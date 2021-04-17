@@ -1,4 +1,4 @@
-## OpenIPC v2.1 (experimental)
+## OpenIPC v2.1 (experimental, buildroot based..)
 
 ### More information about the project is available in our [Wiki](https://github.com/OpenIPC/openipc-2.1/wiki)
 
