@@ -1,0 +1,52 @@
+include ../Configure
+include ../configs/$(CHIP_ID)_config
+SRC = .
+SNSX40 = ../snsX40
+
+
+LIB_OBJS := $(SRC)/X50_cmos.o	\
+			$(SRC)/X50_sensor_ctl.o	
+
+ifeq ($(CONFIG_X40_SC5239),y)	
+CFLAGS_SENSOR += -DSENS_X40_SC5239
+LIB_OBJS += $(SNSX40)/SC5239_cmos.o	\
+            $(SNSX40)/SC5239_sensor_ctl.o 
+endif
+
+ifeq ($(CONFIG_X50_PS5510),y)	
+CFLAGS_SENSOR += -DSENS_X50_PS5510
+LIB_OBJS += $(SRC)/ps5510_cmos.o	\
+			$(SRC)/ps5510_sensor_ctl.o 
+endif
+
+ifeq ($(CONFIG_X50_SC5035),y)	
+CFLAGS_SENSOR += -DSENS_X50_SC5035
+LIB_OBJS += $(SRC)/sc5035_cmos.o	\
+			$(SRC)/sc5035_sensor_ctl.o 
+endif
+
+ifeq ($(CONFIG_X50_K03),y)	
+CFLAGS_SENSOR += -DSENS_X50_K03
+LIB_OBJS += $(SRC)/k03_cmos.o	\
+			$(SRC)/k03_sensor_ctl.o 
+endif
+
+ifeq ($(CONFIG_X50_SC5235),y)	
+CFLAGS_SENSOR += -DSENS_X50_SC5235
+LIB_OBJS += $(SRC)/SC5235_cmos.o	\
+			$(SRC)/SC5235_sensor_ctl.o 
+endif
+
+ifeq ($(CONFIG_X50_SC335E),y)	
+CFLAGS_SENSOR += -DSENS_X50_SC335E
+LIB_OBJS += $(SRC)/SC335E_cmos.o	\
+            $(SRC)/SC335E_sensor_ctl.o 
+endif
+
+ifeq ($(CONFIG_X50_IMX335),y)	
+CFLAGS_SENSOR += -DSENS_X50_IMX335
+LIB_OBJS += $(SRC)/IMX335_cmos.o	\
+            $(SRC)/IMX335_sensor_ctl.o 
+endif
+
+
