@@ -1,0 +1,32 @@
+#!/bin/sh
+
+on_exit()
+{
+  mountpoint -q /proc && umount /proc
+  exec /sbin/init $*
+}
+trap on_exit 0
+
+
+mount -t proc proc /proc || exit
+grep -q overlay /proc/filesystems || exit
+
+mount -t jffs2 /dev/$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd | sed 's/mtd/mtdblock/') /overlay || \
+  mount -t tmpfs tmpfs /overlay || exit
+
+if grep -q overlayfs /proc/filesystems; then
+  mount -t overlayfs overlayfs -o lowerdir=/,upperdir=/overlay,ro /mnt \
+    || { umount /overlay; exit; }
+else
+  overlay_rootdir=/overlay/root
+  overlay_workdir=/overlay/work
+  mkdir -p ${overlay_rootdir} ${overlay_workdir}
+  mount -t overlay overlay \
+        -o lowerdir=/,upperdir=${overlay_rootdir},workdir=${overlay_workdir} /mnt \
+    || { umount /overlay; exit; }
+fi
+
+pivot_root /mnt /mnt/rom
+mount -o noatime,move /rom/proc /proc
+mount -o noatime,move /rom/dev /dev
+mount -o noatime,move /rom/overlay /overlay
