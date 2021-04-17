@@ -1,0 +1,25 @@
+在运行sample_venc时，由于sensor的不同，需要使用不同的isp库文件（mpp\lib\isp目录下）对不同的sensor进行支持（初始是200W sensor的库）
+
+若需要更换isp库时，请根据下述情况编译对应的库：
+一、200W sensor
+	200W seneor，首先需要进入mpp\isp\ispsample到目录，运行mkconfig，
+[zhaozaihang@xm ispsample]$ ./mkconfig 
+/*************************************************************************************************/
+         Chips : XM530
+        Device : CHIP
+           SOC : SYSTEM XMSDK
+        Sensor : X123 X50
+          SNS1 : NONE
+      Customer : GENERAL
+       Version : 1.000.00.0.R
+                 OK         Cancel
+/*************************************************************************************************/
+	SOC选择XMSDK，Sensor 选择 X123，选择OK，然后使用make clean;make编译。
+	生成的库在mpp\isp\ispsample\output目录下，将此目录下面的所有库拷贝替换mpp\lib\isp目录下的库。
+	在mpp\sample\venc下重新使用make clean;make重新编译程序，然后运行程序。
+二、400W seneor
+	400W sensor编译库时Sensor选择X50，其他同200W，编译步骤同200W
+
+【注意】200W sensor不能运行400W sensor的程序。
+【注意】mpp\lib\isp\只能同时出现libsns_X50_XM530.a和libsns_X123_XM530.a其中一个，否则会造成误链接，导致程序运行不正常
+【提示】在运行程序时出现不支持此sensor时，请根据上述步骤更正对应的库

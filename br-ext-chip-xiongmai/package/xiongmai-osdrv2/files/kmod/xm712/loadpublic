@@ -1,0 +1,11 @@
+#!/bin/sh
+
+WIFI=XM712
+
+if [ "$WIFI" = "XM712" ]; then
+	insmod /usr/lib/modules/wifi_pdn.ko value=96
+	insmod /usr/lib/modules/compat.ko
+	insmod /usr/lib/modules/cfg80211.ko
+	insmod /usr/lib/modules/xm712.ko
+fi
+

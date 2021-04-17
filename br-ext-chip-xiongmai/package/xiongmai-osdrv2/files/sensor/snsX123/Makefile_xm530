@@ -1,0 +1,219 @@
+####for XM530####
+#CROSS = arm-xm-linux-
+CC	= @echo " GCC	$@"; $(CROSS)gcc
+CPP	= @echo " G++	$@"; $(CROSS)g++
+LD	= @echo " LD	$@"; $(CROSS)ld
+AR	= @echo " AR	$@"; $(CROSS)ar
+RM	= @echo " RM	$@"; rm -f
+#########################################################
+
+
+TOPDIR = ../..
+INC = $(TOPDIR)/include
+SRC = .
+SNSX1x = ../snsX1x
+SNSX20 = ../snsX20
+SNSX30 = ../snsX30
+SNSEXT = ../snsExt
+
+DEBUGTMP = ./debug_tmp
+OUTPUT = ../_libs
+
+include ../Configure
+include ../configs/XM530_config
+
+ifeq ($(SOC),SYSTEM)
+CROSS = arm-xm-linux-
+CFLAGS += -ffunction-sections -g -Os -Wall -fno-stack-protector -fno-common -mcpu=cortex-a5
+endif
+ifeq ($(SOC),NONE)
+CROSS = arm-none-eabi-
+CFLAGS += -nostdinc -ffunction-sections -g -Os -Wall -fno-stack-protector -fno-common -mcpu=cortex-a5
+endif
+ifeq ($(SOC),ALIOS)
+ROOTDIR = /home/$(LOGNAME)/mnt/Sofia/Trunk
+include $(ROOTDIR)/MainApplication/ALIOS/Makefile.param-ALIOS_XM530
+EXT:=_alios
+endif
+
+#CFLAGS  += -DSVN_ID=\"$(SVN_ID)\"
+CFLAGS	+= -I$(INC)/xm
+CFLAGS	+= -I$(INC)/isp
+CFLAGS 	+= -I$(SNSEXT)/
+CFLAGS 	+= -I$(SRC)/
+
+
+##############################################
+# CHIP_ID:	XM530
+##############################################
+CFLAGS += -DCHIPID_XM530
+CFLAGS += -DSOC_$(SOC)
+CFLAGS += -DAWB_ALGO_V2
+
+
+##############################################
+#ISP
+##############################################
+CFLAGS += -DCSTM_$(CSTM_ID)
+
+##############################################
+#IRCUT
+##############################################
+CFLAGS += -DICR_$(IRCUT_ID)
+
+
+CFLAGS_D := $(CFLAGS) -g
+
+AFLAGS	= -r
+
+LIB_OBJS = 	$(SRC)/XAx_cmos.o	\
+			$(SRC)/XAx_sensor_ctl.o \
+			$(SNSEXT)/ext_cmos.o \
+			$(SNSEXT)/ext_sensor_ctl.o \
+
+#-------------------------------------------------------------------
+ifeq ($(CONFIG_X1X_SOIH62),y)	
+CFLAGS += -DSENS_X1X_SOIH62
+LIB_OBJS += $(SNSX1x)/soih62_cmos.o
+endif
+ifeq ($(CONFIG_X1X_SP140A),y)	
+CFLAGS += -DSENS_X1X_SP140A
+LIB_OBJS += $(SNSX1x)/sp140A_cmos.o
+endif
+ifeq ($(CONFIG_X1X_SC2145H),y)	
+CFLAGS += -DSENS_X1X_SC2145H
+LIB_OBJS += $(SNSX1x)/sc2145H_cmos.o
+endif
+ifeq ($(CONFIG_X1X_SOIH65),y)	
+CFLAGS += -DSENS_X1X_SOIH65
+LIB_OBJS += $(SNSX1x)/soih65_cmos.o
+endif
+ifeq ($(CONFIG_X1X_SC1235),y)	
+CFLAGS += -DSENS_X1X_SC1235
+LIB_OBJS += $(SNSX1x)/sc1235_cmos.o
+endif
+ifeq ($(CONFIG_X1X_OV9732),y)	
+CFLAGS += -DSENS_X1X_OV9732
+LIB_OBJS += $(SNSX1x)/ov9732_cmos.o
+endif
+
+ifeq ($(CONFIG_X20_SC2235E),y)	
+CFLAGS += -DSENS_X20_SC2235E
+LIB_OBJS += $(SNSX20)/sc2235E_cmos.o
+endif
+ifeq ($(CONFIG_X20_SC2235),y)	
+CFLAGS += -DSENS_X20_SC2235
+LIB_OBJS += $(SNSX20)/sc2235_cmos.o
+endif
+ifeq ($(CONFIG_X20_SC2335),y)	
+CFLAGS += -DSENS_X20_SC2335
+LIB_OBJS += $(SNSX20)/sc2335_cmos.o
+endif
+ifeq ($(CONFIG_X20_SC2235P),y)	
+CFLAGS += -DSENS_X20_SC2235P
+LIB_OBJS += $(SNSX20)/sc2235P_cmos.o
+endif
+ifeq ($(CONFIG_X20_SC307E),y)	
+CFLAGS += -DSENS_X20_SC307E
+LIB_OBJS += $(SNSX20)/sc307E_cmos.o
+endif
+ifeq ($(CONFIG_X20_SC2145),y)	
+CFLAGS += -DSENS_X20_SC2145
+LIB_OBJS += $(SNSX20)/sc2145_cmos.o
+endif
+
+ifeq ($(CONFIG_X20_IMX323),y)	
+CFLAGS += -DSENS_X20_IMX323
+LIB_OBJS += $(SNSX20)/imx323_cmos.o
+endif
+ifeq ($(CONFIG_X20_IMX307),y)	
+CFLAGS += -DSENS_X20_IMX307
+LIB_OBJS += $(SNSX20)/imx307_cmos.o
+
+ifeq ($(CONFIG_X20_F37),y)	
+CFLAGS += -DSENS_X20_F37
+LIB_OBJS += $(SNSX20)/soif37_cmos.o
+endif
+
+ifeq ($(CONFIG_X20_MIS2003),y)	
+CFLAGS += -DSENS_X20_MIS2003
+LIB_OBJS += $(SNSX20)/mis2003_cmos.o
+endif
+
+ifeq ($(CONFIG_X20_SP2305),y)	
+CFLAGS += -DSENS_X20_SP2305
+LIB_OBJS += $(SNSX20)/sp2305_cmos.o
+endif
+endif
+
+ifeq ($(CONFIG_X30_SC4236),y)	
+CFLAGS += -DSENS_X30_SC4236
+LIB_OBJS += $(SNSX30)/sc4236_cmos.o
+endif
+
+ifeq ($(CONFIG_X30_AUGE),y)
+CFLAGS += -DSENS_X30_AUGE
+LIB_OBJS += $(SNSX30)/auge_cmos.o
+endif
+
+ifeq ($(CONFIG_X30_SC3035),y)
+CFLAGS += -DSENS_X30_SC3035
+LIB_OBJS += $(SNSX30)/sc3035_cmos.o
+LIB_OBJS += $(SNSX30)/sc3035_sensor_ctl.o
+endif
+#-------------------------------------------------------------------	
+			
+		
+LIB_OBJS_D = $(patsubst $(SRC)/%.o,$(DEBUGTMP)/%.o,$(LIB_OBJS))
+
+
+LIBNAME = $(OUTPUT)/libsns_X123$(EXT)_$(CHIP_ID).a
+LIBNAME_D = $(OUTPUT)/libsns_X123$(EXT)_$(CHIP_ID)-d.a
+
+
+TARGET	= $(LIBNAME) $(LIBNAME_D)
+
+all: $(TARGET)
+	@cp -vf $(LIBNAME)  $(DstDir)/
+$(LIBNAME): $(LIB_OBJS)
+	$(RM) $@;
+	$(AR) $(AFLAGS) $@ $^
+
+$(LIBNAME_D): $(LIB_OBJS_D)
+	$(RM) $@;
+	$(AR) $(AFLAGS) $@ $^
+
+$(SRC)/%.o: $(SRC)/%.c
+	$(CC)  $(CFLAGS) -c -o $@ $<
+
+$(SRC)/%.o: $(SRC)/%.cpp
+	$(CPP)  $(CFLAGS) -c -o $@ $<
+
+$(DEBUGTMP)/%.o: $(SRC)/%.c
+	@mkdir -p $(DEBUGTMP)
+	@mkdir -p $(dir $@)
+	$(CC)  $(CFLAGS_D) -c -o $@ $<
+	
+$(DEBUGTMP)/%.o: $(SRC)/%.cpp
+	@mkdir -p $(DEBUGTMP)
+	@mkdir -p $(dir $@)
+	$(CPP)  $(CFLAGS_D) -c -o $@ $<
+
+
+#.c.o:
+#	$(CC)  $(CFLAGS) -c -o $@ $<
+#
+#.cpp.o:
+#	$(CPP) $(CFLAGS) -c -o $@ $<
+
+clean:
+	rm -f $(TARGET) $(LIB_OBJS) $(EXEC_OBJS);
+	rm -rf $(DEBUGTMP);
+	find ./ -type f \( -name '*.elf*' -o -name '*.gdb' \) | xargs rm -f
+
+
+DstDir := $(TOPDIR)/ispSample/lib_$(SOC)/lib_$(CSTM_ID)
+
+dbg: all
+	# copy to your debug dir
+	@cp -vf $(LIBNAME)  $(DstDir)/lib_X1x$(EXT).a

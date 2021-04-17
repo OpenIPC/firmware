@@ -1,0 +1,120 @@
+####for XM530####
+#CROSS = arm-xm-linux-
+CC	= @echo " GCC	$@"; $(CROSS)gcc
+CPP	= @echo " G++	$@"; $(CROSS)g++
+LD	= @echo " LD	$@"; $(CROSS)ld
+AR	= @echo " AR	$@"; $(CROSS)ar
+RM	= @echo " RM	$@"; rm -f
+#########################################################
+
+
+TOPDIR = ../..
+INC = $(TOPDIR)/include
+SRC = .
+DEBUGTMP = ./debug_tmp
+OUTPUT = ../_libs
+DIST = ../../../lib/OEM/lib_$(CSTM_ID)/
+
+include ../Configure
+include ./Makefile_Sensor
+
+ifeq ($(SOC),SYSTEM)
+CROSS = arm-xm-linux-
+CFLAGS += -ffunction-sections -g -Os -Wall -fno-stack-protector -fno-common -mcpu=cortex-a5
+endif
+ifeq ($(SOC),NONE)
+CROSS = arm-none-eabi-
+CFLAGS += -nostdinc -ffunction-sections -g -Os -Wall -fno-stack-protector -fno-common -mcpu=cortex-a5
+endif
+ifeq ($(SOC),ALIOS)
+ROOTDIR = /home/$(LOGNAME)/mnt/Sofia/Trunk
+include $(ROOTDIR)/MainApplication/ALIOS/Makefile.param-ALIOS_XM530
+EXT:=_alios
+endif
+
+
+#CFLAGS  += -DSVN_ID=\"$(SVN_ID)\"
+
+CFLAGS  +=  $(CFLAGS_SENSOR)
+CFLAGS	+= -I$(INC)/xm
+CFLAGS	+= -I$(INC)/isp
+
+CFLAGS 	+= -I$(SRC)/
+
+
+##############################################
+# CHIP_ID:	XM530
+##############################################
+CFLAGS += -DCHIPID_XM530
+CFLAGS += -DSOC_$(SOC)
+CFLAGS += -DAWB_ALGO_V2
+
+
+##############################################
+#ISP
+##############################################
+CFLAGS += -DCSTM_$(CSTM_ID)
+
+##############################################
+#IRCUT
+##############################################
+CFLAGS += -DICR_$(IRCUT_ID)
+
+
+CFLAGS_D := $(CFLAGS) -g
+
+AFLAGS	= -r
+
+		
+LIB_OBJS_D = $(patsubst $(SRC)/%.o,$(DEBUGTMP)/%.o,$(LIB_OBJS))
+
+
+LIBNAME = $(OUTPUT)/libsns_X80$(EXT)_$(CHIP_ID).a
+LIBNAME_D = $(OUTPUT)/libsns_X80$(EXT)_$(CHIP_ID)-d.a
+
+
+TARGET	= $(LIBNAME) $(LIBNAME_D)
+
+all: $(TARGET)
+	@cp -vf $(LIBNAME)  $(DstDir)/
+$(LIBNAME): $(LIB_OBJS)
+	$(RM) $@;
+	$(AR) $(AFLAGS) $@ $^
+
+$(LIBNAME_D): $(LIB_OBJS_D)
+	$(RM) $@;
+	$(AR) $(AFLAGS) $@ $^
+
+$(SRC)/%.o: $(SRC)/%.c
+	$(CC)  $(CFLAGS) -c -o $@ $<
+
+$(SRC)/%.o: $(SRC)/%.cpp
+	$(CPP)  $(CFLAGS) -c -o $@ $<
+
+$(DEBUGTMP)/%.o: $(SRC)/%.c
+	@mkdir -p $(DEBUGTMP)
+	@mkdir -p $(dir $@)
+	$(CC)  $(CFLAGS_D) -c -o $@ $<
+	
+$(DEBUGTMP)/%.o: $(SRC)/%.cpp
+	@mkdir -p $(DEBUGTMP)
+	@mkdir -p $(dir $@)
+	$(CPP)  $(CFLAGS_D) -c -o $@ $<
+
+
+#.c.o:
+#	$(CC)  $(CFLAGS) -c -o $@ $<
+#
+#.cpp.o:
+#	$(CPP) $(CFLAGS) -c -o $@ $<
+
+clean:
+	rm -f $(TARGET) $(LIB_OBJS) $(EXEC_OBJS);
+	rm -rf $(DEBUGTMP);
+	find ./ -type f \( -name '*.elf*' -o -name '*.gdb' \) | xargs rm -f
+
+
+DstDir := $(TOPDIR)/ispSample/lib_$(SOC)/lib_$(CSTM_ID)
+dbg: all
+	# copy to your debug dir
+	@cp -vf $(LIBNAME)  $(DstDir)/
