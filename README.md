@@ -11,6 +11,8 @@
 
 [![Building...](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg)](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml)
 
+[![Building...](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg)](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml)
+
 ### Supporting
 
 If you like our work, please consider supporting us on [Opencollective](https://opencollective.com/openipc/contribute/backer-14335/checkout) or [PayPal](https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS) or [YooMoney](https://openipc.org/donation/yoomoney.html). 
