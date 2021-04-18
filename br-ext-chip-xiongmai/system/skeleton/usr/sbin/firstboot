@@ -1,6 +1,0 @@
-#!/bin/sh
-
-
-echo -e "\nСlearing the overlayfs partition and rebooting without any questions...\n"
-#
-flash_eraseall -j /dev/$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd) && reboot
