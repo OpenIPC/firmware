@@ -1,4 +1,4 @@
-name: OpenIPC for Hi3516Ev200
+name: OpenIPC for Hi3518Ev300
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build_core:
-    name: OpenIPC v2.0 for Hi3516Ev200
+    name: OpenIPC v2.0 for Hi3518Ev300
     runs-on: ubuntu-18.04
 
     steps:
@@ -56,18 +56,18 @@ jobs:
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build Hi3516Ev200 firmware
-        id: build-hi3516ev200-firmware
+      - name: Build Hi3518Ev300 firmware
+        id: build-hi3518ev300-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.hi3516ev200-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.hi3518ev300-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make BOARD=unknown_unknown_hi3516ev200_openipc all
+          make BOARD=unknown_unknown_hi3518ev300_openipc all
           tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs uImage
 
-      - name: Build Hi3516Ev200 SDK
-        id: build-hi3516ev200-sdk
+      - name: Build Hi3518Ev300 SDK
+        id: build-hi3518ev300-sdk
         continue-on-error: true
         run: |
           ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
@@ -79,7 +79,7 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-hi3516ev200-firmware.outcome != 'success' || steps.build-hi3516ev200-sdk.outcome != 'success'
+        if: steps.build-hi3518ev300-firmware.outcome != 'success' || steps.build-hi3518ev300-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
           TG_NOTIFY="Warning, Buildroot compiling error..."
@@ -104,7 +104,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: "openipc.hi3516ev200-br.tgz"
+          asset_name: "openipc.hi3518ev300-br.tgz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
