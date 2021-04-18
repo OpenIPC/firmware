@@ -160,6 +160,7 @@ insert_piris()
 {
 	if [ "{chipid}" == "hi3516ev300" -a "${board}" == "demo" ];then
 		insmod hi_piris.ko
+		# insmod hi3516ev200_pm.ko   # Maybe need for Hi3518Ev300
 	fi
 }
 
@@ -243,7 +244,7 @@ load_usage()
 	echo "    -sensor sensor_name      config sensor type [default: imx307]"
 	echo "    -h                       help information"
 	echo -e "Available sensors: gc2053 imx307 imx327 imx335 os05a sc2231 sc2235 sc4236 sc3235 sc4236 etc."
-	echo -e "for example: ./load_hisilicon -i -sensor imx307 -osmem 32M -board openipc -yuv0 0\n"
+	echo -e "for example: ./load_hisilicon -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
 }
 
 calc_mmz_info()
