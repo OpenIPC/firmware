@@ -9,11 +9,11 @@
 
 ### Downloads (research only, no guarantees)
 
-| Building status |    SoC    | Files    | Maintainer |
-|-----------------|-----------|----------|------------|
-|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev200_images.yml/badge.svg)|Hi3516Ev200|[firmware archive](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz)|IZ|
-|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg)|Hi3516Ev200|[firmware archive](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz)|IZ|
-|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg)|Hi3516Ev200|[firmware archive](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz)|IZ|
+| Building status |    SoC    | Files    | Maintainers |
+|-----------------|-----------|----------|-------------|
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev200_images.yml/badge.svg)|Hi3516Ev200|[firmware archive](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz)|[@zigfisher](https://github.com/ZigFisher), [@widgetii](https://github.com/widgetii)|
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg)|Hi3516Ev200|[firmware archive](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz)|[@zigfisher](https://github.com/ZigFisher), [@widgetii](https://github.com/widgetii)|
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg)|Hi3516Ev200|[firmware archive](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz)|[@zigfisher](https://github.com/ZigFisher), [@widgetii](https://github.com/widgetii)|
 
 ### Supporting
 
