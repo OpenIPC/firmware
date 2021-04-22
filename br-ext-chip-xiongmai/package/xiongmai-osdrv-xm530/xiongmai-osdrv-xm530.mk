@@ -30,12 +30,12 @@ define XIONGMAI_OSDRV_XM530_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/sensor/config/*.ini
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.103/xiongmai
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.103/xiongmai $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/kmod/*.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.103/xiongmai $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/kmod/usb/*.ko
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/kmod/*.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/kmod/usb/*.ko
 
-	# $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	# $(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/script/*
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/script/*
 
 	# $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/fonts
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/fonts $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/fonts/*.bin
