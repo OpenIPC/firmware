@@ -1,6 +1,8 @@
 ## OpenIPC v2.1 (experimental, buildroot based..)
 
-### More information about the project is available in our [Wiki](https://github.com/OpenIPC/openipc-2.1/wiki)
+Alternative firmware for IP cameras based on the HiSilicon (and other) SoC's
+
+More information about the project is available in our [Wiki](https://github.com/OpenIPC/openipc-2.1/wiki) and [Site](https://openipc.org)
 
 -----
 
