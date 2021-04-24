@@ -19,6 +19,8 @@ If you like our work, please consider supporting us on [Opencollective](https://
 <a href="https://openipc.org/donation/yoomoney.html"><img src="https://yoomoney.ru/transfer/balance-informer/balance?id=596194605&key=291C29A811B500D7" width="100" alt="YooMoney donate button" /> </a>
 </p>
 
+-----
+
 ### Downloads (for research only, no any guarantees)
 
 | Building status |    SoC    | Files    | Maintainers | Notes |
