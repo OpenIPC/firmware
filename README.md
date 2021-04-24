@@ -2,14 +2,16 @@
 
 ### More information about the project is available in our [Wiki](https://github.com/OpenIPC/openipc-2.1/wiki)
 
-[![Backers](https://opencollective.com/openipc/tiers/backer/badge.svg?label=backer&color=brightgreen)](https://opencollective.com/openipc)
-[![Backers](https://opencollective.com/openipc/tiers/badge.svg)](https://opencollective.com/openipc)
-
-[![Backers](https://opencollective.com/openipc/tiers/backer.svg?avatarHeight=36)](https://opencollective.com/openipc#support)
+-----
 
 ### Supporting
 
 If you like our work, please consider supporting us on [Opencollective](https://opencollective.com/openipc/contribute/backer-14335/checkout) or [PayPal](https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS) or [YooMoney](https://openipc.org/donation/yoomoney.html). 
+
+[![Backers](https://opencollective.com/openipc/tiers/backer/badge.svg?label=backer&color=brightgreen)](https://opencollective.com/openipc)
+[![Backers](https://opencollective.com/openipc/tiers/badge.svg)](https://opencollective.com/openipc)
+
+[![Backers](https://opencollective.com/openipc/tiers/backer.svg?avatarHeight=36)](https://opencollective.com/openipc#support)
 
 ### Thanks a lot !!!
 
