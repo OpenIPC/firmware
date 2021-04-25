@@ -3,7 +3,7 @@ name: OpenIPC for SSC335
 on:
   push:
     branches:
-      - ssc335
+      - master
     tags:
       - "v*"
 
@@ -63,7 +63,7 @@ jobs:
           ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.ssc335-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make BOARD=unknown_unknown_ssc335_openipc all
+          make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_openipc all
           tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs uImage
 
       - name: Build SSC335 SDK

@@ -2,9 +2,7 @@
 ROOT_DIR      := $(CURDIR)
 BR_VER        := 2020.02
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
-#BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-hisilicon
-BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-sigmastar
-#BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-xiongmai
+BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
 SCRIPTS_DIR   := $(ROOT_DIR)/scripts
 BOARDS        := $(shell ls -1 $(BR_EXT_DIR)/configs)
 
