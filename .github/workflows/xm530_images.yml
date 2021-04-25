@@ -64,9 +64,9 @@ jobs:
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
           make PLATFORM=xiongmai BOARD=unknown_unknown_xm530_openipc all
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage_xm530
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs_xm530
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs_xm530 uImage_xm530
+          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.xm530
+          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.xm530
+          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.xm530 uImage.xm530
 
       - name: Build XM530 SDK
         id: build-xm530-sdk

@@ -64,7 +64,9 @@ jobs:
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
           make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev200_openipc all
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs uImage
+          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.hi3516ev200
+          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.hi3516ev200
+          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.hi3516ev200 uImage.hi3516ev200
 
       - name: Build Hi3516Ev200 SDK
         id: build-hi3516ev200-sdk

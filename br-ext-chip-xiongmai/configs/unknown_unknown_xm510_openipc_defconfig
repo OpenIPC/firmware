@@ -36,12 +36,12 @@ BR2_ROOTFS_OVERLAY="$(TOPDIR)/../general/overlay"
 
 # OpenIPC configuration
 BR2_TOOLCHAIN_BUILDROOT_VENDOR="openipc"
-BR2_TARGET_GENERIC_ISSUE="Welcome to OpenIPC v21.04.22.1"
+BR2_TARGET_GENERIC_ISSUE="Welcome to OpenIPC v21.04.25.1"
 BR2_TARGET_GENERIC_HOSTNAME="ipcam"
-BR2_GLOBAL_PATCH_DIR="$(TOPDIR)/../general/package/patches"
+BR2_GLOBAL_PATCH_DIR="$(TOPDIR)/../general/package"
 
 # Packages
-BR2_PACKAGE_BUSYBOX_CONFIG="$(TOPDIR)/../general/package/configs/busybox.config"
+BR2_PACKAGE_BUSYBOX_CONFIG="$(TOPDIR)/../general/package/busybox/busybox.config"
 BR2_PACKAGE_DROPBEAR=y
 BR2_PACKAGE_FWPRINTENV_NG=y
 # BR2_PACKAGE_XIONGMAI_OSDRV_XM510 is not set
