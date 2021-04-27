@@ -1,7 +1,12 @@
 #!/bin/sh
 
-#GPIO1_0 -> GPIO8 (1*8+0 = 8)
-#GPIO1_1 -> GPIO9 (1*8+1 = 9)
+# on EV200:
+# GPIO1_0 -> GPIO8 (1*8+0 = 8)
+# GPIO1_1 -> GPIO9 (1*8+1 = 9)
+
+# on EV300:
+# GPIO1_3 -> GPIO11
+# GPIO1_2 -> GPIO10
 
 #(normal mode)
 ir_cut_enable() {
@@ -63,8 +68,8 @@ else
     gpio_0=8
     gpio_1=9
   elif [ $1 = "hi3516ev300" ]; then
-    gpio_0=8
-    gpio_1=9
+    gpio_0=11
+    gpio_1=10
   else
     echo "wrong chipid: $1, please select: hi3516ev200 or hi3516ev300."
     exit
