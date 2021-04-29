@@ -6,7 +6,7 @@ BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
 SCRIPTS_DIR   := $(ROOT_DIR)/scripts
 BOARDS        := $(shell ls -1 $(BR_EXT_DIR)/configs)
 
-.PHONY: usage help prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
+.PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
 
 usage help:
 	@echo \
@@ -19,11 +19,18 @@ usage help:
 	  - make BOARD=<BOARD-ID> board-info - write to stdout information about selected board\n\
 	  - make BOARD=<BOARD-ID> all - build all needed for a board (toolchain, kernel and rootfs images)\n\
 	  - make overlayed-rootfs-<FS-TYPE> ROOTFS_OVERLAYS=... - create rootfs image that contains original\n\
+	  - make clean - cleaning before reassembly\n\
+	  - make distclean - switching to the factory state\n\
 	  Buildroot target dir overlayed by some custom layers.\n\
 	  Example:\n\
 	      make overlayed-rootfs-squashfs ROOTFS_OVERLAYS=./examples/echo_server/overlay\n\
 	"
 
+distclean:
+	@rm -rf output buildroot-$(BR_VER)
+
+clean:
+	@rm -rf output/target /output/.config
 
 prepare: $(BR_DIR)
 $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz:
