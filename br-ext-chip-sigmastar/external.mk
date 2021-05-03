@@ -4,4 +4,5 @@ include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/sigmastar-
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/fwprintenv-ng/fwprintenv-ng.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libevent-mini/libevent-mini.mk
+include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/node-exporter/node-exporter.mk
 
