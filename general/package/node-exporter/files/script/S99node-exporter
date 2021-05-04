@@ -1,21 +1,21 @@
 #!/bin/sh
 
-DAEMON="prometheus-node-exporter-lua"
+DAEMON="node-exporter"
 PIDFILE="/var/run/$DAEMON.pid"
 
-PROMETHEUS_ARGS="--bind * --port 9100"
+NODE_EXPORTER_ARGS="--bind 0.0.0.0 --port 9100"
 
 # shellcheck source=/dev/null
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
 
-# The majestic does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
+# The node-exporter does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
 start() {
-	logger -s -p daemon.info -t prometheus "Start $DAEMON"
+	logger -s -p daemon.info -t node-exporter "Start $DAEMON"
 	#
 	printf 'Starting %s: ' "$DAEMON"
 	# shellcheck disable=SC2086 # we need the word splitting
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" \
-		-- $PROMETHEUS_ARGS
+		-- $NODE_EXPORTER_ARGS
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		echo "OK"
