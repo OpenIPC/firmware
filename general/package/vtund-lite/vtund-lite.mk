@@ -16,4 +16,11 @@ VTUND_LITE_CONF_OPTS += --disable-lzo --disable-ssl --disable-zlib
 # Assumes old-style gcc inline symbol visibility rules
 VTUND_LITE_CONF_ENV = CFLAGS="$(TARGET_CFLAGS) -std=gnu89"
 
+define VTUND_LITE_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/sbin
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(TOPDIR)/../general/package/vtund-lite/files/tapip
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(TOPDIR)/../general/package/vtund-lite/files/tunnel
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(@D)/vtund
+endef
+
 $(eval $(autotools-package))
