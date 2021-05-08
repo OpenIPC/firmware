@@ -37,9 +37,20 @@ If you like our work, please consider supporting us on [Opencollective](https://
 
 -----
 
-| Platform    | U-Boot | Kernel | Rootfs | Video | Audio | GPIO | WiFi |
-|-------------|--------|--------|--------|-------|-------|------|------|
-| hi3516ev200 |
+### Current development status
+
+| Platform    | U-Boot | Kernel | Rootfs |
+|-------------|--------|--------|--------|
+| hi3516ev200 |  -     |  yes   |  yes   |
+| ssc335      |  -     |  yes   |  yes   |
+| t31         |  -     |  -     |  -     |
+| xm530       |  -     |  yes   |  yes   |
+
+
+| Platform    | Video | Audio | GPIO  | USB   | WiFi  |
+|-------------|-------|-------|-------|-------|-------|
+| hi3516ev200 |  yes  |  yes  |  yes  |  yes  |  yes  |
 | ssc335      |
-| xm530/xm550 |
+| t31         |
+| xm530       |
 
