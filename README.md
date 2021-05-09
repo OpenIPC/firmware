@@ -4,6 +4,12 @@ Alternative firmware for IP cameras based on the HiSilicon (and other) SoC's
 
 More information about the project is available in our [Wiki](https://github.com/OpenIPC/openipc-2.1/wiki) and [Site](https://openipc.org)
 
+[![CI status](https://img.shields.io/github/downloads/OpenIPC/openipc-2.1/total.svg)](https://github.com/OpenIPC/openipc-2.1/releases)
+![GitHub repo size](https://img.shields.io/github/repo-size/OpenIPC/openipc-2.1)
+![GitHub issues](https://img.shields.io/github/issues/OpenIPC/openipc-2.1)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/OpenIPC/openipc-2.1)
+[![License](https://img.shields.io/github/license/OpenIPC/openipc-2.1)](https://opensource.org/licenses/MIT)
+
 -----
 
 ### Supporting
