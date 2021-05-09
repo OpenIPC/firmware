@@ -4,12 +4,12 @@ BR_VER        := 2020.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
 BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
 SCRIPTS_DIR   := $(ROOT_DIR)/scripts
-BOARDS        := $(shell ls -1 $(BR_EXT_DIR)/configs)
+#BOARDS       := $(shell ls -1 $(BR_EXT_DIR)/configs)
 
 .PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
 
 usage help:
-	@echo \
+	@echo -e \
 	"\n\
 	BR-OpenIPC usage:\n\
 	  - make help|usage - print this help\n\
@@ -30,7 +30,7 @@ distclean:
 	@rm -rf output buildroot-$(BR_VER)
 
 clean:
-	@rm -rf output/target /output/.config
+	@rm -rf output/target output/.config
 
 prepare: $(BR_DIR)
 $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz:
