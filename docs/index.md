@@ -1,37 +1,62 @@
-## Welcome to GitHub Pages
+## OpenIPC v2.1 (experimental, buildroot based..)
 
-You can use the [editor on GitHub](https://github.com/OpenIPC/openipc-2.1/edit/master/docs/index.md) to maintain and preview the content for your website in Markdown files.
+Alternative firmware for IP cameras based on the HiSilicon (and other) SoC's
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+More information about the project is available in our [Wiki](https://github.com/OpenIPC/openipc-2.1/wiki) and [Site](https://openipc.org)
 
-### Markdown
+[![CI status](https://img.shields.io/github/downloads/OpenIPC/openipc-2.1/total.svg)](https://github.com/OpenIPC/openipc-2.1/releases)
+![GitHub repo size](https://img.shields.io/github/repo-size/OpenIPC/openipc-2.1)
+![GitHub issues](https://img.shields.io/github/issues/OpenIPC/openipc-2.1)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/OpenIPC/openipc-2.1)
+[![License](https://img.shields.io/github/license/OpenIPC/openipc-2.1)](https://opensource.org/licenses/MIT)
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+-----
 
-```markdown
-Syntax highlighted code block
+### Supporting
 
-# Header 1
-## Header 2
-### Header 3
+If you like our work, please consider supporting us on [Opencollective](https://opencollective.com/openipc/contribute/backer-14335/checkout) or [PayPal](https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS) or [YooMoney](https://openipc.org/donation/yoomoney.html). 
 
-- Bulleted
-- List
+[![Backers](https://opencollective.com/openipc/tiers/backer/badge.svg?label=backer&color=brightgreen)](https://opencollective.com/openipc)
+[![Backers](https://opencollective.com/openipc/tiers/badge.svg)](https://opencollective.com/openipc)
 
-1. Numbered
-2. List
+[![Backers](https://opencollective.com/openipc/tiers/backer.svg?avatarHeight=36)](https://opencollective.com/openipc#support)
 
-**Bold** and _Italic_ and `Code` text
+### Thanks a lot !!!
 
-[Link](url) and ![Image](src)
-```
+<p align="center">
+<a href="https://opencollective.com/openipc/contribute/backer-14335/checkout" target="_blank"><img src="https://opencollective.com/webpack/donate/button@2x.png?color=blue" width="300" alt="OpenCollective donate button" /></a>
+<a href="https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS"><img src="https://www.paypalobjects.com/en_US/IT/i/btn/btn_donateCC_LG.gif" alt="PayPal donate button" /> </a>
+<a href="https://openipc.org/donation/yoomoney.html"><img src="https://yoomoney.ru/transfer/balance-informer/balance?id=596194605&key=291C29A811B500D7" width="100" alt="YooMoney donate button" /> </a>
+</p>
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+-----
 
-### Jekyll Themes
+### Downloads (for research only, no any guarantees)
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/OpenIPC/openipc-2.1/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+| Building status |    SoC    | Files    | Maintainers | Notes |
+|-----------------|-----------|----------|-------------|-------|
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev200_images.yml/badge.svg)|Hi3516Ev200|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Ready |
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg)|Hi3516Ev300|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Ready |
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg)|Hi3518Ev300|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Ready |
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc335_images.yml/badge.svg)|SSC335|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc335-br.tgz)|[zigfisher](https://github.com/ZigFisher)| Testing |
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm530_images.yml/badge.svg)|XM530/XM550|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm530-br.tgz)|[zigfisher](https://github.com/ZigFisher)| Testing |
 
-### Support or Contact
+-----
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+### Current development status
+
+| Platform    | U-Boot | Kernel | Rootfs |
+|-------------|--------|--------|--------|
+| hi3516ev200 |  -     |  yes   |  yes   |
+| ssc335      |  -     |  yes   |  yes   |
+| t31         |  -     |  -     |  -     |
+| xm530       |  -     |  yes   |  yes   |
+
+
+| Platform    | Video | Audio | GPIO  | USB   | WiFi  |
+|-------------|-------|-------|-------|-------|-------|
+| hi3516ev200 |  yes  |  yes  |  yes  |  yes  |  yes  |
+| ssc335      |
+| t31         |
+| xm530       |
+
