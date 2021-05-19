@@ -1,4 +1,4 @@
-## OpenIPC v2.1 (experimental, buildroot based..)
+## OpenIPC v2.1 (Buildroot based..)
 
 Alternative firmware for IP cameras based on the HiSilicon (and other) SoC's
 
@@ -45,7 +45,7 @@ If you like our work, please consider supporting us on [Opencollective](https://
 
 ### Current development status
 
-| Platform    | U-Boot | Kernel | Rootfs |
+| Chip Family | U-Boot | Kernel | Rootfs |
 |-------------|--------|--------|--------|
 | hi3516ev200 |  -     |  yes   |  yes   |
 | ssc335      |  -     |  yes   |  yes   |
@@ -53,9 +53,9 @@ If you like our work, please consider supporting us on [Opencollective](https://
 | xm530       |  -     |  yes   |  yes   |
 
 
-| Platform    | Video | Audio | GPIO  | USB   | WiFi  |
-|-------------|-------|-------|-------|-------|-------|
-| hi3516ev200 |  yes  |  yes  |  yes  |  yes  |  yes  |
+| Chip Family | Video | Audio | GPIO  | USB   | WiFi  | MMC   |
+|-------------|-------|-------|-------|-------|-------|-------|
+| hi3516ev200 |  yes  |  yes  |  yes  |  yes  |  yes  |  yes  |
 | ssc335      |
 | t31         |
 | xm530       |
