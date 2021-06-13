@@ -1,6 +1,8 @@
 #!/bin/bash
-
 #
+# ..
+#
+
 clone() {
   sudo apt-get update -y ; apt-get install -y bc build-essential git unzip
   git clone --depth=1 https://github.com/OpenIPC/openipc-2.1.git
@@ -14,6 +16,7 @@ fresh() {
 rename() {
   mv -v ./output/images/rootfs.squashfs ./output/images/rootfs.squashfs.${soc}
   mv -v ./output/images/uImage ./output/images/uImage.${soc}
+  mv -v ./output/images/rootfs.tar ./output/images/rootfs.${soc}.tar
 }
 
 upload() {
@@ -44,34 +47,42 @@ hi3516cv300() {
 }
 
 hi3516ev200() {
+  soc="hi3516ev200"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev200_openipc all && rename
 }
 
 hi3516ev300() {
+  soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_openipc all && rename
 }
 
 hi3516ev300_dev() {
+  soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_dev all && rename
 }
 
 hi3516ev300_glibc() {
+  soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_glibc all && rename
 }
 
 hi3516ev300_tehshield() {
+  soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_tehshield all && rename
 }
 
 ssc335() {
+  soc="ssc335"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_openipc all && rename
 }
 
 ssc335_blackbird() {
+  soc="ssc335"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_blackbird all && rename
 }
 
 xm530() {
+  soc="xm530"
   fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_xm530_openipc all && rename
 }
 
@@ -88,10 +99,10 @@ xm530() {
 # hi3516ev300                   # OK
 # hi3516ev300_dev               # testing..
 # hi3516ev300_glibc             # testing..
-# hi3516ev300_tehshield         # partner..
+# hi3516ev300_tehshield         # Partner. Tehshield.
 #
-# ssc335                        # OK
-# ssc335_blackbird              # partner..
+ssc335                        # OK
+# ssc335_blackbird              # Partner. Sputnik.
 #
 # xm530                         # OK
 #
@@ -101,4 +112,3 @@ xm530() {
 #
 # make PLATFORM=sigmastar br-linux-{dirclean,rebuild}
 #
-
