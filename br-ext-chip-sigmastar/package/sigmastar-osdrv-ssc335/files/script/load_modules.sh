@@ -1,13 +1,13 @@
 #!/bin/sh
 #
-# OpenIPC.org | 2021.04.26
+# OpenIPC.org | 2021.06.16
 #
 # Useage: ./load [ -r|-i|-a ]
 #         -r : rmmod all modules
 #         -i : insmod all modules
 #    default : rmmod all moules and then insmod them
 
-PATH_MODULE=/opt/lib/modules/
+PATH_MODULE=/lib/modules/4.9.84/sigmastar
 
 insert_ko()
 {
@@ -18,23 +18,42 @@ insert_ko()
     insmod ${PATH_MODULE}/mi_ao.ko
     insmod ${PATH_MODULE}/mi_rgn.ko
     insmod ${PATH_MODULE}/mi_divp.ko thread_priority=98
-    insmod ${PATH_MODULE}/mi_ipu.ko
+    #insmod ${PATH_MODULE}/mi_ipu.ko
     insmod ${PATH_MODULE}/mi_vpe.ko thread_priority=98
     insmod ${PATH_MODULE}/mi_sensor.ko
     insmod ${PATH_MODULE}/mi_vif.ko thread_priority=98
-    insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296  thread_priority=99
+    #
+    # default
+    insmod ${PATH_MODULE}/mi_venc.ko max_width=1920 max_height=1080 max_jpe_task=1
+    #
+    # imx307
+    # insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 thread_priority=99
+    #
+    # sc3335 untested
+    # insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 mi_timeout_reset=1
+    #
     insmod ${PATH_MODULE}/mi_shadow.ko
-
+    #
     major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
     mknod /dev/mi_poll c $major 0
     echo hvsp2 down /config/iqfile/filter.txt /config/iqfile/filter.txt > /sys/class/mstar/mscl/hvsp
-    #insmod ${PATH_MODULE}/imx307_MIPI.ko chmap=1 lane_num=2 hdr_lane_num=2
+    #
+    # Change configs folder
+    # echo isproot /config/iqfile > /dev/ispmid
+    #
+    # imx307
+    # insmod ${PATH_MODULE}/imx307_MIPI.ko chmap=1 lane_num=2 hdr_lane_num=2
+    #
+    # sc3335
+    # insmod ${PATH_MODULE}/sc3335_MIPI.ko chmap=1
+    #
     mdev -s
 }
 
 
 remove_ko()
 {
+    rmmod sc3335_MIPI
     rmmod imx307_MIPI
     rmmod mi_shadow
     rmmod mi_venc
