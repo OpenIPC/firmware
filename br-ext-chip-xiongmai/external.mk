@@ -8,4 +8,4 @@ include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/libevent-mini/libevent-mini.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/majestic/majestic.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/vtund-lite/vtund-lite.mk
-
+include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/yaml-cli/yaml-cli.mk
