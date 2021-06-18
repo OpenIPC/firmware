@@ -81,6 +81,16 @@ ssc335_blackbird() {
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_blackbird all && rename
 }
 
+ssc335_goodcam() {
+  soc="ssc335"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_goodcam all && rename
+}
+
+ssc335_rotek() {
+  soc="ssc335"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_rotek all && rename
+}
+
 xm530() {
   soc="xm530"
   fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_xm530_openipc all && rename
@@ -101,8 +111,10 @@ xm530() {
 # hi3516ev300_glibc             # testing..
 # hi3516ev300_tehshield         # Partner. Tehshield.
 #
-ssc335                        # OK
+##ssc335                        # OK
 # ssc335_blackbird              # Partner. Sputnik.
+# ssc335_goodcam                # Partner. GoodCam.
+ssc335_rotek                   # Partner. Rotek.
 #
 # xm530                         # OK
 #

@@ -44,6 +44,9 @@ insert_ko()
     # imx307
     # insmod ${PATH_MODULE}/imx307_MIPI.ko chmap=1 lane_num=2 hdr_lane_num=2
     #
+    # gc2053
+    # insmod ${PATH_MODULE}/gc2053_MIPI.ko chmap=1
+    #
     # sc3335
     # insmod ${PATH_MODULE}/sc3335_MIPI.ko chmap=1
     #
