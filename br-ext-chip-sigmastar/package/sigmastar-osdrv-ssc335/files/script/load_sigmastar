@@ -39,7 +39,7 @@ insert_ko()
     echo hvsp2 down /config/iqfile/filter.txt /config/iqfile/filter.txt > /sys/class/mstar/mscl/hvsp
     #
     # Change configs folder
-    echo isproot /etc/sensor/iqfile > /dev/ispmid
+    echo isproot /etc/sensors/iqfile > /dev/ispmid
     #
     # imx307
     # insmod ${PATH_MODULE}/sensor_imx307_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2
