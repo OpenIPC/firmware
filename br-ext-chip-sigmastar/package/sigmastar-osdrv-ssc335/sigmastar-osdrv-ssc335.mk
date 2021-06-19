@@ -57,6 +57,7 @@ define SIGMASTAR_OSDRV_SSC335_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iqfile
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/sensor/iqfile/imx307_iqfile.bin
+	ln -sf imx307_iqfile.bin $(TARGET_DIR)/etc/sensors/iqfile/iqfile0.bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/venc_fw
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/venc_fw $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/sensor/venc_fw/chagall.bin
