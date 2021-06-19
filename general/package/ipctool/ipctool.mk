@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-IPCTOOL_VERSION = 7c25684308d18f7fd232b7e9d9c249e4a8107951
+IPCTOOL_VERSION = e847b384c0d4339dbbad591a3f8a308ec1f0eced
 IPCTOOL_SITE = $(call github,openipc,ipctool,$(IPCTOOL_VERSION))
 IPCTOOL_LICENSE = MIT
 IPCTOOL_LICENSE_FILES = LICENSE
