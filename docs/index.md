@@ -35,6 +35,8 @@ If you like our work, please consider supporting us on [Opencollective](https://
 
 | Building status |    SoC    | Files    | Maintainers | Notes |
 |-----------------|-----------|----------|-------------|-------|
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/fh8852_images.yml/badge.svg)|FH8852|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.fh8852-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Start |
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/fh8856_images.yml/badge.svg)|FH8856|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.fh8856-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Start |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev200_images.yml/badge.svg)|Hi3516Ev200|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Ready |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg)|Hi3516Ev300|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Ready |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg)|Hi3518Ev300|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Ready |
@@ -47,6 +49,7 @@ If you like our work, please consider supporting us on [Opencollective](https://
 
 | Chip Family | U-Boot | Kernel | Rootfs |
 |-------------|--------|--------|--------|
+| fh8856      |  -     |  -     |  -     |
 | hi3516ev200 |  -     |  yes   |  yes   |
 | ssc335      |  -     |  yes   |  yes   |
 | t31         |  -     |  -     |  -     |
@@ -55,6 +58,7 @@ If you like our work, please consider supporting us on [Opencollective](https://
 
 | Chip Family | Video | Audio | GPIO  | USB   | WiFi  | MMC   |
 |-------------|-------|-------|-------|-------|-------|-------|
+| fh8856      |
 | hi3516ev200 |  yes  |  yes  |  yes  |  yes  |  yes  |  yes  |
 | ssc335      |
 | t31         |

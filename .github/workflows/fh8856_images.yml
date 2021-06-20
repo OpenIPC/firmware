@@ -1,15 +1,11 @@
-name: OpenIPC for Hi3518Ev300
+name: OpenIPC for FH8856
 
 on:
-  push:
-    branches:
-      - master
-    tags:
-      - "v*"
+  workflow_dispatch:
 
 jobs:
   build_core:
-    name: OpenIPC v2.1 for Hi3518Ev300
+    name: OpenIPC v2.1 for FH8856
     runs-on: ubuntu-18.04
 
     steps:
@@ -56,20 +52,20 @@ jobs:
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build Hi3518Ev300 firmware
-        id: build-hi3518ev300-firmware
+      - name: Build FH8856 firmware
+        id: build-fh8856-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.hi3518ev300-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.fh8856-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=hisilicon BOARD=unknown_unknown_hi3518ev300_openipc all
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.hi3518ev300
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.hi3518ev300
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.hi3518ev300 uImage.hi3518ev300
+          make PLATFORM=sigmastar BOARD=unknown_unknown_fh8856_openipc all
+          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.fh8856
+          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.fh8856
+          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.fh8856 uImage.fh8856
 
-      - name: Build Hi3518Ev300 SDK
-        id: build-hi3518ev300-sdk
+      - name: Build FH8856 SDK
+        id: build-fh8856-sdk
         continue-on-error: true
         run: |
           ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
@@ -81,7 +77,7 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-hi3518ev300-firmware.outcome != 'success' || steps.build-hi3518ev300-sdk.outcome != 'success'
+        if: steps.build-fh8856-firmware.outcome != 'success' || steps.build-fh8856-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
           TG_NOTIFY="Warning, Buildroot compiling error..."
@@ -106,7 +102,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: "openipc.hi3518ev300-br.tgz"
+          asset_name: "openipc.fh8856-br.tgz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -116,7 +112,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-hi3518ev300-linux-musleabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-fh8856-linux-musleabi_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 

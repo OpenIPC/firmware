@@ -31,6 +31,16 @@ sdk() {
   make br-sdk
 }
 
+fh8852() {
+  soc="fh8852"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_fh8852_openipc all && rename
+}
+
+fh8856() {
+  soc="fh8856"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_fh8856_openipc all && rename
+}
+
 hi3516cv100() {
   soc="hi3516cv100"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_unknown all && rename
@@ -99,6 +109,8 @@ xm530() {
 
 
 # Build firmware
+#
+# fh8856                        # testing..
 #
 # hi3516cv100                   # testing..
 # hi3516cv200                   # testing..
