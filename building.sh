@@ -111,10 +111,10 @@ xm530() {
 # hi3516ev300_glibc             # testing..
 # hi3516ev300_tehshield         # Partner. Tehshield.
 #
-##ssc335                        # OK
+# ssc335                        # OK
 # ssc335_blackbird              # Partner. Sputnik.
 # ssc335_goodcam                # Partner. GoodCam.
-ssc335_rotek                   # Partner. Rotek.
+ssc335_rotek                  # Partner. Rotek.
 #
 # xm530                         # OK
 #

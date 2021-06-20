@@ -56,8 +56,12 @@ define SIGMASTAR_OSDRV_SSC335_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/script/S99sigmastar
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iqfile
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/sensor/iqfile/filter.txt
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/sensor/iqfile/imx307_iqfile.bin
 	ln -sf imx307_iqfile.bin $(TARGET_DIR)/etc/sensors/iqfile/iqfile0.bin
+	ln -sf imx307_iqfile.bin $(TARGET_DIR)/etc/sensors/iqfile/iqfile1.bin
+	ln -sf imx307_iqfile.bin $(TARGET_DIR)/etc/sensors/iqfile/iqfile2.bin
+	ln -sf imx307_iqfile.bin $(TARGET_DIR)/etc/sensors/iqfile/iqfile3.bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/venc_fw
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/venc_fw $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/sensor/venc_fw/chagall.bin
@@ -88,7 +92,15 @@ define SIGMASTAR_OSDRV_SSC335_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/fonts $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/fonts/*.bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/lib/*.so
+	# Minimalism for sample_venc_jpeg
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/lib/libmi_sys.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/lib/libmi_sensor.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/lib/libmi_vif.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/lib/libmi_vpe.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/lib/libmi_isp.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/lib/libcus3a.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/lib/libispalgo.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/lib/libmi_venc.so
 endef
 
 $(eval $(generic-package))
