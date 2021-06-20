@@ -1,11 +1,7 @@
 name: OpenIPC for SSC335
 
 on:
-  push:
-    branches:
-      - master
-    tags:
-      - "v*"
+  workflow_dispatch:
 
 jobs:
   build_core:
