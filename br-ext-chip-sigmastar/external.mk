@@ -2,6 +2,7 @@ include $(BR2_EXTERNAL_SIGMASTAR_PATH)/linux/linux-ext-sigmastar_patcher.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar_patcher/sigmastar_patcher.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/aura-httpd/aura-httpd.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/fwprintenv-ng/fwprintenv-ng.mk
+include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/gdbserver-lite/gdbserver-lite.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libevent-mini/libevent-mini.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/node-exporter/node-exporter.mk
