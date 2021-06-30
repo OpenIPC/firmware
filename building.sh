@@ -16,6 +16,7 @@ fresh() {
 rename() {
   [[ $(stat --printf="%s" ./output/images/uImage) -gt 2097152 ]] && TG_NOTIFY="Warning: kernel size exceeded : $(stat --printf="%s" ./output/images/uImage) vs 2097152" && exit 1
   [[ $(stat --printf="%s" ./output/images/rootfs.squashfs) -gt 5242880 ]] && TG_NOTIFY="Warning: rootfs size exceeded - $(stat --printf="%s" ./output/images/rootfs.squashfs) vs 5242880" && exit 1
+  #
   mv -v ./output/images/uImage ./output/images/uImage.${soc}
   mv -v ./output/images/rootfs.squashfs ./output/images/rootfs.squashfs.${soc}
   mv -v ./output/images/rootfs.tar ./output/images/rootfs.${soc}.tar

@@ -4,7 +4,8 @@ export HOME=${HOME:-/root}
 export TZ=$(cat /etc/TZ)
 
 if [ "$PS1" ]; then
-	echo -e "\n\e[1;36m* * *\e[0m\n$(cat /etc/openipc_donaters)\n\n"
+	[ -f /etc/openipc_banner ] && echo -e "\n\e[1;36m$(cat /etc/openipc_banner)\e[0m\n"
+	[ -f /etc/openipc_donaters ] && echo -e "\n\e[1;36m$(cat /etc/openipc_donaters)\e[0m\n\n"
 	#
 	if [ "`id -u`" -eq 0 ]; then
 		export PS1='\u@\h:\w\# '
