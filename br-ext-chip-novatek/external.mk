@@ -1,0 +1,10 @@
+include $(BR2_EXTERNAL_NOVATEK_PATH)/linux/linux-ext-novatek_patcher.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek_patcher/novatek_patcher.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/fwprintenv-ng/fwprintenv-ng.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/ipctool/ipctool.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/libevent-mini/libevent-mini.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/majestic/majestic.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/node-exporter/node-exporter.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/vtund-lite/vtund-lite.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/yaml-cli/yaml-cli.mk
