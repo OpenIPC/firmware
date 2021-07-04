@@ -19,6 +19,18 @@ LIBHV_CONF_OPTS += \
 	--disable-windump
 
 
+LIBHV_MAKE_OPTS = \
+	CC="$(TARGET_CC)" \
+	CXX="$(TARGET_CXX)"
+#	ARCH=$(KERNEL_ARCH) \
+#	CROSS_COMPILE="$(TARGET_CROSS)" \
+#	CFLAGS="$(TARGET_CFLAGS)" \
+#	LDFLAGS="$(TARGET_LDFLAGS)" \
+#	LD="$(TARGET_CC)" \
+#	STRIP=$(TARGET_STRIP) \
+#	PREFIX="$(TARGET_DIR)" \
+
+
 define LIBHV_CONFIGURE_CMDS
 	(cd $(@D); rm -rf config.cache; \
 		$(TARGET_CONFIGURE_ARGS) \
@@ -28,7 +40,7 @@ endef
 
 
 define LIBHV_BUILD_CMDS
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)
+	$(TARGET_MAKE_ENV) $(MAKE) $(LIBHV_MAKE_OPTS) -C $(@D)
 endef
 
 define LIBHV_INSTALL_TARGET_CMDS
