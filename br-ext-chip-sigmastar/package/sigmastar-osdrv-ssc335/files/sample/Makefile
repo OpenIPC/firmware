@@ -1,30 +1,25 @@
 
-TOP=$(shell pwd)
+CC := ../../../../../output/host/bin/arm-openipc-linux-uclibcgnueabihf-gcc
 
-GNU_TARGET := arm-buildroot-linux-uclibcgnueabihf
-#GNU_TARGET := arm-openipc-linux-uclibcgnueabihf
-CC := $(GNU_TARGET)-gcc
-
-#LIBS_PATH = sstar-libs/ipc/i6b0/common/uclibc/4.9.4/
-#INCLUDE_PATH = sstar-libs/include
-
-LIBS_PATH = $(TOP)/sstar-libs
-INCLUDE_PATH = $(TOP)/sstar-libs/include
+LIBS_PATH = ../lib
+INCLUDE_PATH = ../include
 
 CFLAGS := -I$(INCLUDE_PATH)
-LINK_FLAGS := -L$(LIBS_PATH)/mi_libs/dynamic -L$(LIBS_PATH)/ex_libs/static
-LIBS := -lmi_sys -lmi_sensor -lmi_vif -lmi_vpe -lmi_isp -lcus3a -lispalgo -lmi_venc -Wl,-Bstatic -Wl,--whole-archive -lcam_os_wrapper -Wl,--no-whole-archive -Wl,-Bdynamic
+LINK_FLAGS := -L$(LIBS_PATH)
+LIBS := -lmi_sys  -lmi_sensor  -lmi_vif  -lmi_vpe  -lmi_isp  -lcus3a  -lispalgo  -lmi_venc  -Wl,-Bstatic -Wl,--whole-archive -lcam_os_wrapper -Wl,--no-whole-archive -Wl,-Bdynamic
+#LIBS := -lmi_sys  -lmi_sensor  -lmi_vif  -lmi_vpe  -lmi_isp  -lcus3a  -lispalgo  -lmi_venc  -lcam_os_wrapper
 
-all: test_venc_ssc335
+all: test_venc
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-test_venc_ssc335: test_venc_ssc335.o
-	$(CC) test_venc_ssc335.o -o $@ $(LINK_FLAGS) $(LIBS)
+test_venc: test_venc.o
+	$(CC) test_venc.o -o $@ $(LINK_FLAGS) $(LIBS)
+	make clean
 
 clean:
 	-rm -f *.o
-	-rm -f test_venc_ssc335
+	#-rm -f test_venc
 
 .PHONY: all clean
