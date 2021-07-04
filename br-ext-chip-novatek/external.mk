@@ -4,6 +4,7 @@ include $(BR2_EXTERNAL_NOVATEK_PATH)/package/aura-httpd/aura-httpd.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/fwprintenv-ng/fwprintenv-ng.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/libevent-mini/libevent-mini.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/libhv/libhv.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/libsrt/libsrt.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/majestic/majestic.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/node-exporter/node-exporter.mk
