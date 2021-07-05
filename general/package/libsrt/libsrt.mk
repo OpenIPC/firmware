@@ -32,8 +32,8 @@ endef
 
 define LIBSRT_INSTALL_TARGET_CMDS
 	$(INSTALL) -D $(@D)/libsrt.so.$(LIBSRT_VERSION) $(TARGET_DIR)/usr/lib/libsrt.so.$(LIBSRT_VERSION)
-	ln -sf $(TARGET_DIR)/usr/lib/libsrt.so.$(LIBSRT_VERSION) $(TARGET_DIR)/usr/lib/libsrt.so
-	ln -sf $(TARGET_DIR)/usr/lib/libsrt.so.$(LIBSRT_VERSION) $(TARGET_DIR)/usr/lib/libsrt.so.1.4
+	ln -sf libsrt.so.$(LIBSRT_VERSION) $(TARGET_DIR)/usr/lib/libsrt.so
+	ln -sf libsrt.so.$(LIBSRT_VERSION) $(TARGET_DIR)/usr/lib/libsrt.so.1.4
 endef
 
 
