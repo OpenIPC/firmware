@@ -99,6 +99,11 @@ ssc335_goodcam() {
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_goodcam all && rename
 }
 
+ssc335_musl() {
+  soc="ssc335"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_musl all && rename
+}
+
 ssc335_rotek() {
   soc="ssc335"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_rotek all && rename
@@ -124,12 +129,13 @@ xm530() {
 # hi3516ev300                   # OK
 # hi3516ev300_dev               # testing..
 # hi3516ev300_glibc             # testing..
-# hi3516ev300_tehshield         # Partner. Tehshield.
+# hi3516ev300_tehshield         # Tehshield
 #
-# ssc335                        # OK
-ssc335_blackbird              # Partner. Sputnik.
-# ssc335_goodcam                # Partner. GoodCam.
-# ssc335_rotek                  # Partner. Rotek.
+ssc335                          # OpenIPC
+# ssc335_blackbird              # BlackBird/Sputnik
+# ssc335_goodcam                # GoodCam
+# ssc335_musl                   # Musl
+# ssc335_rotek                  # Rotek
 #
 # xm530                         # OK
 #
