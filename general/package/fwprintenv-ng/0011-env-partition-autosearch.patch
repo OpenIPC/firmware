@@ -1,5 +1,5 @@
 diff --git a/tools/env/fw_env.c b/tools/env/fw_env.c
-index 2a61a5d6f0..6398e29c38 100644
+index 2a61a5d6f0..f2ed8e436d 100644
 --- a/tools/env/fw_env.c
 +++ b/tools/env/fw_env.c
 @@ -484,7 +484,8 @@ int fw_printenv(int argc, char *argv[], int value_only, struct env_opts *opts)
@@ -12,7 +12,7 @@ index 2a61a5d6f0..6398e29c38 100644
  			rc = -1;
  			continue;
  		}
-@@ -1725,6 +1726,88 @@ static int check_device_config(int dev)
+@@ -1725,6 +1726,91 @@ static int check_device_config(int dev)
  	return rc;
  }
  
@@ -21,7 +21,7 @@ index 2a61a5d6f0..6398e29c38 100644
 +#define ENV_LEN 0x10000
 +
 +// Detect U-Boot environment area offset
-+int uboot_detect_env(void *buf, size_t len) {
++static int uboot_detect_env(void *buf, size_t len) {
 +	// Jump over memory by step
 +	int scan_step = ENV_LEN;
 +	int res = -1;
@@ -38,7 +38,7 @@ index 2a61a5d6f0..6398e29c38 100644
 +	return res;
 +}
 +
-+char *open_mtdblock(int i, int *fd, uint32_t size, int flags) {
++static char *open_mtdblock(int i, int *fd, uint32_t size, int flags) {
 +	char filename[PATH_MAX];
 +
 +	snprintf(filename, sizeof filename, "/dev/mtdblock%d", i);
@@ -58,11 +58,12 @@ index 2a61a5d6f0..6398e29c38 100644
 +}
 +
 +static char dev[80];
-+static void detect_env() {
++static int detect_env() {
 +	FILE *fp;
 +	char name[80];
 +	int i, es, ee;
 +	struct mtd_info_user mtd;
++	int res = 0;
 +
 +	if ((fp = fopen("/proc/mtd", "r"))) {
 +		bool running = true;
@@ -88,6 +89,7 @@ index 2a61a5d6f0..6398e29c38 100644
 +						ENVSIZE(0) = ENV_LEN;
 +						DEVESIZE(0) = mtd.erasesize;
 +						ENVSECTORS(0) = 1;
++						res = 1;
 +						break;
 +					}
 +				}
@@ -96,19 +98,24 @@ index 2a61a5d6f0..6398e29c38 100644
 +		}
 +		fclose(fp);
 +	}
++	return res;
 +}
 +
  static int parse_config(struct env_opts *opts)
  {
  	int rc;
-@@ -1735,9 +1818,7 @@ static int parse_config(struct env_opts *opts)
+@@ -1735,9 +1821,11 @@ static int parse_config(struct env_opts *opts)
  #if defined(CONFIG_FILE)
  	/* Fills in DEVNAME(), ENVSIZE(), DEVESIZE(). Or don't. */
  	if (get_config(opts->config_file)) {
 -		fprintf(stderr, "Cannot parse config file '%s': %m\n",
 -			opts->config_file);
 -		return -1;
-+		detect_env();
++		if (!detect_env()) {
++			fprintf(stderr, "Cannot parse config file '%s': %m\n",
++				opts->config_file);
++			return -1;
++		}
  	}
  #else
  	DEVNAME(0) = DEVICE1_NAME;
