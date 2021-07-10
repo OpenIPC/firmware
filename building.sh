@@ -131,7 +131,7 @@ xm530() {
 # hi3516ev300_glibc             # testing..
 # hi3516ev300_tehshield         # Tehshield
 #
-ssc335                          # OpenIPC
+ssc335                        # OpenIPC
 # ssc335_blackbird              # BlackBird/Sputnik
 # ssc335_goodcam                # GoodCam
 # ssc335_musl                   # Musl
