@@ -3,13 +3,20 @@
 DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
 
-MAJESTIC_ARGS=""
+DAEMON_ARGS=""
 
 # shellcheck source=/dev/null
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
 
-# The majestic does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
+# The daemon does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
 start() {
+	logger -s -p daemon.info -t sigmastar "Check MAC for Sigmastar devices"
+	if [ "$(fw_printenv -n ethaddr)" = "D0:22:12:88:88:88" ]; then
+		logger -s -p daemon.info -t sigmastar "The eth0 interface has a lousy MAC, let's try to change it.."
+	else
+		logger -s -p daemon.info -t sigmastar "The eth0 interface has a correct MAC - $(fw_printenv -n ethaddr)"
+	fi
+	#
 	logger -s -p daemon.info -t sigmastar "Loading of kernel modules and initialization of the video system has started"
 	export TZ=$(cat /etc/TZ)
 	load_sigmastar -i
@@ -17,7 +24,7 @@ start() {
 	printf 'Starting %s: ' "$DAEMON"
 	# shellcheck disable=SC2086 # we need the word splitting
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" \
-		-- $MAJESTIC_ARGS
+		-- $DAEMON_ARGS
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		echo "OK"
