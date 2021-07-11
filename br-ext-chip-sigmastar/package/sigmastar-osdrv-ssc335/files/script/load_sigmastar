@@ -9,6 +9,11 @@
 
 PATH_MODULE=/lib/modules/4.9.84/sigmastar
 
+# Sensor
+sensor=$(fw_printenv -n sensor)
+
+
+
 insert_ko()
 {
     insmod ${PATH_MODULE}/mhal.ko
@@ -23,14 +28,23 @@ insert_ko()
     insmod ${PATH_MODULE}/mi_sensor.ko
     insmod ${PATH_MODULE}/mi_vif.ko thread_priority=98
     #
-    # default
-    insmod ${PATH_MODULE}/mi_venc.ko max_width=1920 max_height=1080 max_jpe_task=1
-    #
-    # imx307
-    # insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 thread_priority=99
-    #
-    # sc3335 untested
-    # insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 mi_timeout_reset=1
+    case $sensor in
+        gc2053)
+            # Untested
+            insmod ${PATH_MODULE}/mi_venc.ko max_width=1920 max_height=1080 max_jpe_task=1;
+            ;;
+        imx307)
+            # Untested
+            insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 thread_priority=99;
+            ;;
+        sc3335)
+            # Untested
+            insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 mi_timeout_reset=1;
+            ;;
+        *)
+            echo -e "\n\e[1;31mAn UNSUPPORTED sensor type is specified - ${sensor}\e[0m\n" | logger -s -t OpenIPC;
+            ;;
+    esac
     #
     insmod ${PATH_MODULE}/mi_shadow.ko
     #
@@ -43,14 +57,23 @@ insert_ko()
     # Change configs folder
     echo isproot /etc/sensors/iqfile > /dev/ispmid
     #
-    # imx307
-    # insmod ${PATH_MODULE}/sensor_imx307_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2
-    #
-    # gc2053
-    # insmod ${PATH_MODULE}/sensor_gc2053_mipi.ko chmap=1
-    #
-    # sc3335
-    # insmod ${PATH_MODULE}/sensor_sc3335_mipi.ko chmap=1
+    case $sensor in
+        gc2053)
+            # Untested
+            insmod ${PATH_MODULE}/sensor_gc2053_mipi.ko chmap=1;
+            ;;
+        imx307)
+            # Untested
+            insmod ${PATH_MODULE}/sensor_imx307_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2;
+            ;;
+        sc3335)
+            # Untested
+            insmod ${PATH_MODULE}/sensor_sc3335_mipi.ko chmap=1;
+            ;;
+        *)
+            echo -e "\n\e[1;31mAn UNSUPPORTED sensor type is specified - ${sensor}\e[0m\n" | logger -s -t OpenIPC;
+            ;;
+    esac
     #
     mdev -s
 }
@@ -58,8 +81,9 @@ insert_ko()
 
 remove_ko()
 {
-    rmmod sc3335_MIPI
-    rmmod imx307_MIPI
+    rmmod drv_ms_cus_gc2053_MIPI
+    rmmod drv_ms_cus_imx307_MIPI
+    rmmod drv_ms_cus_sc3335_MIPI
     rmmod mi_shadow
     rmmod mi_venc
     rmmod mi_vif
@@ -76,18 +100,25 @@ remove_ko()
 }
 
 
-if [ "$1" = "-i" ]
-then
+if [ -z ${sensor} ]; then
+    echo -e "\n\e[1;31mThe sensor parameter is MISSING\e[0m\n" | logger -s -t OpenIPC
+    exit 1
+elif [ ${sensor} = "none" ]; then
+    echo -e "\n\e[1;33mThe sensor is assigned to NONE\e[0m\n" | logger -s -t OpenIPC
+    exit 0
+else
+    echo -e "\n\e[1;32mThe sensor is assigned - ${sensor}\e[0m\n" | logger -s -t OpenIPC
+fi
+
+if [ "$1" = "-i" ]; then
     insert_ko
 fi
 
-if [ "$1" = "-r" ]
-then
+if [ "$1" = "-r" ]; then
     remove_ko
 fi
 
-if [ $# -eq 0 ] || [ "$1" = "-a" ]
-then
+if [ $# -eq 0 ] || [ "$1" = "-a" ]; then
     remove_ko
     insert_ko
 fi
