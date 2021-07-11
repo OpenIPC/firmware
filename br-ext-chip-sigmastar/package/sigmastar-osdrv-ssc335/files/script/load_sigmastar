@@ -12,6 +12,8 @@ PATH_MODULE=/lib/modules/4.9.84/sigmastar
 # Sensor
 sensor=$(fw_printenv -n sensor)
 
+# Watchdog
+watchdog -t 10 /dev/watchdog
 
 
 insert_ko()
@@ -30,15 +32,15 @@ insert_ko()
     #
     case $sensor in
         gc2053)
-            # Untested
+            # Untested | The information is obtained from the Gospell firmware
             insmod ${PATH_MODULE}/mi_venc.ko max_width=1920 max_height=1080 max_jpe_task=1;
             ;;
         imx307)
-            # Untested
+            # Untested | The information is obtained from the Anjoy and Brovotech (no any params) firmware
             insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 thread_priority=99;
             ;;
         sc3335)
-            # Untested
+            # Untested | The information is obtained from the Uniview firmware (no any params on other version)
             insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 mi_timeout_reset=1;
             ;;
         *)
@@ -59,15 +61,15 @@ insert_ko()
     #
     case $sensor in
         gc2053)
-            # Untested
-            insmod ${PATH_MODULE}/sensor_gc2053_mipi.ko chmap=1;
+            # Untested | The information is obtained from the Gospell firmware
+            insmod ${PATH_MODULE}/sensor_gc2053_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2;
             ;;
         imx307)
-            # Untested
-            insmod ${PATH_MODULE}/sensor_imx307_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2;
+            # Untested | The information is obtained from the Anjoy and Brovotech (mclk=37.125M) firmware
+            insmod ${PATH_MODULE}/sensor_imx307_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2 mclk=37.125M;
             ;;
         sc3335)
-            # Untested
+            # Untested | The information is obtained from the Uniview firmware
             insmod ${PATH_MODULE}/sensor_sc3335_mipi.ko chmap=1;
             ;;
         *)
