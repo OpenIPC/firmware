@@ -110,6 +110,8 @@ elif [ ${sensor} = "none" ]; then
     exit 0
 else
     echo -e "\n\e[1;32mThe sensor is assigned - ${sensor}\e[0m\n" | logger -s -t OpenIPC
+    # Temporary crutch, sorry
+    [ ! -f /data/ut/chagall.bin ] && (mkdir -p /data/ut; ln -sf /etc/sensors/venc_fw/chagall.bin /data/ut/chagall.bin)
 fi
 
 if [ "$1" = "-i" ]; then
