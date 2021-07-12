@@ -463,7 +463,7 @@ int32_t gci_vpe_deinit(void) {
 }
 
 /// Create an MJPEG encoding channel.
-static int32_t gci_venc_init_mjpeg(void) {
+static int32_t gci_venc_init_mjpeg(uint32_t dst_frame_rate) {
     MI_VPE_ChannelAttr_t vpe_attrs;
     MI_VENC_ChnAttr_t attrs;
     MI_S32 ret;
@@ -481,7 +481,7 @@ static int32_t gci_venc_init_mjpeg(void) {
     attrs.stVeAttr.stAttrJpeg.u32PicHeight = vpe_attrs.u16MaxH;
     attrs.stVeAttr.stAttrJpeg.bByFrame = TRUE;
     attrs.stRcAttr.eRcMode = E_MI_VENC_RC_MODE_MJPEGCBR;
-    attrs.stRcAttr.stAttrMjpegCbr.u32SrcFrmRateNum = 30;
+    attrs.stRcAttr.stAttrMjpegCbr.u32SrcFrmRateNum = dst_frame_rate;
     attrs.stRcAttr.stAttrMjpegCbr.u32SrcFrmRateDen = 1;
     attrs.stRcAttr.stAttrMjpegCbr.u32BitRate = 4000000;
 
@@ -554,11 +554,10 @@ static int32_t gci_venc_unbind_channel() {
 }
 
 /// Initialize an encoder channel and bind it to VPE.
-int32_t gci_venc_init(void) {
-    MI_U32 frame_rate;
+int32_t gci_venc_init(uint32_t dst_frame_rate) {
     MI_S32 ret;
 
-    if ((ret = gci_venc_init_mjpeg()) != MI_SUCCESS) {
+    if ((ret = gci_venc_init_mjpeg(dst_frame_rate)) != MI_SUCCESS) {
         return ret;
     }
 
@@ -566,7 +565,7 @@ int32_t gci_venc_init(void) {
         goto destroy_channel;
     }
 
-    if ((ret = gci_venc_bind_channel(2)) != MI_SUCCESS) {
+    if ((ret = gci_venc_bind_channel(dst_frame_rate)) != MI_SUCCESS) {
         goto stop_channel;
     }
 
@@ -660,7 +659,6 @@ static int32_t read_venc_frame(void) {
         goto end;
     }
 
-
     if (stream.u32PackCount) {
         printf("  frame #%u\n", stream.u32Seq);
         printf("  frame pts: %llu\n", stream.pstPack[0].u64PTS);
@@ -706,7 +704,7 @@ int main(void) {
     printf("  ok\n");
 
     printf("initializing video encoder...\n");
-    if ((ret = gci_venc_init()) != MI_SUCCESS) {
+    if ((ret = gci_venc_init(2)) != MI_SUCCESS) {
         goto deinit_vpe;
     }
     printf("  ok\n");
