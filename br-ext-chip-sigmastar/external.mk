@@ -7,6 +7,7 @@ include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libevent-mini/libevent-mini.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libhv/libhv.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libsrt/libsrt.mk
+include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/majestic-ssc335/majestic-ssc335.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/sigmastar-osdrv-ssc335.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/vtund-lite/vtund-lite.mk
