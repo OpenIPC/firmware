@@ -1,0 +1,15 @@
+
+config BR2_LINUX_KERNEL_EXT_GOKE_PATCHER
+	bool "Goke kernel patches"
+	select BR2_PACKAGE_GOKE_PATCHER
+	help
+	  Patch Kernel for Goke boards
+
+if BR2_LINUX_KERNEL_EXT_GOKE_PATCHER
+
+config BR2_LINUX_KERNEL_EXT_GOKE_PATCHER_LIST
+	string "Patch list"
+	help
+	  Space-separated list of patches to be applied
+
+endif  # BR2_LINUX_KERNEL_EXT_GOKE_PATCHER
