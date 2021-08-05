@@ -118,6 +118,7 @@ xm530() {
 
 # Build firmware
 #
+# fh8852                        # testing..
 # fh8856                        # testing..
 #
 # hi3516cv100                   # testing..
