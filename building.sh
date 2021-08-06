@@ -9,6 +9,7 @@ clone() {
 }
 
 fresh() {
+  date >/tmp/openipc_buildtime.txt
   make distclean #clean
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
 }
@@ -20,6 +21,8 @@ rename() {
   mv -v ./output/images/uImage ./output/images/uImage.${soc}
   mv -v ./output/images/rootfs.squashfs ./output/images/rootfs.squashfs.${soc}
   mv -v ./output/images/rootfs.tar ./output/images/rootfs.${soc}.tar
+  date >>/tmp/openipc_buildtime.txt
+  echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
 }
 
 upload() {
@@ -109,6 +112,11 @@ ssc335_rotek() {
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_rotek all && rename
 }
 
+ssc337() {
+  soc="ssc337"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc337_openipc all && rename
+}
+
 xm530() {
   soc="xm530"
   fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_xm530_openipc all && rename
@@ -137,6 +145,8 @@ ssc335                        # OpenIPC
 # ssc335_goodcam                # GoodCam
 # ssc335_musl                   # Musl
 # ssc335_rotek                  # Rotek
+#
+# ssc337                        # OpenIPC
 #
 # xm530                         # OK
 #
