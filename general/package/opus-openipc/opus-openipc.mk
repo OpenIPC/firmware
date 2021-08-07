@@ -5,6 +5,7 @@
 ################################################################################
 
 OPUS_OPENIPC_VERSION = 1.3.1
+OPUS_OPENIPC_SOURCE = opus-$(OPUS_OPENIPC_VERSION).tar.gz
 OPUS_OPENIPC_SITE = https://downloads.xiph.org/releases/opus
 OPUS_OPENIPC_LICENSE = BSD-3-Clause
 OPUS_OPENIPC_LICENSE_FILES = COPYING
