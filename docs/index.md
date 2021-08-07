@@ -55,31 +55,16 @@ If you like our work, please consider supporting us on [Opencollective](https://
 
 ### Current development status
 
-| Chip Family | U-Boot | Kernel | Rootfs |
-|-------------|--------|--------|--------|
-| fh8632      |  -     |  -     |  -     |
-| fh8856      |  -     |  -     |  -     |
-| gk7102s     |  -     |  -     |  -     |
-| gk7205v200  |  -     |  -     |  -     |
-| hi3516ev200 |  -     |  yes   |  yes   |
-| nt98566     |  -     |  -     |  -     |
-| ssc325      |  -     |  -     |  -     |
-| ssc335      |  -     |  yes   |  yes   |
-| ssc337      |  -     |  -     |  -     |
-| t31         |  -     |  -     |  -     |
-| xm530       |  -     |  yes   |  yes   |
-
-
-| Chip Family | Video | Audio | GPIO  | USB   | WiFi  | MMC   |
-|-------------|-------|-------|-------|-------|-------|-------|
+| Chip Family | U-Boot | Kernel | Rootfs | Video  | Audio  | GPIO   | USB    | WiFi   | MMC    |
+|-------------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
 | fh8632      |
 | fh8856      |
 | gk7102s     |
 | gk7205v200  |
-| hi3516ev200 |  yes  |  yes  |  yes  |  yes  |  yes  |  yes  |
+| hi3516ev200 |  -     |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
 | nt98566     |
 | ssc325      |
-| ssc335      |  yes  |   ?   |  yes  |  yes  |  yes  |  yes  |
+| ssc335      |  -     |  yes   |  yes   |  yes   |   ?    |  yes   |  yes   |  yes   |  yes   |
 | ssc337      |
 | t31         |
-| xm530       |
+| xm530       |  -     |  yes   |  yes   |
