@@ -1,11 +1,11 @@
-name: OpenIPC for FH8852
+name: OpenIPC for T31
 
 on:
   workflow_dispatch:
 
 jobs:
   build_core:
-    name: OpenIPC v2.1 for FH8852
+    name: OpenIPC v2.1 for T31
     runs-on: ubuntu-18.04
 
     steps:
@@ -52,22 +52,22 @@ jobs:
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build FH8852 firmware
-        id: build-fh8852-firmware
+      - name: Build T31 firmware
+        id: build-t31-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.fh8852-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.t31-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=fullhan BOARD=unknown_unknown_fh8852_openipc all
+          make PLATFORM=ingenic BOARD=unknown_unknown_t31_openipc all
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152" >> $GITHUB_ENV && exit 1
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880" >> $GITHUB_ENV && exit 1
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.fh8852
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.fh8852
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.fh8852 uImage.fh8852
+          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.t31
+          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.t31
+          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.t31 uImage.t31
 
-      - name: Build FH8852 SDK
-        id: build-fh8852-sdk
+      - name: Build T31 SDK
+        id: build-t31-sdk
         continue-on-error: true
         run: |
           ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
@@ -79,7 +79,7 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-fh8852-firmware.outcome != 'success' || steps.build-fh8852-sdk.outcome != 'success'
+        if: steps.build-t31-firmware.outcome != 'success' || steps.build-t31-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
           TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error...}"
@@ -104,7 +104,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: "openipc.fh8852-br.tgz"
+          asset_name: "openipc.t31-br.tgz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -114,7 +114,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-fh8852-linux-musleabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-t31-linux-musleabi_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
