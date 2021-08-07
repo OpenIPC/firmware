@@ -82,6 +82,11 @@ hi3516ev300_glibc() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_glibc all && rename
 }
 
+hi3516ev300_opus() {
+  soc="hi3516ev300"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_opus all && rename
+}
+
 hi3516ev300_tehshield() {
   soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_tehshield all && rename
@@ -138,9 +143,10 @@ xm530() {
 # hi3516ev300                   # OK
 # hi3516ev300_dev               # testing..
 # hi3516ev300_glibc             # testing..
+hi3516ev300_opus              # OPUS testing
 # hi3516ev300_tehshield         # Tehshield
 #
-ssc335                        # OpenIPC
+# ssc335                        # OpenIPC
 # ssc335_blackbird              # BlackBird/Sputnik
 # ssc335_goodcam                # GoodCam
 # ssc335_musl                   # Musl
