@@ -5,7 +5,9 @@
 ################################################################################
 
 LAME_OPENIPC_VERSION = 3.100
-LAME_OPENIPC_SITE = http://downloads.sourceforge.net/project/lame/lame/$(LAME_OPENIPC_VERSION)
+LAME_OPENIPC_SOURCE = lame-$(LAME_OPENIPC_VERSION).tar.gz
+#LAME_OPENIPC_SITE = http://downloads.sourceforge.net/project/lame/lame/$(LAME_OPENIPC_VERSION)
+LAME_OPENIPC_SITE = http://prdownloads.sourceforge.net/lame
 LAME_OPENIPC_DEPENDENCIES = host-pkgconf
 LAME_OPENIPC_INSTALL_STAGING = YES
 LAME_OPENIPC_CONF_ENV = GTK_CONFIG=/bin/false
@@ -31,3 +33,5 @@ endif
 LAME_OPENIPC_POST_CONFIGURE_HOOKS += LAME_OPENIPC_BIGENDIAN_ARCH
 
 $(eval $(autotools-package))
+
+
