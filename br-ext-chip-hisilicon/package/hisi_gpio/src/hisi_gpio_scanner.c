@@ -301,6 +301,13 @@ void get_chip_id(unsigned long *Chip_Id, unsigned char *cpu, unsigned char *hard
       *Chip_Id = 0;
       return;
     }
+    SCBASE = 0x12050000; //Hi3536
+    if(GetValueRegister(SCBASE)==-1) //затем читаем другой
+    {
+      sprintf(cpu,"unknown");
+      *Chip_Id = 0;
+      return;
+    }
   }
   //---------------------------------------------
   if((GetValueRegister(SCBASE+SCSYSID0) & 0xFF000000) >> 24 == 0x35) //если старший байт = 0x35 значит все ID в одном регистре
