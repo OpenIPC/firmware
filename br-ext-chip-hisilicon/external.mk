@@ -6,12 +6,13 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/fwprintenv-openipc/fwprintenv-ope
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisi_gpio/hisi_gpio.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/hisilicon-osdrv-hi3516ev300.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/ipctool/ipctool.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/lame-openipc/lame-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libevent-openipc/libevent-openipc.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/libhv/libhv.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/libhv-openipc/libhv-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libogg-openipc/libogg-openipc.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/libsrt/libsrt.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/libsrt-openipc/libsrt-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516ev300/majestic-hi3516ev300.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/mbdtls-openipc/mbedtls-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/opus-openipc/opus-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/vtund-openipc/vtund-openipc.mk
