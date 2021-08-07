@@ -1,5 +1,5 @@
-config BR2_PACKAGE_OPUS
-	bool "opus"
+config BR2_PACKAGE_OPUS_OPENIPC
+	bool "opus-openipc"
 	help
 	  The Opus codec is designed for interactive speech and audio
 	  transmission over the Internet. It is designed by the IETF
@@ -14,9 +14,9 @@ config BR2_PACKAGE_OPUS
 
 	  http://opus-codec.org
 
-if BR2_PACKAGE_OPUS
+if BR2_PACKAGE_OPUS_OPENIPC
 
-config BR2_PACKAGE_OPUS_FIXED_POINT
+config BR2_PACKAGE_OPUS_OPENIPC_FIXED_POINT
 	bool "use fixed-point" if !BR2_SOFT_FLOAT
 	default y if BR2_SOFT_FLOAT
 	help
