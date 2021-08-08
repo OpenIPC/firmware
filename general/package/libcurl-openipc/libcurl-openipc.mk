@@ -68,7 +68,8 @@ LIBCURL_OPENIPC_CONF_OPTS += --without-nss
 endif
 
 ifeq ($(BR2_PACKAGE_LIBCURL_OPENIPC_MBEDTLS),y)
-LIBCURL_OPENIPC_CONF_OPTS += --with-mbedtls=$(STAGING_DIR)/usr
+LIBCURL_OPENIPC_CONF_OPTS += --with-mbedtls=$(STAGING_DIR)/usr \
+	--with-ca-path=/etc/ssl/certs
 LIBCURL_OPENIPC_DEPENDENCIES += mbedtls-openipc
 else
 LIBCURL_OPENIPC_CONF_OPTS += --without-mbedtls
