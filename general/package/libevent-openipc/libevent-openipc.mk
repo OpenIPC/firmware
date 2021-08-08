@@ -4,13 +4,8 @@
 #
 ################################################################################
 
-# LIBEVENT_OPENIPC_VERSION = 2.1.12
-# LIBEVENT_OPENIPC_SITE = https://github.com/libevent/libevent/releases/download/release-$(LIBEVENT_OPENIPC_VERSION)-stable
-# LIBEVENT_OPENIPC_SOURCE = libevent-$(LIBEVENT_OPENIPC_VERSION)-stable.tar.gz
-#
 LIBEVENT_OPENIPC_VERSION = 6f139b871100aa2322598dfd37c4145e033d2602
 LIBEVENT_OPENIPC_SITE = $(call github,libevent,libevent,$(LIBEVENT_OPENIPC_VERSION))
-#
 LIBEVENT_OPENIPC_INSTALL_STAGING = YES
 LIBEVENT_OPENIPC_LICENSE = BSD-3-Clause, OpenBSD
 LIBEVENT_OPENIPC_LICENSE_FILES = LICENSE
