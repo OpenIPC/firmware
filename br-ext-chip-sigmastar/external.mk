@@ -5,6 +5,7 @@ include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/fwprintenv-openipc/fwprintenv-ope
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/gdbserver-lite/gdbserver-lite.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/lame-openipc/lame-openipc.mk
+include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libcurl-openipc/libcurl-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libevent-openipc/libevent-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libhv-openipc/libhv-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libogg-openipc/libogg-openipc.mk
@@ -14,5 +15,6 @@ include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/mbedtls-openipc/mbedtls-openipc.m
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/opus-openipc/opus-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/sigmastar-osdrv-ssc335.mk
+include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/uacme-openipc/uacme-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/vtund-openipc/vtund-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/yaml-cli/yaml-cli.mk
