@@ -24,8 +24,7 @@ LIBEVENT_OPENIPC_CONF_OPTS = \
 	--disable-samples \
 	--disable-thread-support \
 	--disable-debug-mode \
-	--disable-largefile \
-	--disable-openssl
+	--disable-largefile
 HOST_LIBEVENT_OPENIPC_CONF_OPTS = \
 	--disable-libevent-regress \
 	--disable-samples \
@@ -46,6 +45,13 @@ LIBEVENT_OPENIPC_DEPENDENCIES += host-pkgconf openssl
 LIBEVENT_OPENIPC_CONF_OPTS += --enable-openssl
 else
 LIBEVENT_OPENIPC_CONF_OPTS += --disable-openssl
+endif
+
+ifeq ($(BR2_PACKAGE_MBEDTLS_OPENIPC),y)
+LIBEVENT_OPENIPC_DEPENDENCIES += host-pkgconf mbedtls-openipc
+LIBEVENT_OPENIPC_CONF_OPTS += --enable-embedtls
+else
+LIBEVENT_OPENIPC_CONF_OPTS += --disable-mbedtls
 endif
 
 $(eval $(autotools-package))
