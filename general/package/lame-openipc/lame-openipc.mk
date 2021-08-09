@@ -10,7 +10,7 @@ LAME_OPENIPC_SITE = http://prdownloads.sourceforge.net/lame
 LAME_OPENIPC_DEPENDENCIES = host-pkgconf
 LAME_OPENIPC_INSTALL_STAGING = YES
 LAME_OPENIPC_CONF_ENV = GTK_CONFIG=/bin/false
-LAME_OPENIPC_CONF_OPTS = --enable-dynamic-frontends
+LAME_OPENIPC_CONF_OPTS = --disable-frontend --disable-decoder --disable-gtktest
 LAME_OPENIPC_LICENSE = LGPL-2.0+
 LAME_OPENIPC_LICENSE_FILES = COPYING
 
