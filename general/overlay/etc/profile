@@ -5,7 +5,7 @@ export TZ=$(cat /etc/TZ)
 
 if [ "$PS1" ]; then
 	[ -f /etc/openipc_banner ] && echo -e "\n\e[1;36m$(cat /etc/openipc_banner)\e[0m\n"
-	[ -f /etc/openipc_donaters ] && echo -e "\n\e[1;36m$(cat /etc/openipc_donaters)\e[0m\n\n"
+	[ -f /etc/openipc_donators ] && echo -e "\n\e[1;36m$(cat /etc/openipc_donators)\e[0m\n\n"
 	#
 	if [ "`id -u`" -eq 0 ]; then
 		export PS1='\u@\h:\w\# '
