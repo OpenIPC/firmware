@@ -1,6 +1,7 @@
 include $(BR2_EXTERNAL_FULLHAN_PATH)/linux/linux-ext-fullhan_patcher.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/fullhan_patcher/fullhan_patcher.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_FULLHAN_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/lame-openipc/lame-openipc.mk

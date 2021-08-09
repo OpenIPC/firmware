@@ -1,6 +1,7 @@
 include $(BR2_EXTERNAL_GOKE_PATH)/linux/linux-ext-goke_patcher.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/goke_patcher/goke_patcher.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/lame-openipc/lame-openipc.mk
