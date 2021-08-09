@@ -14,8 +14,8 @@ include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/majestic-xm530/majestic-xm530.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/opus-openipc/opus-openipc.mk
-include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/uacme-lite/uacme-openipc.mk
-include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/vtund-lite/vtund-openipc.mk
+include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/uacme-openipc/uacme-openipc.mk
+include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/vtund-openipc/vtund-openipc.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm510/xiongmai-osdrv-xm510.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/xiongmai-osdrv-xm530.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/yaml-cli/yaml-cli.mk
