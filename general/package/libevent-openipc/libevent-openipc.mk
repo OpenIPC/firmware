@@ -34,6 +34,12 @@ define LIBEVENT_OPENIPC_REMOVE_PYSCRIPT
 	rm $(TARGET_DIR)/usr/bin/event_rpcgen.py
 endef
 
+define LIBEVENT_OPENIPC_DELETE_UNUSED
+	rm -f $(TARGET_DIR)/usr/lib/libevent-2.2.so.1.0.0
+	rm -f $(TARGET_DIR)/usr/lib/libevent-2.2.so.1
+	rm -f $(TARGET_DIR)/usr/lib/libevent.so
+endef
+
 # libevent installs a python script to target - get rid of it if we
 # don't have python support enabled
 ifneq ($(BR2_PACKAGE_PYTHON)$(BR2_PACKAGE_PYTHON3),y)
@@ -53,6 +59,8 @@ LIBEVENT_OPENIPC_CONF_OPTS += --enable-embedtls
 else
 LIBEVENT_OPENIPC_CONF_OPTS += --disable-mbedtls
 endif
+
+LIBEVENT_OPENIPC_POST_INSTALL_TARGET_HOOKS += LIBEVENT_OPENIPC_DELETE_UNUSED
 
 $(eval $(autotools-package))
 $(eval $(host-autotools-package))
