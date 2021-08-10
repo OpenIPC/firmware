@@ -1,0 +1,16 @@
+diff --git a/bufferevent_mbedtls.c b/bufferevent_mbedtls.c
+index f42da2ae..61f448a2 100644
+--- a/bufferevent_mbedtls.c
++++ b/bufferevent_mbedtls.c
+@@ -57,8 +57,10 @@ static void
+ mbedtls_context_free(void *ssl, int flags)
+ {
+ 	struct mbedtls_context *ctx = ssl;
+-	if (flags & BEV_OPT_CLOSE_ON_FREE)
++	if (flags & BEV_OPT_CLOSE_ON_FREE) {
+ 		mbedtls_ssl_free(ctx->ssl);
++		free(ctx->ssl);
++	}
+ 	mm_free(ctx);
+ }
+ static int
