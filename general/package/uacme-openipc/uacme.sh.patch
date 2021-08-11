@@ -9,3 +9,11 @@
  ARGS=5
  E_BADARGS=85
  
+@@ -36,6 +36,7 @@ case "$METHOD" in
+     "begin")
+         case "$TYPE" in
+             http-01)
++                mkdir -p ${CHALLENGE_PATH}
+                 echo -n "${AUTH}" > "${CHALLENGE_PATH}/${TOKEN}"
+                 exit $?
+                 ;;
