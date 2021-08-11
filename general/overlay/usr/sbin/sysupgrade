@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# OpenIPC.org | v.20210811
+#
+
+set -e
+
+soc=$(fw_printenv -n soc)
+kernel=$(awk -F ':' '/"kernel"/ {print $1}' /proc/mtd)
+rootfs=$(awk -F ':' '/"rootfs"/ {print $1}' /proc/mtd)
+overlay=$(awk -F ':' '/"rootfs_data"/ {print $1}' /proc/mtd)
+github="https://github.com/OpenIPC/openipc-2.1/releases/download/latest"
+option="--progress-bar --connect-timeout 30 --max-time 60"
+
+
+
+stop_services() {
+  echo -e "\n\e[1;31mForced shutdown of services...\e[0m\n"
+  killall majestic || true
+  killall klogd ntpd rngd syslogd || true
+}
+
+download_firmware() {
+  echo -e "\n\e[1;31mDownloading the latest firmware...\e[0m\n"
+  curl ${option} -L ${github}/openipc.${soc}-br.tgz -o - | gzip -d | tar xvf - -C /tmp
+}
+
+writing_kernel() {
+  echo -e "\n\e[1;31mWriting a new kernel...\e[0m\n"
+  flashcp -v /tmp/uImage.${soc} /dev/${kernel}
+}
+
+writing_rootfs() {
+  echo -e "\n\e[1;31mWriting a new rootfs...\e[0m\n"
+  flashcp -v /tmp/rootfs.squashfs.${soc} /dev/${rootfs}
+}
+
+clearing_overlayfs() {
+  echo -e "\n\e[1;31mСlearing the overlayfs partition...\e[0m\n"
+  flash_eraseall -j /dev/${overlay}
+}
+
+quick_reboot() {
+  echo -e "\n\e[1;31mRebooting without any questions...\e[0m\n"
+  reboot -f
+}
+
+
+
+if ! ping -q -c 3 -w 3 github.com >/dev/null 2>&1; then
+  echo -e "\n\e[1;31mThere is no access to the github.com, please check the Internet connection...\e[0m\n"
+  exit 1
+else
+  stop_services
+  download_firmware && writing_kernel && writing_rootfs
+  if [ "$1" = "-n" ]; then
+    clearing_overlayfs
+  fi
+  quick_reboot
+fi

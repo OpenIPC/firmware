@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Up 2021.08.11
+# OpenIPC.org | v.20210811
 #
 
 clone() {
@@ -135,7 +135,7 @@ hi3516ev300                   # OK
 # hi3516ev300_tehshield         # Tehshield
 #
 # ssc335                        # OpenIPC
-# ssc335_blackbird              # BlackBird/Sputnik
+# ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
 # ssc335_musl                   # Musl
 # ssc335_rotek                  # Rotek
