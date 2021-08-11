@@ -77,6 +77,11 @@ hi3516ev300_glibc() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_glibc all && rename
 }
 
+hi3516ev300_ipv6() {
+  soc="hi3516ev300"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_ipv6 all && rename
+}
+
 hi3516ev300_tehshield() {
   soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_tehshield all && rename
@@ -130,8 +135,9 @@ xm530() {
 #
 # hi3516ev200                   # OK
 #
-hi3516ev300                   # OK
+# hi3516ev300                   # OK
 # hi3516ev300_glibc             # testing..
+hi3516ev300_ipv6              # IPv6
 # hi3516ev300_tehshield         # Tehshield
 #
 # ssc335                        # OpenIPC
