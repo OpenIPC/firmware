@@ -17,7 +17,7 @@ option="--progress-bar --connect-timeout 30 --max-time 60"
 stop_services() {
   echo -e "\n\e[1;31mForced shutdown of services...\e[0m\n"
   killall majestic || true
-  killall klogd ntpd rngd syslogd || true
+  killall crond klogd ntpd rngd syslogd || true
 }
 
 download_firmware() {
