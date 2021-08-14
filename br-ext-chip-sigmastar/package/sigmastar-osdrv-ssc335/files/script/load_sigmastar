@@ -39,6 +39,10 @@ insert_ko()
             # Untested | The information is obtained from the Anjoy and Brovotech (no any params) firmware
             insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 thread_priority=99;
             ;;
+        sc2239)
+            # Untested | The information is obtained from the IMOU firmware
+            insmod ${PATH_MODULE}/mi_venc.ko thread_priority=99;
+            ;;
         sc3335)
             # Untested | The information is obtained from the Uniview firmware (no any params on other version)
             insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 mi_timeout_reset=1;
@@ -68,6 +72,10 @@ insert_ko()
             # Untested | The information is obtained from the Anjoy and Brovotech (mclk=37.125M) firmware
             insmod ${PATH_MODULE}/sensor_imx307_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2 mclk=37.125M;
             ;;
+        sc2239)
+            # Untested | The information is obtained from the IMOU firmware
+            insmod ${PATH_MODULE}/sensor_sc2239_mipi.ko chmap=1;
+            ;;
         sc3335)
             # Untested | The information is obtained from the Uniview firmware
             insmod ${PATH_MODULE}/sensor_sc3335_mipi.ko chmap=1;
@@ -85,6 +93,7 @@ remove_ko()
 {
     rmmod drv_ms_cus_gc2053_MIPI
     rmmod drv_ms_cus_imx307_MIPI
+    rmmod drv_ms_cus_sc2239_MIPI
     rmmod drv_ms_cus_sc3335_MIPI
     rmmod mi_shadow
     rmmod mi_venc
