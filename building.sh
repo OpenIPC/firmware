@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# OpenIPC.org | v.20210811
+# OpenIPC.org | v.20210814
 #
 
 clone() {
@@ -82,6 +82,11 @@ hi3516ev300_tehshield() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_tehshield all && rename
 }
 
+ssc325() {
+  soc="ssc325"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc325_openipc all && rename
+}
+
 ssc335() {
   soc="ssc335"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_openipc all && rename
@@ -132,8 +137,9 @@ xm530() {
 #
 # hi3516ev300                   # OK
 # hi3516ev300_glibc             # testing..
-hi3516ev300_ipv6              # IPv6
 # hi3516ev300_tehshield         # Tehshield
+#
+# ssc325                        # OpenIPC
 #
 # ssc335                        # OpenIPC
 # ssc335_blackbird              # BlackBird
