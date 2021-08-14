@@ -77,11 +77,6 @@ hi3516ev300_glibc() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_glibc all && rename
 }
 
-hi3516ev300_ipv6() {
-  soc="hi3516ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_ipv6 all && rename
-}
-
 hi3516ev300_tehshield() {
   soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_tehshield all && rename
