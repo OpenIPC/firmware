@@ -63,8 +63,8 @@ If you like our work, please consider supporting us on [Opencollective](https://
 | gk7205v200  |
 | hi3516ev200 |  -     |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
 | nt98566     |
-| ssc325      |
+| ssc325      |  -     |  yes   |  yes   |  yes   |   ?    |  yes   |  yes   |  yes   |  yes   |
 | ssc335      |  -     |  yes   |  yes   |  yes   |   ?    |  yes   |  yes   |  yes   |  yes   |
-| ssc337      |
+| ssc337      |  -     |  yes   |  yes   |  yes   |   ?    |  yes   |  yes   |  yes   |  yes   |
 | t31         |
 | xm530       |  -     |  yes   |  yes   |
