@@ -22,7 +22,6 @@ LIBEVENT_OPENIPC_PRE_CONFIGURE_HOOKS += LIBEVENT_OPENIPC_RUN_AUTOGEN
 LIBEVENT_OPENIPC_CONF_OPTS = \
 	--disable-libevent-regress \
 	--disable-samples \
-	--disable-thread-support \
 	--disable-debug-mode \
 	--disable-largefile
 HOST_LIBEVENT_OPENIPC_CONF_OPTS = \
