@@ -82,9 +82,18 @@ hi3516ev300_tehshield() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_tehshield all && rename
 }
 
+#################################################################################
+
 ssc325() {
   soc="ssc325"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc325_openipc all && rename
+}
+
+#################################################################################
+
+ssc333() {
+  soc="ssc333"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc333_openipc all && rename
 }
 
 ssc335() {
@@ -102,6 +111,11 @@ ssc335_goodcam() {
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_goodcam all && rename
 }
 
+ssc335_initramfs() {
+  soc="ssc335"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_initramfs all && rename
+}
+
 ssc335_musl() {
   soc="ssc335"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_musl all && rename
@@ -116,6 +130,20 @@ ssc337() {
   soc="ssc337"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc337_openipc all && rename
 }
+
+#################################################################################
+
+ssc335de() {
+  soc="ssc335de"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335de_openipc all && rename
+}
+
+ssc337de() {
+  soc="ssc337de"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc337de_openipc all && rename
+}
+
+#################################################################################
 
 xm530() {
   soc="xm530"
@@ -141,19 +169,21 @@ xm530() {
 #
 # ssc325                        # OpenIPC
 #
+# ssc333                        # OpenIPC
 # ssc335                        # OpenIPC
 # ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
+ssc335_initramfs              # Initramfs
 # ssc335_musl                   # Musl
 # ssc335_rotek                  # Rotek
-#
 # ssc337                        # OpenIPC
+#
+# ssc335de                      # OpenIPC
+# ssc337de                      # OpenIPC
 #
 # xm530                         # OK
 #
 #
 #
-# More examples
-#
-# make PLATFORM=sigmastar br-linux-{dirclean,rebuild}
+# More examples see here: https://github.com/OpenIPC/openipc-2.1/wiki/source_code
 #
