@@ -89,7 +89,7 @@ insert_ko()
 	insmod hi_osal.ko anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 	insmod hi3516ev200_base.ko
 	insmod hi3516ev200_sys.ko
-	insmod hi3516ev200_tde.ko
+#	insmod hi3516ev200_tde.ko
 	insmod hi3516ev200_rgn.ko
 	insmod hi3516ev200_vgs.ko
 	insmod hi3516ev200_vi.ko
@@ -140,7 +140,7 @@ remove_ko()
 	rmmod hi3516ev200_vi
 	rmmod hi3516ev200_vgs
 	rmmod hi3516ev200_rgn
-	rmmod hi3516ev200_tde
+#	rmmod hi3516ev200_tde
 	rmmod hi_sensor_i2c &> /dev/null
 	rmmod hi_sensor_spi &> /dev/null
 	rmmod hi3516ev200_sys
