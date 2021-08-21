@@ -1,8 +1,28 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20210811
+# OpenIPC.org | v.20210821
 #
 
-echo -e "\n\e[1;31mСlearing the overlayfs partition and rebooting without any questions...\e[0m\n"
-#
-flash_eraseall -j /dev/$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd) && reboot
+set -e
+
+overlay=$(awk -F ':' '/"rootfs_data"/ {print $1}' /proc/mtd)
+
+
+
+clearing_overlayfs() {
+  echo -e "\n\e[1;31mСlearing the overlayfs partition...\e[0m\n"
+  flash_eraseall -j /dev/${overlay}
+}
+
+quick_reboot() {
+  echo -e "\n\e[1;31mRebooting without any questions...\e[0m\n"
+  reboot -f
+}
+
+
+
+if [ "$1" = "-s" ]; then
+  clearing_overlayfs
+else
+  clearing_overlayfs && quick_reboot
+fi

@@ -20,6 +20,7 @@ rename() {
   #
   mv -v ./output/images/uImage ./output/images/uImage.${soc}
   mv -v ./output/images/rootfs.squashfs ./output/images/rootfs.squashfs.${soc}
+  mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${soc}.cpio
   mv -v ./output/images/rootfs.tar ./output/images/rootfs.${soc}.tar
   date >>/tmp/openipc_buildtime.txt
   echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
