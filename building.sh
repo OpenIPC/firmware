@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# OpenIPC.org | v.20210814
+# OpenIPC.org | v.20210821
 #
 
 clone() {
@@ -20,6 +20,16 @@ rename() {
   #
   mv -v ./output/images/uImage ./output/images/uImage.${soc}
   mv -v ./output/images/rootfs.squashfs ./output/images/rootfs.squashfs.${soc}
+  mv -v ./output/images/rootfs.tar ./output/images/rootfs.${soc}.tar
+  date >>/tmp/openipc_buildtime.txt
+  echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
+}
+
+rename_initramfs() {
+  [[ $(stat --printf="%s" ./output/images/uImage) -gt 3097152 ]] && TG_NOTIFY="Warning: kernel size exceeded : $(stat --printf="%s" ./output/images/uImage) vs 2097152" && exit 1
+  #
+  mv -v ./output/images/uImage ./output/images/uImage.initramfs.${soc}
+  mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${soc}.cpio
   mv -v ./output/images/rootfs.tar ./output/images/rootfs.${soc}.tar
   date >>/tmp/openipc_buildtime.txt
   echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
@@ -113,7 +123,7 @@ ssc335_goodcam() {
 
 ssc335_initramfs() {
   soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_initramfs all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_initramfs all && rename_initramfs
 }
 
 ssc335_musl() {
