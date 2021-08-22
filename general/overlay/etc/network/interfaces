@@ -5,4 +5,4 @@ iface lo inet loopback
 
 auto eth0
 iface eth0 inet dhcp
-    hwaddress ether $(fw_printenv -n ethaddr)
+    hwaddress ether $(fw_printenv -n ethaddr || echo 00:24:B8:FF:FF:FF)
