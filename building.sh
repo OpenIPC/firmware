@@ -52,12 +52,12 @@ sdk() {
 
 fh8852() {
   soc="fh8852"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_fh8852_openipc all && rename
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 fh8856() {
   soc="fh8856"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_fh8856_openipc all && rename
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 #################################################################################
@@ -82,92 +82,102 @@ hi3516cv300() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_unknown all && rename
 }
 
+hi3516cv500() {
+  soc="hi3516cv500"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+hi3516dv300() {
+  soc="hi3516dv500"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 hi3516ev200() {
   soc="hi3516ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev200_openipc all && rename
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 hi3516ev300() {
   soc="hi3516ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_openipc all && rename
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 hi3516ev300_glibc() {
   soc="hi3516ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_glibc all && rename
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_glibc all && rename
 }
 
 hi3516ev300_tehshield() {
   soc="hi3516ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_tehshield all && rename
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_tehshield all && rename
 }
 
 #################################################################################
 
 ssc325() {
   soc="ssc325"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc325_openipc all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 #################################################################################
 
 ssc333() {
   soc="ssc333"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc333_openipc all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 ssc335() {
   soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_openipc all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 ssc335_blackbird() {
   soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_blackbird all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_blackbird all && rename
 }
 
 ssc335_goodcam() {
   soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_goodcam all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_goodcam all && rename
 }
 
 ssc335_initramfs() {
   soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_initramfs all && rename_initramfs
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_initramfs all && rename_initramfs
 }
 
 ssc335_musl() {
   soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_musl all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_musl all && rename
 }
 
 ssc335_rotek() {
   soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335_rotek all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_rotek all && rename
 }
 
 ssc337() {
   soc="ssc337"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc337_openipc all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 #################################################################################
 
 ssc335de() {
   soc="ssc335de"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc335de_openipc all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 ssc337de() {
   soc="ssc337de"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_ssc337de_openipc all && rename
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 #################################################################################
 
 xm530() {
   soc="xm530"
-  fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_xm530_openipc all && rename
+  fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 
@@ -177,9 +187,14 @@ xm530() {
 # fh8852                        # testing..
 # fh8856                        # testing..
 #
+# hi3516av300                   # testind..
+#
 # hi3516cv100                   # testing..
 # hi3516cv200                   # testing..
 # hi3516cv300                   # testind..
+# hi3516cv500                   # testind..
+#
+# hi3516dv300                   # testind..
 #
 # hi3516ev200                   # OK
 #
