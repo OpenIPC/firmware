@@ -1,4 +1,4 @@
-name: OpenIPC for Hi3516Av300
+name: OpenIPC for Hi3516Cv500
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_core:
-    name: OpenIPC v2.1 for Hi3516Av300
+    name: OpenIPC v2.1 for Hi3516Cv500
     runs-on: ubuntu-18.04
 
     steps:
@@ -57,22 +57,22 @@ jobs:
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build Hi3516Av300 firmware
-        id: build-hi3516av300-firmware
+      - name: Build Hi3516Cv500 firmware
+        id: build-hi3516cv500-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.hi3516av300-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.hi3516cv500-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516av300_openipc all
+          make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516cv500_openipc all
           # [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152" >> $GITHUB_ENV && exit 1
           # [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880" >> $GITHUB_ENV && exit 1
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.hi3516av300
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.hi3516av300
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.hi3516av300 uImage.hi3516av300
+          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.hi3516cv500
+          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.hi3516cv500
+          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.hi3516cv500 uImage.hi3516cv500
 
-      - name: Build Hi3516Av300 SDK
-        id: build-hi3516av300-sdk
+      - name: Build Hi3516Cv500 SDK
+        id: build-hi3516cv500-sdk
         continue-on-error: true
         run: |
           ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-glibc_sdk-buildroot.tar.gz"
@@ -84,7 +84,7 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-hi3516av300-firmware.outcome != 'success' || steps.build-hi3516av300-sdk.outcome != 'success'
+        if: steps.build-hi3516cv500-firmware.outcome != 'success' || steps.build-hi3516cv500-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 5 --max-time 15"
           TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error...}"
@@ -109,7 +109,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: "openipc.hi3516av300-br.tgz"
+          asset_name: "openipc.hi3516cv500-br.tgz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -119,7 +119,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-hi3516av300-linux-glibc_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-hi3516cv500-linux-glibc_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 

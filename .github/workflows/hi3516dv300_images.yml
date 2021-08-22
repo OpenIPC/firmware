@@ -75,7 +75,7 @@ jobs:
         id: build-hi3516dv300-sdk
         continue-on-error: true
         run: |
-          ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
+          ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-glibc_sdk-buildroot.tar.gz"
           echo "ARCHIVE_SDK=$ARCHIVE_SDK" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE/output
           make sdk
@@ -119,7 +119,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-hi3516dv300-linux-musleabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-hi3516dv300-linux-glibc_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
