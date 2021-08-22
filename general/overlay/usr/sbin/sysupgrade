@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20210811
+# OpenIPC.org | v.20210821
 #
 
 set -e
@@ -22,7 +22,7 @@ stop_services() {
 
 download_firmware() {
   echo -e "\n\e[1;31mDownloading the latest firmware...\e[0m\n"
-  curl ${option} -L ${github}/openipc.${soc}-br.tgz -o - | gzip -d | tar xvf - -C /tmp
+  curl ${option} -L ${github}/openipc.${soc}-br.tgz -o - | gzip -d | tar xvf - -C /tmp || (echo -e "\n\e[1;31mError receiving the update file, execution was interrupted....\e[0m\n"; exit 1)
 }
 
 writing_kernel() {
