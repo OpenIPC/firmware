@@ -1,0 +1,325 @@
+#!/bin/sh
+# Useage: ./load3516cv500 [ -r|-i|-a ] [ sensor ]
+#         -r : rmmod all modules
+#         -i : insmod all modules
+#         -a : rmmod all moules and then insmod them
+# e.g: RAW:        ./load3516cv500 -i -sensor0 imx327 -sensor1 imx327
+# e.g: BT1120/DC : ./load3516cv500 -i -sensor0 imx327 -sensor1 imx327 -osmem 64 -yuv0 1
+# e.g: BT656     : ./load3516cv500 -i -sensor0 imx327 -sensor1 imx327 -osmem 64 -yuv0 2
+
+####################Variables Definition##########################
+
+
+SNS_TYPE0=imx327;           # sensor type
+SNS_TYPE1=NULL;            	# sensor type
+YUV_TYPE0=0;                # 0 -- raw, 1 -- bt1120/DC, 2 --bt656
+CHIP_TYPE=hi3516cv500;      # chip type
+
+
+#DDR start:0x80000000, kernel start:0x80000000,  OS(64M); MMZ start:0x84000000
+mem_total=256                # 256M, total mem
+mem_start=0x80000000          # phy mem start
+os_mem_size=64               # 64M, os mem
+mmz_start=0x84000000;         # mmz start addr
+mmz_size=192M;               # 192M, mmz size
+##################################################################
+
+report_error()
+{
+    echo "******* Error: There's something wrong, please check! *****"
+    exit 1
+}
+
+insert_audio()
+{
+    insmod hi3516cv500_aio.ko
+    insmod hi3516cv500_ai.ko
+    insmod hi3516cv500_ao.ko
+    insmod hi3516cv500_aenc.ko
+    insmod hi3516cv500_adec.ko
+    insmod hi3516cv500_acodec.ko
+#    insmod extdrv/hi_tlv320aic31.ko
+    echo "insert audio"
+}
+
+remove_audio()
+{
+    rmmod hi3516cv500_acodec
+#    rmmod hi_tlv320aic31.ko
+    rmmod hi3516cv500_adec
+    rmmod hi3516cv500_aenc
+    rmmod hi3516cv500_ao
+    rmmod hi3516cv500_ai
+    rmmod hi3516cv500_aio
+
+    echo "remove audio"
+}
+
+insert_isp()
+{
+    insmod hi3516cv500_isp.ko
+}
+
+insert_gyro()
+{
+    insmod extdrv/hi_spi.ko
+    insmod hi3516cv500_gyrodis.ko
+    insmod hi3516cv500_motionfusion.ko
+    insmod extdrv/motionsensor_mng.ko
+    insmod extdrv/motionsensor_chip.ko
+}
+
+remove_gyro()
+{
+    rmmod motionsensor_chip
+    rmmod motionsensor_mng
+    rmmod hi3516cv500_motionfusion
+    rmmod hi3516cv500_gyrodis
+    rmmod hi_spi
+}
+
+insert_ko()
+{
+    # sys config
+    insmod sys_config.ko chip=$CHIP_TYPE sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1, g_cmos_yuv_flag=$YUV_TYPE0
+
+    # driver load
+    insmod hi_osal.ko anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+#    insmod hi_tzasc.ko
+    insmod hi3516cv500_base.ko
+    insmod hi3516cv500_sys.ko
+    insmod hi3516cv500_tde.ko
+    insmod hi3516cv500_rgn.ko
+    insmod hi3516cv500_gdc.ko
+    insmod hi3516cv500_vgs.ko
+    insmod hi3516cv500_dis.ko
+    insmod hi3516cv500_vi.ko
+    insert_isp;
+    insmod hi3516cv500_vpss.ko
+    insmod hi3516cv500_vo.ko
+    insmod hifb.ko video="hifb:vram0_size:16200"     # default fb0:1080p
+
+    insmod hi3516cv500_chnl.ko
+    insmod hi3516cv500_vedu.ko
+    insmod hi3516cv500_rc.ko
+    insmod hi3516cv500_venc.ko
+    insmod hi3516cv500_h264e.ko
+    insmod hi3516cv500_h265e.ko
+    insmod hi3516cv500_jpege.ko
+
+
+    insmod hi3516cv500_ive.ko save_power=0
+#    insmod hi_ipcm.ko
+    insmod hi3516cv500_nnie.ko
+    insmod extdrv/hi_pwm.ko
+    insmod extdrv/hi_piris.ko
+    insmod extdrv/hi_sensor_i2c.ko
+    insmod extdrv/hi_sensor_spi.ko
+#    insmod extdrv/hi_sil9136.ko norm=12    #1080P@30fps for umap7p
+#    insmod extdrv/mpu_bosch.ko
+
+    insert_audio
+
+    insmod hi_mipi_rx.ko
+#    insmod hi_mipi_tx.ko
+#    insmod hi_user.ko
+
+#    insert_gyro
+}
+
+remove_ko()
+{
+#    rmmod_gyro
+#    rmmod hi_user
+    remove_audio
+#    rmmod hi_mipi_tx
+    rmmod hi_mipi_rx
+    #rmmod hi_sil9136 &> /dev/null
+    rmmod hi_piris
+    rmmod hi_pwm
+
+    rmmod hi3516cv500_nnie nnie_save_power=1 nnie_max_tskbuf_num=32
+#    rmmod hi_ipcm
+    rmmod hi3516cv500_ive
+    rmmod hi3516cv500_rc
+    rmmod hi3516cv500_jpege
+    rmmod hi3516cv500_h264e
+    rmmod hi3516cv500_h265e
+    rmmod hi3516cv500_venc
+    rmmod hi3516cv500_vedu
+    rmmod hi3516cv500_chnl
+    rmmod hifb
+    rmmod hi3516cv500_vo
+    rmmod hi3516cv500_vpss
+    rmmod hi3516cv500_isp
+    rmmod hi3516cv500_vi
+    rmmod hi3516cv500_gdc
+    rmmod hi3516cv500_dis
+    rmmod hi3516cv500_vgs
+    rmmod hi3516cv500_rgn
+    rmmod hi3516cv500_tde
+
+    rmmod hi_sensor_i2c &> /dev/null
+    rmmod hi_sensor_spi &> /dev/null
+
+#    rmmod mpu_bosch
+    rmmod hi3516cv500_sys
+    rmmod hi3516cv500_base
+#    rmmod hi_tzasc
+    rmmod hi_osal
+    rmmod sys_config
+}
+
+sys_restore()
+{
+    ####################################################
+    clkcfg_hi3516cv500.sh > /dev/null
+
+    # system configuration
+    sysctl_hi3516cv500.sh  # > /dev/null
+    sns_config;
+}
+
+load_usage()
+{
+    echo "Usage:  ./load3516cv500 [-option] [sensor0]"
+    echo "options:"
+    echo "    -i                       insert modules"
+    echo "    -r                       remove modules"
+    echo "    -a                       remove modules first, then insert modules"
+    echo "    -sensor sensor_name      config sensor type [default: imx327]"
+    echo "    -total mem_size          config total mem size [unit: M, default: 512]"
+    echo "    -osmem os_mem_size       config os mem size [unit: M, default: 128]"
+    echo "    -h                       help information"
+    echo -e "Available sensors: imx327"
+    echo -e "for example: ./load3516cv500 -i -sensor0 imx327 -sensor1 imx327\n"
+}
+
+calc_mmz_info()
+{
+    mmz_start=`echo "$mem_start $os_mem_size"  |
+    awk 'BEGIN { temp = 0; }
+    {
+        temp = $1/1024/1024 + $2;
+    }
+    END { printf("0x%x00000\n", temp); }'`
+
+    mmz_size=`echo "$mem_total $os_mem_size"  |
+    awk 'BEGIN { temp = 0; }
+    {
+        temp = $1 - $2;
+    }
+    END { printf("%dM\n", temp); }'`
+    echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+}
+
+######################parse arg###################################
+b_arg_sensor0=0
+b_arg_sensor1=0
+b_arg_yuv_type0=0
+b_arg_insmod=0
+b_arg_remove=0
+b_arg_restore=0
+b_arg_total_mem=0
+b_arg_os_mem=0
+
+for arg in $@
+do
+    if [ $b_arg_sensor0 -eq 1 ] ; then
+        b_arg_sensor0=0;
+        SNS_TYPE0=$arg;
+    fi
+    if [ $b_arg_sensor1 -eq 1 ] ; then
+        b_arg_sensor1=0;
+        SNS_TYPE1=$arg;
+    fi
+    if [ $b_arg_total_mem -eq 1 ]; then
+        b_arg_total_mem=0;
+        mem_total=$arg;
+
+        if [ -z $mem_total ]; then
+            echo "[error] mem_total is null"
+            exit;
+        fi
+    fi
+
+    if [ $b_arg_os_mem -eq 1 ] ; then
+        b_arg_os_mem=0;
+        os_mem_size=$arg;
+
+        if [ -z $os_mem_size ]; then
+            echo "[error] os_mem_size is null"
+            exit;
+        fi
+    fi
+
+    if [ $b_arg_yuv_type0 -eq 1 ] ; then
+        b_arg_yuv_type0=0;
+        YUV_TYPE0=$arg;
+    fi
+
+    case $arg in
+        "-i")
+            b_arg_insmod=1;
+            ;;
+        "-r")
+            b_arg_remove=1;
+            ;;
+        "-a")
+            b_arg_insmod=1;
+            b_arg_remove=1;
+            ;;
+        "-h")
+            load_usage;
+            ;;
+        "-sensor0")
+            b_arg_sensor0=1;
+            ;;
+        "-sensor")
+            b_arg_sensor0=1;
+            ;;
+        "-sensor1")
+            b_arg_sensor1=1;
+            ;;
+        "-osmem")
+            b_arg_os_mem=1;
+            ;;
+        "-yuv0")
+            b_arg_yuv_type0=1;
+            ;;
+        "-total")
+            b_arg_total_mem=1;
+            ;;
+        "-restore")
+            b_arg_restore=1;
+            ;;
+    esac
+done
+#######################parse arg end########################
+if [ $os_mem_size -ge $mem_total ] ; then
+    echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+    exit;
+fi
+
+calc_mmz_info;
+
+#######################Action###############################
+
+if [ $# -lt 1 ]; then
+    load_usage;
+    exit 0;
+fi
+
+
+if [ $b_arg_remove -eq 1 ]; then
+    remove_ko;
+fi
+
+if [ $b_arg_insmod -eq 1 ]; then
+    insert_ko;
+fi
+
+if [ $b_arg_restore -eq 1 ]; then
+    sys_restore;
+fi
+
