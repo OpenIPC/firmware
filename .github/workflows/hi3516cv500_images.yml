@@ -119,7 +119,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-linux-gnueabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-hi3516cv500-linux-gnueabi_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
