@@ -40,6 +40,9 @@ If you like our work, please consider supporting us on [Opencollective](https://
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/fh8856_images.yml/badge.svg)|FH8856|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.fh8856-br.tgz)|[zigfisher](https://github.com/ZigFisher)| Start |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7102s_images.yml/badge.svg)|GK7102S|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7102s-br.tgz)|[zigfisher](https://github.com/ZigFisher)| Start |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7205v200_images.yml/badge.svg)|GK7205v200|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7205v200-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Start |
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516av300_images.yml/badge.svg)|Hi3516Av300|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516av300-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Testing |
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516cv500_images.yml/badge.svg)|Hi3516Cv500|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv500-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Testing |
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516dv300_images.yml/badge.svg)|Hi3516Dv300|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv300-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Testing |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev200_images.yml/badge.svg)|Hi3516Ev200|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Ready |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg)|Hi3516Ev300|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Ready |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg)|Hi3518Ev300|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Ready |
@@ -48,6 +51,7 @@ If you like our work, please consider supporting us on [Opencollective](https://
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc325_images.yml/badge.svg)|SSC325|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc325-br.tgz)|[zigfisher](https://github.com/ZigFisher)| Start |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc335_images.yml/badge.svg)|SSC335|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc335-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Testing |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337_images.yml/badge.svg)|SSC337|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337-br.tgz)|[zigfisher](https://github.com/ZigFisher)| Testing |
+|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337de_images.yml/badge.svg)|SSC337DE|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337de-br.tgz)|[zigfisher](https://github.com/ZigFisher)| Testing |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/t31_images.yml/badge.svg)|T31|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.t31-br.tgz)|[zigfisher](https://github.com/ZigFisher)| Start |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm530_images.yml/badge.svg)|XM530/XM550|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm530-br.tgz)|[zigfisher](https://github.com/ZigFisher), [widgetii](https://github.com/widgetii)| Testing |
 
@@ -61,10 +65,13 @@ If you like our work, please consider supporting us on [Opencollective](https://
 | fh8856      |
 | gk7102s     |
 | gk7205v200  |
-| hi3516ev200 |  -     |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
+| hi3516cv500 |        |  yes   |  yes   |  yes   |        |        |        |        |        |
+| hi3516ev200 |        |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
+| msc313e     |
 | nt98566     |
-| ssc325      |  -     |  yes   |  yes   |  yes   |   ?    |  yes   |  yes   |  yes   |  yes   |
-| ssc335      |  -     |  yes   |  yes   |  yes   |   ?    |  yes   |  yes   |  yes   |  yes   |
-| ssc337      |  -     |  yes   |  yes   |  yes   |   ?    |  yes   |  yes   |  yes   |  yes   |
+| ssc325      |        |  yes   |  yes   |        |        |        |        |        |        |
+| ssc335      |        |  yes   |  yes   |  yes   |        |  yes   |  yes   |        |  yes   |
+| ssc337      |        |  yes   |  yes   |  yes   |        |  yes   |  yes   |        |  yes   |
+| ssc337de    |        |  yes   |  yes   |        |        |        |        |        |        |
 | t31         |
-| xm530       |  -     |  yes   |  yes   |
+| xm530       |        |  yes   |  yes   |
