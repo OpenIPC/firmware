@@ -63,7 +63,7 @@ fh8856() {
 #################################################################################
 
 hi3516av300() {
-  soc="hi3516av100"
+  soc="hi3516av300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
@@ -88,7 +88,7 @@ hi3516cv500() {
 }
 
 hi3516dv300() {
-  soc="hi3516dv500"
+  soc="hi3516dv300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
