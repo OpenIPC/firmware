@@ -97,6 +97,11 @@ hi3516ev200() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+hi3516ev200_vixand() {
+  soc="hi3516ev200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_vixand all && rename
+}
+
 hi3516ev300() {
   soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -195,7 +200,7 @@ xm530() {
 #
 #######
 #
-hi3516av300                   # testind..
+# hi3516av300                   # testind..
 #
 # hi3516cv100                   # testing..
 # hi3516cv200                   # testing..
@@ -205,6 +210,7 @@ hi3516av300                   # testind..
 # hi3516dv300                   # testind..
 #
 # hi3516ev200                   # OK
+# hi3516ev200_vixand            # Vixand
 #
 # hi3516ev300                   # OK
 # hi3516ev300_glibc             # testing..
@@ -218,7 +224,7 @@ hi3516av300                   # testind..
 # ssc335                        # OpenIPC
 # ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
-# ssc335_initramfs              # Initramfs
+ssc335_initramfs              # Initramfs
 # ssc335_musl                   # Musl
 # ssc335_rotek                  # Rotek
 # ssc337                        # OpenIPC
