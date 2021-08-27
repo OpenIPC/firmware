@@ -80,11 +80,11 @@ remove_gyro()
 
 insert_ko()
 {
+    # driver load
+    insmod hi_osal.ko anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
     # sys config
     insmod sys_config.ko chip=$CHIP_TYPE sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1, g_cmos_yuv_flag=$YUV_TYPE0
 
-    # driver load
-    insmod hi_osal.ko anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 #    insmod hi_tzasc.ko
     insmod hi3516cv500_base.ko
     insmod hi3516cv500_sys.ko
@@ -108,9 +108,9 @@ insert_ko()
     insmod hi3516cv500_jpege.ko
 
 
-    insmod hi3516cv500_ive.ko save_power=0
+    insmod hi3516cv500_ive.ko save_power=1
 #    insmod hi_ipcm.ko
-    insmod hi3516cv500_nnie.ko
+    insmod hi3516cv500_nnie.ko nnie_save_power=1 nnie_max_tskbuf_num=32
     insmod extdrv/hi_pwm.ko
     insmod extdrv/hi_piris.ko
     insmod extdrv/hi_sensor_i2c.ko
@@ -166,8 +166,8 @@ remove_ko()
     rmmod hi3516cv500_sys
     rmmod hi3516cv500_base
 #    rmmod hi_tzasc
-    rmmod hi_osal
     rmmod sys_config
+    rmmod hi_osal
 }
 
 sys_restore()
