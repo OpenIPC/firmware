@@ -63,7 +63,7 @@ fh8856() {
 #################################################################################
 
 hi3516av300() {
-  soc="hi3516av100"
+  soc="hi3516av300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
@@ -88,7 +88,7 @@ hi3516cv500() {
 }
 
 hi3516dv300() {
-  soc="hi3516dv500"
+  soc="hi3516dv300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
@@ -175,11 +175,17 @@ ssc337de() {
 
 #################################################################################
 
+xm510() {
+  soc="xm510"
+  fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 xm530() {
   soc="xm530"
   fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+#################################################################################
 
 
 # Build firmware
@@ -187,7 +193,9 @@ xm530() {
 # fh8852                        # testing..
 # fh8856                        # testing..
 #
-# hi3516av300                   # testind..
+#######
+#
+hi3516av300                   # testind..
 #
 # hi3516cv100                   # testing..
 # hi3516cv200                   # testing..
@@ -202,13 +210,15 @@ xm530() {
 # hi3516ev300_glibc             # testing..
 # hi3516ev300_tehshield         # Tehshield
 #
+#######
+#
 # ssc325                        # OpenIPC
 #
 # ssc333                        # OpenIPC
 # ssc335                        # OpenIPC
 # ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
-ssc335_initramfs              # Initramfs
+# ssc335_initramfs              # Initramfs
 # ssc335_musl                   # Musl
 # ssc335_rotek                  # Rotek
 # ssc337                        # OpenIPC
@@ -216,6 +226,9 @@ ssc335_initramfs              # Initramfs
 # ssc335de                      # OpenIPC
 # ssc337de                      # OpenIPC
 #
+#######
+#
+# xm510                         # Brocken
 # xm530                         # OK
 #
 #
