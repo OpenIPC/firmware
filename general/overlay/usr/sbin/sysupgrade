@@ -47,7 +47,7 @@ quick_reboot() {
 
 
 
-if ! ping -q -c 3 -w 3 github.com >/dev/null 2>&1; then
+if [ "$(curl -o /dev/null -s -w '%{http_code}\n' http://github.com)" != "301" ]; then
   echo -e "\n\e[1;31mThere is no access to the github.com, please check the Internet connection...\e[0m\n"
   exit 1
 else
