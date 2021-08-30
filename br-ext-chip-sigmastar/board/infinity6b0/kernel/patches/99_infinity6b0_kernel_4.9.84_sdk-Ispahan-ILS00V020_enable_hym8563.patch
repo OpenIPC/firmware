@@ -1,0 +1,13 @@
+--- a/arch/arm/boot/dts/infinity6b0.dtsi	2021-08-30 12:53:15.184220565 +0300
++++ b/arch/arm/boot/dts/infinity6b0.dtsi	2021-08-30 15:06:44.341510947 +0300
+@@ -528,6 +528,10 @@
+ //                compatible = "sstar,24c512";
+ //                reg = <0x54>;
+ //            };
++              hym8563@51 {
++                  compatible = "haoyu,hym8563";
++                  reg = <0x51>;
++              };
+         };
+ 
+ 
