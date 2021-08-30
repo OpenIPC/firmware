@@ -16,7 +16,13 @@ fi
 
 export EDITOR='/bin/vi'
 
+
 [ -x /usr/bin/arp ] || arp() { cat /proc/net/arp; }
+
+show_modules() { echo; cat /proc/modules | cut -f 1 -d " " | while read module; do echo "Module: $module"; \
+  if [ -d "/sys/module/$module/parameters" ]; then ls /sys/module/$module/parameters/ | while read parameter; \
+  do echo -n "Parameter: $parameter --> "; cat /sys/module/$module/parameters/$parameter; done; fi;  echo; done; }
+
 
 # Source configuration files from /etc/profile.d
 for i in /etc/profile.d/*.sh ; do
