@@ -1,6 +1,9 @@
+#define _GNU_SOURCE
 #include <fcntl.h>
+#include <regex.h>
 #include <setjmp.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -250,6 +253,69 @@ void get_chip_gpio_adress(unsigned long *Chip_Id, unsigned long *GPIO_Groups,
     //---------------------------------
   }
 }
+
+#define MAX_ERROR_MSG 0x1000
+static int compile_regex(regex_t *r, const char *regex_text) {
+  int status = regcomp(r, regex_text, REG_EXTENDED | REG_NEWLINE | REG_ICASE);
+  if (status != 0) {
+    char error_message[MAX_ERROR_MSG];
+    regerror(status, r, error_message, MAX_ERROR_MSG);
+    printf("Regex error compiling '%s': %s\n", regex_text, error_message);
+    return -1;
+  }
+  return 1;
+}
+
+bool get_regex_line_from_file(const char *filename, const char *re, char *buf,
+                              size_t buflen) {
+  long res = false;
+
+  FILE *f = fopen(filename, "r");
+  if (!f)
+    return false;
+
+  regex_t regex;
+  regmatch_t matches[2];
+  if (!compile_regex(&regex, re))
+    goto exit;
+
+  char *line = NULL;
+  size_t len = 0;
+  ssize_t read;
+
+  while ((read = getline(&line, &len, f)) != -1) {
+    if (regexec(&regex, line, sizeof(matches) / sizeof(matches[0]),
+                (regmatch_t *)&matches, 0) == 0) {
+      regoff_t start = matches[1].rm_so;
+      regoff_t end = matches[1].rm_eo;
+
+      line[end] = 0;
+      strncpy(buf, line + start, buflen);
+      res = true;
+      break;
+    }
+  }
+  if (line)
+    free(line);
+
+exit:
+  regfree(&regex);
+  fclose(f);
+  return res;
+}
+
+static long get_uart0_address() {
+  char buf[256];
+
+  bool res = get_regex_line_from_file(
+      "/proc/iomem", "^([0-9a-f]+)-[0-9a-f]+ : .*uart[@:][0-9]", buf,
+      sizeof(buf));
+  if (!res) {
+    return -1;
+  }
+  return strtol(buf, NULL, 16);
+}
+
 //************************************************************
 void get_chip_id(unsigned long *Chip_Id, char *cpu, char *hardware) {
   unsigned long SCBASE;
@@ -262,18 +328,25 @@ void get_chip_id(unsigned long *Chip_Id, char *cpu, char *hardware) {
   char Buffer[4096];
   int i;
 
-  //---------------------------------------------
-  SCBASE = 0x20050000;
-  if (GetValueRegister(SCBASE) == -1) //читаем сначала один базовый адрес
-  {
+  long uart_base = get_uart0_address();
+  switch (uart_base) {
+  // hi3516cv300
+  case 0x12100000:
+  // hi3516ev200
+  case 0x120a0000:
+  case 0x12040000:
     SCBASE = 0x12020000;
-    if (GetValueRegister(SCBASE) == -1) //затем читаем другой
-    {
-      sprintf(cpu, "unknown");
-      *Chip_Id = 0;
-      return;
-    }
+    break;
+  // hi3536c
+  case 0x12080000:
+    SCBASE = 0x12050000;
+    break;
+  // hi3516cv100
+  // hi3518ev200
+  default:
+    SCBASE = 0x20050000;
   }
+
   //---------------------------------------------
   if ((GetValueRegister(SCBASE + SCSYSID0) & 0xFF000000) >> 24 ==
       0x35) //если старший байт = 0x35 значит все ID в одном регистре
@@ -375,7 +448,7 @@ void get_chip_id(unsigned long *Chip_Id, char *cpu, char *hardware) {
     sprintf(hardware, "A9 dual-core @ 900 MHz");
     break;
   //-------------------------------------------
-  case 0x3536C100:
+  case 0xBDA9D100:
     sprintf(cpu, "Hi3536Cv100");
     sprintf(hardware, "A7 dual-core @ 1.3 GHz");
     break;
@@ -411,7 +484,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
   get_chip_id(&Chip_Id, &CPU[0], &HARDWARE[0]);
-  printf("For skip pin exaple: %s 12 14 ...\n", argv[0]);
+  printf("To skip pin use: %s 12 14 ...\n", argv[0]);
   printf("================ Hisilicon GPIO Scaner (2021) OpenIPC.org collective "
          "=================\n");
   printf("Chip_Id: 0x%08lX, CPU: %s, Hardware: %s\n", Chip_Id, CPU, HARDWARE);
