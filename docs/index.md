@@ -59,19 +59,26 @@ If you like our work, please consider supporting us on [Opencollective](https://
 
 ### Current development status
 
-| Chip Family | U-Boot | Kernel | Rootfs | Video  | Audio  | GPIO   | USB    | WiFi   | MMC    |
-|-------------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
+| Chip        | U-Boot | Kernel | Rootfs | Video  | Audio  | GPIO   | USB    | WiFi   | MMC    | IPv6   |
+|-------------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
 | fh8632      |
 | fh8856      |
 | gk7102s     |
 | gk7205v200  |
-| hi3516cv500 |        |  yes   |  yes   |  yes   |        |        |        |        |        |
-| hi3516ev200 |        |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
+| hi3516av300 |        |  yes   |  yes   |  yes   |        |        |        |        |        |        |
+| hi3516cv500 |        |  yes   |  yes   |  yes   |        |        |        |        |        |        |
+| hi3516dv300 |        |  yes   |  yes   |  yes   |        |        |        |        |        |        |
+| hi3516ev200 |        |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
+| hi3516ev300 |        |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
+| hi3518ev300 |        |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
 | msc313e     |
 | nt98566     |
 | ssc325      |        |  yes   |  yes   |        |        |        |        |        |        |
 | ssc335      |        |  yes   |  yes   |  yes   |        |  yes   |  yes   |        |  yes   |
 | ssc337      |        |  yes   |  yes   |  yes   |        |  yes   |  yes   |        |  yes   |
 | ssc337de    |        |  yes   |  yes   |        |        |        |        |        |        |
+| t20         |
+| t21         |
 | t31         |
+| xm510       |
 | xm530       |        |  yes   |  yes   |
