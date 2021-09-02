@@ -6,3 +6,15 @@ iface lo inet loopback
 auto eth0
 iface eth0 inet dhcp
     hwaddress ether $(fw_printenv -n ethaddr || echo 00:24:B8:FF:FF:FF)
+
+manual wlan0
+iface wlan0 inet dhcp
+    pre-up devmem 0x100C0080 32 0x530
+    pre-up echo 7 > /sys/class/gpio/export
+    pre-up echo out > /sys/class/gpio/gpio7/direction
+    pre-up echo 0 > /sys/class/gpio/gpio7/value
+    pre-up modprobe mt7601u
+    pre-up wpa_passphrase "SSID" "password" >/tmp/wpa_supplicant.conf
+    pre-up (sleep 3; wpa_supplicant -B -Dnl80211 -iwlan0 -c/tmp/wpa_supplicant.conf)
+    post-down killall -q wpa_supplicant
+
