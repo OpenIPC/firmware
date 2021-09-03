@@ -24,6 +24,11 @@ show_modules() { echo; cat /proc/modules | cut -f 1 -d " " | while read module; 
   do echo -n "Parameter: $parameter --> "; cat /sys/module/$module/parameters/$parameter; done; fi;  echo; done; }
 
 
+show_fullname() { echo "openipc-$(ipctool --chip_id)-$(ipctool --sensor_id | awk -F '_' '{print $1}')"; }
+
+set_fullname() { show_fullname >/etc/hostname; }
+
+
 # Source configuration files from /etc/profile.d
 for i in /etc/profile.d/*.sh ; do
 	if [ -r "$i" ]; then
