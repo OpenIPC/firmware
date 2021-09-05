@@ -22,6 +22,7 @@ start() {
 	load_sigmastar -i
 	#
 	printf 'Starting %s: ' "$DAEMON"
+	[ -f /usr/bin/$DAEMON ] || (echo "IT IS MISSING" ; exit 1)
 	# shellcheck disable=SC2086 # we need the word splitting
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" \
 		-- $DAEMON_ARGS
@@ -36,6 +37,7 @@ start() {
 
 stop() {
 	printf 'Stopping %s: ' "$DAEMON"
+	[ -f /usr/bin/$DAEMON ] || (echo "IT IS MISSING" ; exit 1)
 	start-stop-daemon -K -q -p "$PIDFILE"
 	status=$?
 	if [ "$status" -eq 0 ]; then
