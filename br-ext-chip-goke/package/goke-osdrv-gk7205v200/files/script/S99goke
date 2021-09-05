@@ -10,17 +10,17 @@ DAEMON_ARGS=""
 
 # The daemon does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
 start() {
-	logger -s -p daemon.info -t hisilicon "Check MAC for Xiongmai devices"
+	logger -s -p daemon.info -t goke "Check MAC for Xiongmai devices"
 	if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
-		logger -s -p daemon.info -t hisilicon "The eth0 interface has a lousy MAC, let's try to change it.."
-		XMMAC="$(ipcinfo --xm_mac)" && [ -n "${XMMAC}" ] && fw_setenv ethaddr ${XMMAC} && ifconfig eth0 hw ether ${XMMAC} && logger -s -p daemon.info -t hisilicon "The eth0 interface have new MAC - ${XMMAC}" && reboot -f
+		logger -s -p daemon.info -t goke "The eth0 interface has a lousy MAC, let's try to change it.."
+		XMMAC="$(ipcinfo --xm_mac)" && [ -n "${XMMAC}" ] && fw_setenv ethaddr ${XMMAC} && ifconfig eth0 hw ether ${XMMAC} && logger -s -p daemon.info -t goke "The eth0 interface have new MAC - ${XMMAC}" && reboot -f
 	else
-		logger -s -p daemon.info -t hisilicon "The eth0 interface has a correct MAC - $(fw_printenv -n ethaddr)"
+		logger -s -p daemon.info -t goke "The eth0 interface has a correct MAC - $(fw_printenv -n ethaddr)"
 	fi
 	#
-	logger -s -p daemon.info -t hisilicon "Loading of kernel modules and initialization of the video system has started"
+	logger -s -p daemon.info -t goke "Loading of kernel modules and initialization of the video system has started"
 	export TZ=$(cat /etc/TZ)
-	load_hisilicon -i
+	load_goke -i
 	#
 	printf 'Starting %s: ' "$DAEMON"
 	[ -f /usr/bin/$DAEMON ] || (echo "IT IS MISSING" ; exit 1)

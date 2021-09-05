@@ -12,6 +12,7 @@ SNMPD_ARGS="-n -4 -c openipc -i eth0 -D OpenIPC -C https://openipc.org -L Intern
 # and use "-m" to instruct start-stop-daemon to create one.
 start() {
 	printf 'Starting %s: ' "$DAEMON"
+	[ -f /usr/sbin/$DAEMON ] || (echo "IT IS MISSING" ; exit 1)
 	# shellcheck disable=SC2086 # we need the word splitting
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" \
 		-- $SNMPD_ARGS
@@ -26,6 +27,7 @@ start() {
 
 stop() {
 	printf 'Stopping %s: ' "$DAEMON"
+	[ -f /usr/sbin/$DAEMON ] || (echo "IT IS MISSING" ; exit 1)
 	start-stop-daemon -K -q -p "$PIDFILE"
 	status=$?
 	if [ "$status" -eq 0 ]; then
