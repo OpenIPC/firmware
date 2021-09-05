@@ -200,6 +200,13 @@ xm530() {
 #
 #######
 #
+# gk7202v300                   # testind..
+# gk7205v200                   # testind..
+# gk7205v300                   # testind..
+# gk7605v100                   # testind..
+#
+#######
+#
 # hi3516av300                   # testind..
 #
 # hi3516cv100                   # testing..
@@ -221,15 +228,18 @@ xm530() {
 # ssc325                        # OpenIPC
 #
 # ssc333                        # OpenIPC
+#
 # ssc335                        # OpenIPC
 # ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
 ssc335_initramfs              # Initramfs
 # ssc335_musl                   # Musl
 # ssc335_rotek                  # Rotek
-# ssc337                        # OpenIPC
 #
 # ssc335de                      # OpenIPC
+#
+# ssc337                        # OpenIPC
+#
 # ssc337de                      # OpenIPC
 #
 #######
