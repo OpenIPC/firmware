@@ -5,7 +5,7 @@
 
 set -e
 
-mpp=$(awk '/Version:/ {print $3,$4"]"}' /proc/umap/sys)
+mpp=$(awk '/Version:/ {print $3,$4"]"}' /proc/umap/sys) || true
 soc=$(ipctool --chip_id)
 
 
@@ -16,6 +16,7 @@ prepare()
 
   hi3516av300|hi3516cv500|hi3516dv300)
     echo -e "\n\e[1;31mSorry but the ${soc} is not supported at the moment...\e[0m\n"
+    exit 1
     ;;
 
   hi3516ev200|hi3516ev300|hi3516dv200|hi3518ev300)
@@ -26,6 +27,7 @@ prepare()
 
   *)
     echo -e "\n\e[1;31mSorry but the ${soc} is not supported at the moment...\e[0m\n"
+    exit 1
     ;;
 
   esac

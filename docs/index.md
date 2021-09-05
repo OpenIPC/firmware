@@ -64,7 +64,10 @@ If you like our work, please consider supporting us on [Opencollective](https://
 | fh8632      |
 | fh8856      |
 | gk7102s     |
+| gk7202v300  |
 | gk7205v200  |
+| gk7205v300  |
+| gk7605v100  |
 | hi3516av300 |        |  yes   |  yes   |  yes   |        |        |        |        |        |        |
 | hi3516cv500 |        |  yes   |  yes   |  yes   |        |        |        |        |        |        |
 | hi3516dv300 |        |  yes   |  yes   |  yes   |        |        |        |        |        |        |
