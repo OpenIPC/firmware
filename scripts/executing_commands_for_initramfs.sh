@@ -19,10 +19,21 @@ rm -rf ${TARGET_DIR}/etc/ssl
 rm -f ${TARGET_DIR}/lib/libatomic*
 rm -f ${TARGET_DIR}/lib/libgcc*
 #
-#rm -rf ${TARGET_DIR}/lib/modules
+rm -rf ${TARGET_DIR}/lib/modules
+rm -rf ${TARGET_DIR}/lib/mdev
 #
-rm -rf ${TARGET_DIR}/usr/sbin/firstboot
-rm -rf ${TARGET_DIR}/usr/sbin/sysupgrade
+rm -f ${TARGET_DIR}/sbin/ldconfig
+#
+rm -f ${TARGET_DIR}/usr/bin/getconf
+rm -f ${TARGET_DIR}/usr/bin/ipcinfo
+rm -f ${TARGET_DIR}/usr/bin/ldd
+#
+rm -f ${TARGET_DIR}/usr/lib/libjson-c.so.2
+#
+rm -f ${TARGET_DIR}/usr/sbin/firstboot
+rm -f ${TARGET_DIR}/usr/sbin/pqtools
+rm -f ${TARGET_DIR}/usr/sbin/sysupgrade
+rm -f ${TARGET_DIR}/usr/sbin/telegram_bot
 #
 # mkdir -p ${TARGET_DIR}/dev ; mknod ${TARGET_DIR}/dev/null c 3 2; chmod 666 ${TARGET_DIR}/dev/null
 #
