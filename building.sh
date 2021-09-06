@@ -62,6 +62,13 @@ fh8856() {
 
 #################################################################################
 
+gk7205v200() {
+  soc="gk7205v200"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
 hi3516av300() {
   soc="hi3516av300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -201,7 +208,7 @@ xm530() {
 #######
 #
 # gk7202v300                   # testind..
-# gk7205v200                   # testind..
+gk7205v200                   # testind..
 # gk7205v300                   # testind..
 # gk7605v100                   # testind..
 #
@@ -232,7 +239,7 @@ xm530() {
 # ssc335                        # OpenIPC
 # ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
-ssc335_initramfs              # Initramfs
+# ssc335_initramfs              # Initramfs
 # ssc335_musl                   # Musl
 # ssc335_rotek                  # Rotek
 #
