@@ -69,7 +69,7 @@ jobs:
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880" >> $GITHUB_ENV && exit 1
           mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.gk7205v200
           mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.gk7205v200
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.fh8856 uImage.gk7205v200
+          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.gk7205v200 uImage.gk7205v200
 
       - name: Build GK7205v200 SDK
         id: build-gk7205v200-sdk
