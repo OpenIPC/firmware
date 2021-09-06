@@ -1,6 +1,11 @@
 name: OpenIPC for GK7205v200
 
 on:
+  push:
+    branches:
+      - master
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
