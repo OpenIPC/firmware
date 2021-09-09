@@ -8,15 +8,15 @@ TELNETD_ARGS="-F -p 4321 -l /bin/sh"
 
 start() {
       printf "Starting telnetd: "
-      [ -f /usr/sbin/telnetd ] || (echo "DISABLED" ; exit 1)
+      [ -f /usr/sbin/telnetd ] || echo -en "DISABLED, "
       start-stop-daemon -S -q -m -b -p /var/run/telnetd.pid \
 			-x /usr/sbin/telnetd -- $TELNETD_ARGS
-      [ $? = 0 ] && echo "OK (port 4321)" || echo "FAIL"
+      [ $? = 0 ] && echo "OK" || echo "FAIL"
 }
 
 stop() {
 	printf "Stopping telnetd: "
-	[ -f /usr/sbin/telnetd ] || (echo "DISABLED" ; exit 1)
+	[ -f /usr/sbin/telnetd ] || echo -en "DISABLED, "
 	start-stop-daemon -K -q -p /var/run/telnetd.pid \
 			  -x /usr/sbin/telnetd
 	[ $? = 0 ] && echo "OK" || echo "FAIL"
