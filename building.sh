@@ -163,6 +163,11 @@ ssc335_musl() {
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_musl all && rename
 }
 
+ssc335_portal() {
+  soc="ssc335"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_portal all && rename
+}
+
 ssc335_rotek() {
   soc="ssc335"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_rotek all && rename
@@ -241,6 +246,7 @@ gk7205v200                   # testind..
 # ssc335_goodcam                # GoodCam
 # ssc335_initramfs              # Initramfs
 # ssc335_musl                   # Musl
+# ssc335_portal                 # Portal (partner)
 # ssc335_rotek                  # Rotek
 #
 # ssc335de                      # OpenIPC
