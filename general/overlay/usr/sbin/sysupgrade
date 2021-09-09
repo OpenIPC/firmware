@@ -42,6 +42,7 @@ clearing_overlayfs() {
 
 quick_reboot() {
   echo -e "\n\e[1;31mRebooting without any questions...\e[0m\n"
+  sleep 1
   reboot -f
 }
 
@@ -53,6 +54,7 @@ if [ "$(curl -o /dev/null -s -w '%{http_code}\n' http://github.com)" != "301" ];
 else
   stop_services
   download_firmware && writing_kernel && writing_rootfs
+  sleep 1
   if [ "$1" = "-n" ]; then
     clearing_overlayfs
   fi
