@@ -19,10 +19,12 @@ export EDITOR='/bin/vi'
 
 [ -x /usr/bin/arp ] || arp() { cat /proc/net/arp; }
 
+
+majestic_changes() { diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml; }
+
 show_modules() { echo; cat /proc/modules | cut -f 1 -d " " | while read module; do echo "Module: $module"; \
   if [ -d "/sys/module/$module/parameters" ]; then ls /sys/module/$module/parameters/ | while read parameter; \
   do echo -n "Parameter: $parameter --> "; cat /sys/module/$module/parameters/$parameter; done; fi;  echo; done; }
-
 
 show_fullname() { echo "openipc-$(ipctool --chip_id)-$(ipctool --sensor_id | awk -F '_' '{print $1}')"; }
 
