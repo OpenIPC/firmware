@@ -207,6 +207,11 @@ xm530() {
   fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+xm550() {
+  soc="xm550"
+  fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 #################################################################################
 
 
@@ -265,6 +270,7 @@ ssc335                        # OpenIPC
 #
 # xm510                         # Brocken
 # xm530                         # OK
+# xm550                         # OK
 #
 #
 #
