@@ -27,6 +27,9 @@ endef
 
 
 define XIONGMAI_OSDRV_XM530_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-xm530/files/script/S99xiongmai
+
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/sensor/config/*.ini
 
@@ -40,14 +43,14 @@ define XIONGMAI_OSDRV_XM530_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/script/*
 
-	# $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/fonts
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/fonts $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/fonts/*.bin
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/fonts
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/fonts $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/fonts/*.bin
 
-	# $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/sensor/*.so
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/sensor/*.so
 
-	# $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/lib/*.so
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/lib/*.so
 endef
 
 $(eval $(generic-package))
