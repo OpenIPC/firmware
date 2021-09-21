@@ -104,6 +104,11 @@ hi3516ev200() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+hi3516ev200_dozor() {
+  soc="hi3516ev200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_dozor all && rename
+}
+
 hi3516ev200_vixand() {
   soc="hi3516ev200"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_vixand all && rename
@@ -207,13 +212,13 @@ xm530() {
 
 # Build firmware
 #
-# fh8852                        # testing..
-# fh8856                        # testing..
+# fh8852                       # testing..
+# fh8856                       # testing..
 #
 #######
 #
 # gk7202v300                   # testind..
-gk7205v200                   # testind..
+# gk7205v200                   # testind..
 # gk7205v300                   # testind..
 # gk7605v100                   # testind..
 #
@@ -229,6 +234,7 @@ gk7205v200                   # testind..
 # hi3516dv300                   # testind..
 #
 # hi3516ev200                   # OK
+# hi3516ev200_dozor             # Dozor
 # hi3516ev200_vixand            # Vixand
 #
 # hi3516ev300                   # OK
@@ -241,7 +247,7 @@ gk7205v200                   # testind..
 #
 # ssc333                        # OpenIPC
 #
-# ssc335                        # OpenIPC
+ssc335                        # OpenIPC
 # ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
 # ssc335_initramfs              # Initramfs
