@@ -22,6 +22,23 @@ start() {
 	export TZ=$(cat /etc/TZ)
 	load_xiongmai -i
 	#
+	if [ ! -f /usr/lib/libsns.so ]; then
+		SNS_TYPE=$(ipcinfo --short_sensor)
+		logger -s -p daemon.info -t xiongmai "You sensor is $SNS_TYPE and symlink to libsns.so not found"
+		case $SNS_TYPE in
+
+		imx335|sc335e)
+			logger -s -p daemon.info -t xiongmai "Create new symlink to libsns_X50_XM530.so";
+			ln -sf /usr/lib/sensors/libsns_X50_XM530.so /usr/lib/libsns.so;
+			;;
+
+		*)
+			logger -s -p daemon.info -t xiongmai "Create new symlink to libsns_X123_XM530.so";
+			ln -sf /usr/lib/sensors/libsns_X123_XM530.so /usr/lib/libsns.so;
+			;;
+		esac
+	fi
+	#
 	printf 'Starting %s: ' "$DAEMON"
 	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
 	# shellcheck disable=SC2086 # we need the word splitting
