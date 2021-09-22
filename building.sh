@@ -252,7 +252,7 @@ xm550() {
 #
 # ssc333                        # OpenIPC
 #
-ssc335                        # OpenIPC
+# ssc335                        # OpenIPC
 # ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
 # ssc335_initramfs              # Initramfs
@@ -268,7 +268,7 @@ ssc335                        # OpenIPC
 #
 #######
 #
-# xm510                         # Brocken
+xm510                         # Brocken
 # xm530                         # OK
 # xm550                         # OK
 #
