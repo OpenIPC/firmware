@@ -1,0 +1,138 @@
+#!/bin/sh
+# Useage: ./load3518 [ -r|-i|-a ] [ sensor ]
+#         -r : rmmod all modules
+#         -i : insmod all modules
+#    default : rmmod all moules and then insmod them
+#
+
+
+# AR0130 MN34031 IMX104 ICX692 OV9712 9M034 IMX122 MT9P006 IMX138 SOIH22 OV2710 HIMAX1375 IMX225
+
+
+#内存和地址单位M
+MEM_ALL=64
+MEM_START=0x800
+MEM_SAMALL_LIN=0x1
+
+MEM_OS=`cat /proc/cmdline  | awk '{print $1}' | sed -e 's/mem=//' -e 's/M//'`
+MEM_LEN=`echo "$MEM_ALL $MEM_OS"|awk '{printf("0x%03x00000",$1-$2)}'`
+MEM_START=`echo "$MEM_START $MEM_SAMALL_LIN $MEM_OS"|awk '{printf("0x%03x00000",$1+$2*$3)}'`
+echo MEM_START=$MEM_START  MEM_LEN=$MEM_LEN
+
+
+SNS_A=AR0130
+
+if [ $# -ge 2 ]; then
+SNS_A=$2
+fi
+
+report_error()
+{
+	echo "******* Error: There's something wrong, please check! *****"
+		exit 1
+}
+
+insert_audio()
+{
+	echo "insert audio"
+	insmod gpioi2c.ko
+	insmod xm_i2s.ko
+	insmod acodec.ko
+}
+
+remove_audio()
+{
+	echo "remove audio"
+	rmmod acodec
+	rmmod xm510_i2s
+	rmmod gpioi2c
+}
+
+insert_sns()
+{
+    #Sensor clock 27MHz
+		regs 0x2000002c 1;
+		regs 0x2000000c 0x10110010;
+		regs 0x20000010 0x901F0010;
+		regs 0x20000014 0x01120000;
+		regs 0x2000002c 0;
+		sleep 0.1;
+		insmod xm_i2c.ko;
+}
+
+remove_sns()
+{
+	rmmod xm_i2c &> /dev/null
+	rmmod ssp_sony &> /dev/null
+}
+
+insert_ko()
+{
+# low power control
+	#source ./lowpower.sh > /dev/null
+
+# pinmux configuration
+	#source ./pinmux_xm510.sh rmii i2c > /dev/null
+
+# driver load
+		insert_sns > /dev/null
+		insmod mmz.ko mmz_start=$MEM_START mmz_size=$MEM_LEN
+		insmod xm510_vi.ko buffer=3
+		insmod xm510_isp.ko
+		insmod xm510_rgn.ko
+		insmod xm510_h264.ko
+		insmod xm_rtc.ko
+		insmod xm_wdt.ko
+
+		#insert_audio
+		echo "==== Your input Sensor type is $SNS_A ===="
+}
+
+remove_ko()
+{
+	remove_audio
+	rmmod xm_wdt
+	rmmod xm_rtc
+	rmmod xm510_h264
+	rmmod xm510_rgn
+	rmmod xm510_isp
+	rmmod xm510_vi
+
+	remove_sns
+}
+
+load_usage()
+{
+	echo "Usage:  ./loadxm510 [-option] [sensor_name]"
+		echo "options:"
+		echo "    -i sensor_name           insert modules"
+		echo "    -r                       remove modules"
+		echo "    -a sensor_name           remove modules first, then insert modules"
+		echo "    -h                       help information"
+		echo -e "Available sensors: ar0130, h42, imx104, icx692, ov9715, 9m034, imx122, mt9p006"
+		echo -e "for example: ./loadxm510 -a ar0130 \n"
+}
+
+# load module.
+if [ "$1" = "-i" ]
+then
+insert_ko
+fi
+
+if [ "$1" = "-r" ]
+then
+remove_ko
+fi
+
+if [ "$1" = "-h" ]
+then
+load_usage
+exit
+fi
+
+if [ $# -eq 0 ] || [ "$1" = "-a" ]
+then
+remove_ko
+insert_ko
+fi
+
