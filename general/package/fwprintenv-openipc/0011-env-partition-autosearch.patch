@@ -1,8 +1,20 @@
 diff --git a/tools/env/fw_env.c b/tools/env/fw_env.c
-index 2a61a5d6f0..f2ed8e436d 100644
+index 2a61a5d6f0..a008254a6a 100644
 --- a/tools/env/fw_env.c
 +++ b/tools/env/fw_env.c
-@@ -484,7 +484,8 @@ int fw_printenv(int argc, char *argv[], int value_only, struct env_opts *opts)
+@@ -37,7 +37,11 @@
+ # include <mtd/mtd-user.h>
+ #endif
+ 
++#ifndef __packed
++#define __packed __attribute__((packed))
++#endif
+ #include <mtd/ubi-user.h>
++#undef __packed
+ 
+ #include "fw_env_private.h"
+ #include "fw_env.h"
+@@ -484,7 +488,8 @@ int fw_printenv(int argc, char *argv[], int value_only, struct env_opts *opts)
  
  		val = fw_getenv(name);
  		if (!val) {
@@ -12,7 +24,7 @@ index 2a61a5d6f0..f2ed8e436d 100644
  			rc = -1;
  			continue;
  		}
-@@ -1725,6 +1726,91 @@ static int check_device_config(int dev)
+@@ -1725,6 +1730,91 @@ static int check_device_config(int dev)
  	return rc;
  }
  
@@ -80,7 +92,7 @@ index 2a61a5d6f0..f2ed8e436d 100644
 +					char *addr = open_mtdblock(
 +								i, &blockfd, mtd.size, MAP_POPULATE /* causes read-ahead on the file */);
 +					if (!addr)
-+						return;
++						return res;
 +					int off = uboot_detect_env(addr, mtd.size);
 +					close(blockfd);
 +					if (off != -1) {
@@ -104,7 +116,7 @@ index 2a61a5d6f0..f2ed8e436d 100644
  static int parse_config(struct env_opts *opts)
  {
  	int rc;
-@@ -1735,9 +1821,11 @@ static int parse_config(struct env_opts *opts)
+@@ -1735,9 +1825,11 @@ static int parse_config(struct env_opts *opts)
  #if defined(CONFIG_FILE)
  	/* Fills in DEVNAME(), ENVSIZE(), DEVESIZE(). Or don't. */
  	if (get_config(opts->config_file)) {
