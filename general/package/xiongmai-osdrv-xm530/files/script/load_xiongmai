@@ -85,9 +85,8 @@ insert_ko()
 		insmod xm530_rgn.ko
 		insmod xm530_h264.ko
 		insmod xm_rtc.ko
-		#insmod xm_wdt.ko
+		insmod xm_wdt.ko
 		insmod log.ko
-
 		insert_audio
 		insert_h265
 		#insert_vo
@@ -95,9 +94,9 @@ insert_ko()
 
 remove_ko()
 {
-	#remove_audio
-	#rmmod xm_wdt
-	#rmmod xm_rtc
+	remove_audio
+	rmmod xm_wdt
+	rmmod xm_rtc
 	rmmod xm530_h264
 	rmmod xm530_rgn
 	rmmod xm530_isp
