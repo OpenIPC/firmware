@@ -82,7 +82,7 @@ jobs:
         if: steps.build-nt98566-firmware.outcome != 'success' || steps.build-nt98566-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
-          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error...}"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... NT98566}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
