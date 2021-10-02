@@ -12,6 +12,7 @@ include $(BR2_EXTERNAL_FULLHAN_PATH)/package/libogg-openipc/libogg-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/libsrt-openipc/libsrt-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/majestic/majestic.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
+include $(BR2_EXTERNAL_FULLHAN_PATH)/package/motors/motors.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/opus-openipc/opus-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/uacme-openipc/uacme-openipc.mk

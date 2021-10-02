@@ -13,6 +13,7 @@ include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libogg-openipc/libogg-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libsrt-openipc/libsrt-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/majestic-ssc335/majestic-ssc335.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
+include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/motors/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/opus-openipc/opus-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/sigmastar-osdrv-ssc335.mk
