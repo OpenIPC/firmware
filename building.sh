@@ -10,6 +10,7 @@ clone() {
 
 fresh() {
   date >/tmp/openipc_buildtime.txt
+  [ -d buildroot-2020.02.12/dl ] && mkdir -p /tmp/buildroot_dl ; cp -rv buildroot-2020.02.12/dl/* /tmp/buildroot_dl
   make distclean #clean
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
 }
@@ -268,7 +269,7 @@ xm550() {
 #
 #######
 #
-xm510                         # Brocken
+xm510                         # testing
 # xm530                         # OK
 # xm550                         # OK
 #
