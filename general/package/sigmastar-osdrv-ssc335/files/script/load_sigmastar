@@ -97,7 +97,8 @@ insert_ko()
             ;;
         sc2235)
             # Untested | The information is obtained from the Tiandy firmware
-            insmod ${PATH_MODULE}/sensor_sc2235_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2;
+            # insmod ${PATH_MODULE}/sensor_sc2235_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2; # Module from SDK is not work on Tiandy device
+            insmod ${PATH_MODULE}/sensor_sc2235_mipi_tiandy.ko chmap=1 lane_num=2 hdr_lane_num=2;
             ;;
         sc2239)
             # Untested | The information is obtained from the IMOU firmware
