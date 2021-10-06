@@ -47,9 +47,13 @@ insert_ko()
             # Untested | The information is obtained from the Anjoy firmware
             insmod ${PATH_MODULE}/mi_venc.ko max_width=2592 max_height=1944 thread_priority=99;
             ;;
+        sc2235)
+            # Untested | The information is obtained from the Tiandy firmware
+            insmod ${PATH_MODULE}/mi_venc.ko thread_priority=99;
+            ;;
         sc2239)
             # Untested | The information is obtained from the IMOU firmware
-            insmod ${PATH_MODULE}/mi_venc.ko thread_priority=99;
+            insmod ${PATH_MODULE}/mi_venc.ko;
             ;;
         sc3335)
             # Untested | The information is obtained from the Uniview firmware (no any params on other version)
@@ -67,6 +71,9 @@ insert_ko()
     #
     # Disable it now, untested
     #echo hvsp2 down /config/iqfile/filter.txt /config/iqfile/filter.txt > /sys/class/mstar/mscl/hvsp
+    #
+    # Change firmware folder
+    # insmod ${PATH_MODULE}/mi_venc.ko fw_path="/config/venc_fw/chagall.bin"
     #
     # Change configs folder
     echo isproot /etc/sensors/iqfile > /dev/ispmid
@@ -87,6 +94,10 @@ insert_ko()
         imx335)
             # Untested | The information is obtained from the Anjoy firmware
             insmod ${PATH_MODULE}/sensor_imx335_mipi.ko chmap=1;
+            ;;
+        sc2235)
+            # Untested | The information is obtained from the Tiandy firmware
+            insmod ${PATH_MODULE}/sensor_sc2235_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2;
             ;;
         sc2239)
             # Untested | The information is obtained from the IMOU firmware
