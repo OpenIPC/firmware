@@ -35,7 +35,7 @@ fi
 report_error()
 {
 	echo "******* Error: There's something wrong, please check! *****"
-		exit 1
+	exit 1
 }
 
 insert_audio()
@@ -57,13 +57,13 @@ remove_audio()
 insert_sns()
 {
     #Sensor clock 27MHz
-		regs 0x2000002c 1;
-		regs 0x2000000c 0x10110010;
-		regs 0x20000010 0x901F0010;
-		regs 0x20000014 0x01120000;
-		regs 0x2000002c 0;
-		sleep 0.1;
-		insmod xm_i2c.ko;
+	devmem 0x2000002c 32 1;
+	devmem 0x2000000c 32 0x10110010;
+	devmem 0x20000010 32 0x901F0010;
+	devmem 0x20000014 32 0x01120000;
+	devmem 0x2000002c 32 0;
+	sleep 0.1;
+	insmod xm_i2c.ko;
 }
 
 remove_sns()
@@ -81,17 +81,17 @@ insert_ko()
 	#source ./pinmux_xm510.sh rmii i2c > /dev/null
 
 # driver load
-		insert_sns > /dev/null
-		insmod mmz.ko mmz_start=$MEM_START mmz_size=$MEM_LEN
-		insmod xm510_vi.ko buffer=$VI_BUFF
-		insmod xm510_isp.ko
-		insmod xm510_rgn.ko
-		insmod xm510_h264.ko
-		insmod xm_rtc.ko
-		insmod xm_wdt.ko
+	insert_sns > /dev/null
+	insmod mmz.ko mmz_start=$MEM_START mmz_size=$MEM_LEN
+	insmod xm510_vi.ko buffer=$VI_BUFF
+	insmod xm510_isp.ko
+	insmod xm510_rgn.ko
+	insmod xm510_h264.ko
+	insmod xm_rtc.ko
+	insmod xm_wdt.ko
 
-		#insert_audio
-		echo "==== Your input Sensor type is $SNS_A ===="
+	#insert_audio
+	echo "==== Your input Sensor type is $SNS_A ===="
 }
 
 remove_ko()
@@ -110,13 +110,13 @@ remove_ko()
 load_usage()
 {
 	echo "Usage:  ./loadxm510 [-option] [sensor_name]"
-		echo "options:"
-		echo "    -i sensor_name           insert modules"
-		echo "    -r                       remove modules"
-		echo "    -a sensor_name           remove modules first, then insert modules"
-		echo "    -h                       help information"
-		echo -e "Available sensors: ar0130, h42, imx104, icx692, ov9715, 9m034, imx122, mt9p006"
-		echo -e "for example: ./loadxm510 -a ar0130 \n"
+	echo "options:"
+	echo "    -i sensor_name           insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a sensor_name           remove modules first, then insert modules"
+	echo "    -h                       help information"
+	echo -e "Available sensors: ar0130, h42, imx104, icx692, ov9715, 9m034, imx122, mt9p006"
+	echo -e "for example: ./loadxm510 -a ar0130 \n"
 }
 
 # load module.
@@ -142,4 +142,3 @@ then
 remove_ko
 insert_ko
 fi
-

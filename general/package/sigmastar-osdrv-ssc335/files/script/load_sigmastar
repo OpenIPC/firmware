@@ -49,11 +49,11 @@ insert_ko()
             ;;
         sc2235)
             # Untested | The information is obtained from the Tiandy firmware
-            insmod ${PATH_MODULE}/mi_venc.ko thread_priority=99;
+            insmod ${PATH_MODULE}/mi_venc.ko;
             ;;
         sc2239)
             # Untested | The information is obtained from the IMOU firmware
-            insmod ${PATH_MODULE}/mi_venc.ko;
+            insmod ${PATH_MODULE}/mi_venc.ko thread_priority=99;
             ;;
         sc3335)
             # Untested | The information is obtained from the Uniview firmware (no any params on other version)
