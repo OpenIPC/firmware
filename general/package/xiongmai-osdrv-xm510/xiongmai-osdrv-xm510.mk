@@ -27,6 +27,9 @@ endef
 
 
 define XIONGMAI_OSDRV_XM510_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/script/S99xiongmai
+
 	# $(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm510/files/sensor/config/*.ini
 

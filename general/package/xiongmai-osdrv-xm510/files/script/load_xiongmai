@@ -81,6 +81,7 @@ insert_ko()
 	#source ./pinmux_xm510.sh rmii i2c > /dev/null
 
 # driver load
+	cd /lib/modules/3.0.101/xiongmai/
 	insert_sns > /dev/null
 	insmod mmz.ko mmz_start=$MEM_START mmz_size=$MEM_LEN
 	insmod xm510_vi.ko buffer=$VI_BUFF
