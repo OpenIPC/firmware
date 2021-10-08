@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MICROBE_WEB_VERSION = b7dc70d21453d5bb9890119df914148bcb615d04
+MICROBE_WEB_VERSION = 28201f3534d5c2a7e4157105b31c359a5d0e4213
 MICROBE_WEB_SITE = $(call github,openipc,microbe-web,$(MICROBE_WEB_VERSION))
 MICROBE_WEB_LICENSE = MIT
 MICROBE_WEB_LICENSE_FILES = LICENSE
