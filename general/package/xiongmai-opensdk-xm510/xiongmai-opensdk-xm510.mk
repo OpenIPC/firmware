@@ -17,6 +17,7 @@ endef
 
 define XIONGMAI_OPENSDK_XM510_INSTALL_TARGET_CMDS
 	install -m 0755 -D $(@D)/libwrapper.so $(TARGET_DIR)/lib/libwrapper.so
+	ln -sfv libwrapper.so $(TARGET_DIR)/lib/libwrapper.so.0
 endef
 
 $(eval $(generic-package))
