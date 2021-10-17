@@ -1,0 +1,275 @@
+#!/bin/sh
+# Useage: ./loadgk7205v300 [ -r|-i|-a ] [ sensor ]
+#         -r : rmmod all modules
+#         -i : insmod all modules
+#    default : rmmod all moules and then insmod them
+# e.g: ./loadgk7205v300 -i -sensor0 imx307 -osmem 32M
+
+
+####################Variables Definition##########################
+
+
+SNS_TYPE0=imx307;           # sensor type
+YUV_TYPE0=0;                # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
+CHIP_TYPE=gk7205v300;      # chip type
+BOARD=demo;
+
+#DDR start:0x40000000, kernel start:0x40000000,  OS(32M); MMZ start:0x42000000
+mem_total=128                # 128M, total mem
+mem_start=0x40000000         # phy mem start
+os_mem_size=32               # 32M, os mem
+mmz_start=0x42000000;        # mmz start addr
+mmz_size=96M;                # 96M, mmz size
+##################################################################
+
+report_error()
+{
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+insert_audio()
+{
+	insmod gk7205v200_aio.ko
+	insmod gk7205v200_ai.ko
+	insmod gk7205v200_ao.ko
+	insmod gk7205v200_aenc.ko
+	insmod gk7205v200_adec.ko
+	insmod gk7205v200_acodec.ko
+	echo "insert audio"
+}
+
+remove_audio()
+{
+	rmmod gk7205v200_acodec
+	rmmod gk7205v200_adec
+	rmmod gk7205v200_aenc
+	rmmod gk7205v200_ao
+	rmmod gk7205v200_ai
+	rmmod gk7205v200_aio
+
+	echo "remove audio"
+}
+
+insert_isp()
+{
+	insmod gk7205v200_isp.ko
+}
+
+insert_sil9024()
+{
+	i2c_sel=2
+	if [ "$CHIP_TYPE" == "gk7205v300" ];then
+		i2c_sel=1
+	fi
+
+	if [ "$BOARD" == "sck" ];then
+		insmod sil9024.ko norm=12 i2c_num=$i2c_sel  #1080P@30fps
+	fi
+}
+
+insert_adv7179()
+{
+	i2c_sel=2
+	if [ "$CHIP_TYPE" == "gk7205v300" ];then
+		i2c_sel=1
+	fi
+
+	if [ "$BOARD" == "sck" ];then
+		insmod adv7179.ko norm_mode=0 i2c_num=$i2c_sel # norm_mode = 0:PAL, 1:NTSC
+	fi
+}
+
+insert_isp_piris()
+{
+	if [ "$CHIP_TYPE" == "gk7205v300" -a "$BOARD" == "demo" ];then
+		insmod isp_piris.ko
+	fi
+}
+
+insert_ko()
+{
+	insmod sysconfig.ko chip=$CHIP_TYPE sensors=$SNS_TYPE0 g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
+	insmod osal.ko anony=1 mmz_allocator=gk mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+	insmod gk7205v200_base.ko
+	insmod gk7205v200_sys.ko
+	insmod gk7205v200_tde.ko
+	insmod gk7205v200_rgn.ko
+	insmod gk7205v200_vgs.ko
+	insmod gk7205v200_vi.ko
+	insert_isp;
+	insmod gk7205v200_vpss.ko
+	insmod gk7205v200_vo.ko
+	insmod gfbg.ko video="gfbg:vram0_size:1620"     # default fb0:D1
+	insmod gk7205v200_chnl.ko
+	insmod gk7205v200_vedu.ko
+	insmod gk7205v200_rc.ko
+	insmod gk7205v200_venc.ko
+	insmod gk7205v200_h264e.ko
+	insmod gk7205v200_h265e.ko
+	insmod gk7205v200_jpege.ko
+	insmod gk7205v200_ive.ko save_power=0
+	insmod isp_pwm.ko
+	insmod isp_sensor_i2c.ko
+	insmod isp_sensor_spi.ko
+	insert_isp_piris
+	insert_sil9024; # BT1120
+
+	insert_audio
+	insmod mipi_rx.ko
+}
+
+remove_ko()
+{
+	remove_audio
+	rmmod mipi_rx
+	rmmod isp_piris
+	rmmod isp_pwm
+	rmmod sil9024 &> /dev/null
+	rmmod gk7205v200_ive
+	rmmod gk7205v200_rc
+	rmmod gk7205v200_jpege
+	rmmod gk7205v200_h264e
+	rmmod gk7205v200_h265e
+	rmmod gk7205v200_venc
+	rmmod gk7205v200_vedu
+	rmmod gk7205v200_chnl
+	rmmod gfbg
+	rmmod gk7205v200_vo
+	rmmod gk7205v200_vpss
+	rmmod gk7205v200_isp
+	rmmod gk7205v200_vi
+	rmmod gk7205v200_vgs
+	rmmod gk7205v200_rgn
+	rmmod gk7205v200_tde
+	rmmod isp_sensor_i2c &> /dev/null
+	rmmod isp_sensor_spi &> /dev/null
+	rmmod gk7205v200_sys
+	rmmod gk7205v200_base
+	rmmod osal
+	rmmod sysconfig
+}
+
+
+load_usage()
+{
+	echo "Usage:  ./loadgk7205v300 [-option] [sensor_name]"
+	echo "options:"
+	echo "    -i                       insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a                       remove modules first, then insert modules"
+	echo "    -sensor sensor_name      config sensor type [default: imx307]"
+	echo "    -h                       help information"
+	echo -e "Available sensors: imx307 imx327 sc4236 etc."
+	echo -e "for example: ./loadgk7205v300 -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
+}
+
+calc_mmz_info()
+{
+        mmz_start=`echo "$mem_start $os_mem_size"  |
+        awk 'BEGIN { temp = 0; }
+        {
+                temp = $1/1024/1024 + $2;
+        }
+        END { printf("0x%x00000\n", temp); }'`
+
+        mmz_size=`echo "$mem_total $os_mem_size"  |
+        awk 'BEGIN { temp = 0; }
+        {
+                temp = $1 - $2;
+        }
+        END { printf("%dM\n", temp); }'`
+        echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+}
+
+######################parse arg###################################
+b_arg_sensor0=0
+b_arg_sensor1=0
+b_arg_yuv_type0=0
+b_arg_insmod=0
+b_arg_remove=0
+b_arg_os_mem=0
+b_arg_board=0
+
+for arg in $@
+do
+	if [ $b_arg_sensor0 -eq 1 ] ; then
+		b_arg_sensor0=0;
+		SNS_TYPE0=$arg;
+	fi
+
+
+	if [ $b_arg_os_mem -eq 1 ] ; then
+		b_arg_os_mem=0;
+		os_mem_size=$arg;
+
+		if [ -z $os_mem_size ]; then
+			echo "[error] os_mem_size is null"
+			exit;
+		fi
+	fi
+
+	if [ $b_arg_yuv_type0 -eq 1 ] ; then
+		b_arg_yuv_type0=0;
+		YUV_TYPE0=$arg;
+	fi
+	if [ $b_arg_board -eq 1 ] ; then
+		b_arg_board=0;
+		BOARD=$arg;
+	fi
+
+	case $arg in
+		"-i")
+			b_arg_insmod=1;
+			;;
+		"-r")
+			b_arg_remove=1;
+			;;
+		"-a")
+			b_arg_insmod=1;
+			b_arg_remove=1;
+			;;
+		"-h")
+			load_usage;
+			;;
+		"-sensor0")
+			b_arg_sensor0=1;
+			;;
+		"-sensor")
+			b_arg_sensor0=1;
+			;;
+		"-osmem")
+			b_arg_os_mem=1;
+			;;
+		"-yuv0")
+			b_arg_yuv_type0=1;
+			;;
+		"-board")
+			b_arg_board=1;
+			;;
+	esac
+done
+#######################parse arg end########################
+if [ $os_mem_size -ge $mem_total ] ; then
+	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+	exit;
+fi
+
+calc_mmz_info;
+
+#######################Action###############################
+
+if [ $# -lt 1 ]; then
+    load_usage;
+    exit 0;
+fi
+
+
+if [ $b_arg_remove -eq 1 ]; then
+	remove_ko;
+fi
+
+if [ $b_arg_insmod -eq 1 ]; then
+	insert_ko;
+fi
+
