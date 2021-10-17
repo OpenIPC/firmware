@@ -107,13 +107,13 @@ insert_ko()
 	insmod isp_sensor_spi.ko
 	# insert_sil9024;                               # unused on OpenIPC  # BT1120
 	insert_audio
-	# insmod mipi_rx.ko                             # unused on OpenIPC
+	insmod mipi_rx.ko
 }
 
 remove_ko()
 {
 	remove_audio
-	# rmmod mipi_rx                                 # unused on OpenIPC
+	rmmod mipi_rx
 	# rmmod sil9024 &> /dev/null                    # unused on OpenIPC
 	rmmod gk7205v200_ive
 	rmmod gk7205v200_rc
