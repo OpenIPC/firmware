@@ -81,7 +81,7 @@ insert_adv7179()
 
 insert_ko()
 {
-
+	cd /lib/modules/4.9.37/goke/
 	insmod sysconfig.ko chip=$CHIP_TYPE sensors=$SNS_TYPE0 g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
 	insmod osal.ko anony=1 mmz_allocator=gk mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 	insmod gk7205v200_base.ko
@@ -92,8 +92,8 @@ insert_ko()
 	insmod gk7205v200_vi.ko
 	insert_isp;
 	insmod gk7205v200_vpss.ko
-	insmod gk7205v200_vo.ko
-	insmod gfbg.ko video="gfbg:vram0_size:1620"     # default fb0:D1
+	# insmod gk7205v200_vo.ko                       # unused on OpenIPC
+	# insmod gfbg.ko video="gfbg:vram0_size:1620"   # unused on OpenIPC  # default fb0:D1
 	insmod gk7205v200_chnl.ko
 	insmod gk7205v200_vedu.ko
 	insmod gk7205v200_rc.ko
@@ -102,19 +102,19 @@ insert_ko()
 	insmod gk7205v200_h265e.ko
 	insmod gk7205v200_jpege.ko
 	insmod gk7205v200_ive.ko save_power=0
-	insmod isp_pwm.ko
+	# insmod isp_pwm.ko                             # unused on OpenIPC
 	insmod isp_sensor_i2c.ko
 	insmod isp_sensor_spi.ko
-	insert_sil9024; # BT1120
+	# insert_sil9024;                               # unused on OpenIPC  # BT1120
 	insert_audio
-	insmod mipi_rx.ko
+	# insmod mipi_rx.ko                             # unused on OpenIPC
 }
 
 remove_ko()
 {
 	remove_audio
-	rmmod mipi_rx
-	rmmod sil9024 &> /dev/null
+	# rmmod mipi_rx                                 # unused on OpenIPC
+	# rmmod sil9024 &> /dev/null                    # unused on OpenIPC
 	rmmod gk7205v200_ive
 	rmmod gk7205v200_rc
 	rmmod gk7205v200_jpege
@@ -123,8 +123,8 @@ remove_ko()
 	rmmod gk7205v200_venc
 	rmmod gk7205v200_vedu
 	rmmod gk7205v200_chnl
-	rmmod gfbg
-	rmmod gk7205v200_vo
+	# rmmod gfbg                                    # unused on OpenIPC
+	# rmmod gk7205v200_vo                           # unused on OpenIPC
 	rmmod gk7205v200_vpss
 	rmmod gk7205v200_isp
 	rmmod gk7205v200_vi
@@ -133,7 +133,7 @@ remove_ko()
 	rmmod gk7205v200_tde
 	rmmod isp_sensor_i2c &> /dev/null
 	rmmod isp_sensor_spi &> /dev/null
-	rmmod isp_pwm
+	# rmmod isp_pwm                                 # unused on OpenIPC
 	rmmod gk7205v200_sys
 	rmmod gk7205v200_base
 	rmmod osal
