@@ -110,6 +110,11 @@ hi3516ev200_dozor() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_dozor all && rename
 }
 
+hi3516ev200_eltis() {
+  soc="hi3516ev200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_eltis all && rename
+}
+
 hi3516ev200_vixand() {
   soc="hi3516ev200"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_vixand all && rename
@@ -241,6 +246,7 @@ xm550() {
 #
 # hi3516ev200                   # OK
 # hi3516ev200_dozor             # Dozor
+# hi3516ev200_eltis             # Eltis
 # hi3516ev200_vixand            # Vixand
 #
 # hi3516ev300                   # OK

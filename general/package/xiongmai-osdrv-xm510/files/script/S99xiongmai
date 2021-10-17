@@ -23,7 +23,7 @@ start() {
 	load_xiongmai -i
 	#
 	SNS_TYPE=$(ipcinfo --short_sensor)
-	logger -s -p daemon.info -t xiongmai "You sensor is $SNS_TYPE."
+	logger -s -p daemon.info -t xiongmai "You sensor is $SNS_TYPE"
 	#
 	printf 'Starting %s: ' "$DAEMON"
 	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
