@@ -1,6 +1,6 @@
 ################################################################################
 #
-# microbe-web | updated 2021.10.12
+# microbe-web | updated 2021.10.17
 #
 ################################################################################
 
@@ -10,7 +10,7 @@ MICROBE_WEB_LICENSE = MIT
 MICROBE_WEB_LICENSE_FILES = LICENSE
 
 define MICROBE_WEB_INSTALL_TARGET_CMDS
-	cp -rv $(@D)/files_old/var/www $(TARGET_DIR)/var
+	cp -rv $(@D)/files/var/www $(TARGET_DIR)/var
 endef
 
 $(eval $(generic-package))
