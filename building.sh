@@ -4,7 +4,7 @@
 #
 
 clone() {
-  sudo apt-get update -y ; apt-get install -y bc build-essential git unzip
+  sudo apt-get update -y ; apt-get install -y bc build-essential git unzip autotools-dev automake libtool
   git clone --depth=1 https://github.com/OpenIPC/openipc-2.1.git
 }
 
@@ -137,6 +137,18 @@ hi3516ev300_tehshield() {
 
 #################################################################################
 
+nt98562() {
+  soc="nt98562"
+  fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+nt98566() {
+  soc="nt98566"
+  fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
 ssc325() {
   soc="ssc325"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -255,6 +267,12 @@ xm550() {
 #
 #######
 #
+nt98562                       # OpenIPC
+#
+# nt98566                       # OpenIPC
+#
+#######
+#
 # ssc325                        # OpenIPC
 #
 # ssc333                        # OpenIPC
@@ -275,7 +293,7 @@ xm550() {
 #
 #######
 #
-xm510                         # testing
+# xm510                         # testing
 # xm530                         # OK
 # xm550                         # OK
 #
