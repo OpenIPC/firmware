@@ -92,7 +92,8 @@ hi3518ev200() {
 
 hi3516cv300() {
   soc="hi3516cv300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_unknown all && rename
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+  #PLATFORM=hisilicon make br-linux-{dirclean,rebuild}
 }
 
 hi3516cv500() {
