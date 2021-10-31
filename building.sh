@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# OpenIPC.org | v.20210914
+# OpenIPC.org | v.20211025
 #
 
 clone() {
-  sudo apt-get update -y ; apt-get install -y bc build-essential git unzip autotools-dev automake libtool
+  sudo apt-get update -y ; apt-get install -y bc build-essential git unzip rsync autotools-dev automake libtool
   git clone --depth=1 https://github.com/OpenIPC/openipc-2.1.git
 }
 
@@ -82,7 +82,12 @@ hi3516cv100() {
 
 hi3516cv200() {
   soc="hi3516cv200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_unknown all && rename
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+hi3518ev200() {
+  soc="hi3518ev200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 hi3516cv300() {
@@ -140,6 +145,7 @@ hi3516ev300_tehshield() {
 nt98562() {
   soc="nt98562"
   fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_openipc all && rename
+  #PLATFORM=novatek make br-linux-{dirclean,rebuild}
 }
 
 nt98566() {
@@ -251,6 +257,7 @@ xm550() {
 #
 # hi3516cv100                   # testing..
 # hi3516cv200                   # testing..
+hi3518ev200                   # testing..
 # hi3516cv300                   # testind..
 # hi3516cv500                   # testind..
 #
@@ -267,7 +274,7 @@ xm550() {
 #
 #######
 #
-nt98562                       # OpenIPC
+# nt98562                       # OpenIPC
 #
 # nt98566                       # OpenIPC
 #
