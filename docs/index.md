@@ -49,15 +49,15 @@ If you like our work, please consider supporting us on [Opencollective](https://
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev200_images.yml/badge.svg)|Hi3516Ev200|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz)| READY |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg)|Hi3516Ev300|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz)| READY |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg)|Hi3518Ev300|[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz)| READY |
-|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/msc313e_images.yml/badge.svg)    |MSC313E    |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.msc313e-br.tgz)    | RND   |
+|    |MSC313E    |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.msc313e-br.tgz)    | RND   |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/nt98562_images.yml/badge.svg)    |NT98562    |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98562-br.tgz)    | RND   |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/nt98566_images.yml/badge.svg)    |NT98566    |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98566-br.tgz)    | RND   |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc325_images.yml/badge.svg)     |SSC325     |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc325-br.tgz)     | RND   |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc335_images.yml/badge.svg)     |SSC335     |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc335-br.tgz)     | WORK  |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337_images.yml/badge.svg)     |SSC337     |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337-br.tgz)     | WORK  |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337de_images.yml/badge.svg)   |SSC337DE   |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337de-br.tgz)   | WIP   |
-|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/t20_images.yml/badge.svg)        |T20        |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.t20-br.tgz)        | RND   |
-|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/t21_images.yml/badge.svg)        |T21        |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.t21-br.tgz)        | RND   |
+|!        |T20        |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.t20-br.tgz)        | RND   |
+|!        |T21        |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.t21-br.tgz)        | RND   |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/t31_images.yml/badge.svg)        |T31        |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.t31-br.tgz)        | RND   |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm510_images.yml/badge.svg)      |XM510      |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm510-br.tgz)      | WORK  |
 |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm530_images.yml/badge.svg)      |XM530      |[uImage + rootfs.squashfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm530-br.tgz)      | WORK  |
@@ -69,30 +69,30 @@ If you like our work, please consider supporting us on [Opencollective](https://
 
 | Chip        | U-Boot | Kernel | Rootfs | Video  | Audio  | GPIO   | USB    | WiFi   | MMC    | IPv6   |
 |-------------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|
-| fh8632      |
-| fh8852      |
-| fh8856      |
-| gk7102s     |
-| gk7202v300  |
-| gk7205v200  |  yes   |  yes   |  yes   |        |        |        |        |        |        |        |
-| gk7205v300  |
-| gk7605v100  |
-| hi3516av300 |        |  yes   |  yes   |  yes   |        |        |        |        |        |        |
-| hi3516cv500 |        |  yes   |  yes   |  yes   |        |        |        |        |        |        |
-| hi3516dv300 |        |  yes   |  yes   |  yes   |        |        |        |        |        |        |
-| hi3516ev200 |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
-| hi3516ev300 |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
-| hi3518ev300 |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |  yes   |
-| msc313e     |
-| nt98562     |
-| nt98566     |
-| ssc325      |        |  yes   |  yes   |        |        |        |        |        |        |
-| ssc335      |        |  yes   |  yes   |  yes   |        |  yes   |  yes   |        |  yes   |
-| ssc337      |        |  yes   |  yes   |  yes   |        |  yes   |  yes   |        |  yes   |
-| ssc337de    |        |  yes   |  yes   |        |        |        |        |        |        |
-| t20         |
-| t21         |
-| t31         |
-| xm510       |
-| xm530       |        |  yes   |  yes   |
-| xm550       |        |  yes   |  yes   |
+| FH8632      |
+| FH8852      |
+| FH8856      |
+| GK7102S     |
+| GK7202v300  |
+| GK7205v200  |  ✅   |  ✅   |  ✅   |        |        |        |        |        |        |        |
+| GK7205v300  |
+| GK7605v100  |
+| Hi3516Av300 |        |  ✅   |  ✅   |  ✅   |        |        |        |        |        |        |
+| Hi3516Cv500 |        |  ✅   |  ✅   |  ✅   |        |        |        |        |        |        |
+| Hi3516Dv300 |        |  ✅   |  ✅   |  ✅   |        |        |        |        |        |        |
+| Hi3516Ev200 |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |
+| Hi3516Ev300 |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |
+| Hi3518Ev300 |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |  ✅   |
+| MSC313E     |
+| NT98562     |
+| NT98566     |
+| SSC325      |        |  ✅   |  ✅   |        |        |        |        |        |        |
+| SSC335      |        |  ✅   |  ✅   |  ✅   |        |  ✅   |  ✅   |        |  ✅   |
+| SSC337      |        |  ✅   |  ✅   |  ✅   |        |  ✅   |  ✅   |        |  ✅   |
+| SSC337DE    |        |  ✅   |  ✅   |        |        |        |        |        |        |
+| T20         |
+| T21         |
+| T31         |
+| XM510       |
+| XM530       |        |  ✅   |  ✅   |
+| XM550       |        |  ✅   |  ✅   |
