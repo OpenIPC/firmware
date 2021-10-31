@@ -1,0 +1,11 @@
+--- a/scripts/dtc/dtc-lexer.lex.c_shipped	2016-08-28 13:19:20.000000000 +0300
++++ b/scripts/dtc/dtc-lexer.lex.c_shipped	2021-04-02 00:06:02.972781070 +0300
+@@ -637,7 +637,7 @@
+ #include "srcpos.h"
+ #include "dtc-parser.tab.h"
+ 
+-YYLTYPE yylloc;
++extern YYLTYPE yylloc;
+ extern bool treesource_error;
+ 
+ /* CAUTION: this will stop working if we ever use yyless() or yyunput() */
