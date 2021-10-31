@@ -1,11 +1,11 @@
-name: OpenIPC for NT98566
+name: OpenIPC for Hi3516Cv300
 
 on:
   workflow_dispatch:
 
 jobs:
   build_core:
-    name: OpenIPC v2.1 for NT98566
+    name: OpenIPC v2.1 for Hi3516Cv300
     runs-on: ubuntu-18.04
 
     steps:
@@ -52,22 +52,22 @@ jobs:
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build NT98566 firmware
-        id: build-nt98566-firmware
+      - name: Build Hi3516Cv300 firmware
+        id: build-hi3516cv300-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.nt98566-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.hi3516cv300-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=novatek BOARD=unknown_unknown_nt98566_openipc all
+          make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516cv300_openipc all
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152" >> $GITHUB_ENV && exit 1
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880" >> $GITHUB_ENV && exit 1
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.nt98566
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.nt98566
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.nt98566 uImage.nt98566
+          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.hi3516cv300
+          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.hi3516cv300
+          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.hi3516cv300 uImage.hi3516cv300
 
-      - name: Build NT98566 SDK
-        id: build-nt98566-sdk
+      - name: Build Hi3516Cv300 SDK
+        id: build-hi3516cv300-sdk
         continue-on-error: true
         run: |
           ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
@@ -79,10 +79,10 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-nt98566-firmware.outcome != 'success' || steps.build-nt98566-sdk.outcome != 'success'
+        if: steps.build-hi3516cv300-firmware.outcome != 'success' || steps.build-hi3516cv300-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
-          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... NT98566}"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... HI3516CV300}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
@@ -104,7 +104,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: "openipc.nt98566-br.tgz"
+          asset_name: "openipc.hi3516cv300-br.tgz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -114,7 +114,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-nt98566-linux-musleabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-hi3516cv300-linux-musleabi_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
