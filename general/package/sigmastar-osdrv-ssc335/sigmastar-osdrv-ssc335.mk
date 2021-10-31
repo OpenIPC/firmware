@@ -88,8 +88,8 @@ define SIGMASTAR_OSDRV_SSC335_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/script/ircut_demo
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/script/debug_level
 
-	# $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/fonts
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/fonts $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/fonts/*.bin
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/fonts
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/fonts $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/fonts/*.bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
 	# Minimalism for sample_venc_jpeg
