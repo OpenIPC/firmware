@@ -8,22 +8,6 @@ HISILICON_OSDRV_HI3516CV500_VERSION =
 HISILICON_OSDRV_HI3516CV500_SITE =
 HISILICON_OSDRV_HI3516CV500_LICENSE = MIT
 HISILICON_OSDRV_HI3516CV500_LICENSE_FILES = LICENSE
-HISILICON_OSDRV_HI3516CV500_INSTALL_STAGING = YES
-
-
-define HISILICON_OSDRV_HI3516CV500_INSTALL_STAGING_CMDS
-	$(INSTALL) -m 755 -d $(STAGING_DIR)/usr/include/hisilicon
-	# $(INSTALL) -m 644 -t $(STAGING_DIR)/usr/include/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv500/files/include/*
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/hisilicon-osdrv-hi3516cv500/include
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/hisilicon-osdrv-hi3516cv500/include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv500/files/include/*
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/hisilicon-osdrv-hi3516cv500/kmod
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/hisilicon-osdrv-hi3516cv500/kmod $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv500/files/kmod/*.ko
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/hisilicon-osdrv-hi3516cv500/lib
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/hisilicon-osdrv-hi3516cv500/lib $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv500/files/lib/*.so
-endef
 
 
 define HISILICON_OSDRV_HI3516CV500_INSTALL_TARGET_CMDS

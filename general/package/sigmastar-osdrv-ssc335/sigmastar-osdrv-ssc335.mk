@@ -8,47 +8,6 @@ SIGMASTAR_OSDRV_SSC335_VERSION =
 SIGMASTAR_OSDRV_SSC335_SITE =
 SIGMASTAR_OSDRV_SSC335_LICENSE = MIT
 SIGMASTAR_OSDRV_SSC335_LICENSE_FILES = LICENSE
-SIGMASTAR_OSDRV_SSC335_INSTALL_STAGING = YES
-
-
-define SIGMASTAR_OSDRV_SSC335_INSTALL_STAGING_CMDS
-	$(INSTALL) -m 755 -d $(STAGING_DIR)/usr/include/sigmastar
-	$(INSTALL) -m 644 -t $(STAGING_DIR)/usr/include/sigmastar $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/include/*.h
-
-	$(INSTALL) -m 755 -d $(STAGING_DIR)/usr/include/sigmastar/drivers/sensorif
-	$(INSTALL) -m 644 -t $(STAGING_DIR)/usr/include/sigmastar/drivers/sensorif $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/include/drivers/sensorif/*.h
-
-	$(INSTALL) -m 755 -d $(STAGING_DIR)/usr/include/sigmastar/isp/ispahan
-	$(INSTALL) -m 644 -t $(STAGING_DIR)/usr/include/sigmastar/isp/ispahan $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/include/isp/ispahan/*.h
-
-	$(INSTALL) -m 755 -d $(STAGING_DIR)/usr/include/sigmastar/isp/macaron
-	$(INSTALL) -m 644 -t $(STAGING_DIR)/usr/include/sigmastar/isp/macaron $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/include/isp/macaron/*.h
-
-	$(INSTALL) -m 755 -d $(STAGING_DIR)/usr/include/sigmastar/isp/pudding
-	$(INSTALL) -m 644 -t $(STAGING_DIR)/usr/include/sigmastar/isp/pudding $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/include/isp/pudding/*.h
-
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/usr/include/sigmastar
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/usr/include/sigmastar $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/include/*.h
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/usr/include/sigmastar/drivers/sensorif
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/usr/include/sigmastar/drivers/sensorif $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/include/drivers/sensorif/*.h
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/usr/include/sigmastar/isp/ispahan
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/usr/include/sigmastar/isp/ispahan $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/include/isp/ispahan/*.h
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/usr/include/sigmastar/isp/macaron
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/usr/include/sigmastar/isp/macaron $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/include/isp/macaron/*.h
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/usr/include/sigmastar/isp/pudding
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/usr/include/sigmastar/isp/pudding $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/include/isp/pudding/*.h
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/sigmastar-osdrv-ssc335/kmod
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/sigmastar-osdrv-ssc335/kmod $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/kmod/*.ko
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/sigmastar-osdrv-ssc335/lib
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/sigmastar-osdrv-ssc335/lib $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/lib/*.so
-endef
 
 
 define SIGMASTAR_OSDRV_SSC335_INSTALL_TARGET_CMDS
