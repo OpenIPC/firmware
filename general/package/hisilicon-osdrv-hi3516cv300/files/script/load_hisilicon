@@ -463,16 +463,6 @@ calc_mmz_info()
 	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
 }
 
-start_majestic()
-{
-	# Use it for stopping service:  killall -sigint majestic
-	sleep 1
-	export SENSOR=$SNS_TYPE
-	sleep 30
-	ntpd -n -q -p 0.openwrt.pool.ntp.org -p 1.openwrt.pool.ntp.org -p 2.openwrt.pool.ntp.org -p 3.openwrt.pool.ntp.org
-	majestic 2>&1 | logger -p daemon.info -t majestic &
-}
-
 
 ######################parse arg###################################
 b_arg_os_mem=0
@@ -558,13 +548,12 @@ if [ $# -lt 1 ]; then
 fi
 
 if [ $b_arg_remove -eq 1 ]; then
-	killall -sigint majestic
 	remove_ko;
 fi
 
 if [ $b_arg_insmod -eq 1 ]; then
+	cd /lib/modules/3.18.20/hisilicon
 	insert_ko;
-	start_majestic;
 fi
 
 if [ $b_arg_restore -eq 1 ]; then
