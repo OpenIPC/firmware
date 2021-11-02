@@ -1,0 +1,572 @@
+#!/bin/sh
+#
+# This is part of OpenIPC.org project | 2020.08.01
+#
+# ar0237 imx290 imx307 imx323 imx385 jxf22 ov2718 ov2718_2a sc2235
+
+
+# SoC detect
+chipid=$(ipctool --chip_id)
+
+# MMZ config
+mem_start=0x80000000;                             # phy mem start
+
+mem_total=$(awk -F '=' '$1=="totalmem"{print $2}' RS=" " /proc/cmdline | tr -d 'M')
+mem_total=${mem_total:=64}
+
+os_mem_size=$(awk -F '=' '$1=="mem"{print $2}' RS=" " /proc/cmdline | tr -d 'M')
+os_mem_size=${os_mem_size:=32}
+
+# Sensor config
+SNS_TYPE=$(awk -F '=' '$1=="sensor"{print $2}' RS=" " /proc/cmdline)
+SNS_TYPE=${SNS_TYPE:=ar0237_i2c_dc}
+
+
+
+##################################################################
+
+#if [ ${chipid} = "hi3516ev100" ]; then
+#	mem_total=64;                             # 64M, total mem
+#	os_mem_size=32;                           # 32M, os mem
+#	mmz_start=0x82000000;                     # mmz start addr, is calculated automatically
+#	mmz_size=32M;                             # 32M, mmz size, is calculated automatically
+#elif [ ${chipid} = "hi3516cv300" ]; then
+#	mem_total=128;                            # 128M, total mem
+#	os_mem_size=40;                           # 40M, os mem
+#	mmz_start=0x82800000;                     # mmz start addr, is calculated automatically
+#	mmz_size=88M;                             # 88M, mmz size, is calculated automatically
+#else
+#	echo "Wrong chip_id: ${chipid}";
+#	exit 1;
+#fi
+#
+# Checker
+#echo "${chipid}: ${mem_total}/${os_mem_size} | ${mem_start}/${mmz_start} | ${mmz_size}"
+
+####################vo config#################################
+
+#vou interface mode: default(cvbs), bt656, lcd
+vou_intf_mode="default";
+
+##################################################################
+
+####################clk config####################################
+
+vedu_frequency=198000000;  # 198M, vedu clock frequency
+vgs_frequency=297000000;   # 297M, vgs clock frequency
+vpss_frequency=250000000;  # 250M, vpss clock frequency
+ive_frequency=297000000;   # 297M, ive clock frequency
+
+##################################################################
+
+report_error()
+{
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+insert_audio()
+{
+	insmod hi3516cv300_aio.ko
+	insmod hi3516cv300_ai.ko
+	insmod hi3516cv300_ao.ko
+	insmod hi3516cv300_aenc.ko
+	insmod hi3516cv300_adec.ko
+	insmod hi_acodec.ko
+	#insmod extdrv/hi_tlv320aic31.ko 
+	echo "insert audio"
+}
+
+remove_audio()
+{
+	#rmmod hi_tlv320aic31.ko
+	rmmod hi3516cv300_adec
+	rmmod hi3516cv300_aenc
+	rmmod hi3516cv300_ao
+	rmmod hi3516cv300_ai
+	rmmod hi_acodec
+	rmmod hi3516cv300_aio
+	echo "remove audio"
+}
+
+bus_type="i2c";
+pinmux_mode="i2c_mipi";
+sensor_clk_freq=37125000;
+intf_mode="default"
+
+####################sensor note#################################
+
+#if you want to configure a new sensor, maybe you need to know the sensor parameters as follows
+#(1)bus_type: i2c or ssp, write and read sensor register.
+#(2)pinmux_mode: i2c_mipi/ssp_mipi/i2c_dc/ssp_dc. For example, if the bus_type is i2c and the sensor output DC sequence, the pinmux_mode would be i2c_dc.
+#(3)sensor_clk_freq: sensor clock frequency, please read the datasheet about sensor.
+#(4)intf_mode: if the interface mode of viu is bt1120, the value should be bt1120, else default.
+#(5)viu_frequency: viu clock frequecny, you can adjust different frequency when the scene changed.
+#(6)isp_div: isp clock divider. Input clock frequency is the same as viu clock frequency.
+
+##################################################################
+insert_sns()
+{
+    case $SNS_TYPE in
+
+	ar0237)
+			bus_type="i2c";
+			pinmux_mode="i2c_mipi";
+			sensor_clk_freq=27000000;
+			intf_mode="default";
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+				isp_div=1;                            # isp div clk, freq = viu_clk_freq / div
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+            ;;
+
+	ar0237_i2c_dc)
+			# This was added by ZigFisher
+			bus_type="i2c";
+			pinmux_mode="i2c_dc";
+			sensor_clk_freq=27000000;
+			intf_mode="default";
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+				isp_div=1;                            # isp div clk, freq = viu_clk_freq / div
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+            ;;
+
+	bt1120)
+			intf_mode="bt1120";
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+			isp_div=1;                                    # isp div clk, freq = viu_clk_freq / div
+            ;;
+
+	imx290)
+			bus_type="i2c";
+			pinmux_mode="i2c_mipi";
+			sensor_clk_freq=37125000;
+			intf_mode="default";
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+				isp_div=1;                            # isp div clk, freq = viu_clk_freq / div
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+            ;;
+
+	imx291_i2c_lvds|imx307_i2c_lvds)
+			# This was added by @widgetii
+			bus_type="i2c";
+			pinmux_mode="i2c_mipi";
+			sensor_clk_freq=37125000;
+			intf_mode="default";
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+				isp_div=1;                            # isp div clk, freq = viu_clk_freq / div
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+            ;;
+
+	imx307_i2c_mipi)
+			# This was added by ZigFisher
+			bus_type="i2c";
+			pinmux_mode="i2c_mipi";
+			sensor_clk_freq=37125000;
+			intf_mode="default";
+			isp_div=1;                                    # isp div clk, freq = viu_clk_freq / div
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+            ;;
+
+	imx323_spi_dc)
+			# This was added by ZigFisher
+			bus_type="ssp";
+			pinmux_mode="ssp_dc";
+			sensor_clk_freq=37125000;
+			intf_mode="default";
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+				isp_div=1;                            # isp div clk, freq = viu_clk_freq / div
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+            ;;
+
+	imx323_i2c_dc)
+			# This was added by ZigFisher
+			bus_type="i2c";
+			pinmux_mode="i2c_dc";
+			sensor_clk_freq=37125000;
+			intf_mode="default";
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+				isp_div=1;                            # isp div clk, freq = viu_clk_freq / div
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+            ;;
+
+	imx385)
+			# get from hi3516cv300 profile (!!! check viu_frequency and isp_div !!!)
+			bus_type="i2c";
+			pinmux_mode="i2c_mipi";
+			sensor_clk_freq=37125000;
+			intf_mode="default";
+			viu_frequency=198000000;  # 198M, viu clock frequency
+			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
+            ;;
+
+	jxf22)
+			# get from hi3516ev100 profile (!!! check viu_frequency and isp_div !!!)
+			bus_type="i2c";
+			pinmux_mode="i2c_mipi";
+			sensor_clk_freq=24000000;
+			intf_mode="default";
+			viu_frequency=83300000;   # 83.3M, viu clock frequency
+			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
+			echo "66" > /sys/class/gpio/export;     # GPIO8_2
+			echo "out" > /sys/class/gpio/gpio66/direction;
+			echo "0" > /sys/class/gpio/gpio66/value;
+            ;;
+
+	jxf22_i2c_dc)
+			# This was added by ZigFisher
+			bus_type="i2c";
+			pinmux_mode="i2c_dc";
+			sensor_clk_freq=24000000;
+			intf_mode="default";
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+				isp_div=1;                            # isp div clk, freq = viu_clk_freq / div
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+			echo "66" > /sys/class/gpio/export;     # GPIO8_2
+			echo "out" > /sys/class/gpio/gpio66/direction;
+			echo "0" > /sys/class/gpio/gpio66/value;
+            ;;
+
+	ov2718)
+			bus_type="i2c";
+			pinmux_mode="i2c_mipi";
+			sensor_clk_freq=24000000;
+			intf_mode="default";
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+				isp_div=1;                            # isp div clk, freq = viu_clk_freq / div
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+            ;;
+
+	ov2718_2a)
+			bus_type="i2c";
+			pinmux_mode="i2c_mipi";
+			sensor_clk_freq=24000000;
+			intf_mode="default";
+			viu_frequency=250000000;  # 250M, viu clock frequency
+			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
+            ;;
+
+	sc2235p_i2c_dc)
+			# This was added by ZigFisher
+			bus_type="i2c";
+			pinmux_mode="i2c_dc";
+			sensor_clk_freq=27000000;
+			intf_mode="default";
+			if [ ${chipid} = "hi3516ev100" ]; then
+				viu_frequency=83300000;               # 83.3M, viu clock frequency
+				isp_div=1;                            # isp div clk, freq = viu_clk_freq / div
+			elif [ ${chipid} = "hi3516cv300" ]; then
+				viu_frequency=198000000;              # 198M, viu clock frequency
+				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
+			else
+				echo "Wrong chip_id: ${chipid}";
+				exit 1;
+			fi
+            ;;
+
+        *)
+            echo "xxxx Invalid sensor type $SNS_TYPE xxxx"
+            report_error;;
+    esac
+}
+
+insert_isp()
+{
+	insmod hi3516cv300_isp.ko update_pos=0  proc_param=30 port_init_delay=0
+}
+
+insert_ko()
+{
+	insert_sns
+	insmod sys_config.ko vi_vpss_online=$b_arg_online
+
+	# driver load
+	insmod hi_osal.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
+	#insmod hi3516cv300_wdt.ko
+	#insmod hi3516cv300_rtc.ko
+	insmod hi3516cv300_base.ko
+
+	insmod hi3516cv300_sys.ko vi_vpss_online=$b_arg_online sensor=$SNS_TYPE mem_total=$mem_total
+
+	insmod hi3516cv300_region.ko
+	insmod hi3516cv300_vgs.ko vgs_clk_frequency=$vgs_frequency
+
+	insmod hi3516cv300_viu.ko detect_err_frame=10 viu_clk_frequency=$viu_frequency isp_div=$isp_div input_mode=$intf_mode
+	insert_isp;
+	insmod hi3516cv300_vpss.ko vpss_clk_frequency=$vpss_frequency
+	insmod hi3516cv300_vou.ko vou_mode=$vou_intf_mode
+	#insmod hi3516cv300_vou.ko detectCycle=0 vou_mode=$vou_intf_mode #close dac detect
+	#insmod hi3516cv300_vou.ko transparentTransmit=1 vou_mode=$vou_intf_mode #enable transparentTransmit
+
+	insmod hi3516cv300_rc.ko
+	insmod hi3516cv300_venc.ko
+	insmod hi3516cv300_chnl.ko
+	insmod hi3516cv300_vedu.ko vedu_clk_frequency=$vedu_frequency
+	insmod hi3516cv300_h264e.ko
+	insmod hi3516cv300_h265e.ko
+	insmod hi3516cv300_jpege.ko
+	insmod hi3516cv300_ive.ko save_power=1 ive_clk_frequency=$ive_frequency
+	insmod hi3516cv300_sensor.ko sensor_bus_type=$bus_type sensor_clk_frequency=$sensor_clk_freq sensor_pinmux_mode=$pinmux_mode
+	#insmod hi_adc.ko
+	#insmod hi_gpio.ko
+	#insmod gpioi2c_ex.ko
+	#insmod sha_204.ko
+	#insmod hi_sensor_i2c.ko
+	#insmod hi_ssp_sony.ko
+	insmod hi3516cv300_pwm.ko
+	insmod hi_piris.ko
+	#insmod exfat.ko
+	insert_audio
+
+	insmod hi_mipi.ko
+
+	echo "==== Your input Sensor type is $SNS_TYPE ===="
+
+}
+
+remove_ko()
+{
+	remove_audio
+
+	rmmod hi3516cv300_pwm
+	rmmod hi_piris
+
+	rmmod hi3516cv300_sensor
+
+	rmmod hi3516cv300_ive
+
+	rmmod hi3516cv300_rc
+	rmmod hi3516cv300_jpege
+	rmmod hi3516cv300_h264e
+	rmmod hi3516cv300_h265e
+	rmmod hi3516cv300_vedu
+	rmmod hi3516cv300_chnl
+	rmmod hi3516cv300_venc
+
+	rmmod hi3516cv300_vou
+	rmmod hi3516cv300_vpss
+	rmmod hi3516cv300_isp
+	rmmod hi3516cv300_viu
+	rmmod hi_mipi
+	
+	rmmod hi3516cv300_vgs
+	rmmod hi3516cv300_region
+
+	rmmod hi3516cv300_sys
+	rmmod hi3516cv300_base
+	rmmod hi_osal
+	rmmod sys_config
+}
+
+load_usage()
+{
+	echo "Usage:  ./load_universal [-option] [sensor_name]"
+	echo "options:"
+	echo "    -i                       insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a                       remove modules first, then insert modules"
+	echo "    -sensor sensor_name      config sensor type [default: imx290]"
+	echo "    -osmem os_mem_size       config os mem size [unit: M, default: XX]"
+	echo "    -total_mem_size          config total mem size [unit: M, default: YY]"
+	echo "    -online                  vi/vpss online"
+	echo "    -h                       help information"
+	echo -e "Available sensors: ar0237 imx290 imx307 imx323 imx385 jxf22 ov2718 ov2718_2a sc2235"
+	echo -e "notes: osmem option can't be used when mmz zone partition is enable\n\n"
+	echo -e "for example online:   ./load_universal -i -sensor jxf22_i2c_dc -online\n"
+	echo -e "            offline:  ./load_universal -i -sensor jxf22_i2c_dc \n"
+}
+
+calc_mmz_info()
+{
+	mmz_start=`echo "$mem_start $os_mem_size" | 
+	awk 'BEGIN { temp = 0; }
+	{
+		temp = $1/1024/1024 + $2;
+	} 
+	END { printf("0x%x00000\n", temp); }'`
+
+	mmz_size=`echo "$mem_total $os_mem_size" | 
+	awk 'BEGIN { temp = 0; }
+	{
+		temp = $1 - $2;
+	} 
+	END { printf("%dM\n", temp); }'`
+	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+}
+
+start_majestic()
+{
+	# Use it for stopping service:  killall -sigint majestic
+	sleep 1
+	export SENSOR=$SNS_TYPE
+	sleep 30
+	ntpd -n -q -p 0.openwrt.pool.ntp.org -p 1.openwrt.pool.ntp.org -p 2.openwrt.pool.ntp.org -p 3.openwrt.pool.ntp.org
+	majestic 2>&1 | logger -p daemon.info -t majestic &
+}
+
+
+######################parse arg###################################
+b_arg_os_mem=0
+b_arg_total_mem=0
+b_arg_sensor=0
+b_arg_insmod=0
+b_arg_remove=0
+b_arg_online=0
+b_arg_restore=0
+
+for arg in $@
+do
+	if [ $b_arg_total_mem -eq 1 ]; then
+		b_arg_total_mem=0;
+		mem_total=$arg;
+		
+		if [ -z $mem_total ]; then
+			echo "[error] mem_total is null"
+			exit;
+		fi
+	fi
+	
+	if [ $b_arg_os_mem -eq 1 ] ; then
+		b_arg_os_mem=0;
+		os_mem_size=$arg;
+
+		if [ -z $os_mem_size ]; then
+			echo "[error] os_mem_size is null"
+			exit;
+		fi
+	fi
+
+	if [ $b_arg_sensor -eq 1 ] ; then
+		b_arg_sensor=0
+		SNS_TYPE=$arg;
+	fi
+
+	case $arg in
+		"-i")
+			b_arg_insmod=1;
+			;;
+		"-r")
+			b_arg_remove=1;
+			;;
+		"-a")			
+			b_arg_insmod=1;
+			b_arg_remove=1;
+			;;
+		"-h")
+			load_usage;
+			;;
+		"-sensor")
+			b_arg_sensor=1;
+			;;
+		"-osmem")
+			b_arg_os_mem=1;
+			;;
+		"-total")
+			b_arg_total_mem=1;
+			;;
+		"-restore")
+			b_arg_restore=1;
+			;;
+		"-online")
+			b_arg_online=1;
+			;;
+	esac
+done
+#######################parse arg end########################
+
+if [ $os_mem_size -ge $mem_total ] ; then
+	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+	exit;
+fi
+
+calc_mmz_info;
+
+#######################Action###############################
+
+if [ $# -lt 1 ]; then
+    load_usage;
+    exit 0;
+fi
+
+if [ $b_arg_remove -eq 1 ]; then
+	killall -sigint majestic
+	remove_ko;
+fi
+
+if [ $b_arg_insmod -eq 1 ]; then
+	insert_ko;
+	start_majestic;
+fi
+
+if [ $b_arg_restore -eq 1 ]; then
+	sys_restore;
+fi
