@@ -8,22 +8,6 @@ HISILICON_OSDRV_HI3516EV300_VERSION =
 HISILICON_OSDRV_HI3516EV300_SITE =
 HISILICON_OSDRV_HI3516EV300_LICENSE = MIT
 HISILICON_OSDRV_HI3516EV300_LICENSE_FILES = LICENSE
-HISILICON_OSDRV_HI3516EV300_INSTALL_STAGING = YES
-
-
-define HISILICON_OSDRV_HI3516EV300_INSTALL_STAGING_CMDS
-	$(INSTALL) -m 755 -d $(STAGING_DIR)/usr/include/hisilicon
-	$(INSTALL) -m 644 -t $(STAGING_DIR)/usr/include/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/files/include/*
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/hisilicon-osdrv-hi3516ev300/include
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/hisilicon-osdrv-hi3516ev300/include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/files/include/*
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/hisilicon-osdrv-hi3516ev300/kmod
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/hisilicon-osdrv-hi3516ev300/kmod $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/files/kmod/*.ko
-
-	# $(INSTALL) -m 755 -d $(BUILD_DIR)/hisilicon-osdrv-hi3516ev300/lib
-	# $(INSTALL) -m 644 -t $(BUILD_DIR)/hisilicon-osdrv-hi3516ev300/lib $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/files/lib/*.so
-endef
 
 
 define HISILICON_OSDRV_HI3516EV300_INSTALL_TARGET_CMDS
