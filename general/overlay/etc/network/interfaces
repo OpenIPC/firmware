@@ -6,6 +6,7 @@ iface lo inet loopback
 auto eth0
 iface eth0 inet dhcp
     hwaddress ether $(fw_printenv -n ethaddr || echo 00:24:B8:FF:FF:FF)
+    #pre-up echo -e "nameserver 77.88.8.8\nnameserver 8.8.4.4\n" >/tmp/resolv.conf
 
 manual wlan0
 iface wlan0 inet dhcp

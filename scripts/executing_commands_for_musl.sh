@@ -8,3 +8,5 @@ echo 'Note: BR2_TOOLCHAIN_BUILDROOT_LIBC="musl"'
 ln -sfv /lib/libc.so ${TARGET_DIR}/lib/ld-uClibc.so.0
 ln -sfv ../../lib/libc.so ${TARGET_DIR}/usr/bin/ldd
 #
+date "+OPENIPC_VERSION=2.1.%m.%d" >${TARGET_DIR}/etc/openipc_version
+#
