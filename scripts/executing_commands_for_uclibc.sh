@@ -5,3 +5,5 @@
 
 echo 'Note: BR2_TOOLCHAIN_BUILDROOT_LIBC="uclibc"'
 #
+date "+OPENIPC_VERSION=2.1.%m.%d" >${TARGET_DIR}/etc/openipc_version
+#
