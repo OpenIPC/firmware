@@ -1,6 +1,11 @@
 name: GK7605v100
 
 on:
+  push:
+    branches:
+      - master
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
