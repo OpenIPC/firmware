@@ -1,6 +1,11 @@
 name: GK7202v300
 
 on:
+  push:
+    branches:
+      - master
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
