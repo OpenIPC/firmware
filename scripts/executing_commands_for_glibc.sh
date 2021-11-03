@@ -5,5 +5,5 @@
 
 echo 'Note: BR2_TOOLCHAIN_BUILDROOT_LIBC="glibc"'
 #
-date "+OPENIPC_VERSION=2.1.%m.%d" >${TARGET_DIR}/etc/openipc_version
+date "+OPENIPC_VERSION=2.1.%m.%d" >>${TARGET_DIR}/usr/lib/os-release
 #
