@@ -26,6 +26,18 @@ const char brpkt[] =
     "\x00\x00\x00\x00";
 static const char *Reset = "\x1b[0m";
 static const char *FgRed = "\x1b[31m";
+static const char *FgBrightRed = "\033[31;1m";
+
+static const char *color(enum ConnectStatus status) {
+  switch (status) {
+  case CONNECT_OK:
+    return FgRed;
+  case CONNECT_ERR:
+    return FgBrightRed;
+  default:
+    return "";
+  }
+}
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa) {
@@ -175,7 +187,7 @@ int main() {
       ipaddr_from32bit(abuf, sizeof abuf, host_ip);
       host_ip = abuf;
     }
-    bool netip_ok = netip_connect(host_ip, netip_port);
+    enum ConnectStatus netip_conn = netip_connect(host_ip, netip_port);
 
     char verstr[128] = {0};
     if (strlen(version)) {
@@ -191,23 +203,21 @@ int main() {
         version++;
       }
 
-      if (strlen(builddt)) {
-        const char *end;
-        if ((end = strchr(builddt, ' '))) {
-          strcat(verstr + strlen(verstr), " (");
-          snprintf(verstr + strlen(verstr),
-                   MIN(sizeof(verstr) - strlen(verstr), end - builddt + 1),
-                   "%s", builddt);
-          strcat(verstr + strlen(verstr), ")");
-        }
+      if (strlen(builddt) == 19 && builddt[10] == ' ') {
+        const char *end = builddt + 10;
+        strcat(verstr + strlen(verstr), " (");
+        snprintf(verstr + strlen(verstr),
+                 MIN(sizeof(verstr) - strlen(verstr), end - builddt + 1), "%s",
+                 builddt);
+        strcat(verstr + strlen(verstr), ")");
       }
     }
 
-    printf("%s%s\t%s\t%s %s, %s", netip_ok ? FgRed : "", host_ip, mac,
+    printf("%s%s\t%s\t%s %s, %s", color(netip_conn), host_ip, mac,
            chan_num > 1 ? "DVR" : "IPC", sn, hostname);
     if (strlen(verstr))
       printf("\t%s", verstr);
-    printf("%s\n", netip_ok ? Reset : "");
+    printf("%s\n", *color(netip_conn) ? Reset : "");
 
   skip_loop:
 
