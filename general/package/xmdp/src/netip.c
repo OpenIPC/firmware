@@ -4,8 +4,10 @@
 #include <string.h>
 
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include "cjson/cJSON.h"
 #include "netip.h"
@@ -43,8 +45,9 @@ typedef union netip_pkt {
 #define NETIP_HSIZE sizeof(netip_preabmle_t)
 #define NETIP_MAX_JSON sizeof(resp) - NETIP_HSIZE - 1
 
-bool netip_connect(const char *addr, uint16_t port) {
-  bool res = true;
+enum ConnectStatus netip_connect(const char *addr, uint16_t port) {
+  bool res = CONNECT_OK;
+  cJSON *json = NULL;
 
   int s = socket(AF_INET, SOCK_STREAM, 0);
   if (s == -1)
@@ -55,8 +58,22 @@ bool netip_connect(const char *addr, uint16_t port) {
   srv.sin_family = AF_INET;
   srv.sin_port = htons(port);
 
-  if (connect(s, (struct sockaddr *)&srv, sizeof(srv)) < 0)
-    return false;
+  const int flags = fcntl(s, F_GETFL, 0);
+  fcntl(s, F_SETFL, flags | O_NONBLOCK);
+  (void)connect(s, (struct sockaddr *)&srv, sizeof(srv));
+
+  fd_set fdset;
+  FD_ZERO(&fdset);
+  FD_SET(s, &fdset);
+  struct timeval tv = {
+      .tv_sec = 2, /* 2 second timeout */
+  };
+
+  if (select(s + 1, NULL, &fdset, NULL, &tv) != 1) {
+    res = CONNECT_ERR;
+    goto quit;
+  }
+  fcntl(s, F_SETFL, flags);
 
   netip_pkt_t msg;
   memset(&msg.header, 0, sizeof(msg.header));
@@ -69,29 +86,30 @@ bool netip_connect(const char *addr, uint16_t port) {
   msg.header.len_data = sizeof(default_login);
 
   if (send(s, &msg, sizeof(default_login) + NETIP_HSIZE, 0) < 0) {
-    puts("Send failed");
-    return false;
+    return CONNECT_ERR;
   }
 
   if (recv(s, &msg, sizeof(msg), 0) <= NETIP_HSIZE) {
     puts("recv failed");
   }
 
-  cJSON *json = cJSON_Parse(msg.header.data);
+  json = cJSON_Parse(msg.header.data);
   if (!json) {
     const char *error_ptr = cJSON_GetErrorPtr();
     if (error_ptr != NULL) {
       fprintf(stderr, "Error before: %s\n", error_ptr);
     }
-    res = false;
-    goto skip_loop;
+    res = CONNECT_ERR;
+    goto quit;
   }
   const int retval = get_json_intval(json, "Ret", 0);
   if (retval != RESULT_OK)
-    return false;
+    return CONNECT_PWDREQ;
 
-skip_loop:
-  cJSON_Delete(json);
+quit:
+  if (json)
+    cJSON_Delete(json);
+  close(s);
 
   return res;
 }
