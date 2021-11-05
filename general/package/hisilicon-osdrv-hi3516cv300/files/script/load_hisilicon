@@ -73,7 +73,7 @@ insert_audio()
 	insmod hi3516cv300_aenc.ko
 	insmod hi3516cv300_adec.ko
 	insmod hi_acodec.ko
-	#insmod extdrv/hi_tlv320aic31.ko 
+	#insmod extdrv/hi_tlv320aic31.ko
 	echo "insert audio"
 }
 
@@ -351,7 +351,7 @@ insert_ko()
 
 	# driver load
 	insmod hi_osal.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
-	#insmod hi3516cv300_wdt.ko
+	insmod hi3516cv300_wdt.ko
 	#insmod hi3516cv300_rtc.ko
 	insmod hi3516cv300_base.ko
 
@@ -423,6 +423,7 @@ remove_ko()
 
 	rmmod hi3516cv300_sys
 	rmmod hi3516cv300_base
+	rmmod hi3516cv300_wdt
 	rmmod hi_osal
 	rmmod sys_config
 }

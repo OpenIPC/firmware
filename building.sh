@@ -90,13 +90,23 @@ hi3518ev200() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+#################################################################################
+
 hi3516cv300() {
   soc="hi3516cv300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
   #PLATFORM=hisilicon  make br-linux-{dirclean,rebuild}
   #PLATFORM=hisilicon  make br-hisilicon-osdrv-hi3516cv300-{dirclean,rebuild}
   #PLATFORM=hisilicon  make br-majestic-hi3516cv300-{dirclean,rebuild}
+  #PLATFORM=hisilicon  make br-mbedtls-openipc-{dirclean,rebuild}
 }
+
+hi3516ev100() {
+  soc="hi3516ev100"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
 
 hi3516cv500() {
   soc="hi3516cv500"
@@ -256,14 +266,16 @@ xm550() {
 #
 #######
 #
-# hi3516av300                   # testind..
-#
 # hi3516cv100                   # testing..
+#
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
-hi3516cv300                   # testind..
-# hi3516cv500                   # testind..
 #
+# hi3516cv300                   # testind..
+# hi3516ev100                   # testind..
+#
+# hi3516av300                   # testind..
+# hi3516cv500                   # testind..
 # hi3516dv300                   # testind..
 #
 # hi3516ev200                   # OK
