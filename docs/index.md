@@ -94,9 +94,9 @@ If you like our work, please consider supporting us on [Opencollective](https://
 | T20         |
 | T21         |
 | T31         |
-| XM510       |        |  ✅   |   ✅|
-| XM530       |        |  ✅   |  ✅|
-| XM550       |        |  ✅   |  ✅|
+| XM510       |        |  ✅   |  ✅ |  ✅ |
+| XM530       |        |  ✅   |  ✅ |  ✅ |
+| XM550       |        |  ✅   |  ✅ |  ✅ |
 
 ### Commercial Support
 <a id="commercial"></a>
