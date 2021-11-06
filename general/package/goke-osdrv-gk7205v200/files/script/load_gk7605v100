@@ -1,25 +1,25 @@
 #!/bin/sh
-# Useage: ./loadgk7605v100 [ -r|-i|-a ] [ sensor ]
+# Useage: ./load_goke [ -r|-i|-a ] [ sensor ]
 #         -r : rmmod all modules
 #         -i : insmod all modules
 #    default : rmmod all moules and then insmod them
-# e.g: ./loadgk7605v100 -i -sensor0 imx307 -osmem 32M
+# e.g: ./load_goke -i -sensor0 imx307 -osmem 32M
 
 
 ####################Variables Definition##########################
 
 
-SNS_TYPE0=imx307;           # sensor type
-YUV_TYPE0=0;                # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
-CHIP_TYPE=gk7605v100;      # chip type
+SNS_TYPE0=imx307;             # sensor type
+YUV_TYPE0=0;                  # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
+CHIP_TYPE=gk7605v100;         # chip type
 BOARD=demo;
 
 #DDR start:0x40000000, kernel start:0x40000000,  OS(32M); MMZ start:0x42000000
-mem_total=512                # 512M, total mem
-mem_start=0x40000000         # phy mem start
-os_mem_size=32               # 32M, os mem
-mmz_start=0x42000000;        # mmz start addr
-mmz_size=480M;               # 480M, mmz size
+mem_total=512                 # 512M, total mem
+mem_start=0x40000000          # phy mem start
+os_mem_size=32                # 32M, os mem
+mmz_start=0x42000000;         # mmz start addr
+mmz_size=480M;                # 480M, mmz size
 ##################################################################
 
 report_error()
@@ -47,7 +47,6 @@ remove_audio()
 	rmmod gk7205v200_ao
 	rmmod gk7205v200_ai
 	rmmod gk7205v200_aio
-
 	echo "remove audio"
 }
 
@@ -79,14 +78,17 @@ insert_adv7179()
 		insmod adv7179.ko norm_mode=0 i2c_num=$i2c_sel # norm_mode = 0:PAL, 1:NTSC
 	fi
 }
+
 insert_isp_piris()
 {
 	if [ "$CHIP_TYPE" == "gk7605v100" -a "$BOARD" == "demo" ];then
 		insmod isp_piris.ko
 	fi
 }
+
 insert_ko()
 {
+	cd /lib/modules/4.9.37/goke/
 	insmod sysconfig.ko chip=$CHIP_TYPE sensors=$SNS_TYPE0 g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
 	insmod osal.ko anony=1 mmz_allocator=gk mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 	insmod gk7205v200_base.ko
@@ -97,8 +99,8 @@ insert_ko()
 	insmod gk7205v200_vi.ko
 	insert_isp;
 	insmod gk7205v200_vpss.ko
-	insmod gk7205v200_vo.ko
-	insmod gfbg.ko video="gfbg:vram0_size:1620"     # default fb0:D1
+	# insmod gk7205v200_vo.ko                       # unused on OpenIPC
+	# insmod gfbg.ko video="gfbg:vram0_size:1620"   # unused on OpenIPC  # default fb0:D1
 	insmod gk7205v200_chnl.ko
 	insmod gk7205v200_vedu.ko
 	insmod gk7205v200_rc.ko
@@ -107,22 +109,23 @@ insert_ko()
 	insmod gk7205v200_h265e.ko
 	insmod gk7205v200_jpege.ko
 	insmod gk7205v200_ive.ko save_power=0
-	insmod isp_pwm.ko
+	# insmod isp_pwm.ko                             # unused on OpenIPC
 	insmod isp_sensor_i2c.ko
 	insmod isp_sensor_spi.ko
-	insert_isp_piris
-	insert_sil9024; # BT1120
+	# insert_isp_piris                              # unused on OpenIPC
+	# insert_sil9024;                               # unused on OpenIPC  # BT1120
 	insert_audio
 	insmod mipi_rx.ko
+	# insmod gk7205v200_pm.ko                       # unused on OpenIPC
 }
 
 remove_ko()
 {
+	# rmmod gk7205v200_pm                           # unused on OpenIPC
 	remove_audio
 	rmmod mipi_rx
-	rmmod isp_piris
-	rmmod isp_pwm
-	rmmod sil9024 &> /dev/null
+	# rmmod isp_piris                               # unused on OpenIPC
+	# rmmod sil9024 &> /dev/null                    # unused on OpenIPC
 	rmmod gk7205v200_ive
 	rmmod gk7205v200_rc
 	rmmod gk7205v200_jpege
@@ -131,8 +134,8 @@ remove_ko()
 	rmmod gk7205v200_venc
 	rmmod gk7205v200_vedu
 	rmmod gk7205v200_chnl
-	rmmod gfbg
-	rmmod gk7205v200_vo
+	# rmmod gfbg                                    # unused on OpenIPC
+	# rmmod gk7205v200_vo                           # unused on OpenIPC
 	rmmod gk7205v200_vpss
 	rmmod gk7205v200_isp
 	rmmod gk7205v200_vi
@@ -141,6 +144,7 @@ remove_ko()
 	rmmod gk7205v200_tde
 	rmmod isp_sensor_i2c &> /dev/null
 	rmmod isp_sensor_spi &> /dev/null
+	# rmmod isp_pwm                                 # unused on OpenIPC
 	rmmod gk7205v200_sys
 	rmmod gk7205v200_base
 	rmmod osal
@@ -150,15 +154,15 @@ remove_ko()
 
 load_usage()
 {
-	echo "Usage:  ./loadgk7605v100 [-option] [sensor_name]"
+	echo "Usage:  ./load_goke [-option] [sensor_name]"
 	echo "options:"
 	echo "    -i                       insert modules"
 	echo "    -r                       remove modules"
 	echo "    -a                       remove modules first, then insert modules"
 	echo "    -sensor sensor_name      config sensor type [default: imx307]"
 	echo "    -h                       help information"
-	echo -e "Available sensors: imx307 imx335 os05a etc."
-	echo -e "for example: ./loadgk7605v100 -i -sensor imx307 -osmem 32M -board demo  -yuv0 0\n"
+	echo -e "Available sensors: gc2053 imx307 imx327 imx335 os05a sc2231 sc3235 sc4236  etc."
+	echo -e "for example: ./load_goke -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
 }
 
 calc_mmz_info()
@@ -210,6 +214,7 @@ do
 		b_arg_yuv_type0=0;
 		YUV_TYPE0=$arg;
 	fi
+
 	if [ $b_arg_board -eq 1 ] ; then
 		b_arg_board=0;
 		BOARD=$arg;

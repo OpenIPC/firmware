@@ -1,17 +1,17 @@
 #!/bin/sh
-# Useage: ./loadgk7205v200 [ -r|-i|-a ] [ sensor ]
+# Useage: ./load_goke [ -r|-i|-a ] [ sensor ]
 #         -r : rmmod all modules
 #         -i : insmod all modules
 #    default : rmmod all moules and then insmod them
-# e.g: ./loadgk7205v200 -i -sensor0 imx307 -osmem 32M
+# e.g: ./load_goke -i -sensor0 imx307 -osmem 32M
 
 
 ####################Variables Definition##########################
 
 
-SNS_TYPE0=imx307;           # sensor type
-YUV_TYPE0=0;                # 0 -- raw, 1 --DC, 3 --bt656
-CHIP_TYPE=gk7205v200;      # chip type
+SNS_TYPE0=imx307;             # sensor type
+YUV_TYPE0=0;                  # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
+CHIP_TYPE=gk7205v200;         # chip type
 BOARD=demo;
 
 #DDR start:0x40000000, kernel start:0x40000000,  OS(32M); MMZ start:0x42000000
@@ -79,6 +79,13 @@ insert_adv7179()
 	fi
 }
 
+insert_isp_piris()
+{
+	if [ "$CHIP_TYPE" == "gk7605v100" -a "$BOARD" == "demo" ];then
+		insmod isp_piris.ko
+	fi
+}
+
 insert_ko()
 {
 	cd /lib/modules/4.9.37/goke/
@@ -105,15 +112,19 @@ insert_ko()
 	# insmod isp_pwm.ko                             # unused on OpenIPC
 	insmod isp_sensor_i2c.ko
 	insmod isp_sensor_spi.ko
+	# insert_isp_piris                              # unused on OpenIPC
 	# insert_sil9024;                               # unused on OpenIPC  # BT1120
 	insert_audio
 	insmod mipi_rx.ko
+	# insmod gk7205v200_pm.ko                       # unused on OpenIPC
 }
 
 remove_ko()
 {
+	# rmmod gk7205v200_pm                           # unused on OpenIPC
 	remove_audio
 	rmmod mipi_rx
+	# rmmod isp_piris                               # unused on OpenIPC
 	# rmmod sil9024 &> /dev/null                    # unused on OpenIPC
 	rmmod gk7205v200_ive
 	rmmod gk7205v200_rc
@@ -143,15 +154,15 @@ remove_ko()
 
 load_usage()
 {
-	echo "Usage:  ./loadgk7205v200 [-option] [sensor_name]"
+	echo "Usage:  ./load_goke [-option] [sensor_name]"
 	echo "options:"
 	echo "    -i                       insert modules"
 	echo "    -r                       remove modules"
 	echo "    -a                       remove modules first, then insert modules"
 	echo "    -sensor sensor_name      config sensor type [default: imx307]"
 	echo "    -h                       help information"
-	echo -e "Available sensors: imx307 imx327 sc4236 sc3235 etc."
-	echo -e "for example: ./loadgk7205v200 -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
+	echo -e "Available sensors: gc2053 imx307 imx327 imx335 os05a sc2231 sc3235 sc4236  etc."
+	echo -e "for example: ./load_goke -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
 }
 
 calc_mmz_info()
