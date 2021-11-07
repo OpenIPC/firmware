@@ -34,35 +34,37 @@ If you like our work, please consider supporting us on [Opencollective](https://
 ### Downloads (for research only, without any guarantee) <a href="#commercial">*</a>
 
 | Manufacturer | SoC | Files | Status |
-|---|---|---|---|
-|Fullhan|![Image](https://img.shields.io/static/v1?label=FH8632&message=help%20needed&color=5500ff&logo=github)     |     | R&D   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/fh8852_images.yml/badge.svg)     |     | R&D   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/fh8856_images.yml/badge.svg)     |     | R&D   |
-|Goke|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7102s_images.yml/badge.svg)    |    | R&D   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7202v300_images.yml/badge.svg) | | WIP   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7205v200_images.yml/badge.svg) |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7205v200-br.tgz) | READY |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7205v300_images.yml/badge.svg) | | R&D   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7605v100_images.yml/badge.svg) | | R&D   |
-|HiSilicon|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516cv300_images.yml/badge.svg)|[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv300-br.tgz)| WIP   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516av300_images.yml/badge.svg)|[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516av300-br.tgz)| WIP   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516cv500_images.yml/badge.svg)|[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv500-br.tgz)| WIP   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516dv300_images.yml/badge.svg)|[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv300-br.tgz)| WIP   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev200_images.yml/badge.svg)|[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz)| READY |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg)|[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz)| READY |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg)|[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz)| READY |
-|MStar|![Image](https://img.shields.io/static/v1?label=MSC313E&message=help%20needed&color=5500ff&logo=github)    |    | R&D   |
-|Novatek|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/nt98562_images.yml/badge.svg)    |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98562-br.tgz)    | R&D   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/nt98566_images.yml/badge.svg)    |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98566-br.tgz)    | R&D   |
-|SigmaStar|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc325_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc325-br.tgz)     | R&D   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc335_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc335-br.tgz)     | WORK  |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337-br.tgz)     | WORK  |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337de_images.yml/badge.svg)   |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337de-br.tgz)   | WIP   |
-|Ingenic| ![Image](https://img.shields.io/static/v1?label=T20&message=help%20needed&color=5500ff&logo=github) |        | R&D   |
-|| ![Image](https://img.shields.io/static/v1?label=T21&message=help%20needed&color=5500ff&logo=github) |        | R&D   |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/t31_images.yml/badge.svg)        |        | R&D   |
-|Xiongmai|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm510_images.yml/badge.svg)      |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm510-br.tgz)      | WORK  |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm530_images.yml/badge.svg)      |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm530-br.tgz)      | WORK  |
-||![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm550_images.yml/badge.svg)      |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm550-br.tgz)      | WORK  |
+|--------------|-----|-------|--------|
+|Fullhan  |![Image](https://img.shields.io/static/v1?label=FH8632&message=help%20needed&color=5500ff&logo=github)  | | R&D   |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/fh8852_images.yml/badge.svg)          | | R&D   |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/fh8856_images.yml/badge.svg)          | | R&D   |
+|Goke     |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7102s_images.yml/badge.svg)         | | R&D   |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7202v300_images.yml/badge.svg)      |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7202v300-br.tgz) | WIP  |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7205v200_images.yml/badge.svg)      |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7205v200-br.tgz) | DONE |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7205v300_images.yml/badge.svg)      |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7205v300-br.tgz) | WIP  |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7605v100_images.yml/badge.svg)      |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7605v100-br.tgz) | WIP  |
+|HiSilicon|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516cv300_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv300-br.tgz)| DONE |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev100_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev100-br.tgz)| DONE |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev200_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz)| DONE |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz)| DONE |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz)| DONE |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516av300_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516av300-br.tgz)| WIP  |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516cv500_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv500-br.tgz)| WIP  |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516dv300_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv300-br.tgz)| WIP  |
+|MStar    |![Image](https://img.shields.io/static/v1?label=MSC313E&message=help%20needed&color=5500ff&logo=github) | | R&D   |
+|         |![Image](https://img.shields.io/static/v1?label=MSC316D&message=help%20needed&color=5500ff&logo=github) | | R&D   |
+|Novatek  |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/nt98562_images.yml/badge.svg)         |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98562-br.tgz)    | R&D  |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/nt98566_images.yml/badge.svg)         |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98566-br.tgz)    | R&D  |
+|SigmaStar|![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc325_images.yml/badge.svg)          |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc325-br.tgz)     | R&D  |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc335_images.yml/badge.svg)          |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc335-br.tgz)     | MVP  |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337_images.yml/badge.svg)          |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337-br.tgz)     | MVP  |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337de_images.yml/badge.svg)        |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337de-br.tgz)   | WIP  |
+|Ingenic  |![Image](https://img.shields.io/static/v1?label=T20&message=help%20needed&color=5500ff&logo=github)     | | R&D   |
+|         |![Image](https://img.shields.io/static/v1?label=T21&message=help%20needed&color=5500ff&logo=github)     | | R&D   |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/t31_images.yml/badge.svg)             | | R&D   |
+|Xiongmai |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm510_images.yml/badge.svg)           |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm510-br.tgz)      | MVP  |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm530_images.yml/badge.svg)           |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm530-br.tgz)      | MVP  |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm550_images.yml/badge.svg)           |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm550-br.tgz)      | MVP  |
 
 -----
 
