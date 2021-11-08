@@ -48,6 +48,7 @@ If you like our work, please consider supporting us on [Opencollective](https://
 |         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev200_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz)| DONE |
 |         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz)| DONE |
 |         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz)| DONE |
+|         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516dv200_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv200-br.tgz)| DONE |
 |         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516av300_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516av300-br.tgz)| WIP  |
 |         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516cv500_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv500-br.tgz)| WIP  |
 |         |![Image](https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516dv300_images.yml/badge.svg)     |[uImage + rootfs](https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv300-br.tgz)| WIP  |
@@ -80,12 +81,15 @@ If you like our work, please consider supporting us on [Opencollective](https://
 | GK7205v200  | ✅               | ✅               | ✅               | ✅               | ✅               |        | ✅               | ✅               |        |        |
 | GK7205v300  |        |        |        |        |        |        |        |        |        |        |
 | GK7605v100  | ✅               | ✅               | ✅               | ✅               | ✅               |        |        |        |        |        |
-| Hi3516Av300 |        | ✅               | ✅               | ✅               |        |        |        |        |        |        |
-| Hi3516Cv500 |        | ✅               | ✅               | ✅               |        |        |        |        |        |        |
-| Hi3516Dv300 |        | ✅               | ✅               | ✅               |        |        |        |        |        |        |
+| Hi3516Cv300 | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               |
+| Hi3516Ev100 | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               |
 | Hi3516Ev200 | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               |
 | Hi3516Ev300 | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               |
 | Hi3518Ev300 | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               |
+| Hi3516Dv200 | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               | ✅               |
+| Hi3516Av300 |        | ✅               | ✅               | ✅               |        |        |        |        |        |        |
+| Hi3516Cv500 |        | ✅               | ✅               | ✅               |        |        |        |        |        |        |
+| Hi3516Dv300 |        | ✅               | ✅               | ✅               |        |        |        |        |        |        |
 | MSC313E     |        |        |        |        |        |        |        |        |        |        |
 | NT98562     |        |        |        |        |        |        |        |        |        |        |
 | NT98566     |        |        |        |        |        |        |        |        |        |        |
