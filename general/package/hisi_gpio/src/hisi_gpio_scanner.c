@@ -202,6 +202,7 @@ void get_chip_gpio_adress(unsigned long *Chip_Id, unsigned long *GPIO_Groups,
   case 0x3516E200:
     *GPIO_Groups = 9;
     *GPIO_Base = 0x120B0000;
+    *GPIO_Offset = 0x1000;
     break;
   //-------------------------------------------
   // Default: 0x3516E300
@@ -209,6 +210,7 @@ void get_chip_gpio_adress(unsigned long *Chip_Id, unsigned long *GPIO_Groups,
   case 0x3516E300:
     *GPIO_Groups = 10;
     *GPIO_Base = 0x120B0000;
+    *GPIO_Offset = 0x1000;
     break;
   //-------------------------------------------
   // Default: 0x3518E200 одна группа
