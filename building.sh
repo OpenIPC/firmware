@@ -118,6 +118,13 @@ hi3516dv300() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+#################################################################################
+
+hi3516dv200() {
+  soc="hi3516dv200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 hi3516ev200() {
   soc="hi3516ev200"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -151,6 +158,11 @@ hi3516ev300_glibc() {
 hi3516ev300_tehshield() {
   soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_tehshield all && rename
+}
+
+hi3518ev300() {
+  soc="hi3518ev300"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 #################################################################################
@@ -274,18 +286,19 @@ xm550() {
 # hi3516cv300                   # testind..
 # hi3516ev100                   # testind..
 #
-# hi3516av300                   # testind..
-# hi3516cv500                   # testind..
-# hi3516dv300                   # testind..
-#
-# hi3516ev200                   # OK
+# hi3516dv200                   # OpenIPC
+# hi3516ev200                   # OpenIPC
 # hi3516ev200_dozor             # Dozor
 # hi3516ev200_eltis             # Eltis
 # hi3516ev200_vixand            # Vixand
-#
-# hi3516ev300                   # OK
+hi3516ev300                   # OpenIPC
 # hi3516ev300_glibc             # testing..
 # hi3516ev300_tehshield         # Tehshield
+# hi3518ev300                   # OpenIPC
+#
+# hi3516av300                   # testind..
+# hi3516cv500                   # testind..
+# hi3516dv300                   # testind..
 #
 #######
 #
