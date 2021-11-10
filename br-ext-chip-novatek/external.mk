@@ -17,6 +17,7 @@ include $(BR2_EXTERNAL_NOVATEK_PATH)/package/motors/motors.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/novatek-osdrv-nt9856x.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/opus-openipc/opus-openipc.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/rtl8188fu-openipc/rtl8188fu-openipc.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/uacme-openipc/uacme-openipc.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/vtund-openipc/vtund-openipc.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/yaml-cli/yaml-cli.mk
