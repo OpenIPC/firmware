@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20210901
+# OpenIPC.org | v.20211111
 #
 
 set -e
@@ -18,6 +18,11 @@ stop_services() {
   echo -e "\n\e[1;31mForced shutdown of services...\e[0m\n"
   killall majestic || true
   killall crond klogd ntpd rngd syslogd || true
+}
+
+check_memory() {
+  echo -e "\n\e[1;31mCheck RAM size...\e[0m\n"
+  free
 }
 
 download_firmware() {
@@ -53,7 +58,7 @@ if [ "$(curl -o /dev/null -s -w '%{http_code}\n' http://github.com)" != "301" ];
   exit 1
 else
   stop_services
-  download_firmware && writing_kernel && writing_rootfs
+  download_firmware && check_memory && writing_kernel && writing_rootfs
   sleep 1
   if [ "$1" = "-n" ]; then
     clearing_overlayfs
