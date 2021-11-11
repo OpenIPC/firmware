@@ -13,5 +13,11 @@ RTL8188FU_OPENIPC_MODULE_MAKE_OPTS = \
 	KVER=$(LINUX_VERSION_PROBED) \
 	KSRC=$(LINUX_DIR)
 
+define RTL8188FU_OPENIPC_INSTALL_FIRMWARE
+	$(INSTALL) -D -m 644 $(@D)/firmware/rtl8188fufw.bin \
+		$(TARGET_DIR)/lib/firmware/rtlwifi/rtl8188fufw.bin
+endef
+RTL8188FU_OPENIPC_POST_INSTALL_TARGET_HOOKS += RTL8188FU_OPENIPC_INSTALL_FIRMWARE
+
 $(eval $(kernel-module))
 $(eval $(generic-package))

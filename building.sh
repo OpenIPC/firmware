@@ -291,10 +291,10 @@ xm550() {
 # hi3516ev200_dozor             # Dozor
 # hi3516ev200_eltis             # Eltis
 # hi3516ev200_vixand            # Vixand
-hi3516ev300                   # OpenIPC
+# hi3516ev300                   # OpenIPC
 # hi3516ev300_glibc             # testing..
 # hi3516ev300_tehshield         # Tehshield
-# hi3518ev300                   # OpenIPC
+hi3518ev300                   # OpenIPC
 #
 # hi3516av300                   # testind..
 # hi3516cv500                   # testind..
