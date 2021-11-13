@@ -3,7 +3,7 @@
 DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
 
-DAEMON_ARGS=""
+DAEMON_ARGS="-s"
 
 # shellcheck source=/dev/null
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
