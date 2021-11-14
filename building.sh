@@ -165,6 +165,11 @@ hi3518ev300() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+hi3536cv100() {
+  soc="hi3536cv100"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 hi3536dv100() {
   soc="hi3536dv100"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
