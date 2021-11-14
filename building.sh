@@ -165,6 +165,11 @@ hi3518ev300() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+hi3536dv100() {
+  soc="hi3536dv100"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 #################################################################################
 
 nt98562() {
@@ -294,12 +299,13 @@ xm550() {
 # hi3516ev300                   # OpenIPC
 # hi3516ev300_glibc             # testing..
 # hi3516ev300_tehshield         # Tehshield
-hi3518ev300                   # OpenIPC
+# hi3518ev300                   # OpenIPC
 #
 # hi3516av300                   # testind..
 # hi3516cv500                   # testind..
 # hi3516dv300                   # testind..
 #
+hi3536dv100                     # OpenIPC
 #######
 #
 # nt98562                       # OpenIPC
