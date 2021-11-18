@@ -68,6 +68,11 @@ gk7205v200() {
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+gk7205v200_uclibc() {
+  soc="gk7205v200"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_uclibc all && rename
+}
+
 #################################################################################
 
 hi3516av300() {
@@ -283,6 +288,7 @@ xm550() {
 #
 # gk7202v300                   # testind..
 # gk7205v200                   # testind..
+gk7205v200_uclibc              # Dev
 # gk7205v300                   # testind..
 # gk7605v100                   # testind..
 #
@@ -310,7 +316,7 @@ xm550() {
 # hi3516cv500                   # testind..
 # hi3516dv300                   # testind..
 #
-hi3536dv100                     # OpenIPC
+# hi3536dv100                   # OpenIPC
 #
 #######
 #

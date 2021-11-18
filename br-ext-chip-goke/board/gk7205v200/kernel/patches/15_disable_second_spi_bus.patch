@@ -1,0 +1,11 @@
+--- a/arch/arm/boot/dts/gk7205v200-demb.dts	2021-11-18 23:40:51.816413971 +0300
++++ b/arch/arm/boot/dts/gk7205v200-demb.dts	2021-11-18 23:53:33.467687981 +0300
+@@ -56,7 +56,7 @@
+ };
+ 
+ &spi_bus1{
+-	status = "okay";
++	status = "disabled";
+ 	num-cs = <2>;
+ 
+ 	spidev@0 {
