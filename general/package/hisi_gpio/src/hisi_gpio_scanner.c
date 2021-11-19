@@ -247,6 +247,27 @@ void get_chip_gpio_adress(unsigned long *Chip_Id, unsigned long *GPIO_Groups,
     *GPIO_Base = 0x12150000;
     break;
   //-------------------------------------------
+  case 0x72050200:
+    *GPIO_Groups = 9;
+    *GPIO_Base = 0x120B0000;
+    *GPIO_Offset = 0x1000;
+    break;
+  case 0x72050300:
+    *GPIO_Groups = 10;
+    *GPIO_Base = 0x120B0000;
+    *GPIO_Offset = 0x1000;
+    break;
+  case 0x72020300:
+    *GPIO_Groups = 9;
+    *GPIO_Base = 0x120B0000;
+    *GPIO_Offset = 0x1000;
+    break;
+  case 0x76050100:
+    *GPIO_Groups = 10;
+    *GPIO_Base = 0x120B0000;
+    *GPIO_Offset = 0x1000;
+    break;
+  //-------------------------------------------
   default:
     *GPIO_Groups = 0;
     *GPIO_Base = 0;
@@ -351,7 +372,7 @@ void get_chip_id(unsigned long *Chip_Id, char *cpu, char *hardware) {
 
   //---------------------------------------------
   if ((GetValueRegister(SCBASE + SCSYSID0) & 0xFF000000) >> 24 ==
-      0x35) //если старший байт = 0x35 значит все ID в одном регистре
+      0x35  || 0x72 || 0x76 ) //если старший байт соответсвует сигнатуре значит все ID в одном регистре
   {
     *Chip_Id = GetValueRegister(SCBASE + SCSYSID0);
     Chip_Ver = 0;
@@ -458,6 +479,26 @@ void get_chip_id(unsigned long *Chip_Id, char *cpu, char *hardware) {
   case 0x3536D100:
     sprintf(cpu, "Hi3536Dv100");
     sprintf(hardware, "A7 @ 850 MHz");
+    break;
+  //-------------------------------------------
+  case 0x72050200:
+    sprintf(cpu, "Gk7205v200");
+    sprintf(hardware, "A7 @ 900MHz");
+    break;
+  //-------------------------------------------
+  case 0x72050300:
+    sprintf(cpu, "Gk7205v300");
+    sprintf(hardware, "A7 @ 900MHz");
+    break;
+  //-------------------------------------------
+  case 0x72020300:
+    sprintf(cpu, "Gk7202v300");
+    sprintf(hardware, "A7 @ 900MHz");
+    break;
+  //-------------------------------------------
+  case 0x76050100:
+    sprintf(cpu, "Gk7605v100");
+    sprintf(hardware, "A7 @ 900MHz");
     break;
   //-------------------------------------------
   default: //чип не поддерживается
