@@ -59,6 +59,9 @@ insert_ko()
             # Untested | The information is obtained from the Uniview firmware (no any params on other version)
             insmod ${PATH_MODULE}/mi_venc.ko max_width=2304 max_height=1296 mi_timeout_reset=1;
             ;;
+        auto)
+            insmod ${PATH_MODULE}/mi_venc.ko;
+            ;;
         *)
             echo -e "\n\e[1;31mAn UNSUPPORTED sensor type is specified - ${sensor}\e[0m\n" | logger -s -t OpenIPC;
             ;;
@@ -107,6 +110,11 @@ insert_ko()
             # Untested | The information is obtained from the Uniview firmware
             insmod ${PATH_MODULE}/sensor_sc3335_mipi.ko chmap=1;
             ;;
+        auto)
+            insmod ${PATH_MODULE}/sensor_imx307_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2 mclk=37.125M;
+            insmod ${PATH_MODULE}/sensor_gc2053_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2;
+            insmod ${PATH_MODULE}/sensor_sc2335_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2;
+            ;;
         *)
             echo -e "\n\e[1;31mAn UNSUPPORTED sensor type is specified - ${sensor}\e[0m\n" | logger -s -t OpenIPC;
             ;;
@@ -147,6 +155,8 @@ if [ -z ${sensor} ]; then
 elif [ ${sensor} = "none" ]; then
     echo -e "\n\e[1;33mThe sensor is assigned to NONE\e[0m\n" | logger -s -t OpenIPC
     exit 0
+elif [ ${sensor} = "auto" ]; then
+    echo -e "\n\e[1;33mThe sensor is assigned to AUTO\e[0m\n" | logger -s -t OpenIPC
 else
     echo -e "\n\e[1;32mThe sensor is assigned - ${sensor}\e[0m\n" | logger -s -t OpenIPC
     # Temporary crutch, sorry
