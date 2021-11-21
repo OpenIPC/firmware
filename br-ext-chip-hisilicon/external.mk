@@ -17,6 +17,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/libevent-openipc/libevent-openipc
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libhv-openipc/libhv-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libogg-openipc/libogg-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libsrt-openipc/libsrt-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-fonts/majestic-fonts.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv300/majestic-hi3516cv300.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv500/majestic-hi3516cv500.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516ev300/majestic-hi3516ev300.mk

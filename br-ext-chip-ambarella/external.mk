@@ -10,6 +10,7 @@ include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/libevent-openipc/libevent-openipc
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/libhv-openipc/libhv-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/libogg-openipc/libogg-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/libsrt-openipc/libsrt-openipc.mk
+include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/majestic-fonts/majestic-fonts.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/majestic/majestic.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/microbe-web/microbe-web.mk
