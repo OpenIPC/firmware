@@ -10,6 +10,7 @@ include $(BR2_EXTERNAL_NOVATEK_PATH)/package/libevent-openipc/libevent-openipc.m
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/libhv-openipc/libhv-openipc.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/libogg-openipc/libogg-openipc.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/libsrt-openipc/libsrt-openipc.mk
+include $(BR2_EXTERNAL_NOVATEK_PATH)/package/majestic-fonts/majestic-fonts.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/majestic-nt9856x/majestic-nt9856x.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_NOVATEK_PATH)/package/microbe-web/microbe-web.mk
