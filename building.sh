@@ -288,7 +288,7 @@ xm550() {
 #
 # gk7202v300                   # testind..
 # gk7205v200                   # testind..
-gk7205v200_uclibc              # Dev
+# gk7205v200_uclibc            # Dev
 # gk7205v300                   # testind..
 # gk7605v100                   # testind..
 #
@@ -299,7 +299,7 @@ gk7205v200_uclibc              # Dev
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
 #
-# hi3516cv300                   # testind..
+hi3516cv300                   # testind..
 # hi3516ev100                   # testind..
 #
 # hi3516dv200                   # OpenIPC
