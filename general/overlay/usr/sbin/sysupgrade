@@ -9,7 +9,7 @@ soc=$(fw_printenv -n soc)
 kernel=$(awk -F ':' '/"kernel"/ {print $1}' /proc/mtd)
 rootfs=$(awk -F ':' '/"rootfs"/ {print $1}' /proc/mtd)
 overlay=$(awk -F ':' '/"rootfs_data"/ {print $1}' /proc/mtd)
-github="https://github.com/OpenIPC/openipc-2.1/releases/download/latest"
+github="https://github.com/OpenIPC/firmware/releases/download/latest"
 option="-s --connect-timeout 30 --max-time 60"
 
 
