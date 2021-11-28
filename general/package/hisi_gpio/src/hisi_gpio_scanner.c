@@ -371,8 +371,10 @@ void get_chip_id(unsigned long *Chip_Id, char *cpu, char *hardware) {
   }
 
   //---------------------------------------------
-  if ((GetValueRegister(SCBASE + SCSYSID0) & 0xFF000000) >> 24 ==
-      0x35  || 0x72 || 0x76 ) //если старший байт соответсвует сигнатуре значит все ID в одном регистре
+  if ((GetValueRegister(SCBASE + SCSYSID0) & 0xFF000000) >> 24 == 0x35 ||
+      (GetValueRegister(SCBASE + SCSYSID0) & 0xFF000000) >> 24 == 0x72 ||
+      (GetValueRegister(SCBASE + SCSYSID0) & 0xFF000000) >> 24 == 0x76)
+  //если старший байт соответсвует сигнатуре значит все ID в одном регистре
   {
     *Chip_Id = GetValueRegister(SCBASE + SCSYSID0);
     Chip_Ver = 0;
