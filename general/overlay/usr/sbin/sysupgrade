@@ -1,11 +1,11 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20211111
+# OpenIPC.org | v.20211129
 #
 
 set -e
 
-soc=$(fw_printenv -n soc)
+soc=$(fw_printenv -n soc) || (echo -e "\n\e[1;31mSOC not defined in U-Boot ENV ....\e[0m\n"; exit 1)
 kernel=$(awk -F ':' '/"kernel"/ {print $1}' /proc/mtd)
 rootfs=$(awk -F ':' '/"rootfs"/ {print $1}' /proc/mtd)
 overlay=$(awk -F ':' '/"rootfs_data"/ {print $1}' /proc/mtd)
