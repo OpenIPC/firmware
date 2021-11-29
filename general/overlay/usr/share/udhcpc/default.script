@@ -2,6 +2,12 @@
 
 # udhcpc script edited by Tim Riker <Tim@Rikers.org>
 
+# Changes by OpenIPC 2021
+#
+# - move resolv.conf path to /tmp
+# - remove interface notes from resolv.conf
+
+
 [ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
 
 RESOLV_CONF="/tmp/resolv.conf"
