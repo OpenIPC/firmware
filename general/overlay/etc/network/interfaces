@@ -8,6 +8,11 @@ iface eth0 inet dhcp
     hwaddress ether $(fw_printenv -n ethaddr || echo 00:24:B8:FF:FF:FF)
     #pre-up echo -e "nameserver 77.88.8.8\nnameserver 8.8.4.4\n" >/tmp/resolv.conf
 
+manual eth0:1
+iface eth0:1 inet static
+    address $(fw_printenv -n ipaddr)
+    netmask 255.255.255.0
+
 manual wlan0
 iface wlan0 inet dhcp
     pre-up devmem 0x100C0080 32 0x530
