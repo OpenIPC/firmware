@@ -17,15 +17,42 @@ mem_total=${mem_total:=64}
 os_mem_size=$(awk -F '=' '$1=="mem"{print $2}' RS=" " /proc/cmdline | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
 
-# Sensor config
-SNS_TYPE=$(awk -F '=' '$1=="sensor"{print $2}' RS=" " /proc/cmdline)
-SNS_TYPE=${SNS_TYPE:=sc2235}
-
-
 report_error()
 {
         echo "******* Error: There's something wrong, please check! *****"
         exit 1
+}
+
+insert_mmz()
+{
+        insmod mmz.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
+}
+
+insert_detect()
+{
+        cd /lib/modules/4.9.37/hisilicon
+        insmod sys_config.ko vi_vpss_online=$b_arg_online sensor=unknown pin_mux_select=0 
+        insert_mmz
+        insmod hi_media.ko
+        insmod hi3518e_base.ko
+        insmod hi3518e_sys.ko vi_vpss_online=$b_arg_online sensor=unknown mem_total=$mem_total
+        insert_isp
+        insmod sensor_i2c.ko
+        insmod sensor_spi.ko
+        SENSOR=ar0130 insert_sns
+        ipcinfo -s
+}
+
+remove_detect()
+{
+        rmmod sensor_spi
+        rmmod sensor_i2c
+        rmmod hi3518e_isp
+        rmmod hi3518e_sys
+        rmmod hi3518e_base
+        rmmod hi_media
+        rmmod mmz
+        rmmod sys_config.ko
 }
 
 insert_audio()
@@ -74,19 +101,19 @@ insert_sns()
 {
         case $SENSOR in
                 ar0130|9m034)
-                        devmem 0x200f0040 0x2;                            # I2C0_SCL
-                        devmem 0x200f0044 0x2;                            # I2C0_SDA
-
+                        devmem 0x200f0040 32 0x2;                            # I2C0_SCL
+                        devmem 0x200f0044 32 0x2;                            # I2C0_SDA
+ 
                         #cmos pinmux
-                        devmem 0x200f007c 0x1;                            # VI_DATA13
-                        devmem 0x200f0080 0x1;                            # VI_DATA10
-                        devmem 0x200f0084 0x1;                            # VI_DATA12
-                        devmem 0x200f0088 0x1;                            # VI_DATA11
-                        devmem 0x200f008c 0x2;                            # VI_VS
-                        devmem 0x200f0090 0x2;                            # VI_HS
-                        devmem 0x200f0094 0x1;                            # VI_DATA9
+                        devmem 0x200f007c 32 0x1;                            # VI_DATA13
+                        devmem 0x200f0080 32 0x1;                            # VI_DATA10
+                        devmem 0x200f0084 32 0x1;                            # VI_DATA12
+                        devmem 0x200f0088 32 0x1;                            # VI_DATA11
+                        devmem 0x200f008c 32 0x2;                            # VI_VS
+                        devmem 0x200f0090 32 0x2;                            # VI_HS
+                        devmem 0x200f0094 32 0x1;                            # VI_DATA9
 
-                        devmem 0x2003002c 0xb4001;                        # sensor unreset, clk 27MHz, VI 99MHz
+                        devmem 0x2003002c 32 0xc4001;                        # sensor unreset, clk 24MHz, VI 99MHz
                         ;;
                 sc2235)
                         devmem 0x200f0040 32 0x2;                            # I2C0_SCL
@@ -114,14 +141,15 @@ insert_ko()
         insmod sys_config.ko vi_vpss_online=$b_arg_online sensor=$SENSOR pin_mux_select=0 
 
         # driver load
-        insmod mmz.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
+        insert_mmz;
+        #insmod mmz.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
         insmod hi_media.ko
         insmod hi3518e_base.ko
 
         insmod hi3518e_sys.ko vi_vpss_online=$b_arg_online sensor=$SENSOR mem_total=$mem_total
         if [[ $? -ne 0 ]]; then 
                 exit;
-        fi  
+        fi
 
         insmod hi3518e_tde.ko
         insmod hi3518e_region.ko
@@ -144,7 +172,7 @@ insert_ko()
         insmod sensor_i2c.ko
         insmod pwm.ko
         insmod piris.ko
-	insert_sns
+        insert_sns
         insert_audio
 
         insmod hi_mipi.ko
@@ -304,6 +332,7 @@ fi
 # Sensor config
 # SENSOR=${SENSOR:=imx307}
 #
+
 if [ -n "$SENSOR" ]; then
         logger -s -p daemon.info -t hisilicon "Manualy set SENSOR as ${SENSOR}"
 else
