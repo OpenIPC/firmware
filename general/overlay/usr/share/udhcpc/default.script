@@ -56,6 +56,7 @@ case "$1" in
 		if [ -x /usr/sbin/avahi-autoipd ]; then
 			/usr/sbin/avahi-autoipd -c $interface || /usr/sbin/avahi-autoipd -wD $interface --no-chroot
 		fi
+		/sbin/ifconfig $interface $(fw_printenv -n ipaddr || echo -n 192.168.1.10) netmask $(fw_printenv -n netmask || echo -n 255.255.255.0) up
 		;;
 
 	renew|bound)
