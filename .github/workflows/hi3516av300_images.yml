@@ -3,9 +3,11 @@ name: Hi3516Av300
 on:
   push:
     branches:
-      - master
+      - production
     tags:
       - "v*"
+  schedule:
+      - cron: "00 03 * * *"
   workflow_dispatch:
 
 jobs:

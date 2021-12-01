@@ -3,6 +3,16 @@ name: SSC335
 on:
   push:
     branches:
+      - production
+    tags:
+      - "v*"
+  schedule:
+      - cron: "00 03 * * *"
+  workflow_dispatch:
+
+on:
+  push:
+    branches:
       - master
     tags:
       - "v*"
