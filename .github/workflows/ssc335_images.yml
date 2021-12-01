@@ -10,14 +10,6 @@ on:
       - cron: "00 03 * * *"
   workflow_dispatch:
 
-on:
-  push:
-    branches:
-      - master
-    tags:
-      - "v*"
-  workflow_dispatch:
-
 jobs:
   build_core:
     name: OpenIPC v2.1 for SSC335
