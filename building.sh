@@ -68,14 +68,14 @@ gk7205v200() {
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+gk7205v200_fpv() {
+  soc="gk7205v200"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_fpv all && rename
+}
+
 gk7205v300() {
   soc="gk7205v300"
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-gk7205v200_uclibc() {
-  soc="gk7205v200"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_uclibc all && rename
 }
 
 #################################################################################
@@ -301,7 +301,7 @@ xm550() {
 #
 # gk7202v300                   # testind..
 # gk7205v200                   # OpenIPC
-# gk7205v200_uclibc            # Dev
+# gk7205v200_fpv               # FPV
 # gk7205v300                   # OpenIPC
 # gk7605v100                   # testind..
 #
@@ -309,12 +309,12 @@ xm550() {
 #
 # hi3516cv100                   # testing..
 #
-# hi3516cv200                   # testing..
+hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
 #
 # hi3516av100                   # OpenIPC
 # hi3516dv100                   # OpenIPC
-hi3516cv300                   # testind..
+# hi3516cv300                   # testind..
 # hi3516ev100                   # testind..
 #
 # hi3516dv200                   # OpenIPC
