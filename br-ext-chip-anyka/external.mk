@@ -10,6 +10,7 @@ include $(BR2_EXTERNAL_ANYKA_PATH)/package/libevent-openipc/libevent-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/libhv-openipc/libhv-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/libogg-openipc/libogg-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/libsrt-openipc/libsrt-openipc.mk
+include $(BR2_EXTERNAL_ANYKA_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/majestic-fonts/majestic-fonts.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/majestic/majestic.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
