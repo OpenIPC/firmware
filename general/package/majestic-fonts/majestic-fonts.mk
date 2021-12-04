@@ -1,6 +1,6 @@
 ################################################################################
 #
-# majestic-fonts | updated 2021.11.21
+# majestic-fonts | updated 2021.12.04
 #
 ################################################################################
 
@@ -13,8 +13,8 @@ define MAJESTIC_FONTS_EXTRACT_CMDS
 endef
 
 define MAJESTIC_FONTS_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/fonts
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/fonts $(@D)/UbuntuMono-Regular.ttf
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/share/fonts/truetype
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/share/fonts/truetype $(@D)/UbuntuMono-Regular.ttf
 endef
 
 $(eval $(generic-package))
