@@ -1,10 +1,10 @@
 ################################################################################
 #
-# microbe-web | updated 2021.11.21
+# microbe-web | updated 2021.12.06
 #
 ################################################################################
 
-MICROBE_WEB_VERSION = 09c6b2b9702b909daa6a27d2514dddb22383acbf
+MICROBE_WEB_VERSION = 4b3453f8cd1136045ee3317a939d4cc4ab76a594
 MICROBE_WEB_SITE = $(call github,openipc,microbe-web,$(MICROBE_WEB_VERSION))
 MICROBE_WEB_LICENSE = MIT
 MICROBE_WEB_LICENSE_FILES = LICENSE
