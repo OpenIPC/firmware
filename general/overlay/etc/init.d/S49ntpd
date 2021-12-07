@@ -3,7 +3,7 @@
 DAEMON="ntpd"
 PIDFILE="/var/run/$DAEMON.pid"
 
-NTPD_ARGS="-p 0.openwrt.pool.ntp.org -p 1.openwrt.pool.ntp.org -p 2.openwrt.pool.ntp.org -p 3.openwrt.pool.ntp.org"
+NTPD_ARGS=""
 
 # shellcheck source=/dev/null
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
