@@ -65,7 +65,7 @@ print_usage() {
 	echo "Usage:  ./sysupgrade [-option]"
 	echo "options:"
 	echo "Remotely:"
-	echo "    -k                       updatee kernel"
+	echo "    -k                       update kernel"
 	echo "    -r                       update rootfs"
 	echo "    --url=URL                URL for update file (.tgz format)"
   echo "Locally:"
@@ -130,16 +130,16 @@ do
 	esac
 done
 
-if [ $usage -eq 1 ] || [ $remotely -eq 1 ] && [ $locally -eq 1 ]; then
-  print_usage;
-  exit 1;
+if [ $remotely -eq 1 ] && [ $locally -eq 1 ] || [ $usage -eq 1 ]; then
+  print_usage
+  exit 1
 fi
 
 [ $locally -eq 0 ] && remotely=1
 
 if [ $update_kernel -eq 0 ] && [ $update_rootfs -eq 0 ] && [ $locally -eq 0 ]; then
-  update_kernel=1;
-  update_rootfs=1;
+  update_kernel=1
+  update_rootfs=1
 fi
 
 [ -z "${kernel_file}" ] && kernel_file="/tmp/uImage.${soc}"
