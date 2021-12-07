@@ -26,23 +26,33 @@ check_memory() {
 }
 
 download_firmware() {
-  echo -e "\n\e[1;31mDownloading the latest firmware...\e[0m\n"
-  curl ${option} -L ${github}/openipc.${soc}-br.tgz -o - | gzip -d | tar xvf - -C /tmp || (echo -e "\n\e[1;31mError receiving the update file, execution was interrupted....\e[0m\n"; exit 1)
+  if [ $remotely -eq 1 ]; then
+    echo -e "\n\e[1;31mDownloading the latest firmware...\e[0m\n"
+    echo ${1}
+    curl ${option} -L "${1}" -o - | gzip -d | tar xvf - -C /tmp || (echo -e "\n\e[1;31mError receiving the update file, execution was interrupted....\e[0m\n"; exit 1)
+  fi
 }
 
 writing_kernel() {
-  echo -e "\n\e[1;31mWriting a new kernel...\e[0m\n"
-  flashcp -v /tmp/uImage.${soc} /dev/${kernel}
+  if [ $update_kernel -eq 1 ]; then
+    echo -e "\n\e[1;31mWriting a new kernel...\e[0m\n"
+    flashcp -v "${1}" /dev/${kernel}
+  fi
 }
 
 writing_rootfs() {
-  echo -e "\n\e[1;31mWriting a new rootfs...\e[0m\n"
-  flashcp -v /tmp/rootfs.squashfs.${soc} /dev/${rootfs}
+  if [ $update_rootfs -eq 1 ]; then
+    echo -e "\n\e[1;31mWriting a new rootfs...\e[0m\n"
+    flashcp -v "${1}" /dev/${rootfs}
+  fi
 }
 
 clearing_overlayfs() {
-  echo -e "\n\e[1;31mСlearing the overlayfs partition...\e[0m\n"
-  flash_eraseall -j /dev/${overlay}
+  if [ $clear_overlayfs -eq 1 ]; then
+    sleep 1
+    echo -e "\n\e[1;31mСlearing the overlayfs partition...\e[0m\n"
+    flash_eraseall -j /dev/${overlay}
+  fi
 }
 
 quick_reboot() {
@@ -51,17 +61,99 @@ quick_reboot() {
   reboot -f
 }
 
+print_usage() {
+	echo "Usage:  ./sysupgrade [-option]"
+	echo "options:"
+	echo "Remotely:"
+	echo "    -k                       update kernel"
+	echo "    -r                       update rootfs"
+	echo "    --url=URL                URL for update file (.tgz format)"
+  echo "Locally:"
+	echo "    --kernel=[FILE]          update kernel from file (uImage format)"
+	echo "    --rootfs=[FILE]          update rootfs from file (squashfs format)"
+  echo
+	echo "    -n                       clear overlayfs"
+	echo "    -x                       no reboot after upgrade"
+	echo "    -h                       help information"
+}
 
+update_kernel=0
+update_rootfs=0
+clear_overlayfs=0
+no_reboot=0
+usage=0
+from_url=0
+remotely=0
+locally=0
 
-if [ "$(curl -o /dev/null -s -w '%{http_code}\n' http://github.com)" != "301" ]; then
-  echo -e "\n\e[1;31mThere is no access to the github.com, please check the Internet connection...\e[0m\n"
+for arg in $@
+do
+	case $arg in
+		"-k")
+			update_kernel=1
+      remotely=1
+			;;
+		"-r")
+			update_rootfs=1
+      remotely=1
+			;;
+		"-n")
+			clear_overlayfs=1
+			;;
+		"-x")
+			no_reboot=1
+			;;
+		"-h")
+			usage=1
+			;;
+    *)
+      case $(echo $arg | cut -d= -f1) in
+        "--kernel")
+          kernel_file=$(echo =$arg | cut -d= -f3-)
+          update_kernel=1
+          locally=1
+          ;;
+        "--rootfs")
+          rootfs_file=$(echo =$arg | cut -d= -f3-)
+          update_rootfs=1
+          locally=1
+          ;;
+        "--url")
+          url=$(echo =$arg | cut -d= -f3-)
+          from_url=1
+          remotely=1
+          ;;
+        *)
+          usage=1;
+          ;;
+      esac    
+	esac
+done
+
+if [ $remotely -eq $locally ] || [ $usage -eq 1 ]; then
+  print_usage
   exit 1
-else
-  stop_services
-  download_firmware && check_memory && writing_kernel && writing_rootfs
-  sleep 1
-  if [ "$1" = "-n" ]; then
-    clearing_overlayfs
+fi
+
+[ -z "${kernel_file}" ] && kernel_file="/tmp/uImage.${soc}"
+[ -z "${rootfs_file}" ] && rootfs_file="/tmp/rootfs.squashfs.${soc}"
+
+if [ $from_url -eq 1 ]; then
+  if [ -z "${url}" ]; then
+    echo -e "\n\e[1;31mThere is no URL to update file...\e[0m\n"
+    exit 1
   fi
+else
+  if [ "$(curl -o /dev/null -s -w '%{http_code}\n' http://github.com)" != "301" ]; then
+    echo -e "\n\e[1;31mThere is no access to the github.com, please check the Internet connection...\e[0m\n"
+    exit 1
+  fi
+  url="${github}/openipc.${soc}-br.tgz"
+fi
+
+stop_services
+download_firmware "${url}" && check_memory && writing_kernel "${kernel_file}" && writing_rootfs "${rootfs_file}" && clearing_overlayfs
+
+if [ $no_reboot -eq 0 ]; then
   quick_reboot
 fi
