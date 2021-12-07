@@ -130,16 +130,9 @@ do
 	esac
 done
 
-if [ $remotely -eq 1 ] && [ $locally -eq 1 ] || [ $usage -eq 1 ]; then
+if [ $remotely -eq $locally ] || [ $usage -eq 1 ]; then
   print_usage
   exit 1
-fi
-
-[ $locally -eq 0 ] && remotely=1
-
-if [ $update_kernel -eq 0 ] && [ $update_rootfs -eq 0 ] && [ $locally -eq 0 ]; then
-  update_kernel=1
-  update_rootfs=1
 fi
 
 [ -z "${kernel_file}" ] && kernel_file="/tmp/uImage.${soc}"
