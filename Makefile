@@ -15,7 +15,7 @@ usage help:
 	  - make help|usage - print this help\n\
 	  - make install-deps - install system deps\n\
 	  - make prepare - download and unpack buildroot\n\
-	  - make list-configs - show avalible hardware configs list\n\
+	  - make list-configs - show available hardware configs list\n\
 	  - make BOARD=<BOARD-ID> board-info - write to stdout information about selected board\n\
 	  - make BOARD=<BOARD-ID> all - build all needed for a board (toolchain, kernel and rootfs images)\n\
 	  - make overlayed-rootfs-<FS-TYPE> ROOTFS_OVERLAYS=... - create rootfs image that contains original\n\
