@@ -27,7 +27,7 @@ show_modules() { echo; cat /proc/modules | cut -f 1 -d " " | while read module; 
   if [ -d "/sys/module/$module/parameters" ]; then ls /sys/module/$module/parameters/ | while read parameter; \
   do echo -n "Parameter: $parameter --> "; cat /sys/module/$module/parameters/$parameter; done; fi;  echo; done; }
 
-debug_microbe() { curl -k -L -o /tmp/microbe-dev.zip https://github.com/OpenIPC/microbe-web/archive/refs/heads/themactep-dev.zip; \
+debug_microbe() { curl -k -L -o /tmp/microbe-dev.zip https://github.com/OpenIPC/microbe-web/archive/refs/heads/development.zip; \
   unzip -o -d /tmp /tmp/microbe-dev.zip; \
   cp -av /tmp/microbe-web-themactep-dev/files/var/www /var/; \
   rm -rf /tmp/microbe-dev.zip /tmp/microbe-web-themactep-dev; }
