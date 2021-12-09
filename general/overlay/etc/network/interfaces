@@ -10,7 +10,7 @@ iface eth0 inet dhcp
 
 manual eth0:1
 iface eth0:1 inet static
-    address $(fw_printenv -n ipaddr)
+    address $(fw_printenv -n ipaddr || echo 192.168.1.10)
     netmask 255.255.255.0
 
 manual wlan0
