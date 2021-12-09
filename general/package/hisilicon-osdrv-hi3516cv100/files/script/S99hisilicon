@@ -3,10 +3,25 @@
 DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
 
-DAEMON_ARGS=""
+DAEMON_ARGS="-s"
 
 # shellcheck source=/dev/null
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
+
+load_majestic() {
+	printf 'Starting %s: ' "$DAEMON"
+	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
+	# shellcheck disable=SC2086 # we need the word splitting
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" \
+		-- $DAEMON_ARGS
+	status=$?
+	if [ "$status" -eq 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+	return "$status"
+}
 
 # The daemon does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
 start() {
@@ -22,24 +37,13 @@ start() {
 	export TZ=$(cat /etc/TZ)
 	load_hisilicon -i
 	#
-	printf 'Starting %s: ' "$DAEMON"
-	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
-	# shellcheck disable=SC2086 # we need the word splitting
-	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" \
-		-- $DAEMON_ARGS
-	status=$?
-	if [ "$status" -eq 0 ]; then
-		echo "OK"
-	else
-		echo "FAIL"
-	fi
-	return "$status"
+  load_majestic
 }
 
 stop() {
 	printf 'Stopping %s: ' "$DAEMON"
-	[ -f /usr/sbin/$DAEMON ] || echo -en "DISABLED, "
-	start-stop-daemon -K -q -p "$PIDFILE"
+	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
+	start-stop-daemon -K -s 9 -q -p "$PIDFILE"
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		rm -f "$PIDFILE"
@@ -56,12 +60,13 @@ restart() {
 	start
 }
 
+reload() {
+	load_majestic
+}
+
 case "$1" in
-	start|stop|restart)
+	start|stop|restart|reload)
 		"$1";;
-	reload)
-		# Restart, since there is no true "reload" feature.
-		restart;;
 	*)
 		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1
