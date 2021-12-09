@@ -46,7 +46,7 @@ start() {
 stop() {
 	printf 'Stopping %s: ' "$DAEMON"
 	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
-	start-stop-daemon -K -q -p "$PIDFILE"
+	start-stop-daemon -K -s 9 -q -p "$PIDFILE"
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		rm -f "$PIDFILE"
