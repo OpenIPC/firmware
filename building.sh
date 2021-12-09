@@ -294,16 +294,16 @@ xm550() {
 
 # Build firmware
 #
-# fh8852                       # testing..
-# fh8856                       # testing..
+# fh8852                        # testing..
+# fh8856                        # testing..
 #
 #######
 #
-# gk7202v300                   # testind..
+# gk7202v300                   # testing..
 # gk7205v200                   # OpenIPC
 # gk7205v200_fpv               # FPV
 # gk7205v300                   # OpenIPC
-# gk7605v100                   # testind..
+# gk7605v100                   # testing..
 #
 #######
 #
@@ -316,8 +316,8 @@ hi3516cv200                   # testing..
 #
 # hi3516av100                   # OpenIPC
 # hi3516dv100                   # OpenIPC
-# hi3516cv300                   # testind..
-# hi3516ev100                   # testind..
+# hi3516cv300                   # testing..
+# hi3516ev100                   # testing..
 #
 # hi3516dv200                   # OpenIPC
 # hi3516ev200                   # OpenIPC
@@ -329,9 +329,9 @@ hi3516cv200                   # testing..
 # hi3516ev300_tehshield         # Tehshield
 # hi3518ev300                   # OpenIPC
 #
-# hi3516av300                   # testind..
-# hi3516cv500                   # testind..
-# hi3516dv300                   # testind..
+# hi3516av300                   # testing..
+# hi3516cv500                   # testing..
+# hi3516dv300                   # testing..
 #
 # hi3536dv100                   # OpenIPC
 #
