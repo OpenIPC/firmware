@@ -28,7 +28,7 @@ endef
 
 define GOKE_OSDRV_GK7205V200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk7205v200/files/script/S99goke
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk7205v200/files/script/S95goke
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk7205v200/files/sensor/config/*.ini
