@@ -81,10 +81,13 @@ case "$1" in
 
 		# drop info from this interface
 		# resolv.conf may be a symlink to /tmp/, so take care
-		TMPFILE=$(mktemp)
-		grep -vE "# $interface\$" $RESOLV_CONF > $TMPFILE
-		cat $TMPFILE > $RESOLV_CONF
-		rm -f $TMPFILE
+		#TMPFILE=$(mktemp)
+		#grep -vE "# $interface\$" $RESOLV_CONF > $TMPFILE
+		#cat $TMPFILE > $RESOLV_CONF
+		#rm -f $TMPFILE
+
+		# Clearing the file because it is in RAM
+		> $RESOLV_CONF
 
 		# prefer rfc3397 domain search list (option 119) if available
 		if [ -n "$search" ]; then
