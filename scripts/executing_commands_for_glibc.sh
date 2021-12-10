@@ -5,7 +5,7 @@
 
 GITHUB_VERSION="${BRANCH_NAME}+${GIT_HASH}" 
 RELEASE_DATE=$(date "+%y.%m.%d") 
-echo "OPENIPC_VERSION=${GITHUB_VERSION}, 2.${RELEASE_DATE:1}" >>${TARGET_DIR}/usr/lib/os-release
+echo "OPENIPC_VERSION=${GITHUB_VERSION}, v2.${RELEASE_DATE:1}" >>${TARGET_DIR}/usr/lib/os-release
 #
 echo 'Note: BR2_TOOLCHAIN_BUILDROOT_LIBC="glibc"'
 #
