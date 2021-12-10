@@ -1,10 +1,10 @@
 ################################################################################
 #
-# ipctool | updated 2021.12.06
+# ipctool | updated 2021.12.10
 #
 ################################################################################
 
-IPCTOOL_VERSION = 89abf0d6874ea26682113ab2a541e0caf73d8f70
+IPCTOOL_VERSION = 0982b23b234e6d156e4a325ea6c29b9cbd91e2c7
 IPCTOOL_SITE = $(call github,openipc,ipctool,$(IPCTOOL_VERSION))
 IPCTOOL_LICENSE = MIT
 IPCTOOL_LICENSE_FILES = LICENSE
