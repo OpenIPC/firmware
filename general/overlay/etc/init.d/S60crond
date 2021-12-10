@@ -3,7 +3,7 @@
 DAEMON="crond"
 PIDFILE="/var/run/$DAEMON.pid"
 
-CROND_ARGS="-f -l 6"
+CROND_ARGS="-f -c /etc/crontabs"
 
 # shellcheck source=/dev/null
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
@@ -11,9 +11,6 @@ CROND_ARGS="-f -l 6"
 # The mini-snmpd does not create a pidfile, so pass "-n" in the command line
 # and use "-m" to instruct start-stop-daemon to create one.
 start() {
-	[ -d /var/spool/cron/crontabs ] || mkdir -p /var/spool/cron/crontabs
-	[ -f /etc/crontab ] && ln -sf /etc/crontab /var/spool/cron/crontabs/root
-	#
 	printf 'Starting %s: ' "$DAEMON"
 	[ -f /usr/sbin/$DAEMON ] || echo -en "DISABLED, "
 	# shellcheck disable=SC2086 # we need the word splitting
