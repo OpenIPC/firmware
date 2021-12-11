@@ -51,6 +51,7 @@ _NB! Downloads are for research only, without any guarantee._
 | `SigmaStar SSC335`<br>![SSC335][SSC335]                |        |   +    |   +    |  +  |      |  +  |      | [⬇][dl21] | MVP    |
 | `SigmaStar SSC337`<br>![SSC337][SSC337]                |        |   +    |   +    |  +  |      |  +  |      | [⬇][dl22] | MVP    |
 | `SigmaStar SSC337DE`<br>![SSC337DE][SSC337DE]          |        |   +    |   +    |     |      |     |      | [⬇][dl23] | WIP    |
+| `Ingenic T10`<br>![T10][T10]                           |        |        |        |     |      |     |      |           | R&D    |
 | `Ingenic T20`<br>![T20][T20]                           |        |        |        |     |      |     |      |           | R&D    |
 | `Ingenic T21`<br>![T21][T21]                           |        |        |        |     |      |     |      |           | R&D    |
 | `Ingenic T31`<br>![T31][T31]                           |        |        |        |     |      |     |      |           | R&D    |
@@ -132,6 +133,7 @@ Thank you.
 [SSC335]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc335_images.yml/badge.svg
 [SSC337]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337_images.yml/badge.svg
 [SSC337DE]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337de_images.yml/badge.svg
+[T10]: https://img.shields.io/static/v1?label=T10&message=help%20needed&color=5500ff&logo=github
 [T20]: https://img.shields.io/static/v1?label=T20&message=help%20needed&color=5500ff&logo=github
 [T21]: https://img.shields.io/static/v1?label=T21&message=help%20needed&color=5500ff&logo=github
 [T31]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/t31_images.yml/badge.svg
