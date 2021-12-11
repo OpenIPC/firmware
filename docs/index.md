@@ -66,7 +66,7 @@ _NB! Downloads are for research only, without any guarantee._
 
 OpenIPC offers two levels of support.
 
-- Free support through the community (via [chat](https://openipc.org/#telegram-chat-groups) and mailing lists).
+- Free support through the community (via [chat](https://openipc.org/#telegram-chat-groups) and [mailing lists](https://github.com/OpenIPC/firmware/discussions)).
 - Paid commercial support (from the team of developers).
 
 Please consider subscribing for paid commercial support if you intend to use our product for business.
