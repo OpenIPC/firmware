@@ -17,6 +17,8 @@ and [on the website](https://openipc.org/).
 ![GitHub issues](https://img.shields.io/github/issues/OpenIPC/openipc-2.1)
 ![GitHub pull requests](https://img.shields.io/github/issues-pr/OpenIPC/openipc-2.1)
 [![License](https://img.shields.io/github/license/OpenIPC/openipc-2.1)](https://opensource.org/licenses/MIT)
+![Backers](https://opencollective.com/openipc/tiers/backer/badge.svg)
+![Backers](https://opencollective.com/openipc/tiers/badge.svg)
 
 _NB! Downloads are for research only, without any guarantee._
 
@@ -92,12 +94,6 @@ or via [PayPal](https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS),
 or via [YooMoney](https://openipc.org/donation/yoomoney.html).
 
 Thank you.
-
-<!--
-![Backers](https://opencollective.com/openipc/tiers/backer/badge.svg)
-![Backers](https://opencollective.com/openipc/tiers/badge.svg)
-[![Backers](https://opencollective.com/openipc/tiers/backer.svg)](https://opencollective.com/openipc#support)
--->
 
 <a href="https://opencollective.com/openipc/contribute/backer-14335/checkout" target="_blank"><img src="https://opencollective.com/webpack/donate/button@2x.png?color=blue" width="375" alt="Open Collective donate button"></a>
 <a href="https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS"><img src="https://www.paypalobjects.com/en_US/IT/i/btn/btn_donateCC_LG.gif" alt="PayPal donate button"></a>
