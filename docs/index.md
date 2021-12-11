@@ -4,7 +4,7 @@ _(based on Buildroot)_
 OpenIPC is a rapidly developing open source alternative firmware for popular IP cameras.
 
 Historically, OpenIPC firmware supports SoC manufactured by HiSilicon, but as the development continues,
-the list of supported processors expands. Today, it also includes chips from Goke and SigmaStar,
+the list of supported processors expands. Today, it also includes chips from Goke, SigmaStar, Xiongmai,
 and is expected to grow further.
 
 More information about the project is available [in our wiki](https://github.com/OpenIPC/openipc-2.1/wiki)
