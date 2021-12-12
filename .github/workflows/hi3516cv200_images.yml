@@ -69,9 +69,12 @@ jobs:
           make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516cv200_openipc all
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... HI3516CV200" >> $GITHUB_ENV && exit 1
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... HI3516CV200" >> $GITHUB_ENV && exit 1
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.hi3516cv200
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.hi3516cv200
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.hi3516cv200 uImage.hi3516cv200
+          cd ${GITHUB_WORKSPACE}/output/images
+          mv uImage uImage.hi3516cv200
+          mv rootfs.squashfs rootfs.squashfs.hi3516cv200
+          md5sum rootfs.squashfs.hi3516cv200 > rootfs.squashfs.hi3516cv200.md5sum
+          md5sum uImage.hi3516cv200 > uImage.hi3516cv200.md5sum
+          tar -cvzf $ARCHIVE_FW *hi3516cv200*
 
       - name: Build Hi3516Cv200 SDK
         id: build-hi3516cv200-sdk
