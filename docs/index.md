@@ -63,6 +63,7 @@ _NB! Downloads are for research only, without any guarantee._
 | `Xiongmai XM530`<br>![XM530][XM530]                    |        |   +    |   +    |     |      |     |      | [⬇][dl25] | MVP    |
 | `Xiongmai XM550`<br>![XM550][XM550]                    |        |   +    |   +    |     |      |     |      | [⬇][dl26] | MVP    |
 
+-----
 
 ### Support
 
