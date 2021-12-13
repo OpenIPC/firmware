@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MICROBE_WEB_VERSION = latest
+MICROBE_WEB_VERSION = stable
 MICROBE_WEB_SITE = $(call github,openipc,microbe-web,$(MICROBE_WEB_VERSION))
 MICROBE_WEB_LICENSE = MIT
 MICROBE_WEB_LICENSE_FILES = LICENSE
