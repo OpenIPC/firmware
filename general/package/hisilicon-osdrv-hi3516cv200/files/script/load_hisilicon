@@ -100,11 +100,11 @@ insert_isp()
 insert_sns()
 {
         case $SENSOR in
-                ar0130|9m034)
+                9m034|ar0130|ov9732|sc2235)
                         devmem 0x200f0040 32 0x2;                            # I2C0_SCL
                         devmem 0x200f0044 32 0x2;                            # I2C0_SDA
  
-                        #cmos pinmux
+                        # Cmos pinmux
                         devmem 0x200f007c 32 0x1;                            # VI_DATA13
                         devmem 0x200f0080 32 0x1;                            # VI_DATA10
                         devmem 0x200f0084 32 0x1;                            # VI_DATA12
@@ -113,7 +113,7 @@ insert_sns()
                         devmem 0x200f0090 32 0x2;                            # VI_HS
                         devmem 0x200f0094 32 0x1;                            # VI_DATA9
 
-                        devmem 0x2003002c 32 0xc4001;                        # sensor unreset, clk 24MHz, VI 99MHz
+                        devmem 0x2003002c 32 0xc4001;                        # Sensor unreset, clk 24MHz, VI 99MHz
                         ;;
 
 		sc1135|sc1145|sc2135)
@@ -130,21 +130,6 @@ insert_sns()
 			devmem 0x2003002c 32 0xb4001;	# clk 27MHz, VI 99MHz
 			;;
 
-                sc2235)
-                        devmem 0x200f0040 32 0x2;                            # I2C0_SCL
-                        devmem 0x200f0044 32 0x2;                            # I2C0_SDA
- 
-                        #cmos pinmux
-                        devmem 0x200f007c 32 0x1;                            # VI_DATA13
-                        devmem 0x200f0080 32 0x1;                            # VI_DATA10
-                        devmem 0x200f0084 32 0x1;                            # VI_DATA12
-                        devmem 0x200f0088 32 0x1;                            # VI_DATA11
-                        devmem 0x200f008c 32 0x2;                            # VI_VS
-                        devmem 0x200f0090 32 0x2;                            # VI_HS
-                        devmem 0x200f0094 32 0x1;                            # VI_DATA9
-
-                        devmem 0x2003002c 32 0xc4001;                        # sensor unreset, clk 24MHz, VI 99MHz
-                        ;;
                 *)
                         echo "xxxx Invalid sensor type $SENSOR xxxx"
                         report_error;;
@@ -173,7 +158,7 @@ insert_ko()
         insert_isp;
         insmod hi3518e_viu.ko detect_err_frame=10;
         insmod hi3518e_vpss.ko rfr_frame_comp=1;
-        insmod hi3518e_vou.ko
+        #insmod hi3518e_vou.ko
         #insmod hi3518e_vou.ko transparentTransmit=1 #enable transparentTransmit
         #insmod hifb.ko video="hifb:vram0_size:1620"     # default pal
 
@@ -183,10 +168,10 @@ insert_ko()
         insmod hi3518e_h264e.ko H264eMiniBufMode=1
         insmod hi3518e_jpege.ko
         insmod hi3518e_ive.ko save_power=0;
-#       insmod hi3518e_ive.ko
+        #insmod hi3518e_ive.ko
         insmod sensor_i2c.ko
         insmod pwm.ko
-        insmod piris.ko
+        #insmod piris.ko
         insert_sns
         insert_audio
 
@@ -211,7 +196,7 @@ remove_ko()
         rmmod hi3518e_venc
 
         rmmod hifb
-        rmmod hi3518e_vou
+        #rmmod hi3518e_vou
         rmmod hi3518e_vpss
         rmmod hi3518e_viu
         rmmod hi_mipi
@@ -220,7 +205,7 @@ remove_ko()
         rmmod hi3518e_region
         rmmod hi3518e_tde
 
-        rmmod piris
+        #rmmod piris
         rmmod hi3518e_isp
         rmmod hi3518e_sys
         rmmod hi3518e_base

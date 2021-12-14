@@ -5,7 +5,7 @@ export TZ=$(cat /etc/TZ)
 
 if [ "$PS1" ]; then
 	[ -f /etc/os-release ] && . /etc/os-release
-	[ -f /etc/openipc_banner ] && echo -ne "\n\e[1;36m$(cat /etc/openipc_banner) v$OPENIPC_VERSION\e[0m\n\n"
+	[ -f /etc/openipc_banner ] && echo -ne "\n\e[1;36m$(cat /etc/openipc_banner) $GITHUB_VERSION\e[0m\n\n"
 	[ -f /etc/openipc_donators ] && echo -e "\n\e[1;36m$(cat /etc/openipc_donators)\e[0m\n\n"
 	#
 	if [ "`id -u`" -eq 0 ]; then

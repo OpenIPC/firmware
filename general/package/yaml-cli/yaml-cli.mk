@@ -1,11 +1,11 @@
 ################################################################################
 #
-# yaml-cli | updated 2021.11.09
+# yaml-cli
 #
 ################################################################################
 
-YAML_CLI_VERSION = 0.0.4
-YAML_CLI_SITE = $(call github,openipc,yaml-cli,v$(YAML_CLI_VERSION))
+YAML_CLI_VERSION = master
+YAML_CLI_SITE = $(call github,openipc,yaml-cli,$(YAML_CLI_VERSION))
 YAML_CLI_LICENSE = MIT
 YAML_CLI_LICENSE_FILES = LICENSE
 
