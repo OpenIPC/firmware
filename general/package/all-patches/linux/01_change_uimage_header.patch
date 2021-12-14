@@ -1,0 +1,12 @@
+diff -uarN  a/scripts/Makefile.lib b/scripts/Makefile.lib
+--- a/scripts/Makefile.lib
++++ b/scripts/Makefile.lib
+@@ -370,7 +370,8 @@
+ UIMAGE_TYPE ?= kernel
+ UIMAGE_LOADADDR ?= arch_must_set_this
+ UIMAGE_ENTRYADDR ?= $(UIMAGE_LOADADDR)
+-UIMAGE_NAME ?= 'Linux-$(KERNELRELEASE)'
++$(eval CHIP := $(shell echo $(BOARD) | cut -d "_" -f 3))
++UIMAGE_NAME ?= 'Linux-$(KERNELRELEASE)-$(CHIP)'
+ UIMAGE_IN ?= $<
+ UIMAGE_OUT ?= $@
