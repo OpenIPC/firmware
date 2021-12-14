@@ -24,44 +24,44 @@ and [on the website](https://openipc.org/).
 
 _NB! Downloads are for research only, without any guarantee._
 
-| SoC                                                    | U-Boot | Kernel | Rootfs | USB | WiFi | MMC | IPv6 |    D/L    | Status |
-|--------------------------------------------------------|:------:|:------:|:------:|:---:|:----:|:---:|:----:|:---------:|--------|
-| `Fullhan FH8632`<br>![FH8632][FH8632]                  |        |        |        |     |      |     |      |           | R&D    |
-| `Fullhan FH8852`<br>![FH8652][FH8852]                  |        |        |        |     |      |     |      |           | R&D    |
-| `Fullhan FH8856`<br>![FH8856][FH8856]                  |        |        |        |     |      |     |      |           | R&D    |
-| `Goke GK7102S`<br>![GK7102S][GK7102S]                  |        |        |        |     |      |     |      |           | R&D    |
-| `Goke GK7202v300`<br>![GK7202v300][GK7202v300]         |        |        |        |     |      |     |      | [⬇][dl01] | WIP    |
-| `Goke GK7205v200`<br>![GK7205v200][GK7205v200]         |   +    |   +    |   +    |  +  |  +   |     |      | [⬇][dl02] | DONE   |
-| `Goke GK7205v300`<br>![GK7205v300][GK7205v300]         |        |        |        |     |      |     |      | [⬇][dl03] | WIP    |
-| `Goke GK7605v100`<br>![GK7605v100][GK7605v100]         |   +    |   +    |   +    |     |      |     |      | [⬇][dl04] | WIP    |
-| `HiSilicon Hi3516Av100`<br>![Hi3516Av100][Hi3516Av100] |        |   +    |   +    |     |      |     |      | [⬇][dl05] | WIP    |
-| `HiSilicon Hi3516Av300`<br>![Hi3516Av300][Hi3516Av300] |        |   +    |   +    |     |      |     |      | [⬇][dl06] | WIP    |
-| `HiSilicon Hi3516Cv200`<br>![Hi3516Cv200][Hi3516Cv200] |        |   +    |   +    |  +  |  +   |  +  |      | [⬇][dl07] | DONE   |
-| `HiSilicon Hi3516Cv300`<br>![Hi3516Cv300][Hi3516Cv300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][dl08] | DONE   |
-| `HiSilicon Hi3516Cv500`<br>![Hi3516Cv500][Hi3516Cv500] |        |   +    |   +    |     |      |     |      | [⬇][dl09] | WIP    |
-| `HiSilicon Hi3516Dv100`<br>![Hi3516Dv100][Hi3516Dv100] |        |   +    |   +    |     |      |     |      | [⬇][dl10] | WIP    |
-| `HiSilicon Hi3516Dv200`<br>![Hi3516Dv200][Hi3516Dv200] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][dl11] | DONE   |
-| `HiSilicon Hi3516Dv300`<br>![Hi3516Dv300][Hi3516Dv300] |        |   +    |   +    |     |      |     |      | [⬇][dl12] | WIP    |
-| `HiSilicon Hi3516Ev100`<br>![Hi3516Ev100][Hi3516Ev100] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][dl13] | DONE   |
-| `HiSilicon Hi3516Ev200`<br>![Hi3516Ev200][Hi3516Ev200] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][dl14] | DONE   |
-| `HiSilicon Hi3516Ev300`<br>![Hi3516Ev300][Hi3516Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][dl15] | DONE   |
-| `HiSilicon Hi3518Ev200`<br>![Hi3518Ev200][Hi3518Ev200] |        |   +    |   +    |  +  |  +   |  +  |      | [⬇][dl16] | DONE   |
-| `HiSilicon Hi3518Ev300`<br>![Hi3518Ev300][Hi3518Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][dl17] | DONE   |
-| `MStar MSC313E`<br>![MSC313E][MSC313E]                 |        |        |        |     |      |     |      |           | R&D    |
-| `MStar MSC316D`<br>![MSC316D][MSC316D]                 |        |        |        |     |      |     |      |           | R&D    |
-| `Novatek NT98562`<br>![NT98562][NT98562]               |        |        |        |     |      |     |      | [⬇][dl18] | R&D    |
-| `Novatek NT98566`<br>![NT98566][NT98566]               |        |        |        |     |      |     |      | [⬇][dl19] | R&D    |
-| `SigmaStar SSC325`<br>![SSC325][SSC325]                |        |   +    |   +    |     |      |     |      | [⬇][dl20] | R&D    |
-| `SigmaStar SSC335`<br>![SSC335][SSC335]                |        |   +    |   +    |  +  |      |  +  |      | [⬇][dl21] | MVP    |
-| `SigmaStar SSC337`<br>![SSC337][SSC337]                |        |   +    |   +    |  +  |      |  +  |      | [⬇][dl22] | MVP    |
-| `SigmaStar SSC337DE`<br>![SSC337DE][SSC337DE]          |        |   +    |   +    |     |      |     |      | [⬇][dl23] | WIP    |
-| `Ingenic T10`<br>![T10][T10]                           |        |        |        |     |      |     |      |           | R&D    |
-| `Ingenic T20`<br>![T20][T20]                           |        |        |        |     |      |     |      |           | R&D    |
-| `Ingenic T21`<br>![T21][T21]                           |        |        |        |     |      |     |      |           | R&D    |
-| `Ingenic T31`<br>![T31][T31]                           |        |        |        |     |      |     |      |           | R&D    |
-| `Xiongmai XM510`<br>![XM510][XM510]                    |        |   +    |   +    |     |      |     |      | [⬇][dl24] | MVP    |
-| `Xiongmai XM530`<br>![XM530][XM530]                    |        |   +    |   +    |     |      |     |      | [⬇][dl25] | MVP    |
-| `Xiongmai XM550`<br>![XM550][XM550]                    |        |   +    |   +    |     |      |     |      | [⬇][dl26] | MVP    |
+| SoC                                                       | U-Boot | Kernel | Rootfs | USB | WiFi | MMC | IPv6 |        D/L         | Status |
+|-----------------------------------------------------------|:------:|:------:|:------:|:---:|:----:|:---:|:----:|:------------------:|--------|
+| Fullhan&nbsp;FH8632<br>![FH8632][FH8632]                  |        |        |        |     |      |     |      |                    | R&D    |
+| Fullhan&nbsp;FH8852<br>![FH8652][FH8852]                  |        |        |        |     |      |     |      |                    | R&D    |
+| Fullhan&nbsp;FH8856<br>![FH8856][FH8856]                  |        |        |        |     |      |     |      |                    | R&D    |
+| Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  |        |        |        |     |      |     |      |                    | R&D    |
+| Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         |        |        |        |     |      |     |      | [⬇][fwGK7202v300]  | WIP    |
+| Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         |   +    |   +    |   +    |  +  |  +   |     |      | [⬇][fwGK7205v200]  | DONE   |
+| Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |        |        |        |     |      |     |      | [⬇][fwGK7205v300]  | WIP    |
+| Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         |   +    |   +    |   +    |     |      |     |      | [⬇][fwGK7605v100]  | WIP    |
+| HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av100] | WIP    |
+| HiSilicon&nbsp;Hi3516Av300<br>![Hi3516Av300][Hi3516Av300] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av300] | WIP    |
+| HiSilicon&nbsp;Hi3516Cv200<br>![Hi3516Cv200][Hi3516Cv200] |        |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwHi3516Cv200] | DONE   |
+| HiSilicon&nbsp;Hi3516Cv300<br>![Hi3516Cv300][Hi3516Cv300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Cv300] | DONE   |
+| HiSilicon&nbsp;Hi3516Cv500<br>![Hi3516Cv500][Hi3516Cv500] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Cv500] | WIP    |
+| HiSilicon&nbsp;Hi3516Dv100<br>![Hi3516Dv100][Hi3516Dv100] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Dv100] | WIP    |
+| HiSilicon&nbsp;Hi3516Dv200<br>![Hi3516Dv200][Hi3516Dv200] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Dv200] | DONE   |
+| HiSilicon&nbsp;Hi3516Dv300<br>![Hi3516Dv300][Hi3516Dv300] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Dv300] | WIP    |
+| HiSilicon&nbsp;Hi3516Ev100<br>![Hi3516Ev100][Hi3516Ev100] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Ev100] | DONE   |
+| HiSilicon&nbsp;Hi3516Ev200<br>![Hi3516Ev200][Hi3516Ev200] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Ev200] | DONE   |
+| HiSilicon&nbsp;Hi3516Ev300<br>![Hi3516Ev300][Hi3516Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Ev300] | DONE   |
+| HiSilicon&nbsp;Hi3518Ev200<br>![Hi3518Ev200][Hi3518Ev200] |        |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwHi3518Ev200] | DONE   |
+| HiSilicon&nbsp;Hi3518Ev300<br>![Hi3518Ev300][Hi3518Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3518Ev300] | DONE   |
+| MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 |        |        |        |     |      |     |      |                    | R&D    |
+| MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 |        |        |        |     |      |     |      |                    | R&D    |
+| Novatek&nbsp;NT98562<br>![NT98562][NT98562]               |        |        |        |     |      |     |      |   [⬇][fwNT98562]   | R&D    |
+| Novatek&nbsp;NT98566<br>![NT98566][NT98566]               |        |        |        |     |      |     |      |   [⬇][fwNT98566]   | R&D    |
+| SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                |        |   +    |   +    |     |      |     |      |   [⬇][fwSSC325]    | R&D    |
+| SigmaStar&nbsp;SSC335<br>![SSC335][SSC335]                |        |   +    |   +    |  +  |      |  +  |      |   [⬇][fwSSC335]    | MVP    |
+| SigmaStar&nbsp;SSC337<br>![SSC337][SSC337]                |        |   +    |   +    |  +  |      |  +  |      |   [⬇][fwSSC337]    | MVP    |
+| SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          |        |   +    |   +    |     |      |     |      |  [⬇][fwSSC337DE]   | WIP    |
+| Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |        |     |      |     |      |                    | R&D    |
+| Ingenic&nbsp;T20<br>![T20][T20]                           |        |        |        |     |      |     |      |                    | R&D    |
+| Ingenic&nbsp;T21<br>![T21][T21]                           |        |        |        |     |      |     |      |                    | R&D    |
+| Ingenic&nbsp;T31<br>![T31][T31]                           |        |        |        |     |      |     |      |                    | R&D    |
+| Xiongmai&nbsp;XM510<br>![XM510][XM510]                    |        |   +    |   +    |     |      |     |      |    [⬇][fwXM510]    | MVP    |
+| Xiongmai&nbsp;XM530<br>![XM530][XM530]                    |        |   +    |   +    |     |      |     |      |    [⬇][fwXM530]    | MVP    |
+| Xiongmai&nbsp;XM550<br>![XM550][XM550]                    |        |   +    |   +    |     |      |     |      |    [⬇][fwXM550]    | MVP    |
 
 -----
 
@@ -140,29 +140,29 @@ Thank you.
 [XM530]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm530_images.yml/badge.svg
 [XM550]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm550_images.yml/badge.svg
 
-[dl01]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7202v300-br.tgz
-[dl02]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7205v200-br.tgz
-[dl03]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7205v300-br.tgz
-[dl04]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7605v100-br.tgz
-[dl05]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516av100-br.tgz
-[dl06]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516av300-br.tgz
-[dl07]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv200-br.tgz
-[dl08]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv300-br.tgz
-[dl09]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv500-br.tgz
-[dl10]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv100-br.tgz
-[dl11]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv200-br.tgz
-[dl12]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv300-br.tgz
-[dl13]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev100-br.tgz
-[dl14]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz
-[dl15]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz
-[dl16]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev200-br.tgz
-[dl17]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz
-[dl18]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98562-br.tgz
-[dl19]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98566-br.tgz
-[dl20]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc325-br.tgz
-[dl21]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc335-br.tgz
-[dl22]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337-br.tgz
-[dl23]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337de-br.tgz
-[dl24]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm510-br.tgz
-[dl25]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm530-br.tgz
-[dl26]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm550-br.tgz
+[fwGK7202v300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7202v300-br.tgz
+[fwGK7205v200]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7205v200-br.tgz
+[fwGK7205v300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7205v300-br.tgz
+[fwGK7605v100]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7605v100-br.tgz
+[fwHi3516Av100]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516av100-br.tgz
+[fwHi3516Av300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516av300-br.tgz
+[fwHi3516Cv200]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv200-br.tgz
+[fwHi3516Cv300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv300-br.tgz
+[fwHi3516Cv500]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv500-br.tgz
+[fwHi3516Dv100]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv100-br.tgz
+[fwHi3516Dv200]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv200-br.tgz
+[fwHi3516Dv300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv300-br.tgz
+[fwHi3516Ev100]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev100-br.tgz
+[fwHi3516Ev200]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz
+[fwHi3516Ev300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz
+[fwHi3518Ev200]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev200-br.tgz
+[fwHi3518Ev300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz
+[fwNT98562]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98562-br.tgz
+[fwNT98566]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98566-br.tgz
+[fwSSC325]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc325-br.tgz
+[fwSSC335]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc335-br.tgz
+[fwSSC337]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337-br.tgz
+[fwSSC337DE]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337de-br.tgz
+[fwXM510]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm510-br.tgz
+[fwXM530]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm530-br.tgz
+[fwXM550]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm550-br.tgz
