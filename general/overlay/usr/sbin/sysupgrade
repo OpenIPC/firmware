@@ -1,17 +1,18 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20211129
+# OpenIPC.org | v.20211214
 #
 
 set -e
 
-soc=$(fw_printenv -n soc) || (echo -e "\n\e[1;31mSOC not defined in U-Boot ENV ....\e[0m\n"; exit 1)
+soc=$(fw_printenv -n soc) || (echo -e "\n\e[1;31mSOC not defined in U-Boot ENV...\e[0m\n"; exit 1)
 kernel=$(awk -F ':' '/"kernel"/ {print $1}' /proc/mtd)
 rootfs=$(awk -F ':' '/"rootfs"/ {print $1}' /proc/mtd)
 overlay=$(awk -F ':' '/"rootfs_data"/ {print $1}' /proc/mtd)
+kernelrelease=0x$(xxd -l 4 -s 8 -p /dev/"${kernel}" | xargs)
+systemrelease=$(cat /etc/os-release | grep "GITHUB_VERSION" | head -1 | cut -d= -f2)
 github="https://github.com/OpenIPC/firmware/releases/download/latest"
 option="-s --connect-timeout 30 --max-time 60"
-
 
 
 stop_services() {
@@ -29,12 +30,79 @@ download_firmware() {
   if [ $remotely -eq 1 ]; then
     echo -e "\n\e[1;31mDownloading the latest firmware...\e[0m\n"
     echo ${1}
-    curl ${option} -L "${1}" -o - | gzip -d | tar xvf - -C /tmp || (echo -e "\n\e[1;31mError receiving the update file, execution was interrupted....\e[0m\n"; exit 1)
+    curl ${option} -L "${1}" -o - | gzip -d | tar xvf - -C /tmp || (echo -e "\n\e[1;31mError receiving the update file, execution was interrupted...\e[0m\n"; exit 1)
+  fi
+}
+
+check_sum() {
+  if [ $md5 -eq 1 ]; then
+    cd $(dirname "${1}")
+    md5sum -c -s "${1}.md5sum"
+    if [ $? -eq 0 ]; then
+      echo -e "\n\e[1;31m${2}: Checksum verified...\e[0m\n"
+    else
+      echo -e "\n\e[1;31m${2}: Checksum error, execution was interrupted...\e[0m\n"
+      exit 1
+    fi
+  else
+    echo -e "\n\e[1;31m${2}: Checksum skipped...\e[0m\n"
+  fi
+}
+
+check_soc() {
+  if [ $host -eq 1 ]; then
+    echo -e "\n\e[1;32m${2}: installed SOC: ${soc}\e[0m"
+    echo -e "\e[1;32m${2}:       new SOC: ${1}\e[0m\n"
+    if [ "${1}" = "${soc}" ]; then
+      echo -e "\n\e[1;31m${2}: Hostname verified...\e[0m\n"
+    else
+      echo -e "\n\e[1;31m${2} is not for this system, execution was interrupted...\e[0m\n"
+      exit 1
+    fi
+  else
+    echo -e "\n\e[1;31m${2}: Hostname check skipped...\e[0m\n"
+  fi
+}
+
+check_release() {
+  echo -e "\n\e[1;32m${3}: installed release: ${1}\e[0m"
+  echo -e "\e[1;32m${3}:       new release: ${2}\e[0m\n"
+  if [ "${1}" = "${2}" ]; then
+    echo -e "\n\e[1;31m${3} has the same release version, skipping...\e[0m\n"
+    return 0  
+  else
+    return 1
+  fi
+}
+
+mount_rootfs() {
+  mkdir /tmp/rootfs
+  loop=$(losetup -f)
+  [ $? -eq 0 ] && losetup "${loop}" "${1}" && mount "${loop}" /tmp/rootfs
+  if [ $? -eq 0 ]; then
+    new_soc=$(cat /tmp/rootfs/etc/hostname | head -1 | cut -d- -f2)
+    new_systemrelease=$(cat /tmp/rootfs/etc/os-release | grep "GITHUB_VERSION" | head -1 | cut -d= -f2)
+    umount /tmp/rootfs
+    rm -rf /tmp/rootfs
+    losetup -d "${loop}"
+  else
+    if [ $host -eq 1 ]; then
+      echo -e "\n\e[1;31mRootfs: Unable to get hostname, execution was interrupted...\e[0m\n"
+      exit 1
+    fi
   fi
 }
 
 writing_kernel() {
   if [ $update_kernel -eq 1 ]; then
+    check_sum "${1}" "Kernel"
+    
+    new_kernelrelease=0x$(xxd -l 4 -s 8 -p "${1}" | xargs)
+    check_release "${kernelrelease}" "${new_kernelrelease}" "Kernel" && return 0
+    
+    new_soc=$(strings "${1}" | head -1 | cut -d- -f3)
+    check_soc "${new_soc}" "Kernel"
+
     echo -e "\n\e[1;31mWriting a new kernel...\e[0m\n"
     flashcp -v "${1}" /dev/${kernel}
   fi
@@ -42,6 +110,12 @@ writing_kernel() {
 
 writing_rootfs() {
   if [ $update_rootfs -eq 1 ]; then
+    check_sum "${1}" "Rootfs"
+
+    mount_rootfs "${1}"
+    check_release "${systemrelease}" "${new_systemrelease}" "Rootfs" && return 0
+    check_soc "${new_soc}" "Rootfs"
+
     echo -e "\n\e[1;31mWriting a new rootfs...\e[0m\n"
     flashcp -v "${1}" /dev/${rootfs}
   fi
@@ -72,9 +146,11 @@ print_usage() {
 	echo "    --kernel=[FILE]          update kernel from file (uImage format)"
 	echo "    --rootfs=[FILE]          update rootfs from file (squashfs format)"
   echo
+  echo "    -f                       skip check md5 hash"
+  echo "    --force                    and hostname"
 	echo "    -n                       clear overlayfs"
 	echo "    -x                       no reboot after upgrade"
-	echo "    -h                       help information"
+	echo "    -h --help                help information"
 }
 
 update_kernel=0
@@ -85,6 +161,8 @@ usage=0
 from_url=0
 remotely=0
 locally=0
+md5=1
+host=1
 
 for arg in $@
 do
@@ -102,6 +180,9 @@ do
 			;;
 		"-x")
 			no_reboot=1
+			;;
+		"-f")
+			md5=0
 			;;
 		"-h")
 			usage=1
@@ -122,6 +203,13 @@ do
           url=$(echo =$arg | cut -d= -f3-)
           from_url=1
           remotely=1
+          ;;
+        "--force")
+          md5=0
+          host=0
+          ;;
+        "--help")
+          usage=1
           ;;
         *)
           usage=1;
