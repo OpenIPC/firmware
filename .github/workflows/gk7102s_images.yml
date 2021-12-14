@@ -1,4 +1,4 @@
-name: GK7102S
+name: "GK7102S  "
 
 on:
   workflow_dispatch:
@@ -62,8 +62,9 @@ jobs:
           make PLATFORM=goke BOARD=unknown_unknown_gk7102s_openipc all
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... GK7102S" >> $GITHUB_ENV && exit 1
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... GK7102S" >> $GITHUB_ENV && exit 1
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.gk7102s
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.gk7102s
+          cd ${GITHUB_WORKSPACE}/output/images
+          mv uImage uImage.gk7102s
+          mv rootfs.squashfs rootfs.squashfs.gk7102s
           tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.fh8856 uImage.gk7102s
 
       - name: Build GK7102S SDK

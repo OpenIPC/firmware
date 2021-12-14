@@ -1,4 +1,4 @@
-name: SSC337DE
+name: "SSC337DE  "
 
 on:
   push:
@@ -69,9 +69,12 @@ jobs:
           make PLATFORM=sigmastar BOARD=unknown_unknown_ssc337de_openipc all
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... SSC337DE" >> $GITHUB_ENV && exit 1
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... SSC337DE" >> $GITHUB_ENV && exit 1
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.ssc337de
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.ssc337de
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.ssc337de uImage.ssc337de
+          cd ${GITHUB_WORKSPACE}/output/images
+          mv uImage uImage.ssc337de
+          mv rootfs.squashfs rootfs.squashfs.ssc337de
+          md5sum rootfs.squashfs.ssc337de > rootfs.squashfs.ssc337de.md5sum
+          md5sum uImage.ssc337de > uImage.ssc337de.md5sum
+          tar -cvzf $ARCHIVE_FW *ssc337de*
 
       - name: Build SSC337DE SDK
         id: build-ssc337de-sdk

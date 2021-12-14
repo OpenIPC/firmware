@@ -1,4 +1,4 @@
-name: XM510
+name: "XM510  "
 
 on:
   push:
@@ -69,9 +69,12 @@ jobs:
           make PLATFORM=xiongmai BOARD=unknown_unknown_xm510_openipc all
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... XM510" >> $GITHUB_ENV && exit 1
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... XM510" >> $GITHUB_ENV && exit 1
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.xm510
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.xm510
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.xm510 uImage.xm510
+          cd ${GITHUB_WORKSPACE}/output/images
+          mv uImage uImage.xm510
+          mv rootfs.squashfs rootfs.squashfs.xm510
+          md5sum rootfs.squashfs.xm510 > rootfs.squashfs.xm510.md5sum
+          md5sum uImage.xm510 > uImage.xm510.md5sum
+          tar -cvzf $ARCHIVE_FW *xm510*
 
       - name: Build XM510 SDK
         id: build-xm510-sdk

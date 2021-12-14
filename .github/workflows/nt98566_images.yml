@@ -1,4 +1,4 @@
-name: NT98566
+name: "NT98566  "
 
 on:
   workflow_dispatch:
@@ -62,9 +62,12 @@ jobs:
           make PLATFORM=novatek BOARD=unknown_unknown_nt98566_openipc all
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... NT98566" >> $GITHUB_ENV && exit 1
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... NT98566" >> $GITHUB_ENV && exit 1
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.nt98566
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.nt98566
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.nt98566 uImage.nt98566
+          cd ${GITHUB_WORKSPACE}/output/images
+          mv uImage uImage.nt98566
+          mv rootfs.squashfs rootfs.squashfs.nt98566
+          md5sum rootfs.squashfs.nt98566 > rootfs.squashfs.nt98566.md5sum
+          md5sum uImage.nt98566 > uImage.nt98566.md5sum
+          tar -cvzf $ARCHIVE_FW *nt98566*
 
       - name: Build NT98566 SDK
         id: build-nt98566-sdk

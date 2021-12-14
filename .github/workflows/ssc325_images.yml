@@ -1,4 +1,4 @@
-name: SSC325
+name: "SSC325  "
 
 on:
   push:
@@ -69,9 +69,12 @@ jobs:
           make PLATFORM=sigmastar BOARD=unknown_unknown_ssc325_openipc all
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... SSC325" >> $GITHUB_ENV && exit 1
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... SSC325" >> $GITHUB_ENV && exit 1
-          mv ${GITHUB_WORKSPACE}/output/images/uImage ${GITHUB_WORKSPACE}/output/images/uImage.ssc325
-          mv ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.ssc325
-          tar -C ${GITHUB_WORKSPACE}/output/images -cvzf $ARCHIVE_FW rootfs.squashfs.ssc325 uImage.ssc325
+          cd ${GITHUB_WORKSPACE}/output/images
+          mv uImage uImage.ssc325
+          mv rootfs.squashfs rootfs.squashfs.ssc325
+          md5sum rootfs.squashfs.ssc325 > rootfs.squashfs.ssc325.md5sum
+          md5sum uImage.ssc325 > uImage.ssc325.md5sum
+          tar -cvzf $ARCHIVE_FW *ssc325*
 
       - name: Build SSC325 SDK
         id: build-ssc325-sdk
