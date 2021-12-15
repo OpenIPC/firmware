@@ -13,6 +13,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv300/hisil
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv500/hisilicon-osdrv-hi3516cv500.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/hisilicon-osdrv-hi3516ev300.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/ipctool/ipctool.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/json-c-openipc/json-c-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/lame-openipc/lame-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libcurl-openipc/libcurl-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libevent-openipc/libevent-openipc.mk

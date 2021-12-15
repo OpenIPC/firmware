@@ -4,6 +4,7 @@ include $(BR2_EXTERNAL_ANYKA_PATH)/package/aura-httpd/aura-httpd.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/ipctool/ipctool.mk
+include $(BR2_EXTERNAL_ANYKA_PATH)/package/json-c-openipc/json-c-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/lame-openipc/lame-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/libcurl-openipc/libcurl-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/libevent-openipc/libevent-openipc.mk
