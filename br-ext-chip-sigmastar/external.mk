@@ -5,6 +5,7 @@ include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.m
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/gdbserver-lite/gdbserver-lite.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/ipctool/ipctool.mk
+include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/json-c-openipc/json-c-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/lame-openipc/lame-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libcurl-openipc/libcurl-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/libevent-openipc/libevent-openipc.mk
