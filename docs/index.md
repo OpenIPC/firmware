@@ -32,7 +32,7 @@ _NB! Downloads are for research only, without any guarantee._
 | Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  |        |        |        |     |      |     |      |                    | R&D    |
 | Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         |        |        |        |     |      |     |      | [⬇][fwGK7202v300]  | WIP    |
 | Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         |   +    |   +    |   +    |  +  |  +   |     |      | [⬇][fwGK7205v200]  | DONE   |
-| Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |        |        |        |     |      |     |      | [⬇][fwGK7205v300]  | WIP    |
+| Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |        |        |        |     |      |     |      | [⬇][fwGK7205v300]  | DONE   |
 | Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         |   +    |   +    |   +    |     |      |     |      | [⬇][fwGK7605v100]  | WIP    |
 | HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av100] | WIP    |
 | HiSilicon&nbsp;Hi3516Av300<br>![Hi3516Av300][Hi3516Av300] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av300] | WIP    |
@@ -54,7 +54,7 @@ _NB! Downloads are for research only, without any guarantee._
 | SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                |        |   +    |   +    |     |      |     |      |   [⬇][fwSSC325]    | R&D    |
 | SigmaStar&nbsp;SSC335<br>![SSC335][SSC335]                |        |   +    |   +    |  +  |      |  +  |      |   [⬇][fwSSC335]    | MVP    |
 | SigmaStar&nbsp;SSC337<br>![SSC337][SSC337]                |        |   +    |   +    |  +  |      |  +  |      |   [⬇][fwSSC337]    | MVP    |
-| SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          |        |   +    |   +    |     |      |     |      |  [⬇][fwSSC337DE]   | WIP    |
+| SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          |        |   +    |   +    |     |      |     |      |  [⬇][fwSSC337DE]   | TEST   |
 | Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |        |     |      |     |      |                    | R&D    |
 | Ingenic&nbsp;T20<br>![T20][T20]                           |        |        |        |     |      |     |      |                    | R&D    |
 | Ingenic&nbsp;T21<br>![T21][T21]                           |        |        |        |     |      |     |      |                    | R&D    |
