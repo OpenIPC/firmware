@@ -8,3 +8,6 @@ date "+GITHUB_VERSION=\"${BRANCH_NAME}+${GIT_HASH}, %Y-%m-%d\"" >>${TARGET_DIR}/
 #
 echo 'Note: BR2_TOOLCHAIN_BUILDROOT_LIBC="glibc"'
 #
+# Comment out this line if you want to save the libraries
+rm -f ${TARGET_DIR}/usr/lib/libstdc++*
+#
