@@ -76,7 +76,7 @@ check_release() {
 }
 
 mount_rootfs() {
-  mkdir /tmp/rootfs
+  mkdir -p /tmp/rootfs
   loop=$(losetup -f)
   [ $? -eq 0 ] && losetup "${loop}" "${1}" && mount "${loop}" /tmp/rootfs
   if [ $? -eq 0 ]; then
