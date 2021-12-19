@@ -1,0 +1,12 @@
+--- a/hostapd-2.9/hostapd/defconfig	2021-10-29 04:23:27.000000000 +0300
++++ b/hostapd-2.9/hostapd/defconfig	2021-12-17 23:47:31.733934121 +0200
+@@ -15,6 +15,9 @@
+ # Driver interface for wired authenticator
+ #CONFIG_DRIVER_WIRED=y
+ 
++# Driver interface for Realtek WLAN
++CONFIG_DRIVER_RTW=y
++
+ # Driver interface for drivers using the nl80211 kernel interface
+ CONFIG_DRIVER_NL80211=y
+ 
