@@ -100,7 +100,7 @@ writing_kernel() {
     new_kernelrelease=0x$(xxd -l 4 -s 8 -p "${1}" | xargs)
     check_release "${kernelrelease}" "${new_kernelrelease}" "Kernel" && return 0
     
-    new_soc=$(strings "${1}" | head -1 | cut -d- -f3)
+    new_soc=$(od -N 32 -j 32 "${1}" -S 1 -A none | cut -d- -f3)
     check_soc "${new_soc}" "Kernel"
 
     echo -e "\n\e[1;31mWriting a new kernel...\e[0m\n"
