@@ -123,16 +123,17 @@ writing_rootfs() {
 
 clearing_overlayfs() {
   if [ $clear_overlayfs -eq 1 ]; then
-    sleep 1
     echo -e "\n\e[1;31mСlearing the overlayfs partition...\e[0m\n"
     flash_eraseall -j /dev/${overlay}
   fi
 }
 
 quick_reboot() {
-  echo -e "\n\e[1;31mRebooting without any questions...\e[0m\n"
-  sleep 1
-  reboot -f
+  if [ $no_reboot -eq 0 ]; then
+    echo -e "\n\e[1;31mRebooting without any questions...\e[0m\n"
+    sleep 1
+    reboot -f
+  fi
 }
 
 print_usage() {
@@ -149,7 +150,7 @@ print_usage() {
   echo "    -f                       skip check md5 hash"
   echo "    --force                    and hostname"
 	echo "    -n                       clear overlayfs"
-	echo "    -x                       no reboot after upgrade"
+	echo "    -x                       no reboot after success execution"
 	echo "    -h --help                help information"
 }
 
@@ -218,30 +219,35 @@ do
 	esac
 done
 
-if [ $remotely -eq $locally ] || [ $usage -eq 1 ]; then
+if ( [ $remotely -eq 1 ] && [ $locally -eq 1 ] ) || [ $usage -eq 1 ] || \
+   ( [ $remotely -eq 0 ] && [ $locally -eq 0 ]   && [ $clear_overlayfs -eq 0 ] ); then
   print_usage
+  echo one
+  exit 1
+fi
+
+if [ $remotely -eq 0 ] && [ $locally -eq 0 ] && [ $clear_overlayfs -eq 1 ]; then
+  clearing_overlayfs && quick_reboot
   exit 1
 fi
 
 [ -z "${kernel_file}" ] && kernel_file="/tmp/uImage.${soc}"
 [ -z "${rootfs_file}" ] && rootfs_file="/tmp/rootfs.squashfs.${soc}"
 
-if [ $from_url -eq 1 ]; then
-  if [ -z "${url}" ]; then
-    echo -e "\n\e[1;31mThere is no URL to update file...\e[0m\n"
-    exit 1
+if [ $remotely -eq 1 ]; then
+  if [ $from_url -eq 1 ]; then
+    if [ -z "${url}" ]; then
+      echo -e "\n\e[1;31mThere is no URL to update file...\e[0m\n"
+      exit 1
+    fi
+  else
+    if [ "$(curl -o /dev/null -s -w '%{http_code}\n' http://git_hub.com)" != "301" ]; then
+      echo -e "\n\e[1;31mThere is no access to the github.com, please check the Internet connection...\e[0m\n"
+      exit 1
+    fi
+    url="${github}/openipc.${soc}-br.tgz"
   fi
-else
-  if [ "$(curl -o /dev/null -s -w '%{http_code}\n' http://github.com)" != "301" ]; then
-    echo -e "\n\e[1;31mThere is no access to the github.com, please check the Internet connection...\e[0m\n"
-    exit 1
-  fi
-  url="${github}/openipc.${soc}-br.tgz"
 fi
 
 stop_services
-download_firmware "${url}" && check_memory && writing_kernel "${kernel_file}" && writing_rootfs "${rootfs_file}" && clearing_overlayfs
-
-if [ $no_reboot -eq 0 ]; then
-  quick_reboot
-fi
+download_firmware "${url}" && check_memory && writing_kernel "${kernel_file}" && writing_rootfs "${rootfs_file}" && sleep 1 && clearing_overlayfs && quick_reboot
