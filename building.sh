@@ -79,6 +79,11 @@ gk7205v200_fpv() {
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_fpv all && rename
 }
 
+gk7205v200_ufanet() {
+  soc="gk7205v200"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_ufanet all && rename
+}
+
 gk7205v300() {
   soc="gk7205v300"
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -177,6 +182,11 @@ hi3516ev200_vixand() {
 hi3516ev300() {
   soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+hi3516ev300_dev() {
+  soc="hi3516ev300"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_dev all && rename
 }
 
 hi3516ev300_glibc() {
@@ -313,6 +323,7 @@ xm550() {
 # gk7202v300                   # testing..
 # gk7205v200                   # OpenIPC
 # gk7205v200_fpv               # FPV
+gk7205v200_ufanet            # Ufanet
 # gk7205v300                   # OpenIPC
 # gk7605v100                   # testing..
 #
@@ -324,7 +335,7 @@ xm550() {
 # hi3518ev200                   # testing..
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
-hi3518ev200_hs303v3             # testing..
+# hi3518ev200_hs303v3             # testing..
 #
 # hi3516av100                   # OpenIPC
 # hi3516dv100                   # OpenIPC
@@ -337,6 +348,7 @@ hi3518ev200_hs303v3             # testing..
 # hi3516ev200_eltis             # Eltis
 # hi3516ev200_vixand            # Vixand
 # hi3516ev300                   # OpenIPC
+# hi3516ev300_dev               # OpenIPC development
 # hi3516ev300_glibc             # testing..
 # hi3516ev300_tehshield         # Tehshield
 # hi3518ev300                   # OpenIPC
@@ -369,7 +381,7 @@ hi3518ev200_hs303v3             # testing..
 #
 # ssc335de                      # OpenIPC
 #
-# ssc337                        # OpenIPC
+# ssc337                        # OpenIPC => musl
 #
 # ssc337de                      # OpenIPC
 #
