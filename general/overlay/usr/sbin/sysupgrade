@@ -241,7 +241,7 @@ if [ $remotely -eq 1 ]; then
       exit 1
     fi
   else
-    if [ "$(curl -o /dev/null -s -w '%{http_code}\n' http://git_hub.com)" != "301" ]; then
+    if [ "$(curl -o /dev/null -s -w '%{http_code}\n' http://github.com)" != "301" ]; then
       echo -e "\n\e[1;31mThere is no access to the github.com, please check the Internet connection...\e[0m\n"
       exit 1
     fi
