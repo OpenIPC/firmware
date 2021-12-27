@@ -1,12 +1,12 @@
 #!/bin/sh
 #
-# This is part of OpenIPC.org project | 2020.08.01
+# This is part of OpenIPC.org project | 2021.12.01
 #
 # ar0237 imx290 imx307 imx323 imx385 jxf22 ov2718 ov2718_2a sc2235
 
 
 # SoC detect
-chipid=$(ipctool --chip_id)
+chipid=$(ipcinfo --chip_id)
 
 # MMZ config
 mem_start=0x80000000;                             # phy mem start
@@ -18,7 +18,8 @@ os_mem_size=$(awk -F '=' '$1=="mem"{print $2}' RS=" " /proc/cmdline | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
 
 # Sensor config
-SNS_TYPE=$(awk -F '=' '$1=="sensor"{print $2}' RS=" " /proc/cmdline)
+# SNS_TYPE=$(awk -F '=' '$1=="sensor"{print $2}' RS=" " /proc/cmdline)
+SNS_TYPE=$(fw_printenv -n sensor)
 SNS_TYPE=${SNS_TYPE:=ar0237_i2c_dc}
 
 
