@@ -1,0 +1,10 @@
+--- a/linkfd.c	2008-01-08 00:35:43.000000000 +0200
++++ b/linkfd.c	2021-12-21 20:08:27.197338347 +0300
+@@ -264,6 +264,7 @@
+ 		 break;	
+ 	      }
+ 	      /* Send ECHO request */
++	      vtun_syslog(LOG_INFO,"Session %s sending ping", lfd_host->host);
+ 	      if( proto_write(fd1, buf, VTUN_ECHO_REQ) < 0 )
+ 		 break;
+ 	   }

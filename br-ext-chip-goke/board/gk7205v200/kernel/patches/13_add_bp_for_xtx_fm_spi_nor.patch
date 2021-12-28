@@ -1,0 +1,21 @@
+--- a/drivers/mtd/spi-nor/spi-nor.c
++++ b/drivers/mtd/spi-nor/spi-nor.c
+@@ -2251,6 +2251,8 @@
+ 	/* read the BP bit in RDSR to check whether nor is lock or not */
+ 	switch (JEDEC_MFR(info)) {
+ 	case SNOR_MFR_GD:
++	case SNOR_MFR_FM:
++	case SNOR_MFR_XTX:
+ 	case SNOR_MFR_ESMT:
+ 	case SNOR_MFR_EON:
+ 	case SNOR_MFR_SPANSION:
+--- a/include/linux/mtd/spi-nor.h
++++ b/include/linux/mtd/spi-nor.h
+@@ -31,6 +31,7 @@
+ #define SNOR_MFR_GD			0xc8
+ #define SNOR_MFR_XTX        0x0b
+ #define SNOR_MFR_PUYA       0x85
++#define SNOR_MFR_FM         0xa1
+ #define SNOR_MFR_ISSI		0x9d
+ 
+ /* Flash set the RESET# from */
