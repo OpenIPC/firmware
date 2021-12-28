@@ -177,14 +177,14 @@ insert_ko() {
                 exit
         fi
 
-        # insmod hi3516a_tde.ko
+        #insmod hi3516a_tde.ko
         insmod hi3516a_region.ko
         insmod hi3516a_vgs.ko
 
         insert_isp
         insmod hi3516a_viu.ko detect_err_frame=10
         insmod hi3516a_vpss.ko rfr_frame_comp=1
-        # insmod hi3516a_vou.ko
+        #insmod hi3516a_vou.ko
         #insmod hi3516a_vou.ko transparentTransmit=1 #enable transparentTransmit
         #insmod hifb.ko video="hifb:vram0_size:1620"     # default pal
 
@@ -194,10 +194,10 @@ insert_ko() {
         insmod hi3516a_h264e.ko H264eMiniBufMode=1
         insmod hi3516a_jpege.ko
         insmod hi3516a_ive.ko save_power=0
-        #       insmod hi3516a_ive.ko
+        #insmod hi3516a_ive.ko
         insmod sensor_i2c.ko
-        insmod pwm.ko
-        insmod piris.ko
+        #insmod pwm.ko
+        #insmod piris.ko
         insert_sns
         insert_audio
 
@@ -210,7 +210,7 @@ remove_ko() {
         remove_audio
         remove_sns
 
-        rmmod pwm
+        #rmmod pwm
 
         rmmod hi3516a_ive
 
@@ -230,7 +230,7 @@ remove_ko() {
         rmmod hi3516a_region
         rmmod hi3516a_tde
 
-        rmmod piris
+        #rmmod piris
         rmmod hi3516a_isp
         rmmod hi3516a_sys
         rmmod hi3516a_base
