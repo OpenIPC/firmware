@@ -1,6 +1,6 @@
 ![OpenIPC Logo](https://cdn.themactep.com/images/logo_openipc.png)
 
-## OpenIPC v2.1
+## OpenIPC firmware
 _(based on Buildroot)_
 
 OpenIPC is a rapidly developing open source alternative firmware for popular IP cameras.
@@ -9,16 +9,16 @@ Historically, OpenIPC firmware supports SoC manufactured by HiSilicon, but as th
 the list of supported processors expands. Today, it also includes chips from Goke, SigmaStar, Xiongmai,
 and is expected to grow further.
 
-More information about the project is available [in our wiki](https://github.com/OpenIPC/openipc-2.1/wiki)
+More information about the project is available [in our wiki](https://github.com/OpenIPC/firmware/wiki)
 and [on the website](https://openipc.org/).
 
 ### Current development status <a href="#commercial">*</a>
 
-[![CI status](https://img.shields.io/github/downloads/OpenIPC/openipc-2.1/total.svg)](https://github.com/OpenIPC/openipc-2.1/releases)
-![GitHub repo size](https://img.shields.io/github/repo-size/OpenIPC/openipc-2.1)
-![GitHub issues](https://img.shields.io/github/issues/OpenIPC/openipc-2.1)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/OpenIPC/openipc-2.1)
-[![License](https://img.shields.io/github/license/OpenIPC/openipc-2.1)](https://opensource.org/licenses/MIT)
+[![CI status](https://img.shields.io/github/downloads/OpenIPC/firmware/total.svg)](https://github.com/OpenIPC/firmware/releases)
+![GitHub repo size](https://img.shields.io/github/repo-size/OpenIPC/firmware)
+![GitHub issues](https://img.shields.io/github/issues/OpenIPC/firmware)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/OpenIPC/firmware)
+[![License](https://img.shields.io/github/license/OpenIPC/firmware)](https://opensource.org/licenses/MIT)
 ![Backers](https://opencollective.com/openipc/tiers/backer/badge.svg)
 ![Backers](https://opencollective.com/openipc/tiers/badge.svg)
 
@@ -104,65 +104,65 @@ Thank you.
 
 
 [FH8632]: https://img.shields.io/static/v1?label=FH8632&message=help%20needed&color=5500ff&logo=github
-[FH8852]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/fh8852_images.yml/badge.svg
-[FH8856]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/fh8856_images.yml/badge.svg
-[GK7102S]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7102s_images.yml/badge.svg
-[GK7202v300]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7202v300_images.yml/badge.svg
-[GK7205v200]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7205v200_images.yml/badge.svg
-[GK7205v300]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7205v300_images.yml/badge.svg
-[GK7605v100]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/gk7605v100_images.yml/badge.svg
-[Hi3516Av100]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516av100_images.yml/badge.svg
-[Hi3516Av300]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516av300_images.yml/badge.svg
-[Hi3516Cv200]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516cv200_images.yml/badge.svg
-[Hi3516Cv300]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516cv300_images.yml/badge.svg
-[Hi3516Cv500]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516cv500_images.yml/badge.svg
-[Hi3516Dv100]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516dv100_images.yml/badge.svg
-[Hi3516Dv200]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516dv200_images.yml/badge.svg
-[Hi3516Dv300]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516dv300_images.yml/badge.svg
-[Hi3516Ev100]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev100_images.yml/badge.svg
-[Hi3516Ev200]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev200_images.yml/badge.svg
-[Hi3516Ev300]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3516ev300_images.yml/badge.svg
-[Hi3518Ev200]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev200_images.yml/badge.svg
-[Hi3518Ev300]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/hi3518ev300_images.yml/badge.svg
+[FH8852]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852_images.yml/badge.svg
+[FH8856]: https://github.com/OpenIPC/firmware/actions/workflows/fh8856_images.yml/badge.svg
+[GK7102S]: https://github.com/OpenIPC/firmware/actions/workflows/gk7102s_images.yml/badge.svg
+[GK7202v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7202v300_images.yml/badge.svg
+[GK7205v200]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v200_images.yml/badge.svg
+[GK7205v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v300_images.yml/badge.svg
+[GK7605v100]: https://github.com/OpenIPC/firmware/actions/workflows/gk7605v100_images.yml/badge.svg
+[Hi3516Av100]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516av100_images.yml/badge.svg
+[Hi3516Av300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516av300_images.yml/badge.svg
+[Hi3516Cv200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516cv200_images.yml/badge.svg
+[Hi3516Cv300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516cv300_images.yml/badge.svg
+[Hi3516Cv500]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516cv500_images.yml/badge.svg
+[Hi3516Dv100]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516dv100_images.yml/badge.svg
+[Hi3516Dv200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516dv200_images.yml/badge.svg
+[Hi3516Dv300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516dv300_images.yml/badge.svg
+[Hi3516Ev100]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516ev100_images.yml/badge.svg
+[Hi3516Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516ev200_images.yml/badge.svg
+[Hi3516Ev300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516ev300_images.yml/badge.svg
+[Hi3518Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3518ev200_images.yml/badge.svg
+[Hi3518Ev300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3518ev300_images.yml/badge.svg
 [MSC313E]: https://img.shields.io/static/v1?label=MSC313E&message=help%20needed&color=5500ff&logo=github
 [MSC316D]: https://img.shields.io/static/v1?label=MSC316D&message=help%20needed&color=5500ff&logo=github
-[NT98562]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/nt98562_images.yml/badge.svg
-[NT98566]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/nt98566_images.yml/badge.svg
-[SSC325]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc325_images.yml/badge.svg
-[SSC335]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc335_images.yml/badge.svg
-[SSC337]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337_images.yml/badge.svg
-[SSC337DE]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/ssc337de_images.yml/badge.svg
+[NT98562]: https://github.com/OpenIPC/firmware/actions/workflows/nt98562_images.yml/badge.svg
+[NT98566]: https://github.com/OpenIPC/firmware/actions/workflows/nt98566_images.yml/badge.svg
+[SSC325]: https://github.com/OpenIPC/firmware/actions/workflows/ssc325_images.yml/badge.svg
+[SSC335]: https://github.com/OpenIPC/firmware/actions/workflows/ssc335_images.yml/badge.svg
+[SSC337]: https://github.com/OpenIPC/firmware/actions/workflows/ssc337_images.yml/badge.svg
+[SSC337DE]: https://github.com/OpenIPC/firmware/actions/workflows/ssc337de_images.yml/badge.svg
 [T10]: https://img.shields.io/static/v1?label=T10&message=help%20needed&color=5500ff&logo=github
 [T20]: https://img.shields.io/static/v1?label=T20&message=help%20needed&color=5500ff&logo=github
 [T21]: https://img.shields.io/static/v1?label=T21&message=help%20needed&color=5500ff&logo=github
-[T31]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/t31_images.yml/badge.svg
-[XM510]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm510_images.yml/badge.svg
-[XM530]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm530_images.yml/badge.svg
-[XM550]: https://github.com/OpenIPC/openipc-2.1/actions/workflows/xm550_images.yml/badge.svg
+[T31]: https://github.com/OpenIPC/firmware/actions/workflows/t31_images.yml/badge.svg
+[XM510]: https://github.com/OpenIPC/firmware/actions/workflows/xm510_images.yml/badge.svg
+[XM530]: https://github.com/OpenIPC/firmware/actions/workflows/xm530_images.yml/badge.svg
+[XM550]: https://github.com/OpenIPC/firmware/actions/workflows/xm550_images.yml/badge.svg
 
-[fwGK7202v300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7202v300-br.tgz
-[fwGK7205v200]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7205v200-br.tgz
-[fwGK7205v300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7205v300-br.tgz
-[fwGK7605v100]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.gk7605v100-br.tgz
-[fwHi3516Av100]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516av100-br.tgz
-[fwHi3516Av300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516av300-br.tgz
-[fwHi3516Cv200]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv200-br.tgz
-[fwHi3516Cv300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv300-br.tgz
-[fwHi3516Cv500]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516cv500-br.tgz
-[fwHi3516Dv100]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv100-br.tgz
-[fwHi3516Dv200]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv200-br.tgz
-[fwHi3516Dv300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516dv300-br.tgz
-[fwHi3516Ev100]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev100-br.tgz
-[fwHi3516Ev200]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev200-br.tgz
-[fwHi3516Ev300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3516ev300-br.tgz
-[fwHi3518Ev200]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev200-br.tgz
-[fwHi3518Ev300]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.hi3518ev300-br.tgz
-[fwNT98562]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98562-br.tgz
-[fwNT98566]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.nt98566-br.tgz
-[fwSSC325]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc325-br.tgz
-[fwSSC335]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc335-br.tgz
-[fwSSC337]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337-br.tgz
-[fwSSC337DE]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.ssc337de-br.tgz
-[fwXM510]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm510-br.tgz
-[fwXM530]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm530-br.tgz
-[fwXM550]: https://github.com/OpenIPC/openipc-2.1/releases/download/latest/openipc.xm550-br.tgz
+[fwGK7202v300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gk7202v300-br.tgz
+[fwGK7205v200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gk7205v200-br.tgz
+[fwGK7205v300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gk7205v300-br.tgz
+[fwGK7605v100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gk7605v100-br.tgz
+[fwHi3516Av100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516av100-br.tgz
+[fwHi3516Av300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516av300-br.tgz
+[fwHi3516Cv200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516cv200-br.tgz
+[fwHi3516Cv300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516cv300-br.tgz
+[fwHi3516Cv500]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516cv500-br.tgz
+[fwHi3516Dv100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516dv100-br.tgz
+[fwHi3516Dv200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516dv200-br.tgz
+[fwHi3516Dv300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516dv300-br.tgz
+[fwHi3516Ev100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516ev100-br.tgz
+[fwHi3516Ev200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516ev200-br.tgz
+[fwHi3516Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516ev300-br.tgz
+[fwHi3518Ev200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3518ev200-br.tgz
+[fwHi3518Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3518ev300-br.tgz
+[fwNT98562]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.nt98562-br.tgz
+[fwNT98566]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.nt98566-br.tgz
+[fwSSC325]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ssc325-br.tgz
+[fwSSC335]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ssc335-br.tgz
+[fwSSC337]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ssc337-br.tgz
+[fwSSC337DE]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ssc337de-br.tgz
+[fwXM510]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.xm510-br.tgz
+[fwXM530]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.xm530-br.tgz
+[fwXM550]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.xm550-br.tgz
