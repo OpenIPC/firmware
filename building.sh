@@ -1,11 +1,11 @@
 #!/bin/bash
 #
-# OpenIPC.org | v.20211214
+# OpenIPC.org | v.20211231
 #
 
 clone() {
   sudo apt-get update -y ; apt-get install -y bc build-essential git unzip rsync autotools-dev automake libtool
-  git clone --depth=1 https://github.com/OpenIPC/openipc-2.1.git
+  git clone --depth=1 https://github.com/OpenIPC/firmware.git
 }
 
 fresh() {
@@ -40,7 +40,7 @@ rename_initramfs() {
 autoup_rootfs() {
   echo -e "\n\n"
   cp -v ./output/images/uImage.initramfs.${soc} ./output/images/autoupdate-kernel.img
-  ./output/host/bin/mkimage -A arm -O linux -T filesystem -n 'OpenIPC v2.1' -a 0x000000250000 -e 0x000000750000 -d ./output/images/rootfs.squashfs.${soc} ./output/images/autoupdate-rootfs.img
+  ./output/host/bin/mkimage -A arm -O linux -T filesystem -n 'OpenIPC firmware' -a 0x000000250000 -e 0x000000750000 -d ./output/images/rootfs.squashfs.${soc} ./output/images/autoupdate-rootfs.img
 }
 
 upload() {
@@ -323,7 +323,7 @@ xm550() {
 # gk7202v300                   # testing..
 # gk7205v200                   # OpenIPC
 # gk7205v200_fpv               # FPV
-gk7205v200_ufanet            # Ufanet
+# gk7205v200_ufanet            # Ufanet
 # gk7205v300                   # OpenIPC
 # gk7605v100                   # testing..
 #
@@ -338,7 +338,7 @@ gk7205v200_ufanet            # Ufanet
 # hi3518ev200_hs303v3             # testing..
 #
 # hi3516av100                   # OpenIPC
-# hi3516dv100                   # OpenIPC
+hi3516dv100                   # OpenIPC
 # hi3516cv300                   # testing..
 # hi3516ev100                   # testing..
 #
@@ -393,5 +393,5 @@ gk7205v200_ufanet            # Ufanet
 #
 #
 #
-# More examples see here: https://github.com/OpenIPC/openipc-2.1/wiki/source_code
+# More examples see here: https://github.com/OpenIPC/firmware/wiki/source_code
 #
