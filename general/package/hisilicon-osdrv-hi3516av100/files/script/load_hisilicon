@@ -46,6 +46,7 @@ remove_detect() {
         rmmod hi3516a_base
         rmmod hi_media
         rmmod mmz
+        rmmod sys_config
 }
 
 insert_audio() {
@@ -129,16 +130,16 @@ insert_sns() {
                 insmod extdrv/sensor_spi.ko sensor=imx117
                 ;;
         mn34220)
-                devmem 0x200f0050 0x2 # i2c0_scl
-                devmem 0x200f0054 0x2 # i2c0_sda
+                devmem 0x200f0050 32 0x2 # i2c0_scl
+                devmem 0x200f0054 32 0x2 # i2c0_sda
 
-                devmem 0x2003002c 0x90007 # sensor unreset, clk 37.125MHz, VI 250MHz
+                devmem 0x2003002c 32 0x90007 # sensor unreset, clk 37.125MHz, VI 250MHz
                 ;;
         ar0330)
-                devmem 0x200f0050 0x2 # i2c0_scl
-                devmem 0x200f0054 0x2 # i2c0_sda
+                devmem 0x200f0050 32 0x2 # i2c0_scl
+                devmem 0x200f0054 32 0x2 # i2c0_sda
 
-                devmem 0x2003002c 0xE0007 # sensor unreset, clk 24MHz, VI 250MHz
+                devmem 0x2003002c 32 0xE0007 # sensor unreset, clk 24MHz, VI 250MHz
                 ;;
         ov4689)
                 devmem 0x200f0050 32 0x2     # i2c0_scl
@@ -146,7 +147,7 @@ insert_sns() {
                 devmem 0x2003002c 32 0xB0007 # sensor unreset, clk 27MHz, VI 250MHz
                 devmem 0x20030104 32 0x0
                 ;;
-        ar0230 | ar0237 | sc4236)
+        ar0230 | ar0237 | sc4236 | imx178)
                 devmem 0x200f0050 32 0x2 # i2c0_scl
                 devmem 0x200f0054 32 0x2 # i2c0_sda
 
@@ -164,7 +165,7 @@ insert_sns() {
 }
 insert_ko() {
         # sys config
-        #insmod sys_config.ko vi_vpss_online=$b_arg_online sensor=$SENSOR pin_mux_select=0
+        insmod sys_config.ko vi_vpss_online=$b_arg_online sensor=$SENSOR pin_mux_select=0
 
         # driver load
         insert_mmz
@@ -177,7 +178,7 @@ insert_ko() {
                 exit
         fi
 
-        #insmod hi3516a_tde.ko
+        insmod hi3516a_tde.ko
         insmod hi3516a_region.ko
         insmod hi3516a_vgs.ko
 
