@@ -198,6 +198,7 @@ insert_ko() {
         insmod hi3516a_venc.ko
         insmod hi3516a_chnl.ko ChnlLowPower=1
         insmod hi3516a_h264e.ko H264eMiniBufMode=1
+        insmod hi3516a_h265e.ko H265eMiniBufMode=1
         insmod hi3516a_jpege.ko
         insmod hi3516a_ive.ko save_power=0
         #insmod hi3516a_ive.ko
@@ -222,6 +223,7 @@ remove_ko() {
 
         rmmod hi3516a_rc
         rmmod hi3516a_jpege
+        rmmod hi3516a_h265e
         rmmod hi3516a_h264e
         rmmod hi3516a_chnl
         rmmod hi3516a_venc
