@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-LIBWEBSOCKETS_OPENIPC_VERSION = 3.2.2
+LIBWEBSOCKETS_OPENIPC_VERSION = 4.2.2
 LIBWEBSOCKETS_OPENIPC_SITE = $(call github,warmcat,libwebsockets,v$(LIBWEBSOCKETS_OPENIPC_VERSION))
 LIBWEBSOCKETS_OPENIPC_LICENSE = LGPL-2.1 with exceptions
 LIBWEBSOCKETS_OPENIPC_LICENSE_FILES = LICENSE
