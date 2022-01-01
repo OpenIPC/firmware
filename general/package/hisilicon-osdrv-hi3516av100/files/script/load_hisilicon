@@ -1,8 +1,7 @@
 #!/bin/sh
 #
-# This is part of OpenIPC.org project | 2020.08.01
+# This is part of OpenIPC.org project | 2022.01.01
 #
-# ar0237 imx290 imx307 imx323 imx385 jxf22 ov2718 ov2718_2a sc2235
 
 # SoC detect
 chipid=$(ipctool --chip_id)
@@ -73,67 +72,135 @@ remove_sns() {
         rmmod sensor_i2c &>/dev/null
 }
 
+sys_config() {
+        # pinmux configuration
+        devmem 0x200f0000 32 0x1 # 0: GPIO0_5, 1: SENSOR_CLK
+        devmem 0x200f0004 32 0x1 # 1: FLASH_TRIG, 0: GPIO0_6, 2: SPI1_CSN1
+        devmem 0x200f0008 32 0x1 # 1: SHUTTER_TRIG, 0: GPIO0_7, 2: SPI1_CSN2
+
+        # clock configuration
+        devmem 0x20030030 32 0x00004005         # AVC-300M VGS-300M VPSS-250M VEDU-300M mda1axi 250M mda0axi 300M DDR-250
+        devmem 0x20030104 32 0x3                # VICAP-198M VPSS-198M
+        devmem 0x2003002c 32 0x90007            # VICAP-250M, ISP unreset & clk en, Sensor clk en-37.125M, clk reverse
+        #devmem 0x20030034 32 0xffc             # VDP-1080p@60fps unreset & clk en
+        #devmem 0x20030034 32 0xef74            # VDP-PAL/NTSC
+        devmem 0x20030040 32 0x2002             # VEDU0 AVC unreset & clk en
+        devmem 0x20030048 32 0x2                # VPSS0 unreset & clk en
+
+        devmem 0x20030058 32 0x2        # TDE unreset & clk en
+        devmem 0x2003005c 32 0x2        # VGS unreset & clk en
+        devmem 0x20030060 32 0x2        # JPGE  unreset & clk en
+
+        devmem 0x20030068 32 0x2        # MDU unreset & clk en
+        devmem 0x2003006c 32 0x2        # IVE-300MHz unreset & clk en
+        #devmem 0x20030070 32 0x2       # VOIE unreset & clk en
+
+        devmem 0x2003007c 32 0x2        # cipher unreset & clk en
+        devmem 0x2003008c 32 0xe        # aio MCLK PLL 1188M, unreset & clk en
+        #devmem 0x200300d8 32 0xa;      # ddrt
+
+        # system configuration
+        devmem 0x201200E0 32 0xd        # internal codec:AIO MCLK out, CODEC AIO TX MCLK
+        # -------------vi vpss online open
+        if [ $b_arg_online -eq 1 ]; then
+                devmem 0x20120004 32 0x40000000 # online, SPI1 CS0
+
+                #pri config
+                devmem 0x20120058 32 0x26666400 # each module 4bit:vedu       ddrt_md  ive  aio    jpge    tde   vicap  vdp
+                devmem 0x2012005c 32 0x66666103 # each module 4bit:sfc_nand   sfc_nor  nfc  sdio1  sdio0   a7    vpss   vgs
+                devmem 0x20120060 32 0x66266666 # each module 4bit:reserve    reserve  avc  usb    cipher  dma2  dma1   gsf
+
+                #timeout config
+                devmem 0x20120064 32 0x00000011 # each module 4bit:vedu       ddrt_md  ive  aio    jpge    tde   vicap  vdp
+                devmem 0x20120068 32 0x00000020 # each module 4bit:sfc_nand   sfc_nor  nfc  sdio1  sdio0   a7    vpss   vgs
+                devmem 0x2012006c 32 0x00000000 # each module 4bit:reserve    reserve  avc  usb    cipher  dma2  dma1   gsf
+        else
+                devmem 0x20120004 32 0x0 # offline, mipi SPI1 CS0;
+                # pri config
+                devmem 0x20120058 32 0x26666401 # each module 4bit:vedu       ddrt_md  ive  aio    jpge    tde   vicap  vdp
+                devmem 0x2012005c 32 0x66666112 # each module 4bit:sfc_nand   sfc_nor  nfc  sdio1  sdio0   a7    vpss   vgs
+                devmem 0x20120060 32 0x66266666 # each module 4bit:reserve    reserve  avc  usb    cipher  dma2  dma1   gsf
+                # timeout config
+                devmem 0x20120064 32 0x00000011 # each module 4bit:vedu       ddrt_md  ive  aio    jpge    tde   vicap  vdp
+                devmem 0x20120068 32 0x00000000 # each module 4bit:sfc_nand   sfc_nor  nfc  sdio1  sdio0   a7    vpss   vgs
+                devmem 0x2012006c 32 0x00000000 # each module 4bit:reserve    reserve  avc  usb    cipher  dma2  dma1   gsf
+        fi
+}
+
 insert_isp() {
         case $SENSOR in
-        ov9750)
-                insmod hi3516a_isp.ko update_pos=1
-                ;;
         *)
-                insmod hi3516a_isp.ko update_pos=0 proc_param=1
+                insmod hi3516a_isp.ko
                 ;;
         esac
 }
 
 insert_sns() {
         case $SENSOR in
+        ar0130 | 9m034)
+                devmem 0x200f0050 32 0x2 # i2c0_scl
+                devmem 0x200f0054 32 0x2 # i2c0_sda
+                ;;
+        mt9p006)
+                devmem 0x200f0050 32 0x2 # i2c0_scl
+                devmem 0x200f0054 32 0x2 # i2c0_sda
+
+                devmem 0x2003002c 32 0xE0007 # sensor unreset, clk 24MHz, VI 250MHz
+                ;;
+        imx136)
+                devmem 0x200f0050 32 0x1 # spi0_sclk
+                devmem 0x200f0054 32 0x1 # spi0_sdo
+                devmem 0x200f0058 32 0x1 # spi0_sdi
+                devmem 0x200f005c 32 0x1 # spi0_csn
+                ;;
         imx123)
                 devmem 0x200f0050 32 0x1 # spi0_sclk
                 devmem 0x200f0054 32 0x1 # spi0_sdo
                 devmem 0x200f0058 32 0x1 # spi0_sdi
                 devmem 0x200f005c 32 0x1 # spi0_csn
 
+                #devmem 0x2003002c 32 0xb0007            # sensor unreset, clk 27MHz, VI 250MHz
                 devmem 0x2003002c 32 0x90007 # sensor unreset, clk 37.125MHz, VI 250MHz
                 devmem 0x20030104 32 0x0     # VI 250MHz
-                insmod sensor_i2c.ko
+                insmod sensor_spi.ko
                 ;;
         imx178)
-                devmem 0x200f0050 32 0x2;                # i2c0_scl
-                devmem 0x200f0054 32 0x2;                # i2c0_sda
-                devmem 0x2003002c 32 0xF0007             # sensor unreset, clk 25MHz, VI 250MHz
-                #himm 0x2003002c 0x90007            # sensor unreset, clk 37.125MHz, VI 250MHz
+                devmem 0x200f0050 32 0x2     # i2c0_scl
+                devmem 0x200f0054 32 0x2     # i2c0_sda
+                devmem 0x2003002c 32 0xF0007 # sensor unreset, clk 25MHz, VI 250MHz
+                #devmem 0x2003002c 32 0x90007            # sensor unreset, clk 37.125MHz, VI 250MHz
                 ;;
-
         imx185)
-                devmem 0x200f0050 0x1 # spi0_sclk
-                devmem 0x200f0054 0x1 # spi0_sdo
-                devmem 0x200f0058 0x1 # spi0_sdi
-                devmem 0x200f005c 0x1 # spi0_csn
+                devmem 0x200f0050 32 0x1 # spi0_sclk
+                devmem 0x200f0054 32 0x1 # spi0_sdo
+                devmem 0x200f0058 32 0x1 # spi0_sdi
+                devmem 0x200f005c 32 0x1 # spi0_csn
 
-                devmem 0x2003002c 0x90007 # sensor unreset, clk 37.125MHz, VI 250MHz
+                devmem 0x2003002c 32 0x90007 # sensor unreset, clk 37.125MHz, VI 250MHz
 
-                insmod extdrv/sensor_spi.ko
+                insmod sensor_spi.ko
                 ;;
         imx117)
-                devmem 0x200f0050 0x1 # spi0_sclk
-                devmem 0x200f0054 0x1 # spi0_sdo
-                devmem 0x200f0058 0x1 # spi0_sdi
-                devmem 0x200f005c 0x1 # spi0_csn
+                devmem 0x200f0050 32 0x1 # spi0_sclk
+                devmem 0x200f0054 32 0x1 # spi0_sdo
+                devmem 0x200f0058 32 0x1 # spi0_sdi
+                devmem 0x200f005c 32 0x1 # spi0_csn
 
-                devmem 0x200f00dc 0x1
-                devmem 0x200f00e0 0x1
-                devmem 0x20030038 0x6
+                devmem 0x200f00dc 32 0x1
+                devmem 0x200f00e0 32 0x1
+                devmem 0x20030038 32 0x6
 
-                devmem 0x20131020 0x30de8
-                devmem 0x20131024 0x30de5
-                devmem 0x2013102c 0x5
+                devmem 0x20131020 32 0x30de8
+                devmem 0x20131024 32 0x30de5
+                devmem 0x2013102c 32 0x5
 
-                devmem 0x20131060 0xbf
-                devmem 0x20131064 0xbc
-                devmem 0x2013106c 0x5
+                devmem 0x20131060 32 0xbf
+                devmem 0x20131064 32 0xbc
+                devmem 0x2013106c 32 0x5
 
-                devmem 0x2003002c 0x90007 # sensor unreset, clk 37.125MHz, VI 250MHz
+                devmem 0x2003002c 32 0x90007 # sensor unreset, clk 37.125MHz, VI 250MHz
 
-                insmod extdrv/sensor_spi.ko sensor=imx117
+                insmod sensor_spi.ko sensor=imx117
                 ;;
         mn34220)
                 devmem 0x200f0050 32 0x2 # i2c0_scl
@@ -145,12 +212,18 @@ insert_sns() {
                 devmem 0x200f0050 32 0x2 # i2c0_scl
                 devmem 0x200f0054 32 0x2 # i2c0_sda
 
+                devmem 0x2003002c 32 0xB0007 # sensor unreset, clk 27MHz, VI 250MHz
+                ;;
+        ov5658)
+                devmem 0x200f0050 32 0x2     # i2c0_scl
+                devmem 0x200f0054 32 0x2     # i2c0_sda
                 devmem 0x2003002c 32 0xE0007 # sensor unreset, clk 24MHz, VI 250MHz
+                devmem 0x20030104 32 0x0     # VI 250MHz
                 ;;
         ov4689)
                 devmem 0x200f0050 32 0x2     # i2c0_scl
                 devmem 0x200f0054 32 0x2     # i2c0_sda
-                devmem 0x2003002c 32 0xB0007 # sensor unreset, clk 27MHz, VI 250MHz
+                devmem 0x2003002c 32 0xE0007 # sensor unreset, clk 24MHz, VI 250MHz
                 devmem 0x20030104 32 0x0
                 ;;
         ar0230 | ar0237 | sc4236)
@@ -158,9 +231,11 @@ insert_sns() {
                 devmem 0x200f0054 32 0x2 # i2c0_sda
 
                 devmem 0x2003002c 32 0xB0007 # sensor unreset, clk 27MHz, VI 250MHz
-                devmem 0x20030104 32 0x0
                 ;;
         bt1120) ;;
+
+        \
+                imx122) ;;
 
         \
                 *)
@@ -168,13 +243,13 @@ insert_sns() {
                 report_error
                 ;;
         esac
+
 }
 insert_ko() {
-        # sys config
+        sys_config
 
-        # driver load
         insert_mmz
-        #insmod mmz.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
+
         insmod hi_media.ko
         insmod hi3516a_base.ko
 
@@ -188,6 +263,7 @@ insert_ko() {
         insmod hi3516a_vgs.ko
 
         insert_isp
+
         insmod hi3516a_viu.ko detect_err_frame=10
         insmod hi3516a_vpss.ko rfr_frame_comp=1
         #insmod hi3516a_vou.ko
@@ -196,30 +272,33 @@ insert_ko() {
 
         insmod hi3516a_rc.ko
         insmod hi3516a_venc.ko
-        insmod hi3516a_chnl.ko ChnlLowPower=1
+        insmod hi3516a_chnl.ko #ChnlLowPower=1
         insmod hi3516a_h264e.ko H264eMiniBufMode=1
         insmod hi3516a_h265e.ko H265eMiniBufMode=1
         insmod hi3516a_jpege.ko
-        insmod hi3516a_ive.ko save_power=0
+        #insmod hi3516a_ive.ko save_power=0
         #insmod hi3516a_ive.ko
+
         insmod sensor_i2c.ko
-        #insmod pwm.ko
+        insmod pwm.ko
         #insmod piris.ko
+
         insert_sns
         insert_audio
 
         insmod hi_mipi.ko
+        insmod wdt.ko
         echo "==== Your input Sensor type is $SENSOR ===="
 }
 
 remove_ko() {
-        rmmod sys_config.ko
+        rmmod wdt
         remove_audio
         remove_sns
 
-        #rmmod pwm
-
-        rmmod hi3516a_ive
+        rmmod pwm
+        rmmod piris
+        #rmmod hi3516a_ive
 
         rmmod hi3516a_rc
         rmmod hi3516a_jpege
@@ -228,8 +307,8 @@ remove_ko() {
         rmmod hi3516a_chnl
         rmmod hi3516a_venc
 
-        rmmod hifb
-        rmmod hi3516a_vou
+        #rmmod hifb
+        #rmmod hi3516a_vou
         rmmod hi3516a_vpss
         rmmod hi3516a_viu
         rmmod hi_mipi
@@ -238,7 +317,6 @@ remove_ko() {
         rmmod hi3516a_region
         rmmod hi3516a_tde
 
-        #rmmod piris
         rmmod hi3516a_isp
         rmmod hi3516a_sys
         rmmod hi3516a_base
