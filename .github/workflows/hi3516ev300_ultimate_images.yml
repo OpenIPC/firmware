@@ -68,7 +68,7 @@ jobs:
           cd $GITHUB_WORKSPACE
           make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_ultimate all
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... HI3516EV300 (ultimate)" >> $GITHUB_ENV && exit 1
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... HI3516EV300 (ultimate)" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 13107200 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 13107200... HI3516EV300 (ultimate)" >> $GITHUB_ENV && exit 1
           cd ${GITHUB_WORKSPACE}/output/images
           mv uImage uImage.hi3516ev300-ultimate
           mv rootfs.squashfs rootfs.squashfs.hi3516ev300-ultimate
