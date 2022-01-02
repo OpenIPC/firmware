@@ -180,6 +180,13 @@ insert_sns() {
 
                 insmod sensor_spi.ko
                 ;;
+        imx291)
+                devmem 0x200f0050 32 0x2 # i2c0_scl
+                devmem 0x200f0054 32 0x2 # i2c0_sda
+
+                devmem 0x2003002c 32 0x90005 # sensor unreset, clk 37.125MHz, VI 148MHz
+                ;;
+
         imx117)
                 devmem 0x200f0050 32 0x1 # spi0_sclk
                 devmem 0x200f0054 32 0x1 # spi0_sdo
@@ -287,7 +294,7 @@ insert_ko() {
         insert_audio
 
         insmod hi_mipi.ko
-        insmod wdt.ko
+        #insmod wdt.ko
         echo "==== Your input Sensor type is $SENSOR ===="
 }
 
