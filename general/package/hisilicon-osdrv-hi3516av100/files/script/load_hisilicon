@@ -239,6 +239,12 @@ insert_sns() {
 
                 devmem 0x2003002c 32 0xB0007 # sensor unreset, clk 27MHz, VI 250MHz
                 ;;
+        os05a)
+                devmem 0x200f0050 32 0x2 # i2c0_scl
+                devmem 0x200f0054 32 0x2 # i2c0_sda
+                devmem 0x2003002c 32 0xE0003 # sensor unreset, clk 24MHz, VI 297MHz
+                devmem 0x20030104 32 0x0 # Sensor 24M
+                ;;
         bt1120) ;;
 
         \
