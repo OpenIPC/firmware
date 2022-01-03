@@ -6,7 +6,7 @@
 
 MAJESTIC_NT9856X_VERSION = current
 MAJESTIC_NT9856X_SOURCE = majestic.nt9856x.lite.master.tar.bz2
-MAJESTIC_NT9856X_SITE = http://openipc.s3-eu-west-1.amazonaws.com
+MAJESTIC_NT9856X_SITE = https://openipc.s3-eu-west-1.amazonaws.com
 MAJESTIC_NT9856X_LICENSE = MIT
 MAJESTIC_NT9856X_LICENSE_FILES = LICENSE
 
