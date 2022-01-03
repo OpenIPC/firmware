@@ -1,0 +1,11 @@
+--- a/lib/event-libs/libevent/CMakeLists.txt	2021-08-28 09:39:20.000000000 +0300
++++ a/lib/event-libs/libevent/CMakeLists.txt	2022-01-03 20:46:11.900254822 +0300
+@@ -35,7 +35,7 @@
+ 
+ if (NOT LIBEVENT_FOUND)
+ 	find_path(LIBEVENT_INCLUDE_DIRS NAMES event2/event.h)
+-	find_library(LIBEVENT_LIBRARIES NAMES event)
++	find_library(LIBEVENT_LIBRARIES NAMES event_core)
+ endif()
+ message("libevent include dir: ${LIBEVENT_INCLUDE_DIRS}")
+ message("libevent libraries: ${LIBEVENT_LIBRARIES}")
