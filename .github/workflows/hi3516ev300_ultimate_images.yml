@@ -1,4 +1,4 @@
-name: "Hi3516Av100  "
+name: "Hi3516Ev300 (ultimate)  "
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build_core:
-    name: OpenIPC firmware for Hi3516Av100
+    name: OpenIPC firmware for Hi3516Ev300 (ultimate)
     runs-on: ubuntu-latest
 
     steps:
@@ -59,25 +59,25 @@ jobs:
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build Hi3516Av100 firmware
-        id: build-hi3516av100-firmware
+      - name: Build Hi3516Ev300 (ultimate) firmware
+        id: build-hi3516ev300-ultimate-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.hi3516av100-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.hi3516ev300-ultimate-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516av100_openipc all
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... Hi3516Av100" >> $GITHUB_ENV && exit 1
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... Hi3516Av100" >> $GITHUB_ENV && exit 1
+          make PLATFORM=hisilicon BOARD=unknown_unknown_hi3516ev300_ultimate all
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... HI3516EV300 (ultimate)" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 13107200 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 13107200... HI3516EV300 (ultimate)" >> $GITHUB_ENV && exit 1
           cd ${GITHUB_WORKSPACE}/output/images
-          mv uImage uImage.hi3516av100
-          mv rootfs.squashfs rootfs.squashfs.hi3516av100
-          md5sum rootfs.squashfs.hi3516av100 > rootfs.squashfs.hi3516av100.md5sum
-          md5sum uImage.hi3516av100 > uImage.hi3516av100.md5sum
-          tar -cvzf $ARCHIVE_FW *hi3516av100*
+          mv uImage uImage.hi3516ev300-ultimate
+          mv rootfs.squashfs rootfs.squashfs.hi3516ev300-ultimate
+          md5sum rootfs.squashfs.hi3516ev300 > rootfs.squashfs.hi3516ev300-ultimate.md5sum
+          md5sum uImage.hi3516ev300 > uImage.hi3516ev300-ultimate.md5sum
+          tar -cvzf $ARCHIVE_FW *hi3516ev300-ultimate*
 
-      - name: Build Hi3516Av100 SDK
-        id: build-hi3516av100-sdk
+      - name: Build Hi3516Ev300 (ultimate) SDK
+        id: build-hi3516ev300-ultimate-sdk
         continue-on-error: true
         run: |
           ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
@@ -89,10 +89,10 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-hi3516av100-firmware.outcome != 'success' || steps.build-hi3516av100-sdk.outcome != 'success'
+        if: steps.build-hi3516ev300-ultimate-firmware.outcome != 'success' || steps.build-hi3516ev300-ultimate-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
-          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... Hi3516Av100}"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... HI3516EV300 (ultimate)}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
@@ -114,7 +114,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: "openipc.hi3516av100-br.tgz"
+          asset_name: "openipc.hi3516ev300-ultimate-br.tgz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -124,7 +124,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-hi3516av100-linux-musleabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-hi3516ev300-ultimate-linux-musleabi_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 

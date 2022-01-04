@@ -5,8 +5,8 @@
 ################################################################################
 
 MAJESTIC_HI3516CV200_VERSION = current
-MAJESTIC_HI3516CV200_SOURCE = majestic.hi3516cv200.master.tar.bz2
-MAJESTIC_HI3516CV200_SITE = http://openipc.s3-eu-west-1.amazonaws.com
+MAJESTIC_HI3516CV200_SOURCE = majestic.hi3516cv200.lite.master.tar.bz2
+MAJESTIC_HI3516CV200_SITE = https://openipc.s3-eu-west-1.amazonaws.com
 MAJESTIC_HI3516CV200_LICENSE = MIT
 MAJESTIC_HI3516CV200_LICENSE_FILES = LICENSE
 

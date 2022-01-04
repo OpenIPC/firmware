@@ -1,4 +1,4 @@
-export PATH="/bin:/sbin:/usr/bin:/usr/sbin"
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/tmp"
 export HOME=$(grep -e "^${USER:-root}:" /etc/passwd | cut -d ":" -f 6)
 export HOME=${HOME:-/root}
 export TZ=$(cat /etc/TZ)
@@ -20,6 +20,8 @@ export EDITOR='/bin/vi'
 
 [ -x /usr/bin/arp ] || arp() { cat /proc/net/arp; }
 
+ipctool_install() { curl -s -L -o /tmp/ipctool https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool && \
+  chmod +x /tmp/ipctool && echo -e "\n\e[1;36mipctool installed\e[0m\n\n"; }
 
 majestic_changes() { diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml; }
 
@@ -27,7 +29,7 @@ show_modules() { echo; cat /proc/modules | cut -f 1 -d " " | while read module; 
   if [ -d "/sys/module/$module/parameters" ]; then ls /sys/module/$module/parameters/ | while read parameter; \
   do echo -n "Parameter: $parameter --> "; cat /sys/module/$module/parameters/$parameter; done; fi;  echo; done; }
 
-debug_microbe() { curl -k -L -o /tmp/microbe-web-dev.zip https://github.com/OpenIPC/microbe-web/archive/refs/heads/dev.zip; \
+debug_microbe() { curl -L -o /tmp/microbe-web-dev.zip https://github.com/OpenIPC/microbe-web/archive/refs/heads/dev.zip; \
   unzip -o -d /tmp /tmp/microbe-web-dev.zip; \
   cp -av /tmp/microbe-web-dev/files/var/www /var/; \
   rm -rf /tmp/microbe-web-dev.zip /tmp/microbe-web-dev; }

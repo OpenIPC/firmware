@@ -5,8 +5,8 @@
 ################################################################################
 
 MAJESTIC_SSC335_VERSION = current
-MAJESTIC_SSC335_SOURCE = majestic.ssc335.master.tar.bz2
-MAJESTIC_SSC335_SITE = http://openipc.s3-eu-west-1.amazonaws.com
+MAJESTIC_SSC335_SOURCE = majestic.ssc335.lite.master.tar.bz2
+MAJESTIC_SSC335_SITE = https://openipc.s3-eu-west-1.amazonaws.com
 MAJESTIC_SSC335_LICENSE = MIT
 MAJESTIC_SSC335_LICENSE_FILES = LICENSE
 

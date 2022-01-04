@@ -5,8 +5,8 @@
 ################################################################################
 
 MAJESTIC_GK7205V200_VERSION = current
-MAJESTIC_GK7205V200_SOURCE = majestic.gk7205v200.master.tar.bz2
-MAJESTIC_GK7205V200_SITE = http://openipc.s3-eu-west-1.amazonaws.com
+MAJESTIC_GK7205V200_SOURCE = majestic.gk7205v200.lite.master.tar.bz2
+MAJESTIC_GK7205V200_SITE = https://openipc.s3-eu-west-1.amazonaws.com
 MAJESTIC_GK7205V200_LICENSE = MIT
 MAJESTIC_GK7205V200_LICENSE_FILES = LICENSE
 
