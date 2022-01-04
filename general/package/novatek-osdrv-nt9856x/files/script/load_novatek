@@ -20,11 +20,10 @@ insert_sns() {
         devmem 0xF0220038 32 0x00000000
         devmem 0xF022003C 32 0x00000000
 
-        insmod nvt_sen_${SENSOR}.ko sen_cfg_path=/usr/lib/sensors/config/sen_${SENSOR}.cfg
+        insmod nvt_sen_${SENSOR}.ko sen_cfg_path=/etc/sensors/sen_${SENSOR}.cfg
         ;;
     *)
         echo "xxxx Invalid sensor type $SENSOR xxxx"
-        report_error
         ;;
     esac
 }
