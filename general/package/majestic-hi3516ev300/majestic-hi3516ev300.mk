@@ -5,10 +5,16 @@
 ################################################################################
 
 MAJESTIC_HI3516EV300_VERSION = current
-MAJESTIC_HI3516EV300_SOURCE = majestic.hi3516ev300.master.tar.bz2
-MAJESTIC_HI3516EV300_SITE = http://openipc.s3-eu-west-1.amazonaws.com
+MAJESTIC_HI3516EV300_SOURCE = majestic.hi3516ev300.lite.master.tar.bz2
+MAJESTIC_HI3516EV300_SITE = https://openipc.s3-eu-west-1.amazonaws.com
 MAJESTIC_HI3516EV300_LICENSE = MIT
 MAJESTIC_HI3516EV300_LICENSE_FILES = LICENSE
+
+#ifeq ($(BR2_PACKAGE_MAJESTIC_HI3516EV300_ULTIMATE),y)
+#MAJESTIC_HI3516EV300_SOURCE = majestic.hi3516ev300.ultimate.master.tar.bz2
+#else
+#MAJESTIC_HI3516EV300_SOURCE = majestic.hi3516ev300.master.tar.bz2
+#endif
 
 define MAJESTIC_HI3516EV300_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc

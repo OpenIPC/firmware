@@ -5,8 +5,8 @@
 ################################################################################
 
 MAJESTIC_XM510_VERSION = current
-MAJESTIC_XM510_SOURCE = majestic.xm510.master.tar.bz2
-MAJESTIC_XM510_SITE = http://openipc.s3-eu-west-1.amazonaws.com
+MAJESTIC_XM510_SOURCE = majestic.xm510.lite.master.tar.bz2
+MAJESTIC_XM510_SITE = https://openipc.s3-eu-west-1.amazonaws.com
 MAJESTIC_XM510_LICENSE = MIT
 MAJESTIC_XM510_LICENSE_FILES = LICENSE
 
