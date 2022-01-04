@@ -26,6 +26,7 @@ _NB! Downloads are for research only, without any guarantee._
 
 | SoC                                                       | U-Boot | Kernel | Rootfs | USB | WiFi | MMC | IPv6 |        D/L         | Status |
 |-----------------------------------------------------------|:------:|:------:|:------:|:---:|:----:|:---:|:----:|:------------------:|--------|
+| Ambarella&nbsp;S3L<br>![AmbaS3L][AmbaS3L]                 |        |        |        |     |      |     |      |                    | R&D    |
 | Fullhan&nbsp;FH8632<br>![FH8632][FH8632]                  |        |        |        |     |      |     |      |                    | R&D    |
 | Fullhan&nbsp;FH8852<br>![FH8652][FH8852]                  |        |        |        |     |      |     |      |                    | R&D    |
 | Fullhan&nbsp;FH8856<br>![FH8856][FH8856]                  |        |        |        |     |      |     |      |                    | R&D    |
@@ -47,6 +48,10 @@ _NB! Downloads are for research only, without any guarantee._
 | HiSilicon&nbsp;Hi3516Ev300<br>![Hi3516Ev300][Hi3516Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Ev300] | DONE   |
 | HiSilicon&nbsp;Hi3518Ev200<br>![Hi3518Ev200][Hi3518Ev200] |        |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwHi3518Ev200] | DONE   |
 | HiSilicon&nbsp;Hi3518Ev300<br>![Hi3518Ev300][Hi3518Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3518Ev300] | DONE   |
+| Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |        |     |      |     |      |                    | R&D    |
+| Ingenic&nbsp;T20<br>![T20][T20]                           |        |        |        |     |      |     |      |                    | R&D    |
+| Ingenic&nbsp;T21<br>![T21][T21]                           |        |        |        |     |      |     |      |                    | R&D    |
+| Ingenic&nbsp;T31<br>![T31][T31]                           |        |        |        |     |      |     |      |                    | R&D    |
 | MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 |        |        |        |     |      |     |      |                    | R&D    |
 | MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 |        |        |        |     |      |     |      |                    | R&D    |
 | Novatek&nbsp;NT98562<br>![NT98562][NT98562]               |        |        |        |     |      |     |      |   [⬇][fwNT98562]   | R&D    |
@@ -55,10 +60,6 @@ _NB! Downloads are for research only, without any guarantee._
 | SigmaStar&nbsp;SSC335<br>![SSC335][SSC335]                |        |   +    |   +    |  +  |      |  +  |      |   [⬇][fwSSC335]    | MVP    |
 | SigmaStar&nbsp;SSC337<br>![SSC337][SSC337]                |        |   +    |   +    |  +  |      |  +  |      |   [⬇][fwSSC337]    | MVP    |
 | SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          |        |   +    |   +    |     |      |     |      |  [⬇][fwSSC337DE]   | TEST   |
-| Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |        |     |      |     |      |                    | R&D    |
-| Ingenic&nbsp;T20<br>![T20][T20]                           |        |        |        |     |      |     |      |                    | R&D    |
-| Ingenic&nbsp;T21<br>![T21][T21]                           |        |        |        |     |      |     |      |                    | R&D    |
-| Ingenic&nbsp;T31<br>![T31][T31]                           |        |        |        |     |      |     |      |                    | R&D    |
 | Xiongmai&nbsp;XM510<br>![XM510][XM510]                    |        |   +    |   +    |     |      |     |      |    [⬇][fwXM510]    | MVP    |
 | Xiongmai&nbsp;XM530<br>![XM530][XM530]                    |        |   +    |   +    |     |      |     |      |    [⬇][fwXM530]    | MVP    |
 | Xiongmai&nbsp;XM550<br>![XM550][XM550]                    |        |   +    |   +    |     |      |     |      |    [⬇][fwXM550]    | MVP    |
@@ -103,10 +104,11 @@ Thank you.
 <a href="https://openipc.org/donation/yoomoney.html"><img src="https://yoomoney.ru/transfer/balance-informer/balance?id=596194605&key=291C29A811B500D7" width="140" alt="YooMoney donate button"></a>
 
 
+[AmbaS3L]: https://img.shields.io/static/v1?label=AmbaS3L&message=help%20needed&color=5500ff&logo=github
 [FH8632]: https://img.shields.io/static/v1?label=FH8632&message=help%20needed&color=5500ff&logo=github
-[FH8852]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852_images.yml/badge.svg
-[FH8856]: https://github.com/OpenIPC/firmware/actions/workflows/fh8856_images.yml/badge.svg
-[GK7102S]: https://github.com/OpenIPC/firmware/actions/workflows/gk7102s_images.yml/badge.svg
+[FH8852]: https://img.shields.io/static/v1?label=FH8852&message=help%20needed&color=5500ff&logo=github
+[FH8856]: https://img.shields.io/static/v1?label=FH8856&message=help%20needed&color=5500ff&logo=github
+[GK7102S]: https://img.shields.io/static/v1?label=GK7102S&message=help%20needed&color=5500ff&logo=github
 [GK7202v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7202v300_images.yml/badge.svg
 [GK7205v200]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v200_images.yml/badge.svg
 [GK7205v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v300_images.yml/badge.svg
@@ -135,7 +137,7 @@ Thank you.
 [T10]: https://img.shields.io/static/v1?label=T10&message=help%20needed&color=5500ff&logo=github
 [T20]: https://img.shields.io/static/v1?label=T20&message=help%20needed&color=5500ff&logo=github
 [T21]: https://img.shields.io/static/v1?label=T21&message=help%20needed&color=5500ff&logo=github
-[T31]: https://github.com/OpenIPC/firmware/actions/workflows/t31_images.yml/badge.svg
+[T31]: https://img.shields.io/static/v1?label=T31&message=help%20needed&color=5500ff&logo=github
 [XM510]: https://github.com/OpenIPC/firmware/actions/workflows/xm510_images.yml/badge.svg
 [XM530]: https://github.com/OpenIPC/firmware/actions/workflows/xm530_images.yml/badge.svg
 [XM550]: https://github.com/OpenIPC/firmware/actions/workflows/xm550_images.yml/badge.svg
