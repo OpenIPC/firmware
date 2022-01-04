@@ -11,6 +11,7 @@ include $(BR2_EXTERNAL_FULLHAN_PATH)/package/libevent-openipc/libevent-openipc.m
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/libhv-openipc/libhv-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/libogg-openipc/libogg-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/libsrt-openipc/libsrt-openipc.mk
+include $(BR2_EXTERNAL_FULLHAN_PATH)/package/libwebsockets-openipc/libwebsockets-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/majestic-fonts/majestic-fonts.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/majestic/majestic.mk
