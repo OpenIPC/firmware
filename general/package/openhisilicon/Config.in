@@ -1,0 +1,10 @@
+config BR2_PACKAGE_OPENHISILICON
+	bool "openhisilicon"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Opensource Hisilicon SoCs SDK
+
+	  https://github.com/OpenIPC/openhisilicon
+
+comment "OPENHISILICON needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
