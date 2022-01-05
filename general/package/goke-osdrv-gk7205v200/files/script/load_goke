@@ -49,7 +49,7 @@ YUV_TYPE0=0;                # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 # mmz_size=32M;                 # 32M, mmz size
 
 
-# GK7205V200
+# GK7205V300
 #
 # mem_total=128                 # 128M, total mem
 # mem_start=0x40000000          # phy mem start
@@ -139,7 +139,7 @@ insert_ko()
 	insmod osal.ko anony=1 mmz_allocator=gk mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 	insmod gk7205v200_base.ko
 	insmod gk7205v200_sys.ko
-	insmod gk7205v200_tde.ko
+	# insmod gk7205v200_tde.ko
 	insmod gk7205v200_rgn.ko
 	insmod gk7205v200_vgs.ko
 	insmod gk7205v200_vi.ko
@@ -155,7 +155,7 @@ insert_ko()
 	insmod gk7205v200_h265e.ko
 	insmod gk7205v200_jpege.ko
 	insmod gk7205v200_ive.ko save_power=0
-	# insmod isp_pwm.ko                             # unused on OpenIPC
+	insmod isp_pwm.ko
 	insmod isp_sensor_i2c.ko
 	insmod isp_sensor_spi.ko
 	# insert_isp_piris                              # unused on OpenIPC
@@ -163,10 +163,12 @@ insert_ko()
 	insert_audio
 	insmod mipi_rx.ko
 	# insmod gk7205v200_pm.ko                       # unused on OpenIPC
+        insmod gk7205v200_wdt.ko
 }
 
 remove_ko()
 {
+        rmmod gk7205v200_wdt
 	# rmmod gk7205v200_pm                           # unused on OpenIPC
 	remove_audio
 	rmmod mipi_rx
@@ -187,10 +189,10 @@ remove_ko()
 	rmmod gk7205v200_vi
 	rmmod gk7205v200_vgs
 	rmmod gk7205v200_rgn
-	rmmod gk7205v200_tde
+	# rmmod gk7205v200_tde
 	rmmod isp_sensor_i2c &> /dev/null
 	rmmod isp_sensor_spi &> /dev/null
-	# rmmod isp_pwm                                 # unused on OpenIPC
+	rmmod isp_pwm
 	rmmod gk7205v200_sys
 	rmmod gk7205v200_base
 	rmmod osal
