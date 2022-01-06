@@ -333,7 +333,7 @@ xm550() {
 # gk7205v200                   # OpenIPC
 # gk7205v200_fpv               # FPV
 # gk7205v200_ufanet            # Ufanet
-# gk7205v300                   # OpenIPC
+gk7205v300                   # OpenIPC
 # gk7605v100                   # testing..
 #
 #######
@@ -372,7 +372,7 @@ xm550() {
 #
 #######
 #
-nt98562                       # OpenIPC
+# nt98562                       # OpenIPC
 #
 # nt98566                       # OpenIPC
 #
