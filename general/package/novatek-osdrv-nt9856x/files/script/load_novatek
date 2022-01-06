@@ -2,7 +2,7 @@
 
 insert_sns() {
     case $SENSOR in
-    sc401ai | sc501ai)
+    sc401ai | sc500ai | sc501ai)
         devmem 0xf0220000 32 0x00001473
         devmem 0xF0220004 32 0x10000000
         devmem 0xF0220008 32 0x00048100
