@@ -12,6 +12,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv200/hisil
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv300/hisilicon-osdrv-hi3516cv300.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv500/hisilicon-osdrv-hi3516cv500.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/hisilicon-osdrv-hi3516ev300.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3519v101/hisilicon-osdrv-hi3519v101.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/json-c-openipc/json-c-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/lame-openipc/lame-openipc.mk
@@ -28,6 +29,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv200/majestic-hi3
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv300/majestic-hi3516cv300.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv500/majestic-hi3516cv500.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516ev300/majestic-hi3516ev300.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3519v101/majestic-hi3519v101.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/microbe-web/microbe-web.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/motors/motors.mk
