@@ -77,7 +77,8 @@ define NOVATEK_OSDRV_NT9856X_INSTALL_TARGET_CMDS
 	#$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/script/ircut_demo
 
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.19.91/novatek $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/sensor/sen_sc401ai/*.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.19.91/novatek $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/sensor/sen_sc501ai/*.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.19.91/novatek $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/sensor/sen_sc500ai/*.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.19.91/novatek $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/sensor/sen_sc501ai/*.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/lib/libhdal.so
