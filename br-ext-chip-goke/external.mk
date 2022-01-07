@@ -19,6 +19,7 @@ include $(BR2_EXTERNAL_GOKE_PATH)/package/majestic-gk7205v200/majestic-gk7205v20
 include $(BR2_EXTERNAL_GOKE_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/microbe-web/microbe-web.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/motors/motors.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/mt7601u-ap-openipc/mt7601u-ap-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/opus-openipc/opus-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/rtl8188fu-openipc/rtl8188fu-openipc.mk

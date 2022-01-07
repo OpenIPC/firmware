@@ -33,7 +33,7 @@ _NB! Downloads are for research only, without any guarantee._
 | Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  |        |        |        |     |      |     |      |                    | R&D    |
 | Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         |        |        |        |     |      |     |      | [⬇][fwGK7202v300]  | WIP    |
 | Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         |   +    |   +    |   +    |  +  |  +   |     |      | [⬇][fwGK7205v200]  | DONE   |
-| Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |        |        |        |     |      |     |      | [⬇][fwGK7205v300]  | DONE   |
+| Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |   +    |   +    |   +    |  +  |  +   |     |      | [⬇][fwGK7205v300]  | DONE   |
 | Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         |   +    |   +    |   +    |     |      |     |      | [⬇][fwGK7605v100]  | WIP    |
 | HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av100] | WIP    |
 | HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av200] | WIP    |
