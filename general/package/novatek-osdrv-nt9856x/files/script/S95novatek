@@ -25,12 +25,13 @@ load_majestic() {
 
 # The daemon does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
 start() {
-	#logger -s -p daemon.info -t novatek "Check MAC for Novatek devices"
-	#if [ "$(fw_printenv -n ethaddr)" = "D0:22:12:88:88:88" ]; then
-	#	logger -s -p daemon.info -t novatek "The eth0 interface has a lousy MAC, let's try to change it.."
-	#else
-	#	logger -s -p daemon.info -t novatek "The eth0 interface has a correct MAC - $(fw_printenv -n ethaddr)"
-	#fi
+	logger -s -p daemon.info -t novatek "Check MAC for Novatek devices"
+	if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
+		logger -s -p daemon.info -t novatek "The eth0 interface has a lousy MAC, let's try to change it.."
+		XMMAC="$(ipcinfo --xm_mac)" && [ -n "${XMMAC}" ] && fw_setenv ethaddr ${XMMAC} && reboot -f || logger -s -p daemon.info -t novatek "It is not possible to install a new MAC on the eth0 interface.."
+	else
+		logger -s -p daemon.info -t novatek "The eth0 interface has a correct MAC - $(fw_printenv -n ethaddr)"
+	fi
 	#
 	logger -s -p daemon.info -t novatek "Loading of kernel modules and initialization of the video system has started"
 	export TZ=$(cat /etc/TZ)
