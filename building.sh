@@ -100,7 +100,7 @@ hi3516av300() {
 
 hi3516cv100() {
   soc="hi3516cv100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_unknown all && rename
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 hi3516cv200() {
@@ -350,7 +350,7 @@ xm550() {
 #
 #######
 #
-# hi3516cv100                   # testing..
+hi3516cv100                   # OpenIPC
 #
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
@@ -387,7 +387,7 @@ xm550() {
 #
 #######
 #
-nt98562                       # OpenIPC
+# nt98562                       # OpenIPC
 # nt98566                       # OpenIPC
 #
 #######
