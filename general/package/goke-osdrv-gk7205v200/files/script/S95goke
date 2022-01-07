@@ -28,7 +28,7 @@ start() {
 	logger -s -p daemon.info -t goke "Check MAC for Xiongmai devices"
 	if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
 		logger -s -p daemon.info -t goke "The eth0 interface has a lousy MAC, let's try to change it.."
-		XMMAC="$(ipcinfo --xm_mac)" && [ -n "${XMMAC}" ] && fw_setenv ethaddr ${XMMAC} && ifconfig eth0 hw ether ${XMMAC} && logger -s -p daemon.info -t goke "The eth0 interface have new MAC - ${XMMAC}" && reboot -f
+		XMMAC="$(ipcinfo --xm_mac)" && [ -n "${XMMAC}" ] && fw_setenv ethaddr ${XMMAC} && reboot -f || logger -s -p daemon.info -t goke "It is not possible to install a new MAC on the eth0 interface.."
 	else
 		logger -s -p daemon.info -t goke "The eth0 interface has a correct MAC - $(fw_printenv -n ethaddr)"
 	fi
