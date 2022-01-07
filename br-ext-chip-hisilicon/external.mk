@@ -8,6 +8,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/fwprintenv-openipc/fwprintenv-ope
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisi_gpio/hisi_gpio.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-opensdk/hisilicon-opensdk.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516av100/hisilicon-osdrv-hi3516av100.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/hisilicon-osdrv-hi3516cv100.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv200/hisilicon-osdrv-hi3516cv200.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv300/hisilicon-osdrv-hi3516cv300.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv500/hisilicon-osdrv-hi3516cv500.mk
@@ -25,6 +26,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/libwebsockets-openipc/libwebsocke
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-fonts/majestic-fonts.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516av100/majestic-hi3516av100.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv100/majestic-hi3516cv100.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv200/majestic-hi3516cv200.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv300/majestic-hi3516cv300.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv500/majestic-hi3516cv500.mk
