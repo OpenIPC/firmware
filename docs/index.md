@@ -36,6 +36,7 @@ _NB! Downloads are for research only, without any guarantee._
 | Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |        |        |        |     |      |     |      | [⬇][fwGK7205v300]  | DONE   |
 | Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         |   +    |   +    |   +    |     |      |     |      | [⬇][fwGK7605v100]  | WIP    |
 | HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av100] | WIP    |
+| HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av200] | WIP    |
 | HiSilicon&nbsp;Hi3516Av300<br>![Hi3516Av300][Hi3516Av300] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av300] | WIP    |
 | HiSilicon&nbsp;Hi3516Cv200<br>![Hi3516Cv200][Hi3516Cv200] |        |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwHi3516Cv200] | DONE   |
 | HiSilicon&nbsp;Hi3516Cv300<br>![Hi3516Cv300][Hi3516Cv300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Cv300] | DONE   |
@@ -48,6 +49,7 @@ _NB! Downloads are for research only, without any guarantee._
 | HiSilicon&nbsp;Hi3516Ev300<br>![Hi3516Ev300][Hi3516Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Ev300] | DONE   |
 | HiSilicon&nbsp;Hi3518Ev200<br>![Hi3518Ev200][Hi3518Ev200] |        |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwHi3518Ev200] | DONE   |
 | HiSilicon&nbsp;Hi3518Ev300<br>![Hi3518Ev300][Hi3518Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3518Ev300] | DONE   |
+| HiSilicon&nbsp;Hi3519v101<br>![Hi3519v101][Hi3519v101]    |        |   +    |   +    |     |      |     |      | [⬇][fwHi3519v101]  | WIP    |
 | Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |        |     |      |     |      |                    | R&D    |
 | Ingenic&nbsp;T20<br>![T20][T20]                           |        |        |        |     |      |     |      |                    | R&D    |
 | Ingenic&nbsp;T21<br>![T21][T21]                           |        |        |        |     |      |     |      |                    | R&D    |
@@ -114,6 +116,7 @@ Thank you.
 [GK7205v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v300_images.yml/badge.svg
 [GK7605v100]: https://github.com/OpenIPC/firmware/actions/workflows/gk7605v100_images.yml/badge.svg
 [Hi3516Av100]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516av100_images.yml/badge.svg
+[Hi3516Av200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516av200_images.yml/badge.svg
 [Hi3516Av300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516av300_images.yml/badge.svg
 [Hi3516Cv200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516cv200_images.yml/badge.svg
 [Hi3516Cv300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516cv300_images.yml/badge.svg
@@ -126,6 +129,7 @@ Thank you.
 [Hi3516Ev300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516ev300_images.yml/badge.svg
 [Hi3518Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3518ev200_images.yml/badge.svg
 [Hi3518Ev300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3518ev300_images.yml/badge.svg
+[Hi3519v101]: https://github.com/OpenIPC/firmware/actions/workflows/hi3519v101_images.yml/badge.svg
 [MSC313E]: https://img.shields.io/static/v1?label=MSC313E&message=help%20needed&color=5500ff&logo=github
 [MSC316D]: https://img.shields.io/static/v1?label=MSC316D&message=help%20needed&color=5500ff&logo=github
 [NT98562]: https://github.com/OpenIPC/firmware/actions/workflows/nt98562_images.yml/badge.svg
@@ -147,6 +151,7 @@ Thank you.
 [fwGK7205v300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gk7205v300-br.tgz
 [fwGK7605v100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gk7605v100-br.tgz
 [fwHi3516Av100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516av100-br.tgz
+[fwHi3516Av200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516av200-br.tgz
 [fwHi3516Av300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516av300-br.tgz
 [fwHi3516Cv200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516cv200-br.tgz
 [fwHi3516Cv300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516cv300-br.tgz
@@ -159,6 +164,7 @@ Thank you.
 [fwHi3516Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516ev300-br.tgz
 [fwHi3518Ev200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3518ev200-br.tgz
 [fwHi3518Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3518ev300-br.tgz
+[fwHi3519v101]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3519v101-br.tgz
 [fwNT98562]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.nt98562-br.tgz
 [fwNT98566]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.nt98566-br.tgz
 [fwSSC325]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ssc325-br.tgz
