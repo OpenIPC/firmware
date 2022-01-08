@@ -1,5 +1,5 @@
 diff --git a/tools/env/fw_env.c b/tools/env/fw_env.c
-index 2a61a5d6f0..4a15a0b1cd 100644
+index 2a61a5d6f0..2edb872cc6 100644
 --- a/tools/env/fw_env.c
 +++ b/tools/env/fw_env.c
 @@ -37,7 +37,11 @@
@@ -130,7 +130,7 @@ index 2a61a5d6f0..4a15a0b1cd 100644
  static int parse_config(struct env_opts *opts)
  {
  	int rc;
-@@ -1735,9 +1839,17 @@ static int parse_config(struct env_opts *opts)
+@@ -1735,9 +1839,26 @@ static int parse_config(struct env_opts *opts)
  #if defined(CONFIG_FILE)
  	/* Fills in DEVNAME(), ENVSIZE(), DEVESIZE(). Or don't. */
  	if (get_config(opts->config_file)) {
@@ -143,10 +143,19 @@ index 2a61a5d6f0..4a15a0b1cd 100644
 +			return -1;
 +		}
 +		FILE* f = fopen(opts->config_file, "wb");
-+		fprintf(f, "%s\t%#llx\t%#lx\t%#lx\t%#lx\n",
++		if (f == NULL) {
++			fprintf(stderr, "Cannot open config file '%s': %m\n",
++				opts->config_file);
++			return -1;
++		}
++		if (fprintf(f, "%s\t%#llx\t%#lx\t%#lx\t%#lx\n",
 +			    DEVNAME(0),
 +			    DEVOFFSET(0),
-+			    ENVSIZE(0), DEVESIZE(0), ENVSECTORS(0));
++			    ENVSIZE(0), DEVESIZE(0), ENVSECTORS(0)) < 0) {
++			fprintf(stderr, "Cannot write config file '%s': %m\n",
++				opts->config_file);
++			return -1;
++		}
 +		fclose(f);
  	}
  #else
