@@ -34,9 +34,13 @@ insert_detect() {
     insmod hi3518_sys.ko
     insmod hi3518_isp.ko
     insmod hi_i2c.ko
+    SNS_TYPE=imx122 insert_sns
 }
 
 remove_detect() {
+    rmmod ssp_sony &>/dev/null
+    rmmod ssp_pana &>/dev/null
+    rmmod ssp_ad9020 &>/dev/null
     rmmod hi_i2c
     rmmod hi3518_isp
     rmmod hi3518_sys
@@ -85,14 +89,14 @@ insert_sns() {
         devmem 0x20030030 32 0x5 #Sensor clock 27MHz
         insmod ssp_pana.ko
         ;;
-    imx104 | imx122 | imx138 | imx225)
+    imx104 | imx122 | imx138 | imx222 | imx225 | imx322)
         devmem 0x200f000c 32 0x1 #pinmux SPI0
         devmem 0x200f0010 32 0x1 #pinmux SPI0
         devmem 0x200f0014 32 0x1 #pinmux SPI0
         devmem 0x20030030 32 0x6 #Sensor clock 37.125 MHz
         insmod ssp_sony.ko
         ;;
-    ov9712 | soih22 | ov2710)
+    ov9712 | soih22 | ov2710 | jxh22 | jxh42)
         devmem 0x20030030 32 0x1 #Sensor clock 24 MHz
         insmod ssp_ad9020.ko
         ;;
@@ -277,10 +281,8 @@ insert_ko() {
 
     sys_config
 
-    # driver load
     insert_osal
-    # insmod mmz.ko mmz=anonymous,0,0x86000000,64M anony=1 || report_error
-    #insmod mmz.ko mmz=anonymous,0,0x82000000,32M anony=1 || report_error   #for 3518E use
+
     insmod hi3518_base.ko
     insmod hi3518_sys.ko
     insmod hiuser.ko
@@ -317,11 +319,14 @@ insert_ko() {
     insert_audio
     echo "==== Your input Sensor type is $SNS_TYPE ===="
 
+    insmod wdt.ko
+
     # system configuration
     sysctl;
 }
 
 remove_ko() {
+    rmmod wdt
     remove_audio
     remove_sns
 
