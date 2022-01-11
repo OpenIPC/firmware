@@ -96,7 +96,7 @@ insert_sns() {
         devmem 0x20030030 32 0x6 #Sensor clock 37.125 MHz
         insmod ssp_sony.ko
         ;;
-    ov9712 | soih22 | ov2710 | jxh22 | jxh42)
+    ov9712 | ov9732 | soih22 | ov2710 | jxh22 | jxh42)
         devmem 0x20030030 32 0x1 #Sensor clock 24 MHz
         insmod ssp_ad9020.ko
         ;;
