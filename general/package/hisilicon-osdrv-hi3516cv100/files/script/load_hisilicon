@@ -240,7 +240,7 @@ sys_config() {
     clk_cfg() {
         devmem 0x2003002c 32 0x2a  # VICAP, ISP unreset & clock enable
         devmem 0x20030048 32 0x2   # VPSS unreset, code also config
-        devmem 0x20030034 32 0x510 # VDP  unreset & HD clock enable
+        devmem 0x20030034 32 0x510 # VDP  unreset & HD clock enable # XM: 0x00000043
         devmem 0x20030040 32 0x2   # VEDU unreset
         devmem 0x20030060 32 0x2   # JPEG unreset
         devmem 0x20030058 32 0x2   # TDE  unreset
