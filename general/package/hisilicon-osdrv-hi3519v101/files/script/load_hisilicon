@@ -55,7 +55,7 @@ insert_audio() {
 	insmod hi3519v101_aenc.ko
 	insmod hi3519v101_adec.ko
 	insmod hi_acodec.ko
-	#insmod extdrv/hi_tlv320aic31.ko
+	#insmod hi_tlv320aic31.ko
 }
 
 remove_audio() {
@@ -68,60 +68,279 @@ remove_audio() {
 	rmmod hi3519v101_aio
 }
 
-spi0_4wire_pin_mux() {
-	#pinmux
-	devmem 0x1204018c 32 0x1 #SPI0_SCLK
-	devmem 0x12040190 32 0x1 #SPI0_SD0
-	devmem 0x12040194 32 0x1 #SPI0_SDI
-	devmem 0x12040198 32 0x1 #SPI0_CSN
+sysconfig() {
+	vicap_pin_mux() {
+		#sensor0 pinmux
+		devmem 0x1204017c 32 0x1 #SENSOR0_CLK
+		devmem 0x12040180 32 0x0 #SENSOR0_RSTN
+		devmem 0x12040184 32 0x1 #SENSOR0_HS,from vi0
+		devmem 0x12040188 32 0x1 #SENSOR0_VS,from vi0
+		#sensor0 drive capability
+		devmem 0x12040988 32 0x150 #SENSOR0_CLK
+		devmem 0x1204098c 32 0x170 #SENSOR0_RSTN
+		devmem 0x12040990 32 0x170 #SENSOR0_HS
+		devmem 0x12040994 32 0x170 #SENSOR0_VS
 
-	#drive capability
-	devmem 0x12040998 32 0x150 #SPI0_SCLK
-	devmem 0x1204099c 32 0x160 #SPI0_SD0
-	devmem 0x120409a0 32 0x160 #SPI0_SDI
-	devmem 0x120409a4 32 0x160 #SPI0_CSN
-}
-spi1_4wire_pin_mux() {
-	#pinmux
-	devmem 0x12040018 32 0x1 #SPI1_SCLK
-	devmem 0x1204001c 32 0x1 #SPI1_SD0
-	devmem 0x12040020 32 0x1 #SPI1_SDI
-	devmem 0x12040024 32 0x1 #SPI1_CSN
+		#sensor1 pinmux
+		devmem 0x12040008 32 0x1 #SENSOR1_CLK
+		devmem 0x1204000c 32 0x0 #SENSOR1_RSTN
+		devmem 0x12040010 32 0x2 #SENSOR1_HS,from vi1
+		devmem 0x12040014 32 0x2 #SENSOR1_VS,from vi1
+		#sensor1 drive capability
+		devmem 0x12040808 32 0x150 #SENSOR1_CLK
+		devmem 0x1204080c 32 0x170 #SENSOR1_RSTN
+		devmem 0x12040810 32 0x170 #SENSOR1_HS
+		devmem 0x12040814 32 0x170 #SENSOR1_VS
 
-	#drive capability
-	devmem 0x12040818 32 0x150 #SPI1_SCLK
-	devmem 0x1204081C 32 0x160 #SPI1_SD0
-	devmem 0x12040820 32 0x160 #SPI1_SDI
-	devmem 0x12040824 32 0x160 #SPI1_CSN
-}
-spi0_3wire_pin_mux() {
-	#pinmux
-	devmem 0x1204018c 32 0x3 #SPI0_3WIRE_CLK
-	devmem 0x12040190 32 0x3 #SPI0_3WIRE_DATA
-	devmem 0x12040198 32 0x3 #SPI0_3WIRE_CSN
+		#vi1 pinmux
+		devmem 0x12040030 32 0x1 #VI1_CLK
+		devmem 0x12040028 32 0x1 #VI1_HS
+		devmem 0x1204002c 32 0x1 #VI1_VS
+		devmem 0x12040034 32 0x1 #VI1_DATA0
+		devmem 0x12040038 32 0x1 #VI1_DATA1
+		devmem 0x1204003c 32 0x1 #VI1_DATA2
+		devmem 0x12040040 32 0x1 #VI1_DATA3
+		devmem 0x12040044 32 0x1 #VI1_DATA4
+		devmem 0x12040048 32 0x1 #VI1_DATA5
+		#vi1 drive capability
+		devmem 0x12040830 32 0x170 #VI1_CLK
+		devmem 0x12040828 32 0x170 #VI1_HS
+		devmem 0x1204082c 32 0x170 #VI1_VS
+		devmem 0x12040834 32 0x170 #VI1_DATA0
+		devmem 0x12040838 32 0x170 #VI1_DATA1
+		devmem 0x1204083c 32 0x170 #VI1_DATA2
+		devmem 0x12040840 32 0x170 #VI1_DATA3
+		devmem 0x12040844 32 0x170 #VI1_DATA4
+		devmem 0x12040848 32 0x170 #VI1_DATA5
 
-	#drive capability
-	devmem 0x12040998 32 0x150 #SPI0_3WIRE_CLK
-	devmem 0x1204099c 32 0x160 #SPI0_3WIRE_DATA
-	devmem 0x120409a4 32 0x160 #SPI0_3WIRE_CSN
-}
-i2c0_pin_mux() {
-	#pinmux
-	devmem 0x12040190 32 0x2 #I2C0_SDA
-	devmem 0x1204018c 32 0x2 #I2C0_SCL
+	}
+	i2c0_pin_mux() {
+		#pinmux
+		devmem 0x12040190 32 0x2 #I2C0_SDA
+		devmem 0x1204018c 32 0x2 #I2C0_SCL
 
-	#drive capability
-	devmem 0x1204099c 32 0x120 #I2C0_SDA
-	devmem 0x12040998 32 0x120 #I2C0_SCL
-}
-i2c1_pin_mux() {
-	#pinmux
-	devmem 0x1204001c 32 0x2 #I2C1_SDA
-	devmem 0x12040018 32 0x2 #I2C1_SCL
+		#drive capability
+		devmem 0x1204099c 32 0x120 #I2C0_SDA
+		devmem 0x12040998 32 0x120 #I2C0_SCL
+	}
+	i2c1_pin_mux() {
+		#pinmux
+		devmem 0x1204001c 32 0x2 #I2C1_SDA
+		devmem 0x12040018 32 0x2 #I2C1_SCL
 
-	#drive capability
-	devmem 0x1204081c 32 0x120 #I2C1_SDA
-	devmem 0x12040818 32 0x120 #I2C1_SCL
+		#drive capability
+		devmem 0x1204081c 32 0x120 #I2C1_SDA
+		devmem 0x12040818 32 0x120 #I2C1_SCL
+	}
+	#i2c2 -> sil9136 aic31
+	i2c2_pin_mux() {
+		#pinmux
+		devmem 0x1204005c 32 0x1 #I2C2_SDA
+		devmem 0x12040060 32 0x1 #I2C2_SCL
+
+		#drive capability
+		devmem 0x1204085C 32 0x120 #I2C2_SDA
+		devmem 0x12040860 32 0x120 #I2C2_SCL
+	}
+
+	#i2c3 -> adv7179
+	i2c3_pin_mux() {
+		#pinmux
+		devmem 0x12040178 32 0x3 #I2C3_SDA
+		devmem 0x12040160 32 0x3 #I2C3_SCL
+
+		#drive capability
+		devmem 0x12040984 32 0x120 #I2C3_SDA
+		devmem 0x1204096C 32 0x120 #I2C3_SCL
+	}
+
+	#spi1 -> vi
+	spi1_pin_mux() {
+		#pinmux
+		devmem 0x12040018 32 0x1 #SPI1_SCLK
+		devmem 0x1204001c 32 0x1 #SPI1_SD0
+		devmem 0x12040020 32 0x1 #SPI1_SDI
+		devmem 0x12040024 32 0x1 #SPI1_CSN
+
+		#drive capability
+		devmem 0x12040818 32 0x150 #SPI1_SCLK
+		devmem 0x1204081C 32 0x160 #SPI1_SD0
+		devmem 0x12040820 32 0x160 #SPI1_SDI
+		devmem 0x12040824 32 0x160 #SPI1_CSN
+	}
+
+	#spi3 -> LCD
+	spi3_pin_mux() {
+		#pinmux
+		devmem 0x12040160 32 0x1 #SPI3_SCLK
+		devmem 0x12040178 32 0x1 #SPI3_SD0
+		devmem 0x12040170 32 0x1 #SPI3_SDI
+		devmem 0x12040174 32 0x1 #SPI3_CSN
+		#drive capability
+		devmem 0x1204096C 32 0x150 #SPI3_SCLK
+		devmem 0x12040984 32 0x160 #SPI3_SD0
+		devmem 0x1204097C 32 0x160 #SPI3_SDI
+		devmem 0x12040980 32 0x160 #SPI3_CSN
+	}
+	#rgmii
+	net_rgmii_pinmux() {
+		#pinmux
+		devmem 0x1204013C 32 0x2
+		devmem 0x12040140 32 0x2
+		devmem 0x12040144 32 0x2
+		devmem 0x12040148 32 0x2
+		devmem 0x1204014C 32 0x2
+		devmem 0x12040150 32 0x2
+		devmem 0x12040154 32 0x2
+		devmem 0x12040158 32 0x2
+		devmem 0x1204015C 32 0x2
+		devmem 0x1204015C 32 0x2
+		devmem 0x12040164 32 0x2
+		devmem 0x12040168 32 0x2
+		devmem 0x1204016C 32 0x2
+		devmem 0x12040170 32 0x2
+		devmem 0x12040174 32 0x2
+		devmem 0x12040178 32 0x2
+
+		#drive capability
+		devmem 0x12040948 32 0x0d0
+		devmem 0x1204094C 32 0x0c0
+		devmem 0x12040950 32 0x0d0
+		devmem 0x12040954 32 0x0d0
+		devmem 0x12040958 32 0x0d0
+		devmem 0x1204095C 32 0x0d0
+		devmem 0x12040960 32 0x130
+		devmem 0x12040964 32 0x130
+		devmem 0x12040968 32 0x130
+		devmem 0x1204096C 32 0x130
+		devmem 0x12040970 32 0x130
+		devmem 0x12040974 32 0x130
+		devmem 0x12040978 32 0x130
+		devmem 0x1204097C 32 0x050
+		devmem 0x12040980 32 0x120
+		devmem 0x12040984 32 0x120
+	}
+
+	if [ ${SNS_TYPE1} != "NULL" ]; then
+		vicap1_pwrdn >/dev/null
+	fi
+	if [ ${WORK_MODE} == "double_pipe" ]; then
+		vicap1_pwrdn >/dev/null
+	fi
+
+	#clkcfg
+	clk_cfg() {
+		devmem 0x120100e4 32 0x1fff0000 # I2C0-3/SSP0-3 unreset, ir,enable clk gate
+		devmem 0x1201003c 32 0x31000100 # MIPI VI ISP unreset
+		devmem 0x12010050 32 0x2        # VEDU0 unreset
+		devmem 0x12010058 32 0x2        # VPSS0 unreset
+		devmem 0x12010058 32 0x3        # VPSS0 unreset
+		devmem 0x12010058 32 0x2        # VPSS0 unreset
+		devmem 0x1201005c 32 0x2        # VGS unreset
+		devmem 0x12010060 32 0x2        # JPGE unreset
+		devmem 0x12010064 32 0x2        # TDE unreset
+		devmem 0x1201006c 32 0x2        # IVE unreset
+		devmem 0x12010070 32 0x2        # FD unreset
+		devmem 0x12010074 32 0x2        # GDC unreset
+		devmem 0x1201007C 32 0x2a       # HASH&SAR ADC&CIPHER unreset
+		devmem 0x12010080 32 0x2        # AIAO unreset,clock 1188M
+		devmem 0x12010084 32 0x2        # GZIP unreset
+		devmem 0x120100d8 32 0xa        # ddrt efuse enable clock, unreset
+		devmem 0x120100e0 32 0xa8       # rsa trng klad enable clock, unreset
+		#devmem 0x120100e0 32  0xaa       # rsa trng klad DMA enable clock, unreset
+		devmem 0x12010040 32 0x60
+		devmem 0x12010040 32 0x0 # sensor unreset,unreset the control module with slave-mode
+
+		#VDP_OUT
+
+		#devmem 0x12010044 32  0x00015ff4	# D1@30fps,BT656 CVBS
+
+		#devmem 0x12010044 32  0x00004ff0  # 1080p30 BT1120
+
+		#                 IVE[21:19] GDC[18:16] VGS[15:13] VEDU [12:10] VPSS0[7:5] VI0[2:0]
+		# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M  VI0:300M---0x00494841
+		#devmem 0x1201004c 32  0x00094c21;
+		#                 ISP0 [18:14] ISP1[10:6] VI1[2:0]
+		# SDK config:     ISP0:300M,   ISP1:300M, VI1:300M
+		#devmem 0x12010054 32  0x00004041;
+
+		# configure with different sensor type
+		#devmem 0x12010040 32  0x11;   #226  8 lane sensor clock 72M
+
+		# pcie clk enable
+		devmem 0x120100b0 32 0x000001f0
+
+		echo "clock configure operation done!"
+	}
+	vi_vpss_online_config() {
+		# -------------vi vpss online open
+		if [ $b_vpss_online -eq 1 ]; then
+			echo "==============vi_vpss_online=============="
+			devmem 0x12030000 32 0x00000204
+
+			# write priority select
+			devmem 0x12030054 32 0x55552356 # each module 4bit  cci       ---        ddrt  ---    ---     gzip   ---    ---
+			devmem 0x12030058 32 0x16554411 # each module 4bit  vicap1    hash       ive   aio    jpge    tde   vicap0  vdp
+			devmem 0x1203005c 32 0x33466314 # each module 4bit  mmc2      A17        fmc   sdio1  sdio0   A7    vpss0   vgs
+			devmem 0x12030060 32 0x46266666 # each module 4bit  gdc       usb3/pcie  vedu  usb2   cipher  dma2  dma1    gsf
+
+			# read priority select
+			devmem 0x12030064 32 0x55552356 # each module 4bit  cci       ---         ddrt  ---    ---     gzip   ---    ---
+			devmem 0x12030068 32 0x06554401 # each module 4bit  vicap1    hash        ive   aio    jpge    tde   vicap0  vdp
+			devmem 0x1203006c 32 0x33466304 # each module 4bit  mmc2      A17         fmc   sdio1  sdio0    A7   vpss0   vgs
+			devmem 0x12030070 32 0x46266666 # each module 4bit  gdc       usb3/pcie   vedu  usb2   cipher  dma2  dma1    gsf
+
+			devmem 0x120641f0 32 0x1 # use pri_map
+			# write timeout select
+			devmem 0x1206409c 32 0x00000040 #
+			devmem 0x120640a0 32 0x00000000 #
+
+			#read timeout select
+			devmem 0x120640ac 32 0x00000040 #
+			devmem 0x120640b0 32 0x00000000 #
+		else
+			echo "==============vi_vpss_offline=============="
+			devmem 0x12030000 32 0x00000004
+
+			# write priority select
+			devmem 0x12030054 32 0x55552366 # each module 4bit  cci       ---        ddrt  ---    ---     gzip   ---    ---
+			devmem 0x12030058 32 0x16556611 # each module 4bit  vicap1    hash       ive   aio    jpge    tde   vicap0  vdp
+			devmem 0x1203005c 32 0x43466445 # each module 4bit  mmc2      A17        fmc   sdio1  sdio0   A7    vpss0   vgs
+			devmem 0x12030060 32 0x56466666 # each module 4bit  gdc       usb3/pcie  vedu  usb2   cipher  dma2  dma1    gsf
+
+			# read priority select
+			devmem 0x12030064 32 0x55552366 # each module 4bit  cci       ---        ddrt  ---    ---     gzip   ---    ---
+			devmem 0x12030068 32 0x06556600 # each module 4bit  vicap1    hash       ive   aio    jpge    tde   vicap0  vdp
+			devmem 0x1203006c 32 0x43466435 # each module 4bit  mmc2      A17        fmc   sdio1  sdio0   A7    vpss0   vgs
+			devmem 0x12030070 32 0x56266666 # each module 4bit  gdc       usb3/pcie  vedu  usb2   cipher  dma2  dma1    gsf
+
+			devmem 0x120641f0 32 0x1 # use pri_map
+			# write timeout select
+			devmem 0x1206409c 32 0x00000040 #
+			devmem 0x120640a0 32 0x00000000 #
+
+			# read timeout select
+			devmem 0x120640ac 32 0x00000040 # each module 8bit
+			devmem 0x120640b0 32 0x00000000 #
+		fi
+	}
+	#########################################################################################
+	ai_config() {
+		devmem 0x120300e0 32 0xd # internal codec: AIO MCLK out, CODEC AIO TX MCLK
+		#devmem 0x120300e0 32  0xe				# external codec: AIC31 AIO MCLK out, CODEC AIO TX MCLK
+	}
+
+	echo "++++++++++++++++++++++++++++++++++++++++++++++"
+	b_vpss_online=1
+
+	if [ $# -ge 1 ]; then
+		b_vpss_online=$1
+	fi
+
+	vicap_pin_mux
+	vi_vpss_online_config
+	ai_config
+	clkcfg
 }
 
 insert_sns() {
@@ -138,7 +357,7 @@ insert_sns() {
 			devmem 0x1201004c 32 0x00094c23
 			devmem 0x12010054 32 0x00024041
 			spi0_4wire_pin_mux
-			insmod extdrv/hi_ssp_sony.ko
+			insmod hi_ssp_sony.ko
 			;;
 		imx274)
 			tmp=0x11
@@ -148,7 +367,7 @@ insert_sns() {
 			devmem 0x1201004c 32 0x00094c23
 			devmem 0x12010054 32 0x0004041
 			spi0_4wire_pin_mux
-			insmod extdrv/hi_ssp_sony.ko
+			insmod hi_ssp_sony.ko
 			;;
 		imx274_mipi)
 			tmp=0x14
@@ -159,7 +378,7 @@ insert_sns() {
 			devmem 0x12010040 32 0x14 # sensor0 clk_en, 24MHz
 			i2c0_pin_mux
 			;;
-		imx290)
+		imx290 | imx385)
 			tmp=0x18
 			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
 			#imx290:viu0:340M,isp0:214M, viu1:340M,isp1:214M
@@ -291,28 +510,10 @@ vicap1_pwrdn() {
 	devmem 0x120a012c 32 0x2
 	devmem 0x1201003c 32 0x120003ff
 }
-sys_config() {
-	# pinmux configuration
-	sh ./pinmux.sh -net -vi >/dev/null
-
-	if [ ${SNS_TYPE1} != "NULL" ]; then
-		vicap1_pwrdn >/dev/null
-	fi
-	if [ ${WORK_MODE} == "double_pipe" ]; then
-		vicap1_pwrdn >/dev/null
-	fi
-	#vicap1_pwrdn;
-	#vicap1_pwrdn > /dev/null
-
-	# clock configuration
-	sh clkcfg.sh >/dev/null
-	# system configuration
-	sh sysctl.sh $b_arg_online >/dev/null
-}
 
 insert_ko() {
 	# sys config
-	sys_config
+	sysconfig
 
 	# driver load
 	insert_osal
@@ -343,9 +544,9 @@ insert_ko() {
 	#insmod hi3519v101_ive.ko save_power=1
 	insmod hi3519v101_photo.ko
 	#
-	insmod extdrv/hi_sensor_i2c.ko
-	insmod extdrv/hi_pwm.ko
-	insmod extdrv/hi_piris.ko
+	insmod hi_sensor_i2c.ko
+	insmod hi_pwm.ko
+	insmod hi_piris.ko
 
 	insert_audio
 
@@ -353,9 +554,8 @@ insert_ko() {
 	insmod hi_user.ko
 
 	insert_sns
-	# sh ./pinmux.sh -vo BT1120 > /dev/null
-	devmem 0x12010044 32 0x4ff0
 
+	devmem 0x12010044 32 0x4ff0
 	devmem 0x12010044 32 0x4
 	echo "==== Your input Sensor0 type is $SNS_TYPE0 ===="
 	echo "==== Your input Sensor1 type is $SNS_TYPE1 ===="
