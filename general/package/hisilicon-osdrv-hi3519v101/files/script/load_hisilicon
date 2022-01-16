@@ -2,7 +2,7 @@
 #
 # This is part of OpenIPC.org project | 2022.01.07
 #
-
+#set -x
 # SoC detect
 chipid=$(ipcinfo --chip_id)
 
@@ -18,7 +18,9 @@ os_mem_size=${os_mem_size:=32}
 # Sensor config
 # SNS_TYPE=$(awk -F '=' '$1=="sensor"{print $2}' RS=" " /proc/cmdline)
 SNS_TYPE0=$(fw_printenv -n sensor)
-SNS_TYPE0=${SNS_TYPE0:=ov4689}
+SNS_TYPE0=${SNS_TYPE0:=imx290}
+SNS_TYPE1="NULL"
+WORK_MODE="single_pipe"
 
 report_error() {
 	echo "******* Error: There's something wrong, please check! *****"
@@ -69,6 +71,10 @@ remove_audio() {
 }
 
 sysconfig() {
+	devmem 0x100503c4 32 0x7
+	devmem 0x100503c0 32 0x11011f
+	devmem 0x100503c4 32 0xc004
+	devmem 0x100503c0 32 0x110113
 	vicap_pin_mux() {
 		#sensor0 pinmux
 		devmem 0x1204017c 32 0x1 #SENSOR0_CLK
@@ -228,9 +234,8 @@ sysconfig() {
 		vicap1_pwrdn >/dev/null
 	fi
 
-	#clkcfg
 	clkcfg() {
-		devmem 0x120100e4 32 0x1fff0000 # I2C0-3/SSP0-3 unreset, ir,enable clk gate
+		devmem 0x120100e4 32 0x1ff70000 # I2C0-3/SSP0-3 unreset, ir,enable clk gate
 		devmem 0x1201003c 32 0x31000100 # MIPI VI ISP unreset
 		devmem 0x12010050 32 0x2        # VEDU0 unreset
 		devmem 0x12010058 32 0x2        # VPSS0 unreset
@@ -269,8 +274,6 @@ sysconfig() {
 
 		# pcie clk enable
 		devmem 0x120100b0 32 0x000001f0
-
-		echo "clock configure operation done!"
 	}
 	vi_vpss_online_config() {
 		# -------------vi vpss online open
@@ -378,7 +381,7 @@ insert_sns() {
 			devmem 0x12010040 32 0x14 # sensor0 clk_en, 24MHz
 			i2c0_pin_mux
 			;;
-		imx290 | imx385)
+		imx290)
 			tmp=0x18
 			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
 			#imx290:viu0:340M,isp0:214M, viu1:340M,isp1:214M
@@ -386,6 +389,19 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004
 			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
 			i2c0_pin_mux
+			;;
+		imx385)
+			tmp=0x18
+			devmem 0x12010040 32 0x18
+			devmem 0x12040190 32 0x2
+			devmem 0x1204018c 32 0x2
+			devmem 0x1204099c 32 0x120
+			devmem 0x12040998 32 0x120
+			insmod hi_ssp_sony.ko
+			devmem 0x12040184 32 0x1
+			devmem 0x12040188 32 0x1
+			devmem 0x12040010 32 0x2
+			devmem 0x12040014 32 0x2
 			;;
 		ov4689)
 			tmp=0x14
@@ -557,6 +573,11 @@ insert_ko() {
 
 	devmem 0x12010044 32 0x4ff0
 	devmem 0x12010044 32 0x4
+	devmem 0x12040098 32 0x3
+  	devmem 0x120100DC 32 0x6
+
+	devmem 0x1204008C 32 0x1
+	devmem 0x12040094 32 0x1
 	echo "==== Your input Sensor0 type is $SNS_TYPE0 ===="
 	echo "==== Your input Sensor1 type is $SNS_TYPE1 ===="
 }
@@ -568,8 +589,8 @@ remove_ko() {
 	rmmod hi_pwm
 	rmmod hi_piris
 
-	#rmmod hi3519v101_photo
-	rmmod hi3519v101_ive
+	rmmod hi3519v101_photo
+	#rmmod hi3519v101_ive
 
 	rmmod hi3519v101_rc
 	rmmod hi3519v101_jpege
