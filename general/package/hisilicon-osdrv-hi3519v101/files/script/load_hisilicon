@@ -18,7 +18,7 @@ os_mem_size=${os_mem_size:=32}
 # Sensor config
 # SNS_TYPE=$(awk -F '=' '$1=="sensor"{print $2}' RS=" " /proc/cmdline)
 SNS_TYPE0=$(fw_printenv -n sensor)
-SNS_TYPE0=${SNS_TYPE:=ov4689}
+SNS_TYPE0=${SNS_TYPE0:=ov4689}
 
 report_error() {
 	echo "******* Error: There's something wrong, please check! *****"
@@ -229,7 +229,7 @@ sysconfig() {
 	fi
 
 	#clkcfg
-	clk_cfg() {
+	clkcfg() {
 		devmem 0x120100e4 32 0x1fff0000 # I2C0-3/SSP0-3 unreset, ir,enable clk gate
 		devmem 0x1201003c 32 0x31000100 # MIPI VI ISP unreset
 		devmem 0x12010050 32 0x2        # VEDU0 unreset
@@ -523,7 +523,7 @@ insert_ko() {
 
 	#insmod hi3519v101_tde.ko
 	insmod hi3519v101_region.ko
-	insmod hi3519v101_fisheye.ko
+	#insmod hi3519v101_fisheye.ko
 	#insmod hi3519v101_vgs.ko
 
 	insert_isp
@@ -551,7 +551,7 @@ insert_ko() {
 	insert_audio
 
 	insmod hi_mipi.ko
-	insmod hi_user.ko
+	#insmod hi_user.ko
 
 	insert_sns
 
@@ -564,7 +564,7 @@ insert_ko() {
 remove_ko() {
 	remove_audio
 	remove_sns
-	rmmod hi_user
+	#rmmod hi_user
 	rmmod hi_pwm
 	rmmod hi_piris
 
@@ -585,7 +585,7 @@ remove_ko() {
 	rmmod hi3519v101_isp
 	rmmod hi3519v101_viu
 	rmmod hi_mipi
-	rmmod hi3519v101_fisheye
+	#rmmod hi3519v101_fisheye
 
 	#rmmod hi3519v101_vgs
 	rmmod hi3519v101_region
@@ -772,6 +772,7 @@ if [ $b_arg_remove -eq 1 ]; then
 fi
 
 if [ $b_arg_insmod -eq 1 ]; then
+	cd /lib/modules/3.18.20/hisilicon
 	insert_ko
 fi
 
