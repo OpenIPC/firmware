@@ -18,7 +18,7 @@ os_mem_size=${os_mem_size:=32}
 # Sensor config
 # SNS_TYPE=$(awk -F '=' '$1=="sensor"{print $2}' RS=" " /proc/cmdline)
 SNS_TYPE0=$(fw_printenv -n sensor)
-SNS_TYPE0=${SNS_TYPE0:=imx290}
+SNS_TYPE0=${SNS_TYPE0:=imx385}
 SNS_TYPE1="NULL"
 WORK_MODE="single_pipe"
 
@@ -33,16 +33,18 @@ insert_osal() {
 
 insert_detect() {
 	cd /lib/modules/3.18.20/hisilicon
+	sysconfig
 	insert_osal
 	insmod hi3519v101_base.ko
 	insmod hi3519v101_sys.ko vi_vpss_online=$b_arg_online sensor=$SNS_TYPE0,$SNS_TYPE1 mem_total=$mem_total
 	insert_isp
 	insmod hi_sensor_i2c.ko
-	insmod hi_sensor_spi.ko
+	insmod hi_ssp_sony.ko
+	insert_sns
 }
 
 remove_detect() {
-	rmmod hi_sensor_spi
+	rmmod hi_ssp_sony
 	rmmod hi_sensor_i2c
 	rmmod hi3519v101_isp
 	rmmod hi3519v101_sys
@@ -508,7 +510,7 @@ insert_sns() {
 			#spi0_4wire_pin_mux;
 			#insmod extdrv/hi_ssp_sony.ko;
 			;;
-		os08a10)
+		os08a | os08a10)
 			tmp=0x14
 			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
 			#os08a10:	viu0: 600M, isp0:300M, viu1:300M,isp1:300M
@@ -867,6 +869,7 @@ fi
 # Sensor config
 # SENSOR=${SENSOR:=imx307}
 #
+
 if [ -n "$SENSOR" ]; then
 	logger -s -p daemon.info -t hisilicon "Manualy set SENSOR as ${SENSOR}"
 else
