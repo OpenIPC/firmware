@@ -6,20 +6,12 @@
 set -e
 
 mpp=$(awk '/Version:/ {print $3,$4"]"}' /proc/umap/sys) || true
-soc=$(ipctool --chip_id)
+soc=$(ipcinfo --chip-id)
 
-
-
-prepare()
-{
+prepare() {
   case ${soc} in
 
-  hi3516av300|hi3516cv500|hi3516dv300)
-    echo -e "\n\e[1;31mSorry but the ${soc} is not supported at the moment...\e[0m\n"
-    exit 1
-    ;;
-
-  hi3516ev200|hi3516ev300|hi3516dv200|hi3518ev300)
+  hi3516ev200 | hi3516ev300 | hi3516dv200 | hi3518ev300)
     echo -e "\n\e[1;31mA supported processor with ${mpp} was found...\e[0m\n"
     ittb_url="https://raw.githubusercontent.com/widgetii/pqtools/master/hi3516ev300/ittb_ev300_V1.0.1.2.tgz"
     ittb_folder="ittb_ev300_V1.0.1.2"
@@ -33,19 +25,17 @@ prepare()
   esac
 }
 
-
-download()
-  if [[ -d /tmp/${ittb_folder} ]]; then
-    echo -e "\n\e[1;31mA directory with utilities was found and the download is not needed...\e[0m\n"
-    echo -e "\n\e[1;31mWe run the utilities for sensor calibration...\e[0m\n"
-    cd /tmp/${ittb_folder} ; ./start.sh
-  else
-    echo -e "\n\e[1;31mDownloading the latest tools, please wait...\e[0m\n"
-    curl -s ${ittb_url} | gzip -d - | tar xvf - -C /tmp
-    echo -e "\n\e[1;31mWe run the utilities for sensor calibration...\e[0m\n"
-    cd /tmp/${ittb_folder} ; ./start.sh
-  fi
-
-
+download() if [[ -d /tmp/${ittb_folder} ]]; then
+  echo -e "\n\e[1;31mA directory with utilities was found and the download is not needed...\e[0m\n"
+  echo -e "\n\e[1;31mWe run the utilities for sensor calibration...\e[0m\n"
+  cd /tmp/${ittb_folder}
+  ./start.sh
+else
+  echo -e "\n\e[1;31mDownloading the latest tools, please wait...\e[0m\n"
+  curl -s ${ittb_url} | gzip -d - | tar xvf - -C /tmp
+  echo -e "\n\e[1;31mWe run the utilities for sensor calibration...\e[0m\n"
+  cd /tmp/${ittb_folder}
+  ./start.sh
+fi
 
 prepare && download
