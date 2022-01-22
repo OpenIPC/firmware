@@ -2,17 +2,17 @@
 
 soc=$(fw_printenv -n soc) || (>&2 echo "SOC not defined in U-Boot ENV"; exit 1)
 vendor=$(fw_printenv -n vendor) || (>&2 echo "Vendor not defined in U-Boot ENV"; exit 1)
-# devid=$(fw_printenv -n devid) || (>&2 echo "SOC not defined in U-Boot ENV"; exit 1)
+# devid=$(fw_printenv -n devid) || (>&2 echo "Device ID not defined in U-Boot ENV"; exit 1)
 
 case ${vendor} in
   anjoy)
     case ${soc} in
       ssc335|ssc337|ssc337de)
-      gpio="ircut1=78 ircut2=79 light=61"
-      ;;
+        gpio="ircut1=78 ircut2=79 light=61"
+        ;;
     esac
     ;;
-  camhi|xin)
+  camhi|hichip|xin)
     case ${soc} in
       hi3516ev200|gk7205v200)
         gpio="usb_ena=-9"
