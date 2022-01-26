@@ -408,7 +408,7 @@ else
         logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
     else
         insert_detect
-        SENSOR_DETECT=$(ipcinfo -s)
+        SENSOR_DETECT=$(ipcinfo --short-sensor)
         export SENSOR=${SENSOR_DETECT:=unknown}
         remove_detect
         logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"

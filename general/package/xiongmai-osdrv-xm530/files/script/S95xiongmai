@@ -38,7 +38,7 @@ start() {
 	load_xiongmai -i
 	#
 	if [ ! -f /usr/lib/libsns.so ]; then
-		SNS_TYPE=$(ipcinfo --short_sensor)
+		SNS_TYPE=$(ipcinfo --short-sensor)
 		logger -s -p daemon.info -t xiongmai "You sensor is $SNS_TYPE and symlink to libsns.so not found"
 		case $SNS_TYPE in
 
