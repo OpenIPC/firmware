@@ -11,10 +11,10 @@ chipid=$(ipcinfo --chip_id)
 # MMZ config
 mem_start=0x80000000;                             # phy mem start
 
-mem_total=$(awk -F '=' '$1=="totalmem"{print $2}' RS=" " /proc/cmdline | tr -d 'M')
+mem_total=$(fw_printenv -n totalmem | tr -d 'M')
 mem_total=${mem_total:=64}
 
-os_mem_size=$(awk -F '=' '$1=="mem"{print $2}' RS=" " /proc/cmdline | tr -d 'M')
+os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
 
 # Sensor config
