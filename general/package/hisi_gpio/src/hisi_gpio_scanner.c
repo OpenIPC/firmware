@@ -191,6 +191,7 @@ void get_chip_gpio_adress(unsigned long *Chip_Id, unsigned long *GPIO_Groups,
   case 0x3516C300:
     *GPIO_Groups = 9;
     *GPIO_Base = 0x12140000;
+    *GPIO_Offset = 0x1000;
     break;
   case 0x3516A300:
     *GPIO_Groups = 12;
