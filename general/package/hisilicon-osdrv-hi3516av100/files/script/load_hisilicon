@@ -154,7 +154,7 @@ insert_sns() {
                 devmem 0x200f0058 32 0x1 # spi0_sdi
                 devmem 0x200f005c 32 0x1 # spi0_csn
                 ;;
-        imx123_spi)
+        imx123)
                 devmem 0x200f0050 32 0x1 # spi0_sclk
                 devmem 0x200f0054 32 0x1 # spi0_sdo
                 devmem 0x200f0058 32 0x1 # spi0_sdi
@@ -165,7 +165,7 @@ insert_sns() {
                 devmem 0x20030104 32 0x0     # VI 250MHz
                 insmod sensor_spi.ko
                 ;;
-        imx123 | imx178)
+        imx178)
                 devmem 0x200f0050 32 0x2     # i2c0_scl
                 devmem 0x200f0054 32 0x2     # i2c0_sda
                 devmem 0x2003002c 32 0xF0007 # sensor unreset, clk 25MHz, VI 250MHz
@@ -449,7 +449,7 @@ else
                 logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
         else
                 insert_detect
-                SENSOR_DETECT=$(ipcinfo -s)
+                SENSOR_DETECT=$(ipcinfo --short-sensor)
                 export SENSOR=${SENSOR_DETECT:=unknown}
                 remove_detect
                 logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"

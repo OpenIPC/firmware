@@ -168,7 +168,7 @@ else
         logger -s -p daemon.info -t novatek "Get data from environment and set SENSOR as ${SENSOR}"
     else
         #insert_ko
-        SENSOR_DETECT=$(ipcinfo -s)
+        SENSOR_DETECT=$(ipcinfo --short-sensor)
         export SENSOR=${SENSOR_DETECT:=unknown}
         logger -s -p daemon.info -t novatek "Get data from ipcinfo and set SENSOR as ${SENSOR}"
         fw_setenv sensor $SENSOR && logger -s -p daemon.info -t novatek "Write detected ${SENSOR} to U-Boot ENV"

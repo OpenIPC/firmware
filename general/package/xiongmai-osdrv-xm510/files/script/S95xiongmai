@@ -37,7 +37,7 @@ start() {
 	export TZ=$(cat /etc/TZ)
 	load_xiongmai -i
 	#
-	SNS_TYPE=$(ipcinfo --short_sensor)
+	SNS_TYPE=$(ipcinfo --short-sensor)
 	logger -s -p daemon.info -t xiongmai "You sensor is $SNS_TYPE"
 	#
 	load_majestic
