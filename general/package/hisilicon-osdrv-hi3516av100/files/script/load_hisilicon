@@ -9,10 +9,10 @@ chipid=$(ipcinfo --chip_id)
 # MMZ config
 mem_start=0x80000000 # phy mem start
 
-mem_total=$(awk -F '=' '$1=="totalmem"{print $2}' RS=" " /proc/cmdline | tr -d 'M')
+mem_total=$(fw_printenv -n totalmem | tr -d 'M')
 mem_total=${mem_total:=128}
 
-os_mem_size=$(awk -F '=' '$1=="mem"{print $2}' RS=" " /proc/cmdline | tr -d 'M')
+os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
 
 report_error() {
@@ -101,8 +101,9 @@ sys_config() {
 
         # system configuration
         devmem 0x201200E0 32 0xd # internal codec:AIO MCLK out, CODEC AIO TX MCLK
-        # -------------vi vpss online open
+
         if [ $b_arg_online -eq 1 ]; then
+                # -------------vi vpss online
                 devmem 0x20120004 32 0x40000000 # online, SPI1 CS0
 
                 #pri config
@@ -245,13 +246,7 @@ insert_sns() {
                 devmem 0x2003002c 32 0xE0003 # sensor unreset, clk 24MHz, VI 297MHz
                 devmem 0x20030104 32 0x0     # Sensor 24M
                 ;;
-        bt1120) ;;
-
-        \
-                imx122) ;;
-
-        \
-                *)
+        *)
                 echo "xxxx Invalid sensor type $SNS_TYPE xxxx"
                 report_error
                 ;;
@@ -266,10 +261,7 @@ insert_ko() {
         insmod hi_media.ko
         insmod hi3516a_base.ko
 
-        insmod hi3516a_sys.ko vi_vpss_online=$b_arg_online sensor=$SENSOR mem_total=$mem_total
-        if [[ $? -ne 0 ]]; then
-                exit
-        fi
+        insmod hi3516a_sys.ko vi_vpss_online=$b_arg_online sensor=$SENSOR mem_total=$mem_total || report_error
 
         insmod hi3516a_tde.ko
         insmod hi3516a_region.ko
@@ -294,7 +286,7 @@ insert_ko() {
 
         insmod sensor_i2c.ko
         insmod pwm.ko
-        #insmod piris.ko
+        insmod piris.ko
 
         insert_sns
         insert_audio
@@ -337,21 +329,16 @@ remove_ko() {
         rmmod mmz
 }
 
-load_usage() {
-        echo "Usage:  ./load3518e [-option] [sensor_name]"
-        echo "options:"
-        echo "    -i                       insert modules"
-        echo "    -r                       remove modules"
-        echo "    -a                       remove modules first, then insert modules"
-        echo "    -sensor sensor_name      config sensor type [default: ar0230]"
-        echo "    -osmem os_mem_size       config os mem size [unit: M, default: 32]"
-        echo "    -total_mem_size          config total mem size [unit: M, default: 64]"
-        echo "    -offline                 vi/vpss offline"
-        echo "    -h                       help information"
-        echo -e "Available sensors: imx222 9m034 ov9752 ar0230 ar0130 ov9712 mn34222"
-        echo -e "notes: osmem option can't be used when mmz zone partition is enable\n\n"
-        echo -e "for example online:   ./load3518e -a -sensor ar0230 -osmem 32 -total 64\n"
-        echo -e "            offline:  ./load3518e -a -sensor ar0230 -osmem 32 -total 64 -offline\n"
+load_usage()
+{
+	echo "Usage:  ./load_hisilicon [-option] [sensor_name]"
+	echo "options:"
+	echo "    -i                       insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a                       remove modules first, then insert modules"
+	echo "    -sensor sensor_name      config sensor type [default: imx307]"
+	echo "    -h                       help information"
+	echo -e "for example: ./load_hisilicon -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
 }
 
 calc_mmz_info() {
