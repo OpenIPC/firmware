@@ -79,28 +79,28 @@ sys_config() {
         devmem 0x200f0008 32 0x1 # 1: SHUTTER_TRIG, 0: GPIO0_7, 2: SPI1_CSN2
 
         # clock configuration
-        devmem 0x20030030 32 0x00004005         # AVC-300M VGS-300M VPSS-250M VEDU-300M mda1axi 250M mda0axi 300M DDR-250
-        devmem 0x20030104 32 0x3                # VICAP-198M VPSS-198M
-        devmem 0x2003002c 32 0x90007            # VICAP-250M, ISP unreset & clk en, Sensor clk en-37.125M, clk reverse
+        devmem 0x20030030 32 0x00004005 # AVC-300M VGS-300M VPSS-250M VEDU-300M mda1axi 250M mda0axi 300M DDR-250
+        devmem 0x20030104 32 0x3        # VICAP-198M VPSS-198M
+        devmem 0x2003002c 32 0x90007    # VICAP-250M, ISP unreset & clk en, Sensor clk en-37.125M, clk reverse
         #devmem 0x20030034 32 0xffc             # VDP-1080p@60fps unreset & clk en
         #devmem 0x20030034 32 0xef74            # VDP-PAL/NTSC
-        devmem 0x20030040 32 0x2002             # VEDU0 AVC unreset & clk en
-        devmem 0x20030048 32 0x2                # VPSS0 unreset & clk en
+        devmem 0x20030040 32 0x2002 # VEDU0 AVC unreset & clk en
+        devmem 0x20030048 32 0x2    # VPSS0 unreset & clk en
 
-        devmem 0x20030058 32 0x2        # TDE unreset & clk en
-        devmem 0x2003005c 32 0x2        # VGS unreset & clk en
-        devmem 0x20030060 32 0x2        # JPGE  unreset & clk en
+        devmem 0x20030058 32 0x2 # TDE unreset & clk en
+        devmem 0x2003005c 32 0x2 # VGS unreset & clk en
+        devmem 0x20030060 32 0x2 # JPGE  unreset & clk en
 
-        devmem 0x20030068 32 0x2        # MDU unreset & clk en
-        devmem 0x2003006c 32 0x2        # IVE-300MHz unreset & clk en
+        devmem 0x20030068 32 0x2 # MDU unreset & clk en
+        devmem 0x2003006c 32 0x2 # IVE-300MHz unreset & clk en
         #devmem 0x20030070 32 0x2       # VOIE unreset & clk en
 
-        devmem 0x2003007c 32 0x2        # cipher unreset & clk en
-        devmem 0x2003008c 32 0xe        # aio MCLK PLL 1188M, unreset & clk en
+        devmem 0x2003007c 32 0x2 # cipher unreset & clk en
+        devmem 0x2003008c 32 0xe # aio MCLK PLL 1188M, unreset & clk en
         #devmem 0x200300d8 32 0xa;      # ddrt
 
         # system configuration
-        devmem 0x201200E0 32 0xd        # internal codec:AIO MCLK out, CODEC AIO TX MCLK
+        devmem 0x201200E0 32 0xd # internal codec:AIO MCLK out, CODEC AIO TX MCLK
         # -------------vi vpss online open
         if [ $b_arg_online -eq 1 ]; then
                 devmem 0x20120004 32 0x40000000 # online, SPI1 CS0
@@ -153,7 +153,7 @@ insert_sns() {
                 devmem 0x200f0058 32 0x1 # spi0_sdi
                 devmem 0x200f005c 32 0x1 # spi0_csn
                 ;;
-        imx123)
+        imx123_spi)
                 devmem 0x200f0050 32 0x1 # spi0_sclk
                 devmem 0x200f0054 32 0x1 # spi0_sdo
                 devmem 0x200f0058 32 0x1 # spi0_sdi
@@ -164,7 +164,7 @@ insert_sns() {
                 devmem 0x20030104 32 0x0     # VI 250MHz
                 insmod sensor_spi.ko
                 ;;
-        imx178)
+        imx123 | imx178)
                 devmem 0x200f0050 32 0x2     # i2c0_scl
                 devmem 0x200f0054 32 0x2     # i2c0_sda
                 devmem 0x2003002c 32 0xF0007 # sensor unreset, clk 25MHz, VI 250MHz
@@ -240,10 +240,10 @@ insert_sns() {
                 devmem 0x2003002c 32 0xB0007 # sensor unreset, clk 27MHz, VI 250MHz
                 ;;
         os05a)
-                devmem 0x200f0050 32 0x2 # i2c0_scl
-                devmem 0x200f0054 32 0x2 # i2c0_sda
+                devmem 0x200f0050 32 0x2     # i2c0_scl
+                devmem 0x200f0054 32 0x2     # i2c0_sda
                 devmem 0x2003002c 32 0xE0003 # sensor unreset, clk 24MHz, VI 297MHz
-                devmem 0x20030104 32 0x0 # Sensor 24M
+                devmem 0x20030104 32 0x0     # Sensor 24M
                 ;;
         bt1120) ;;
 
@@ -300,7 +300,7 @@ insert_ko() {
         insert_audio
 
         insmod hi_mipi.ko
-        #insmod wdt.ko
+        insmod wdt.ko
         echo "==== Your input Sensor type is $SENSOR ===="
 }
 
