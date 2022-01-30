@@ -350,7 +350,7 @@ xm550() {
 #
 #######
 #
-hi3516cv100                   # OpenIPC
+# hi3516cv100                   # OpenIPC
 #
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
@@ -380,7 +380,7 @@ hi3516cv100                   # OpenIPC
 # hi3516av200                   # OpenIPC
 #
 # hi3516av300                   # testing..
-# hi3516cv500                   # testing..
+hi3516cv500                   # testing..
 # hi3516dv300                   # testing..
 #
 # hi3536dv100                   # OpenIPC
