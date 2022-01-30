@@ -38,10 +38,10 @@ insert_osal() {
 
 insert_detect() {
     cd /lib/modules/4.9.37/hisilicon
-    insmod sys_config.ko chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
     insert_osal
-    insmod hi3516ev200_base.ko
-    insmod hi3516ev200_isp.ko
+    insmod sys_config.ko chip=${chipid} sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1, g_cmos_yuv_flag=$YUV_TYPE0
+    insmod hi3516cv500_base.ko
+    insmod hi3516cv500_isp.ko
     insmod hi_sensor_i2c.ko
     insmod hi_sensor_spi.ko
 }
@@ -49,11 +49,11 @@ insert_detect() {
 remove_detect() {
     rmmod hi_sensor_spi
     rmmod hi_sensor_i2c
-    rmmod hi3516ev200_isp
-    rmmod hi3516ev200_base
+    rmmod hi3516cv500_isp
+    rmmod hi3516cv500_base
+    rmmod sys_config
     rmmod hi_osal &> /dev/null
     rmmod cma_osal &> /dev/null
-    rmmod sys_config
 }
 
 insert_audio() {
@@ -173,7 +173,7 @@ remove_ko() {
     rmmod hi3516cv500_vi
     rmmod hi3516cv500_gdc
     rmmod hi3516cv500_dis
-    rmmod hi3516cv500_vgs
+    # rmmod hi3516cv500_vgs
     rmmod hi3516cv500_rgn
     rmmod hi3516cv500_tde
 
