@@ -40,6 +40,7 @@ config() {
     echo "  device ${vtund_iface};"
     echo "  stat no;"
     echo "  persist yes;"
+    echo "  keepalive 10:5;"
     echo "  timeout 10;"
     echo "  up {"
     echo "    ifconfig \"${vtund_iface} hw ether ${identity_mac} mtu 1500 -multicast up\";"
