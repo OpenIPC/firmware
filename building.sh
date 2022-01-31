@@ -93,11 +93,6 @@ gk7205v300() {
 
 #################################################################################
 
-hi3516av300() {
-  soc="hi3516av300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
 hi3516cv100() {
   soc="hi3516cv100"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -157,6 +152,11 @@ hi3516av200() {
 }
 
 #################################################################################
+
+hi3516av300() {
+  soc="hi3516av300"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
 
 hi3516cv500() {
   soc="hi3516cv500"
@@ -352,7 +352,7 @@ xm550() {
 #
 # hi3516cv100                   # OpenIPC
 #
-# hi3516cv200                   # testing..
+hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
@@ -380,7 +380,7 @@ xm550() {
 # hi3516av200                   # OpenIPC
 #
 # hi3516av300                   # testing..
-hi3516cv500                   # testing..
+# hi3516cv500                   # testing..
 # hi3516dv300                   # testing..
 #
 # hi3536dv100                   # OpenIPC
