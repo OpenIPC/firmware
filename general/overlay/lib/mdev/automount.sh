@@ -21,6 +21,7 @@ my_mount()
         exit 1
     fi
 
+    # copy files from autoconfig folder
     [ -d "${destdir}/$1/autoconfig" ] && cp -af ${destdir}/$1/autoconfig/* /
 }
 
