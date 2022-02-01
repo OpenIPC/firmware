@@ -22,7 +22,7 @@ my_mount()
     fi
 
     # copy files from autoconfig folder
-    [ -d "${destdir}/$1/autoconfig" ] && cp -af ${destdir}/$1/autoconfig/* /
+    [ -d "${destdir}/$1/autoconfig" ] && cp -afv ${destdir}/$1/autoconfig/* / | logger -s -p daemon.info -t autoconfig
 }
 
 case "${ACTION}" in
