@@ -20,6 +20,8 @@ my_mount()
         rmdir "${destdir}/$1"
         exit 1
     fi
+
+    [ -d "${destdir}/$1/autoconfig" ] && cp -af ${destdir}/$1/autoconfig/* /
 }
 
 case "${ACTION}" in
