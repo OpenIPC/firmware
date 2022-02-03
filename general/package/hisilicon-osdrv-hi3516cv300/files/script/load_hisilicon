@@ -193,7 +193,7 @@ insert_sns()
 			fi
             ;;
 
-	imx307_i2c_mipi)
+	imx307_i2c*)
 			# This was added by ZigFisher
 			bus_type="i2c";
 			pinmux_mode="i2c_mipi";
@@ -210,7 +210,7 @@ insert_sns()
 			fi
             ;;
 
-	imx323_spi_dc)
+	imx323_spi*)
 			# This was added by ZigFisher
 			bus_type="ssp";
 			pinmux_mode="ssp_dc";
@@ -228,7 +228,7 @@ insert_sns()
 			fi
             ;;
 
-	imx323_i2c_dc)
+	imx323_i2c*)
 			# This was added by ZigFisher
 			bus_type="i2c";
 			pinmux_mode="i2c_dc";
