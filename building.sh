@@ -41,7 +41,8 @@ rename_initramfs() {
 
 autoup_rootfs() {
   echo -e "\n\n"
-  cp -v ./output/images/uImage.initramfs.${soc} ./output/images/autoupdate-kernel.img
+  # cp -v ./output/images/uImage.initramfs.${soc} ./output/images/autoupdate-kernel.img
+  cp -v ./output/images/uImage.${soc} ./output/images/autoupdate-kernel.img
   ./output/host/bin/mkimage -A arm -O linux -T filesystem -n 'OpenIPC firmware' -a 0x000000250000 -e 0x000000750000 -d ./output/images/rootfs.squashfs.${soc} ./output/images/autoupdate-rootfs.img
 }
 
@@ -106,6 +107,16 @@ hi3516cv200() {
 hi3518ev200() {
   soc="hi3518ev200"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+hi3518ev200_hs303v1() {
+  soc="hi3518ev200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename && autoup_rootfs
+}
+
+hi3518ev200_hs303v2() {
+  soc="hi3518ev200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename && autoup_rootfs
 }
 
 hi3518ev200_hs303v3() {
@@ -352,11 +363,13 @@ xm550() {
 #
 # hi3516cv100                   # OpenIPC
 #
-hi3516cv200                   # testing..
+# hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
-# hi3518ev200_hs303v3             # testing..
+# hi3518ev200_hs303v1           # OpenIPC
+hi3518ev200_hs303v2           # OpenIPC
+# hi3518ev200_hs303v3           # OpenIPC
 #
 # hi3516av100                   # OpenIPC
 # hi3516dv100                   # OpenIPC
