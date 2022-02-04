@@ -31,6 +31,7 @@ show_modules() { echo; cat /proc/modules | cut -f 1 -d " " | while read module; 
 
 debug_microbe() { curl -L -o /tmp/microbe-web-dev.zip https://github.com/OpenIPC/microbe-web/archive/refs/heads/dev.zip; \
   unzip -o -d /tmp /tmp/microbe-web-dev.zip; \
+  cp -av /tmp/microbe-web-dev/files/usr/sbin /usr/; \
   cp -av /tmp/microbe-web-dev/files/var/www /var/; \
   rm -rf /tmp/microbe-web-dev.zip /tmp/microbe-web-dev; }
 
