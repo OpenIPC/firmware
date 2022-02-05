@@ -1,10 +1,10 @@
 #!/bin/sh
 
 soc=$(fw_printenv -n soc) || (>&2 echo "SOC not defined in U-Boot ENV"; exit 1)
-vendor=$(fw_printenv -n vendor) || (>&2 echo "Vendor not defined in U-Boot ENV"; exit 1)
+manufacturer=$(fw_printenv -n manufacturer) || (>&2 echo "Manufacturer not defined in U-Boot ENV"; exit 1)
 # devid=$(fw_printenv -n devid) || (>&2 echo "Device ID not defined in U-Boot ENV"; exit 1)
 
-case ${vendor} in
+case ${manufacturer} in
   anjoy)
     case ${soc} in
       ssc335|ssc337|ssc337de)
