@@ -1,18 +1,18 @@
 #!/bin/sh
 
 soc=$(fw_printenv -n soc) || (>&2 echo "SOC not defined in U-Boot ENV"; exit 1)
-vendor=$(fw_printenv -n vendor) || (>&2 echo "Vendor not defined in U-Boot ENV"; exit 1)
+manufacturer=$(fw_printenv -n manufacturer) || (>&2 echo "Manufacturer not defined in U-Boot ENV"; exit 1)
 # devid=$(fw_printenv -n devid) || (>&2 echo "Device ID not defined in U-Boot ENV"; exit 1)
 
-case ${vendor} in
-  anjoy)
+case ${manufacturer} in
+  Anjoy)
     case ${soc} in
       ssc335|ssc337|ssc337de)
         gpio="ircut1=78 ircut2=79 light=61"
         ;;
     esac
     ;;
-  camhi|hichip|xin)
+  Camhi|Hichip|Xin)
     case ${soc} in
       hi3516ev200|gk7205v200)
         gpio="usb_ena=-9"
@@ -25,7 +25,7 @@ case ${vendor} in
         ;;
     esac
     ;;
-  herospeed|longsee|cantonk)
+  Herospeed|Longsee|Cantonk)
     case ${soc} in
       hi3516ev200|gk7205v200)
         gpio="ircut1=12 ircut2=13 irctl=4 alm_in=15 alm_out=14"
@@ -38,14 +38,14 @@ case ${vendor} in
         ;;
     esac
     ;;
-  jabsco)
+  Jabsco)
     case ${soc} in
       hi3516ev200|gk7205v200)
         gpio="ircut1=52 ircut2=53 irstatus=9"
         ;;
     esac
     ;;
-  jvt)
+  Jvt)
     case ${soc} in
       hi3516cv200)
         gpio="ircut1=64 ircut2=65 light=62"
@@ -55,28 +55,28 @@ case ${vendor} in
         ;;
     esac
     ;;
-  juan|sannce)
+  Juan|Sannce)
     case ${soc} in
       hi3518ev200)
         gpio="ircut1=65 ircut2=64 irstatus=-62"
         ;;
     esac
     ;;
-  tiandy)
+  Tiandy)
     case ${soc} in
       hi3518ev200)
         gpio="ircut1=78 ircut2=79 irctl=37"
         ;;
     esac
     ;;
-  uniview)
+  Uniview)
     case ${soc} in
       hi3516ev300|gk7205v300)
         gpio="ircut1=63 ircut2=67 reset="
         ;;
     esac
     ;;
-  xm)
+  Xiongmai)
     case ${soc} in
       hi3516ev200|gk7205v200)
         gpio="ircut1=8 ircut=29 irstatus=15 irctl=16 alm_in=4,53 alm_out=55 eth_act=14 eth_sta=12 reset=0"
@@ -95,7 +95,7 @@ case ${vendor} in
         ;;
     esac
     ;;
-  zenotech|videopark)
+  Zenotech|Videopark)
     case ${soc} in
       hi3516ev300|gk7205v300)
         gpio="ircut1=40 ircut2=41 irctl=65"
