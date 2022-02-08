@@ -35,7 +35,7 @@ debug_microbe() { curl -L -o /tmp/microbe-web-dev.zip https://github.com/OpenIPC
   cp -av /tmp/microbe-web-dev/files/var/www /var/; \
   rm -rf /tmp/microbe-web-dev.zip /tmp/microbe-web-dev; }
 
-show_fullname() { echo "openipc-$(ipctool --chip_id)-$(ipctool --sensor_id | awk -F '_' '{print $1}')"; }
+show_fullname() { echo "openipc-$(ipcinfo --chip-name)-$(ipcinfo --short-sensor)"; }
 
 set_fullname() { show_fullname >/etc/hostname; }
 
