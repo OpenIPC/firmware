@@ -344,6 +344,12 @@ xm550() {
 
 #################################################################################
 
+gm8136() {
+  soc="gm8136"
+  fresh && make PLATFORM=grainmedia BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
 
 # Build firmware
 #
@@ -368,7 +374,7 @@ xm550() {
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
 # hi3518ev200_hs303v1           # OpenIPC
-hi3518ev200_hs303v2           # OpenIPC
+# hi3518ev200_hs303v2           # OpenIPC
 # hi3518ev200_hs303v3           # OpenIPC
 #
 # hi3516av100                   # OpenIPC
@@ -429,7 +435,10 @@ hi3518ev200_hs303v2           # OpenIPC
 # xm530                         # OK
 # xm550                         # OK
 #
+#######
 #
+gm8136
 #
+#######
 # More examples see here: https://github.com/OpenIPC/firmware/wiki/source_code
 #
