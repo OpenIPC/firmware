@@ -1,5 +1,14 @@
 --- a/drivers/mtd/spi-nor/spi-nor.c
 +++ b/drivers/mtd/spi-nor/spi-nor.c
+@@ -1107,7 +1107,7 @@
+ 	.reads[SNOR_MIDX_1_1_4]	= SNOR_OP_READ(0, 8, SPINOR_OP_READ_1_1_4),
+ 	.reads[SNOR_MIDX_1_4_4]	= SNOR_OP_READ(0, 24, SPINOR_OP_READ_1_4_4),
+ 
+-	.wr_modes		= SNOR_WR_MODES,
++	.wr_modes		= SNOR_MODE_1_1_1,
+ 	.page_programs[SNOR_MIDX_1_1_1]	= SPINOR_OP_PP,
+ 	.page_programs[SNOR_MIDX_1_1_4]	= SPINOR_OP_PP_1_1_4,
+ 
 @@ -2251,6 +2251,8 @@
  	/* read the BP bit in RDSR to check whether nor is lock or not */
  	switch (JEDEC_MFR(info)) {
@@ -9,6 +18,15 @@
  	case SNOR_MFR_ESMT:
  	case SNOR_MFR_EON:
  	case SNOR_MFR_SPANSION:
+@@ -2607,6 +2609,8 @@
+ 	/* NOR protection support for STmicro/Micron chips and similar */
+ 	if (JEDEC_MFR(info) == SNOR_MFR_MICRON ||
+ 	    JEDEC_MFR(info) == SNOR_MFR_WINBOND ||
++	    JEDEC_MFR(info) == SNOR_MFR_XTX ||
++	    JEDEC_MFR(info) == SNOR_MFR_FM ||
+ 		info->flags & SPI_NOR_HAS_LOCK) {
+ 		nor->flash_lock = stm_lock;
+ 		nor->flash_unlock = stm_unlock;
 --- a/include/linux/mtd/spi-nor.h
 +++ b/include/linux/mtd/spi-nor.h
 @@ -31,6 +31,7 @@
