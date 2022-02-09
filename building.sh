@@ -94,6 +94,13 @@ gk7205v300() {
 
 #################################################################################
 
+gm8136() {
+  soc="gm8136"
+  fresh && make PLATFORM=grainmedia BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
 hi3516cv100() {
   soc="hi3516cv100"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -344,17 +351,16 @@ xm550() {
 
 #################################################################################
 
-gm8136() {
-  soc="gm8136"
-  fresh && make PLATFORM=grainmedia BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
 #################################################################################
 
 # Build firmware
 #
 # fh8852                        # testing..
 # fh8856                        # testing..
+#
+#######
+#
+gm8136
 #
 #######
 #
@@ -437,8 +443,5 @@ gm8136() {
 #
 #######
 #
-gm8136
-#
-#######
-# More examples see here: https://github.com/OpenIPC/firmware/wiki/source_code
+# More examples see here: https://openipc.github.io/wiki/
 #
