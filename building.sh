@@ -360,16 +360,16 @@ xm550() {
 #
 #######
 #
-gm8136
+# gm8136                        # testing..
 #
 #######
 #
-# gk7202v300                   # testing..
-# gk7205v200                   # OpenIPC
-# gk7205v200_fpv               # FPV
-# gk7205v200_ufanet            # Ufanet
-# gk7205v300                   # OpenIPC
-# gk7605v100                   # testing..
+# gk7202v300                    # testing..
+# gk7205v200                    # OpenIPC
+# gk7205v200_fpv                # FPV
+# gk7205v200_ufanet             # Ufanet
+# gk7205v300                    # OpenIPC
+# gk7605v100                    # testing..
 #
 #######
 #
@@ -397,7 +397,7 @@ gm8136
 # hi3516ev300                   # OpenIPC
 # hi3516ev300_dev               # OpenIPC development
 # hi3516ev300_glibc             # testing..
-# hi3516ev300_tehshield         # Tehshield
+hi3516ev300_tehshield         # Tehshield
 # hi3516ev300_ultimate          # OpenIPC_ultimate version
 # hi3518ev300                   # OpenIPC
 #
