@@ -25,7 +25,7 @@ load_majestic() {
 
 # The daemon does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
 start() {
-	logger -s -p daemon.info -t grainmedia "Check MAC for Xiongmai devices"
+	logger -s -p daemon.info -t grainmedia "Check MAC for GrainMedia devices"
 	if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
 		logger -s -p daemon.info -t grainmedia "The eth0 interface has a lousy MAC, let's try to change it.."
 		XMMAC="$(ipcinfo --xm_mac)" && [ -n "${XMMAC}" ] && fw_setenv ethaddr ${XMMAC} && reboot -f || logger -s -p daemon.info -t grainmedia "It is not possible to install a new MAC on the eth0 interface.."
