@@ -1,325 +1,218 @@
+#!/bin/sh
+
 video_frontend=ov2715
-video_system=PAL
+video_system=NTSC
 
 # Support video_front_end: ov2710, ov2715, ov9712, ov9715, ov9714, ov5653
 # Support video_front_end: mt9m034, ar0130, ar0140, ar0330, ar0331
 # Support video_front_end: imx222, imx238, imx236, imx238
 
-chipver=`head -1 /proc/pmu/chipver`
-chipid=`echo $chipver | cut -c 1-4`
+chipver=$(head -1 /proc/pmu/chipver)
+chipid=$(echo $chipver | cut -c 1-4)
 
 if [ "$chipid" != "8136" ] && [ "$chipid" != "8135" ]; then
     echo "Error! Not support chip version $chipver."
     exit
 fi
 
-
-
 if [ "$video_system" != "NTSC" ] && [ "$video_system" != "PAL" ]; then
     echo "Invalid argument for NTSC/PAL."
     exit
 fi
 
-if [ "$1" != "" ] ; then
+if [ "$1" != "" ]; then
     video_frontend=$1
 fi
 
-#cp /usr/etc/gm/isp328_*.cfg /mnt/mtd/
+if [ "$video_frontend" != "ov2715" ] && [ "$video_frontend" != "ov2710" ] &&
+    [ "$video_frontend" != "ov9710" ] && [ "$video_frontend" != "ov9712" ] &&
+    [ "$video_frontend" != "ov9715" ] && [ "$video_frontend" != "ov9714" ] &&
+    [ "$video_frontend" != "ar0130" ] && [ "$video_frontend" != "mt9m034" ] &&
+    [ "$video_frontend" != "ar0140" ] && [ "$video_frontend" != "ar0141" ] &&
+    [ "$video_frontend" != "ar0330" ] && [ "$video_frontend" != "ar0331" ] &&
+    [ "$video_frontend" != "imx222" ] && [ "$video_frontend" != "imx124" ] &&
+    [ "$video_frontend" != "imx238" ] && [ "$video_frontend" != "imx236" ]; then
+    echo "Invalid argument for video frontend: $video_frontend"
+    exit
+fi
 
-#if [ "$video_frontend" != "ov2715" ] && [ "$video_frontend" != "ov2710" ] &&
-#   [ "$video_frontend" != "ov9710" ] && [ "$video_frontend" != "ov9712" ] &&
-#   [ "$video_frontend" != "ov9715" ] && [ "$video_frontend" != "ov9714" ] &&
-#   [ "$video_frontend" != "ar0130" ] && [ "$video_frontend" != "mt9m034" ] &&
-#   [ "$video_frontend" != "ar0140" ] && [ "$video_frontend" != "ar0141" ] &&
-#   [ "$video_frontend" != "ar0330" ] && [ "$video_frontend" != "ar0331" ] &&   
-#   [ "$video_frontend" != "imx222" ] && [ "$video_frontend" != "imx124" ] &&
-#   [ "$video_frontend" != "imx238" ] && [ "$video_frontend" != "imx236" ]; then
-#     echo "Invalid argument for video frontend: $video_frontend"
-#     exit
-#fi
+cd /lib/modules/3.3.0/grainmedia
 
-insmod /lib/modules/3.3.0/grainmedia/frammap.ko
+insmod frammap.ko
 cat /proc/frammap/ddr_info
 
-if [ "$chipid" == "8136" ];then
-	insmod /lib/modules/3.3.0/grainmedia/log.ko mode=0 log_ksize=256
-else
-	insmod /lib/modules/3.3.0/grainmedia/log.ko mode=0 log_ksize=64
-fi
-
-insmod /lib/modules/3.3.0/grainmedia/ms.ko
-insmod /lib/modules/3.3.0/grainmedia/em.ko
-
-if [ "$chipid" == "8136" ];then
-	insmod /lib/modules/3.3.0/grainmedia/flcd200-common.ko
-	insmod /lib/modules/3.3.0/grainmedia/flcd200-pip.ko output_type=0 fb0_fb1_share=1    # CVBS display
-fi
-
-insmod /lib/modules/3.3.0/grainmedia/sar_adc.ko
-insmod /lib/modules/3.3.0/grainmedia/think2d.ko
-insmod /lib/modules/3.3.0/grainmedia/ftpwmtmr010.ko
-insmod /lib/modules/3.3.0/grainmedia/fe_common.ko
-insmod /lib/modules/3.3.0/grainmedia/adda308.ko input_mode=0 single_end=1
-insmod /lib/modules/3.3.0/grainmedia/ft3dnr200.ko src_yc_swap=1 dst_yc_swap=1 ref_yc_swap=1
+insmod log.ko mode=0 log_ksize=256
+insmod ms.ko
+insmod em.ko
+insmod gm2d.ko
+insmod flcd200-common.ko
+insmod flcd200-pip.ko output_type=0 fb0_fb1_share=1 # CVBS display
+insmod sar_adc.ko run_mode=4                        #run_mode=4 is for CVBS out
+#insmod ftpwmtmr010.ko
+insmod fe_common.ko
+insmod adda308.ko input_mode=0 single_end=1
+insmod ft3dnr200.ko src_yc_swap=1 dst_yc_swap=1 ref_yc_swap=1
 
 case "$video_frontend" in
-    "ov2715"|"ov2710")
-        codec_max_width=1920
-        codec_max_height=1080
-        if [ "$video_system" == "NTSC" ]  ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_ov2715.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            devmem 0x90c00054 32 0x10028000
-            devmem 0x90c000ac 32 0xFFFFFDC2
-            insmod /lib/modules/3.3.0/grainmedia/fisp_ov2715.ko sensor_w=1920 sensor_h=1080 fps=30 mirror=0 flip=0
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_ov2715.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            devmem 0x90c00054 32 0x10028000
-            devmem 0x90c000ac 32 0xFFFFFDC2
-            insmod /lib/modules/3.3.0/grainmedia/fisp_ov2715.ko sensor_w=1920 sensor_h=1080 fps=25 mirror=0 flip=0
-        fi        
-        ;;
-    "soih42")
-        codec_max_width=1280
-        codec_max_height=720
-        if [ "$video_system" == "NTSC" ]  ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_soih42.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            devmem 0x90c00054 32 0x10028000
-            devmem 0x90c000ac 32 0xFFFFFDC2
-            [ -z "$FISH_SOIH42_CFG" ] && insmod /lib/modules/3.3.0/grainmedia/fisp_soih42.ko sensor_w=1280 sensor_h=720 fps=30 mirror=0 flip=0
-            [ -n "$FISH_SOIH42_CFG" ] && insmod /lib/modules/3.3.0/grainmedia/fisp_soih42.ko $FISH_SOIH42_CFG
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_soih42.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            devmem 0x90c00054 32 0x10028000
-            devmem 0x90c000ac 32 0xFFFFFDC2
-            [ -z "$FISH_SOIH42_CFG" ] && insmod /lib/modules/3.3.0/grainmedia/fisp_soih42.ko sensor_w=1280 sensor_h=720 fps=25 mirror=0 flip=0
-            [ -n "$FISH_SOIH42_CFG" ] && insmod /lib/modules/3.3.0/grainmedia/fisp_soih42.ko $FISH_SOIH42_CFG
-        fi        
-        ;;
-    "soih81")
-        codec_max_width=1280
-        codec_max_height=720
-        if [ "$video_system" == "NTSC" ]  ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_soih81.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            devmem 0x90c00054 32 0x10028000
-            devmem 0x90c000ac 32 0xFFFFFDC2
-            insmod /lib/modules/3.3.0/grainmedia/fisp_soih81.ko sensor_w=1280 sensor_h=720 fps=30 mirror=0 flip=0
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_soih81.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            devmem 0x90c00054 32 0x10028000
-            devmem 0x90c000ac 32 0xFFFFFDC2
-            insmod /lib/modules/3.3.0/grainmedia/fisp_soih81.ko sensor_w=1280 sensor_h=720 fps=25 mirror=0 flip=0
-        fi        
-        ;;
-    "53V13")
-	if [ -z "$codec_max_width" ];then
-        	codec_max_width=1280
-        	codec_max_height=720
-	fi
-        if [ "$video_system" == "NTSC" ]  ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_sc1035.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            devmem 0x90c00054 32 0x10028000
-            devmem 0x90c000ac 32 0xFFFFFDC2
-            insmod /lib/modules/3.3.0/grainmedia/fisp_53V13.ko sensor_w=$codec_max_width sensor_h=$codec_max_height fps=30 mirror=0 flip=0
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_sc1035.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            devmem 0x90c00054 32 0x10028000
-            devmem 0x90c000ac 32 0xFFFFFDC2
-            insmod /lib/modules/3.3.0/grainmedia/fisp_53V13.ko sensor_w=$codec_max_width sensor_h=$codec_max_height fps=25 mirror=0 flip=0
-        fi        
-        ;;
-    "ov9715"|"ov9712"|"ov9710")
-        codec_max_width=1280
-        codec_max_height=720
-        if [ "$video_system" == "NTSC" ]  ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_ov9715.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_ov9715.ko sensor_w=1280 sensor_h=720 fps=30 mirror=0 flip=0
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_ov9715.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_ov9715.ko sensor_w=1280 sensor_h=720 fps=25 mirror=0 flip=0
-        fi        
-        ;;     
-    "ar0330")
-        codec_max_width=1920
-        codec_max_height=1080
-        if [ "$video_system" == "NTSC" ]  ; then    
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_ar0330.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_ar0330.ko sensor_w=1920 sensor_h=1080 mirror=0 flip=0 interface=1 fps=30
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_ar0330.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_ar0330.ko sensor_w=1920 sensor_h=1080 mirror=0 flip=0 interface=1 fps=25
-        fi        
-        ;;         
-    "ar0331")
-        codec_max_width=1920
-        codec_max_height=1080
-        if [ "$video_system" == "NTSC" ]  ; then    
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_ar0331.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_ar0331.ko sensor_w=1920 sensor_h=1080 interface=0 fps=30
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_ar0331.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_ar0331.ko sensor_w=1920 sensor_h=1080 interface=0 fps=25
-        fi        
-        ;;      
-    "mt9m034")
-        codec_max_width=1280
-        codec_max_height=720
-        if [ "$video_system" == "NTSC" ]  ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_mt9m034.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_mt9m034.ko sensor_w=1280 sensor_h=720 fps=30
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_mt9m034.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_mt9m034.ko sensor_w=1280 sensor_h=720 fps=25
-        fi        
-        ;;
-    "ar0140"|"ar0141")
-        codec_max_width=1280
-        codec_max_height=720
-        if [ "$video_system" == "NTSC" ]  ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_ar0140.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_ar0140.ko sensor_w=1280 sensor_h=720 fps=30
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_ar0140.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_ar0140.ko sensor_w=1280 sensor_h=720 fps=25
-        fi        
-        ;;
-    "imx238")                                                                              
-        codec_max_width=1280                                                             
-        codec_max_height=720                                                              
-        if [ "$video_system" == "NTSC" ]  ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_imx238.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_imx138.ko sensor_w=1280 sensor_h=720 fps=30        
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_imx238.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_imx138.ko sensor_w=1280 sensor_h=720 fps=25        
-        fi        
-        ;;           
-    "imx222")
-        codec_max_width=1920
-        codec_max_height=1080
-        if [ "$video_system" == "NTSC" ]  ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_imx222.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_imx122.ko sensor_w=1920 sensor_h=1080 fps=30
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_imx222.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_imx122.ko sensor_w=1920 sensor_h=1080 fps=25
-        fi        
-        ;;        
-    "imx236")
-        codec_max_width=1920
-        codec_max_height=1080
-        if [ "$video_system" == "NTSC" ]  ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_imx236.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=0            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_imx136.ko sensor_w=1920 sensor_h=1080 fps=30
-        elif [ "$video_system" == "PAL" ] ; then
-            insmod /lib/modules/3.3.0/grainmedia/fisp328.ko cfg_path=/mnt/mtd/isp328_imx236.cfg
-            insmod /lib/modules/3.3.0/grainmedia/fisp_algorithm.ko pwr_freq=1            
-            insmod /lib/modules/3.3.0/grainmedia/fisp_imx136.ko sensor_w=1920 sensor_h=1080 fps=25
-        fi        
-        ;;
-    *)
-        echo "Invalid argument for video frontend: $video_frontend"
-        exit
-        ;;
+"ov2715" | "ov2710")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov2715.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_ov2715.ko sensor_w=1920 sensor_h=1080 interface=0 fps=30 mirror=1 flip=1
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov2715.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_ov2715.ko sensor_w=1920 sensor_h=1080 interface=0 fps=25 mirror=1 flip=1
+    fi
+    ;;
+"ov9715" | "ov9712" | "ov9710")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov9715.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_ov9715.ko sensor_w=1280 sensor_h=720 fps=30 mirror=1 flip=1
+
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov9715.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_ov9715.ko sensor_w=1280 sensor_h=720 fps=25 mirror=1 flip=1
+    fi
+    ;;
+"ar0330")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0330.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_ar0330.ko sensor_w=1920 sensor_h=1080 mirror=1 flip=1 interface=1 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0330.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_ar0330.ko sensor_w=1920 sensor_h=1080 mirror=1 flip=1 interface=1 fps=25
+    fi
+    ;;
+"ar0331")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0331.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_ar0331.ko sensor_w=1920 sensor_h=1080 interface=0 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0331.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_ar0331.ko sensor_w=1920 sensor_h=1080 interface=0 fps=25
+    fi
+    ;;
+"mt9m034")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_mt9m034.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_mt9m034.ko sensor_w=1280 sensor_h=720 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_mt9m034.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_mt9m034.ko sensor_w=1280 sensor_h=720 fps=25
+    fi
+    ;;
+"ar0140" | "ar0141")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0140.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_ar0140.ko sensor_w=1280 sensor_h=720 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0140.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_ar0140.ko sensor_w=1280 sensor_h=720 fps=25
+    fi
+    ;;
+"imx238")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx238.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_imx138.ko sensor_w=1280 sensor_h=720 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx238.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_imx138.ko sensor_w=1280 sensor_h=720 fps=25
+    fi
+    ;;
+"imx222")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx222.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_imx122.ko sensor_w=1920 sensor_h=1080 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx222.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_imx122.ko sensor_w=1920 sensor_h=1080 fps=25
+    fi
+    ;;
+"imx236")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx236.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_imx136.ko sensor_w=1920 sensor_h=1080 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx236.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_imx136.ko sensor_w=1920 sensor_h=1080 fps=25
+    fi
+    ;;
+*)
+    echo "Invalid argument for video frontend: $video_frontend"
+    exit
+    ;;
 esac
 
-insmod /lib/modules/3.3.0/grainmedia/vcap300_common.ko
-insmod /lib/modules/3.3.0/grainmedia/vcap0.ko vi_mode=0,1 ext_irq_src=1
-insmod /lib/modules/3.3.0/grainmedia/vcap300_isp.ko ch_id=0 range=1
-insmod /lib/modules/3.3.0/grainmedia/fmcp_drv.ko mp4_tight_buf=1
+insmod vcap300_common.ko
+insmod vcap0.ko vi_mode=0,1 ext_irq_src=1 sync_time_div=500
+insmod vcap300_isp.ko ch_id=0 range=1
+insmod fmcp_drv.ko mp4_tight_buf=1
+insmod favc_enc.ko h264e_max_b_frame=0 h264e_one_ref_buf=1 h264e_tight_buf=1 h264e_max_width=$codec_max_width h264e_max_height=$codec_max_height h264e_slice_offset=1
+insmod favc_rc.ko
+insmod fmjpeg_drv.ko
 
-insmod /lib/modules/3.3.0/grainmedia/favc_enc.ko h264e_max_b_frame=0 h264e_one_ref_buf=1 h264e_tight_buf=1 h264e_max_width=$codec_max_width h264e_max_height=$codec_max_height h264e_slice_offset=1
+insmod sw_osg.ko
+insmod fscaler300.ko max_vch_num=1 max_minors=1 temp_width=0 temp_height=0
+insmod osd_dispatch.ko
+insmod codec.ko
+insmod audio_drv.ko audio_ssp_num=0,1 audio_ssp_chan=1,1 bit_clock=400000,400000 sample_rate=8000,8000 audio_out_enable=1,0
+insmod gs.ko
+insmod vpd.ko vpd_dbglevel=0 gmlib_dbglevel=0 quiet=1
 
-insmod /lib/modules/3.3.0/grainmedia/favc_rc.ko
-insmod /lib/modules/3.3.0/grainmedia/decoder.ko
+echo /tmp >/proc/videograph/dumplog #configure log path
 
-insmod /lib/modules/3.3.0/grainmedia/fmjpeg_drv.ko jpg_enc_max_chn=2
-
-if [ "$chipid" == 8136 ];then
-	insmod /lib/modules/3.3.0/grainmedia/fmpeg4_drv.ko mp4_max_width=$codec_max_width mp4_max_height=$codec_max_height
-	insmod /lib/modules/3.3.0/grainmedia/mp4e_rc.ko
-fi
-
-
-# Encode 4CH + Cascade YUV 1CH
-insmod /lib/modules/3.3.0/grainmedia/sw_osg.ko
-if [ "$chipid" == 8136 ];then
-	insmod /lib/modules/3.3.0/grainmedia/fscaler300.ko max_vch_num=5 max_minors=5 temp_width=0 temp_height=0
-else
-	insmod /lib/modules/3.3.0/grainmedia/fscaler300.ko max_vch_num=3 max_minors=3 temp_width=0 temp_height=0	
-fi
-#insmod /lib/modules/3.3.0/grainmedia/ftdi220.ko
-insmod /lib/modules/3.3.0/grainmedia/osd_dispatch.ko
-insmod /lib/modules/3.3.0/grainmedia/codec.ko
-insmod /lib/modules/3.3.0/grainmedia/audio_drv.ko audio_ssp_num=0,1 audio_ssp_chan=1,1 bit_clock=400000,400000 sample_rate=8000,8000 audio_out_enable=1,0
-if [ "$chipid" == "8136" ];then
-	insmod /lib/modules/3.3.0/grainmedia/gs.ko reserved_ch_cnt=2 alloc_unit_size=262144 flow_mode=1
-else
-	insmod /lib/modules/3.3.0/grainmedia/gs.ko reserved_ch_cnt=1 alloc_unit_size=65536 flow_mode=1
-fi
-
-if [ -f /lib/loop_comm.ko ];then 
-	insmod /lib/loop_comm.ko
-else
-	insmod /lib/modules/3.3.0/grainmedia/loop_comm.ko
-fi
-
-if [ -f /lib/vpd_slave.ko ];then
-	insmod /lib/vpd_slave.ko vpslv_dbglevel=0 ddr0_sz=0 ddr1_sz=0 config_path="/mnt/mtd/" usr_func=0 usr_param=0 datain_minors=4 dataout_minors=8
-else
-	insmod /lib/modules/3.3.0/grainmedia/vpd_slave.ko vpslv_dbglevel=0 ddr0_sz=0 ddr1_sz=0 config_path="/mnt/mtd/" usr_func=0 usr_param=0 datain_minors=4 dataout_minors=8
-fi
-
-if [ -f /lib/vpd_master.ko ];then
-	insmod /lib/vpd_master.ko vpd_dbglevel=0 gmlib_dbglevel=0
-else
-	insmod /lib/modules/3.3.0/grainmedia/vpd_master.ko vpd_dbglevel=0 gmlib_dbglevel=0
-fi
-
-echo /root > /proc/videograph/dumplog   #configure log path
-mdev -s
-cat /proc/modules
-echo 0 > /proc/frammap/free_pages   #should not free DDR1 for performance issue
-echo 1 > /proc/vcap300/vcap0/dbg_mode  #need debug mode to detect capture overflow
-echo 0 > /proc/videograph/em/dbglevel
-echo 0 > /proc/videograph/gs/dbglevel
-echo 0 > /proc/videograph/ms/dbglevel
-echo 0 > /proc/videograph/datain/dbglevel
-echo 0 > /proc/videograph/dataout/dbglevel
-echo 0 > /proc/videograph/vpd/dbglevel
-echo 0 > /proc/videograph/gmlib/dbglevel
+echo 0 >/proc/frammap/free_pages     #should not free DDR1 for performance issue
+echo 1 >/proc/vcap300/vcap0/dbg_mode #need debug mode to detect capture overflow
+echo 0 >/proc/videograph/em/dbglevel
+echo 0 >/proc/videograph/gs/dbglevel
+echo 0 >/proc/videograph/ms/dbglevel
+echo 0 >/proc/videograph/datain/dbglevel
+echo 0 >/proc/videograph/dataout/dbglevel
+echo 0 >/proc/videograph/vpd/dbglevel
+echo 0 >/proc/videograph/gmlib/dbglevel
 
 echo =========================================================================
-if [ -e /mnt/mtd/gmlib.cfg ] ; then
-grep ";" /mnt/mtd/gmlib.cfg |sed -n '1,1p'
+if [ -e /etc/sensors/gmlib.cfg ]; then
+    grep ";" /etc/sensors/gmlib.cfg | sed -n '1,1p'
 else
-grep ";" /mnt/mtd/spec.cfg |sed -n '2,6p'
+    grep ";" /etc/sensors/spec.cfg | sed -n '2,6p'
 fi
 
-#rootfs_date=`ls /|grep 00_2`
-#mtd_date=`ls /mnt/mtd|grep 00_2`
 echo =========================================================================
 echo "  Video Front End: $video_frontend"
 echo "  Chip Version: $chipver"
@@ -339,5 +232,5 @@ devmem 0x9a100030 32 0xDF000f04
 #echo w fps 15 > /proc/isp320/command
 
 # force max CPU performance
-#echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
-
+echo performance >/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+#echo 30 > /proc/videograph/ft3dnr/job_pre_callback
