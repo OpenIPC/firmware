@@ -360,7 +360,7 @@ xm550() {
 #
 #######
 #
-# gm8136                        # testing..
+gm8136                        # testing..
 #
 #######
 #
@@ -397,7 +397,7 @@ xm550() {
 # hi3516ev300                   # OpenIPC
 # hi3516ev300_dev               # OpenIPC development
 # hi3516ev300_glibc             # testing..
-hi3516ev300_tehshield         # Tehshield
+#hi3516ev300_tehshield         # Tehshield
 # hi3516ev300_ultimate          # OpenIPC_ultimate version
 # hi3518ev300                   # OpenIPC
 #
