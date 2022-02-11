@@ -1,5 +1,6 @@
 #!/bin/sh
 
+config_path=/etc/sensors
 video_frontend=ov2715
 video_system=NTSC
 
@@ -38,20 +39,19 @@ fi
 
 cd /lib/modules/3.3.0/grainmedia
 
-insmod frammap.ko
+insmod frammap.ko || exit 1
 cat /proc/frammap/ddr_info
 
-insmod log.ko mode=0 log_ksize=256
+insmod log.ko mode=0 log_ksize=256 config_path=${config_path}/gmlib.cfg
 insmod ms.ko
 insmod em.ko
 insmod gm2d.ko
-insmod flcd200-common.ko
-insmod flcd200-pip.ko output_type=0 fb0_fb1_share=1 # CVBS display
+#insmod flcd200-common.ko
+#insmod flcd200-pip.ko output_type=0 fb0_fb1_share=1 # CVBS display
 insmod sar_adc.ko run_mode=4                        #run_mode=4 is for CVBS out
-#insmod ftpwmtmr010.ko
 insmod fe_common.ko
 insmod adda308.ko input_mode=0 single_end=1
-insmod ft3dnr200.ko src_yc_swap=1 dst_yc_swap=1 ref_yc_swap=1
+insmod ft3dnr200.ko src_yc_swap=1 dst_yc_swap=1 ref_yc_swap=1 config_path=${config_path}
 
 case "$video_frontend" in
 "ov2715" | "ov2710")
@@ -181,8 +181,8 @@ esac
 insmod vcap300_common.ko
 insmod vcap0.ko vi_mode=0,1 ext_irq_src=1 sync_time_div=500
 insmod vcap300_isp.ko ch_id=0 range=1
-insmod fmcp_drv.ko mp4_tight_buf=1
-insmod favc_enc.ko h264e_max_b_frame=0 h264e_one_ref_buf=1 h264e_tight_buf=1 h264e_max_width=$codec_max_width h264e_max_height=$codec_max_height h264e_slice_offset=1
+insmod fmcp_drv.ko mp4_tight_buf=1 config_path=${config_path}
+insmod favc_enc.ko h264e_max_b_frame=0 h264e_one_ref_buf=1 h264e_tight_buf=1 h264e_max_width=$codec_max_width h264e_max_height=$codec_max_height h264e_slice_offset=1 config_path=${config_path}
 insmod favc_rc.ko
 insmod fmjpeg_drv.ko
 
