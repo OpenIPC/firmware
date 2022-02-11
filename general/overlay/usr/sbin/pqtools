@@ -6,7 +6,7 @@
 set -e
 
 mpp=$(awk '/Version:/ {print $3,$4"]"}' /proc/umap/sys) || true
-soc=$(ipcinfo --chip-id)
+soc=$(ipcinfo --chip-name)
 
 prepare() {
   case ${soc} in
