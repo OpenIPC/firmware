@@ -10,6 +10,8 @@ set_gpio()
     echo $2 > /sys/class/gpio/GPIO$1/value
 }
 
+cd /lib/modules/4.9.129/fullhan
+
 insmod vmm.ko mmz=anonymous,0,0xA1D00000,33M anony=1
 #insmod vmm.ko mmz=anonymous,0,0xA2000000,64M anony=1
 #insmod vmm.ko mmz=anonymous,0,0xA2000000,64M anony=1
@@ -17,7 +19,7 @@ insmod vmm.ko mmz=anonymous,0,0xA1D00000,33M anony=1
 #reset sensor
 set_gpio 13 0
 
-insmod xbus_rpc.ko fn=rtthread_arc_FH885xV200.bin fa=0xbff80000
+insmod xbus_rpc.ko fn=/lib/firmware/rtthread_arc_FH885xV200.bin fa=0xbff80000
 
 #reset sensor
 set_gpio 13 1
