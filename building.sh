@@ -60,13 +60,33 @@ sdk() {
 
 #################################################################################
 
-fh8852() {
-  soc="fh8852"
+fh8852v200() {
+  soc="fh8852v200"
   fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
-fh8856() {
-  soc="fh8856"
+fh8856v200() {
+  soc="fh8856v200"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+fh8858v200() {
+  soc="fh8858v200"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+fh8852v210() {
+  soc="fh8852v210"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+fh8856v210() {
+  soc="fh8856v210"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+fh8858v200() {
+  soc="fh8858v210"
   fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
@@ -355,12 +375,16 @@ xm550() {
 
 # Build firmware
 #
-# fh8852                        # testing..
-# fh8856                        # testing..
+fh8852v200                        # testing..
+# fh8856v200                        # testing..
+# fh8858v200                        # testing..
+# fh8852v210                        # testing..
+# fh8856v210                        # testing..
+# fh8858v210                        # testing..
 #
 #######
 #
-gm8136                        # testing..
+# gm8136                        # testing..
 #
 #######
 #
