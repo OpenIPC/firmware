@@ -60,6 +60,21 @@ sdk() {
 
 #################################################################################
 
+fh8833v100() {
+  soc="fh8833v100"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+fh8852v100() {
+  soc="fh8852v100"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+fh8856v100() {
+  soc="fh8856v100"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 fh8852v200() {
   soc="fh8852v200"
   fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -374,6 +389,10 @@ xm550() {
 #################################################################################
 
 # Build firmware
+#
+# fh8833v100                        # testing..
+# fh8852v100                        # testing..
+# fh8856v100                        # testing..
 #
 fh8852v200                        # testing..
 # fh8856v200                        # testing..
