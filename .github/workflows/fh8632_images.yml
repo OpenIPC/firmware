@@ -1,6 +1,13 @@
 name: "FH8632  "
 
 on:
+  push:
+    branches:
+      - production
+    tags:
+      - "v*"
+  schedule:
+      - cron: "00 03 * * *"
   workflow_dispatch:
 
 jobs:
