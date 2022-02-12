@@ -1,4 +1,5 @@
 include $(BR2_EXTERNAL_FULLHAN_PATH)/linux/linux-ext-fullhan_patcher.mk
+include $(BR2_EXTERNAL_FULLHAN_PATH)/package/fullhan-osdrv-fh8852v100/fullhan-osdrv-fh8852v100.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/fullhan-osdrv-fh8852v200/fullhan-osdrv-fh8852v200.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/fullhan_patcher/fullhan_patcher.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/aura-httpd/aura-httpd.mk

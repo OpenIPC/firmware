@@ -1,0 +1,34 @@
+#!/bin/sh
+
+set_gpio()
+{
+    if [ ! -d "/sys/class/gpio/GPIO$1" ]; then
+        echo $1 > /sys/class/gpio/export
+        echo out > /sys/class/gpio/GPIO$1/direction
+    fi
+
+    echo $2 > /sys/class/gpio/GPIO$1/value
+}
+
+cd /lib/modules/3.0.8/fullhan
+
+insmod vmm.ko mmz=anonymous,0,0xA1D00000,33M anony=1
+#insmod vmm.ko mmz=anonymous,0,0xA2000000,64M anony=1
+
+#reset sensor
+set_gpio 13 0
+
+insmod rtvbus.ko ra=0xa3e00000 rs=65536 fn=rtthread_arc_FH8852.bin fa=0xa3f00000
+#insmod rtvbus.ko ra=0xa7e00000 rs=65536 fn=rtthread_arc_FH8856.bin fa=0xa7f00000
+
+#reset sensor
+set_gpio 13 1
+
+insmod media_process.ko
+insmod isp.ko
+insmod vpu.ko vpu_mode=buf_0_3,buf_1_4
+insmod enc.ko
+insmod hevc.ko
+insmod jpeg.ko
+insmod bgm.ko
+insmod vbus_ac.ko
