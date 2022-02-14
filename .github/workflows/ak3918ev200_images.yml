@@ -1,0 +1,139 @@
+name: "AK3918Ev200  "
+
+on:
+  push:
+    branches:
+      - production
+    tags:
+      - "v*"
+  # schedule:
+  #     - cron: "00 03 * * *"
+  workflow_dispatch:
+
+jobs:
+  build_core:
+    name: OpenIPC firmware for AK3918Ev200
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v2
+
+      - name: Install build dependencies
+        id: install
+        run: |
+          make install-deps
+          mkdir -p tmp
+
+      - name: Free disk space
+        id: freshing
+        run: |
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+
+      - name: Prepare buildroot
+        id: prepare
+        run: |
+          HEAD_TAG=$(git tag --points-at HEAD)
+          GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
+          BRANCH_NAME=$(echo $GITHUB_REF | cut -d'/' -f 3)
+          if [ -z "$HEAD_TAG" ]; then
+            TAG_NAME="latest"
+            RELEASE_NAME="Development Build"
+            PRERELEASE=true
+          else
+            TAG_NAME=${{ github.ref }}
+            RELEASE_NAME="Release ${{ github.ref }}"
+            PRERELEASE=false
+          fi
+          echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          cd $GITHUB_WORKSPACE
+          make prepare
+
+      - name: Build Ak3918ev200 firmware
+        id: build-ak3918ev200-firmware
+        continue-on-error: true
+        run: |
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.ak3918ev200-br.tgz"
+          echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
+          cd $GITHUB_WORKSPACE
+          make PLATFORM=anyka BOARD=unknown_unknown_ak3918ev200_openipc all
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... AK3918EV200" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... AK3918EV200" >> $GITHUB_ENV && exit 1
+          cd ${GITHUB_WORKSPACE}/output/images
+          mv uImage uImage.ak3918ev200
+          mv rootfs.squashfs rootfs.squashfs.ak3918ev200
+          md5sum rootfs.squashfs.ak3918ev200 > rootfs.squashfs.ak3918ev200.md5sum
+          md5sum uImage.ak3918ev200 > uImage.ak3918ev200.md5sum
+          tar -cvzf $ARCHIVE_FW *ak3918ev200*
+
+      - name: Build AK3918Ev200 SDK
+        id: build-ak3918ev200-sdk
+        continue-on-error: true
+        run: |
+          ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
+          echo "ARCHIVE_SDK=$ARCHIVE_SDK" >> $GITHUB_ENV
+          cd $GITHUB_WORKSPACE/output
+          make sdk
+
+      - name: Send warning message to telegram channel
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
+          TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
+        if: steps.build-ak3918ev200-firmware.outcome != 'success' || steps.build-ak3918ev200-sdk.outcome != 'success'
+        run: |
+          TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... AK3918EV200}"
+          TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
+          curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
+            -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
+
+      - name: Create release
+        uses: actions/create-release@v1
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: ${{ env.RELEASE_NAME }}
+          draft: false
+          prerelease: ${{ env.PRERELEASE }}
+
+      - name: Upload FW to release
+        uses: svenstaro/upload-release-action@v2
+        continue-on-error: true
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.ARCHIVE_FW }}
+          asset_name: "openipc.ak3918ev200-br.tgz"
+          tag: ${{ env.TAG_NAME }}
+          overwrite: true
+
+      - name: Upload SDK to release
+        uses: svenstaro/upload-release-action@v2
+        continue-on-error: true
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.ARCHIVE_SDK }}
+          asset_name: "arm-openipc-ak3918ev200-linux-musleabi_sdk-buildroot.tar.gz"
+          tag: ${{ env.TAG_NAME }}
+          overwrite: true
+
+      - name: Send binary file to telegram channel
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
+          TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
+        run: |
+          TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
+          TG_HEADER=$(echo -e "\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9C\x85 GitHub Actions")
+          curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendDocument \
+            -F chat_id=$TG_CHANNEL -F document="@$ARCHIVE_FW" -F caption="$TG_HEADER"
