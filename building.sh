@@ -60,6 +60,12 @@ sdk() {
 
 #################################################################################
 
+ak3918ev200() {
+  soc="ak3918ev200"
+  fresh && make PLATFORM=anyka BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
 fh8833v100() {
   soc="fh8833v100"
   fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -389,6 +395,8 @@ xm550() {
 #################################################################################
 
 # Build firmware
+#
+# ak3918ev200                       # testing..
 #
 # fh8833v100                        # testing..
 # fh8852v100                        # testing..
