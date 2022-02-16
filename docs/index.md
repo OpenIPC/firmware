@@ -26,16 +26,26 @@ _NB! Downloads are for research only, without any guarantee._
 
 | SoC                                                       | U-Boot | Kernel | Rootfs | USB | WiFi | MMC | IPv6 |        D/L         | Status |
 |-----------------------------------------------------------|:------:|:------:|:------:|:---:|:----:|:---:|:----:|:------------------:|--------|
+| Ambarella&nbsp;S2L<br>![AmbaS2L][AmbaS2L]                 |        |        |        |     |      |     |      |                    | R&D    |
 | Ambarella&nbsp;S3L<br>![AmbaS3L][AmbaS3L]                 |        |        |        |     |      |     |      |                    | R&D    |
+| Anyka&nbsp;AK3916Ev301<br>![AK3916Ev301][AK3916Ev301]     |        |        |        |     |      |     |      |                    | R&D    |
+| Anyka&nbsp;AK3918Ev200<br>![AK3918Ev200][AK3918Ev200]     |        |   +    |   +    |     |      |     |      | [⬇][fwAK3918Ev200] | WIP    |
 | Fullhan&nbsp;FH8632<br>![FH8632][FH8632]                  |        |        |        |     |      |     |      |                    | R&D    |
-| Fullhan&nbsp;FH8852<br>![FH8652][FH8852]                  |        |        |        |     |      |     |      |                    | R&D    |
-| Fullhan&nbsp;FH8856<br>![FH8856][FH8856]                  |        |        |        |     |      |     |      |                    | R&D    |
+| Fullhan&nbsp;FH8852v100<br>![FH8652v100][FH8852v100]      |        |   +    |   +    |     |      |     |      | [⬇][fwFH8852v100]  | R&D    |
+| Fullhan&nbsp;FH8852v200<br>![FH8652v200][FH8852v200]      |        |   +    |   +    |     |      |     |      | [⬇][fwFH8852v200]  | R&D    |
+| Fullhan&nbsp;FH8852v210<br>![FH8652v210][FH8852v210]      |        |        |        |     |      |     |      |                    | R&D    |
+| Fullhan&nbsp;FH8856v100<br>![FH8856v100][FH8856v100]      |        |        |        |     |      |     |      |                    | R&D    |
+| Fullhan&nbsp;FH8856v200<br>![FH8856v200][FH8856v200]      |        |   +    |   +    |     |      |     |      | [⬇][fwFH8852v200]  | R&D    |
+| Fullhan&nbsp;FH8856v210<br>![FH8856v210][FH8856v210]      |        |        |        |     |      |     |      |                    | R&D    |
+| Fullhan&nbsp;FH8858v200<br>![FH8858v200][FH8858v200]      |        |        |        |     |      |     |      |                    | R&D    |
+| Fullhan&nbsp;FH8858v210<br>![FH8858v210][FH8858v210]      |        |        |        |     |      |     |      |                    | R&D    |
 | Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  |        |        |        |     |      |     |      |                    | R&D    |
 | Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         |        |        |        |     |      |     |      | [⬇][fwGK7202v300]  | WIP    |
 | Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         |   +    |   +    |   +    |  +  |  +   |     |      | [⬇][fwGK7205v200]  | DONE   |
 | Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |   +    |   +    |   +    |  +  |  +   |     |      | [⬇][fwGK7205v300]  | DONE   |
 | Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         |   +    |   +    |   +    |     |      |     |      | [⬇][fwGK7605v100]  | WIP    |
-| GrainMedia&nbsp;GM8136<br>![GM8136][GM8136]               |        |   +    |   +    |     |      |     |      | [⬇][fwGM8136]      | R&D    |
+| GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               |        |   +    |   +    |     |      |     |      | [⬇][fwGM8135]      | WIP    |
+| GrainMedia&nbsp;GM8136<br>![GM8136][GM8136]               |        |   +    |   +    |     |      |     |      | [⬇][fwGM8136]      | WIP    |
 | HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av100] | WIP    |
 | HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av200] | WIP    |
 | HiSilicon&nbsp;Hi3516Av300<br>![Hi3516Av300][Hi3516Av300] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av300] | WIP    |
@@ -110,10 +120,19 @@ Thank you.
 <a href="https://openipc.org/donation/yoomoney.html"><img src="https://yoomoney.ru/transfer/balance-informer/balance?id=596194605&key=291C29A811B500D7" width="140" alt="YooMoney donate button"></a>
 
 
+[AmbaS2L]: https://img.shields.io/static/v1?label=AmbaS2L&message=help%20needed&color=5500ff&logo=github
 [AmbaS3L]: https://img.shields.io/static/v1?label=AmbaS3L&message=help%20needed&color=5500ff&logo=github
+[AK3916Ev301]: https://img.shields.io/static/v1?label=AK3916Ev301&message=help%20needed&color=5500ff&logo=github
+[AK3918Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/ak3918ev200_images.yml/badge.svg
 [FH8632]: https://img.shields.io/static/v1?label=FH8632&message=help%20needed&color=5500ff&logo=github
-[FH8852]: https://img.shields.io/static/v1?label=FH8852&message=help%20needed&color=5500ff&logo=github
-[FH8856]: https://img.shields.io/static/v1?label=FH8856&message=help%20needed&color=5500ff&logo=github
+[FH8852v100]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v100_images.yml/badge.svg
+[FH8852v200]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v200_images.yml/badge.svg
+[FH8852v210]: https://img.shields.io/static/v1?label=FH8852V210&message=help%20needed&color=5500ff&logo=github
+[FH8856v100]: https://img.shields.io/static/v1?label=FH8856V100&message=help%20needed&color=5500ff&logo=github
+[FH8856v200]: https://github.com/OpenIPC/firmware/actions/workflows/fh8856v200_images.yml/badge.svg
+[FH8856v210]: https://img.shields.io/static/v1?label=FH8856V210&message=help%20needed&color=5500ff&logo=github
+[FH8858v200]: https://img.shields.io/static/v1?label=FH8856V200&message=help%20needed&color=5500ff&logo=github
+[FH8858v210]: https://img.shields.io/static/v1?label=FH8856V210&message=help%20needed&color=5500ff&logo=github
 [GK7102S]: https://img.shields.io/static/v1?label=GK7102S&message=help%20needed&color=5500ff&logo=github
 [GK7202v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7202v300_images.yml/badge.svg
 [GK7205v200]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v200_images.yml/badge.svg
