@@ -35,7 +35,7 @@ _NB! Downloads are for research only, without any guarantee._
 | Fullhan&nbsp;FH8852v200<br>![FH8652v200][FH8852v200]      |        |   +    |   +    |     |      |     |      | [⬇][fwFH8852v200]  | R&D    |
 | Fullhan&nbsp;FH8852v210<br>![FH8652v210][FH8852v210]      |        |        |        |     |      |     |      |                    | R&D    |
 | Fullhan&nbsp;FH8856v100<br>![FH8856v100][FH8856v100]      |        |        |        |     |      |     |      |                    | R&D    |
-| Fullhan&nbsp;FH8856v200<br>![FH8856v200][FH8856v200]      |        |   +    |   +    |     |      |     |      | [⬇][fwFH8852v200]  | R&D    |
+| Fullhan&nbsp;FH8856v200<br>![FH8856v200][FH8856v200]      |        |   +    |   +    |     |      |     |      | [⬇][fwFH8856v200]  | R&D    |
 | Fullhan&nbsp;FH8856v210<br>![FH8856v210][FH8856v210]      |        |        |        |     |      |     |      |                    | R&D    |
 | Fullhan&nbsp;FH8858v200<br>![FH8858v200][FH8858v200]      |        |        |        |     |      |     |      |                    | R&D    |
 | Fullhan&nbsp;FH8858v210<br>![FH8858v210][FH8858v210]      |        |        |        |     |      |     |      |                    | R&D    |
@@ -124,7 +124,7 @@ Thank you.
 [AmbaS3L]: https://img.shields.io/static/v1?label=AmbaS3L&message=help%20needed&color=5500ff&logo=github
 [AK3916Ev301]: https://img.shields.io/static/v1?label=AK3916Ev301&message=help%20needed&color=5500ff&logo=github
 [AK3918Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/ak3918ev200_images.yml/badge.svg
-[FH8632]: https://img.shields.io/static/v1?label=FH8632&message=help%20needed&color=5500ff&logo=github
+[FH8632]: https://img.shields.io/static/v1?label=FH8632&message=no%20equipment&color=ff0000&logo=github
 [FH8852v100]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v100_images.yml/badge.svg
 [FH8852v200]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v200_images.yml/badge.svg
 [FH8852v210]: https://img.shields.io/static/v1?label=FH8852V210&message=help%20needed&color=5500ff&logo=github
@@ -173,10 +173,16 @@ Thank you.
 [XM530]: https://github.com/OpenIPC/firmware/actions/workflows/xm530_images.yml/badge.svg
 [XM550]: https://github.com/OpenIPC/firmware/actions/workflows/xm550_images.yml/badge.svg
 
+
+[fwAK3918Ev200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3918ev200-br.tgz
+[fwFH8852v100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8852v100-br.tgz
+[fwFH8852v200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8852v200-br.tgz
+[fwFH8856v200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8856v200-br.tgz
 [fwGK7202v300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gk7202v300-br.tgz
 [fwGK7205v200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gk7205v200-br.tgz
 [fwGK7205v300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gk7205v300-br.tgz
 [fwGK7605v100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gk7605v100-br.tgz
+[fwGM8135]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gm8135-br.tgz
 [fwGM8136]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.gm8136-br.tgz
 [fwHi3516Av100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516av100-br.tgz
 [fwHi3516Av200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516av200-br.tgz
