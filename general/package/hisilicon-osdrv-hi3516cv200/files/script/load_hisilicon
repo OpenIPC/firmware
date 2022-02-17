@@ -1,15 +1,14 @@
 #!/bin/sh
 #
-# This is part of OpenIPC.org project | 2020.08.01
+# This is part of OpenIPC.org project | 2022.02.17
 #
-# ar0237 imx290 imx307 imx323 imx385 jxf22 ov2718 ov2718_2a sc2235
-
+#
 
 # SoC detect
 chipid=$(ipcinfo --chip_id)
 
 # MMZ config
-mem_start=0x80000000;                             # phy mem start
+mem_start=0x80000000 # phy mem start
 
 mem_total=$(fw_printenv -n totalmem | tr -d 'M')
 mem_total=${mem_total:=64}
@@ -17,21 +16,18 @@ mem_total=${mem_total:=64}
 os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
 
-report_error()
-{
+report_error() {
         echo "******* Error: There's something wrong, please check! *****"
         exit 1
 }
 
-insert_mmz()
-{
+insert_mmz() {
         insmod mmz.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
 }
 
-insert_detect()
-{
+insert_detect() {
         cd /lib/modules/4.9.37/hisilicon
-        insmod sys_config.ko vi_vpss_online=$b_arg_online sensor=unknown pin_mux_select=0 
+        insmod sys_config.ko vi_vpss_online=$b_arg_online sensor=unknown pin_mux_select=0
         insert_mmz
         insmod hi_media.ko
         insmod hi3518e_base.ko
@@ -42,8 +38,7 @@ insert_detect()
         SENSOR=ar0130 insert_sns
 }
 
-remove_detect()
-{
+remove_detect() {
         rmmod sensor_spi
         rmmod sensor_i2c
         rmmod hi3518e_isp
@@ -54,20 +49,18 @@ remove_detect()
         rmmod sys_config.ko
 }
 
-insert_audio()
-{
+insert_audio() {
         insmod acodec.ko
         insmod hi3518e_aio.ko
         insmod hi3518e_ai.ko
         insmod hi3518e_ao.ko
         insmod hi3518e_aenc.ko
         insmod hi3518e_adec.ko
-        #insmod extdrv/tlv_320aic31.ko 
+        #insmod extdrv/tlv_320aic31.ko
         echo "insert audio"
 }
 
-remove_audio()
-{
+remove_audio() {
         rmmod tlv_320aic31.ko
         rmmod hi3518e_adec
         rmmod hi3518e_aenc
@@ -78,95 +71,92 @@ remove_audio()
         echo "remove audio"
 }
 
-remove_sns()
-{
-        rmmod sensor_spi &> /dev/null
-        rmmod sensor_i2c &> /dev/null
+remove_sns() {
+        rmmod sensor_spi &>/dev/null
+        rmmod sensor_i2c &>/dev/null
 }
 
-insert_isp()
-{
-    case $SENSOR in
-        ov9750)
-            insmod hi3518e_isp.ko update_pos=1;
-            ;;
-        *)
-            insmod hi3518e_isp.ko update_pos=0 proc_param=1;
-            ;;
-    esac
-}
-
-insert_sns()
-{
+insert_isp() {
         case $SENSOR in
-                9m034|ar0130|jxf22|ov9732|sc1235|sc2235)
-                        devmem 0x200f0040 32 0x2;                            # I2C0_SCL
-                        devmem 0x200f0044 32 0x2;                            # I2C0_SDA
- 
-                        # Cmos pinmux
-                        devmem 0x200f007c 32 0x1;                            # VI_DATA13
-                        devmem 0x200f0080 32 0x1;                            # VI_DATA10
-                        devmem 0x200f0084 32 0x1;                            # VI_DATA12
-                        devmem 0x200f0088 32 0x1;                            # VI_DATA11
-                        devmem 0x200f008c 32 0x2;                            # VI_VS
-                        devmem 0x200f0090 32 0x2;                            # VI_HS
-                        devmem 0x200f0094 32 0x1;                            # VI_DATA9
-
-                        devmem 0x2003002c 32 0xc4001;                        # Sensor unreset, clk 24MHz, VI 99MHz
-                        ;;
-
-		sc1135|sc1145|sc2135)
-			devmem 0x200f0040 32 0x2;	# I2C0_SCL
-			devmem 0x200f0044 32 0x2;	# I2C0_SDA
-			# Cmos pinmux
-			devmem 0x200f007c 32 0x1;	# VI_DATA13
-			devmem 0x200f0080 32 0x1;	# VI_DATA10
-			devmem 0x200f0084 32 0x1;	# VI_DATA12
-			devmem 0x200f0088 32 0x1;	# VI_DATA11
-			devmem 0x200f008c 32 0x2;	# VI_VS
-			devmem 0x200f0090 32 0x2;	# VI_HS
-			devmem 0x200f0094 32 0x1;	# VI_DATA9
-			devmem 0x2003002c 32 0xb4001;	# clk 27MHz, VI 99MHz
-			;;
-
-                *)
-                        echo "xxxx Invalid sensor type $SENSOR xxxx"
-                        report_error;;
+        ov9750)
+                insmod hi3518e_isp.ko update_pos=1
+                ;;
+        *)
+                insmod hi3518e_isp.ko update_pos=0 proc_param=1
+                ;;
         esac
 }
-insert_ko()
-{
+
+insert_sns() {
+        case $SENSOR in
+        9m034 | ar0130 | jxf22 | ov9732 | jxh62 | sc1235 | sc2235)
+                devmem 0x200f0040 32 0x2 # I2C0_SCL
+                devmem 0x200f0044 32 0x2 # I2C0_SDA
+
+                # Cmos pinmux
+                devmem 0x200f007c 32 0x1 # VI_DATA13
+                devmem 0x200f0080 32 0x1 # VI_DATA10
+                devmem 0x200f0084 32 0x1 # VI_DATA12
+                devmem 0x200f0088 32 0x1 # VI_DATA11
+                devmem 0x200f008c 32 0x2 # VI_VS
+                devmem 0x200f0090 32 0x2 # VI_HS
+                devmem 0x200f0094 32 0x1 # VI_DATA9
+
+                devmem 0x2003002c 32 0xc4001 # Sensor unreset, clk 24MHz, VI 99MHz
+                ;;
+
+        sc1135 | sc1145 | sc2135)
+                devmem 0x200f0040 32 0x2 # I2C0_SCL
+                devmem 0x200f0044 32 0x2 # I2C0_SDA
+                # Cmos pinmux
+                devmem 0x200f007c 32 0x1     # VI_DATA13
+                devmem 0x200f0080 32 0x1     # VI_DATA10
+                devmem 0x200f0084 32 0x1     # VI_DATA12
+                devmem 0x200f0088 32 0x1     # VI_DATA11
+                devmem 0x200f008c 32 0x2     # VI_VS
+                devmem 0x200f0090 32 0x2     # VI_HS
+                devmem 0x200f0094 32 0x1     # VI_DATA9
+                devmem 0x2003002c 32 0xb4001 # clk 27MHz, VI 99MHz
+                ;;
+
+        *)
+                echo "xxxx Invalid sensor type $SENSOR xxxx"
+                report_error
+                ;;
+        esac
+}
+insert_ko() {
         # sys config
-        insmod sys_config.ko vi_vpss_online=$b_arg_online sensor=$SENSOR pin_mux_select=0 
+        insmod sys_config.ko vi_vpss_online=$b_arg_online sensor=$SENSOR pin_mux_select=0
 
         # driver load
-        insert_mmz;
+        insert_mmz
         #insmod mmz.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
         insmod hi_media.ko
         insmod hi3518e_base.ko
 
         insmod hi3518e_sys.ko vi_vpss_online=$b_arg_online sensor=$SENSOR mem_total=$mem_total
-        if [[ $? -ne 0 ]]; then 
-                exit;
+        if [[ $? -ne 0 ]]; then
+                exit
         fi
 
         insmod hi3518e_tde.ko
         insmod hi3518e_region.ko
         insmod hi3518e_vgs.ko
 
-        insert_isp;
-        insmod hi3518e_viu.ko detect_err_frame=10;
-        insmod hi3518e_vpss.ko rfr_frame_comp=1;
+        insert_isp
+        insmod hi3518e_viu.ko detect_err_frame=10
+        insmod hi3518e_vpss.ko rfr_frame_comp=1
         #insmod hi3518e_vou.ko
         #insmod hi3518e_vou.ko transparentTransmit=1 #enable transparentTransmit
         #insmod hifb.ko video="hifb:vram0_size:1620"     # default pal
 
         insmod hi3518e_rc.ko
-        insmod hi3518e_venc.ko 
+        insmod hi3518e_venc.ko
         insmod hi3518e_chnl.ko ChnlLowPower=1
         insmod hi3518e_h264e.ko H264eMiniBufMode=1
         insmod hi3518e_jpege.ko
-        insmod hi3518e_ive.ko save_power=0;
+        insmod hi3518e_ive.ko save_power=0
         #insmod hi3518e_ive.ko
         insmod sensor_i2c.ko
         insmod pwm.ko
@@ -179,8 +169,7 @@ insert_ko()
         echo "==== Your input Sensor type is $SENSOR ===="
 }
 
-remove_ko()
-{
+remove_ko() {
         rmmod wdt
         rmmod sys_config.ko
         remove_audio
@@ -216,40 +205,34 @@ remove_ko()
 
 load_usage()
 {
-        echo "Usage:  ./load3518e [-option] [sensor_name]"
-        echo "options:"
-        echo "    -i                       insert modules"
-        echo "    -r                       remove modules"
-        echo "    -a                       remove modules first, then insert modules"
-        echo "    -sensor sensor_name      config sensor type [default: ar0230]"
-        echo "    -osmem os_mem_size       config os mem size [unit: M, default: 32]"
-        echo "    -total_mem_size          config total mem size [unit: M, default: 64]"
-        echo "    -offline                 vi/vpss offline"
-        echo "    -h                       help information"
-        echo -e "Available sensors: imx222 9m034 ov9752 ar0230 ar0130 ov9712 mn34222"
-        echo -e "notes: osmem option can't be used when mmz zone partition is enable\n\n"
-        echo -e "for example online:   ./load3518e -a -sensor ar0230 -osmem 32 -total 64\n"
-        echo -e "            offline:  ./load3518e -a -sensor ar0230 -osmem 32 -total 64 -offline\n"
+	echo "Usage:  ./load_hisilicon [-option] [sensor_name]"
+	echo "options:"
+	echo "    -i                       insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a                       remove modules first, then insert modules"
+	echo "    -sensor sensor_name      config sensor type [default: imx307]"
+	echo "    -h                       help information"
+	echo -e "Available sensors: gc2053 imx307 imx327 imx335 os05a sc2231 sc2235 sc4236 sc3235 sc4236 etc."
+	echo -e "for example: ./load_hisilicon -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
 }
 
-calc_mmz_info()
-{
-        mmz_start=`echo "$mem_start $os_mem_size" | 
-        awk 'BEGIN { temp = 0; }
+
+calc_mmz_info() {
+        mmz_start=$(echo "$mem_start $os_mem_size" |
+                awk 'BEGIN { temp = 0; }
         {
                 temp = $1/1024/1024 + $2;
         } 
-        END { printf("0x%x00000\n", temp); }'`
+        END { printf("0x%x00000\n", temp); }')
 
-        mmz_size=`echo "$mem_total $os_mem_size" | 
-        awk 'BEGIN { temp = 0; }
+        mmz_size=$(echo "$mem_total $os_mem_size" |
+                awk 'BEGIN { temp = 0; }
         {
                 temp = $1 - $2;
         } 
-        END { printf("%dM\n", temp); }'`
+        END { printf("%dM\n", temp); }')
         echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
 }
-
 
 ######################parse arg###################################
 b_arg_os_mem=0
@@ -259,75 +242,74 @@ b_arg_insmod=0
 b_arg_remove=0
 b_arg_online=1
 
-for arg in $@
-do
+for arg in $@; do
         if [ $b_arg_total_mem -eq 1 ]; then
-                b_arg_total_mem=0;
-                mem_total=$arg;
+                b_arg_total_mem=0
+                mem_total=$arg
 
                 if [ -z $mem_total ]; then
                         echo "[error] mem_total is null"
-                        exit;
+                        exit
                 fi
         fi
 
-        if [ $b_arg_os_mem -eq 1 ] ; then
-                b_arg_os_mem=0;
-                os_mem_size=$arg;
+        if [ $b_arg_os_mem -eq 1 ]; then
+                b_arg_os_mem=0
+                os_mem_size=$arg
 
                 if [ -z $os_mem_size ]; then
                         echo "[error] os_mem_size is null"
-                        exit;
+                        exit
                 fi
         fi
 
-        if [ $b_arg_sensor -eq 1 ] ; then
+        if [ $b_arg_sensor -eq 1 ]; then
                 b_arg_sensor=0
-                SENSOR=$arg;
+                SENSOR=$arg
         fi
 
         case $arg in
-                "-i")
-                        b_arg_insmod=1;
-                        ;;
-                "-r")
-                        b_arg_remove=1;
-                        ;;
-                "-a")
-                        b_arg_insmod=1;
-                        b_arg_remove=1;
-                        ;;
-                "-h")
-                        load_usage;
-                        ;;
-                "-sensor")
-                        b_arg_sensor=1;
-                        ;;
-                "-osmem")
-                        b_arg_os_mem=1;
-                        ;;
-                "-total")
-                        b_arg_total_mem=1;
-                        ;;
-                "-offline")
-                        b_arg_online=0;
-                        ;;
+        "-i")
+                b_arg_insmod=1
+                ;;
+        "-r")
+                b_arg_remove=1
+                ;;
+        "-a")
+                b_arg_insmod=1
+                b_arg_remove=1
+                ;;
+        "-h")
+                load_usage
+                ;;
+        "-sensor")
+                b_arg_sensor=1
+                ;;
+        "-osmem")
+                b_arg_os_mem=1
+                ;;
+        "-total")
+                b_arg_total_mem=1
+                ;;
+        "-offline")
+                b_arg_online=0
+                ;;
         esac
 done
 #######################parse arg end########################
 
-if [ $os_mem_size -ge $mem_total ] ; then
+if [ $os_mem_size -ge $mem_total ]; then
         echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
-        exit;
+        exit
 fi
 
-calc_mmz_info;
+calc_mmz_info
 
 #######################Action###############################
 
 if [ $# -lt 1 ]; then
-    load_usage;
-    exit 0;
+        load_usage
+        exit 0
 fi
 
 # Sensor config
@@ -352,7 +334,7 @@ else
 fi
 
 if [ $b_arg_remove -eq 1 ]; then
-        remove_ko;
+        remove_ko
 fi
 
 if [ "$SENSOR" = "unknown" ]; then
@@ -360,6 +342,6 @@ if [ "$SENSOR" = "unknown" ]; then
 else
         if [ $b_arg_insmod -eq 1 ]; then
                 cd /lib/modules/4.9.37/hisilicon
-                insert_ko;
+                insert_ko
         fi
 fi
