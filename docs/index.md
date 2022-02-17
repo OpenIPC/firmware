@@ -70,9 +70,9 @@ _NB! Downloads are for research only, without any guarantee._
 | Ingenic&nbsp;T31<br>![T31][T31]                           |        |        |        |     |      |     |      |                    | R&D    |
 | MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 |        |        |        |     |      |     |      |                    | R&D    |
 | MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 |        |        |        |     |      |     |      |                    | R&D    |
-| Novatek&nbsp;NT98562<br>![NT98562][NT98562]               |        |        |        |     |      |     |      |   [⬇][fwNT98562]   | R&D    |
-| Novatek&nbsp;NT98566<br>![NT98566][NT98566]               |        |        |        |     |      |     |      |   [⬇][fwNT98566]   | R&D    |
-| SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                |        |   +    |   +    |     |      |     |      |   [⬇][fwSSC325]    | R&D    |
+| Novatek&nbsp;NT98562<br>![NT98562][NT98562]               |        |   +    |   +    |     |      |     |      |   [⬇][fwNT98562]   | WIP    |
+| Novatek&nbsp;NT98566<br>![NT98566][NT98566]               |        |   +    |   +    |     |      |     |      |   [⬇][fwNT98566]   | WIP    |
+| SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                |        |   +    |   +    |     |      |     |      |   [⬇][fwSSC325]    | WIP    |
 | SigmaStar&nbsp;SSC335<br>![SSC335][SSC335]                |        |   +    |   +    |  +  |      |  +  |      |   [⬇][fwSSC335]    | MVP    |
 | SigmaStar&nbsp;SSC337<br>![SSC337][SSC337]                |        |   +    |   +    |  +  |      |  +  |      |   [⬇][fwSSC337]    | MVP    |
 | SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          |        |   +    |   +    |     |      |     |      |  [⬇][fwSSC337DE]   | TEST   |
