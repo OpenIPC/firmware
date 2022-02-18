@@ -6,6 +6,7 @@
 set -e
 
 soc=$(fw_printenv -n soc) || (echo -e "\n\e[1;31mSOC not defined in U-Boot ENV...\e[0m\n"; exit 1)
+vendor=$(ipcinfo --vendor)
 kernel=$(awk -F ':' '/"kernel"/ {print $1}' /proc/mtd)
 rootfs=$(awk -F ':' '/"rootfs"/ {print $1}' /proc/mtd)
 overlay=$(awk -F ':' '/"rootfs_data"/ {print $1}' /proc/mtd)
@@ -19,6 +20,11 @@ stop_services() {
   echo -e "\n\e[1;31mForced shutdown of services...\e[0m\n"
   killall majestic || true
   killall crond klogd ntpd rngd syslogd || true
+}
+
+unload_modules() {
+  echo -e "\n\e[1;31mUnload vendor specific modules...\e[0m\n"
+  load_$vendor -r >/dev/null 2>&1
 }
 
 check_memory() {
@@ -250,4 +256,5 @@ if [ $remotely -eq 1 ]; then
 fi
 
 stop_services
+unload_modules
 download_firmware "${url}" && check_memory && writing_kernel "${kernel_file}" && writing_rootfs "${rootfs_file}" && sleep 1 && clearing_overlayfs && quick_reboot
