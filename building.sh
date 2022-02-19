@@ -66,6 +66,7 @@ ak3918ev200() {
 }
 
 #################################################################################
+
 fh8833v100() {
   soc="fh8833v100"
   fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -76,28 +77,23 @@ fh8852v100() {
   fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
-fh8856v100() {
-  soc="fh8856v100"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
 fh8852v200() {
   soc="fh8852v200"
   fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
-fh8856v200() {
-  soc="fh8856v200"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-fh8858v200() {
-  soc="fh8858v200"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
 fh8852v210() {
   soc="fh8852v210"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+fh8856v100() {
+  soc="fh8856v100"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+fh8856v200() {
+  soc="fh8856v200"
   fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
@@ -107,6 +103,11 @@ fh8856v210() {
 }
 
 fh8858v200() {
+  soc="fh8858v200"
+  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+fh8858v210() {
   soc="fh8858v210"
   fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
 }
@@ -134,6 +135,11 @@ gk7205v300() {
 }
 
 #################################################################################
+
+gm8135() {
+  soc="gm8135"
+  fresh && make PLATFORM=grainmedia BOARD=unknown_unknown_${soc}_openipc all && rename
+}
 
 gm8136() {
   soc="gm8136"
@@ -396,21 +402,23 @@ xm550() {
 
 # Build firmware
 #
-# ak3918ev200                       # testing..
-#
-# fh8833v100                        # testing..
-# fh8852v100                        # testing..
-# fh8856v100                        # testing..
-#
-fh8852v200                        # testing..
-# fh8856v200                        # testing..
-# fh8858v200                        # testing..
-# fh8852v210                        # testing..
-# fh8856v210                        # testing..
-# fh8858v210                        # testing..
+# ak3918ev200                   # testing..
 #
 #######
 #
+# fh8833v100                    # testing..
+# fh8852v100                    # testing..
+# fh8852v200                    # testing..
+# fh8852v210                    # testing..
+# fh8856v100                    # testing..
+# fh8856v200                    # testing..
+# fh8856v210                    # testing..
+# fh8858v200                    # testing..
+# fh8858v210                    # testing..
+#
+#######
+#
+# gm8135                        # testing..
 # gm8136                        # testing..
 #
 #######
@@ -448,7 +456,7 @@ fh8852v200                        # testing..
 # hi3516ev300                   # OpenIPC
 # hi3516ev300_dev               # OpenIPC development
 # hi3516ev300_glibc             # testing..
-#hi3516ev300_tehshield         # Tehshield
+# hi3516ev300_tehshield         # Tehshield
 # hi3516ev300_ultimate          # OpenIPC_ultimate version
 # hi3518ev300                   # OpenIPC
 #
