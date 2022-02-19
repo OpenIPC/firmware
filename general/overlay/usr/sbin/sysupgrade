@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20211214
+# OpenIPC.org | v.20220217
 #
 
 set -e
@@ -69,7 +69,7 @@ check_release() {
   echo -e "\e[1;32m${3}:       new release: ${2}\e[0m\n"
   if [ "${1}" = "${2}" ]; then
     echo -e "\n\e[1;31m${3} has the same release version, skipping...\e[0m\n"
-    return 0  
+    return 0
   else
     return 1
   fi
@@ -96,10 +96,10 @@ mount_rootfs() {
 writing_kernel() {
   if [ $update_kernel -eq 1 ]; then
     check_sum "${1}" "Kernel"
-    
+
     new_kernelrelease=0x$(xxd -l 4 -s 8 -p "${1}" | xargs)
     check_release "${kernelrelease}" "${new_kernelrelease}" "Kernel" && return 0
-    
+
     new_soc=$(od -N 32 -j 32 "${1}" -S 1 -A none | cut -d- -f3)
     check_soc "${new_soc}" "Kernel"
 
