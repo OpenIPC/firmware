@@ -30,7 +30,7 @@ rename() {
 }
 
 rename_initramfs() {
-  [[ $(stat --printf="%s" ./output/images/uImage) -gt 4097152 ]] && TG_NOTIFY="Warning: kernel size exceeded : $(stat --printf="%s" ./output/images/uImage) vs 2097152" && exit 1
+  [[ $(stat --printf="%s" ./output/images/uImage) -gt 4097152 ]] && TG_NOTIFY="Warning: kernel size exceeded : $(stat --printf="%s" ./output/images/uImage) vs 4097152" && exit 1
   #
   mv -v ./output/images/uImage ./output/images/uImage.initramfs.${soc}
   mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${soc}.cpio
