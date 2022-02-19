@@ -24,7 +24,7 @@ stop_services() {
 
 unload_modules() {
   echo -e "\n\e[1;31mUnload vendor specific modules...\e[0m\n"
-  load_$vendor -r >/dev/null 2>&1
+  load_$vendor -r >/dev/null 2>&1 || true
 }
 
 check_memory() {
