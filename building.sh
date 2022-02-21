@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# OpenIPC.org | v.20220102
+# OpenIPC.org | v.20220221
 #
 
 clone() {
@@ -132,6 +132,11 @@ gk7205v200_ufanet() {
 gk7205v300() {
   soc="gk7205v300"
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+gk7205v300_fpv() {
+  soc="gk7205v300"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_fpv all && rename
 }
 
 #################################################################################
@@ -428,6 +433,7 @@ xm550() {
 # gk7205v200_fpv                # FPV
 # gk7205v200_ufanet             # Ufanet
 # gk7205v300                    # OpenIPC
+# gk7205v300_fpv                # FPV
 # gk7605v100                    # testing..
 #
 #######
