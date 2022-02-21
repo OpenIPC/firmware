@@ -1,0 +1,39 @@
+-------
+ATHEROS
+-------
+
+1) Для сборки с драйверами Atheros включить опции ядра в соотвествующем плате конфиге:
+
+br-ext-chip-goke/board/gk7205v200/kernel/gk7205v200.generic-fpv.config
+br-ext-chip-goke/board/gk7205v200/kernel/gk7205v300.generic-fpv.config
+
+CONFIG_WLAN_VENDOR_ATH=y
+CONFIG_ATH9K_HTC=m
+
+2) Выбрать необходимые пакеты в конфиге соответствующем плате:
+
+br-ext-chip-goke/configs/unknown_unknown_gk7205v200_fpv_defconfig
+br-ext-chip-goke/configs/unknown_unknown_gk7205v300_fpv_defconfig
+
+BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_ATHEROS_9271=y
+
+-------
+REALTEK
+-------
+
+1) Выбрать необходимые пакеты в конфиге соответствующем плате:
+
+br-ext-chip-goke/configs/unknown_unknown_gk7205v200_fpv_defconfig
+br-ext-chip-goke/configs/unknown_unknown_gk7205v300_fpv_defconfig
+
+BR2_PACKAGE_RTL8812AU_OPENIPC=y
+
+------
+
+Перед началом сборки закоментировать в скрипте строку с удалением libstdc++:
+
+scripts/executing_commands_for_musl.sh
+
+# rm -f ${TARGET_DIR}/usr/lib/libstdc++*
+
+!!!ACTHUNG!!! Оба драйвера с большой вероятностью не поместятся в сборку, потому собирать по принципу 1 прошивка 1 драйвер. Majestic не включен в стандартную сборку, после прошивки его необходимо загрузить отдельно.
