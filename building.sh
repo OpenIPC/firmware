@@ -3,6 +3,11 @@
 # OpenIPC.org | v.20220102
 #
 
+MAX_KERNEL_SIZE=0x200000               #    2MiB,  2097152
+MAX_KERNEL_SIZE_EXPERIMENTAL=0x3E8480  # ~3.9MiB,  4097152
+MAX_ROOTFS_SIZE=0x500000               #    5MiB,  5242880
+MAX_KERNEL_SIZE_ULTIMATE=0xC80000      # 12,5MiB, 13107200
+
 clone() {
   sudo apt-get update -y ; apt-get install -y bc build-essential git unzip rsync autotools-dev automake libtool
   git clone --depth=1 https://github.com/OpenIPC/firmware.git
@@ -15,12 +20,21 @@ fresh() {
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
 }
 
+should_fit() {
+  filename=$1
+  maxsize=$2
+  filesize=$(stat --printf="%s" ./output/images/$filename)
+  if [[ $filesize -gt $MAX_KERNEL_SIZE ]]; then
+    export TG_NOTIFY="Warning: $filename is too large: $filesize vs $maxsize"
+    exit 1
+  fi
+}
+
 rename() {
-  [[ $(stat --printf="%s" ./output/images/uImage) -gt 2097152 ]] && TG_NOTIFY="Warning: kernel size exceeded : $(stat --printf="%s" ./output/images/uImage) vs 2097152" && exit 1
-  [[ $(stat --printf="%s" ./output/images/rootfs.squashfs) -gt 5242880 ]] && TG_NOTIFY="Warning: rootfs size exceeded - $(stat --printf="%s" ./output/images/rootfs.squashfs) vs 5242880" && exit 1
+  should_fit uImage $MAX_KERNEL_SIZE
+  should_fit rootfs.squashfs $MAX_ROOTFS_SIZE
   # If board have "_ultimate" as part...
-  #[[ $(stat --printf="%s" ./output/images/rootfs.squashfs) -gt 13107200 ]] && TG_NOTIFY="Warning: rootfs size exceeded - $(stat --printf="%s" ./output/images/rootfs.squashfs) vs 13107200" && exit 1
-  #
+  # should_fit rootfs.squashfs $MAX_ROOTFS_SIZE_ULTIMATE
   mv -v ./output/images/uImage ./output/images/uImage.${soc}
   mv -v ./output/images/rootfs.squashfs ./output/images/rootfs.squashfs.${soc}
   mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${soc}.cpio
@@ -30,8 +44,7 @@ rename() {
 }
 
 rename_initramfs() {
-  [[ $(stat --printf="%s" ./output/images/uImage) -gt 4097152 ]] && TG_NOTIFY="Warning: kernel size exceeded : $(stat --printf="%s" ./output/images/uImage) vs 4097152" && exit 1
-  #
+  should_fit uImage $MAX_KERNEL_SIZE_EXPERIMENTAL
   mv -v ./output/images/uImage ./output/images/uImage.initramfs.${soc}
   mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${soc}.cpio
   mv -v ./output/images/rootfs.tar ./output/images/rootfs.${soc}.tar
