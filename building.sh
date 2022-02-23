@@ -1,12 +1,14 @@
 #!/bin/bash
 #
-# OpenIPC.org | v.20220221
+# OpenIPC.org | v.20220223
 #
 
 MAX_KERNEL_SIZE=0x200000               #    2MiB,  2097152
 MAX_KERNEL_SIZE_EXPERIMENTAL=0x3E8480  # ~3.9MiB,  4097152
 MAX_ROOTFS_SIZE=0x500000               #    5MiB,  5242880
 MAX_KERNEL_SIZE_ULTIMATE=0xC80000      # 12,5MiB, 13107200
+
+export REQUIRE_LIBSTDC=0
 
 clone() {
   sudo apt-get update -y ; apt-get install -y bc build-essential git unzip rsync autotools-dev automake libtool
@@ -24,7 +26,7 @@ should_fit() {
   filename=$1
   maxsize=$2
   filesize=$(stat --printf="%s" ./output/images/$filename)
-  if [[ $filesize -gt $MAX_KERNEL_SIZE ]]; then
+  if [[ $filesize -gt $maxsize ]]; then
     export TG_NOTIFY="Warning: $filename is too large: $filesize vs $maxsize"
     exit 1
   fi
@@ -133,6 +135,7 @@ gk7205v200() {
 }
 
 gk7205v200_fpv() {
+  export REQUIRE_LIBSTDC=1
   soc="gk7205v200"
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_fpv all && rename
 }
@@ -148,6 +151,7 @@ gk7205v300() {
 }
 
 gk7205v300_fpv() {
+  export REQUIRE_LIBSTDC=1
   soc="gk7205v300"
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_fpv all && rename
 }
