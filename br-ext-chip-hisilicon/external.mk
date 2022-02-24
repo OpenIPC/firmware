@@ -1,10 +1,11 @@
 include $(BR2_EXTERNAL_HISILICON_PATH)/linux/linux-ext-hisi_patcher.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisi_patcher/hisi_patcher.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/aura-httpd/aura-httpd.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/gdbserver-lite/gdbserver-lite.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/f2fs-tools-openipc/f2fs-tools-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/gdbserver-lite/gdbserver-lite.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisi_gpio/hisi_gpio.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-opensdk/hisilicon-opensdk.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516av100/hisilicon-osdrv-hi3516av100.mk
