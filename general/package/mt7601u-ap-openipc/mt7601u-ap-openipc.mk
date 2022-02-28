@@ -4,7 +4,6 @@
 #
 ################################################################################
 
-
 MT7601U_AP_OPENIPC_VERSION = fd4a47e55af879f8a1affb89cfc1e91b8aa45306
 MT7601U_AP_OPENIPC_SITE = $(call github,muratdemirtas,MT7601u,$(MT7601U_AP_OPENIPC_VERSION))
 

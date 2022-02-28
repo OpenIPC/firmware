@@ -19,5 +19,4 @@ define MAJESTIC_HI3519V101_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/majestic
 endef
 
-
 $(eval $(generic-package))
