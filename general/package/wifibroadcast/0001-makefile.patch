@@ -6,11 +6,11 @@
 -COMMIT ?= $(shell git rev-parse HEAD)
 -VERSION ?= $(shell $(PYTHON) ./version.py $(shell git show -s --format="%ct" $(shell git rev-parse HEAD)) $(shell git rev-parse --abbrev-ref HEAD))
 +VERSION ?= $(shell git rev-parse HEAD)
-
+ 
 -export VERSION COMMIT
 +LDFLAGS := -lrt -lpcap -lsodium
 +CFLAGS := -Wall -O2 -DWFB_VERSION='"$(VERSION)"'
-
+ 
 -_LDFLAGS := $(LDFLAGS) -lrt -lpcap -lsodium
 -_CFLAGS := $(CFLAGS) -Wall -O2 -DWFB_VERSION='"$(VERSION)-$(shell /bin/bash -c '_tmp=$(COMMIT); echo $${_tmp::8}')"'
 -
@@ -25,23 +25,23 @@
 -gs.key: wfb_keygen
 -	@if ! [ -f gs.key ]; then ./wfb_keygen; fi
 +all: wfb_rx wfb_tx wfb_keygen
-
+ 
  src/%.o: src/%.c src/*.h
 -	$(CC) $(_CFLAGS) -std=gnu99 -c -o $@ $<
 +	$(CC) $(CFLAGS) -std=gnu99 -c -o $@ $<
-
+ 
  src/%.o: src/%.cpp src/*.hpp src/*.h
 -	$(CXX) $(_CFLAGS) -std=gnu++11 -c -o $@ $<
 +	$(CXX) $(CFLAGS) -std=gnu++11 -c -o $@ $<
-
+ 
  wfb_rx: src/rx.o src/radiotap.o src/fec.o src/wifibroadcast.o
 -	$(CXX) -o $@ $^ $(_LDFLAGS)
 +	$(CXX) -o $@ $^ $(LDFLAGS)
-
+ 
  wfb_tx: src/tx.o src/fec.o src/wifibroadcast.o
 -	$(CXX) -o $@ $^ $(_LDFLAGS)
 +	$(CXX) -o $@ $^ $(LDFLAGS)
-
+ 
  wfb_keygen: src/keygen.o
 -	$(CC) -o $@ $^ $(_LDFLAGS)
 -
@@ -63,7 +63,7 @@
 -	$(PYTHON) ./setup.py bdist --plat-name linux-$(ARCH)
 -	rm -rf wifibroadcast.egg-info/
 +	$(CC) -o $@ $^ $(LDFLAGS)
-
+ 
  clean:
 -	rm -rf env wfb_rx wfb_tx wfb_keygen dist deb_dist build wifibroadcast.egg-info _trial_temp *~ src/*.o
 -

@@ -2,9 +2,9 @@
 +++ b/Makefile	2021-12-18 12:07:01.433235328 +0200
 @@ -2055,6 +2056,7 @@
  else
-
+ 
  export CONFIG_RTL8188EU = m
 +EXTRA_CFLAGS += -DCONFIG_AP_MODE -DCONFIG_RTW_HOSTAPD_ACS -DCONFIG_RTW_MESH
-
+ 
  all: modules
-
+ 
