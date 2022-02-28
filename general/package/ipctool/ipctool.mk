@@ -18,5 +18,4 @@ define IPCTOOL_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/ipcinfo
 endef
 
-
 $(eval $(cmake-package))
