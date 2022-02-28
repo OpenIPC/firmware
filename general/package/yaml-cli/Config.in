@@ -1,6 +1,6 @@
 config BR2_PACKAGE_YAML_CLI
-	select BR2_PACKAGE_LIBYAML
 	bool "yaml-cli"
+	select BR2_PACKAGE_LIBYAML
 	help
 	  yaml-cli - console configurator for YAML files
 

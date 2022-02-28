@@ -32,5 +32,3 @@ endif
 LAME_OPENIPC_POST_CONFIGURE_HOOKS += LAME_OPENIPC_BIGENDIAN_ARCH
 
 $(eval $(autotools-package))
-
-

@@ -9,7 +9,6 @@ NOVATEK_OSDRV_NT9856X_SITE =
 NOVATEK_OSDRV_NT9856X_LICENSE = MIT
 NOVATEK_OSDRV_NT9856X_LICENSE_FILES = LICENSE
 
-
 define NOVATEK_OSDRV_NT9856X_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/script/S95novatek
@@ -87,7 +86,6 @@ define NOVATEK_OSDRV_NT9856X_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/lib/libhdal.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/lib/libvendor_isp.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/lib/libvos.so
-
 endef
 
 $(eval $(generic-package))

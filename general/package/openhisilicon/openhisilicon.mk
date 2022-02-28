@@ -13,6 +13,5 @@ OPENHISILICON_MODULE_MAKE_OPTS = \
 	KVER=$(LINUX_VERSION_PROBED) \
 	KSRC=$(LINUX_DIR)
 
-
 $(eval $(kernel-module))
 $(eval $(generic-package))

@@ -25,5 +25,4 @@ define MAJESTIC_HI3516EV300_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/majestic
 endef
 
-
 $(eval $(generic-package))
