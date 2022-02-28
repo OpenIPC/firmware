@@ -9,7 +9,6 @@ HISILICON_OSDRV_HI3516AV100_SITE =
 HISILICON_OSDRV_HI3516AV100_LICENSE = MIT
 HISILICON_OSDRV_HI3516AV100_LICENSE_FILES = LICENSE
 
-
 define HISILICON_OSDRV_HI3516AV100_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516av100/files/script/S95hisilicon
@@ -91,7 +90,6 @@ define HISILICON_OSDRV_HI3516AV100_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516av100/files/lib/libtde.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516av100/files/lib/libupvqe.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516av100/files/lib/libVoiceEngine.so
-
 endef
 
 $(eval $(generic-package))

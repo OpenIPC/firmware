@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MCOOKIE_LICENSE = Public Domain
+XMDP_LICENSE = Public Domain
 
 define XMDP_EXTRACT_CMDS
 	cp package/x11r7/mcookie/mcookie.c $(@D)/

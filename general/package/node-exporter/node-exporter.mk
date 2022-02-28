@@ -10,7 +10,6 @@ NODE_EXPORTER_LICENSE = MIT
 NODE_EXPORTER_LICENSE_FILES = LICENSE
 NODE_EXPORTER_INSTALL_STAGING = YES
 
-
 define NODE_EXPORTER_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(TOPDIR)/../general/package/node-exporter/files/script/S99node-exporter
@@ -23,9 +22,3 @@ define NODE_EXPORTER_INSTALL_TARGET_CMDS
 endef
 
 $(eval $(generic-package))
-
-
-
-
-
-

@@ -9,7 +9,6 @@ XIONGMAI_OSDRV_XM530_SITE =
 XIONGMAI_OSDRV_XM530_LICENSE = MIT
 XIONGMAI_OSDRV_XM530_LICENSE_FILES = LICENSE
 
-
 define XIONGMAI_OSDRV_XM530_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai-osdrv-xm530/files/script/S95xiongmai
@@ -41,9 +40,3 @@ define XIONGMAI_OSDRV_XM530_INSTALL_TARGET_CMDS
 endef
 
 $(eval $(generic-package))
-
-
-
-
-
-
