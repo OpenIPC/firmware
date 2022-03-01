@@ -1,0 +1,17 @@
+config BR2_PACKAGE_RTL8812AU_OPENIPC
+	bool "rtl8812au-openipc"
+	depends on BR2_LINUX_KERNEL
+	help
+	  A standalone driver for the RTL8812AU / RTL8821AU Dual Band
+	  USB Wi-Fi adapter.
+
+	  Make sure your target kernel has the CONFIG_WIRELESS_EXT
+	  config option enabled.
+
+	  Note: this package needs a firmware loading mechanism to
+	  load the binary blob for the chip to work.
+
+	  https://github.com/aircrack-ng/rtl8812au/
+
+comment "rtl8812au needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL

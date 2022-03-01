@@ -12,6 +12,10 @@ echo 'Note: BR2_TOOLCHAIN_BUILDROOT_LIBC="musl"'
 ln -sfv /lib/libc.so ${TARGET_DIR}/lib/ld-uClibc.so.0
 ln -sfv ../../lib/libc.so ${TARGET_DIR}/usr/bin/ldd
 #
-# Comment out this line if you want to save the libraries
-rm -f ${TARGET_DIR}/usr/lib/libstdc++*
-#
+
+if grep -q ^BR2_PACKAGE_WIFIBROADCAST=y ${BR2_CONFIG}
+then
+  echo "Keep libsdc++..."
+else
+  rm -f ${TARGET_DIR}/usr/lib/libstdc++*
+fi

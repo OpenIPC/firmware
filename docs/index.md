@@ -43,8 +43,8 @@ _NB! Downloads are for research only, without any guarantee._
 | Fullhan&nbsp;FH8858v210<br>![FH8858v210][FH8858v210]      |        |        |        |     |      |     |      |                    | R&D    |
 | Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  |        |        |        |     |      |     |      |                    | R&D    |
 | Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         |        |        |        |     |      |     |      | [⬇][fwGK7202v300]  | WIP    |
-| Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         |   +    |   +    |   +    |  +  |  +   |     |      | [⬇][fwGK7205v200]  | DONE   |
-| Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |   +    |   +    |   +    |  +  |  +   |     |      | [⬇][fwGK7205v300]  | DONE   |
+| Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         |   +    |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwGK7205v200]  | DONE   |
+| Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |   +    |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwGK7205v300]  | DONE   |
 | Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         |   +    |   +    |   +    |     |      |     |      | [⬇][fwGK7605v100]  | WIP    |
 | GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               |        |   +    |   +    |     |      |     |      | [⬇][fwGM8135]      | WIP    |
 | GrainMedia&nbsp;GM8136<br>![GM8136][GM8136]               |        |   +    |   +    |     |      |     |      | [⬇][fwGM8136]      | WIP    |

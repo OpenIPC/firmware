@@ -5,10 +5,10 @@
 ################################################################################
 
 LINUX_FIRMWARE_OPENIPC_VERSION = 20190717
-LINUX_FIRMWARE_OPENIPC_SITE = http://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
-LINUX_FIRMWARE_OPENIPC_SITE_METHOD = git
-
-
+LINUX_FIRMWARE_OPENIPC_SOURCE = linux-firmware-$(LINUX_FIRMWARE_OPENIPC_VERSION).tar.gz
+LINUX_FIRMWARE_OPENIPC_SITE = https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/snapshot
+#LINUX_FIRMWARE_OPENIPC_SITE = http://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+#LINUX_FIRMWARE_OPENIPC_SITE_METHOD = git
 
 # WiFi RTL8188EU
 ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_RTL8188EU),y)
@@ -22,7 +22,11 @@ LINUX_FIRMWARE_OPENIPC_FILES += mt7601u.bin
 LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES += LICENCE.ralink_a_mediatek_company_firmware
 endif
 
-
+# WiFi ATH9K_HTC
+ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_ATHEROS_9271),y)
+LINUX_FIRMWARE_OPENIPC_FILES += ath9k_htc/htc_9271-1.4.0.fw
+LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES += LICENCE.open-ath9k-htc-firmware
+endif
 
 ifneq ($(LINUX_FIRMWARE_OPENIPC_FILES),)
 define LINUX_FIRMWARE_OPENIPC_INSTALL_FILES
