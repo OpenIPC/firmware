@@ -89,11 +89,10 @@ insert_isp() {
 
 insert_sns() {
         case $SENSOR in
-        9m034 | ar0130 | jxf22 | ov9732 | jxh62 | sc1235 | sc2235)
+        9m034 | jxf22 | ov2718 | ov9732 | ov9750 | ov9752 | jxh62 | sc1235 | sc2235)
                 devmem 0x200f0040 32 0x2 # I2C0_SCL
                 devmem 0x200f0044 32 0x2 # I2C0_SDA
 
-                # Cmos pinmux
                 devmem 0x200f007c 32 0x1 # VI_DATA13
                 devmem 0x200f0080 32 0x1 # VI_DATA10
                 devmem 0x200f0084 32 0x1 # VI_DATA12
@@ -104,11 +103,10 @@ insert_sns() {
 
                 devmem 0x2003002c 32 0xc4001 # Sensor unreset, clk 24MHz, VI 99MHz
                 ;;
-
-        sc1135 | sc1145 | sc2135)
+        ar0130 | 9m034 | sc1135 | sc1145 | sc2135)
                 devmem 0x200f0040 32 0x2 # I2C0_SCL
                 devmem 0x200f0044 32 0x2 # I2C0_SDA
-                # Cmos pinmux
+
                 devmem 0x200f007c 32 0x1     # VI_DATA13
                 devmem 0x200f0080 32 0x1     # VI_DATA10
                 devmem 0x200f0084 32 0x1     # VI_DATA12
@@ -118,7 +116,51 @@ insert_sns() {
                 devmem 0x200f0094 32 0x1     # VI_DATA9
                 devmem 0x2003002c 32 0xb4001 # clk 27MHz, VI 99MHz
                 ;;
+        ar0230)
+                devmem 0x200f0040 32 0x2 # I2C0_SCL
+                devmem 0x200f0044 32 0x2 # I2C0_SDA
 
+                devmem 0x2003002c 32 0xb4005 # sensor unreset, clk 27MHz, VI 148.5MHz
+                devmem 0x20030104 32 0x1     # vpss 148.5MHz
+                ;;
+        imx222)
+                devmem 0x200f0040 32 0x1 # SPI0_SCLK
+                devmem 0x200f0044 32 0x1 # SPI0_SDO
+                devmem 0x200f0048 32 0x1 # SPI0_SDI
+                devmem 0x200f004c 32 0x1 # SPI0_CSN
+
+                devmem 0x200f007c 32 0x1 # VI_DATA13
+                devmem 0x200f0080 32 0x1 # VI_DATA10
+                devmem 0x200f0084 32 0x1 # VI_DATA12
+                devmem 0x200f0088 32 0x1 # VI_DATA11
+                devmem 0x200f008c 32 0x2 # VI_VS
+                devmem 0x200f0090 32 0x2 # VI_HS
+                devmem 0x200f0094 32 0x1 # VI_DATA9
+
+                devmem 0x2003002c 32 0x94001 # sensor unreset, clk 37.125MHz, VI 99MHz
+
+                insmod sensor_spi.ko
+                ;;
+        ov9712 | ov2710 | ov9732 | gc2023)
+                devmem 0x200f0040 32 0x2 # I2C0_SCL
+                devmem 0x200f0044 32 0x2 # I2C0_SDA
+
+                devmem 0x200f007c 32 0x1 # VI_DATA13
+                devmem 0x200f0080 32 0x1 # VI_DATA10
+                devmem 0x200f0084 32 0x1 # VI_DATA12
+                devmem 0x200f0088 32 0x1 # VI_DATA11
+                devmem 0x200f008c 32 0x2 # VI_VS
+                devmem 0x200f0090 32 0x2 # VI_HS
+                devmem 0x200f0094 32 0x1 # VI_DATA9
+
+                devmem 0x2003002c 32 0xc4001 # sensor unreset, clk 24MHz, VI 99MHz
+                ;;
+        mn34222 | imx291 | imx327 | imx307)
+                devmem 0x200f0040 32 0x2 # I2C0_SCL
+                devmem 0x200f0044 32 0x2 # I2C0_SDA
+
+                devmem 0x2003002c 32 0x94001 # sensor unreset, clk 37.125MHz, VI 99MHz
+                ;;
         *)
                 echo "xxxx Invalid sensor type $SENSOR xxxx"
                 report_error
@@ -203,19 +245,17 @@ remove_ko() {
         rmmod mmz
 }
 
-load_usage()
-{
-	echo "Usage:  ./load_hisilicon [-option] [sensor_name]"
-	echo "options:"
-	echo "    -i                       insert modules"
-	echo "    -r                       remove modules"
-	echo "    -a                       remove modules first, then insert modules"
-	echo "    -sensor sensor_name      config sensor type [default: imx307]"
-	echo "    -h                       help information"
-	echo -e "Available sensors: gc2053 imx307 imx327 imx335 os05a sc2231 sc2235 sc4236 sc3235 sc4236 etc."
-	echo -e "for example: ./load_hisilicon -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
+load_usage() {
+        echo "Usage:  ./load_hisilicon [-option] [sensor_name]"
+        echo "options:"
+        echo "    -i                       insert modules"
+        echo "    -r                       remove modules"
+        echo "    -a                       remove modules first, then insert modules"
+        echo "    -sensor sensor_name      config sensor type [default: imx307]"
+        echo "    -h                       help information"
+        echo -e "Available sensors: gc2053 imx307 imx327 imx335 os05a sc2231 sc2235 sc4236 sc3235 sc4236 etc."
+        echo -e "for example: ./load_hisilicon -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
 }
-
 
 calc_mmz_info() {
         mmz_start=$(echo "$mem_start $os_mem_size" |
