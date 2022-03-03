@@ -1,6 +1,7 @@
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/linux/linux-ext-sigmastar_patcher.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar_patcher/sigmastar_patcher.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/gdbserver-lite/gdbserver-lite.mk
