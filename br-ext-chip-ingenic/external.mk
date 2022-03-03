@@ -1,6 +1,7 @@
 include $(BR2_EXTERNAL_INGENIC_PATH)/linux/linux-ext-ingenic_patcher.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic_patcher/ingenic_patcher.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_INGENIC_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ipctool/ipctool.mk
