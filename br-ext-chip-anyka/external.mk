@@ -2,6 +2,7 @@ include $(BR2_EXTERNAL_ANYKA_PATH)/linux/linux-ext-anyka_patcher.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/anyka-osdrv-ak3918ev200/anyka-osdrv-ak3918ev200.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/anyka_patcher/anyka_patcher.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_ANYKA_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_ANYKA_PATH)/package/ipctool/ipctool.mk

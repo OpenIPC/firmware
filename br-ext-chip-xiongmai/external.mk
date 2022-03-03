@@ -1,6 +1,7 @@
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/linux/linux-ext-xiongmai_patcher.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/xiongmai_patcher/xiongmai_patcher.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/ipctool/ipctool.mk
