@@ -110,16 +110,13 @@ You can help us to write a better documentation, proofread and correct our websi
 You can just donate some money to cover the cost of development and long-term maintaining of what we believe
 is going to be the most stable, flexible, and open IP Network Camera Framework for users like yourself.
 
-You can make a financial contribution to the project
-at [Open Collective](https://opencollective.com/openipc/contribute/backer-14335/checkout),
-or via [PayPal](https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS),
-or via [YooMoney](https://openipc.org/donation/yoomoney.html).
+You can make a financial contribution to the project at [Open Collective](https://opencollective.com/openipc/contribute/backer-14335/checkout).
 
 Thank you.
 
+<p align="center">
 <a href="https://opencollective.com/openipc/contribute/backer-14335/checkout" target="_blank"><img src="https://opencollective.com/webpack/donate/button@2x.png?color=blue" width="375" alt="Open Collective donate button"></a>
-<a href="https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS"><img src="https://www.paypalobjects.com/en_US/IT/i/btn/btn_donateCC_LG.gif" alt="PayPal donate button"></a>
-<a href="https://openipc.org/donation/yoomoney.html"><img src="https://yoomoney.ru/transfer/balance-informer/balance?id=596194605&key=291C29A811B500D7" width="140" alt="YooMoney donate button"></a>
+</p>
 
 
 [AmbaS2L]: https://img.shields.io/static/v1?label=AmbaS2L&message=help%20needed&color=5500ff&logo=github
