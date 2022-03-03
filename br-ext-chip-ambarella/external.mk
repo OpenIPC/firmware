@@ -1,6 +1,7 @@
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/linux/linux-ext-ambarella_patcher.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/ambarella_patcher/ambarella_patcher.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/ipctool/ipctool.mk
