@@ -2,6 +2,7 @@ include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/linux/linux-ext-grainmedia_patcher.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/grainmedia-osdrv-gm8136/grainmedia-osdrv-gm8136.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/grainmedia_patcher/grainmedia_patcher.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/ipctool/ipctool.mk
