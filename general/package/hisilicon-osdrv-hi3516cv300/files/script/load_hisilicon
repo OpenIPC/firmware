@@ -1,9 +1,8 @@
 #!/bin/sh
 #
-# This is part of OpenIPC.org project | 2021.12.01
+# This is part of OpenIPC.org project | 2022.03.04
 #
 # ar0237 imx290 imx307 imx323 imx385 jxf22 ov2718 ov2718_2a sc2235
-
 
 # SoC detect
 chipid=$(ipcinfo --chip_id)
@@ -18,38 +17,11 @@ os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
 
 # Sensor config
-# SNS_TYPE=$(awk -F '=' '$1=="sensor"{print $2}' RS=" " /proc/cmdline)
 SNS_TYPE=$(fw_printenv -n sensor)
 SNS_TYPE=${SNS_TYPE:=ar0237_i2c_dc}
 
-
-
-##################################################################
-
-#if [ ${chipid} = "hi3516ev100" ]; then
-#	mem_total=64;                             # 64M, total mem
-#	os_mem_size=32;                           # 32M, os mem
-#	mmz_start=0x82000000;                     # mmz start addr, is calculated automatically
-#	mmz_size=32M;                             # 32M, mmz size, is calculated automatically
-#elif [ ${chipid} = "hi3516cv300" ]; then
-#	mem_total=128;                            # 128M, total mem
-#	os_mem_size=40;                           # 40M, os mem
-#	mmz_start=0x82800000;                     # mmz start addr, is calculated automatically
-#	mmz_size=88M;                             # 88M, mmz size, is calculated automatically
-#else
-#	echo "Wrong chip_id: ${chipid}";
-#	exit 1;
-#fi
-#
-# Checker
-#echo "${chipid}: ${mem_total}/${os_mem_size} | ${mem_start}/${mmz_start} | ${mmz_size}"
-
-####################vo config#################################
-
 #vou interface mode: default(cvbs), bt656, lcd
 vou_intf_mode="default";
-
-##################################################################
 
 ####################clk config####################################
 
@@ -60,10 +32,40 @@ ive_frequency=297000000;   # 297M, ive clock frequency
 
 ##################################################################
 
+cd /lib/modules/3.18.20/hisilicon
+
 report_error()
 {
 	echo "******* Error: There's something wrong, please check! *****"
 	exit 1
+}
+
+insert_osal()
+{
+	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
+	if [ -z "$MMZ" ]; then
+		insmod hi_osal.ko anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+	else
+		insmod cma_osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
+	fi
+}
+
+insert_detect()
+{
+	insert_sns
+	insmod sys_config.ko vi_vpss_online=$b_arg_online
+	insert_osal
+	insmod hi3516cv300_base.ko
+	insmod hi3516cv300_sys.ko vi_vpss_online=$b_arg_online sensor=$SNS_TYPE mem_total=$mem_total
+}
+
+remove_detect()
+{
+	rmmod hi3516cv300_sys
+	rmmod hi3516cv300_base
+	rmmod hi_osal &> /dev/null
+	rmmod cma_osal &> /dev/null
+	rmmod sys_config.ko
 }
 
 insert_audio()
@@ -351,8 +353,8 @@ insert_ko()
 	insmod sys_config.ko vi_vpss_online=$b_arg_online
 
 	# driver load
-	insmod hi_osal.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
-	insmod hi3516cv300_wdt.ko
+	insert_osal;
+	
 	#insmod hi3516cv300_rtc.ko
 	insmod hi3516cv300_base.ko
 
@@ -389,7 +391,7 @@ insert_ko()
 	insert_audio
 
 	insmod hi_mipi.ko
-
+	insmod hi3516cv300_wdt.ko
 	echo "==== Your input Sensor type is $SNS_TYPE ===="
 
 }
@@ -431,7 +433,7 @@ remove_ko()
 
 load_usage()
 {
-	echo "Usage:  ./load_universal [-option] [sensor_name]"
+	echo "Usage:  ./load_hisilicon [-option] [sensor_name]"
 	echo "options:"
 	echo "    -i                       insert modules"
 	echo "    -r                       remove modules"
@@ -549,13 +551,36 @@ if [ $# -lt 1 ]; then
     exit 0;
 fi
 
+# Sensor config
+# SENSOR=${SENSOR:=imx307}
+#
+if [ -n "$SENSOR" ]; then
+	logger -s -p daemon.info -t hisilicon "Manualy set SENSOR as ${SENSOR}"
+else
+	if fw_printenv -n sensor >/dev/null; then
+		SENSOR_ENV=$(fw_printenv -n sensor)
+		export SENSOR=${SENSOR_ENV}
+		logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
+	else
+		insert_detect
+		SENSOR_DETECT=$(ipcinfo --long-sensor)
+		export SENSOR=${SENSOR_DETECT:=unknown}
+		remove_detect
+		logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && logger -s -p daemon.info -t hisilicon "Write detected ${SENSOR} to U-Boot ENV"
+	fi
+fi
+
 if [ $b_arg_remove -eq 1 ]; then
 	remove_ko;
 fi
 
-if [ $b_arg_insmod -eq 1 ]; then
-	cd /lib/modules/3.18.20/hisilicon
-	insert_ko;
+if [ "$SENSOR" = "unknown" ]; then
+	exit 1
+else
+	if [ $b_arg_insmod -eq 1 ]; then
+		insert_ko;
+	fi
 fi
 
 if [ $b_arg_restore -eq 1 ]; then
