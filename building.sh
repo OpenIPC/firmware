@@ -73,6 +73,13 @@ sdk() {
 
 #################################################################################
 
+ambarella-s3l() {
+  soc="s3l"
+  fresh && make PLATFORM=ambarella BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
 ak3918ev200() {
   soc="ak3918ev200"
   fresh && make PLATFORM=anyka BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -419,6 +426,11 @@ xm550() {
 #################################################################################
 
 # Build firmware
+#######
+#
+ambarella-s3l                   # testing..
+#
+#######
 #
 # ak3918ev200                   # testing..
 #
