@@ -188,6 +188,11 @@ hi3518ev200() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+hi3518ev200_domsip() {
+  soc="hi3518ev200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_domsip all && rename
+}
+
 hi3518ev200_hs303v1() {
   soc="hi3518ev200"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename && autoup_rootfs
@@ -428,7 +433,7 @@ xm550() {
 # Build firmware
 #######
 #
-ambarella-s3l                   # testing..
+# ambarella-s3l                   # testing..
 #
 #######
 #
@@ -469,8 +474,9 @@ ambarella-s3l                   # testing..
 # hi3518ev200                   # testing..
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
+# hi3518ev200_domsip            # DomSip
 # hi3518ev200_hs303v1           # OpenIPC
-# hi3518ev200_hs303v2           # OpenIPC
+hi3518ev200_hs303v2           # OpenIPC
 # hi3518ev200_hs303v3           # OpenIPC
 #
 # hi3516av100                   # OpenIPC
