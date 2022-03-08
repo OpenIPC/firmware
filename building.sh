@@ -332,6 +332,13 @@ hi3536dv100() {
 
 #################################################################################
 
+ingenic-t31() {
+  soc="t31"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
 nt98562() {
   soc="nt98562"
   fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -505,6 +512,10 @@ hi3518ev200                   # testing..
 # hi3516dv300                   # testing..
 #
 # hi3536dv100                   # OpenIPC
+#
+#######
+#
+ingenic-t31                       # testing..
 #
 #######
 #
