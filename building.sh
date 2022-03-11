@@ -478,12 +478,12 @@ xm550() {
 # hi3516cv100                   # OpenIPC
 #
 # hi3516cv200                   # testing..
-hi3518ev200                   # testing..
+# hi3518ev200                   # testing..
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
 # hi3518ev200_domsip            # DomSip
 # hi3518ev200_hs303v1           # OpenIPC
-#hi3518ev200_hs303v2           # OpenIPC
+# hi3518ev200_hs303v2           # OpenIPC
 # hi3518ev200_hs303v3           # OpenIPC
 #
 # hi3516av100                   # OpenIPC
@@ -515,7 +515,7 @@ hi3518ev200                   # testing..
 #
 #######
 #
-ingenic-t31                       # testing..
+# ingenic-t31                   # testing..
 #
 #######
 #
@@ -529,7 +529,7 @@ ingenic-t31                       # testing..
 # ssc333                        # OpenIPC
 #
 # ssc335                        # OpenIPC
-# ssc335_blackbird              # BlackBird
+ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
 # ssc335_initramfs              # Initramfs
 # ssc335_musl                   # Musl
