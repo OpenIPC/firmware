@@ -15,9 +15,10 @@ clone() {
 
 fresh() {
   date >/tmp/openipc_buildtime.txt
-  [ -d buildroot-2020.02.12/dl ] && mkdir -p /tmp/buildroot_dl ; cp -rv buildroot-2020.02.12/dl/* /tmp/buildroot_dl
+  [ -d buildroot-2020.02.12/dl ] && mv buildroot-2020.02.12/dl .
   make distclean #clean
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
+  mv dl buildroot-2020.02.12/dl
 }
 
 should_fit() {
@@ -478,7 +479,7 @@ xm550() {
 # hi3516cv100                   # OpenIPC
 #
 # hi3516cv200                   # testing..
-hi3518ev200                   # testing..
+# hi3518ev200                   # testing..
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
 # hi3518ev200_domsip            # DomSip
