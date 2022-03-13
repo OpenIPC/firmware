@@ -23,6 +23,9 @@ case ${manufacturer} in
       hi3518ev200)
         gpio="ircut1=1 ircut2=2 light=48"
         ;;
+      t31)
+        gpio="ircut1=N ircut2=n light=n"
+        ;;
     esac
     ;;
   Herospeed|Longsee|Cantonk)
