@@ -69,18 +69,18 @@ _NB! Downloads are for research only, without any guarantee._
 | Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |        |     |      |     |      |                    | R&D    |
 | Ingenic&nbsp;T20<br>![T20][T20]                           |        |        |        |     |      |     |      |                    | R&D    |
 | Ingenic&nbsp;T21<br>![T21][T21]                           |        |        |        |     |      |     |      |                    | R&D    |
-| Ingenic&nbsp;T31<br>![T31][T31]                           |        |        |        |     |      |     |      |                    | R&D    |
+| Ingenic&nbsp;T31<br>![T31][T31]                           |        |   +    |   +    |     |      |     |      | [⬇][fwT31]         | WIP    |
 | MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 |        |        |        |     |      |     |      |                    | R&D    |
 | MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 |        |        |        |     |      |     |      |                    | R&D    |
-| Novatek&nbsp;NT98562<br>![NT98562][NT98562]               |        |   +    |   +    |     |      |     |      |   [⬇][fwNT98562]   | WIP    |
-| Novatek&nbsp;NT98566<br>![NT98566][NT98566]               |        |   +    |   +    |     |      |     |      |   [⬇][fwNT98566]   | WIP    |
-| SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                |        |   +    |   +    |     |      |     |      |   [⬇][fwSSC325]    | WIP    |
-| SigmaStar&nbsp;SSC335<br>![SSC335][SSC335]                |        |   +    |   +    |  +  |      |  +  |      |   [⬇][fwSSC335]    | MVP    |
-| SigmaStar&nbsp;SSC337<br>![SSC337][SSC337]                |        |   +    |   +    |  +  |      |  +  |      |   [⬇][fwSSC337]    | MVP    |
-| SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          |        |   +    |   +    |     |      |     |      |  [⬇][fwSSC337DE]   | TEST   |
-| Xiongmai&nbsp;XM510<br>![XM510][XM510]                    |        |   +    |   +    |     |      |     |      |    [⬇][fwXM510]    | MVP    |
-| Xiongmai&nbsp;XM530<br>![XM530][XM530]                    |        |   +    |   +    |     |      |     |      |    [⬇][fwXM530]    | MVP    |
-| Xiongmai&nbsp;XM550<br>![XM550][XM550]                    |        |   +    |   +    |     |      |     |      |    [⬇][fwXM550]    | MVP    |
+| Novatek&nbsp;NT98562<br>![NT98562][NT98562]               |        |   +    |   +    |     |      |     |      | [⬇][fwNT98562]     | WIP    |
+| Novatek&nbsp;NT98566<br>![NT98566][NT98566]               |        |   +    |   +    |     |      |     |      | [⬇][fwNT98566]     | WIP    |
+| SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                |        |   +    |   +    |     |      |     |      | [⬇][fwSSC325]      | WIP    |
+| SigmaStar&nbsp;SSC335<br>![SSC335][SSC335]                |        |   +    |   +    |  +  |      |  +  |      | [⬇][fwSSC335]      | MVP    |
+| SigmaStar&nbsp;SSC337<br>![SSC337][SSC337]                |        |   +    |   +    |  +  |      |  +  |      | [⬇][fwSSC337]      | MVP    |
+| SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          |        |   +    |   +    |     |      |     |      | [⬇][fwSSC337DE]    | TEST   |
+| Xiongmai&nbsp;XM510<br>![XM510][XM510]                    |        |   +    |   +    |     |      |     |      | [⬇][fwXM510]       | MVP    |
+| Xiongmai&nbsp;XM530<br>![XM530][XM530]                    |        |   +    |   +    |     |      |     |      | [⬇][fwXM530]       | MVP    |
+| Xiongmai&nbsp;XM550<br>![XM550][XM550]                    |        |   +    |   +    |     |      |     |      | [⬇][fwXM550]       | MVP    |
 
 -----
 
@@ -202,6 +202,7 @@ Thank you.
 [fwHi3518Ev200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3518ev200-br.tgz
 [fwHi3518Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3518ev300-br.tgz
 [fwHi3519v101]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3519v101-br.tgz
+[fwT31]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.t31-br.tgz
 [fwNT98562]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.nt98562-br.tgz
 [fwNT98566]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.nt98566-br.tgz
 [fwSSC325]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ssc325-br.tgz
