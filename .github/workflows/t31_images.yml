@@ -1,6 +1,13 @@
 name: "T31  "
 
 on:
+  push:
+    branches:
+      - production
+    tags:
+      - "v*"
+  schedule:
+      - cron: "00 02 * * *"
   workflow_dispatch:
 
 jobs:
