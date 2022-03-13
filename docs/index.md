@@ -7,7 +7,7 @@ OpenIPC is a rapidly developing open source alternative firmware for popular IP 
 
 Historically, OpenIPC firmware supports SoC manufactured by HiSilicon, but as the development continues,
 the list of supported processors expands. Today, it also includes chips from Ambarella, Anyka, Fullhan,
-Goke, GrainMedia, MStar, Novatek, SigmaStar, XiongMai and is expected to grow further.
+Goke, GrainMedia, Ingenic, MStar, Novatek, SigmaStar, XiongMai and is expected to grow further.
 
 More information about the project is available [in our wiki](https://github.com/OpenIPC/wiki)
 and [on the website](https://openipc.org/).
@@ -29,7 +29,7 @@ _NB! Downloads are for research only, without any guarantee._
 | SoC                                                       | U-Boot | Kernel | Rootfs | USB | WiFi | MMC | IPv6 |        D/L         | Status |
 |-----------------------------------------------------------|:------:|:------:|:------:|:---:|:----:|:---:|:----:|:------------------:|--------|
 | Ambarella&nbsp;S2L<br>![AmbaS2L][AmbaS2L]                 |        |        |        |     |      |     |      |                    | R&D    |
-| Ambarella&nbsp;S3L<br>![AmbaS3L][AmbaS3L]                 |        |        |        |     |      |     |      |                    | R&D    |
+| Ambarella&nbsp;S3L<br>![AmbaS3L][AmbaS3L]                 |        |   +    |   +    |     |      |     |      |                    | WIP    |
 | Anyka&nbsp;AK3916Ev301<br>![AK3916Ev301][AK3916Ev301]     |        |        |        |     |      |     |      |                    | R&D    |
 | Anyka&nbsp;AK3918Ev200<br>![AK3918Ev200][AK3918Ev200]     |        |   +    |   +    |     |      |     |      | [⬇][fwAK3918Ev200] | WIP    |
 | Fullhan&nbsp;FH8632<br>![FH8632][FH8632]                  |        |        |        |     |      |     |      |                    | R&D    |
@@ -168,7 +168,7 @@ Thank you.
 [T10]: https://img.shields.io/static/v1?label=T10&message=help%20needed&color=5500ff&logo=github
 [T20]: https://img.shields.io/static/v1?label=T20&message=help%20needed&color=5500ff&logo=github
 [T21]: https://img.shields.io/static/v1?label=T21&message=help%20needed&color=5500ff&logo=github
-[T31]: https://img.shields.io/static/v1?label=T31&message=help%20needed&color=5500ff&logo=github
+[T31]: https://github.com/OpenIPC/firmware/actions/workflows/t31_images.yml/badge.svg
 [XM510]: https://github.com/OpenIPC/firmware/actions/workflows/xm510_images.yml/badge.svg
 [XM530]: https://github.com/OpenIPC/firmware/actions/workflows/xm530_images.yml/badge.svg
 [XM550]: https://github.com/OpenIPC/firmware/actions/workflows/xm550_images.yml/badge.svg
