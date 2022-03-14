@@ -4,6 +4,7 @@ include $(BR2_EXTERNAL_GOKE_PATH)/package/aura-httpd/aura-httpd.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/goke-osdrv-gk710x.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk7205v200/goke-osdrv-gk7205v200.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/json-c-openipc/json-c-openipc.mk
