@@ -135,6 +135,26 @@ fh8858v210() {
 
 #################################################################################
 
+gk7101() {
+  soc="gk7101"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+gk7101s() {
+  soc="gk7101s"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+gk7102() {
+  soc="gk7102"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+gk7102s() {
+  soc="gk7102s"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 gk7205v200() {
   soc="gk7205v200"
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -482,6 +502,10 @@ xm550() {
 #
 #######
 #
+# gk7101                    # testing..
+# gk7101s                    # testing..
+# gk7102                    # testing..
+gk7102s                    # testing..
 # gk7202v300                    # testing..
 # gk7205v200                    # OpenIPC
 # gk7205v200_fpv                # FPV
@@ -560,7 +584,7 @@ xm550() {
 # t10                   # testing..
 # t20                   # testing..
 # t30                   # testing..
-t31                   # testing..
+# t31                   # testing..
 #
 #######
 #
