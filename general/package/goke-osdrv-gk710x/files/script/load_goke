@@ -1,0 +1,54 @@
+#!/bin/sh
+
+
+
+kernel_ver=$(uname -r)
+cd /lib/modules/$kernel_ver/goke
+
+USE_OLD_SENSOR_DRIVER=NO    #YES or NO, default no use.
+USE_LOAD_HAL_DRIVER=YES      #YES or NO, default no use.
+
+if [ $USE_LOAD_HAL_DRIVER = "YES" ];then
+    insmod hal.ko
+fi
+insmod hw_crypto.ko
+insmod media.ko
+insmod audio.ko
+
+if [ $USE_OLD_SENSOR_DRIVER = "YES" ]; then
+    if [ -e ${1}.ko ];then
+        insmod ${1}.ko 
+    else
+        echo "${1}.ko is no exist."
+        exit 0
+    fi
+else
+    insmod sensor.ko
+    # Use sensor.ko
+    rm /tmp/sensor_hw.bin -f
+    rm /tmp/sensor_ex.ko -f
+    if [ $# -ne 1 ] ;then
+        sensordetect
+    else
+        if [ -e /etc/sensors/$1"_hw.bin" ];then
+            if [ -e /tmp/sensor_hw.bin ]; then
+                rm /tmp/sensor_hw.bin -f
+            fi
+            ln -s /etc/sensors/$1"_hw.bin" /tmp/sensor_hw.bin
+        else
+            echo "\"/etc/sensors/${1}_hw.bin\" is no exist."
+            exit 0
+        fi
+        if [ -e $1"_ex.ko" ];then
+            if [ -e /tmp/sensor_ex.ko ]; then
+                rm /tmp/sensor_ex.ko -f
+            fi
+            ln -s $1"_ex.ko" /tmp/sensor_ex.ko
+        else
+            echo "\"${1}_ex.ko\" is no exist."
+        fi
+    fi
+    if [ -e /tmp/sensor_ex.ko ];then
+        insmod /tmp/sensor_ex.ko 
+    fi
+fi
