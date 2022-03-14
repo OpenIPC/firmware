@@ -18,7 +18,7 @@ fresh() {
   [ -d buildroot-2020.02.12/dl ] && mv buildroot-2020.02.12/dl .
   make distclean #clean
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
-  mv dl buildroot-2020.02.12/dl
+  [ -d dl ] && mv dl buildroot-2020.02.12/dl
 }
 
 should_fit() {
@@ -331,12 +331,6 @@ hi3536dv100() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
-#################################################################################
-
-ingenic-t31() {
-  soc="t31"
-  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
-}
 
 #################################################################################
 
@@ -415,6 +409,28 @@ ssc335de() {
 ssc337de() {
   soc="ssc337de"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
+t10() {
+  soc="t10"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+t20() {
+  soc="t20"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+t30() {
+  soc="t30"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+t31() {
+  soc="t31"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 #################################################################################
@@ -516,10 +532,6 @@ xm550() {
 #
 #######
 #
-# ingenic-t31                   # testing..
-#
-#######
-#
 # nt98562                       # OpenIPC
 # nt98566                       # OpenIPC
 #
@@ -530,7 +542,7 @@ xm550() {
 # ssc333                        # OpenIPC
 #
 # ssc335                        # OpenIPC
-ssc335_blackbird              # BlackBird
+# ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
 # ssc335_initramfs              # Initramfs
 # ssc335_musl                   # Musl
@@ -542,6 +554,13 @@ ssc335_blackbird              # BlackBird
 # ssc337                        # OpenIPC => musl
 #
 # ssc337de                      # OpenIPC
+#
+#######
+#
+# t10                   # testing..
+# t20                   # testing..
+# t30                   # testing..
+t31                   # testing..
 #
 #######
 #
