@@ -1,4 +1,5 @@
 include $(BR2_EXTERNAL_INGENIC_PATH)/linux/linux-ext-ingenic_patcher.mk
+include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/ingenic-osdrv-t20.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t31/ingenic-osdrv-t31.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic_patcher/ingenic_patcher.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/aura-httpd/aura-httpd.mk
