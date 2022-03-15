@@ -333,7 +333,7 @@ hi3536dv100() {
 
 #################################################################################
 
-ingenic-t31() {
+t31() {
   soc="t31"
   fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
 }
@@ -516,7 +516,7 @@ xm550() {
 #
 #######
 #
-# ingenic-t31                   # testing..
+t31                           # testing..
 #
 #######
 #
@@ -530,7 +530,7 @@ xm550() {
 # ssc333                        # OpenIPC
 #
 # ssc335                        # OpenIPC
-ssc335_blackbird              # BlackBird
+# ssc335_blackbird              # BlackBird
 # ssc335_goodcam                # GoodCam
 # ssc335_initramfs              # Initramfs
 # ssc335_musl                   # Musl
