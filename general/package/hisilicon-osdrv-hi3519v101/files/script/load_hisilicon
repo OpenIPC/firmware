@@ -161,7 +161,32 @@ sysconfig() {
 		devmem 0x12040984 32 0x120 #I2C3_SDA
 		devmem 0x1204096C 32 0x120 #I2C3_SCL
 	}
+	spi0_4wire_pin_mux()
+	{
+		#pinmux
+		devmem 0x1204018c 32 0x1  #SPI0_SCLK
+		devmem 0x12040190 32 0x1  #SPI0_SD0
+		devmem 0x12040194 32 0x1  #SPI0_SDI
+		devmem 0x12040198 32 0x1  #SPI0_CSN
+	
+		#drive capability...
+		devmem 0x12040998 32 0x150  #SPI0_SCLK
+		devmem 0x1204099c 32 0x160  #SPI0_SD0
+		devmem 0x120409a0 32 0x160  #SPI0_SDI
+		devmem 0x120409a4 32 0x160  #SPI0_CSN
+	}
+	spi0_3wire_pin_mux()
+	{
+		#pinmux
+		devmem 0x1204018c 32 0x3    #SPI0_3WIRE_CLK
+		devmem 0x12040190 32 0x3    #SPI0_3WIRE_DATA
+		devmem 0x12040198 32 0x3    #SPI0_3WIRE_CSN
 
+		#drive capability...
+		devmem 0x12040998 32 0x150  #SPI0_3WIRE_CLK
+		devmem 0x1204099c 32 0x160  #SPI0_3WIRE_DATA
+		devmem 0x120409a4 32 0x160  #SPI0_3WIRE_CSN
+	}
 	#spi1 -> vi
 	spi1_pin_mux() {
 		#pinmux
@@ -400,7 +425,7 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004041
 			devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
 			spi0_4wire_pin_mux
-			insmod extdrv/hi_ssp_sony.ko
+			insmod hi_ssp_sony.ko
 			;;
 		imx265)
 			tmp=0x18
@@ -410,7 +435,7 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004041
 			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
 			spi0_4wire_pin_mux
-			insmod extdrv/hi_ssp_sony.ko
+			insmod hi_ssp_sony.ko
 			;;
 		imx377)
 			tmp=0x14
@@ -429,7 +454,7 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004041
 			devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
 			spi0_4wire_pin_mux
-			insmod extdrv/hi_ssp_sony.ko
+			insmod hi_ssp_sony.ko
 			;;
 		imx290)
 			tmp=0x18
@@ -439,6 +464,17 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004
 			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
 			i2c0_pin_mux
+			;;
+		imx327_spi)
+			tmp=0x18
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#imx290:viu0:340M,isp0:214M, viu1:340M,isp1:214M
+			devmem 0x1201004c 32 0x00094c24
+			devmem 0x12010054 32 0x0004
+			# devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
+			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
+			spi0_4wire_pin_mux
+			insmod hi_ssp_sony.ko
 			;;
 		imx327)
 			tmp=0x18
@@ -466,7 +502,7 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004041
 			devmem 0x12010040 32 0x12 # sensor0 clk_en, 54MHz
 			spi0_3wire_pin_mux
-			insmod extdrv/hi_ssp_3wire.ko
+			insmod hi_ssp_3wire.ko
 			;;
 		imx385_lvds)
 			tmp=0x18
@@ -508,7 +544,7 @@ insert_sns() {
 			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
 			i2c0_pin_mux
 			#spi0_4wire_pin_mux;
-			#insmod extdrv/hi_ssp_sony.ko;
+			#insmod hi_ssp_sony.ko;
 			;;
 		os08a | os08a10)
 			tmp=0x14
