@@ -1,0 +1,46 @@
+#!/bin/sh
+
+KMOD_PATH=/lib/modules/3.10.14/ingenic
+
+echo 1 >/proc/sys/vm/overcommit_memory
+
+check_return() {
+    if [ $? -ne 0 ]; then
+        echo err: $1
+        echo exit
+        exit
+    fi
+}
+
+lsmod | grep "sinfo" >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/sinfo.ko
+    check_return "insmod sinfo"
+fi
+
+echo 1 >/proc/jz/sinfo/info
+check_return "start sinfo"
+
+SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+check_return "get sensor type"
+
+SENSOR=${SENSOR_INFO#*:}
+
+lsmod | grep "tx_isp" > /dev/null
+if [ $? -ne 0 ] ;then
+	insmod ${KMOD_PATH/%\//}/tx-isp.ko
+	check_return "insmod isp drv"
+fi
+
+lsmod | grep ${SENSOR} > /dev/null
+if [ $? -ne 0 ] ;then
+	insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}.ko
+	check_return "insmod sensor drv"
+fi
+
+lsmod | grep "audio" >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/audio.ko
+    check_return "insmod audio"
+fi
+
