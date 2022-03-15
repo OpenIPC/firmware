@@ -18,7 +18,7 @@ fresh() {
   [ -d buildroot-2020.02.12/dl ] && mv buildroot-2020.02.12/dl .
   make distclean #clean
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
-  mv dl buildroot-2020.02.12/dl
+  [ -d dl ] && mv dl buildroot-2020.02.12/dl
 }
 
 should_fit() {
@@ -134,6 +134,26 @@ fh8858v210() {
 }
 
 #################################################################################
+
+gk7101() {
+  soc="gk7101"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+gk7101s() {
+  soc="gk7101s"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+gk7102() {
+  soc="gk7102"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+gk7102s() {
+  soc="gk7102s"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
 
 gk7205v200() {
   soc="gk7205v200"
@@ -419,6 +439,28 @@ ssc337de() {
 
 #################################################################################
 
+t10() {
+  soc="t10"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+t20() {
+  soc="t20"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+t30() {
+  soc="t30"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+t31() {
+  soc="t31"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
 xm510() {
   soc="xm510"
   fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -463,6 +505,13 @@ xm550() {
 #
 # gm8135                        # testing..
 # gm8136                        # testing..
+#
+#######
+#
+# gk7101                        # testing..
+# gk7101s                       # testing..
+# gk7102                        # testing..
+gk7102s                       # testing..
 #
 #######
 #
@@ -516,10 +565,6 @@ xm550() {
 #
 #######
 #
-t31                           # testing..
-#
-#######
-#
 # nt98562                       # OpenIPC
 # nt98566                       # OpenIPC
 #
@@ -542,6 +587,13 @@ t31                           # testing..
 # ssc337                        # OpenIPC => musl
 #
 # ssc337de                      # OpenIPC
+#
+#######
+#
+# t10                           # testing..
+# t20                           # testing..
+# t30                           # testing..
+# t31                           # testing..
 #
 #######
 #
