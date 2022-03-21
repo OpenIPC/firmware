@@ -18,7 +18,7 @@ fresh() {
   [ -d buildroot-2020.02.12/dl ] && mv buildroot-2020.02.12/dl .
   make distclean #clean
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
-  [ -d dl ] && mv dl buildroot-2020.02.12/dl
+  [ -d dl ] && mv dl buildroot-2020.02.12/dl || return 0
 }
 
 should_fit() {
@@ -373,6 +373,13 @@ nt98566() {
 
 #################################################################################
 
+msc313e() {
+  soc="msc313e"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
 ssc325() {
   soc="ssc325"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -569,6 +576,8 @@ gk7102s                       # testing..
 # nt98566                       # OpenIPC
 #
 #######
+#
+# msc313e                        # OpenIPC
 #
 # ssc325                        # OpenIPC
 #
