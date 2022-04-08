@@ -530,7 +530,7 @@ xm550() {
 # gk7202v300                    # testing..
 # gk7205v200                    # OpenIPC
 # gk7205v200_fpv                # FPV
-gk7205v200_iscom                # Iscom test
+# gk7205v200_iscom              # Iscom test
 # gk7205v200_ufanet             # Ufanet
 # gk7205v300                    # OpenIPC
 # gk7205v300_fpv                # FPV
@@ -597,7 +597,7 @@ gk7205v200_iscom                # Iscom test
 # ssc335_portal                 # Portal (partner)
 # ssc335_rotek                  # Rotek
 #
-# ssc335de                      # OpenIPC
+ssc335de                      # OpenIPC
 #
 # ssc337                        # OpenIPC => musl
 #
