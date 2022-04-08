@@ -23,6 +23,7 @@ include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/motors/motors.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/opus-openipc/opus-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/rtl8188fu-openipc/rtl8188fu-openipc.mk
+include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/rtl8192eu-openipc/rtl8192eu-openipc.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-msc313e/sigmastar-osdrv-msc313e.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/sigmastar-osdrv-ssc335.mk
 include $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/uacme-openipc/uacme-openipc.mk
