@@ -13,7 +13,7 @@ ln -sfv /lib/libc.so ${TARGET_DIR}/lib/ld-uClibc.so.0
 ln -sfv ../../lib/libc.so ${TARGET_DIR}/usr/bin/ldd
 #
 
-if grep -q ^BR2_PACKAGE_WIFIBROADCAST=y ${BR2_CONFIG}
+if grep -q ^BR2_PACKAGE_WIFIBROADCAST=y ${BR2_CONFIG} || grep -q ^BR2_PACKAGE_ZEROTIER_ONE=y ${BR2_CONFIG}
 then
   echo "Keep libsdc++..."
 else
