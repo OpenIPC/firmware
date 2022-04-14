@@ -1,0 +1,14 @@
+config BR2_PACKAGE_ZEROTIER_ONE
+	bool "zerotier-one"
+	depends on BR2_INSTALL_LIBSTDCPP
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	select BR2_PACKAGE_LIBMINIUPNPC
+	select BR2_PACKAGE_LIBNATPMP
+	help
+	  ZeroTier One lets you join ZeroTier virtual networks and have
+	  them appear as tun/tap ports on your system.
+
+	  https://www.zerotier.com/
+
+comment "zerotier-one needs a toolchain w/ C++, threads"
+	depends on !BR2_INSTALL_LIBSTDCPP || !BR2_TOOLCHAIN_HAS_THREADS

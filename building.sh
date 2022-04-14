@@ -597,7 +597,7 @@ xm550() {
 # ssc335_portal                 # Portal (partner)
 # ssc335_rotek                  # Rotek
 #
-ssc335de                      # OpenIPC
+# ssc335de                      # OpenIPC
 #
 # ssc337                        # OpenIPC => musl
 #
