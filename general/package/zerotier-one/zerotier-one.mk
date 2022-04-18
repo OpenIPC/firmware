@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-ZEROTIER_ONE_VERSION = bd9c8d65ef6530ee5d14293a6d60cd2d4953ee05
+ZEROTIER_ONE_VERSION = 1294767b44c20faf069f5ddbe287fb96ad0750d1
 ZEROTIER_ONE_SITE = $(call github,zerotier,ZeroTierOne,$(ZEROTIER_ONE_VERSION))
 # ZEROTIER_ONE_DEPENDENCIES += libminiupnpc libnatpmp
 ZEROTIER_ONE_LICENSE = BUSL-1.1
