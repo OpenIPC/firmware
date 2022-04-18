@@ -1,0 +1,15 @@
+--- a/drivers/mtd/spi-nor/spi-nor.c
++++ b/drivers/mtd/spi-nor/spi-nor.c
+@@ -1595,6 +1595,12 @@
+ 
+ 	{ "ZB25VQ64A",INFO(0x5e4017, 0, 64 * 1024, 128,
+ 		SPI_NOR_QUAD_READ), PARAMS(spansion), CLK_MHZ_2X(104) },
++
++	/* SiliconKaiser 3.3v */
++	{ "sk25p128", INFO(0x256018, 0, 64 * 1024,  256, SPI_NOR_DUAL_READ), PARAMS(xtx), CLK_MHZ_2X(70) },
++
++	{ "sk25p64", INFO(0x256017, 0, 64 * 1024,  128, SPI_NOR_DUAL_READ), PARAMS(xtx), CLK_MHZ_2X(70) },
++
+ 	{ },
+ };
+ 
