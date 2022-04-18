@@ -10,10 +10,11 @@ case "$1" in
 	/usr/sbin/zerotier-one -d
     ;;
   stop)
+	echo "Stopping zerotier-one daemon..."
 	kill -9 $(pidof zerotier-one)
 	/sbin/rmmod -w tun
     ;;
     *)
-        echo "Usage: $0 {start|stop}"
-        exit 1
+	echo "Usage: $0 {start|stop}"
+	exit 1
 esac

@@ -1,5 +1,5 @@
---- a/make-linux.mk	2022-04-13 12:12:52.070856266 +0300
-+++ b/make-linux.mk	2022-04-13 12:17:32.643372724 +0300
+--- a/make-linux.mk	2022-04-18 13:32:33.520498886 +0300
++++ b/make-linux.mk	2022-04-18 13:35:04.312959847 +0300
 @@ -25,8 +25,8 @@
  # otherwise build into binary as done on Mac and Windows.
  ONE_OBJS+=osdep/PortMapper.o
@@ -20,7 +20,7 @@
  	ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
  else
  	LDLIBS+=-lnatpmp
-@@ -306,8 +306,8 @@
+@@ -312,8 +312,8 @@
  		override CXXFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
  		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
  	else
