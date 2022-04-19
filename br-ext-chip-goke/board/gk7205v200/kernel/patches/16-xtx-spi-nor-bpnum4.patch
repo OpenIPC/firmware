@@ -1,0 +1,28 @@
+--- a/drivers/mtd/spi-nor/spi-nor.c
++++ b/drivers/mtd/spi-nor/spi-nor.c
+@@ -2258,7 +2258,6 @@
+ 	switch (JEDEC_MFR(info)) {
+ 	case SNOR_MFR_GD:
+ 	case SNOR_MFR_FM:
+-	case SNOR_MFR_XTX:
+ 	case SNOR_MFR_ESMT:
+ 	case SNOR_MFR_EON:
+ 	case SNOR_MFR_SPANSION:
+@@ -2273,12 +2272,17 @@
+ 			nor->level = bsp_bp_to_level(nor, info, BP_NUM_4);
+ 		break;
+ 	case SNOR_MFR_MACRONIX:
++	
+ 		/* BP bit convert to lock level */
+ 		if (chipsize <= _8M)
+ 			nor->level = bsp_bp_to_level(nor, info, BP_NUM_3);
+ 		else
+ 			nor->level = bsp_bp_to_level(nor, info, BP_NUM_4);
+ 		break;
++	case SNOR_MFR_XTX:
++		/* BP bit convert to lock level */
++		nor->level = bsp_bp_to_level(nor, info, BP_NUM_4);
++		break;
+ 	default:
+ 		goto usage;
+ 	}
