@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# Start zerotier-one
+#
+
+case "$1" in
+  start)
+	echo "Starting zerotier-one daemon..."
+	/sbin/modprobe tun
+	/usr/sbin/zerotier-one -d
+    ;;
+  stop)
+	echo "Stopping zerotier-one daemon..."
+	kill -9 $(pidof zerotier-one)
+	/sbin/rmmod -w tun
+    ;;
+    *)
+	echo "Usage: $0 {start|stop}"
+	exit 1
+esac
