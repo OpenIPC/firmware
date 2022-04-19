@@ -437,6 +437,11 @@ ssc337() {
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+ssc337_kama() {
+  soc="ssc337"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_kama all && rename
+}
+
 #################################################################################
 
 ssc335de() {
@@ -532,7 +537,7 @@ xm550() {
 # gk7205v200_fpv                # FPV
 # gk7205v200_iscom              # Iscom test
 # gk7205v200_ufanet             # Ufanet
-# gk7205v300                    # OpenIPC
+gk7205v300                    # OpenIPC
 # gk7205v300_fpv                # FPV
 # gk7605v100                    # testing..
 #
@@ -583,7 +588,7 @@ xm550() {
 #
 #######
 #
-# msc313e                        # OpenIPC
+# msc313e                       # OpenIPC
 #
 # ssc325                        # OpenIPC
 #
@@ -600,6 +605,7 @@ xm550() {
 # ssc335de                      # OpenIPC
 #
 # ssc337                        # OpenIPC => musl
+# ssc337_kama                   # uClibc
 #
 # ssc337de                      # OpenIPC
 #
