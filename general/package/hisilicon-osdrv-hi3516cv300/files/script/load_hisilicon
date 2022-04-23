@@ -160,7 +160,7 @@ insert_sns()
 			isp_div=1;                                    # isp div clk, freq = viu_clk_freq / div
             ;;
 
-	imx290|imx327)
+	imx290|imx327_i2c*)
 			bus_type="i2c";
 			pinmux_mode="i2c_mipi";
 			sensor_clk_freq=37125000;
