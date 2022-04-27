@@ -47,13 +47,13 @@ insert_detect() {
 }
 
 remove_detect() {
-    rmmod hi_sensor_spi
-    rmmod hi_sensor_i2c
-    rmmod hi3516cv500_isp
-    rmmod hi3516cv500_base
-    rmmod sys_config
-    rmmod hi_osal &> /dev/null
-    rmmod cma_osal &> /dev/null
+    rmmod -w hi_sensor_spi
+    rmmod -w hi_sensor_i2c
+    rmmod -w hi3516cv500_isp
+    rmmod -w hi3516cv500_base
+    rmmod -w sys_config
+    rmmod -w hi_osal &> /dev/null
+    rmmod -w cma_osal &> /dev/null
 }
 
 insert_audio() {
@@ -68,13 +68,13 @@ insert_audio() {
 }
 
 remove_audio() {
-    rmmod hi3516cv500_acodec
-    #    rmmod hi_tlv320aic31.ko
-    rmmod hi3516cv500_adec
-    rmmod hi3516cv500_aenc
-    rmmod hi3516cv500_ao
-    rmmod hi3516cv500_ai
-    rmmod hi3516cv500_aio
+    rmmod -w hi3516cv500_acodec
+    #    rmmod -w hi_tlv320aic31.ko
+    rmmod -w hi3516cv500_adec
+    rmmod -w hi3516cv500_aenc
+    rmmod -w hi3516cv500_ao
+    rmmod -w hi3516cv500_ai
+    rmmod -w hi3516cv500_aio
 
     echo "remove audio"
 }
@@ -92,11 +92,11 @@ insert_gyro() {
 }
 
 remove_gyro() {
-    rmmod motionsensor_chip
-    rmmod motionsensor_mng
-    rmmod hi3516cv500_motionfusion
-    rmmod hi3516cv500_gyrodis
-    rmmod hi_spi
+    rmmod -w motionsensor_chip
+    rmmod -w motionsensor_mng
+    rmmod -w hi3516cv500_motionfusion
+    rmmod -w hi3516cv500_gyrodis
+    rmmod -w hi_spi
 }
 
 insert_ko() {
@@ -148,44 +148,44 @@ insert_ko() {
 
 remove_ko() {
     # rmmod_gyro
-    # rmmod hi_user
+    # rmmod -w hi_user
     remove_audio
-    # rmmod hi_mipi_tx
-    rmmod hi_mipi_rx
-    #rmmod hi_sil9136 &> /dev/null
-    rmmod hi_piris
-    rmmod hi_pwm
+    # rmmod -w hi_mipi_tx
+    rmmod -w hi_mipi_rx
+    #rmmod -w hi_sil9136 &> /dev/null
+    rmmod -w hi_piris
+    rmmod -w hi_pwm
 
-    # rmmod hi3516cv500_nnie nnie_save_power=1 nnie_max_tskbuf_num=32
-    # rmmod hi_ipcm
-    # rmmod hi3516cv500_ive
-    rmmod hi3516cv500_rc
-    rmmod hi3516cv500_jpege
-    rmmod hi3516cv500_h264e
-    rmmod hi3516cv500_h265e
-    rmmod hi3516cv500_venc
-    rmmod hi3516cv500_vedu
-    rmmod hi3516cv500_chnl
-    # rmmod hifb
-    # rmmod hi3516cv500_vo
-    rmmod hi3516cv500_vpss
-    rmmod hi3516cv500_isp
-    rmmod hi3516cv500_vi
-    rmmod hi3516cv500_gdc
-    rmmod hi3516cv500_dis
-    # rmmod hi3516cv500_vgs
-    rmmod hi3516cv500_rgn
-    rmmod hi3516cv500_tde
+    # rmmod -w hi3516cv500_nnie nnie_save_power=1 nnie_max_tskbuf_num=32
+    # rmmod -w hi_ipcm
+    # rmmod -w hi3516cv500_ive
+    rmmod -w hi3516cv500_rc
+    rmmod -w hi3516cv500_jpege
+    rmmod -w hi3516cv500_h264e
+    rmmod -w hi3516cv500_h265e
+    rmmod -w hi3516cv500_venc
+    rmmod -w hi3516cv500_vedu
+    rmmod -w hi3516cv500_chnl
+    # rmmod -w hifb
+    # rmmod -w hi3516cv500_vo
+    rmmod -w hi3516cv500_vpss
+    rmmod -w hi3516cv500_isp
+    rmmod -w hi3516cv500_vi
+    rmmod -w hi3516cv500_gdc
+    rmmod -w hi3516cv500_dis
+    # rmmod -w hi3516cv500_vgs
+    rmmod -w hi3516cv500_rgn
+    rmmod -w hi3516cv500_tde
 
-    rmmod hi_sensor_i2c &>/dev/null
-    rmmod hi_sensor_spi &>/dev/null
+    rmmod -w hi_sensor_i2c &>/dev/null
+    rmmod -w hi_sensor_spi &>/dev/null
 
-    # rmmod mpu_bosch
-    rmmod hi3516cv500_sys
-    rmmod hi3516cv500_base
-    # rmmod hi_tzasc
-    rmmod sys_config
-    rmmod hi_osal
+    # rmmod -w mpu_bosch
+    rmmod -w hi3516cv500_sys
+    rmmod -w hi3516cv500_base
+    # rmmod -w hi_tzasc
+    rmmod -w sys_config
+    rmmod -w hi_osal
 }
 
 sys_restore() {

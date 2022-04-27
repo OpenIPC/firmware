@@ -39,14 +39,14 @@ insert_detect() {
 }
 
 remove_detect() {
-        rmmod sensor_spi
-        rmmod sensor_i2c
-        rmmod hi3518e_isp
-        rmmod hi3518e_sys
-        rmmod hi3518e_base
-        rmmod hi_media
-        rmmod mmz
-        rmmod sys_config.ko
+        rmmod -w sensor_spi
+        rmmod -w sensor_i2c
+        rmmod -w hi3518e_isp
+        rmmod -w hi3518e_sys
+        rmmod -w hi3518e_base
+        rmmod -w hi_media
+        rmmod -w mmz
+        rmmod -w sys_config.ko
 }
 
 insert_audio() {
@@ -61,19 +61,19 @@ insert_audio() {
 }
 
 remove_audio() {
-        rmmod tlv_320aic31.ko
-        rmmod hi3518e_adec
-        rmmod hi3518e_aenc
-        rmmod hi3518e_ao
-        rmmod hi3518e_ai
-        rmmod hi3518e_aio
-        rmmod acodec
+        rmmod -w tlv_320aic31.ko
+        rmmod -w hi3518e_adec
+        rmmod -w hi3518e_aenc
+        rmmod -w hi3518e_ao
+        rmmod -w hi3518e_ai
+        rmmod -w hi3518e_aio
+        rmmod -w acodec
         echo "remove audio"
 }
 
 remove_sns() {
-        rmmod sensor_spi &>/dev/null
-        rmmod sensor_i2c &>/dev/null
+        rmmod -w sensor_spi &>/dev/null
+        rmmod -w sensor_i2c &>/dev/null
 }
 
 insert_isp() {
@@ -212,37 +212,37 @@ insert_ko() {
 }
 
 remove_ko() {
-        rmmod wdt
-        rmmod sys_config.ko
+        rmmod -w wdt
+        rmmod -w sys_config.ko
         remove_audio
         remove_sns
 
-        rmmod pwm
+        rmmod -w pwm
 
-        rmmod hi3518e_ive
+        rmmod -w hi3518e_ive
 
-        rmmod hi3518e_rc
-        rmmod hi3518e_jpege
-        rmmod hi3518e_h264e
-        rmmod hi3518e_chnl
-        rmmod hi3518e_venc
+        rmmod -w hi3518e_rc
+        rmmod -w hi3518e_jpege
+        rmmod -w hi3518e_h264e
+        rmmod -w hi3518e_chnl
+        rmmod -w hi3518e_venc
 
-        rmmod hifb
-        #rmmod hi3518e_vou
-        rmmod hi3518e_vpss
-        rmmod hi3518e_viu
-        rmmod hi_mipi
+        rmmod -w hifb
+        #rmmod -w hi3518e_vou
+        rmmod -w hi3518e_vpss
+        rmmod -w hi3518e_viu
+        rmmod -w hi_mipi
 
-        rmmod hi3518e_vgs
-        rmmod hi3518e_region
-        rmmod hi3518e_tde
+        rmmod -w hi3518e_vgs
+        rmmod -w hi3518e_region
+        rmmod -w hi3518e_tde
 
-        #rmmod piris
-        rmmod hi3518e_isp
-        rmmod hi3518e_sys
-        rmmod hi3518e_base
-        rmmod hi_media
-        rmmod mmz
+        #rmmod -w piris
+        rmmod -w hi3518e_isp
+        rmmod -w hi3518e_sys
+        rmmod -w hi3518e_base
+        rmmod -w hi_media
+        rmmod -w mmz
 }
 
 load_usage() {
