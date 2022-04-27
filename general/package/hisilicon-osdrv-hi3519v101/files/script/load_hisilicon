@@ -44,12 +44,12 @@ insert_detect() {
 }
 
 remove_detect() {
-	rmmod hi_ssp_sony
-	rmmod hi_sensor_i2c
-	rmmod hi3519v101_isp
-	rmmod hi3519v101_sys
-	rmmod hi3519v101_base
-	rmmod hi_osal
+	rmmod -w hi_ssp_sony
+	rmmod -w hi_sensor_i2c
+	rmmod -w hi3519v101_isp
+	rmmod -w hi3519v101_sys
+	rmmod -w hi3519v101_base
+	rmmod -w hi_osal
 }
 
 insert_audio() {
@@ -63,13 +63,13 @@ insert_audio() {
 }
 
 remove_audio() {
-	rmmod hi_acodec
-	#rmmod hi_tlv320aic31
-	rmmod hi3519v101_adec
-	rmmod hi3519v101_aenc
-	rmmod hi3519v101_ao
-	rmmod hi3519v101_ai
-	rmmod hi3519v101_aio
+	rmmod -w hi_acodec
+	#rmmod -w hi_tlv320aic31
+	rmmod -w hi3519v101_adec
+	rmmod -w hi3519v101_aenc
+	rmmod -w hi3519v101_ao
+	rmmod -w hi3519v101_ai
+	rmmod -w hi3519v101_aio
 }
 
 sysconfig() {
@@ -639,8 +639,8 @@ insert_sns() {
 }
 
 remove_sns() {
-	rmmod hi_ssp_sony &>/dev/null
-	rmmod hi_sensor_spi &>/dev/null
+	rmmod -w hi_ssp_sony &>/dev/null
+	rmmod -w hi_sensor_spi &>/dev/null
 }
 
 insert_isp() {
@@ -719,39 +719,39 @@ insert_ko() {
 remove_ko() {
 	remove_audio
 	remove_sns
-	#rmmod hi_user
-	rmmod hi_pwm
-	rmmod hi_piris
+	#rmmod -w hi_user
+	rmmod -w hi_pwm
+	rmmod -w hi_piris
 
-	rmmod hi3519v101_photo
-	#rmmod hi3519v101_ive
+	rmmod -w hi3519v101_photo
+	#rmmod -w hi3519v101_ive
 
-	rmmod hi3519v101_rc
-	rmmod hi3519v101_jpege
-	rmmod hi3519v101_h264e
-	rmmod hi3519v101_h265e
-	rmmod hi3519v101_vedu
-	rmmod hi3519v101_chnl
-	rmmod hi3519v101_venc
+	rmmod -w hi3519v101_rc
+	rmmod -w hi3519v101_jpege
+	rmmod -w hi3519v101_h264e
+	rmmod -w hi3519v101_h265e
+	rmmod -w hi3519v101_vedu
+	rmmod -w hi3519v101_chnl
+	rmmod -w hi3519v101_venc
 
-	#rmmod hifb
-	#rmmod hi3519v101_vou
-	rmmod hi3519v101_vpss
-	rmmod hi3519v101_isp
-	rmmod hi3519v101_viu
-	rmmod hi_mipi
-	#rmmod hi3519v101_fisheye
+	#rmmod -w hifb
+	#rmmod -w hi3519v101_vou
+	rmmod -w hi3519v101_vpss
+	rmmod -w hi3519v101_isp
+	rmmod -w hi3519v101_viu
+	rmmod -w hi_mipi
+	#rmmod -w hi3519v101_fisheye
 
-	#rmmod hi3519v101_vgs
-	rmmod hi3519v101_region
-	#rmmod hi3519v101_tde
+	#rmmod -w hi3519v101_vgs
+	rmmod -w hi3519v101_region
+	#rmmod -w hi3519v101_tde
 
-	rmmod hi_sensor_i2c &>/dev/null
-	rmmod hi_ssp_3wire.ko &>/dev/null
+	rmmod -w hi_sensor_i2c &>/dev/null
+	rmmod -w hi_ssp_3wire.ko &>/dev/null
 
-	rmmod hi3519v101_sys
-	rmmod hi3519v101_base
-	rmmod hi_osal
+	rmmod -w hi3519v101_sys
+	rmmod -w hi3519v101_base
+	rmmod -w hi_osal
 }
 
 sys_restore() {

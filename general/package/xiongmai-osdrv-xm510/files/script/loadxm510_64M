@@ -43,9 +43,9 @@ insert_audio()
 remove_audio()
 {
 	echo "remove audio"
-	rmmod acodec
-	rmmod xm510_i2s
-	rmmod gpioi2c
+	rmmod -w acodec
+	rmmod -w xm510_i2s
+	rmmod -w gpioi2c
 }
 
 insert_sns()
@@ -62,8 +62,8 @@ insert_sns()
 
 remove_sns()
 {
-	rmmod xm_i2c &> /dev/null
-	rmmod ssp_sony &> /dev/null
+	rmmod -w xm_i2c &> /dev/null
+	rmmod -w ssp_sony &> /dev/null
 }
 
 insert_ko()
@@ -91,12 +91,12 @@ insert_ko()
 remove_ko()
 {
 	remove_audio
-	rmmod xm_wdt
-	rmmod xm_rtc
-	rmmod xm510_h264
-	rmmod xm510_rgn
-	rmmod xm510_isp
-	rmmod xm510_vi
+	rmmod -w xm_wdt
+	rmmod -w xm_rtc
+	rmmod -w xm510_h264
+	rmmod -w xm510_rgn
+	rmmod -w xm510_isp
+	rmmod -w xm510_vi
 
 	remove_sns
 }

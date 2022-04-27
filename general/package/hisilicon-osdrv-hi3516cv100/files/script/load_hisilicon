@@ -38,14 +38,14 @@ insert_detect() {
 }
 
 remove_detect() {
-    rmmod ssp_sony &>/dev/null
-    rmmod ssp_pana &>/dev/null
-    rmmod ssp_ad9020 &>/dev/null
-    rmmod hi_i2c
-    rmmod hi3518_isp
-    rmmod hi3518_sys
-    rmmod hi3518_base
-    rmmod mmz
+    rmmod -w ssp_sony &>/dev/null
+    rmmod -w ssp_pana &>/dev/null
+    rmmod -w ssp_ad9020 &>/dev/null
+    rmmod -w hi_i2c
+    rmmod -w hi3518_isp
+    rmmod -w hi3518_sys
+    rmmod -w hi3518_base
+    rmmod -w mmz
 }
 
 insert_audio() {
@@ -60,13 +60,13 @@ insert_audio() {
 }
 
 remove_audio() {
-    rmmod hi3518_adec
-    rmmod hi3518_aenc
-    rmmod hi3518_ao
-    rmmod hi3518_ai
-    rmmod hi3518_sio
-    rmmod acodec
-    rmmod hidmac
+    rmmod -w hi3518_adec
+    rmmod -w hi3518_aenc
+    rmmod -w hi3518_ao
+    rmmod -w hi3518_ai
+    rmmod -w hi3518_sio
+    rmmod -w acodec
+    rmmod -w hidmac
     echo "remove audio"
 }
 
@@ -122,11 +122,11 @@ insert_sns() {
 }
 
 remove_sns() {
-    rmmod hi_i2c &>/dev/null
-    rmmod ssp &>/dev/null
-    rmmod ssp_sony &>/dev/null
-    rmmod ssp_pana &>/dev/null
-    rmmod ssp_ad9020 &>/dev/null
+    rmmod -w hi_i2c &>/dev/null
+    rmmod -w ssp &>/dev/null
+    rmmod -w ssp_sony &>/dev/null
+    rmmod -w ssp_pana &>/dev/null
+    rmmod -w ssp_ad9020 &>/dev/null
 }
 
 sys_config() {
@@ -326,39 +326,39 @@ insert_ko() {
 }
 
 remove_ko() {
-    rmmod wdt
+    rmmod -w wdt
     remove_audio
     remove_sns
 
-    # rmmod sil9024 &> /dev/null
-    rmmod hi_i2c.ko &>/dev/null
-    rmmod pwm
-    #rmmod gpioi2c
+    # rmmod -w sil9024 &> /dev/null
+    rmmod -w hi_i2c.ko &>/dev/null
+    rmmod -w pwm
+    #rmmod -w gpioi2c
 
-    rmmod hi3518_ive
-    # rmmod hi3518_vda
+    rmmod -w hi3518_ive
+    # rmmod -w hi3518_vda
 
-    rmmod hi3518_region
-    rmmod hi3518_rc
-    rmmod hi3518_jpege
-    rmmod hi3518_h264e
-    rmmod hi3518_chnl
-    rmmod hi3518_group
-    rmmod hi3518_venc
+    rmmod -w hi3518_region
+    rmmod -w hi3518_rc
+    rmmod -w hi3518_jpege
+    rmmod -w hi3518_h264e
+    rmmod -w hi3518_chnl
+    rmmod -w hi3518_group
+    rmmod -w hi3518_venc
 
-    # rmmod hifb
-    # rmmod hi3518_vou
-    rmmod hi3518_vpss
-    rmmod hi3518_isp
-    rmmod hi3518_viu
+    # rmmod -w hifb
+    # rmmod -w hi3518_vou
+    rmmod -w hi3518_vpss
+    rmmod -w hi3518_isp
+    rmmod -w hi3518_viu
 
-    # rmmod hi3518_dsu
-    # rmmod hi3518_tde
+    # rmmod -w hi3518_dsu
+    # rmmod -w hi3518_tde
 
-    rmmod hiuser
-    rmmod hi3518_sys
-    rmmod hi3518_base
-    rmmod mmz
+    rmmod -w hiuser
+    rmmod -w hi3518_sys
+    rmmod -w hi3518_base
+    rmmod -w mmz
 }
 
 load_usage() {

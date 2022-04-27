@@ -40,8 +40,8 @@ remove_detect()
 
 remove_sns()
 {
-        rmmod sensor_spi &> /dev/null
-        rmmod sensor_i2c &> /dev/null
+        rmmod -w sensor_spi &> /dev/null
+        rmmod -w sensor_i2c &> /dev/null
 }
 
 insert_isp()
