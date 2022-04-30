@@ -42,13 +42,13 @@ insert_audio()
 
 remove_audio()
 {
-	rmmod hi3516ev200_acodec
-#	rmmod hi_tlv320aic31.ko
-	rmmod hi3516ev200_adec
-	rmmod hi3516ev200_aenc
-	rmmod hi3516ev200_ao
-	rmmod hi3516ev200_ai
-	rmmod hi3516ev200_aio
+	rmmod -w hi3516ev200_acodec
+#	rmmod -w hi_tlv320aic31.ko
+	rmmod -w hi3516ev200_adec
+	rmmod -w hi3516ev200_aenc
+	rmmod -w hi3516ev200_ao
+	rmmod -w hi3516ev200_ai
+	rmmod -w hi3516ev200_aio
 
 	echo "remove audio"
 }
@@ -118,35 +118,35 @@ insert_ko()
 
 remove_ko()
 {
-	rmmod hi3516ev200_pm
-#	rmmod hi_user
+	rmmod -w hi3516ev200_pm
+#	rmmod -w hi_user
 	remove_audio
-	rmmod hi_pwm
-	rmmod hi_mipi_rx
-	rmmod hi_sil9024 &> /dev/null
-#	rmmod hi_adv7179 &> /dev/null
-	rmmod hi3516ev200_ive
-	rmmod hi3516ev200_rc
-	rmmod hi3516ev200_jpege
-	rmmod hi3516ev200_h264e
-	rmmod hi3516ev200_h265e
-	rmmod hi3516ev200_venc
-	rmmod hi3516ev200_vedu
-	rmmod hi3516ev200_chnl
-	rmmod hifb
-	rmmod hi3516ev200_vo
-	rmmod hi3516ev200_vpss
-	rmmod hi3516ev200_isp
-	rmmod hi3516ev200_vi
-	rmmod hi3516ev200_vgs
-	rmmod hi3516ev200_rgn
-#	rmmod hi3516ev200_tde
-	rmmod hi_sensor_i2c &> /dev/null
-	rmmod hi_sensor_spi &> /dev/null
-	rmmod hi3516ev200_sys
-	rmmod hi3516ev200_base
-	rmmod hi_osal
-	rmmod sys_config
+	rmmod -w hi_pwm
+	rmmod -w hi_mipi_rx
+	rmmod -w hi_sil9024 &> /dev/null
+#	rmmod -w hi_adv7179 &> /dev/null
+	rmmod -w hi3516ev200_ive
+	rmmod -w hi3516ev200_rc
+	rmmod -w hi3516ev200_jpege
+	rmmod -w hi3516ev200_h264e
+	rmmod -w hi3516ev200_h265e
+	rmmod -w hi3516ev200_venc
+	rmmod -w hi3516ev200_vedu
+	rmmod -w hi3516ev200_chnl
+	rmmod -w hifb
+	rmmod -w hi3516ev200_vo
+	rmmod -w hi3516ev200_vpss
+	rmmod -w hi3516ev200_isp
+	rmmod -w hi3516ev200_vi
+	rmmod -w hi3516ev200_vgs
+	rmmod -w hi3516ev200_rgn
+#	rmmod -w hi3516ev200_tde
+	rmmod -w hi_sensor_i2c &> /dev/null
+	rmmod -w hi_sensor_spi &> /dev/null
+	rmmod -w hi3516ev200_sys
+	rmmod -w hi3516ev200_base
+	rmmod -w hi_osal
+	rmmod -w sys_config
 }
 
 

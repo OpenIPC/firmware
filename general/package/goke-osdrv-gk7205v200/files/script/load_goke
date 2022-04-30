@@ -87,12 +87,12 @@ insert_audio()
 
 remove_audio()
 {
-	rmmod gk7205v200_acodec
-	rmmod gk7205v200_adec
-	rmmod gk7205v200_aenc
-	rmmod gk7205v200_ao
-	rmmod gk7205v200_ai
-	rmmod gk7205v200_aio
+	rmmod -w gk7205v200_acodec
+	rmmod -w gk7205v200_adec
+	rmmod -w gk7205v200_aenc
+	rmmod -w gk7205v200_ao
+	rmmod -w gk7205v200_ai
+	rmmod -w gk7205v200_aio
 	echo "remove audio"
 }
 
@@ -168,35 +168,35 @@ insert_ko()
 
 remove_ko()
 {
-        rmmod gk7205v200_wdt
-	# rmmod gk7205v200_pm                           # unused on OpenIPC
+        rmmod -w gk7205v200_wdt
+	# rmmod -w gk7205v200_pm                           # unused on OpenIPC
 	remove_audio
-	rmmod mipi_rx
-	# rmmod isp_piris                               # unused on OpenIPC
-	# rmmod sil9024 &> /dev/null                    # unused on OpenIPC
-	rmmod gk7205v200_ive
-	rmmod gk7205v200_rc
-	rmmod gk7205v200_jpege
-	rmmod gk7205v200_h264e
-	rmmod gk7205v200_h265e
-	rmmod gk7205v200_venc
-	rmmod gk7205v200_vedu
-	rmmod gk7205v200_chnl
-	# rmmod gfbg                                    # unused on OpenIPC
-	# rmmod gk7205v200_vo                           # unused on OpenIPC
-	rmmod gk7205v200_vpss
-	rmmod gk7205v200_isp
-	rmmod gk7205v200_vi
-	rmmod gk7205v200_vgs
-	rmmod gk7205v200_rgn
-	# rmmod gk7205v200_tde
-	rmmod isp_sensor_i2c &> /dev/null
-	rmmod isp_sensor_spi &> /dev/null
-	rmmod isp_pwm
-	rmmod gk7205v200_sys
-	rmmod gk7205v200_base
-	rmmod osal
-	rmmod sysconfig
+	rmmod -w mipi_rx
+	# rmmod -w isp_piris                               # unused on OpenIPC
+	# rmmod -w sil9024 &> /dev/null                    # unused on OpenIPC
+	rmmod -w gk7205v200_ive
+	rmmod -w gk7205v200_rc
+	rmmod -w gk7205v200_jpege
+	rmmod -w gk7205v200_h264e
+	rmmod -w gk7205v200_h265e
+	rmmod -w gk7205v200_venc
+	rmmod -w gk7205v200_vedu
+	rmmod -w gk7205v200_chnl
+	# rmmod -w gfbg                                    # unused on OpenIPC
+	# rmmod -w gk7205v200_vo                           # unused on OpenIPC
+	rmmod -w gk7205v200_vpss
+	rmmod -w gk7205v200_isp
+	rmmod -w gk7205v200_vi
+	rmmod -w gk7205v200_vgs
+	rmmod -w gk7205v200_rgn
+	# rmmod -w gk7205v200_tde
+	rmmod -w isp_sensor_i2c &> /dev/null
+	rmmod -w isp_sensor_spi &> /dev/null
+	rmmod -w isp_pwm
+	rmmod -w gk7205v200_sys
+	rmmod -w gk7205v200_base
+	rmmod -w osal
+	rmmod -w sysconfig
 }
 
 
