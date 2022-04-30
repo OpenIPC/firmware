@@ -37,14 +37,14 @@ insert_detect() {
 }
 
 remove_detect() {
-        rmmod sensor_spi
-        rmmod sensor_i2c
-        rmmod hi3516a_isp
-        rmmod hi3516a_sys
-        rmmod hi3516a_base
-        rmmod hi_media
-        rmmod mmz
-        rmmod sys_config
+        rmmod -w sensor_spi
+        rmmod -w sensor_i2c
+        rmmod -w hi3516a_isp
+        rmmod -w hi3516a_sys
+        rmmod -w hi3516a_base
+        rmmod -w hi_media
+        rmmod -w mmz
+        rmmod -w sys_config
 }
 
 insert_audio() {
@@ -58,18 +58,18 @@ insert_audio() {
 }
 
 remove_audio() {
-        rmmod hi3516a_adec
-        rmmod hi3516a_aenc
-        rmmod hi3516a_ao
-        rmmod hi3516a_ai
-        rmmod hi3516a_aio
-        rmmod acodec
+        rmmod -w hi3516a_adec
+        rmmod -w hi3516a_aenc
+        rmmod -w hi3516a_ao
+        rmmod -w hi3516a_ai
+        rmmod -w hi3516a_aio
+        rmmod -w acodec
         echo "remove audio"
 }
 
 remove_sns() {
-        rmmod sensor_spi &>/dev/null
-        rmmod sensor_i2c &>/dev/null
+        rmmod -w sensor_spi &>/dev/null
+        rmmod -w sensor_i2c &>/dev/null
 }
 
 sys_config() {
@@ -297,36 +297,36 @@ insert_ko() {
 }
 
 remove_ko() {
-        rmmod wdt
+        rmmod -w wdt
         remove_audio
         remove_sns
 
-        rmmod pwm
-        rmmod piris
-        #rmmod hi3516a_ive
+        rmmod -w pwm
+        rmmod -w piris
+        #rmmod -w hi3516a_ive
 
-        rmmod hi3516a_rc
-        rmmod hi3516a_jpege
-        rmmod hi3516a_h265e
-        rmmod hi3516a_h264e
-        rmmod hi3516a_chnl
-        rmmod hi3516a_venc
+        rmmod -w hi3516a_rc
+        rmmod -w hi3516a_jpege
+        rmmod -w hi3516a_h265e
+        rmmod -w hi3516a_h264e
+        rmmod -w hi3516a_chnl
+        rmmod -w hi3516a_venc
 
-        #rmmod hifb
-        #rmmod hi3516a_vou
-        rmmod hi3516a_vpss
-        rmmod hi3516a_viu
-        rmmod hi_mipi
+        #rmmod -w hifb
+        #rmmod -w hi3516a_vou
+        rmmod -w hi3516a_vpss
+        rmmod -w hi3516a_viu
+        rmmod -w hi_mipi
 
-        rmmod hi3516a_vgs
-        rmmod hi3516a_region
-        rmmod hi3516a_tde
+        rmmod -w hi3516a_vgs
+        rmmod -w hi3516a_region
+        rmmod -w hi3516a_tde
 
-        rmmod hi3516a_isp
-        rmmod hi3516a_sys
-        rmmod hi3516a_base
-        rmmod hi_media
-        rmmod mmz
+        rmmod -w hi3516a_isp
+        rmmod -w hi3516a_sys
+        rmmod -w hi3516a_base
+        rmmod -w hi_media
+        rmmod -w mmz
 }
 
 load_usage()

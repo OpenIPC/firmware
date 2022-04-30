@@ -126,26 +126,26 @@ insert_ko()
 
 remove_ko()
 {
-    rmmod drv_ms_cus_gc2053_MIPI
-    rmmod drv_ms_cus_gc4653_MIPI
-    rmmod drv_ms_cus_imx307_MIPI
-    rmmod drv_ms_cus_imx335_MIPI
-    rmmod drv_ms_cus_sc2239_MIPI
-    rmmod drv_ms_cus_sc2335_MIPI
-    rmmod drv_ms_cus_sc3335_MIPI
-    rmmod mi_shadow
-    rmmod mi_venc
-    rmmod mi_vif
-    rmmod mi_sensor
-    rmmod mi_vpe
-    rmmod mi_ipu
-    rmmod mi_divp
-    rmmod mi_rgn
-    rmmod mi_ao
-    rmmod mi_ai
-    rmmod mi_sys
-    rmmod mi_common
-    rmmod mhal
+    rmmod -w drv_ms_cus_gc2053_MIPI
+    rmmod -w drv_ms_cus_gc4653_MIPI
+    rmmod -w drv_ms_cus_imx307_MIPI
+    rmmod -w drv_ms_cus_imx335_MIPI
+    rmmod -w drv_ms_cus_sc2239_MIPI
+    rmmod -w drv_ms_cus_sc2335_MIPI
+    rmmod -w drv_ms_cus_sc3335_MIPI
+    rmmod -w mi_shadow
+    rmmod -w mi_venc
+    rmmod -w mi_vif
+    rmmod -w mi_sensor
+    rmmod -w mi_vpe
+    rmmod -w mi_ipu
+    rmmod -w mi_divp
+    rmmod -w mi_rgn
+    rmmod -w mi_ao
+    rmmod -w mi_ai
+    rmmod -w mi_sys
+    rmmod -w mi_common
+    rmmod -w mhal
 }
 
 
