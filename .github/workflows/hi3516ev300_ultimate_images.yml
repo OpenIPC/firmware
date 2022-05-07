@@ -72,8 +72,8 @@ jobs:
           cd ${GITHUB_WORKSPACE}/output/images
           mv uImage uImage.hi3516ev300-ultimate
           mv rootfs.squashfs rootfs.squashfs.hi3516ev300-ultimate
-          md5sum rootfs.squashfs.hi3516ev300 > rootfs.squashfs.hi3516ev300-ultimate.md5sum
-          md5sum uImage.hi3516ev300 > uImage.hi3516ev300-ultimate.md5sum
+          md5sum rootfs.squashfs.hi3516ev300-ultimate > rootfs.squashfs.hi3516ev300-ultimate.md5sum
+          md5sum uImage.hi3516ev300-ultimate > uImage.hi3516ev300-ultimate.md5sum
           tar -cvzf $ARCHIVE_FW *hi3516ev300-ultimate*
 
       - name: Build Hi3516Ev300 (ultimate) SDK
