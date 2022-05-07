@@ -271,7 +271,7 @@ insert_sns()
 			echo "0" > /sys/class/gpio/gpio66/value;
             ;;
 
-	jxf22_i2c_dc)
+	jxf22_i2c_dc|ar0237_hispi)
 			# This was added by ZigFisher
 			bus_type="i2c";
 			pinmux_mode="i2c_dc";
@@ -292,7 +292,7 @@ insert_sns()
 			echo "0" > /sys/class/gpio/gpio66/value;
             ;;
 
-	ov2718)
+	ov2718|ov2735)
 			bus_type="i2c";
 			pinmux_mode="i2c_mipi";
 			sensor_clk_freq=24000000;
@@ -318,7 +318,7 @@ insert_sns()
 			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
             ;;
 
-	sc2235p_i2c_dc)
+	sc2310|sc2235p_i2c_dc)
 			# This was added by ZigFisher
 			bus_type="i2c";
 			pinmux_mode="i2c_dc";
