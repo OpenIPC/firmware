@@ -2,6 +2,7 @@ export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/tmp"
 export HOME=$(grep -e "^${USER:-root}:" /etc/passwd | cut -d ":" -f 6)
 export HOME=${HOME:-/root}
 export TZ=$(cat /etc/TZ)
+export SENSOR=$(fw_printenv -n sensor)
 
 if [ "$PS1" ]; then
 	[ -f /etc/os-release ] && . /etc/os-release
