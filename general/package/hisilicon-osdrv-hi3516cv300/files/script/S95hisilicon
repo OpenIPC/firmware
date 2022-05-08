@@ -37,7 +37,8 @@ start() {
 	export TZ=$(cat /etc/TZ)
 	load_hisilicon -i
 	#
-  load_majestic
+	export SENSOR=$(fw_printenv -n sensor)
+	load_majestic
 }
 
 stop() {
