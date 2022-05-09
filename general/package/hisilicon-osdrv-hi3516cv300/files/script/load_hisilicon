@@ -112,7 +112,7 @@ insert_sns()
 {
     case $SNS_TYPE in
 
-	ar0237)
+	ar0237_i2c)
 			bus_type="i2c";
 			pinmux_mode="i2c_mipi";
 			sensor_clk_freq=27000000;
@@ -160,7 +160,7 @@ insert_sns()
 			isp_div=1;                                    # isp div clk, freq = viu_clk_freq / div
             ;;
 
-	imx290|imx327_i2c*)
+	imx290_i2c|imx327_i2c*)
 			bus_type="i2c";
 			pinmux_mode="i2c_mipi";
 			sensor_clk_freq=37125000;
@@ -248,7 +248,7 @@ insert_sns()
 			fi
             ;;
 
-	imx385)
+	imx385_i2c)
 			# get from hi3516cv300 profile (!!! check viu_frequency and isp_div !!!)
 			bus_type="i2c";
 			pinmux_mode="i2c_mipi";
@@ -258,7 +258,7 @@ insert_sns()
 			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
             ;;
 
-	jxf22)
+	jxf22_i2c)
 			# get from hi3516ev100 profile (!!! check viu_frequency and isp_div !!!)
 			bus_type="i2c";
 			pinmux_mode="i2c_mipi";
@@ -292,7 +292,7 @@ insert_sns()
 			echo "0" > /sys/class/gpio/gpio66/value;
             ;;
 
-	ov2718|ov2735)
+	ov2718_i2c|ov2735_i2c)
 			bus_type="i2c";
 			pinmux_mode="i2c_mipi";
 			sensor_clk_freq=24000000;
@@ -307,6 +307,9 @@ insert_sns()
 				echo "Wrong chip_id: ${chipid}";
 				exit 1;
 			fi
+			echo "0" > /sys/class/gpio/export; # SENSOR_RSTN @  GPIO0_0 on Dahua boards
+			echo "out" > /sys/class/gpio/gpio0/direction;
+			echo "1" > /sys/class/gpio/gpio0/value;
             ;;
 
 	ov2718_2a)
@@ -318,7 +321,7 @@ insert_sns()
 			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
             ;;
 
-	sc2310|sc2235p_i2c_dc)
+	sc2310_i2c|sc2235p_i2c_dc)
 			# This was added by ZigFisher
 			bus_type="i2c";
 			pinmux_mode="i2c_dc";
