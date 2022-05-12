@@ -316,6 +316,11 @@ hi3516ev200_vixand() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_vixand all && rename
 }
 
+hi3516ev200_ultimate() {
+  soc="hi3516ev200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
+}
+
 hi3516ev300() {
   soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -565,6 +570,7 @@ xm550() {
 # hi3516ev200_dozor             # Dozor
 # hi3516ev200_eltis             # Eltis
 # hi3516ev200_vixand            # Vixand
+hi3516ev200_ultimate          # OpenIPC_ultimate version
 # hi3516ev300                   # OpenIPC
 # hi3516ev300_dev               # OpenIPC development
 # hi3516ev300_glibc             # testing..
