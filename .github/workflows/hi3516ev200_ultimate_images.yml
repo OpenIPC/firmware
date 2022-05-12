@@ -114,7 +114,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: "openipc.${BOARD}-ultimate-br.tgz"
+          asset_name: openipc.${{ env.BOARD }}-ultimate-br.tgz
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -124,7 +124,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW_NAND }}
-          asset_name: "openipc.${BOARD}-nand-br.tgz"
+          asset_name: openipc.${{ env.BOARD }}-nand-br.tgz
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
