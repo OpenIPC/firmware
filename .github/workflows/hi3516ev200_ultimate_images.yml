@@ -67,7 +67,7 @@ jobs:
           ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-ultimate-br.tgz"
           ARCHIVE_FW_NAND="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-nand-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
-          echo "ARCHIVE_FW=$ARCHIVE_FW_NAND" >> $GITHUB_ENV
+          echo "ARCHIVE_FW_NAND=$ARCHIVE_FW_NAND" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
           make PLATFORM=hisilicon BOARD=unknown_unknown_${BOARD}_ultimate all
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${BOARD} (ultimate)" >> $GITHUB_ENV && exit 1
