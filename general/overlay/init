@@ -11,8 +11,12 @@ trap on_exit 0
 mount -t proc proc /proc || exit
 grep -q overlay /proc/filesystems || exit
 
+if grep -q ubifs /proc/cmdline; then
+mount -t ubifs ubi0:rootfs_data /overlay
+else
 mount -t jffs2 /dev/$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd | sed 's/mtd/mtdblock/') /overlay || \
-  mount -t tmpfs tmpfs /overlay || exit
+  mount -t ubifs ubi0:rootfs_data /overlay || mount -t tmpfs tmpfs /overlay || exit
+fi
 
 if grep -q overlayfs /proc/filesystems; then
   mount -t overlayfs overlayfs -o lowerdir=/,upperdir=/overlay,ro /mnt \
