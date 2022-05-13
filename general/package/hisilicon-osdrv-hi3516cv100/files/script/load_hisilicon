@@ -408,8 +408,8 @@ else
         logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
     else
         insert_detect
-        SENSOR_DETECT=$(ipcinfo --short-sensor)
-        export SENSOR=${SENSOR_DETECT:=unknown}
+        SNS_TYPE=$(ipcinfo --short-sensor)
+        export SENSOR=${SNS_TYPE:=unknown}
         remove_detect
         logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"
         fw_setenv sensor $SENSOR && logger -s -p daemon.info -t hisilicon "Write detected ${SENSOR} to U-Boot ENV"
