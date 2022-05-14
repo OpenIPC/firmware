@@ -1,12 +1,13 @@
 #!/bin/bash
 #
-# OpenIPC.org | v.20220224
+# OpenIPC.org | v.20220515
 #
 
 MAX_KERNEL_SIZE=0x200000               #    2MiB,  2097152
+MAX_KERNEL_SIZE_ULTIMATE=0x300000      #    3MiB,  3145728
 MAX_KERNEL_SIZE_EXPERIMENTAL=0x3E8480  # ~3.9MiB,  4097152
 MAX_ROOTFS_SIZE=0x500000               #    5MiB,  5242880
-MAX_KERNEL_SIZE_ULTIMATE=0xC80000      # 12,5MiB, 13107200
+MAX_ROOTFS_SIZE_ULTIMATE=0xA00000      #   10MiB,  10485760
 
 clone() {
   sudo apt-get update -y ; apt-get install -y bc build-essential git unzip rsync autotools-dev automake libtool
@@ -32,10 +33,13 @@ should_fit() {
 }
 
 rename() {
-  should_fit uImage $MAX_KERNEL_SIZE
-  should_fit rootfs.squashfs $MAX_ROOTFS_SIZE
-  # If board have "_ultimate" as part...
-  # should_fit rootfs.squashfs $MAX_ROOTFS_SIZE_ULTIMATE
+  if grep -q ultimate_defconfig ./output/.config; then
+      should_fit uImage $MAX_KERNEL_SIZE_ULTIMATE
+      should_fit rootfs.squashfs $MAX_ROOTFS_SIZE_ULTIMATE
+  else
+      should_fit uImage $MAX_KERNEL_SIZE
+      should_fit rootfs.squashfs $MAX_ROOTFS_SIZE
+  fi
   mv -v ./output/images/uImage ./output/images/uImage.${soc}
   mv -v ./output/images/rootfs.squashfs ./output/images/rootfs.squashfs.${soc}
   mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${soc}.cpio
@@ -570,7 +574,7 @@ xm550() {
 # hi3516ev200_dozor             # Dozor
 # hi3516ev200_eltis             # Eltis
 # hi3516ev200_vixand            # Vixand
-hi3516ev200_ultimate          # OpenIPC_ultimate version
+# hi3516ev200_ultimate          # OpenIPC_ultimate version
 # hi3516ev300                   # OpenIPC
 # hi3516ev300_dev               # OpenIPC development
 # hi3516ev300_glibc             # testing..
