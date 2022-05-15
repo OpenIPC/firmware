@@ -1,4 +1,4 @@
-name: "GK7205v200 (fpv)  "
+name: "GK7205v300 (fpv)  "
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build_core:
-    name: OpenIPC firmware for GK7205v200 (fpv)
+    name: OpenIPC firmware for GK7205v300 (fpv)
     runs-on: ubuntu-latest
 
     steps:
@@ -56,20 +56,20 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-          echo "BOARD=gk7205v200" >> $GITHUB_ENV
+          echo "BOARD=gk7205v300" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build GK7205v200 (fpv) firmware
-        id: build-gk7205v200-fpv-firmware
+      - name: Build GK7205v300 (fpv) firmware
+        id: build-gk7205v300-fpv-firmware
         continue-on-error: true
         run: |
           ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-fpv-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=goke BOARD=unknown_unknown_gk7205v200_fpv all
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... ${BOARD} (fpv)" >> $GITHUB_ENV && exit 1
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... ${BOARD} (fpv)" >> $GITHUB_ENV && exit 1
+          make PLATFORM=goke BOARD=unknown_unknown_gk7205v300_fpv all
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 3145728... ${BOARD} (fpv)" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 10485760 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 10485760... ${BOARD} (fpv)" >> $GITHUB_ENV && exit 1
           cd ${GITHUB_WORKSPACE}/output/images
           mv uImage uImage.${BOARD}
           mv rootfs.squashfs rootfs.squashfs.${BOARD}
@@ -77,8 +77,8 @@ jobs:
           md5sum uImage.${BOARD} > uImage.${BOARD}.md5sum
           tar -cvzf $ARCHIVE_FW *${BOARD}*
 
-      - name: Build GK7205v200 (fpv) SDK
-        id: build-gk7205v200-fpv-sdk
+      - name: Build GK7205v300 (fpv) SDK
+        id: build-gk7205v300-fpv-sdk
         continue-on-error: true
         run: |
           ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
@@ -90,7 +90,7 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-gk7205v200-fpv-firmware.outcome != 'success' || steps.build-gk7205v200-fpv-sdk.outcome != 'success'
+        if: steps.build-gk7205v300-fpv-firmware.outcome != 'success' || steps.build-gk7205v300-fpv-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
           TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${BOARD} (fpv)}"
@@ -125,7 +125,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-gk7205v200-fpv-linux-musleabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-gk7205v300-fpv-linux-musleabi_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
