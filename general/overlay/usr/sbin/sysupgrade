@@ -70,7 +70,13 @@ do_wipe_overlay() {
 
 download_firmware() {
 	echo_c 33 "\nFirmware"
-	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${soc}-br.tgz"
+	osr=$(get_system_build)
+	if [[ "${osr}" == "lite" ]] || [[ "${osr}" == "" ]]; then
+	    build="-"
+	else
+	    build="-${osr}-"
+	fi
+	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${soc}${build}br.tgz"
 	echo "Download from $url"
 	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
 	[ "$(curl -o /dev/null -s -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
@@ -118,6 +124,10 @@ get_system_info() {
 
 get_system_version() {
 	grep "GITHUB_VERSION" "$1/etc/os-release" | head -1 | cut -d= -f2 | sed 's/"//g'
+}
+
+get_system_build() {
+	grep "BUILD_OPTION" "/etc/os-release" | head -1 | cut -d= -f2
 }
 
 print_sysinfo() {
