@@ -36,7 +36,7 @@ define HISILICON_OSDRV_HI3516CV100_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.0.8/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/kmod/hi3518_region.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.0.8/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/kmod/hi3518_sio.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.0.8/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/kmod/hi3518_sys.ko
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.0.8/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/kmod/hi3518_tde.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.0.8/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/kmod/hi3518_tde.ko
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.0.8/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/kmod/hi3518_vda.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.0.8/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/kmod/hi3518_venc.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.0.8/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/kmod/hi3518_viu.ko
