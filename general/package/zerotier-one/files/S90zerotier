@@ -5,9 +5,13 @@
 
 case "$1" in
   start)
-	echo "Starting zerotier-one daemon..."
-	/sbin/modprobe tun
-	/usr/sbin/zerotier-one -d
+	if grep -q daemon=1 /etc/zerotier.conf; then
+	    echo "Starting zerotier-one daemon..."
+	    /sbin/modprobe tun
+	    /usr/sbin/zerotier-one -d
+	else
+	    echo "Zerotier-One service disabled in zerotier.conf..."
+	fi
     ;;
   stop)
 	echo "Stopping zerotier-one daemon..."
