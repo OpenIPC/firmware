@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-ZEROTIER_ONE_VERSION = 7ea2354540cd891f61d0944ff8a25c53a42bd038
+ZEROTIER_ONE_VERSION = 7e46c8359231b4aa55c5d739462c4e5682d35755
 ZEROTIER_ONE_SITE = $(call github,zerotier,ZeroTierOne,$(ZEROTIER_ONE_VERSION))
 # ZEROTIER_ONE_DEPENDENCIES += libminiupnpc libnatpmp
 ZEROTIER_ONE_LICENSE = BUSL-1.1
@@ -19,7 +19,10 @@ define ZEROTIER_ONE_BUILD_CMDS
 endef
 
 define ZEROTIER_ONE_INSTALL_TARGET_CMDS
-#	$(MAKE) -C $(@D) DESTDIR=$(TARGET_DIR) install
+	$(MAKE) -C $(@D) DESTDIR=$(TARGET_DIR) install
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
+	cp ../general/package/zerotier-one/files/zerotier.conf $(TARGET_DIR)/etc
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	cp ../general/package/zerotier-one/files/S90zerotier $(TARGET_DIR)/etc/init.d
