@@ -291,6 +291,11 @@ hi3516av200() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+hi3516av200_ultimate() {
+  soc="hi3516av200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
+}
+
 #################################################################################
 
 hi3516av300() {
@@ -602,6 +607,7 @@ xm550() {
 #
 # hi3519v101                    # OpenIPC
 # hi3516av200                   # OpenIPC
+hi3516av200_ultimate          # OpenIPC_ultimate version
 #
 # hi3516av300                   # testing..
 # hi3516cv500                   # testing..
