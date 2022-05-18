@@ -18,7 +18,7 @@
 ::sysinit:/bin/mount -o remount,rw /
 ::sysinit:/bin/mkdir -p /dev/pts /dev/shm
 ::sysinit:/bin/mount -a
-::sysinit:/sbin/swapon -a
+# ::sysinit:/sbin/swapon -a
 null::sysinit:/bin/ln -sf /proc/self/fd /dev/fd
 null::sysinit:/bin/ln -sf /proc/self/fd/0 /dev/stdin
 null::sysinit:/bin/ln -sf /proc/self/fd/1 /dev/stdout
@@ -35,5 +35,5 @@ console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL
 
 # Stuff to do before rebooting
 ::shutdown:/etc/init.d/rcK
-::shutdown:/sbin/swapoff -a
+# ::shutdown:/sbin/swapoff -a
 ::shutdown:/bin/umount -a -f
