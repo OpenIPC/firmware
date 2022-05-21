@@ -99,11 +99,28 @@ remove_gyro() {
     rmmod -w hi_spi
 }
 
+sys_config(){
+    bt656_pinmux(){
+        devmem 0x114f0040 32 0x2
+        devmem 0x114f0044 32 0x2
+        devmem 0x114f0048 32 0x2
+        devmem 0x114f004c 32 0x2
+        devmem 0x114f0050 32 0x2
+        devmem 0x114f0054 32 0x2
+        devmem 0x114f0058 32 0x2
+        devmem 0x114f005c 32 0x2
+        devmem 0x114f0068 32 0x2
+    }
+    bt656_pinmux;
+}
+
 insert_ko() {
     # driver load
     insert_osal
     # sys config
     insmod sys_config.ko chip=${chipid} sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1, g_cmos_yuv_flag=$YUV_TYPE0
+
+    sys_config;
 
     # insmod hi_tzasc.ko
     insmod hi3516cv500_base.ko
@@ -116,8 +133,8 @@ insert_ko() {
     insmod hi3516cv500_vi.ko
     insert_isp
     insmod hi3516cv500_vpss.ko
-    # insmod hi3516cv500_vo.ko
-    # insmod hifb.ko video="hifb:vram0_size:16200"     # default fb0:1080p
+    insmod hi3516cv500_vo.ko
+    # insmod hifb.ko video="hifb:vram0_size:1024"     # default fb0:576p
 
     insmod hi3516cv500_chnl.ko
     insmod hi3516cv500_vedu.ko
