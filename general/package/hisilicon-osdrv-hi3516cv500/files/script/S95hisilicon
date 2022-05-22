@@ -36,8 +36,9 @@ start() {
 	logger -s -p daemon.info -t hisilicon "Loading of kernel modules and initialization of the video system has started"
 	export TZ=$(cat /etc/TZ)
 	load_hisilicon -i
+	# sample_bindvivo_HISI_V4A 1
 	#
-  load_majestic
+	load_majestic
 }
 
 stop() {
