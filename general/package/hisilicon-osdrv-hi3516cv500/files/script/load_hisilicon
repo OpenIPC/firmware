@@ -128,7 +128,7 @@ insert_ko() {
     insmod hi3516cv500_tde.ko
     insmod hi3516cv500_rgn.ko
     insmod hi3516cv500_gdc.ko
-    # insmod hi3516cv500_vgs.ko
+    insmod hi3516cv500_vgs.ko
     insmod hi3516cv500_dis.ko
     insmod hi3516cv500_vi.ko
     insert_isp
@@ -190,7 +190,7 @@ remove_ko() {
     rmmod -w hi3516cv500_vi
     rmmod -w hi3516cv500_gdc
     rmmod -w hi3516cv500_dis
-    # rmmod -w hi3516cv500_vgs
+    rmmod -w hi3516cv500_vgs
     rmmod -w hi3516cv500_rgn
     rmmod -w hi3516cv500_tde
 
