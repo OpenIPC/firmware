@@ -286,7 +286,7 @@ insert_ko() {
 
         insmod sensor_i2c.ko
         insmod pwm.ko
-        insmod piris.ko
+        #insmod piris.ko
 
         insert_sns
         insert_audio
@@ -302,7 +302,7 @@ remove_ko() {
         remove_sns
 
         rmmod -w pwm
-        rmmod -w piris
+        #rmmod -w piris
         #rmmod -w hi3516a_ive
 
         rmmod -w hi3516a_rc
