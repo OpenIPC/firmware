@@ -271,7 +271,7 @@ insert_ko() {
 
         insmod hi3516a_viu.ko detect_err_frame=10
         insmod hi3516a_vpss.ko rfr_frame_comp=1
-        #insmod hi3516a_vou.ko
+        insmod hi3516a_vou.ko
         #insmod hi3516a_vou.ko transparentTransmit=1 #enable transparentTransmit
         #insmod hifb.ko video="hifb:vram0_size:1620"     # default pal
 
@@ -313,7 +313,7 @@ remove_ko() {
         rmmod -w hi3516a_venc
 
         #rmmod -w hifb
-        #rmmod -w hi3516a_vou
+        rmmod -w hi3516a_vou
         rmmod -w hi3516a_vpss
         rmmod -w hi3516a_viu
         rmmod -w hi_mipi
