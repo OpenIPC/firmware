@@ -12,6 +12,8 @@ MAJESTIC_HI3516EV300_LICENSE_FILES = LICENSE
 
 ifeq ($(BR2_PACKAGE_MAJESTIC_ULTIMATE),y)
 MAJESTIC_HI3516EV300_SOURCE = majestic.hi3516ev300.ultimate.master.tar.bz2
+else ifeq ($(BR2_PACKAGE_MAJESTIC_FPV),y)
+MAJESTIC_HI3516EV300_SOURCE = majestic.hi3516ev300.fpv.master.tar.bz2
 else
 MAJESTIC_HI3516EV300_SOURCE = majestic.hi3516ev300.lite.master.tar.bz2
 endif
