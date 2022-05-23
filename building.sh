@@ -33,7 +33,7 @@ should_fit() {
 }
 
 rename() {
-  if grep -q ultimate_defconfig ./output/.config; then
+  if grep -q ultimate_defconfig ./output/.config || grep -q fpv_defconfig ./output/.config; then
       should_fit uImage $MAX_KERNEL_SIZE_ULTIMATE
       should_fit rootfs.squashfs $MAX_ROOTFS_SIZE_ULTIMATE
   else
@@ -355,6 +355,11 @@ hi3516ev300_dev() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_dev all && rename
 }
 
+hi3516ev300_fpv() {
+  soc="hi3516ev300"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_fpv all && rename
+}
+
 hi3516ev300_glibc() {
   soc="hi3516ev300"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_glibc all && rename
@@ -564,12 +569,12 @@ xm550() {
 # gk7202v300                    # testing..
 # gk7205v200                    # OpenIPC
 # gk7205v200_ultimate           # OpenIPC_ultimate version
-# gk7205v200_fpv                # FPV
+# gk7205v200_fpv                # FPV (ultimate by default)
 # gk7205v200_iscom              # Iscom test
 # gk7205v200_ufanet             # Ufanet
 # gk7205v300                    # OpenIPC
 # gk7205v300_ultimate           # OpenIPC_ultimate version
-# gk7205v300_fpv                # FPV
+# gk7205v300_fpv                # FPV (ultimate by default)
 # gk7605v100                    # testing..
 #
 #######
@@ -600,6 +605,7 @@ xm550() {
 # hi3516ev200_ultimate          # OpenIPC_ultimate version
 # hi3516ev300                   # OpenIPC
 # hi3516ev300_dev               # OpenIPC development
+# hi3516ev300_fpv               # FPV (ultimate by default)
 # hi3516ev300_glibc             # testing..
 # hi3516ev300_tehshield         # Tehshield
 # hi3516ev300_ultimate          # OpenIPC_ultimate version
@@ -607,7 +613,7 @@ xm550() {
 #
 # hi3519v101                    # OpenIPC
 # hi3516av200                   # OpenIPC
-hi3516av200_ultimate          # OpenIPC_ultimate version
+# hi3516av200_ultimate          # OpenIPC_ultimate version
 #
 # hi3516av300                   # testing..
 # hi3516cv500                   # testing..
