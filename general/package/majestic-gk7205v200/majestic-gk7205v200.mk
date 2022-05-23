@@ -12,6 +12,8 @@ MAJESTIC_GK7205V200_LICENSE_FILES = LICENSE
 
 ifeq ($(BR2_PACKAGE_MAJESTIC_ULTIMATE),y)
 MAJESTIC_GK7205V200_SOURCE = majestic.gk7205v200.ultimate.master.tar.bz2
+else ifeq ($(BR2_PACKAGE_MAJESTIC_FPV),y)
+MAJESTIC_GK7205V200_SOURCE = majestic.gk7205v200.fpv.master.tar.bz2
 else
 MAJESTIC_GK7205V200_SOURCE = majestic.gk7205v200.lite.master.tar.bz2
 endif
