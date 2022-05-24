@@ -419,6 +419,20 @@ msc313e() {
 
 #################################################################################
 
+rv1109() {
+  soc="rv1109"
+  fresh && make PLATFORM=rockchip BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
+rv1126() {
+  soc="rv1126"
+  fresh && make PLATFORM=rockchip BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
 ssc325() {
   soc="ssc325"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -625,6 +639,11 @@ xm550() {
 #
 # nt98562                       # OpenIPC
 # nt98566                       # OpenIPC
+#
+#######
+#
+# rv1109                        # testing..
+# rv1126                        # testing..
 #
 #######
 #
