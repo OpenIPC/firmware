@@ -4,7 +4,7 @@
 
 set -e
 
-if [ "$1" = "-x" ]; then
+if [ "$1" = "-s" ]; then
   sysupgrade -n -x
 else
   sysupgrade -n
