@@ -37,7 +37,8 @@ start() {
 	load_ingenic
 	#
 	#
-	export SENSOR=$(fw_printenv -n sensor)
+	# export SENSOR=$(fw_printenv -n sensor)
+	export SENSOR=$(cat /proc/jz/sinfo/info | sed -e 's/.*://')
 	load_majestic
 }
 
