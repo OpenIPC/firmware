@@ -37,6 +37,7 @@ start() {
 	load_ingenic
 	#
 	#
+	export SENSOR=$(fw_printenv -n sensor)
 	#load_majestic
 }
 
