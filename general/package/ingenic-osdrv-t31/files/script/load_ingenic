@@ -88,4 +88,4 @@ if [ $? -ne 0 ]; then
     check_return "insmod sensor drv"
 fi
 # temporary hax to claim gpio 57,58 on HICHIP boards
-insmod ${KMOD_PATH/%\//}/ircut.ko
+insmod ${KMOD_PATH/%\//}/ircut.ko; rmmod ircut
