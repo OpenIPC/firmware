@@ -1,4 +1,4 @@
-name: "RV1126"
+name: "T21"
 
 on:
   push:
@@ -6,14 +6,14 @@ on:
       - production
     tags:
       - "v*"
-  # schedule:
-  #     - cron: "00 03 * * *"
+  schedule:
+      - cron: "00 02 * * *"
   workflow_dispatch:
 
 jobs:
   build_core:
-    name: OpenIPC firmware for RV1126
-    runs-on: ubuntu-latest
+    name: OpenIPC firmware for T21
+    runs-on: ubuntu-18.04
 
     steps:
 
@@ -56,42 +56,43 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-          echo "BOARD=rv1126" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build RV1126 firmware
-        id: build-rv1126-firmware
+      - name: Build T21 firmware
+        id: build-t21-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-br.tgz"
-          ARCHIVE_FW_NAND="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-nand-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.t21-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
-          echo "ARCHIVE_FW_NAND=$ARCHIVE_FW_NAND" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=rockchip BOARD=unknown_unknown_${BOARD}_openipc all
-          # [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${BOARD}" >> $GITHUB_ENV && exit 1
-          # [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 10485760 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 10485760... ${BOARD}" >> $GITHUB_ENV && exit 1
+          make PLATFORM=ingenic BOARD=unknown_unknown_t21_openipc all
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... T21" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... T21" >> $GITHUB_ENV && exit 1
           cd ${GITHUB_WORKSPACE}/output/images
-          mv uImage uImage.${BOARD}
-          mv rootfs.squashfs rootfs.squashfs.${BOARD}
-          mv rootfs.ubi rootfs.ubi.${BOARD}
-          mv rootfs.ubifs rootfs.ubifs.${BOARD}
-          md5sum rootfs.squashfs.${BOARD} > rootfs.squashfs.${BOARD}.md5sum
-          md5sum uImage.${BOARD} > uImage.${BOARD}.md5sum
-          md5sum rootfs.ubifs.${BOARD} > rootfs.ubifs.${BOARD}.md5sum
-          md5sum uImage.${BOARD} > uImage.${BOARD}.md5sum
-          tar -cvzf $ARCHIVE_FW uImage* *rootfs.squashfs.${BOARD}*
-          tar -cvzf $ARCHIVE_FW_NAND uImage* *rootfs.ubi*.${BOARD}*
+          mv uImage uImage.t21
+          mv rootfs.squashfs rootfs.squashfs.t21
+          md5sum rootfs.squashfs.t21 > rootfs.squashfs.t21.md5sum
+          md5sum uImage.t21 > uImage.t21.md5sum
+          tar -cvzf $ARCHIVE_FW *t21*
+
+      - name: Build T21 SDK
+        id: build-t21-sdk
+        continue-on-error: true
+        run: |
+          ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/mipsel-openipc-linux-musl_sdk-buildroot.tar.gz"
+          echo "ARCHIVE_SDK=$ARCHIVE_SDK" >> $GITHUB_ENV
+          cd $GITHUB_WORKSPACE/output
+          make sdk
 
       - name: Send warning message to telegram channel
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-rv1126-firmware.outcome != 'success'
+        if: steps.build-t21-firmware.outcome != 'success' || steps.build-t21-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
-          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${BOARD}}"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... T21}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
@@ -113,17 +114,17 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: openipc.${{ env.BOARD }}-br.tgz
+          asset_name: "openipc.t21-br.tgz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
-      - name: Upload FW to release
+      - name: Upload SDK to release
         uses: svenstaro/upload-release-action@v2
         continue-on-error: true
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.ARCHIVE_FW_NAND }}
-          asset_name: openipc.${{ env.BOARD }}-nand-br.tgz
+          file: ${{ env.ARCHIVE_SDK }}
+          asset_name: "mipsel-openipc-t21-linux-musl_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
