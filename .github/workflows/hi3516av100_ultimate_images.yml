@@ -1,4 +1,4 @@
-name: "RV1126"
+name: "Hi3516Av100 (ultimate)"
 
 on:
   push:
@@ -6,13 +6,13 @@ on:
       - production
     tags:
       - "v*"
-  # schedule:
-  #     - cron: "00 03 * * *"
+  schedule:
+      - cron: "00 03 * * *"
   workflow_dispatch:
 
 jobs:
   build_core:
-    name: OpenIPC firmware for RV1126
+    name: OpenIPC firmware for Hi3516Av100 (ultimate)
     runs-on: ubuntu-latest
 
     steps:
@@ -56,22 +56,22 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-          echo "BOARD=rv1126" >> $GITHUB_ENV
+          echo "BOARD=hi3516av100" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build RV1126 firmware
-        id: build-rv1126-firmware
+      - name: Build Hi3516Av100 (ultimate) firmware
+        id: build-hi3516av100-ultimate-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-ultimate-br.tgz"
           ARCHIVE_FW_NAND="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-nand-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           echo "ARCHIVE_FW_NAND=$ARCHIVE_FW_NAND" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=rockchip BOARD=unknown_unknown_${BOARD}_openipc all
-          # [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${BOARD}" >> $GITHUB_ENV && exit 1
-          # [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 10485760 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 10485760... ${BOARD}" >> $GITHUB_ENV && exit 1
+          make PLATFORM=hisilicon BOARD=unknown_unknown_${BOARD}_ultimate all
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${BOARD} (ultimate)" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 10485760 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 10485760... ${BOARD} (ultimate)" >> $GITHUB_ENV && exit 1
           cd ${GITHUB_WORKSPACE}/output/images
           mv uImage uImage.${BOARD}
           mv rootfs.squashfs rootfs.squashfs.${BOARD}
@@ -88,10 +88,10 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-rv1126-firmware.outcome != 'success'
+        if: steps.build-hi3516av100-ultimate-firmware.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
-          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${BOARD}}"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${BOARD} (ultimate)}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
@@ -113,7 +113,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: openipc.${{ env.BOARD }}-br.tgz
+          asset_name: openipc.${{ env.BOARD }}-ultimate-br.tgz
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 

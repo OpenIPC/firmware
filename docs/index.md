@@ -48,28 +48,28 @@ _NB! Downloads are for research only, without any guarantee._
 | Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         |   +    |   +    |   +    |     |      |     |      | [⬇][fwGK7605v100]  | WIP    |
 | GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               |        |   +    |   +    |     |      |     |      | [⬇][fwGM8135]      | WIP    |
 | GrainMedia&nbsp;GM8136<br>![GM8136][GM8136]               |        |   +    |   +    |     |      |     |      | [⬇][fwGM8136]      | WIP    |
-| HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av100] | WIP    |
-| HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av200] | WIP    |
-| HiSilicon&nbsp;Hi3516Av300<br>![Hi3516Av300][Hi3516Av300] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av300] | WIP    |
-| HiSilicon&nbsp;Hi3516Cv100<br>![Hi3516Cv100][Hi3516Cv100] |        |   +    |   +    |  +  |      |     |      | [⬇][fwHi3516Cv100] | WIP    |
-| HiSilicon&nbsp;Hi3516Cv200<br>![Hi3516Cv200][Hi3516Cv200] |        |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwHi3516Cv200] | DONE   |
+| HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] |   +    |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av100] | WIP    |
+| HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] |   +    |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av200] | WIP    |
+| HiSilicon&nbsp;Hi3516Av300<br>![Hi3516Av300][Hi3516Av300] |   +    |   +    |   +    |     |      |     |      | [⬇][fwHi3516Av300] | WIP    |
+| HiSilicon&nbsp;Hi3516Cv100<br>![Hi3516Cv100][Hi3516Cv100] |   +    |   +    |   +    |  +  |      |     |      | [⬇][fwHi3516Cv100] | WIP    |
+| HiSilicon&nbsp;Hi3516Cv200<br>![Hi3516Cv200][Hi3516Cv200] |   +    |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwHi3516Cv200] | DONE   |
 | HiSilicon&nbsp;Hi3516Cv300<br>![Hi3516Cv300][Hi3516Cv300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Cv300] | DONE   |
-| HiSilicon&nbsp;Hi3516Cv500<br>![Hi3516Cv500][Hi3516Cv500] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Cv500] | WIP    |
-| HiSilicon&nbsp;Hi3516Dv100<br>![Hi3516Dv100][Hi3516Dv100] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Dv100] | WIP    |
+| HiSilicon&nbsp;Hi3516Cv500<br>![Hi3516Cv500][Hi3516Cv500] |   +    |   +    |   +    |     |      |     |      | [⬇][fwHi3516Cv500] | WIP    |
+| HiSilicon&nbsp;Hi3516Dv100<br>![Hi3516Dv100][Hi3516Dv100] |   +    |   +    |   +    |     |      |     |      | [⬇][fwHi3516Dv100] | WIP    |
 | HiSilicon&nbsp;Hi3516Dv200<br>![Hi3516Dv200][Hi3516Dv200] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Dv200] | DONE   |
-| HiSilicon&nbsp;Hi3516Dv300<br>![Hi3516Dv300][Hi3516Dv300] |        |   +    |   +    |     |      |     |      | [⬇][fwHi3516Dv300] | WIP    |
+| HiSilicon&nbsp;Hi3516Dv300<br>![Hi3516Dv300][Hi3516Dv300] |   +    |   +    |   +    |     |      |     |      | [⬇][fwHi3516Dv300] | WIP    |
 | HiSilicon&nbsp;Hi3516Ev100<br>![Hi3516Ev100][Hi3516Ev100] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Ev100] | DONE   |
 | HiSilicon&nbsp;Hi3516Ev200<br>![Hi3516Ev200][Hi3516Ev200] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Ev200] | DONE   |
 | HiSilicon&nbsp;Hi3516Ev300<br>![Hi3516Ev300][Hi3516Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3516Ev300] | DONE   |
-| HiSilicon&nbsp;Hi3518Cv100<br>![Hi3518Cv100][Hi3518Cv100] |        |   +    |   +    |  +  |      |     |      | [⬇][fwHi3518Cv100] | WIP    |
-| HiSilicon&nbsp;Hi3518Ev100<br>![Hi3518Ev100][Hi3518Ev100] |        |   +    |   +    |  +  |      |     |      | [⬇][fwHi3518Ev100] | WIP    |
-| HiSilicon&nbsp;Hi3518Ev200<br>![Hi3518Ev200][Hi3518Ev200] |        |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwHi3518Ev200] | DONE   |
+| HiSilicon&nbsp;Hi3518Cv100<br>![Hi3518Cv100][Hi3518Cv100] |   +    |   +    |   +    |  +  |      |     |      | [⬇][fwHi3518Cv100] | WIP    |
+| HiSilicon&nbsp;Hi3518Ev100<br>![Hi3518Ev100][Hi3518Ev100] |   +    |   +    |   +    |  +  |      |     |      | [⬇][fwHi3518Ev100] | WIP    |
+| HiSilicon&nbsp;Hi3518Ev200<br>![Hi3518Ev200][Hi3518Ev200] |   +    |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwHi3518Ev200] | DONE   |
 | HiSilicon&nbsp;Hi3518Ev300<br>![Hi3518Ev300][Hi3518Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3518Ev300] | DONE   |
-| HiSilicon&nbsp;Hi3519v101<br>![Hi3519v101][Hi3519v101]    |        |   +    |   +    |     |      |     |      | [⬇][fwHi3519v101]  | WIP    |
+| HiSilicon&nbsp;Hi3519v101<br>![Hi3519v101][Hi3519v101]    |   +    |   +    |   +    |     |      |     |      | [⬇][fwHi3519v101]  | WIP    |
 | Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |        |     |      |     |      |                    | R&D    |
 | Ingenic&nbsp;T20<br>![T20][T20]                           |        |        |        |     |      |     |      |                    | R&D    |
 | Ingenic&nbsp;T21<br>![T21][T21]                           |        |        |        |     |      |     |      |                    | R&D    |
-| Ingenic&nbsp;T31<br>![T31][T31]                           |        |   +    |   +    |     |      |     |      | [⬇][fwT31]         | WIP    |
+| Ingenic&nbsp;T31<br>![T31][T31]                           |        |   +    |   +    |     |      |     |      | [⬇][fwT31]         | DONE   |
 | MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 |        |        |        |     |      |     |      |                    | R&D    |
 | MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 |        |        |        |     |      |     |      |                    | R&D    |
 | Novatek&nbsp;NT98562<br>![NT98562][NT98562]               |        |   +    |   +    |     |      |     |      | [⬇][fwNT98562]     | WIP    |
