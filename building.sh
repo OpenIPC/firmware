@@ -397,13 +397,6 @@ hi3536dv100() {
 
 #################################################################################
 
-t31() {
-  soc="t31"
-  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
 nt98562() {
   soc="nt98562"
   fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_openipc all && rename
