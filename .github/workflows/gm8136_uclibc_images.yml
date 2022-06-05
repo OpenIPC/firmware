@@ -125,7 +125,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-gm8136-linux-musleabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-gm8136-uclibc-linux-uclibcgnueabi_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
