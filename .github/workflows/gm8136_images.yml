@@ -1,4 +1,4 @@
-name: "GM8136"
+name: "GM8136  "
 
 on:
   push:
@@ -56,6 +56,7 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "BOARD=gm8136" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
           make prepare
 
@@ -63,24 +64,26 @@ jobs:
         id: build-gm8136-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.gm8136-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=grainmedia BOARD=unknown_unknown_gm8136_openipc all
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... GM8136" >> $GITHUB_ENV && exit 1
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... GM8136" >> $GITHUB_ENV && exit 1
+          # make PLATFORM=grainmedia BOARD=unknown_unknown_gm8136_openipc all
+          make PLATFORM=grainmedia BOARD=unknown_unknown_gm8136_uclibc all
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... ${BOARD}" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... ${BOARD}" >> $GITHUB_ENV && exit 1
           cd ${GITHUB_WORKSPACE}/output/images
-          mv uImage uImage.gm8136
-          mv rootfs.squashfs rootfs.squashfs.gm8136
-          md5sum rootfs.squashfs.gm8136 > rootfs.squashfs.gm8136.md5sum
-          md5sum uImage.gm8136 > uImage.gm8136.md5sum
-          tar -cvzf $ARCHIVE_FW *gm8136*
+          mv uImage uImage.${BOARD}
+          mv rootfs.squashfs rootfs.squashfs.${BOARD}
+          md5sum rootfs.squashfs.${BOARD} > rootfs.squashfs.${BOARD}.md5sum
+          md5sum uImage.${BOARD} > uImage.${BOARD}.md5sum
+          tar -cvzf $ARCHIVE_FW *${BOARD}*
 
       - name: Build GM8136 SDK
         id: build-gm8136-sdk
         continue-on-error: true
         run: |
-          ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
+          # ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
+          ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-uclibcgnueabi_sdk-buildroot.tar.gz"
           echo "ARCHIVE_SDK=$ARCHIVE_SDK" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE/output
           make sdk
@@ -92,7 +95,7 @@ jobs:
         if: steps.build-gm8136-firmware.outcome != 'success' || steps.build-gm8136-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
-          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... GM8136}"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${BOARD}}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
@@ -114,7 +117,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: "openipc.gm8136-br.tgz"
+          asset_name: "openipc.${{ env.BOARD }}-br.tgz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -124,7 +127,8 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-gm8136-linux-musleabi_sdk-buildroot.tar.gz"
+          # asset_name: "arm-openipc-gm8136-linux-musleabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-gm8136-linux-uclibcgnueabi_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
