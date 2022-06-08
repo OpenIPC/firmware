@@ -1,5 +1,5 @@
 include $(BR2_EXTERNAL_INGENIC_PATH)/linux/linux-ext-ingenic_patcher.mk
-include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/ingenic-osdrv-t20.mk
+include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t21/ingenic-osdrv-t21.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t31/ingenic-osdrv-t31.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic_patcher/ingenic_patcher.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/aura-httpd/aura-httpd.mk
@@ -16,6 +16,7 @@ include $(BR2_EXTERNAL_INGENIC_PATH)/package/libogg-openipc/libogg-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/libsrt-openipc/libsrt-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/libwebsockets-openipc/libwebsockets-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
+include $(BR2_EXTERNAL_INGENIC_PATH)/package/majestic-t21/majestic-t21.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/majestic-t31/majestic-t31.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/majestic-fonts/majestic-fonts.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
