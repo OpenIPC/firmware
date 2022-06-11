@@ -66,9 +66,9 @@ _NB! Downloads are for research only, without any guarantee._
 | HiSilicon&nbsp;Hi3518Ev200<br>![Hi3518Ev200][Hi3518Ev200] |   +    |   +    |   +    |  +  |  +   |  +  |      | [⬇][fwHi3518Ev200] | DONE   |
 | HiSilicon&nbsp;Hi3518Ev300<br>![Hi3518Ev300][Hi3518Ev300] |   +    |   +    |   +    |  +  |  +   |  +  |  +   | [⬇][fwHi3518Ev300] | DONE   |
 | HiSilicon&nbsp;Hi3519v101<br>![Hi3519v101][Hi3519v101]    |   +    |   +    |   +    |     |      |     |      | [⬇][fwHi3519v101]  | WIP    |
-| Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |        |     |      |     |      |                    | R&D    |
-| Ingenic&nbsp;T20<br>![T20][T20]                           |        |        |        |     |      |     |      |                    | R&D    |
-| Ingenic&nbsp;T21<br>![T21][T21]                           |        |        |        |     |      |     |      |                    | R&D    |
+| Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |        |     |      |     |      | [⬇][fwT10]         | R&D    |
+| Ingenic&nbsp;T20<br>![T20][T20]                           |        |   +    |   +    |     |      |     |      | [⬇][fwT20]         | WIP    |
+| Ingenic&nbsp;T21<br>![T21][T21]                           |        |   +    |   +    |     |      |     |      | [⬇][fwT21]         | MVP    |
 | Ingenic&nbsp;T31<br>![T31][T31]                           |        |   +    |   +    |     |      |     |      | [⬇][fwT31]         | DONE   |
 | MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 |        |        |        |     |      |     |      |                    | R&D    |
 | MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 |        |        |        |     |      |     |      |                    | R&D    |
@@ -165,9 +165,9 @@ Thank you.
 [SSC335]: https://github.com/OpenIPC/firmware/actions/workflows/ssc335_images.yml/badge.svg
 [SSC337]: https://github.com/OpenIPC/firmware/actions/workflows/ssc337_images.yml/badge.svg
 [SSC337DE]: https://github.com/OpenIPC/firmware/actions/workflows/ssc337de_images.yml/badge.svg
-[T10]: https://img.shields.io/static/v1?label=T10&message=help%20needed&color=5500ff&logo=github
-[T20]: https://img.shields.io/static/v1?label=T20&message=help%20needed&color=5500ff&logo=github
-[T21]: https://img.shields.io/static/v1?label=T21&message=help%20needed&color=5500ff&logo=github
+[T10]: https://github.com/OpenIPC/firmware/actions/workflows/t10_images.yml/badge.svg
+[T20]: https://github.com/OpenIPC/firmware/actions/workflows/t20_images.yml/badge.svg
+[T21]: https://github.com/OpenIPC/firmware/actions/workflows/t21_images.yml/badge.svg
 [T31]: https://github.com/OpenIPC/firmware/actions/workflows/t31_images.yml/badge.svg
 [XM510]: https://github.com/OpenIPC/firmware/actions/workflows/xm510_images.yml/badge.svg
 [XM530]: https://github.com/OpenIPC/firmware/actions/workflows/xm530_images.yml/badge.svg
@@ -202,6 +202,9 @@ Thank you.
 [fwHi3518Ev200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3518ev200-br.tgz
 [fwHi3518Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3518ev300-br.tgz
 [fwHi3519v101]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3519v101-br.tgz
+[fwT10]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.t10-br.tgz
+[fwT20]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.t20-br.tgz
+[fwT21]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.t21-br.tgz
 [fwT31]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.t31-br.tgz
 [fwNT98562]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.nt98562-br.tgz
 [fwNT98566]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.nt98566-br.tgz
