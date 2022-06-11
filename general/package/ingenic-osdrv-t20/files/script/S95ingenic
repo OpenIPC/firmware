@@ -37,7 +37,9 @@ start() {
 	load_ingenic
 	#
 	#
-	#load_majestic
+	# export SENSOR=$(fw_printenv -n sensor)
+	export SENSOR=$(cat /proc/jz/sinfo/info | sed -e 's/.*://')
+	load_majestic
 }
 
 stop() {
@@ -65,10 +67,11 @@ reload() {
 }
 
 case "$1" in
-	start|stop|restart|reload)
-		"$1";;
-	*)
-		echo "Usage: $0 {start|stop|restart|reload}"
-		exit 1
+start | stop | restart | reload)
+	"$1"
+	;;
+*)
+	echo "Usage: $0 {start|stop|restart|reload}"
+	exit 1
+	;;
 esac
-
