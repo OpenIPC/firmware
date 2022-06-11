@@ -135,10 +135,10 @@ Thank you.
 [FH8856v210]: https://img.shields.io/static/v1?label=FH8856V210&message=no%20equipment&color=c0c0c0&logo=github
 [FH8858v200]: https://img.shields.io/static/v1?label=FH8856V200&message=no%20equipment&color=c0c0c0&logo=github
 [FH8858v210]: https://img.shields.io/static/v1?label=FH8856V210&message=no%20equipment&color=c0c0c0&logo=github
-[GK7102S]: https://img.shields.io/static/v1?label=GK7102S&message=no%20equipment&color=c0c0c0&logo=github
+[GK7102S]: https://img.shields.io/static/v1?label=GK7102S&message=help%20needed&color=5500ff&logo=github
 [GK7202v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7202v300_images.yml/badge.svg
 [GK7205v200]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v200_images.yml/badge.svg
-[GK7205v210]: https://img.shields.io/static/v1?label=GK7205V210&message=no%20equipment&color=c0c0c0&logo=github
+[GK7205v210]: https://img.shields.io/static/v1?label=GK7205V2010&message=help%20needed&color=5500ff&logo=github
 [GK7205v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v300_images.yml/badge.svg
 [GK7605v100]: https://github.com/OpenIPC/firmware/actions/workflows/gk7605v100_images.yml/badge.svg
 [GM8135]: https://img.shields.io/static/v1?label=GM8135&message=no%20equipment&color=c0c0c0&logo=github
