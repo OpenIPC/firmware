@@ -4,6 +4,11 @@
 # SoC detect
 CHIP_TYPE=$(ipcinfo --chip_id)
 
+# Dumb cpu remapping
+if [ "$CHIP_TYPE" == "gk7205v210" ]; then
+  CHIP_TYPE=gk7205v200
+fi
+
 # Memory config
 mem_start=0x40000000 # phy mem start
 
