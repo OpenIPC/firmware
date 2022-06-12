@@ -136,7 +136,7 @@ Thank you.
 
 
 [AmbaS2L]: https://img.shields.io/static/v1?label=AmbaS2L&message=%20&logo=github
-[AmbaS3L]: https://img.shields.io/static/v1?label=AmbaS3L&message=%20&logo=github
+[AmbaS3L]: https://github.com/OpenIPC/firmware/actions/workflows/ambarella-s3l_images.yml/badge.svg
 [AK3916Ev301]: https://img.shields.io/static/v1?label=AK3916Ev301&message=%20&logo=github
 [AK3918Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/ak3918ev200_images.yml/badge.svg
 [AK3918Ev330]: https://img.shields.io/static/v1?label=AK3918EV330&message=%20&logo=github
