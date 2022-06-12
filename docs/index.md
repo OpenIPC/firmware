@@ -29,10 +29,10 @@ _NB! Downloads are for research only, without any guarantee._
 | SoC                                                       | U-Boot | Linux              | Video | Audio | GPIO | Status |
 |-----------------------------------------------------------|:------:|:------------------:|:-----:|:-----:|:----:|--------|
 | Ambarella&nbsp;S2L<br>![AmbaS2L][AmbaS2L]                 |        |                    |       |       |      | R&D    |
-| Ambarella&nbsp;S3L<br>![AmbaS3L][AmbaS3L]                 |        |   +                |       |       |      | WIP    |
+| Ambarella&nbsp;S3L<br>![AmbaS3L][AmbaS3L]                 |        | [⬇][fwAmbaS3L]     |       |       |      | WIP    |
 | Anyka&nbsp;AK3916Ev301<br>![AK3916Ev301][AK3916Ev301]     |        |                    |       |       |      | R&D    |
 | Anyka&nbsp;AK3918Ev200<br>![AK3918Ev200][AK3918Ev200]     |        | [⬇][fwAK3918Ev200] |       |       |      | WIP    |
-| Anyka&nbsp;AK3918Ev330<br>![AK3918Ev330][AK3918Ev330]     |        |   +                |       |       |      | R&D    |
+| Anyka&nbsp;AK3918Ev330<br>![AK3918Ev330][AK3918Ev330]     |        |                    |       |       |      | R&D    |
 | Fullhan&nbsp;FH8632<br>![FH8632][FH8632]                  |        |                    |       |       |      | R&D    |
 | Fullhan&nbsp;FH8852v100<br>![FH8652v100][FH8852v100]      |        | [⬇][fwFH8852v100]  |       |       |      | R&D    |
 | Fullhan&nbsp;FH8852v200<br>![FH8652v200][FH8852v200]      |        | [⬇][fwFH8852v200]  |       |       |      | R&D    |
@@ -192,8 +192,8 @@ Thank you.
 [XM550]: https://github.com/OpenIPC/firmware/actions/workflows/xm550_images.yml/badge.svg
 
 
-[fwAmbaS2L]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ambas2l-br.tgz
-[fwAmbaS3L]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ambas3l-br.tgz
+[fwAmbaS2L]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ambarella-s2l-br.tgz
+[fwAmbaS3L]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ambarella-s3l-br.tgz
 [fwAK3916Ev301]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3916ev301-br.tgz
 [fwAK3918Ev200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3918ev200-br.tgz
 [fwAK3918Ev330]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3918ev330-br.tgz
