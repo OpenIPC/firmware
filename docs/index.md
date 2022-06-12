@@ -43,35 +43,35 @@ _NB! Downloads are for research only, without any guarantee._
 | Fullhan&nbsp;FH8858v200<br>![FH8858v200][FH8858v200]      |        |        |       |       |      |                    | R&D    |
 | Fullhan&nbsp;FH8858v210<br>![FH8858v210][FH8858v210]      |        |        |       |       |      |                    | R&D    |
 | Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  |        |        |       |       |      |                    | R&D    |
-| Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         |   +    |   +    |  +    |  +    |  +   | [⬇][fwGK7202v300]  | WIP    |
+| Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         |   +    |   +    |  +    |  +    |  +   | [⬇][fwGK7202v300]  | DONE   |
 | Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         |   +    |   +    |  +    |  +    |  +   | [⬇][fwGK7205v200]  | DONE   |
 | Goke&nbsp;GK7205v210<br>![GK7205v210][GK7205v210]         |   +    |   +    |       |       |      |                    | R&D    |
 | Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |   +    |   +    |  +    |  +    |  +   | [⬇][fwGK7205v300]  | DONE   |
-| Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         |   +    |   +    |  +    |  +    |  +   | [⬇][fwGK7605v100]  | WIP    |
-| GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               |        |   +    |  +    |       |  +   | [⬇][fwGM8135]      | WIP    |
-| GrainMedia&nbsp;GM8136<br>![GM8136][GM8136]               |        |   +    |  +    |       |  +   | [⬇][fwGM8136]      | WIP    |
-| HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Av100] | WIP    |
-| HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Av200] | WIP    |
-| HiSilicon&nbsp;Hi3516Av300<br>![Hi3516Av300][Hi3516Av300] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Av300] | WIP    |
-| HiSilicon&nbsp;Hi3516Cv100<br>![Hi3516Cv100][Hi3516Cv100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Cv100] | WIP    |
+| Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         |   +    |   +    |  +    |  +    |  +   | [⬇][fwGK7605v100]  | DONE   |
+| GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               |        |   +    |  +    |       |  +   | [⬇][fwGM8135]      | MVP    |
+| GrainMedia&nbsp;GM8136<br>![GM8136][GM8136]               |        |   +    |  +    |       |  +   | [⬇][fwGM8136]      | MVP    |
+| HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Av100] | DONE   |
+| HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Av200] | DONE   |
+| HiSilicon&nbsp;Hi3516Av300<br>![Hi3516Av300][Hi3516Av300] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Av300] | DONE   |
+| HiSilicon&nbsp;Hi3516Cv100<br>![Hi3516Cv100][Hi3516Cv100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Cv100] | DONE   |
 | HiSilicon&nbsp;Hi3516Cv200<br>![Hi3516Cv200][Hi3516Cv200] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Cv200] | DONE   |
 | HiSilicon&nbsp;Hi3516Cv300<br>![Hi3516Cv300][Hi3516Cv300] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Cv300] | DONE   |
-| HiSilicon&nbsp;Hi3516Cv500<br>![Hi3516Cv500][Hi3516Cv500] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Cv500] | WIP    |
-| HiSilicon&nbsp;Hi3516Dv100<br>![Hi3516Dv100][Hi3516Dv100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Dv100] | WIP    |
+| HiSilicon&nbsp;Hi3516Cv500<br>![Hi3516Cv500][Hi3516Cv500] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Cv500] | DONE   |
+| HiSilicon&nbsp;Hi3516Dv100<br>![Hi3516Dv100][Hi3516Dv100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Dv100] | DONE   |
 | HiSilicon&nbsp;Hi3516Dv200<br>![Hi3516Dv200][Hi3516Dv200] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Dv200] | DONE   |
-| HiSilicon&nbsp;Hi3516Dv300<br>![Hi3516Dv300][Hi3516Dv300] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Dv300] | WIP    |
+| HiSilicon&nbsp;Hi3516Dv300<br>![Hi3516Dv300][Hi3516Dv300] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Dv300] | DONE   |
 | HiSilicon&nbsp;Hi3516Ev100<br>![Hi3516Ev100][Hi3516Ev100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Ev100] | DONE   |
 | HiSilicon&nbsp;Hi3516Ev200<br>![Hi3516Ev200][Hi3516Ev200] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Ev200] | DONE   |
 | HiSilicon&nbsp;Hi3516Ev300<br>![Hi3516Ev300][Hi3516Ev300] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3516Ev300] | DONE   |
-| HiSilicon&nbsp;Hi3518Cv100<br>![Hi3518Cv100][Hi3518Cv100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3518Cv100] | WIP    |
-| HiSilicon&nbsp;Hi3518Ev100<br>![Hi3518Ev100][Hi3518Ev100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3518Ev100] | WIP    |
+| HiSilicon&nbsp;Hi3518Cv100<br>![Hi3518Cv100][Hi3518Cv100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3518Cv100] | DONE   |
+| HiSilicon&nbsp;Hi3518Ev100<br>![Hi3518Ev100][Hi3518Ev100] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3518Ev100] | DONE   |
 | HiSilicon&nbsp;Hi3518Ev200<br>![Hi3518Ev200][Hi3518Ev200] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3518Ev200] | DONE   |
 | HiSilicon&nbsp;Hi3518Ev300<br>![Hi3518Ev300][Hi3518Ev300] |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3518Ev300] | DONE   |
-| HiSilicon&nbsp;Hi3519v101<br>![Hi3519v101][Hi3519v101]    |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3519v101]  | WIP    |
-| Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |       |       |      | [⬇][fwT10]         | R&D    |
-| Ingenic&nbsp;T20<br>![T20][T20]                           |        |   +    |  +    |       |      | [⬇][fwT20]         | WIP    |
+| HiSilicon&nbsp;Hi3519v101<br>![Hi3519v101][Hi3519v101]    |   +    |   +    |  +    |  +    |  +   | [⬇][fwHi3519v101]  | DONE   |
+| Ingenic&nbsp;T10<br>![T10][T10]                           |        |        |       |       |      | [⬇][fwT10]         | WIP    |
+| Ingenic&nbsp;T20<br>![T20][T20]                           |        |   +    |  +    |       |      | [⬇][fwT20]         | MVP    |
 | Ingenic&nbsp;T21<br>![T21][T21]                           |        |   +    |  +    |       |      | [⬇][fwT21]         | MVP    |
-| Ingenic&nbsp;T31<br>![T31][T31]                           |        |   +    |  +    |       |      | [⬇][fwT31]         | DONE   |
+| Ingenic&nbsp;T31<br>![T31][T31]                           |        |   +    |  +    |       |      | [⬇][fwT31]         | MVP    |
 | MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 |        |        |       |       |      |                    | R&D    |
 | MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 |        |        |       |       |      |                    | R&D    |
 | Novatek&nbsp;NT98562<br>![NT98562][NT98562]               |        |   +    |       |       |      | [⬇][fwNT98562]     | WIP    |
@@ -79,7 +79,7 @@ _NB! Downloads are for research only, without any guarantee._
 | SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                |        |   +    |       |       |      | [⬇][fwSSC325]      | WIP    |
 | SigmaStar&nbsp;SSC335<br>![SSC335][SSC335]                |        |   +    |  +    |       |  +   | [⬇][fwSSC335]      | MVP    |
 | SigmaStar&nbsp;SSC337<br>![SSC337][SSC337]                |        |   +    |  +    |       |  +   | [⬇][fwSSC337]      | MVP    |
-| SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          |        |   +    |       |       |      | [⬇][fwSSC337DE]    | TEST   |
+| SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          |        |   +    |       |       |      | [⬇][fwSSC337DE]    | R&D    |
 | Xiongmai&nbsp;XM510<br>![XM510][XM510]                    |        |   +    |  +    |       |  +   | [⬇][fwXM510]       | MVP    |
 | Xiongmai&nbsp;XM530<br>![XM530][XM530]                    |        |   +    |  +    |       |  +   | [⬇][fwXM530]       | MVP    |
 | Xiongmai&nbsp;XM550<br>![XM550][XM550]                    |        |   +    |  +    |       |  +   | [⬇][fwXM550]       | MVP    |
