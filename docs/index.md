@@ -84,6 +84,12 @@ _NB! Downloads are for research only, without any guarantee._
 | Xiongmai&nbsp;XM530<br>![XM530][XM530]                    |                      | [⬇][fwXM530]       |  +    |       |  +   | MVP    |
 | Xiongmai&nbsp;XM550<br>![XM550][XM550]                    |                      | [⬇][fwXM550]       |  +    |       |  +   | MVP    |
 
+Typical development lifecycle:
+
+When we acquire SDK for new SoC we add SoC name to the table with status `No equipment` (if we don't have specific hardware modules) or `Help needed` (to seek developer who will be responsible for the SoC) and it's considered as starting state of development. Then gradually status changes -> `R&D` -> `WIP` -> `MVP` -> `DONE`
+
+Therefore: there is no reason to have SoC in the table without having SDK.
+
 `DONE` Everything seems works like as in original firmware (but we're still waiting for feedback from you)
 
 `MVP` "Minimal Viable Product", basic system is done (video works at least on main channel), everything is clear (including hardware and software design), but due to lack of human resources we're looking for help from experienced embedded developers or sponsors to continue development and make it `DONE` in the future
