@@ -98,8 +98,6 @@ Therefore: there is no reason to have SoC in the table without having SDK.
 
 `R&D` "Research&Development" stage, when we have platform SDK and probably hardware boards, but there is a lot of work ahead
 
-CI statuses:
-
 `Help needed` - There is hardware in our lab, but we're looking for experienced embedded developers or sponsors to start R&D stage
 
 `No equipment` - We have SDK for the platform, but we don't have specific hardware to continue development, you can donate it to our R&D guys (it's important for ancient boards which are in End-Of-Life state and there is no way to buy it with on the market)
