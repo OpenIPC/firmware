@@ -90,6 +90,16 @@ ak3918ev200() {
   fresh && make PLATFORM=anyka BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+ak3916ev300() {
+  soc="ak3916ev300"
+  fresh && make PLATFORM=anyka BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+ak3918ev300() {
+  soc="ak3918ev300"
+  fresh && make PLATFORM=anyka BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 #################################################################################
 
 fh8833v100() {
@@ -558,6 +568,8 @@ xm550() {
 #######
 #
 # ak3918ev200                   # testing..
+# ak3916ev300                   # testing..
+# ak3918ev300                   # testing..
 #
 #######
 #
