@@ -48,7 +48,7 @@ _NB! Downloads are for research only, without any guarantee._
 | Goke&nbsp;GK7205v210<br>![GK7205v210][GK7205v210]         |   +    |                    |       |       |      | R&D    |
 | Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         |   +    | [⬇][fwGK7205v300]  |  +    |  +    |  +   | DONE   |
 | Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         |   +    | [⬇][fwGK7605v100]  |  +    |  +    |  +   | DONE   |
-| GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               |        | [⬇][fwGM8135]      |  +    |       |  +   | MVP    |
+| GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               |        |                    |       |       |      | R&D    |
 | GrainMedia&nbsp;GM8136<br>![GM8136][GM8136]               |        | [⬇][fwGM8136]      |  +    |       |  +   | MVP    |
 | HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] |   +    | [⬇][fwHi3516Av100] |  +    |  +    |  +   | DONE   |
 | HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] |   +    | [⬇][fwHi3516Av200] |  +    |  +    |  +   | DONE   |
@@ -135,12 +135,12 @@ Thank you.
 </p>
 
 
-[AmbaS2L]: https://img.shields.io/static/v1?label=AmbaS2L&message=help%20needed&color=5500ff&logo=github
-[AmbaS3L]: https://img.shields.io/static/v1?label=AmbaS3L&message=help%20needed&color=5500ff&logo=github
+[AmbaS2L]: https://img.shields.io/static/v1?label=AmbaS2L&message=%20&logo=github
+[AmbaS3L]: https://img.shields.io/static/v1?label=AmbaS3L&message=%20&logo=github
 [AK3916Ev301]: https://img.shields.io/static/v1?label=AK3916Ev301&message=%20&logo=github
 [AK3918Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/ak3918ev200_images.yml/badge.svg
 [AK3918Ev330]: https://img.shields.io/static/v1?label=AK3918EV330&message=%20&logo=github
-[FH8632]: https://img.shields.io/static/v1?label=FH8632&message=no%20equipment&color=c0c0c0&logo=github
+[FH8632]: https://img.shields.io/static/v1?label=FH8632&message=%20&logo=github
 [FH8852v100]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v100_images.yml/badge.svg
 [FH8852v200]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v200_images.yml/badge.svg
 [FH8852v210]: https://img.shields.io/static/v1?label=FH8852V210&message=%20&logo=github
