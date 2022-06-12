@@ -137,7 +137,7 @@ Thank you.
 
 [AmbaS2L]: https://img.shields.io/static/v1?label=AmbaS2L&message=help%20needed&color=5500ff&logo=github
 [AmbaS3L]: https://img.shields.io/static/v1?label=AmbaS3L&message=help%20needed&color=5500ff&logo=github
-[AK3916Ev301]: https://img.shields.io/static/v1?label=AK3916Ev301&message=help%20needed&color=5500ff&logo=github
+[AK3916Ev301]: https://img.shields.io/static/v1?label=AK3916Ev301&logo=github
 [AK3918Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/ak3918ev200_images.yml/badge.svg
 [AK3918Ev330]: https://img.shields.io/static/v1?label=AK3918EV330&message=no%20equipment&color=c0c0c0&logo=github
 [FH8632]: https://img.shields.io/static/v1?label=FH8632&message=no%20equipment&color=c0c0c0&logo=github
