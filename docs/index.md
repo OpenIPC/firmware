@@ -26,12 +26,19 @@ and [on the website](https://openipc.org/).
 
 _NB! Downloads are for research only, without any guarantee._
 
+We provide our own advanced U-boot release for the platform (that could replace the original board U-boot, depending on user's willingness). In the case when manufacturer has a password protected U-boot, consider to replacing it.
+
+**IMPORTANT!** Backup of original firmware is required because our U-Boot version will overwrite original crypto partition (it is not used by OpenIPC, but it will make impossible to restore to factory firmware if you will want).
+
+
 | SoC                                                       | Status        | U-Boot               | Linux              | Video | Audio | GPIO | Sensors |
 |-----------------------------------------------------------|:-------------:|:--------------------:|:------------------:|:-----:|:-----:|:----:|:-------:|
 | Ambarella&nbsp;S2L<br>![AmbaS2L][AmbaS2L]                 | <br>![sRnD]   |                      |                    |       |       |      |         |
 | Ambarella&nbsp;S3L<br>![AmbaS3L][AmbaS3L]                 | <br>![sWIP]   |                      | [⬇][fwAmbaS3L]     |       |       |      |         |
+| Anyka&nbsp;AK3916Ev300<br>![AK3916Ev300][AK3916Ev300]     | <br>![sEQUIP] |                      | [⬇][fwAK3916Ev300] |       |       |      |         |
 | Anyka&nbsp;AK3916Ev301<br>![AK3916Ev301][AK3916Ev301]     | <br>![sRnD]   |                      |                    |       |       |      |         |
 | Anyka&nbsp;AK3918Ev200<br>![AK3918Ev200][AK3918Ev200]     | <br>![sHELP]  |                      | [⬇][fwAK3918Ev200] |       |       |      |         |
+| Anyka&nbsp;AK3916Ev300<br>![AK3918Ev300][AK3918Ev300]     | <br>![sEQUIP] |                      | [⬇][fwAK3918Ev300] |       |       |      |         |
 | Anyka&nbsp;AK3918Ev330<br>![AK3918Ev330][AK3918Ev330]     | <br>![sRnD]   |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8632<br>![FH8632][FH8632]                  | <br>![sEQUIP] |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8852v100<br>![FH8652v100][FH8852v100]      | <br>![sRnD]   |                      | [⬇][fwFH8852v100]  |       |       |      |         |
@@ -45,7 +52,7 @@ _NB! Downloads are for research only, without any guarantee._
 | Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  | <br>![sRnD]   |                      |                    |       |       |      |         |
 | Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         | <br>![sDONE]  | [⬇][bootGK7202v300]  | [⬇][fwGK7202v300]  |  +    |  +    |  +   |         |
 | Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         | <br>![sDONE]  | [⬇][bootGK7205v200]  | [⬇][fwGK7205v200]  |  +    |  +    |  +   |         |
-| Goke&nbsp;GK7205v210<br>![GK7205v210][GK7205v210]         | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Goke&nbsp;GK7205v210<br>![GK7205v210][GK7205v210]         | <br>![sDONE]  |                      | [⬇][fwGK7205v210]  |  +    |  +    |  +   |         |
 | Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         | <br>![sDONE]  | [⬇][bootGK7205v300]  | [⬇][fwGK7205v300]  |  +    |  +    |  +   |         |
 | Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         | <br>![sDONE]  | [⬇][bootGK7605v100]  | [⬇][fwGK7605v100]  |  +    |  +    |  +   |         |
 | GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               | <br>![sEQUIP] |                      |                    |       |       |      |         |
@@ -102,11 +109,6 @@ Therefore: there is no reason to have SoC in the table without having SDK.
 
 ![sEQUIP] We have SDK for the platform, but we don't have specific hardware to continue development, you can donate it to our `RnD` guys (it's important for ancient boards which are in End-Of-Life state and there is no way to buy it with on the market)
 
-
-System components:
-
-We provide our own advanced U-boot release for the platform (that could replace the original board U-boot, depending on user's willingness). In the case when manufacturer has a password protected U-boot, consider to replacing it.
-
 -----
 
 ### Support
@@ -122,7 +124,7 @@ Your bug reports and feature requests will get prioritized attention and expedit
 strategy for both parties, that would contribute to the stability your business, and help core developers
 to work on the project full-time.
 
-If you have any specific questions concerning our project, feel free to [contact us](mailto:flyrouter@gmail.com).
+If you have any specific questions concerning our project, feel free to [contact us](mailto:dev@openipc.org).
 
 ### Participating and Contribution
 
@@ -156,7 +158,9 @@ Thank you.
 [AmbaS2L]: https://img.shields.io/static/v1?label=AmbaS2L&message=%20&logo=github
 [AmbaS3L]: https://github.com/OpenIPC/firmware/actions/workflows/ambarella-s3l_images.yml/badge.svg
 [AK3916Ev301]: https://img.shields.io/static/v1?label=AK3916Ev301&message=%20&logo=github
+[AK3916Ev300]: https://github.com/OpenIPC/firmware/actions/workflows/ak3916ev300_images.yml/badge.svg
 [AK3918Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/ak3918ev200_images.yml/badge.svg
+[AK3918Ev300]: https://github.com/OpenIPC/firmware/actions/workflows/ak3918ev300_images.yml/badge.svg
 [AK3918Ev330]: https://img.shields.io/static/v1?label=AK3918EV330&message=%20&logo=github
 [FH8632]: https://img.shields.io/static/v1?label=FH8632&message=%20&logo=github
 [FH8852v100]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v100_images.yml/badge.svg
@@ -170,7 +174,7 @@ Thank you.
 [GK7102S]: https://img.shields.io/static/v1?label=GK7102S&message=%20&logo=github
 [GK7202v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7202v300_images.yml/badge.svg
 [GK7205v200]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v200_images.yml/badge.svg
-[GK7205v210]: https://img.shields.io/static/v1?label=GK7205V2010&message=%20&logo=github
+[GK7205v210]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v210_images.yml/badge.svg
 [GK7205v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v300_images.yml/badge.svg
 [GK7605v100]: https://github.com/OpenIPC/firmware/actions/workflows/gk7605v100_images.yml/badge.svg
 [GM8135]: https://img.shields.io/static/v1?label=GM8135&message=%20&logo=github
@@ -237,8 +241,10 @@ Thank you.
 
 [fwAmbaS2L]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ambarella-s2l-br.tgz
 [fwAmbaS3L]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ambarella-s3l-br.tgz
+[fwAK3916Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3916ev300-br.tgz
 [fwAK3916Ev301]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3916ev301-br.tgz
 [fwAK3918Ev200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3918ev200-br.tgz
+[fwAK3918Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3918ev300-br.tgz
 [fwAK3918Ev330]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3918ev330-br.tgz
 [fwFH8632]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8632-br.tgz
 [fwFH8852v100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8852v100-br.tgz
