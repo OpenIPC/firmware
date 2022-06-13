@@ -86,21 +86,21 @@ _NB! Downloads are for research only, without any guarantee._
 
 Typical development lifecycle:
 
-When we acquire SDK for new SoC we add SoC name to the table with status ![sEQUIP][sEQUIP] (if we don't have specific hardware modules) or ![sHELP][sHELP] (to seek developer who will be responsible for the SoC) and it's considered as starting state of development. Then gradually status changes -> ![sRnD][sRnD] -> ![sWIP][sWIP] -> ![sMVP][sMVP] -> ![sDONE][sDONE]
+When we acquire SDK for new SoC we add SoC name to the table with status `NoEquipment` (if we don't have specific hardware modules) or `helpNeeded` (to seek developer who will be responsible for the SoC) and it's considered as starting state of development. Then gradually status changes -> ![sRnD] -> ![sWIP] -> ![sMVP] -> ![sDONE]
 
 Therefore: there is no reason to have SoC in the table without having SDK.
 
-![sDONE][sDONE] - Everything seems works like as in original firmware (but we're still waiting for feedback from you)
+![sDONE] Everything seems works like as in original firmware (but we're still waiting for feedback from you)
 
-![sMVP][sMVP] - "Minimal Viable Product", basic system is done (video works at least on main channel), everything is clear (including hardware and software design), but due to lack of human resources we're looking for help from experienced embedded developers or sponsors to continue development and make it ![sDONE][sDONE] in the future
+![sMVP] "Minimal Viable Product", basic system is done (video works at least on main channel), everything is clear (including hardware and software design), but due to lack of human resources we're looking for help from experienced embedded developers or sponsors to continue development and make it `DONE` in the future
 
-![sWIP][sWIP] - "Work In Progress" stage, we're tinkering with hardware and code, and probably early birds can do tests on their boards and help us to move further
+![sWIP] "Work In Progress" stage, we're tinkering with hardware and code, and probably early birds can do tests on their boards and help us to move further
 
-![sRnD][sRnD] - "Research&Development" stage, when we have platform SDK and probably hardware boards, but there is a lot of work ahead
+![sRnD] "Research&Development" stage, when we have platform SDK and probably hardware boards, but there is a lot of work ahead
 
-![sHELP][sHELP] - There is hardware in our lab, but we're looking for experienced embedded developers or sponsors to start ![sRnD][sRnD] stage
+![sHELP] There is hardware in our lab, but we're looking for experienced embedded developers or sponsors to start `RnD` stage
 
-![sEQUIP][sEQUIP] - We have SDK for the platform, but we don't have specific hardware to continue development, you can donate it to our R&D guys (it's important for ancient boards which are in End-Of-Life state and there is no way to buy it with on the market)
+![sEQUIP] We have SDK for the platform, but we don't have specific hardware to continue development, you can donate it to our `RnD` guys (it's important for ancient boards which are in End-Of-Life state and there is no way to buy it with on the market)
 
 -----
 
