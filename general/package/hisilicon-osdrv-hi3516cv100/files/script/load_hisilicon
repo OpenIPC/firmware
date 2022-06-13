@@ -13,9 +13,8 @@ os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
 
 # Sensor config
-# SNS_TYPE=$(awk -F '=' '$1=="sensor"{print $2}' RS=" " /proc/cmdline)
-SNS_TYPE=$(fw_printenv -n sensor)
-SNS_TYPE=${SNS_TYPE:=ar0130}
+# SENSOR=$(fw_printenv -n sensor)
+# SENSOR=${SENSOR:=ar0130}
 
 report_error() {
     echo "******* Error: There's something wrong, please check! *****"
@@ -28,13 +27,13 @@ insert_osal() {
 
 insert_detect() {
     cd /lib/modules/3.0.8/hisilicon
-    sys_config;
+    sys_config
     insert_osal
     insmod hi3518_base.ko
     insmod hi3518_sys.ko
     insmod hi3518_isp.ko
     insmod hi_i2c.ko
-    SNS_TYPE=imx122 insert_sns
+    SENSOR=imx122 insert_sns
 }
 
 remove_detect() {
@@ -71,7 +70,7 @@ remove_audio() {
 }
 
 insert_sns() {
-    case $SNS_TYPE in
+    case $SENSOR in
     ar0130 | 9m034 | po3100k | bf3116 | bg0703)
         devmem 0x20030030 32 0x5 #Sensor clock 27 MHz
         insmod ssp_ad9020.ko
@@ -89,12 +88,15 @@ insert_sns() {
         devmem 0x20030030 32 0x5 #Sensor clock 27MHz
         insmod ssp_pana.ko
         ;;
-    imx104 | imx122 | imx138 | imx222 | imx225 | imx322 | imx323)
+    imx104 | imx122 | imx123 | imx138 | imx222 | imx225 | imx322 | imx323)
         devmem 0x200f000c 32 0x1 #pinmux SPI0
         devmem 0x200f0010 32 0x1 #pinmux SPI0
         devmem 0x200f0014 32 0x1 #pinmux SPI0
         devmem 0x20030030 32 0x6 #Sensor clock 37.125 MHz
         insmod ssp_sony.ko
+        ;;
+    imx138_i2c)
+        devmem 0x20030030 32 0x6 #Sensor clock 37.125 MHz
         ;;
     ov9712 | ov9732 | soih22 | ov2710 | jxh22 | jxh42)
         devmem 0x20030030 32 0x1 #Sensor clock 24 MHz
@@ -115,7 +117,7 @@ insert_sns() {
         devmem 0x20030030 32 0x6 #Sensor clock 37.125 MHz
         ;;
     *)
-        echo "xxxx Invalid sensor type $SNS_TYPE xxxx"
+        echo "xxxx Invalid sensor type $SENSOR xxxx"
         report_error
         ;;
     esac
@@ -318,12 +320,12 @@ insert_ko() {
     insert_sns >/dev/null
 
     insert_audio
-    echo "==== Your input Sensor type is $SNS_TYPE ===="
+    echo "==== Your input Sensor type is $SENSOR ===="
 
     insmod wdt.ko
 
     # system configuration
-    sysctl;
+    sysctl
 }
 
 remove_ko() {
@@ -409,8 +411,8 @@ else
         logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
     else
         insert_detect
-        SNS_TYPE=$(ipcinfo --short-sensor)
-        export SENSOR=${SNS_TYPE:=unknown}
+        SENSOR_DETECT=$(ipcinfo --short-sensor)
+        export SENSOR=${SENSOR_DETECT:=unknown}
         remove_detect
         logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"
         fw_setenv sensor $SENSOR && logger -s -p daemon.info -t hisilicon "Write detected ${SENSOR} to U-Boot ENV"
@@ -419,12 +421,12 @@ fi
 
 # load module
 if [ "$SENSOR" = "unknown" ]; then
-	exit 1
+    exit 1
 else
-if [ "$1" = "-i" ]; then
-    cd /lib/modules/3.0.8/hisilicon
-    insert_ko
-fi
+    if [ "$1" = "-i" ]; then
+        cd /lib/modules/3.0.8/hisilicon
+        insert_ko
+    fi
 fi
 
 if [ "$1" = "-r" ]; then
