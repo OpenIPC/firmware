@@ -74,15 +74,15 @@ _NB! Downloads are for research only, without any guarantee._
 | Ingenic&nbsp;T31<br>![T31][T31]                           | MVP    |                      | [⬇][fwT31]         |  +    |       |      |
 | MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 | R&D    |                      |                    |       |       |      |
 | MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 | R&D    |                      |                    |       |       |      |
-| Novatek&nbsp;NT98562<br>![NT98562][NT98562]               | WIP    |                      | [⬇][fwNT98562]     |       |       |      |
-| Novatek&nbsp;NT98566<br>![NT98566][NT98566]               | WIP    |                      | [⬇][fwNT98566]     |       |       |      |
+| Novatek&nbsp;NT98562<br>![NT98562][NT98562]               | <br>![sWIP][sWIP]    |                      | [⬇][fwNT98562]     |       |       |      |
+| Novatek&nbsp;NT98566<br>![NT98566][NT98566]               | <br>![sWIP][sWIP]    |                      | [⬇][fwNT98566]     |       |       |      |
 | SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                | R&D    |                      | [⬇][fwSSC325]      |       |       |      |
 | SigmaStar&nbsp;SSC335<br>![SSC335][SSC335]                | MVP    |                      | [⬇][fwSSC335]      |  +    |       |  +   |
 | SigmaStar&nbsp;SSC337<br>![SSC337][SSC337]                | MVP    |                      | [⬇][fwSSC337]      |  +    |       |  +   |
 | SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          | R&D    |                      | [⬇][fwSSC337DE]    |       |       |      |
-| Xiongmai&nbsp;XM510<br>![XM510][XM510]                    | MVP    |                      | [⬇][fwXM510]       |  +    |       |  +   |
-| Xiongmai&nbsp;XM530<br>![XM530][XM530]                    | MVP    |                      | [⬇][fwXM530]       |  +    |       |  +   |
-| Xiongmai&nbsp;XM550<br>![XM550][XM550]                    | MVP    |                      | [⬇][fwXM550]       |  +    |       |  +   |
+| Xiongmai&nbsp;XM510<br>![XM510][XM510]                    | <br>![sMVP][sMVP]    |                      | [⬇][fwXM510]       |  +    |       |  +   |
+| Xiongmai&nbsp;XM530<br>![XM530][XM530]                    | <br>![sMVP][sMVP]    |                      | [⬇][fwXM530]       |  +    |       |  +   |
+| Xiongmai&nbsp;XM550<br>![XM550][XM550]                    | <br>![sMVP][sMVP]    |                      | [⬇][fwXM550]       |  +    |       |  +   |
 
 Typical development lifecycle:
 
@@ -140,7 +140,9 @@ Thank you.
 
 
 [sDONE]: https://img.shields.io/static/v1?label=%20&message=DONE&color=#00FF00
-[sRnD]: https://img.shields.io/static/v1?label=%20&message=R&D&color=#008080
+[sMVP]: https://img.shields.io/static/v1?label=%20&message=MVP&color=#FFFF00
+[sRnD]: https://img.shields.io/static/v1?label=%20&message=RnD&color=#008080
+[sWIP]: https://img.shields.io/static/v1?label=%20&message=WIP&color=#FF00FF
 
 
 
