@@ -26,67 +26,67 @@ and [on the website](https://openipc.org/).
 
 _NB! Downloads are for research only, without any guarantee._
 
-| SoC                                                       | Status                | U-Boot               | Linux              | Video | Audio | GPIO |
-|-----------------------------------------------------------|:---------------------:|:--------------------:|:------------------:|:-----:|:-----:|:----:|
-| Ambarella&nbsp;S2L<br>![AmbaS2L][AmbaS2L]                 | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Ambarella&nbsp;S3L<br>![AmbaS3L][AmbaS3L]                 | <br>![sWIP][sWIP]     |                      | [⬇][fwAmbaS3L]     |       |       |      |
-| Anyka&nbsp;AK3916Ev301<br>![AK3916Ev301][AK3916Ev301]     | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Anyka&nbsp;AK3918Ev200<br>![AK3918Ev200][AK3918Ev200]     | <br>![sHELP][sHELP]   |                      | [⬇][fwAK3918Ev200] |       |       |      |
-| Anyka&nbsp;AK3918Ev330<br>![AK3918Ev330][AK3918Ev330]     | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Fullhan&nbsp;FH8632<br>![FH8632][FH8632]                  | <br>![sEQUIP][sEQUIP] |                      |                    |       |       |      |
-| Fullhan&nbsp;FH8852v100<br>![FH8652v100][FH8852v100]      | <br>![sRnD][sRnD]     |                      | [⬇][fwFH8852v100]  |       |       |      |
-| Fullhan&nbsp;FH8852v200<br>![FH8652v200][FH8852v200]      | <br>![sRnD][sRnD]     |                      | [⬇][fwFH8852v200]  |       |       |      |
-| Fullhan&nbsp;FH8852v210<br>![FH8652v210][FH8852v210]      | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Fullhan&nbsp;FH8856v100<br>![FH8856v100][FH8856v100]      | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Fullhan&nbsp;FH8856v200<br>![FH8856v200][FH8856v200]      | <br>![sRnD][sRnD]     |                      | [⬇][fwFH8856v200]  |       |       |      |
-| Fullhan&nbsp;FH8856v210<br>![FH8856v210][FH8856v210]      | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Fullhan&nbsp;FH8858v200<br>![FH8858v200][FH8858v200]      | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Fullhan&nbsp;FH8858v210<br>![FH8858v210][FH8858v210]      | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         | <br>![sDONE][sDONE]   | [⬇][bootGK7202v300]  | [⬇][fwGK7202v300]  |  +    |  +    |  +   |
-| Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         | <br>![sDONE][sDONE]   | [⬇][bootGK7205v200]  | [⬇][fwGK7205v200]  |  +    |  +    |  +   |
-| Goke&nbsp;GK7205v210<br>![GK7205v210][GK7205v210]         | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         | <br>![sDONE][sDONE]   | [⬇][bootGK7205v300]  | [⬇][fwGK7205v300]  |  +    |  +    |  +   |
-| Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         | <br>![sDONE][sDONE]   | [⬇][bootGK7605v100]  | [⬇][fwGK7605v100]  |  +    |  +    |  +   |
-| GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               | <br>![sEQUIP][sEQUIP] |                      |                    |       |       |      |
-| GrainMedia&nbsp;GM8136<br>![GM8136][GM8136]               | <br>![sMVP][sMVP]     |                      | [⬇][fwGM8136]      |  +    |       |  +   |
-| HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Av100] | [⬇][fwHi3516Av100] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Av200] | [⬇][fwHi3516Av200] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Av300<br>![Hi3516Av300][Hi3516Av300] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Av300] | [⬇][fwHi3516Av300] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Cv100<br>![Hi3516Cv100][Hi3516Cv100] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Cv100] | [⬇][fwHi3516Cv100] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Cv200<br>![Hi3516Cv200][Hi3516Cv200] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Cv200] | [⬇][fwHi3516Cv200] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Cv300<br>![Hi3516Cv300][Hi3516Cv300] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Cv300] | [⬇][fwHi3516Cv300] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Cv500<br>![Hi3516Cv500][Hi3516Cv500] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Cv500] | [⬇][fwHi3516Cv500] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Dv100<br>![Hi3516Dv100][Hi3516Dv100] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Dv100] | [⬇][fwHi3516Dv100] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Dv200<br>![Hi3516Dv200][Hi3516Dv200] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Dv200] | [⬇][fwHi3516Dv200] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Dv300<br>![Hi3516Dv300][Hi3516Dv300] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Dv300] | [⬇][fwHi3516Dv300] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Ev100<br>![Hi3516Ev100][Hi3516Ev100] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Ev100] | [⬇][fwHi3516Ev100] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Ev200<br>![Hi3516Ev200][Hi3516Ev200] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Ev200] | [⬇][fwHi3516Ev200] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3516Ev300<br>![Hi3516Ev300][Hi3516Ev300] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Ev300] | [⬇][fwHi3516Ev300] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3518Cv100<br>![Hi3518Cv100][Hi3518Cv100] | <br>![sDONE][sDONE]   | [⬇][bootHi3518Cv100] | [⬇][fwHi3518Cv100] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3518Ev100<br>![Hi3518Ev100][Hi3518Ev100] | <br>![sDONE][sDONE]   | [⬇][bootHi3518Ev100] | [⬇][fwHi3518Ev100] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3518Ev200<br>![Hi3518Ev200][Hi3518Ev200] | <br>![sDONE][sDONE]   | [⬇][bootHi3518Ev200] | [⬇][fwHi3518Ev200] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3518Ev300<br>![Hi3518Ev300][Hi3518Ev300] | <br>![sDONE][sDONE]   | [⬇][bootHi3518Ev300] | [⬇][fwHi3518Ev300] |  +    |  +    |  +   |
-| HiSilicon&nbsp;Hi3519v101<br>![Hi3519v101][Hi3519v101]    | <br>![sDONE][sDONE]   | [⬇][bootHi3519v101]  | [⬇][fwHi3519v101]  |  +    |  +    |  +   |
-| Ingenic&nbsp;T10<br>![T10][T10]                           | <br>![sWIP][sWIP]     |                      | [⬇][fwT10]         |       |       |      |
-| Ingenic&nbsp;T20<br>![T20][T20]                           | <br>![sMVP][sMVP]     |                      | [⬇][fwT20]         |  +    |       |      |
-| Ingenic&nbsp;T21<br>![T21][T21]                           | <br>![sMVP][sMVP]     |                      | [⬇][fwT21]         |  +    |       |      |
-| Ingenic&nbsp;T31<br>![T31][T31]                           | <br>![sMVP][sMVP]     |                      | [⬇][fwT31]         |  +    |       |      |
-| MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
-| Novatek&nbsp;NT98562<br>![NT98562][NT98562]               | <br>![sWIP][sWIP]     |                      | [⬇][fwNT98562]     |       |       |      |
-| Novatek&nbsp;NT98566<br>![NT98566][NT98566]               | <br>![sWIP][sWIP]     |                      | [⬇][fwNT98566]     |       |       |      |
-| SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                | <br>![sRnD][sRnD]     |                      | [⬇][fwSSC325]      |       |       |      |
-| SigmaStar&nbsp;SSC335<br>![SSC335][SSC335]                | <br>![sMVP][sMVP]     |                      | [⬇][fwSSC335]      |  +    |       |  +   |
-| SigmaStar&nbsp;SSC337<br>![SSC337][SSC337]                | <br>![sMVP][sMVP]     |                      | [⬇][fwSSC337]      |  +    |       |  +   |
-| SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          | <br>![sRnD][sRnD]     |                      | [⬇][fwSSC337DE]    |       |       |      |
-| Xiongmai&nbsp;XM510<br>![XM510][XM510]                    | <br>![sMVP][sMVP]     |                      | [⬇][fwXM510]       |  +    |       |  +   |
-| Xiongmai&nbsp;XM530<br>![XM530][XM530]                    | <br>![sMVP][sMVP]     |                      | [⬇][fwXM530]       |  +    |       |  +   |
-| Xiongmai&nbsp;XM550<br>![XM550][XM550]                    | <br>![sMVP][sMVP]     |                      | [⬇][fwXM550]       |  +    |       |  +   |
+| SoC                                                       | Status        | U-Boot               | Linux              | Video | Audio | GPIO | Sensors |
+|-----------------------------------------------------------|:-------------:|:--------------------:|:------------------:|:-----:|:-----:|:----:|:-------:|
+| Ambarella&nbsp;S2L<br>![AmbaS2L][AmbaS2L]                 | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Ambarella&nbsp;S3L<br>![AmbaS3L][AmbaS3L]                 | <br>![sWIP]   |                      | [⬇][fwAmbaS3L]     |       |       |      |         |
+| Anyka&nbsp;AK3916Ev301<br>![AK3916Ev301][AK3916Ev301]     | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Anyka&nbsp;AK3918Ev200<br>![AK3918Ev200][AK3918Ev200]     | <br>![sHELP]  |                      | [⬇][fwAK3918Ev200] |       |       |      |         |
+| Anyka&nbsp;AK3918Ev330<br>![AK3918Ev330][AK3918Ev330]     | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8632<br>![FH8632][FH8632]                  | <br>![sEQUIP] |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8852v100<br>![FH8652v100][FH8852v100]      | <br>![sRnD]   |                      | [⬇][fwFH8852v100]  |       |       |      |         |
+| Fullhan&nbsp;FH8852v200<br>![FH8652v200][FH8852v200]      | <br>![sRnD]   |                      | [⬇][fwFH8852v200]  |       |       |      |         |
+| Fullhan&nbsp;FH8852v210<br>![FH8652v210][FH8852v210]      | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8856v100<br>![FH8856v100][FH8856v100]      | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8856v200<br>![FH8856v200][FH8856v200]      | <br>![sRnD]   |                      | [⬇][fwFH8856v200]  |       |       |      |         |
+| Fullhan&nbsp;FH8856v210<br>![FH8856v210][FH8856v210]      | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8858v200<br>![FH8858v200][FH8858v200]      | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8858v210<br>![FH8858v210][FH8858v210]      | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         | <br>![sDONE]  | [⬇][bootGK7202v300]  | [⬇][fwGK7202v300]  |  +    |  +    |  +   |         |
+| Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         | <br>![sDONE]  | [⬇][bootGK7205v200]  | [⬇][fwGK7205v200]  |  +    |  +    |  +   |         |
+| Goke&nbsp;GK7205v210<br>![GK7205v210][GK7205v210]         | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         | <br>![sDONE]  | [⬇][bootGK7205v300]  | [⬇][fwGK7205v300]  |  +    |  +    |  +   |         |
+| Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         | <br>![sDONE]  | [⬇][bootGK7605v100]  | [⬇][fwGK7605v100]  |  +    |  +    |  +   |         |
+| GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               | <br>![sEQUIP] |                      |                    |       |       |      |         |
+| GrainMedia&nbsp;GM8136<br>![GM8136][GM8136]               | <br>![sMVP]   |                      | [⬇][fwGM8136]      |  +    |       |  +   |         |
+| HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] | <br>![sDONE]  | [⬇][bootHi3516Av100] | [⬇][fwHi3516Av100] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] | <br>![sDONE]  | [⬇][bootHi3516Av200] | [⬇][fwHi3516Av200] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Av300<br>![Hi3516Av300][Hi3516Av300] | <br>![sDONE]  | [⬇][bootHi3516Av300] | [⬇][fwHi3516Av300] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Cv100<br>![Hi3516Cv100][Hi3516Cv100] | <br>![sDONE]  | [⬇][bootHi3516Cv100] | [⬇][fwHi3516Cv100] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Cv200<br>![Hi3516Cv200][Hi3516Cv200] | <br>![sDONE]  | [⬇][bootHi3516Cv200] | [⬇][fwHi3516Cv200] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Cv300<br>![Hi3516Cv300][Hi3516Cv300] | <br>![sDONE]  | [⬇][bootHi3516Cv300] | [⬇][fwHi3516Cv300] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Cv500<br>![Hi3516Cv500][Hi3516Cv500] | <br>![sDONE]  | [⬇][bootHi3516Cv500] | [⬇][fwHi3516Cv500] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Dv100<br>![Hi3516Dv100][Hi3516Dv100] | <br>![sDONE]  | [⬇][bootHi3516Dv100] | [⬇][fwHi3516Dv100] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Dv200<br>![Hi3516Dv200][Hi3516Dv200] | <br>![sDONE]  | [⬇][bootHi3516Dv200] | [⬇][fwHi3516Dv200] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Dv300<br>![Hi3516Dv300][Hi3516Dv300] | <br>![sDONE]  | [⬇][bootHi3516Dv300] | [⬇][fwHi3516Dv300] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Ev100<br>![Hi3516Ev100][Hi3516Ev100] | <br>![sDONE]  | [⬇][bootHi3516Ev100] | [⬇][fwHi3516Ev100] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Ev200<br>![Hi3516Ev200][Hi3516Ev200] | <br>![sDONE]  | [⬇][bootHi3516Ev200] | [⬇][fwHi3516Ev200] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3516Ev300<br>![Hi3516Ev300][Hi3516Ev300] | <br>![sDONE]  | [⬇][bootHi3516Ev300] | [⬇][fwHi3516Ev300] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3518Cv100<br>![Hi3518Cv100][Hi3518Cv100] | <br>![sDONE]  | [⬇][bootHi3518Cv100] | [⬇][fwHi3518Cv100] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3518Ev100<br>![Hi3518Ev100][Hi3518Ev100] | <br>![sDONE]  | [⬇][bootHi3518Ev100] | [⬇][fwHi3518Ev100] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3518Ev200<br>![Hi3518Ev200][Hi3518Ev200] | <br>![sDONE]  | [⬇][bootHi3518Ev200] | [⬇][fwHi3518Ev200] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3518Ev300<br>![Hi3518Ev300][Hi3518Ev300] | <br>![sDONE]  | [⬇][bootHi3518Ev300] | [⬇][fwHi3518Ev300] |  +    |  +    |  +   |         |
+| HiSilicon&nbsp;Hi3519v101<br>![Hi3519v101][Hi3519v101]    | <br>![sDONE]  | [⬇][bootHi3519v101]  | [⬇][fwHi3519v101]  |  +    |  +    |  +   |         |
+| Ingenic&nbsp;T10<br>![T10][T10]                           | <br>![sWIP]   |                      | [⬇][fwT10]         |       |       |      |         |
+| Ingenic&nbsp;T20<br>![T20][T20]                           | <br>![sMVP]   |                      | [⬇][fwT20]         |  +    |       |      |         |
+| Ingenic&nbsp;T21<br>![T21][T21]                           | <br>![sMVP]   |                      | [⬇][fwT21]         |  +    |       |      |         |
+| Ingenic&nbsp;T31<br>![T31][T31]                           | <br>![sMVP]   |                      | [⬇][fwT31]         |  +    |       |      |         |
+| MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 | <br>![sRnD]   |                      |                    |       |       |      |         |
+| MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Novatek&nbsp;NT98562<br>![NT98562][NT98562]               | <br>![sWIP]   |                      | [⬇][fwNT98562]     |       |       |      |         |
+| Novatek&nbsp;NT98566<br>![NT98566][NT98566]               | <br>![sWIP]   |                      | [⬇][fwNT98566]     |       |       |      |         |
+| SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                | <br>![sRnD]   |                      | [⬇][fwSSC325]      |       |       |      |         |
+| SigmaStar&nbsp;SSC335<br>![SSC335][SSC335]                | <br>![sMVP]   |                      | [⬇][fwSSC335]      |  +    |       |  +   |         |
+| SigmaStar&nbsp;SSC337<br>![SSC337][SSC337]                | <br>![sMVP]   |                      | [⬇][fwSSC337]      |  +    |       |  +   |         |
+| SigmaStar&nbsp;SSC337DE<br>![SSC337DE][SSC337DE]          | <br>![sRnD]   |                      | [⬇][fwSSC337DE]    |       |       |      |         |
+| Xiongmai&nbsp;XM510<br>![XM510][XM510]                    | <br>![sMVP]   |                      | [⬇][fwXM510]       |  +    |       |  +   |         |
+| Xiongmai&nbsp;XM530<br>![XM530][XM530]                    | <br>![sMVP]   |                      | [⬇][fwXM530]       |  +    |       |  +   |         |
+| Xiongmai&nbsp;XM550<br>![XM550][XM550]                    | <br>![sMVP]   |                      | [⬇][fwXM550]       |  +    |       |  +   |         |
 
 Typical development lifecycle:
 
-When we acquire SDK for new SoC we add SoC name to the table with status `NoEquipment` (if we don't have specific hardware modules) or `helpNeeded` (to seek developer who will be responsible for the SoC) and it's considered as starting state of development. Then gradually status changes -> ![sRnD] -> ![sWIP] -> ![sMVP] -> ![sDONE]
+When we acquire SDK for new SoC we add SoC name to the table with status `NoEquipment` (if we don't have specific hardware modules) or `HelpNeeded` (to seek developer who will be responsible for the SoC) and it's considered as starting state of development. Then gradually status changes -> ![sRnD] -> ![sWIP] -> ![sMVP] -> ![sDONE]
 
 Therefore: there is no reason to have SoC in the table without having SDK.
 
