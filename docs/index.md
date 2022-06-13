@@ -24,12 +24,11 @@ and [on the website](https://openipc.org/).
 
 [![Join the chat at https://gitter.im/OpenIPC/english](https://badges.gitter.im/OpenIPC/english.svg)](https://gitter.im/OpenIPC/english?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-_NB! Downloads are for research only, without any guarantee._
+**IMPORTANT!** Backup of original firmware is required because our U-Boot version will overwrite original crypto partition (it is not used by OpenIPC, but it will make impossible to restore to factory firmware if you will want).
 
 We provide our own advanced U-boot release for the platform (that could replace the original board U-boot, depending on user's willingness). In the case when manufacturer has a password protected U-boot, consider to replacing it.
 
-**IMPORTANT!** Backup of original firmware is required because our U-Boot version will overwrite original crypto partition (it is not used by OpenIPC, but it will make impossible to restore to factory firmware if you will want).
-
+_**NB!** Downloads are for research only, without any guarantee._
 
 | SoC                                                       | Status        | U-Boot               | Linux              | Video | Audio | GPIO | Sensors |
 |-----------------------------------------------------------|:-------------:|:--------------------:|:------------------:|:-----:|:-----:|:----:|:-------:|
@@ -38,7 +37,7 @@ We provide our own advanced U-boot release for the platform (that could replace 
 | Anyka&nbsp;AK3916Ev300<br>![AK3916Ev300][AK3916Ev300]     | <br>![sEQUIP] |                      | [⬇][fwAK3916Ev300] |       |       |      |         |
 | Anyka&nbsp;AK3916Ev301<br>![AK3916Ev301][AK3916Ev301]     | <br>![sRnD]   |                      |                    |       |       |      |         |
 | Anyka&nbsp;AK3918Ev200<br>![AK3918Ev200][AK3918Ev200]     | <br>![sHELP]  |                      | [⬇][fwAK3918Ev200] |       |       |      |         |
-| Anyka&nbsp;AK3916Ev300<br>![AK3918Ev300][AK3918Ev300]     | <br>![sEQUIP] |                      | [⬇][fwAK3918Ev300] |       |       |      |         |
+| Anyka&nbsp;AK3918Ev300<br>![AK3918Ev300][AK3918Ev300]     | <br>![sEQUIP] |                      | [⬇][fwAK3918Ev300] |       |       |      |         |
 | Anyka&nbsp;AK3918Ev330<br>![AK3918Ev330][AK3918Ev330]     | <br>![sRnD]   |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8632<br>![FH8632][FH8632]                  | <br>![sEQUIP] |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8852v100<br>![FH8652v100][FH8852v100]      | <br>![sRnD]   |                      | [⬇][fwFH8852v100]  |       |       |      |         |
