@@ -45,7 +45,7 @@ _NB! Downloads are for research only, without any guarantee._
 | Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  | R&D    |                      |                    |       |       |      |
 | Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         | DONE   | [⬇][bootGK7202v300]  | [⬇][fwGK7202v300]  |  +    |  +    |  +   |
 | Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         | DONE   | [⬇][bootGK7205v200]  | [⬇][fwGK7205v200]  |  +    |  +    |  +   |
-| Goke&nbsp;GK7205v210<br>![GK7205v210][GK7205v210]         | R&D    |                      |                    |       |       |      |
+| Goke&nbsp;GK7205v210<br>![GK7205v210][GK7205v210]         | [statGK7205v210] |                      |                    |       |       |      |
 | Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         | DONE   | [⬇][bootGK7205v300]  | [⬇][fwGK7205v300]  |  +    |  +    |  +   |
 | Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         | DONE   | [⬇][bootGK7605v100]  | [⬇][fwGK7605v100]  |  +    |  +    |  +   |
 | GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               | R&D    |                      |                    |       |       |      |
@@ -194,6 +194,63 @@ Thank you.
 [XM510]: https://github.com/OpenIPC/firmware/actions/workflows/xm510_images.yml/badge.svg
 [XM530]: https://github.com/OpenIPC/firmware/actions/workflows/xm530_images.yml/badge.svg
 [XM550]: https://github.com/OpenIPC/firmware/actions/workflows/xm550_images.yml/badge.svg
+
+
+[statAmbaS2L]: https://img.shields.io/static/v1?label=AmbaS2L&message=%20&logo=github
+[statAmbaS3L]: https://github.com/OpenIPC/firmware/actions/workflows/ambarella-s3l_images.yml/badge.svg
+[statAK3916Ev301]: https://img.shields.io/static/v1?label=AK3916Ev301&message=%20&logo=github
+[statAK3918Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/ak3918ev200_images.yml/badge.svg
+[statAK3918Ev330]: https://img.shields.io/static/v1?label=AK3918EV330&message=%20&logo=github
+[statFH8632]: https://img.shields.io/static/v1?label=FH8632&message=%20&logo=github
+[statFH8852v100]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v100_images.yml/badge.svg
+[statFH8852v200]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v200_images.yml/badge.svg
+[statFH8852v210]: https://img.shields.io/static/v1?label=FH8852V210&message=%20&logo=github
+[statFH8856v100]: https://img.shields.io/static/v1?label=FH8856V100&message=%20&logo=github
+[statFH8856v200]: https://github.com/OpenIPC/firmware/actions/workflows/fh8856v200_images.yml/badge.svg
+[statFH8856v210]: https://img.shields.io/static/v1?label=FH8856V210&message=%20&logo=github
+[statFH8858v200]: https://img.shields.io/static/v1?label=FH8856V200&message=%20&logo=github
+[statFH8858v210]: https://img.shields.io/static/v1?label=FH8856V210&message=%20&logo=github
+[statGK7102S]: https://img.shields.io/static/v1?label=GK7102S&message=%20&logo=github
+[statGK7202v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7202v300_images.yml/badge.svg
+[statGK7205v200]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v200_images.yml/badge.svg
+[statGK7205v210]: https://img.shields.io/static/v1?label=GK7205V2010&message=DONE
+[statGK7205v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v300_images.yml/badge.svg
+[statGK7605v100]: https://github.com/OpenIPC/firmware/actions/workflows/gk7605v100_images.yml/badge.svg
+[statGM8135]: https://img.shields.io/static/v1?label=GM8135&message=%20&logo=github
+[statGM8136]: https://github.com/OpenIPC/firmware/actions/workflows/gm8136_images.yml/badge.svg
+[statHi3516Av100]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516av100_images.yml/badge.svg
+[statHi3516Av200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516av200_images.yml/badge.svg
+[statHi3516Av300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516av300_images.yml/badge.svg
+[statHi3516Cv100]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516cv100_images.yml/badge.svg
+[statHi3516Cv200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516cv200_images.yml/badge.svg
+[statHi3516Cv300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516cv300_images.yml/badge.svg
+[statHi3516Cv500]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516cv500_images.yml/badge.svg
+[statHi3516Dv100]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516dv100_images.yml/badge.svg
+[statHi3516Dv200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516dv200_images.yml/badge.svg
+[statHi3516Dv300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516dv300_images.yml/badge.svg
+[statHi3516Ev100]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516ev100_images.yml/badge.svg
+[statHi3516Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516ev200_images.yml/badge.svg
+[statHi3516Ev300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3516ev300_images.yml/badge.svg
+[statHi3518Cv100]: https://github.com/OpenIPC/firmware/actions/workflows/hi3518cv100_images.yml/badge.svg
+[statHi3518Ev100]: https://github.com/OpenIPC/firmware/actions/workflows/hi3518ev100_images.yml/badge.svg
+[statHi3518Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3518ev200_images.yml/badge.svg
+[statHi3518Ev300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3518ev300_images.yml/badge.svg
+[statHi3519v101]: https://github.com/OpenIPC/firmware/actions/workflows/hi3519v101_images.yml/badge.svg
+[statMSC313E]: https://img.shields.io/static/v1?label=MSC313E&message=%20&logo=github
+[statMSC316D]: https://img.shields.io/static/v1?label=MSC316D&message=%20&logo=github
+[statNT98562]: https://github.com/OpenIPC/firmware/actions/workflows/nt98562_images.yml/badge.svg
+[statNT98566]: https://github.com/OpenIPC/firmware/actions/workflows/nt98566_images.yml/badge.svg
+[statSSC325]: https://github.com/OpenIPC/firmware/actions/workflows/ssc325_images.yml/badge.svg
+[statSSC335]: https://github.com/OpenIPC/firmware/actions/workflows/ssc335_images.yml/badge.svg
+[statSSC337]: https://github.com/OpenIPC/firmware/actions/workflows/ssc337_images.yml/badge.svg
+[statSSC337DE]: https://github.com/OpenIPC/firmware/actions/workflows/ssc337de_images.yml/badge.svg
+[statT10]: https://github.com/OpenIPC/firmware/actions/workflows/t10_images.yml/badge.svg
+[statT20]: https://github.com/OpenIPC/firmware/actions/workflows/t20_images.yml/badge.svg
+[statT21]: https://github.com/OpenIPC/firmware/actions/workflows/t21_images.yml/badge.svg
+[statT31]: https://github.com/OpenIPC/firmware/actions/workflows/t31_images.yml/badge.svg
+[statXM510]: https://github.com/OpenIPC/firmware/actions/workflows/xm510_images.yml/badge.svg
+[statXM530]: https://github.com/OpenIPC/firmware/actions/workflows/xm530_images.yml/badge.svg
+[statXM550]: https://github.com/OpenIPC/firmware/actions/workflows/xm550_images.yml/badge.svg
 
 
 [bootGK7202v300]: https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-gk7202v300-universal.bin
