@@ -48,7 +48,7 @@ _NB! Downloads are for research only, without any guarantee._
 | Goke&nbsp;GK7205v210<br>![GK7205v210][GK7205v210]         | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
 | Goke&nbsp;GK7205v300<br>![GK7205v300][GK7205v300]         | <br>![sDONE][sDONE]   | [⬇][bootGK7205v300]  | [⬇][fwGK7205v300]  |  +    |  +    |  +   |
 | Goke&nbsp;GK7605v100<br>![GK7605v100][GK7605v100]         | <br>![sDONE][sDONE]   | [⬇][bootGK7605v100]  | [⬇][fwGK7605v100]  |  +    |  +    |  +   |
-| GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               | <br>![sRnD][sRnD]     |                      |                    |       |       |      |
+| GrainMedia&nbsp;GM8135<br>![GM8135][GM8135]               | <br>![sEQUIP][sEQUIP] |                      |                    |       |       |      |
 | GrainMedia&nbsp;GM8136<br>![GM8136][GM8136]               | <br>![sMVP][sMVP]     |                      | [⬇][fwGM8136]      |  +    |       |  +   |
 | HiSilicon&nbsp;Hi3516Av100<br>![Hi3516Av100][Hi3516Av100] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Av100] | [⬇][fwHi3516Av100] |  +    |  +    |  +   |
 | HiSilicon&nbsp;Hi3516Av200<br>![Hi3516Av200][Hi3516Av200] | <br>![sDONE][sDONE]   | [⬇][bootHi3516Av200] | [⬇][fwHi3516Av200] |  +    |  +    |  +   |
@@ -139,7 +139,7 @@ Thank you.
 </p>
 
 
-[sDONE]: https://img.shields.io/static/v1?label=%20&message=DONE&color=00FF00
+[sDONE]: https://img.shields.io/static/v1?label=%20&message=DONE&color=008000
 [sMVP]: https://img.shields.io/static/v1?label=%20&message=MVP&color=FFFF00
 [sRnD]: https://img.shields.io/static/v1?label=%20&message=RnD&color=008080
 [sWIP]: https://img.shields.io/static/v1?label=%20&message=WIP&color=FF00FF
