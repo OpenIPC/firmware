@@ -90,17 +90,17 @@ When we acquire SDK for new SoC we add SoC name to the table with status `No equ
 
 Therefore: there is no reason to have SoC in the table without having SDK.
 
-`DONE` Everything seems works like as in original firmware (but we're still waiting for feedback from you)
+![sDONE][sDONE] - Everything seems works like as in original firmware (but we're still waiting for feedback from you)
 
-`MVP` "Minimal Viable Product", basic system is done (video works at least on main channel), everything is clear (including hardware and software design), but due to lack of human resources we're looking for help from experienced embedded developers or sponsors to continue development and make it `DONE` in the future
+![sMVP][sMVP] - "Minimal Viable Product", basic system is done (video works at least on main channel), everything is clear (including hardware and software design), but due to lack of human resources we're looking for help from experienced embedded developers or sponsors to continue development and make it `DONE` in the future
 
-`WIP` "Work In Progress" stage, we're tinkering with hardware and code, and probably early birds can do tests on their boards and help us to move further
+![sWIP][sWIP] - "Work In Progress" stage, we're tinkering with hardware and code, and probably early birds can do tests on their boards and help us to move further
 
-`R&D` "Research&Development" stage, when we have platform SDK and probably hardware boards, but there is a lot of work ahead
+![sRnD][sRnD] - "Research&Development" stage, when we have platform SDK and probably hardware boards, but there is a lot of work ahead
 
-`Help needed` - There is hardware in our lab, but we're looking for experienced embedded developers or sponsors to start R&D stage
+![sHELP][sHELP] - There is hardware in our lab, but we're looking for experienced embedded developers or sponsors to start R&D stage
 
-`No equipment` - We have SDK for the platform, but we don't have specific hardware to continue development, you can donate it to our R&D guys (it's important for ancient boards which are in End-Of-Life state and there is no way to buy it with on the market)
+![sEQUIP][sEQUIP] - We have SDK for the platform, but we don't have specific hardware to continue development, you can donate it to our R&D guys (it's important for ancient boards which are in End-Of-Life state and there is no way to buy it with on the market)
 
 -----
 
