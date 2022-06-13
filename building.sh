@@ -194,6 +194,11 @@ gk7205v200_ufanet() {
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_ufanet all && rename
 }
 
+gk7205v210() {
+  soc="gk7205v210"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 gk7205v300() {
   soc="gk7205v300"
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -603,6 +608,7 @@ xm550() {
 # gk7205v200_fpv                # FPV (ultimate by default)
 # gk7205v200_iscom              # Iscom test
 # gk7205v200_ufanet             # Ufanet
+# gk7205v210                    # OpenIPC
 # gk7205v300                    # OpenIPC
 # gk7205v300_ultimate           # OpenIPC_ultimate version
 # gk7205v300_fpv                # FPV (ultimate by default)
