@@ -103,6 +103,8 @@ Therefore: there is no reason to have SoC in the table without having SDK.
 ![sEQUIP] We have SDK for the platform, but we don't have specific hardware to continue development, you can donate it to our `RnD` guys (it's important for ancient boards which are in End-Of-Life state and there is no way to buy it with on the market)
 
 
+System components:
+
 We provide our own advanced U-boot release for the platform (that could replace the original board U-boot, depending on user's willingness). In the case when manufacturer has a password protected U-boot, consider to replacing it.
 
 -----
