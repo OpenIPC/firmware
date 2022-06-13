@@ -12,7 +12,7 @@ Goke, GrainMedia, Ingenic, MStar, Novatek, SigmaStar, XiongMai and is expected t
 More information about the project is available [in our wiki](https://github.com/OpenIPC/wiki)
 and [on the website](https://openipc.org/).
 
-### Current development status <a href="#commercial">*</a>
+### Current development status <a href="#support">*</a>
 
 [![CI status](https://img.shields.io/github/downloads/OpenIPC/firmware/total.svg)](https://github.com/OpenIPC/firmware/releases)
 ![GitHub repo size](https://img.shields.io/github/repo-size/OpenIPC/firmware)
