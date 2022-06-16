@@ -35,9 +35,10 @@ start() {
 	#
 	logger -s -p daemon.info -t fullhan "Loading of kernel modules and initialization of the video system has started"
 	export TZ=$(cat /etc/TZ)
-	#load_fullhan
+	load_fullhan
 	#
-	#load_majestic
+	export SENSOR=$(fw_printenv -n sensor)
+	load_majestic
 }
 
 stop() {
