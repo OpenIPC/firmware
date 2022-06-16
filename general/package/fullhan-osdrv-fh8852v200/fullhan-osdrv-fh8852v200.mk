@@ -28,8 +28,8 @@ define FULLHAN_OSDRV_FH8852V200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_FULLHAN_PATH)/package/fullhan-osdrv-fh8852v200/files/sensor/*.so
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors/params
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors/params $(BR2_EXTERNAL_FULLHAN_PATH)/package/fullhan-osdrv-fh8852v200/files/sensor/params/*
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_FULLHAN_PATH)/package/fullhan-osdrv-fh8852v200/files/sensor/params/*
 endef
 
 $(eval $(generic-package))
