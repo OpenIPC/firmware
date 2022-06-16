@@ -12,10 +12,12 @@ set_gpio()
 
 cd /lib/modules/4.9.129/fullhan
 
+# mmz:name,0,start,size,type
 insmod vmm.ko mmz=anonymous,0,0xA2000000,32M anony=1
-#insmod vmm.ko mmz=anonymous,0,0xA1D00000,33M anony=1
-#insmod vmm.ko mmz=anonymous,0,0xA2000000,64M anony=1
-#insmod vmm.ko mmz=anonymous,0,0xA2000000,64M anony=1
+#insmod vmm.ko mmz=anonymous,0,0xA1F00000,33M anony=1
+#insmod vmm.ko mmz=anonymous,0,0xA1B00000,37M anony=1 # 4MP
+#insmod vmm.ko mmz=anonymous,0,0xA4000000,64M anony=1 # 5MP
+#insmod vmm.ko mmz=anonymous,0,0xA2400000,90M anony=1 # 8MP
 
 #reset sensor
 set_gpio 13 0
