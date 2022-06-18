@@ -39,15 +39,17 @@ _**NB!** Downloads are for research only, without any guarantee._
 | Anyka&nbsp;AK3918Ev200<br>![AK3918Ev200][AK3918Ev200]     | <br>![sHELP]  |                      | [⬇][fwAK3918Ev200] |       |       |      |         |
 | Anyka&nbsp;AK3918Ev300<br>![AK3918Ev300][AK3918Ev300]     | <br>![sEQUIP] |                      | [⬇][fwAK3918Ev300] |       |       |      |         |
 | Anyka&nbsp;AK3918Ev330<br>![AK3918Ev330][AK3918Ev330]     | <br>![sRnD]   |                      |                    |       |       |      |         |
-| Fullhan&nbsp;FH8632<br>![FH8632][FH8632]                  | <br>![sEQUIP] |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8626v100<br>![FH8626v100][FH8626v100]      | <br>![sHELP]  |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8632v100<br>![FH8632v100][FH8632v100]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8652v100<br>![FH8652v100][FH8652v100]      | <br>![sHELP]  |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8852v100<br>![FH8652v100][FH8852v100]      | <br>![sRnD]   |                      | [⬇][fwFH8852v100]  |       |       |      |         |
 | Fullhan&nbsp;FH8852v200<br>![FH8652v200][FH8852v200]      | <br>![sRnD]   |                      | [⬇][fwFH8852v200]  |       |       |      |         |
-| Fullhan&nbsp;FH8852v210<br>![FH8652v210][FH8852v210]      | <br>![sRnD]   |                      |                    |       |       |      |         |
-| Fullhan&nbsp;FH8856v100<br>![FH8856v100][FH8856v100]      | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8852v210<br>![FH8652v210][FH8852v210]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8856v100<br>![FH8856v100][FH8856v100]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8856v200<br>![FH8856v200][FH8856v200]      | <br>![sRnD]   |                      | [⬇][fwFH8856v200]  |       |       |      |         |
-| Fullhan&nbsp;FH8856v210<br>![FH8856v210][FH8856v210]      | <br>![sRnD]   |                      |                    |       |       |      |         |
-| Fullhan&nbsp;FH8858v200<br>![FH8858v200][FH8858v200]      | <br>![sRnD]   |                      |                    |       |       |      |         |
-| Fullhan&nbsp;FH8858v210<br>![FH8858v210][FH8858v210]      | <br>![sRnD]   |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8856v210<br>![FH8856v210][FH8856v210]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8858v200<br>![FH8858v200][FH8858v200]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
+| Fullhan&nbsp;FH8858v210<br>![FH8858v210][FH8858v210]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
 | Goke&nbsp;GK7102S<br>![GK7102S][GK7102S]                  | <br>![sRnD]   |                      |                    |       |       |      |         |
 | Goke&nbsp;GK7202v300<br>![GK7202v300][GK7202v300]         | <br>![sDONE]  | [⬇][bootGK7202v300]  | [⬇][fwGK7202v300]  |  +    |  +    |  +   |         |
 | Goke&nbsp;GK7205v200<br>![GK7205v200][GK7205v200]         | <br>![sDONE]  | [⬇][bootGK7205v200]  | [⬇][fwGK7205v200]  |  +    |  +    |  +   |         |
@@ -161,7 +163,9 @@ Thank you.
 [AK3918Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/ak3918ev200_images.yml/badge.svg
 [AK3918Ev300]: https://github.com/OpenIPC/firmware/actions/workflows/ak3918ev300_images.yml/badge.svg
 [AK3918Ev330]: https://img.shields.io/static/v1?label=AK3918EV330&message=%20&logo=github
-[FH8632]: https://img.shields.io/static/v1?label=FH8632&message=%20&logo=github
+[FH8626v100]: https://img.shields.io/static/v1?label=FH8626V100&message=%20&logo=github
+[FH8632v100]: https://img.shields.io/static/v1?label=FH8632V100&message=%20&logo=github
+[FH8652v100]: https://img.shields.io/static/v1?label=FH8652V100&message=%20&logo=github
 [FH8852v100]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v100_images.yml/badge.svg
 [FH8852v200]: https://github.com/OpenIPC/firmware/actions/workflows/fh8852v200_images.yml/badge.svg
 [FH8852v210]: https://img.shields.io/static/v1?label=FH8852V210&message=%20&logo=github
@@ -245,7 +249,9 @@ Thank you.
 [fwAK3918Ev200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3918ev200-br.tgz
 [fwAK3918Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3918ev300-br.tgz
 [fwAK3918Ev330]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ak3918ev330-br.tgz
-[fwFH8632]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8632-br.tgz
+[fwFH8626v100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8626v100-br.tgz
+[fwFH8632v100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8632v100-br.tgz
+[fwFH8652v100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8652v100-br.tgz
 [fwFH8852v100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8852v100-br.tgz
 [fwFH8852v200]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8852v200-br.tgz
 [fwFH8856v100]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.fh8856v100-br.tgz
