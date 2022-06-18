@@ -42,11 +42,11 @@ _**NB!** Downloads are for research only, without any guarantee._
 | Fullhan&nbsp;FH8626v100<br>![FH8626v100][FH8626v100]      | <br>![sHELP]  |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8632v100<br>![FH8632v100][FH8632v100]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8652v100<br>![FH8652v100][FH8652v100]      | <br>![sHELP]  |                      |                    |       |       |      |         |
-| Fullhan&nbsp;FH8852v100<br>![FH8652v100][FH8852v100]      | <br>![sRnD]   |                      | [⬇][fwFH8852v100]  |       |       |      |         |
-| Fullhan&nbsp;FH8852v200<br>![FH8652v200][FH8852v200]      | <br>![sRnD]   |                      | [⬇][fwFH8852v200]  |       |       |      |         |
+| Fullhan&nbsp;FH8852v100<br>![FH8652v100][FH8852v100]      | <br>![sWIP]   |                      | [⬇][fwFH8852v100]  |       |       |      |         |
+| Fullhan&nbsp;FH8852v200<br>![FH8652v200][FH8852v200]      | <br>![sWIP]   |                      | [⬇][fwFH8852v200]  |       |       |      |         |
 | Fullhan&nbsp;FH8852v210<br>![FH8652v210][FH8852v210]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8856v100<br>![FH8856v100][FH8856v100]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
-| Fullhan&nbsp;FH8856v200<br>![FH8856v200][FH8856v200]      | <br>![sRnD]   |                      | [⬇][fwFH8856v200]  |       |       |      |         |
+| Fullhan&nbsp;FH8856v200<br>![FH8856v200][FH8856v200]      | <br>![sWIP]   |                      | [⬇][fwFH8856v200]  |       |       |      |         |
 | Fullhan&nbsp;FH8856v210<br>![FH8856v210][FH8856v210]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8858v200<br>![FH8858v200][FH8858v200]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
 | Fullhan&nbsp;FH8858v210<br>![FH8858v210][FH8858v210]      | <br>![sEQUIP] |                      |                    |       |       |      |         |
