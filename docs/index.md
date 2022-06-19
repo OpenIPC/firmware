@@ -9,7 +9,7 @@ Historically, OpenIPC firmware supports SoC manufactured by HiSilicon, but as th
 the list of supported processors expands. Today, it also includes chips from Ambarella, Anyka, Fullhan,
 Goke, GrainMedia, Ingenic, MStar, Novatek, SigmaStar, XiongMai and is expected to grow further.
 
-More information about the project is available [in our wiki](https://github.com/OpenIPC/wiki)
+More information about the project is available [in our wiki](https://openipc.github.io/wiki/)
 and [on the website](https://openipc.org/).
 
 ### Current development status <a href="#support">*</a>
