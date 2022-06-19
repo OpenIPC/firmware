@@ -1,4 +1,4 @@
-name: "FH8632  "
+name: "FH8833V100"
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_core:
-    name: OpenIPC firmware for FH8632
+    name: OpenIPC firmware for FH8833V100
     runs-on: ubuntu-latest
 
     steps:
@@ -57,25 +57,25 @@ jobs:
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build FH8632 firmware
-        id: build-fh8632-firmware
+      - name: Build FH8833V100 firmware
+        id: build-fh8833v100-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.fh8632-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.fh8833v100-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=fullhan BOARD=unknown_unknown_fh8632_openipc all
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... FH8632" >> $GITHUB_ENV && exit 1
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... FH8632" >> $GITHUB_ENV && exit 1
+          make PLATFORM=fullhan BOARD=unknown_unknown_fh8833v100_openipc all
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... FH8833V100" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... FH8833V100" >> $GITHUB_ENV && exit 1
           cd ${GITHUB_WORKSPACE}/output/images
-          mv uImage uImage.fh8632
-          mv rootfs.squashfs rootfs.squashfs.fh8632
-          md5sum rootfs.squashfs.fh8632 > rootfs.squashfs.fh8632.md5sum
-          md5sum uImage.fh8632 > uImage.fh8632.md5sum
-          tar -cvzf $ARCHIVE_FW *fh8632*
+          mv uImage uImage.fh8833v100
+          mv rootfs.squashfs rootfs.squashfs.fh8833v100
+          md5sum rootfs.squashfs.fh8833v100 > rootfs.squashfs.fh8833v100.md5sum
+          md5sum uImage.fh8833v100 > uImage.fh8833v100.md5sum
+          tar -cvzf $ARCHIVE_FW *fh8833v100*
 
-      - name: Build FH8632 SDK
-        id: build-fh8632-sdk
+      - name: Build FH8833V100 SDK
+        id: build-fh8833v100-sdk
         continue-on-error: true
         run: |
           ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
@@ -87,10 +87,10 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-fh8632-firmware.outcome != 'success' || steps.build-fh8632-sdk.outcome != 'success'
+        if: steps.build-fh8833v100-firmware.outcome != 'success' || steps.build-fh8833v100-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
-          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... FH8632}"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... FH8833V100}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
@@ -112,7 +112,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: "openipc.fh8632-br.tgz"
+          asset_name: "openipc.fh8833v100-br.tgz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -122,7 +122,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-fh8632-linux-musleabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-fh8833v100-linux-musleabi_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
