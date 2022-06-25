@@ -437,6 +437,11 @@ msc313e() {
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+msc316dc() {
+  soc="msc316dc"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 #################################################################################
 
 rv1109() {
@@ -673,6 +678,7 @@ xm550() {
 #######
 #
 # msc313e                       # OpenIPC
+# msc316dc                      # OpenIPC
 #
 # ssc325                        # OpenIPC
 #

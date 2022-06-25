@@ -80,8 +80,8 @@ _**NB!** Downloads are for research only, without any guarantee._
 | Ingenic&nbsp;T20<br>![T20][T20]                           | <br>![sMVP]   |                      | [⬇][fwT20]         |  +    |       |      |         |
 | Ingenic&nbsp;T21<br>![T21][T21]                           | <br>![sMVP]   |                      | [⬇][fwT21]         |  +    |       |      |         |
 | Ingenic&nbsp;T31<br>![T31][T31]                           | <br>![sMVP]   |                      | [⬇][fwT31]         |  +    |       |      |         |
-| MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 | <br>![sRnD]   |                      |                    |       |       |      |         |
-| MStar&nbsp;MSC316D<br>![MSC316D][MSC316D]                 | <br>![sRnD]   |                      |                    |       |       |      |         |
+| MStar&nbsp;MSC313E<br>![MSC313E][MSC313E]                 | <br>![sWIP]   | [⬇][bootMSC313E]     | [⬇][fwMSC313E]     |       |       |      |         |
+| MStar&nbsp;MSC316D<br>![MSC316DC][MSC316DC]               | <br>![sWIP]   |                      | [⬇][fwMSC316DC]    |       |       |      |         |
 | Novatek&nbsp;NT98562<br>![NT98562][NT98562]               | <br>![sWIP]   |                      | [⬇][fwNT98562]     |       |       |      |         |
 | Novatek&nbsp;NT98566<br>![NT98566][NT98566]               | <br>![sWIP]   |                      | [⬇][fwNT98566]     |       |       |      |         |
 | SigmaStar&nbsp;SSC325<br>![SSC325][SSC325]                | <br>![sRnD]   |                      | [⬇][fwSSC325]      |       |       |      |         |
@@ -200,8 +200,8 @@ Thank you.
 [Hi3518Ev200]: https://github.com/OpenIPC/firmware/actions/workflows/hi3518ev200_images.yml/badge.svg
 [Hi3518Ev300]: https://github.com/OpenIPC/firmware/actions/workflows/hi3518ev300_images.yml/badge.svg
 [Hi3519v101]: https://github.com/OpenIPC/firmware/actions/workflows/hi3519v101_images.yml/badge.svg
-[MSC313E]: https://img.shields.io/static/v1?label=MSC313E&message=%20&logo=github
-[MSC316D]: https://img.shields.io/static/v1?label=MSC316D&message=%20&logo=github
+[MSC313E]: https://github.com/OpenIPC/firmware/actions/workflows/msc313e_images.yml/badge.svg
+[MSC316DC]: https://github.com/OpenIPC/firmware/actions/workflows/msc316dc_images.yml/badge.svg
 [NT98562]: https://github.com/OpenIPC/firmware/actions/workflows/nt98562_images.yml/badge.svg
 [NT98566]: https://github.com/OpenIPC/firmware/actions/workflows/nt98566_images.yml/badge.svg
 [SSC325]: https://github.com/OpenIPC/firmware/actions/workflows/ssc325_images.yml/badge.svg
@@ -240,6 +240,8 @@ Thank you.
 [bootHi3518Ev200]: https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-hi3518ev200-universal.bin
 [bootHi3518Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-hi3518ev300-universal.bin
 [bootHi3519v101]: https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-hi3519v101-universal.bin
+[bootMSC313E]: https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-msc313e-universal.bin
+[bootMSC316DC]: https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-msc316dc-universal.bin
 
 
 [fwAmbaS2L]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ambarella-s2l-br.tgz
@@ -287,7 +289,7 @@ Thank you.
 [fwHi3518Ev300]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3518ev300-br.tgz
 [fwHi3519v101]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3519v101-br.tgz
 [fwMSC313E]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.msc313e-br.tgz
-[fwMSC316D]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.msc316d-br.tgz
+[fwMSC316DC]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.msc316dc-br.tgz
 [fwNT98562]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.nt98562-br.tgz
 [fwNT98566]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.nt98566-br.tgz
 [fwSSC325]: https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ssc325-br.tgz
