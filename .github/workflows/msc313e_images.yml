@@ -6,8 +6,8 @@ on:
       - production
     tags:
       - "v*"
-  # schedule:
-  #     - cron: "00 01 * * *"
+    schedule:
+        - cron: "00 01 * * *"
   workflow_dispatch:
 
 jobs:
