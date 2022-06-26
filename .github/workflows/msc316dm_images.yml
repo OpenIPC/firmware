@@ -1,4 +1,4 @@
-name: "MSC313E"
+name: "MSC316DM"
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build_core:
-    name: OpenIPC firmware for MSC313E
+    name: OpenIPC firmware for MSC316DM
     runs-on: ubuntu-18.04
 
     steps:
@@ -59,28 +59,28 @@ jobs:
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build MSC313E firmware
-        id: build-msc313e-firmware
+      - name: Build MSC316DM firmware
+        id: build-msc316dm-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.msc313e-br.tgz"
+          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.msc316dm-br.tgz"
           echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
-          make PLATFORM=sigmastar BOARD=unknown_unknown_msc313e_openipc all
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... MSC313E" >> $GITHUB_ENV && exit 1
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... MSC313E" >> $GITHUB_ENV && exit 1
+          make PLATFORM=sigmastar BOARD=unknown_unknown_msc316dm_openipc all
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 2097152 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) vs 2097152... MSC316DM" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 5242880 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 5242880... MSC316DM" >> $GITHUB_ENV && exit 1
           cd ${GITHUB_WORKSPACE}/output/images
-          mv uImage uImage.msc313e
-          mv rootfs.squashfs rootfs.squashfs.msc313e
-          md5sum rootfs.squashfs.msc313e > rootfs.squashfs.msc313e.md5sum
-          md5sum uImage.msc313e > uImage.msc313e.md5sum
-          tar -cvzf $ARCHIVE_FW *msc313e*
+          mv uImage uImage.msc316dm
+          mv rootfs.squashfs rootfs.squashfs.msc316dm
+          md5sum rootfs.squashfs.msc316dm > rootfs.squashfs.msc316dm.md5sum
+          md5sum uImage.msc316dm > uImage.msc316dm.md5sum
+          tar -cvzf $ARCHIVE_FW *msc316dm*
 
-      - name: Build MSC313E SDK
-        id: build-msc313e-sdk
+      - name: Build MSC316DM SDK
+        id: build-msc316dm-sdk
         continue-on-error: true
         run: |
-          ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-uclibcgnueabi_sdk-buildroot.tar.gz"
+          ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabihf_sdk-buildroot.tar.gz"
           echo "ARCHIVE_SDK=$ARCHIVE_SDK" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE/output
           make sdk
@@ -89,10 +89,10 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-msc313e-firmware.outcome != 'success' || steps.build-msc313e-sdk.outcome != 'success'
+        if: steps.build-msc316dm-firmware.outcome != 'success' || steps.build-msc316dm-sdk.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
-          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... MSC313E}"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... MSC316DM}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
@@ -114,7 +114,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_FW }}
-          asset_name: "openipc.msc313e-br.tgz"
+          asset_name: "openipc.msc316dm-br.tgz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -124,7 +124,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-msc313e-linux-uclibcgnueabi_sdk-buildroot.tar.gz"
+          asset_name: "arm-openipc-msc316dm-linux-musleabihf_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
