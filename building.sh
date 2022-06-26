@@ -667,6 +667,11 @@ xm550() {
 #
 #######
 #
+# msc313e                       # OpenIPC
+msc316dc                      # OpenIPC
+#
+#######
+#
 # nt98562                       # OpenIPC
 # nt98566                       # OpenIPC
 #
@@ -676,9 +681,6 @@ xm550() {
 # rv1126                        # testing..
 #
 #######
-#
-# msc313e                       # OpenIPC
-# msc316dc                      # OpenIPC
 #
 # ssc325                        # OpenIPC
 #
