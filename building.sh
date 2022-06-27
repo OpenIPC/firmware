@@ -419,6 +419,23 @@ hi3536dv100() {
 
 #################################################################################
 
+msc313e() {
+  soc="msc313e"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+msc316dc() {
+  soc="msc316dc"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+msc316dm() {
+  soc="msc316dm"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+#################################################################################
+
 nt98562() {
   soc="nt98562"
   fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -428,18 +445,6 @@ nt98562() {
 nt98566() {
   soc="nt98566"
   fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-msc313e() {
-  soc="msc313e"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-msc316dc() {
-  soc="msc316dc"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
 #################################################################################
@@ -503,6 +508,11 @@ ssc335_portal() {
 ssc335_rotek() {
   soc="ssc335"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_rotek all && rename
+}
+
+ssc335_tiandy() {
+  soc="ssc335"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_tiandy all && rename
 }
 
 ssc337() {
@@ -668,7 +678,8 @@ xm550() {
 #######
 #
 # msc313e                       # OpenIPC
-msc316dc                      # OpenIPC
+# msc316dc                      # OpenIPC
+# msc316dm                      # OpenIPC
 #
 #######
 #
@@ -693,6 +704,7 @@ msc316dc                      # OpenIPC
 # ssc335_musl                   # Musl
 # ssc335_portal                 # Portal (partner)
 # ssc335_rotek                  # Rotek
+ssc335_tiandy                 # Tiandy
 #
 # ssc335de                      # OpenIPC
 #
