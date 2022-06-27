@@ -177,7 +177,7 @@ insert_sns()
 			fi
             ;;
 
-	imx291_i2c_lvds|imx307_i2c_lvds)
+	imx291_i2c|imx291_i2c_lvds|imx307_i2c_lvds)
 			# This was added by @widgetii
 			bus_type="i2c";
 			pinmux_mode="i2c_mipi";
