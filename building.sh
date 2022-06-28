@@ -64,16 +64,24 @@ autoup_rootfs() {
   ./output/host/bin/mkimage -A arm -O linux -T filesystem -n 'OpenIPC firmware' -a 0x000000250000 -e 0x000000750000 -d ./output/images/rootfs.squashfs.${soc} ./output/images/autoupdate-rootfs.img
 }
 
-upload() {
-  server="zig@172.28.200.74:/sync/Archive/Incoming/Tftp/"
-  echo -e "\n\nStart transferring files to the TFTP server...\n"
-  scp -P 22 -r ./output/images/rootfs.squashfs.* ./output/images/uImage.* ${server}
-  echo -e "\n"
-  date
-}
-
 sdk() {
   make br-sdk
+}
+
+upload() {
+  TFTP_SERVER="root@172.17.32.17:/mnt/bigger-2tb/Rotator/TFTP"
+  echo -e "\n\nStart transferring files to the TFTP server...\n"
+  scp -P 22 -r ./output/images/rootfs.squashfs.* ./output/images/uImage.* ${TFTP_SERVER}
+}
+
+tg_message() {
+  #TG_TOKEN=
+  #TG_CHANNEL=
+  TG_REPLY="${TG_REPLY:=No comment.\nAll details will come later.}"
+  TG_MESSAGE=$(echo -e "\xF0\x9F\x8C\x8D PARADOX" "%0A${TG_REPLY}")
+  #
+  curl -s -k --connect-timeout 30 --max-time 30 -X POST \
+    https://api.telegram.org/bot${TG_TOKEN}/sendMessage -d chat_id="${TG_CHANNEL}" -d disable_notification="true" -d text="${TG_MESSAGE}" >/dev/null 2>&1
 }
 
 #################################################################################
@@ -257,7 +265,7 @@ hi3518ev200_domsip() {
 
 hi3518ev200_hs303v1() {
   soc="hi3518ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename && autoup_rootfs
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_hs303 all && rename && autoup_rootfs
 }
 
 hi3518ev200_hs303v2() {
@@ -291,6 +299,7 @@ hi3516ev100() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 #################################################################################
+
 hi3516av100() {
   soc="hi3516av100"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -445,6 +454,11 @@ nt98562() {
 nt98566() {
   soc="nt98566"
   fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+nt98566_polcam() {
+  soc="nt98566"
+  fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_polcam all && rename
 }
 
 #################################################################################
@@ -685,6 +699,7 @@ xm550() {
 #
 # nt98562                       # OpenIPC
 # nt98566                       # OpenIPC
+nt98566_polcam                # Polcam
 #
 #######
 #
@@ -704,7 +719,7 @@ xm550() {
 # ssc335_musl                   # Musl
 # ssc335_portal                 # Portal (partner)
 # ssc335_rotek                  # Rotek
-ssc335_tiandy                 # Tiandy
+# ssc335_tiandy                 # Tiandy
 #
 # ssc335de                      # OpenIPC
 #
