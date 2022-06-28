@@ -57,8 +57,18 @@
     soc {
         isp: isp {
             //clk-pad = <PAD_SPI0_CK>; //be compatible with the previous QFN, so it must reserved 4 pins for SPI0 pads
-            isp-flag = <0x3>; //enable DNR and ROT
-            isp-res = <0x5>; //max image size 5M
+            isp-flag = <0x0>; //Disable DNR and ROT
+            isp-res = <0x1>; //max image size 2M
+        };
+        Mstar-ehci-1 {
+            power-enable-pad = <PAD_SPI0_CK>;
+        };
+        vip: vip {
+            CMDQ-mode = <0>;
+        };
+        cpufreq {
+            compatible = "mstar,infinity-cpufreq";
+            vid1-gpio = <PAD_SAR_GPIO3>;
         };
     };
 };
