@@ -1,6 +1,7 @@
 include $(BR2_EXTERNAL_GOKE_PATH)/linux/linux-ext-goke_patcher.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/goke_patcher/goke_patcher.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/baresip-openipc/baresip-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
@@ -13,6 +14,8 @@ include $(BR2_EXTERNAL_GOKE_PATH)/package/libcurl-openipc/libcurl-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/libevent-openipc/libevent-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/libhv-openipc/libhv-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/libogg-openipc/libogg-openipc.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/libre-openipc/libre-openipc.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/librem-openipc/librem-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/libsrt-openipc/libsrt-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/libwebsockets-openipc/libwebsockets-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
