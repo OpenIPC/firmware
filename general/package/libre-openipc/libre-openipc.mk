@@ -23,7 +23,7 @@ define LIBRE_OPENIPC_BUILD_CMDS
 	    LIBRE_INC=$(STAGING_DIR)/usr/include/re \
 	    LIBRE_SO=$(STAGING_DIR)/usr/lib \
 	    CC="$(TARGET_CC)" \
-	    EXTRA_CFLAGS="$(TARGET_CFLAGS)" \
+	    EXTRA_CFLAGS="$(TARGET_CFLAGS) -D_GNU_SOURCE" \
 	    EXTRA_LFLAGS="-lm" \
 	    DESTDIR="$(STAGING_DIR)" \
 	    SYSROOT="$(STAGING_DIR)/usr" \
