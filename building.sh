@@ -433,6 +433,11 @@ msc313e() {
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+msc313e_baresip() {
+  soc="msc313e"
+  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_baresip all && rename
+}
+
 msc316dc() {
   soc="msc316dc"
   fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -692,6 +697,7 @@ xm550() {
 #######
 #
 # msc313e                       # OpenIPC
+msc313e_baresip               # OpenIPC
 # msc316dc                      # OpenIPC
 # msc316dm                      # OpenIPC
 #
@@ -699,7 +705,7 @@ xm550() {
 #
 # nt98562                       # OpenIPC
 # nt98566                       # OpenIPC
-nt98566_polcam                # Polcam
+# nt98566_polcam                # Polcam
 #
 #######
 #
