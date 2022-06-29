@@ -4,16 +4,16 @@
 #
 #############################################################
 
-LIBREM_VERSION = 0.6.0
-LIBREM_SOURCE = v$(LIBREM_VERSION).tar.gz
-LIBREM_SITE = https://github.com/baresip/rem/archive
-LIBREM_INSTALL_STAGING = YES
+LIBREM_OPENIPC_VERSION = 0.6.0
+LIBREM_OPENIPC_SOURCE = v$(LIBREM_OPENIPC_VERSION).tar.gz
+LIBREM_OPENIPC_SITE = https://github.com/baresip/rem/archive
+LIBREM_OPENIPC_INSTALL_STAGING = YES
 
-ifeq ($(BR2_PACKAGE_LIBRE),y)
-LIBREM_DEPENDENCIES += libre
+ifeq ($(BR2_PACKAGE_LIBRE_OPENIPC),y)
+LIBREM_OPENIPC_DEPENDENCIES += libre
 endif
 
-define LIBREM_BUILD_CMDS
+define LIBREM_OPENIPC_BUILD_CMDS
     $(TARGET_MAKE_ENV) \
 	$(MAKE) -C $(@D) \
 	    LIBRE_MK=$(STAGING_DIR)/usr/share/re/re.mk \
@@ -32,17 +32,17 @@ define LIBREM_BUILD_CMDS
 	    all install
 endef
 
-define LIBREM_INSTALL_TARGET_CMDS
+define LIBREM_OPENIPC_INSTALL_TARGET_CMDS
         $(INSTALL) -m 644 -D $(@D)/librem.so $(TARGET_DIR)/usr/lib/librem.so
 endef
 
-define LIBREM_UNINSTALL_STAGING_CMDS
+define LIBREM_OPENIPC_UNINSTALL_STAGING_CMDS
         $(RM) -r $(STAGING_DIR)/usr/include/rem
         $(RM) $(STAGING_DIR)/usr/lib/librem.a
         $(RM) $(STAGING_DIR)/usr/lib/librem.so
 endef
 
-define LIBREM_UNINSTALL_TARGET_CMDS
+define LIBREM_OPENIPC_UNINSTALL_TARGET_CMDS
         $(RM) $(TARGET_DIR)/usr/lib/librem.so
 endef
 
