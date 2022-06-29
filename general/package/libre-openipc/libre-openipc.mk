@@ -4,19 +4,19 @@
 #
 ###########################################################################
 
-LIBRE_VERSION = 1.1.0
-LIBRE_SOURCE = v$(LIBRE_VERSION).tar.gz
-LIBRE_SITE = https://github.com/baresip/re/archive
-LIBRE_INSTALL_STAGING = YES
+LIBRE_OPENIPC_VERSION = 1.1.0
+LIBRE_OPENIPC_SOURCE = v$(LIBRE_OPENIPC_VERSION).tar.gz
+LIBRE_OPENIPC_SITE = https://github.com/baresip/re/archive
+LIBRE_OPENIPC_INSTALL_STAGING = YES
 
 ifeq ($(BR2_PACKAGE_OPENSSL),y)
-LIBRE_DEPENDENCIES += openssl
+LIBRE_OPENIPC_DEPENDENCIES += openssl
 endif
 ifeq ($(BR2_PACKAGE_ZLIB),y)
-LIBRE_DEPENDENCIES += zlib
+LIBRE_OPENIPC_DEPENDENCIES += zlib
 endif
 
-define LIBRE_BUILD_CMDS
+define LIBRE_OPENIPC_BUILD_CMDS
     $(TARGET_MAKE_ENV) \
 	$(MAKE) -C $(@D) \
 	    LIBRE_MK=$(STAGING_DIR)/usr/share/re/re.mk \
@@ -35,17 +35,17 @@ define LIBRE_BUILD_CMDS
 endef
 
 
-define LIBRE_INSTALL_TARGET_CMDS
+define LIBRE_OPENIPC_INSTALL_TARGET_CMDS
         $(INSTALL) -m 644 -D $(@D)/libre.so $(TARGET_DIR)/usr/lib/libre.so
 endef
 
-define LIBRE_UNINSTALL_STAGING_CMDS
+define LIBRE_OPENIPC_UNINSTALL_STAGING_CMDS
         $(RM) -r $(STAGING_DIR)/usr/include/re
         $(RM) $(STAGING_DIR)/usr/lib/libre.a
         $(RM) $(STAGING_DIR)/usr/lib/libre.so
 endef
 
-define LIBRE_UNINSTALL_TARGET_CMDS
+define LIBRE_OPENIPC_UNINSTALL_TARGET_CMDS
         $(RM) $(TARGET_DIR)/usr/lib/libre.so
 endef
 
