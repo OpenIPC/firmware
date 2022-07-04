@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-LIBEVENT_OPENIPC_VERSION = 2db55e43cffd2fb6a34b5c997f2b8d043ca0ece5
+LIBEVENT_OPENIPC_VERSION = bf3ce77f6cf113839defa70b30e183d471a0dab5
 LIBEVENT_OPENIPC_SITE = $(call github,libevent,libevent,$(LIBEVENT_OPENIPC_VERSION))
 LIBEVENT_OPENIPC_INSTALL_STAGING = YES
 LIBEVENT_OPENIPC_LICENSE = BSD-3-Clause, OpenBSD
@@ -54,7 +54,7 @@ endif
 
 ifeq ($(BR2_PACKAGE_MBEDTLS_OPENIPC),y)
 LIBEVENT_OPENIPC_DEPENDENCIES += host-pkgconf mbedtls-openipc
-LIBEVENT_OPENIPC_CONF_OPTS += --enable-embedtls
+LIBEVENT_OPENIPC_CONF_OPTS += --enable-mbedtls
 else
 LIBEVENT_OPENIPC_CONF_OPTS += --disable-mbedtls
 endif
