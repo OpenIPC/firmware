@@ -70,20 +70,40 @@ do_wipe_overlay() {
 
 download_firmware() {
 	echo_c 33 "\nFirmware"
-	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${soc}-br.tgz"
+	osr=$(get_system_build)
+	if [[ "${osr}" == "lite" ]] || [[ "${osr}" == "" ]]; then
+	    build="-"
+	else
+	    build="-${osr}-"
+	fi
+	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${soc}${build}br.tgz"
 	echo "Download from $url"
 	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
 	[ "$(curl -o /dev/null -s -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
-	curl --connect-timeout 30 -m 60 -L "$url" ${progress} -o - | gzip -d | tar xf - -C /tmp || die "Cannot retrieve $url"
+	curl --connect-timeout 30 -s -m 60 -L "$url" ${progress} -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	if [ "$skip_md5" -eq 0 ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 	fi
 }
 
 free_resources() {
-	echo_c 97 "\nStop services, unload modules"
-	killall majestic crond klogd ntpd rngd syslogd >/dev/null 2>&1 || true
-	"load_$vendor" -r >/dev/null 2>&1 || true
+	# echo_c 97 "\nStop services, unload modules"
+	# killall majestic crond klogd ntpd rngd syslogd >/dev/null 2>&1 || true
+	# "load_$vendor" -r >/dev/null 2>&1 || true
+	#
+	echo_c 97 "\nStop services, sync and fresh memory"
+	for proc in majestic crond klogd ntpd rngd syslogd
+	do
+		echo -n "Killing $proc "
+		while [ -n "$(pidof $proc)" ]
+		do
+			killall $proc >/dev/null 2>&1 || true
+			sleep 0.1
+			echo -n "."
+		done
+		echo ". OK"
+	done
+	sync; echo 3 > /proc/sys/vm/drop_caches
 }
 
 get_device() {
@@ -104,6 +124,10 @@ get_system_info() {
 
 get_system_version() {
 	grep "GITHUB_VERSION" "$1/etc/os-release" | head -1 | cut -d= -f2 | sed 's/"//g'
+}
+
+get_system_build() {
+	grep "BUILD_OPTION" "/etc/os-release" | head -1 | cut -d= -f2
 }
 
 print_sysinfo() {

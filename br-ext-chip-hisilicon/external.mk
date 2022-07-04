@@ -1,8 +1,9 @@
 include $(BR2_EXTERNAL_HISILICON_PATH)/linux/linux-ext-hisi_patcher.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisi_patcher/hisi_patcher.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/aura-httpd/aura-httpd.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/f2fs-tools-openipc/f2fs-tools-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/baresip-openipc/baresip-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/dropbear-openipc/dropbear-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/f2fs-tools-openipc/f2fs-tools-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/gdbserver-lite/gdbserver-lite.mk
@@ -22,6 +23,8 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/libcurl-openipc/libcurl-openipc.m
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libevent-openipc/libevent-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libhv-openipc/libhv-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libogg-openipc/libogg-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/libre-openipc/libre-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/librem-openipc/librem-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libsrt-openipc/libsrt-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libwebsockets-openipc/libwebsockets-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
@@ -43,7 +46,10 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/opus-openipc/opus-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/rtl8188eus-openipc/rtl8188eus-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/rtw-hostapd/rtw-hostapd.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/rtl8188fu-openipc/rtl8188fu-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/rtl8812au-openipc/rtl8812au-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/uacme-openipc/uacme-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/uqmi/uqmi.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/vtund-openipc/vtund-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/wifibroadcast/wifibroadcast.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/yaml-cli/yaml-cli.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/zerotier-one/zerotier-one.mk

@@ -44,12 +44,12 @@ insert_detect() {
 }
 
 remove_detect() {
-	rmmod hi_ssp_sony
-	rmmod hi_sensor_i2c
-	rmmod hi3519v101_isp
-	rmmod hi3519v101_sys
-	rmmod hi3519v101_base
-	rmmod hi_osal
+	rmmod -w hi_ssp_sony
+	rmmod -w hi_sensor_i2c
+	rmmod -w hi3519v101_isp
+	rmmod -w hi3519v101_sys
+	rmmod -w hi3519v101_base
+	rmmod -w hi_osal
 }
 
 insert_audio() {
@@ -63,13 +63,13 @@ insert_audio() {
 }
 
 remove_audio() {
-	rmmod hi_acodec
-	#rmmod hi_tlv320aic31
-	rmmod hi3519v101_adec
-	rmmod hi3519v101_aenc
-	rmmod hi3519v101_ao
-	rmmod hi3519v101_ai
-	rmmod hi3519v101_aio
+	rmmod -w hi_acodec
+	#rmmod -w hi_tlv320aic31
+	rmmod -w hi3519v101_adec
+	rmmod -w hi3519v101_aenc
+	rmmod -w hi3519v101_ao
+	rmmod -w hi3519v101_ai
+	rmmod -w hi3519v101_aio
 }
 
 sysconfig() {
@@ -161,7 +161,32 @@ sysconfig() {
 		devmem 0x12040984 32 0x120 #I2C3_SDA
 		devmem 0x1204096C 32 0x120 #I2C3_SCL
 	}
+	spi0_4wire_pin_mux()
+	{
+		#pinmux
+		devmem 0x1204018c 32 0x1  #SPI0_SCLK
+		devmem 0x12040190 32 0x1  #SPI0_SD0
+		devmem 0x12040194 32 0x1  #SPI0_SDI
+		devmem 0x12040198 32 0x1  #SPI0_CSN
+	
+		#drive capability...
+		devmem 0x12040998 32 0x150  #SPI0_SCLK
+		devmem 0x1204099c 32 0x160  #SPI0_SD0
+		devmem 0x120409a0 32 0x160  #SPI0_SDI
+		devmem 0x120409a4 32 0x160  #SPI0_CSN
+	}
+	spi0_3wire_pin_mux()
+	{
+		#pinmux
+		devmem 0x1204018c 32 0x3    #SPI0_3WIRE_CLK
+		devmem 0x12040190 32 0x3    #SPI0_3WIRE_DATA
+		devmem 0x12040198 32 0x3    #SPI0_3WIRE_CSN
 
+		#drive capability...
+		devmem 0x12040998 32 0x150  #SPI0_3WIRE_CLK
+		devmem 0x1204099c 32 0x160  #SPI0_3WIRE_DATA
+		devmem 0x120409a4 32 0x160  #SPI0_3WIRE_CSN
+	}
 	#spi1 -> vi
 	spi1_pin_mux() {
 		#pinmux
@@ -400,7 +425,7 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004041
 			devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
 			spi0_4wire_pin_mux
-			insmod extdrv/hi_ssp_sony.ko
+			insmod hi_ssp_sony.ko
 			;;
 		imx265)
 			tmp=0x18
@@ -410,7 +435,7 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004041
 			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
 			spi0_4wire_pin_mux
-			insmod extdrv/hi_ssp_sony.ko
+			insmod hi_ssp_sony.ko
 			;;
 		imx377)
 			tmp=0x14
@@ -429,7 +454,7 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004041
 			devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
 			spi0_4wire_pin_mux
-			insmod extdrv/hi_ssp_sony.ko
+			insmod hi_ssp_sony.ko
 			;;
 		imx290)
 			tmp=0x18
@@ -439,6 +464,17 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004
 			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
 			i2c0_pin_mux
+			;;
+		imx327_spi)
+			tmp=0x18
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#imx290:viu0:340M,isp0:214M, viu1:340M,isp1:214M
+			devmem 0x1201004c 32 0x00094c24
+			devmem 0x12010054 32 0x0004
+			# devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
+			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
+			spi0_4wire_pin_mux
+			insmod hi_ssp_sony.ko
 			;;
 		imx327)
 			tmp=0x18
@@ -466,20 +502,7 @@ insert_sns() {
 			devmem 0x12010054 32 0x0004041
 			devmem 0x12010040 32 0x12 # sensor0 clk_en, 54MHz
 			spi0_3wire_pin_mux
-			insmod extdrv/hi_ssp_3wire.ko
-			;;
-		imx385_lvds)
-			tmp=0x18
-			devmem 0x12010040 32 0x18
-			devmem 0x12040190 32 0x2
-			devmem 0x1204018c 32 0x2
-			devmem 0x1204099c 32 0x120
-			devmem 0x12040998 32 0x120
-			insmod hi_ssp_sony.ko
-			devmem 0x12040184 32 0x1
-			devmem 0x12040188 32 0x1
-			devmem 0x12040010 32 0x2
-			devmem 0x12040014 32 0x2
+			insmod hi_ssp_3wire.ko
 			;;
 		ov4689)
 			tmp=0x14
@@ -499,6 +522,25 @@ insert_sns() {
 			devmem 0x12010040 32 0x1a # sensor0 clk_en, 27MHz
 			i2c0_pin_mux
 			;;
+		imx385_spi_lvds)
+			tmp=0x18
+			devmem 0x12010040 32 0x18
+			devmem 0x12040190 32 0x2
+			devmem 0x1204018c 32 0x2
+			devmem 0x1204099c 32 0x120
+			devmem 0x12040998 32 0x120
+			spi0_4wire_pin_mux
+			insmod hi_ssp_sony.ko
+			;;
+		imx385_i2c_lvds)
+			tmp=0x16
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094421
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x16 # sensor0 clk_en, 74.125MHz
+			i2c0_pin_mux
+			;;
 		imx185 | imx385 | imx178)
 			tmp=0x18
 			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
@@ -508,7 +550,7 @@ insert_sns() {
 			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
 			i2c0_pin_mux
 			#spi0_4wire_pin_mux;
-			#insmod extdrv/hi_ssp_sony.ko;
+			#insmod hi_ssp_sony.ko;
 			;;
 		os08a | os08a10)
 			tmp=0x14
@@ -603,8 +645,8 @@ insert_sns() {
 }
 
 remove_sns() {
-	rmmod hi_ssp_sony &>/dev/null
-	rmmod hi_sensor_spi &>/dev/null
+	rmmod -w hi_ssp_sony &>/dev/null
+	rmmod -w hi_sensor_spi &>/dev/null
 }
 
 insert_isp() {
@@ -683,39 +725,39 @@ insert_ko() {
 remove_ko() {
 	remove_audio
 	remove_sns
-	#rmmod hi_user
-	rmmod hi_pwm
-	rmmod hi_piris
+	#rmmod -w hi_user
+	rmmod -w hi_pwm
+	rmmod -w hi_piris
 
-	rmmod hi3519v101_photo
-	#rmmod hi3519v101_ive
+	rmmod -w hi3519v101_photo
+	#rmmod -w hi3519v101_ive
 
-	rmmod hi3519v101_rc
-	rmmod hi3519v101_jpege
-	rmmod hi3519v101_h264e
-	rmmod hi3519v101_h265e
-	rmmod hi3519v101_vedu
-	rmmod hi3519v101_chnl
-	rmmod hi3519v101_venc
+	rmmod -w hi3519v101_rc
+	rmmod -w hi3519v101_jpege
+	rmmod -w hi3519v101_h264e
+	rmmod -w hi3519v101_h265e
+	rmmod -w hi3519v101_vedu
+	rmmod -w hi3519v101_chnl
+	rmmod -w hi3519v101_venc
 
-	#rmmod hifb
-	#rmmod hi3519v101_vou
-	rmmod hi3519v101_vpss
-	rmmod hi3519v101_isp
-	rmmod hi3519v101_viu
-	rmmod hi_mipi
-	#rmmod hi3519v101_fisheye
+	#rmmod -w hifb
+	#rmmod -w hi3519v101_vou
+	rmmod -w hi3519v101_vpss
+	rmmod -w hi3519v101_isp
+	rmmod -w hi3519v101_viu
+	rmmod -w hi_mipi
+	#rmmod -w hi3519v101_fisheye
 
-	#rmmod hi3519v101_vgs
-	rmmod hi3519v101_region
-	#rmmod hi3519v101_tde
+	#rmmod -w hi3519v101_vgs
+	rmmod -w hi3519v101_region
+	#rmmod -w hi3519v101_tde
 
-	rmmod hi_sensor_i2c &>/dev/null
-	rmmod hi_ssp_3wire.ko &>/dev/null
+	rmmod -w hi_sensor_i2c &>/dev/null
+	rmmod -w hi_ssp_3wire.ko &>/dev/null
 
-	rmmod hi3519v101_sys
-	rmmod hi3519v101_base
-	rmmod hi_osal
+	rmmod -w hi3519v101_sys
+	rmmod -w hi3519v101_base
+	rmmod -w hi_osal
 }
 
 sys_restore() {

@@ -1,0 +1,115 @@
+#!/bin/sh
+#
+# OpenIPC.org | 2022.06.25
+#
+
+cd /lib/modules/3.18.30/sigmastar
+
+sensor=$(fw_printenv -n sensor)
+chip=$(cat /sys/devices/soc0/machine | awk '{print $2}')
+
+mkdir -p /data/audio
+mkdir -p /data/cfg
+mkdir -p /data/misc
+mkdir -p /data/property
+
+mount --bind /etc/sensors/iqfile/audio /data/audio
+mount --bind /etc/sensors/iqfile /data/cfg
+
+### param
+## TCP/IP configuration
+echo 163840 >/proc/sys/net/core/rmem_max
+echo 327680 >/proc/sys/net/core/wmem_max
+echo '1488 1984 2976' >/proc/sys/net/ipv4/tcp_mem
+echo '4096 87380 325120' >/proc/sys/net/ipv4/tcp_rmem
+echo '16384 327680 1048576' >/proc/sys/net/ipv4/tcp_wmem
+
+ulimit -c unlimited
+echo 2 >/sys/class/mstar/mvhe/rct
+echo 1 >/sys/class/mstar/msys/dmem_realloc
+
+ulimit -s 6144
+
+echo 0 >/proc/sys/vm/overcommit_memory
+echo 50 >/proc/sys/vm/overcommit_ratio
+
+### MSC313E
+setprop mi.vi.src 2
+setprop mi.sys.shrink_mem 1
+setprop mi.vi.img.sub 0
+setprop mi.venc.bufcnt 2
+setprop mi.venc.sub.bufcnt 2
+
+setprop mi.vi.bufcnt 3
+setprop mi.vi.sub.bufcnt 3
+setprop mi.vi.sub.width 640
+setprop mi.vi.sub.height 480
+
+# SW OSD
+#setprop mi.osd.stretch 1
+setprop mi.osd.gop.use 0
+setprop mstar.omx.gop.disable 1
+
+echo D >/sys/class/mstar/mhvsp1/fbmg
+echo 9 >/sys/class/mstar/mhvsp1/fbmg
+#echo 0 > /sys/class/mstar/mscldma1/db
+#echo D40 > /sys/class/mstar/mhvsp1/dbgmg
+
+setprop mi.venc.bufratio 50
+setprop mi.venc.img.bufratio 40
+setprop mi.video.height.force.aligned32 1
+
+dmem -req 0x00016800 VSPL-I0P3B2
+dmem -req 0x00016800 VSPL-I0P3B1
+dmem -req 0x00016800 VSPL-I0P3B0
+dmem -req 0x00025800 VENC-49
+dmem -req 0x00025800 VENC-48
+dmem -req 0x00070800 VSPL-I0P1B2
+dmem -req 0x00070800 VSPL-I0P1B1
+dmem -req 0x00070800 VSPL-I0P1B0
+dmem -req 0x000FF000 VENC-33
+dmem -req 0x000FF000 VENC-32
+dmem -req 0x00357000 MS-02
+dmem -req 0x00357000 MS-01
+dmem -req 0x00357000 MS-00
+dmem -req 0x00070800 VSPL-I0P0B2
+dmem -req 0x00070800 VSPL-I0P0B1
+dmem -req 0x00070800 VSPL-I0P0B0
+dmem -req 0x000FF000 SCL_MCNR_M
+dmem -req 0x003FC000 SCL_MCNR_YC
+dmem -req 0x00000400 DLC_MEM
+dmem -req 0x000088E0 ISP_MLOAD
+dmem -req 0x00014000 pcmC0D0c
+dmem -req 0x00018000 pcmC0D0p
+dmem -req 0x00000100 BDMA_FSP_WBUFF
+dmem -req 0x0001B120 ISP_base
+dmem -req 0x00002000 EMAC_BUFF
+
+echo "VSPL-I0P3B2" >/sys/class/mstar/msys/fixed_dmem
+echo "VSPL-I0P3B1" >/sys/class/mstar/msys/fixed_dmem
+echo "VSPL-I0P3B0" >/sys/class/mstar/msys/fixed_dmem
+echo "VENC-49" >/sys/class/mstar/msys/fixed_dmem
+echo "VENC-48" >/sys/class/mstar/msys/fixed_dmem
+echo "VSPL-I0P1B2" >/sys/class/mstar/msys/fixed_dmem
+echo "VSPL-I0P1B1" >/sys/class/mstar/msys/fixed_dmem
+echo "VSPL-I0P1B0" >/sys/class/mstar/msys/fixed_dmem
+echo "VENC-33" >/sys/class/mstar/msys/fixed_dmem
+echo "VENC-32" >/sys/class/mstar/msys/fixed_dmem
+echo "MS-02" >/sys/class/mstar/msys/fixed_dmem
+echo "MS-01" >/sys/class/mstar/msys/fixed_dmem
+echo "MS-00" >/sys/class/mstar/msys/fixed_dmem
+echo "VSPL-I0P0B2" >/sys/class/mstar/msys/fixed_dmem
+echo "VSPL-I0P0B1" >/sys/class/mstar/msys/fixed_dmem
+echo "VSPL-I0P0B0" >/sys/class/mstar/msys/fixed_dmem
+echo "SCL_MCNR_M" >/sys/class/mstar/msys/fixed_dmem
+echo "SCL_MCNR_YC" >/sys/class/mstar/msys/fixed_dmem
+echo "DLC_MEM" >/sys/class/mstar/msys/fixed_dmem
+echo "ISP_MLOAD" >/sys/class/mstar/msys/fixed_dmem
+echo "pcmC0D0c" >/sys/class/mstar/msys/fixed_dmem
+echo "pcmC0D0p" >/sys/class/mstar/msys/fixed_dmem
+echo "BDMA_FSP_WBUFF" >/sys/class/mstar/msys/fixed_dmem
+echo "ISP_base" >/sys/class/mstar/msys/fixed_dmem
+echo "EMAC_BUFF" >/sys/class/mstar/msys/fixed_dmem
+
+echo 1 >/sys/class/mstar/msys/fixed_dmem
+echo 0 >/sys/class/mstar/msys/dmem_realloc

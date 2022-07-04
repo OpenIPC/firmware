@@ -21,6 +21,7 @@ define GRAINMEDIA_OSDRV_GM8136_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/grainmedia-osdrv-gm8136/files/script/load*
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/grainmedia-osdrv-gm8136/files/sample/*
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	#$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/grainmedia-osdrv-gm8136/files/sensor/*.so

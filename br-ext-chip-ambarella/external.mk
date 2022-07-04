@@ -1,6 +1,8 @@
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/linux/linux-ext-ambarella_patcher.mk
+include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/ambarella-osdrv-s3l/ambarella-osdrv-s3l.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/ambarella_patcher/ambarella_patcher.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/aura-httpd/aura-httpd.mk
+include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/ipctool/ipctool.mk
@@ -14,7 +16,7 @@ include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/libsrt-openipc/libsrt-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/libwebsockets-openipc/libwebsockets-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/majestic-fonts/majestic-fonts.mk
-include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/majestic/majestic.mk
+#include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/majestic/majestic.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/microbe-web/microbe-web.mk
 include $(BR2_EXTERNAL_AMBARELLA_PATH)/package/motors/motors.mk

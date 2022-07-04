@@ -1,0 +1,87 @@
+#!/bin/sh
+
+KMOD_PATH=/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic
+
+echo 1 >/proc/sys/vm/overcommit_memory
+
+check_return() {
+    if [ $? -ne 0 ]; then
+        echo err: $1
+        echo exit
+        exit
+    fi
+}
+
+lsmod | grep "sinfo" >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/sinfo.ko
+    check_return "insmod sinfo"
+fi
+
+echo 1 >/proc/jz/sinfo/info
+check_return "start sinfo"
+
+SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+check_return "get sensor type"
+
+SENSOR=${SENSOR_INFO#*:}
+
+case ${SENSOR} in
+"sc2232")
+    ISP_PARAM="isp_clk=90000000"
+    SENSOR_PARAM=""
+    ;;
+"sc2135")
+    ISP_PARAM="isp_clk=100000000"
+    SENSOR_PARAM=""
+    ;;
+"sc2335")
+    ISP_PARAM="isp_clk=125000000"
+    SENSOR_PARAM=""
+    ;;
+"sc5235")
+    ISP_PARAM="isp_clk=200000000"
+    SENSOR_PARAM=""
+    ;;
+"gc2053")
+    ISP_PARAM="isp_clk=125000000"
+    SENSOR_PARAM="sensor_max_fps=25 data_interface=1"
+    ;;
+"imx307")
+    ISP_PARAM="isp_clk=125000000 ispw=1920 isph=1080 isptop=20 ispleft=12"
+    SENSOR_PARAM=""
+    ;;
+"jxf22")
+    ISP_PARAM="isp_clk=90000000"
+    SENSOR_PARAM=""
+    ;;
+*)
+    ISP_PARAM="isp_clk=125000000"
+    SENSOR_PARAM=""
+    break
+    ;;
+esac
+
+echo --------------------
+echo "ISP_PARAM: ${ISP_PARAM}"
+echo "SENSOR: ${SENSOR}"
+echo "SENSOR_PARAM: ${SENSOR_PARAM}"
+echo --------------------
+
+lsmod | grep "tx_isp" >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/tx-isp-t21.ko ${ISP_PARAM}
+    check_return "insmod isp drv"
+fi
+
+lsmod | grep "audio" >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/audio.ko
+    check_return "insmod audio"
+fi
+
+lsmod | grep ${SENSOR} >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_t21.ko ${SENSOR_PARAM}
+    check_return "insmod sensor drv"
+fi

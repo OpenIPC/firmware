@@ -12,6 +12,9 @@ load_majestic() {
 	printf 'Starting %s: ' "$DAEMON"
 	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
 	# shellcheck disable=SC2086 # we need the word splitting
+    if [ $(grep ^savedumps /etc/coredump.config | cut -d= -f2) == "true" ]; then
+        ulimit -c unlimited && echo "| /usr/sbin/sendcoredump.sh" > /proc/sys/kernel/core_pattern
+    fi
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" \
 		-- $DAEMON_ARGS
 	status=$?
@@ -37,7 +40,8 @@ start() {
 	export TZ=$(cat /etc/TZ)
 	load_hisilicon -i
 	#
-  load_majestic
+	export SENSOR=$(fw_printenv -n sensor)
+	load_majestic
 }
 
 stop() {
