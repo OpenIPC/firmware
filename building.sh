@@ -60,6 +60,7 @@ rename_initramfs() {
 autoup_rootfs() {
   echo -e "\n\n"
   # cp -v ./output/images/uImage.initramfs.${soc} ./output/images/autoupdate-kernel.img
+  #./output/host/bin/mkimage -A arm -O linux -T firmware -n 'OpenIPC firmware' -a 0x000000000000 -e 0x000000050000 -d ./hi3518ev200_hs303/u-boot-hi3518ev200-universal.bin ./output/images/autoupdate-uboot.img
   ./output/host/bin/mkimage -A arm -O linux -T kernel -n 'OpenIPC firmware' -a 0x000000050000 -e 0x000000250000 -d ./output/images/uImage.${soc} ./output/images/autoupdate-kernel.img
   ./output/host/bin/mkimage -A arm -O linux -T filesystem -n 'OpenIPC firmware' -a 0x000000250000 -e 0x000000750000 -d ./output/images/rootfs.squashfs.${soc} ./output/images/autoupdate-rootfs.img
 }
