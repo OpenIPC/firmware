@@ -15,7 +15,8 @@ clone() {
 }
 
 fresh() {
-  date >/tmp/openipc_buildtime.txt
+  echo -e "\nThe start-stop times\n" >/tmp/openipc_buildtime.txt
+  date >>/tmp/openipc_buildtime.txt
   [ -d buildroot-2020.02.12/dl ] && mv buildroot-2020.02.12/dl .
   make distclean #clean
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
@@ -45,7 +46,6 @@ rename() {
   mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${soc}.cpio
   mv -v ./output/images/rootfs.tar ./output/images/rootfs.${soc}.tar
   date >>/tmp/openipc_buildtime.txt
-  echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
 }
 
 rename_initramfs() {
@@ -58,10 +58,13 @@ rename_initramfs() {
 }
 
 autoup_rootfs() {
-  echo -e "\n\n"
+  echo -e "\n"
   curl -L -o ./output/images/u-boot-hi3518ev200-universal.bin https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-hi3518ev200-universal.bin
+  echo -e "\n"
   ./output/host/bin/mkimage -A arm -O linux -T firmware -n 'OpenIPC v.2.2.7' -a 0x000000000000 -e 0x000000050000 -d ./output/images/u-boot-hi3518ev200-universal.bin ./output/images/autoupdate-uboot.img
+  echo -e "\n"
   ./output/host/bin/mkimage -A arm -O linux -T kernel -C none -n 'OpenIPC v2.2.7' -a 0x000000050000 -e 0x000000250000 -d ./output/images/uImage.${soc} ./output/images/autoupdate-kernel.img
+  echo -e "\n"
   ./output/host/bin/mkimage -A arm -O linux -T filesystem -n 'OpenIPC v.2.2.7' -a 0x000000250000 -e 0x000000750000 -d ./output/images/rootfs.squashfs.${soc} ./output/images/autoupdate-rootfs.img
 }
 
@@ -740,3 +743,6 @@ hi3518ev200_hs303             # OpenIPC
 #
 # More examples see here: https://openipc.github.io/wiki/
 #
+
+echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
+
