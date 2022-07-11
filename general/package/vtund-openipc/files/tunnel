@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20210508
+# OpenIPC.org | v.20220712
 # by Igor Zalatov, aka FlyRouter, aka ZigFisher
 # Busybox applets: awk cat echo insmod ip modprobe sha1sum sleep tr tunctl udhcpc uptime
 #
@@ -10,13 +10,14 @@ vtund_enable="1"
 vtund_port="5000"
 vtund_server=$1
 vtund_server=${vtund_server:=vtun.localhost}
+vtund_source=$(ip r | awk '/default/ {print $5}' | head -n 1)
 vtund_iface="tunnel"
 device_name="IPC-VTUND"
 working_dir="/tmp"
 
 
 identity() {
-  identity_mac=$(cat /sys/class/net/eth0/address | tr 'a-z' 'A-Z')
+  identity_mac=$(cat /sys/class/net/${vtund_source}/address | tr 'a-z' 'A-Z')
   identity_pas=$(echo ${identity_mac} | sha1sum | awk '{print $1}')
   identity_tid=$(echo ${identity_mac} | tr -d ':')
   identity_cfg=${working_dir}/vtund.conf
