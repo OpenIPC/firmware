@@ -652,7 +652,7 @@ xm550() {
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
 # hi3518ev200_domsip            # DomSip
-hi3518ev200_hs303             # OpenIPC
+# hi3518ev200_hs303             # OpenIPC
 #
 # hi3516av100                   # OpenIPC
 # hi3516av100_ultimate          # OpenIPC_ultimate version
