@@ -13,7 +13,10 @@ load_majestic() {
 	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
 	# shellcheck disable=SC2086 # we need the word splitting
 	[ -f /etc/coredump.conf ] && . /etc/coredump.conf
-	[ "$coredump_enabled" ] && ulimit -c unlimited && echo "| /usr/sbin/sendcoredump.sh" > /proc/sys/kernel/core_pattern
+	if [ "$coredump_enabled" ]; then
+		ulimit -c unlimited
+		echo "|/usr/sbin/sendcoredump.sh" >/proc/sys/kernel/core_pattern
+	fi
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" \
 		-- $DAEMON_ARGS
 	status=$?
