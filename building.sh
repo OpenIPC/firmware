@@ -420,6 +420,11 @@ hi3536dv100() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+hi3536dv100_vixand() {
+  soc="hi3536dv100"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_vixand all && rename
+}
+
 #################################################################################
 
 msc313e() {
@@ -684,7 +689,9 @@ xm550() {
 # hi3516cv500                   # testing..
 # hi3516dv300                   # testing..
 #
+# hi3536cv100                   # OpenIPC
 # hi3536dv100                   # OpenIPC
+# hi3536dv100_vixand            # Vixand
 #
 #######
 #
