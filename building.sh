@@ -649,7 +649,7 @@ xm550() {
 # gk7205v210                    # OpenIPC
 # gk7205v300                    # OpenIPC
 # gk7205v300_ultimate           # OpenIPC_ultimate version
-gk7205v300_fpv                # FPV (ultimate by default)
+# gk7205v300_fpv                # FPV (ultimate by default)
 # gk7605v100                    # testing..
 #
 #######
