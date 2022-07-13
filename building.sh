@@ -577,6 +577,11 @@ t31() {
   fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+t31_vixand() {
+  soc="t31"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_vixand all && rename
+}
+
 #################################################################################
 
 xm510() {
@@ -735,10 +740,11 @@ xm550() {
 #
 #######
 #
-# t10                           # testing..
-# t20                           # testing..
-# t30                           # testing..
-# t31                           # testing..
+# t10                           # OpenIPC
+# t20                           # OpenIPC
+# t30                           # OpenIPC
+# t31                           # OpenIPC
+# t31_vixand                    # Vixand partner
 #
 #######
 #
