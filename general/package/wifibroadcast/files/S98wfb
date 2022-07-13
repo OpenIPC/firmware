@@ -18,7 +18,7 @@ load_ath() {
   modprobe cfg80211
   modprobe mac80211
   modprobe ath9k_htc
-  sleep 3
+  sleep 3 # need to load firmware
 }
 
 load_interface() {
