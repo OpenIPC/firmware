@@ -11,7 +11,7 @@ MAX_ROOTFS_SIZE_ULTIMATE=0xA00000      #   10MiB,  10485760
 
 clone() {
   sudo apt-get update -y ; apt-get install -y bc build-essential git unzip rsync autotools-dev automake libtool
-  git clone --depth=1 https://github.com/orlovsn/firmware.git
+  git clone --depth=1 https://github.com/OpenIPC/firmware.git
 }
 
 fresh() {
@@ -641,7 +641,7 @@ xm550() {
 #######
 #
 # gk7202v300                    # testing..
-gk7205v200                    # OpenIPC
+# gk7205v200                    # OpenIPC
 # gk7205v200_ultimate           # OpenIPC_ultimate version
 # gk7205v200_fpv                # FPV (ultimate by default)
 # gk7205v200_iscom              # Iscom test
@@ -662,7 +662,7 @@ gk7205v200                    # OpenIPC
 # hi3516cv200                   # testing..
 # hi3518ev200                   # testing..
 # hi3518ev200_domsip            # DomSip
-# hi3518ev200_hs303             # OpenIPC
+hi3518ev200_hs303             # OpenIPC
 #
 # hi3516av100                   # OpenIPC
 # hi3516av100_ultimate          # OpenIPC_ultimate version
