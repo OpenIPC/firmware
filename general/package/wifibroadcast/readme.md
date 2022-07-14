@@ -1,61 +1,54 @@
-# ATHEROS
+# Настройка
 
-1. Для сборки с драйверами Atheros включить опции ядра в соотвествующем плате конфиге:
-
-```
-br-ext-chip-goke/board/gk7205v200/kernel/gk7205v200.generic-fpv.config
-br-ext-chip-goke/board/gk7205v200/kernel/gk7205v300.generic-fpv.config
-
-CONFIG_WLAN_VENDOR_ATH=y
-CONFIG_ATH9K_HTC=m
-```
-
-2. Выбрать необходимые пакеты в конфиге соответствующем плате:
+В конфигурационном файле /etc/wfb.conf включить автозапуск сервиса:
 
 ```
-br-ext-chip-goke/configs/unknown_unknown_gk7205v200_fpv_defconfig
-br-ext-chip-goke/configs/unknown_unknown_gk7205v300_fpv_defconfig
-
-BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_ATHEROS_9271=y
+daemon=1
 ```
 
-# REALTEK
-
-1. Выбрать необходимые пакеты в конфиге соответствующем плате:
+указать используемый драйвер:
 
 ```
-br-ext-chip-goke/configs/unknown_unknown_gk7205v200_fpv_defconfig
-br-ext-chip-goke/configs/unknown_unknown_gk7205v300_fpv_defconfig
-
-
-BR2_PACKAGE_RTL8812AU_OPENIPC=y
-```
-
-
-!!!ВАЖНО!!! Оба драйвера с большой вероятностью не поместятся в сборку, потому собирать по принципу 1 прошивка 1 драйвер. Majestic не включен в стандартную сборку, после прошивки его необходимо загрузить отдельно.
-
-
-# Загрузка модулей
-
-## Realtek:
+driver=rtl или driver=ath
 
 ```
-modprobe cfg80211
-modprobe 88XXau
-```
-## Atheros:
+нужный wlan если их больше одного, если адаптер один, то оставить как есть:
 
 ```
-modprobe cfg80211
-modprobe mac80211
-modprobe ath9k_htc
+wlan=wlan0
 ```
 
-# Настройка интерфейса
+страна:
 
 ```
-iw set reg BO
-ifconfig wlan0 up
-iwconfig wlan0 mode monitor
-iwconfig wlan0 channel 6
+region=BO
 ```
+
+канал:
+
+```
+channel=6
+```
+
+В конец /etc/majestic.yaml добавить секцию:
+
+```
+outgoing:
+  - udp://127.0.0.1:5600
+```
+
+Выполнить настройки majestic, отключить все лишнее кроме необходимого потока, выполнить настройки по битрейту и ключевым кадрам, после чего перезапустить камеру.
+
+При первом запуске сгенерируются ключи drone.key и gs.key, ключ для наземной станции находится по пути /etc/gs.key, копируем его.
+
+Изменить канал при необходимости можно стандартными командами из консоли:
+
+```
+iwconfig wlan0 channel X
+```
+
+Никаких дополнительных настроек для wfb_tx пока не вынесено в конфиг, для тестов их можно добавлять в функции start_wfb в скрипте инициализации /etc/init.d/S98wfb
+
+
+
+P.S. Это минимальная обвязка, возможно что-то не учтено или сделано не так как хотелось бы, все предложения приветствуются в issues.

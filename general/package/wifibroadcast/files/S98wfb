@@ -1,0 +1,91 @@
+#!/bin/sh
+#
+# Start wifibroadcast
+#
+
+config="/etc/wfb.conf"
+keydir="/etc"
+wlan=`cat ${config} | grep wlan | cut -f 2 -d '='`
+region=`cat ${config} | grep region | cut -f 2 -d '='`
+channel=`cat ${config} | grep channel | cut -f 2 -d '='`
+
+load_rtl() {
+  modprobe cfg80211
+  modprobe 88XXau
+}
+
+load_ath() {
+  modprobe cfg80211
+  modprobe mac80211
+  modprobe ath9k_htc
+  sleep 3 # need to load firmware
+}
+
+load_interface() {
+
+  if cat ${config} | grep "rtl" > /dev/null 2>&1; then
+	ifconfig ${wlan} up
+	iwconfig ${wlan} mode monitor
+  elif cat ${config} | grep "ath" > /dev/null 2>&1; then
+	iwconfig ${wlan} mode monitor
+	ifconfig ${wlan} up
+  fi
+
+  iw reg set ${region}
+  iwconfig ${wlan} channel ${channel}
+}
+
+start_wfb() {
+  wfb_tx -p 1 -u 5600 -K ${keydir}/drone.key ${wlan} &
+}
+
+case "$1" in
+  start)
+    if grep -q daemon=1 ${config}; then
+
+	  echo "Loading modules for selected driver..."
+
+	  if cat ${config} | grep "rtl"; then
+		if ! lsmod | grep "88XXau"; then
+		  load_rtl
+		fi
+	  elif cat ${config} | grep "ath"; then
+		if ! lsmod | grep "ath9k_htc"; then
+          load_ath
+		fi
+	  fi
+
+	  echo "Done."
+	  echo "Preparing interface wlan..."
+	  
+	  load_interface
+	  
+	  echo "Done."
+
+	  if ! cat ${keydir}/drone.key > /dev/null 2>&1; then
+		echo "Generating drone & ground station keys..."
+		cd ${keydir} ; wfb_keygen
+		echo "Done."
+	  else
+		echo "Drone key exist... Done."
+	  fi
+
+	  echo "Starting Wifibroadcast service..."
+	  
+	  start_wfb
+
+	  echo "Done."
+
+	else
+      echo "Wifibroadcast service disabled in wfb.conf..."
+	fi
+    ;;
+  stop)
+    echo "Stopping wifibroadcast service..."
+    kill -9 $(pidof wfb_tx)
+	ifconfig ${wlan} down
+    ;;
+    *)
+    echo "Usage: $0 {start|stop}"
+    exit 1
+esac
