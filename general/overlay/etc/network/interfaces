@@ -13,26 +13,28 @@ iface eth0:1 inet static
     address $(fw_printenv -n ipaddr || echo 192.168.1.10)
     netmask 255.255.255.0
 
+# GPIO pin is USB_ENA https://openipc.github.io/wiki/en/gpio-settings.html
+
 manual wlan0
 iface wlan0 inet dhcp
     pre-up devmem 0x100C0080 32 0x530
-    pre-up echo 7 > /sys/class/gpio/export
-    pre-up echo out > /sys/class/gpio/gpio7/direction
-    pre-up echo 0 > /sys/class/gpio/gpio7/value
+    pre-up echo 9 > /sys/class/gpio/export
+    pre-up echo out > /sys/class/gpio/gpio9/direction
+    pre-up echo 0 > /sys/class/gpio/gpio9/value
     pre-up modprobe mt7601u
-    pre-up wpa_passphrase "SSID" "password" >/tmp/wpa_supplicant.conf
+    pre-up wpa_passphrase "SSID" "password" > /tmp/wpa_supplicant.conf
     pre-up sed -i '2i \\tscan_ssid=1' /tmp/wpa_supplicant.conf
-    pre-up (sleep 3; wpa_supplicant -B -Dnl80211 -iwlan0 -c/tmp/wpa_supplicant.conf)
+    pre-up (sleep 3; wpa_supplicant -B -D nl80211 -i wlan0 -c /tmp/wpa_supplicant.conf)
     post-down killall -q wpa_supplicant
-    post-down echo 1 > /sys/class/gpio/gpio7/value
-    post-down echo 7 > /sys/class/gpio/unexport
+    post-down echo 1 > /sys/class/gpio/gpio9/value
+    post-down echo 9 > /sys/class/gpio/unexport
 
 manual eth2
 iface eth2 inet dhcp
     pre-up wifi xm711
-    pre-up wpa_passphrase "SSID" "password" >/tmp/wpa_supplicant.conf
+    pre-up wpa_passphrase "SSID" "password" > /tmp/wpa_supplicant.conf
     pre-up sed -i '2i \\tscan_ssid=1' /tmp/wpa_supplicant.conf
-    pre-up (sleep 3; wpa_supplicant -B -Dnl80211 -ieth2 -c/tmp/wpa_supplicant.conf)
+    pre-up (sleep 3; wpa_supplicant -B -D nl80211 -i eth2 -c /tmp/wpa_supplicant.conf)
     post-down killall -q wpa_supplicant
 
 manual usb0
