@@ -420,6 +420,11 @@ hi3536dv100() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+hi3536dv100_vixand() {
+  soc="hi3536dv100"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_vixand all && rename
+}
+
 #################################################################################
 
 msc313e() {
@@ -572,6 +577,11 @@ t31() {
   fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+t31_vixand() {
+  soc="t31"
+  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_vixand all && rename
+}
+
 #################################################################################
 
 xm510() {
@@ -684,7 +694,9 @@ gk7205v200                    # OpenIPC
 # hi3516cv500                   # testing..
 # hi3516dv300                   # testing..
 #
+# hi3536cv100                   # OpenIPC
 # hi3536dv100                   # OpenIPC
+# hi3536dv100_vixand            # Vixand
 #
 #######
 #
@@ -728,10 +740,11 @@ gk7205v200                    # OpenIPC
 #
 #######
 #
-# t10                           # testing..
-# t20                           # testing..
-# t30                           # testing..
-# t31                           # testing..
+# t10                           # OpenIPC
+# t20                           # OpenIPC
+# t30                           # OpenIPC
+# t31                           # OpenIPC
+# t31_vixand                    # Vixand partner
 #
 #######
 #
