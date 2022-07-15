@@ -5,13 +5,17 @@
 
 config="/etc/wfb.conf"
 keydir="/etc"
+
 wlan=`cat ${config} | grep wlan | cut -f 2 -d '='`
 region=`cat ${config} | grep region | cut -f 2 -d '='`
 channel=`cat ${config} | grep channel | cut -f 2 -d '='`
+bandwidth=`cat ${config} | grep bandwidth | cut -f 2 -d '='`
+stbc=`cat ${config} | grep stbc | cut -f 2 -d '='`
+mcs_index=`cat ${config} | grep mcs_index | cut -f 2 -d '='`
 
 load_rtl() {
   modprobe cfg80211
-  modprobe 88XXau
+  modprobe 88XXau rtw_monitor_disable_1m=1
 }
 
 load_ath() {
@@ -36,7 +40,7 @@ load_interface() {
 }
 
 start_wfb() {
-  wfb_tx -p 1 -u 5600 -K ${keydir}/drone.key ${wlan} &
+  wfb_tx -p 1 -u 5600 -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} ${wlan} &
 }
 
 case "$1" in
