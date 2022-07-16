@@ -172,8 +172,8 @@ Thank you.
 [FH8856v100]: https://img.shields.io/static/v1?label=FH8856V100&message=%20&logo=github
 [FH8856v200]: https://github.com/OpenIPC/firmware/actions/workflows/fh8856v200_images.yml/badge.svg
 [FH8856v210]: https://img.shields.io/static/v1?label=FH8856V210&message=%20&logo=github
-[FH8858v200]: https://img.shields.io/static/v1?label=FH8856V200&message=%20&logo=github
-[FH8858v210]: https://img.shields.io/static/v1?label=FH8856V210&message=%20&logo=github
+[FH8858v200]: https://img.shields.io/static/v1?label=FH8858V200&message=%20&logo=github
+[FH8858v210]: https://img.shields.io/static/v1?label=FH8858V210&message=%20&logo=github
 [GK7102S]: https://img.shields.io/static/v1?label=GK7102S&message=%20&logo=github
 [GK7202v300]: https://github.com/OpenIPC/firmware/actions/workflows/gk7202v300_images.yml/badge.svg
 [GK7205v200]: https://github.com/OpenIPC/firmware/actions/workflows/gk7205v200_images.yml/badge.svg
