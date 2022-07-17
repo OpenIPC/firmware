@@ -57,5 +57,5 @@ Thank you.
 <a href="https://opencollective.com/openipc/contribute/backer-14335/checkout" target="_blank"><img src="https://opencollective.com/webpack/donate/button@2x.png?color=blue" width="375" alt="Open Collective donate button"></a>
 </p>
 
-[chat]: https://openipc.org/our-telegram-channels
+[chat]: https://openipc.org/our-channels
 [contribution]: https://opencollective.com/openipc/contribute/backer-14335/checkout
