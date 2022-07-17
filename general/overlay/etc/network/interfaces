@@ -24,6 +24,8 @@ iface wlan0 inet dhcp
     pre-up sed -i '2i \\tscan_ssid=1' /tmp/wpa_supplicant.conf
     pre-up (sleep 3; wpa_supplicant -B -Dnl80211 -iwlan0 -c/tmp/wpa_supplicant.conf)
     post-down killall -q wpa_supplicant
+    post-down echo 1 > /sys/class/gpio/gpio7/value
+    post-down echo 7 > /sys/class/gpio/unexport
 
 manual eth2
 iface eth2 inet dhcp
@@ -41,6 +43,8 @@ iface usb0 inet dhcp
     pre-up modprobe usbserial vendor=0x2c7c product=0x6026
     pre-up modprobe rndis_host
     pre-up sleep 10
+    post-down echo 1 > /sys/class/gpio/gpio9/value
+    post-down echo 9 > /sys/class/gpio/unexport
 
 manual wg0
 iface wg0 inet static
