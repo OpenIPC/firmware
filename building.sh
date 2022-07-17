@@ -271,9 +271,12 @@ hi3518ev200_hs303() {
   soc="hi3518ev200"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename && autoup_rootfs
   #PLATFORM=hisilicon  make br-linux-{dirclean,rebuild}
-  #PLATFORM=hisilicon  make br-hisilicon-osdrv-hi3516cv300-{dirclean,rebuild}
-  #PLATFORM=hisilicon  make br-majestic-hi3516cv300-{dirclean,rebuild}
   #PLATFORM=hisilicon  make br-mbedtls-openipc-{dirclean,rebuild}
+}
+
+hi3518ev200_ultimate() {
+  soc="hi3518ev200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
 }
 
 #################################################################################
@@ -663,6 +666,7 @@ xm550() {
 # hi3518ev200                   # testing..
 # hi3518ev200_domsip            # DomSip
 # hi3518ev200_hs303             # OpenIPC
+# hi3518ev200_ultimate          # OpenIPC
 #
 # hi3516av100                   # OpenIPC
 # hi3516av100_ultimate          # OpenIPC_ultimate version
