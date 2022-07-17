@@ -12,6 +12,10 @@ channel=`cat ${config} | grep channel | cut -f 2 -d '='`
 bandwidth=`cat ${config} | grep bandwidth | cut -f 2 -d '='`
 stbc=`cat ${config} | grep stbc | cut -f 2 -d '='`
 mcs_index=`cat ${config} | grep mcs_index | cut -f 2 -d '='`
+udp_port=`cat ${config} | grep udp_port | cut -f 2 -d '='`
+radio_port=`cat ${config} | grep radio_port | cut -f 2 -d '='`
+rs_k=`cat ${config} | grep rs_k | cut -f 2 -d '='`
+rs_n=`cat ${config} | grep rs_n | cut -f 2 -d '='`
 
 load_rtl() {
   modprobe cfg80211
@@ -40,7 +44,7 @@ load_interface() {
 }
 
 start_wfb() {
-  wfb_tx -p 1 -u 5600 -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} ${wlan} &
+  wfb_tx -p ${radio_port} -u ${udp_port} -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -k ${rs_k} -n ${rs_n} ${wlan} &
 }
 
 case "$1" in
