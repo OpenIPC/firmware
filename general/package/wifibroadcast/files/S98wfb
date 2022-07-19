@@ -3,19 +3,9 @@
 # Start wifibroadcast
 #
 
-config="/etc/wfb.conf"
-keydir="/etc"
+. /etc/wfb.conf
 
-wlan=`cat ${config} | grep wlan | cut -f 2 -d '='`
-region=`cat ${config} | grep region | cut -f 2 -d '='`
-channel=`cat ${config} | grep channel | cut -f 2 -d '='`
-bandwidth=`cat ${config} | grep bandwidth | cut -f 2 -d '='`
-stbc=`cat ${config} | grep stbc | cut -f 2 -d '='`
-mcs_index=`cat ${config} | grep mcs_index | cut -f 2 -d '='`
-udp_port=`cat ${config} | grep udp_port | cut -f 2 -d '='`
-radio_port=`cat ${config} | grep radio_port | cut -f 2 -d '='`
-rs_k=`cat ${config} | grep rs_k | cut -f 2 -d '='`
-rs_n=`cat ${config} | grep rs_n | cut -f 2 -d '='`
+keydir="/etc"
 
 load_rtl() {
   modprobe cfg80211
@@ -31,10 +21,10 @@ load_ath() {
 
 load_interface() {
 
-  if cat ${config} | grep "rtl" > /dev/null 2>&1; then
+  if [ ${driver} = "rtl" ]; then
 	ifconfig ${wlan} up
 	iwconfig ${wlan} mode monitor
-  elif cat ${config} | grep "ath" > /dev/null 2>&1; then
+  elif [ ${driver} = "ath" ]; then
 	iwconfig ${wlan} mode monitor
 	ifconfig ${wlan} up
   fi
@@ -44,20 +34,20 @@ load_interface() {
 }
 
 start_wfb() {
-  wfb_tx -p ${radio_port} -u ${udp_port} -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -k ${rs_k} -n ${rs_n} ${wlan} &
+  wfb_tx -p ${radio_port} -u ${udp_port} -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${rs_k} -n ${rs_n} ${wlan} &
 }
 
 case "$1" in
   start)
-    if grep -q daemon=1 ${config}; then
+    if [ ${daemon} -eq 1 ]; then
 
 	  echo "Loading modules for selected driver..."
 
-	  if cat ${config} | grep "rtl"; then
+	  if [ ${driver} = "rtl"  ]; then
 		if ! lsmod | grep "88XXau"; then
 		  load_rtl
 		fi
-	  elif cat ${config} | grep "ath"; then
+	  elif ${driver} = "ath" ]; then
 		if ! lsmod | grep "ath9k_htc"; then
           load_ath
 		fi
