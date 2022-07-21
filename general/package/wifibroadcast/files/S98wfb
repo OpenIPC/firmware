@@ -22,11 +22,11 @@ load_ath() {
 load_interface() {
 
   if [ ${driver} = "rtl" ]; then
-	ifconfig ${wlan} up
-	iwconfig ${wlan} mode monitor
+	  ifconfig ${wlan} up
+	  iwconfig ${wlan} mode monitor
   elif [ ${driver} = "ath" ]; then
-	iwconfig ${wlan} mode monitor
-	ifconfig ${wlan} up
+	  iwconfig ${wlan} mode monitor
+	  ifconfig ${wlan} up
   fi
 
   iw reg set ${region}
@@ -34,7 +34,7 @@ load_interface() {
 }
 
 start_wfb() {
-  wfb_tx -p ${radio_port} -u ${udp_port} -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${rs_k} -n ${rs_n} ${wlan} &
+  wfb_tx -p ${radio_port} -u ${udp_port} -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} -T ${fec_timeout} ${wlan} &
 }
 
 case "$1" in
@@ -74,6 +74,10 @@ case "$1" in
 
 	  echo "Done."
 
+	  if [ ${telemetry} = "true" ]; then
+		  sh /usr/bin/telemetry start
+	  fi
+
 	else
       echo "Wifibroadcast service disabled in wfb.conf..."
 	fi
@@ -81,7 +85,6 @@ case "$1" in
   stop)
     echo "Stopping wifibroadcast service..."
     kill -9 $(pidof wfb_tx)
-	ifconfig ${wlan} down
     ;;
     *)
     echo "Usage: $0 {start|stop}"
