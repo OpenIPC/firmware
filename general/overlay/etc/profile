@@ -23,7 +23,7 @@ export EDITOR='/bin/vi'
 
 [ -x /usr/bin/arp ] || arp() { cat /proc/net/arp; }
 
-cli() { yaml-cli -i /etc/majestic.yaml $@ }
+cli() { yaml-cli -i /etc/majestic.yaml $@; }
 
 #[ -x /tmp/ipctool ] || ipctool() { [ -x /tmp/ipctool ] && /tmp/ipctool $@ || (curl -s -L -o /tmp/ipctool https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool-$(uname -m) && \
 [ -x /tmp/ipctool ] || ipctool() { [ -x /tmp/ipctool ] && /tmp/ipctool $@ || (curl -s -L -o /tmp/ipctool https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool && \
