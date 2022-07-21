@@ -9,8 +9,8 @@ keydir="/etc"
 
 start_telemetry() {
   if [ ! -f /usr/bin/telemetry_rx -a ! -f /usr/bin/telemetry_tx ]; then
-	ln -s /usr/bin/wfb_rx /usr/bin/telemetry_rx ; chmod +x /usr/bin/telemetry_rx
-	ln -s /usr/bin/wfb_tx /usr/bin/telemetry_tx ; chmod +x /usr/bin/telemetry_tx
+	  ln -s /usr/bin/wfb_rx /usr/bin/telemetry_rx ; chmod +x /usr/bin/telemetry_rx
+	  ln -s /usr/bin/wfb_tx /usr/bin/telemetry_tx ; chmod +x /usr/bin/telemetry_tx
   else
 	if [ ${one_way} = "false" ]; then
 	  telemetry_rx -p ${stream_rx} -u ${port_rx} -K ${keydir}/drone.key -k ${fec_k} -n ${fec_n} ${wlan} &
