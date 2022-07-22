@@ -1,7 +1,12 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20220222
+# OpenIPC.org | v.20220722
 #
+
+if [ $(pidof sysupgrade) ]; then
+	echo "Sysupgrade script already running!"
+	exit 1
+fi
 
 set -e
 
