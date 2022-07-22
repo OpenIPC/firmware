@@ -3,11 +3,6 @@
 # OpenIPC.org | v.20220722
 #
 
-if [ $(pidof sysupgrade) ]; then
-	echo "Sysupgrade script already running!"
-	exit 1
-fi
-
 set -e
 
 echo_c() {
@@ -109,6 +104,11 @@ free_resources() {
 		echo ". OK"
 	done
 	sync; echo 3 > /proc/sys/vm/drop_caches
+}
+
+create_lock() {
+  [ -f /tmp/sysupgrade.lock ] && echo -e "\e[1;31m\nAnother sysupgrade process is already running!\e[0m\n" && exit 1
+  touch /tmp/sysupgrade.lock
 }
 
 get_device() {
@@ -248,6 +248,8 @@ print_sysinfo
 [ "$clear_overlay" -eq 0 ] && \
 echo_c 97 "\nTry '$(basename "$0") --help' for options." && \
 exit 0
+
+create_lock
 
 free_resources
 [ "$remote_update" -eq 1 ] && download_firmware
