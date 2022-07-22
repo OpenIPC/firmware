@@ -107,7 +107,7 @@ free_resources() {
 }
 
 create_lock() {
-  [ -f /tmp/sysupgrade.lock ] && echo -e "\e[1;31m\nAnother sysupgrade process already running!\e[0m\n" && exit 1
+  [ -f /tmp/sysupgrade.lock ] && echo -e "\e[1;31m\nAnother sysupgrade process is already running!\e[0m\n" && exit 1
   touch /tmp/sysupgrade.lock
 }
 
