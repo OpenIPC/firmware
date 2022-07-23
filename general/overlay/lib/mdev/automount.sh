@@ -25,7 +25,7 @@ my_mount()
     [ -d "${destdir}/$1/autoconfig" ] && cp -afv ${destdir}/$1/autoconfig/* / | logger -s -p daemon.info -t autoconfig
 
     # execution of the specified commands
-    [ -f "${destdir}/$1/autoconfig.sh" ] && ${destdir}/$1/autoconfig.sh | logger -s -p daemon.info -t autoconfig
+    [ -f "${destdir}/$1/autoconfig.sh" ] && sh ${destdir}/$1/autoconfig.sh | logger -s -p daemon.info -t autoconfig
 }
 
 case "${ACTION}" in
