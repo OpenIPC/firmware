@@ -31,6 +31,7 @@ load_interface() {
 
   iw reg set ${region}
   iwconfig ${wlan} channel ${channel}
+  iw dev ${wlan} set txpower fixed $((${txpower} * 100))
 }
 
 start_wfb() {
