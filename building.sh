@@ -17,7 +17,7 @@ clone() {
 fresh() {
   echo -e "\nThe start-stop times\n" >/tmp/openipc_buildtime.txt
   date >>/tmp/openipc_buildtime.txt
-  [ -d buildroot-2020.02.12/dl ] && mv buildroot-2020.02.12/dl .
+  [ -d buildroot-2020.02.12/dl ] && mv buildroot-2020.02.12/dl . && rm -rf ./dl/majestic* ./dl/ipctool
   make distclean #clean
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
   [ -d dl ] && mv dl buildroot-2020.02.12/dl || return 0
