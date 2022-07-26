@@ -120,8 +120,9 @@ self_update() {
 	  if ! [ "${scr_version}" = "${dstv}" ]; then
 		  echo "A new version is available, trying to update..."
 		  mv /tmp/sysupgrade /usr/sbin/ ; chmod +x /usr/sbin/sysupgrade
-		  echo "Done. Try running sysupgrade again."
-		  exit 0
+	      echo "Done. Restarting..."
+		  exec "$0" ${args}
+		  exit 1
 	  else
 		  echo "Ok, version match."
 	  fi
