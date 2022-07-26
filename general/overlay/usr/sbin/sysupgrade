@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20220726
+# OpenIPC.org | v.20220727
 #
 
 scr_version=1.0.0
@@ -115,12 +115,12 @@ self_update() {
 	  echo "Offline upgrade, skip sysupgrade version check."
   else
 	  echo "Online upgrade, checking sysupgrade version..."
-	  curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/cronyx/firmware/master/general/overlay/usr/sbin/sysupgrade"
+	  curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
 	  dstv=`grep scr_version /tmp/sysupgrade | head -1 | cut -f 2 -d '='`
 	  if ! [ "${scr_version}" = "${dstv}" ]; then
 		  echo "A new version is available, trying to update..."
 		  mv /tmp/sysupgrade /usr/sbin/ ; chmod +x /usr/sbin/sysupgrade
-	      echo "Done. Restarting..."
+		  echo -e "Done. Restarting...\n"
 		  exec "$0" ${args}
 		  exit 1
 	  else
