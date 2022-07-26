@@ -22,6 +22,7 @@ define HISILICON_OSDRV_HI3516EV300_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/files/sensor/iq/imx307.ini
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/files/sensor/iq/imx335.ini
+	ln -sf imx335.ini $(TARGET_DIR)/etc/sensors/iq/default.ini
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/files/kmod/camhi-motor.ko
