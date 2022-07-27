@@ -3,9 +3,9 @@
 # OpenIPC.org | v.20220727
 #
 
-scr_version=1.0.0
+scr_version=1.0.1
 
-args="$@"
+args=" $@"
 
 set -e
 
@@ -111,8 +111,8 @@ free_resources() {
 }
 
 self_update() {
-  if echo ${args} | grep "rootfs" || echo  ${args} | grep "kernel" > /dev/null 2>&1; then
-	  echo -e "\nOffline upgrade, skip sysupgrade version check."
+  if echo ${args} | grep "rootfs" || echo  ${args} | grep "kernel" || echo "${args}" | grep -- "-n" > /dev/null 2>&1; then
+	  echo -e "\nOffline upgrade or Overlay clean, skip sysupgrade version check."
   else
 	  echo -e "\nOnline upgrade, checking sysupgrade version..."
 	  curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
