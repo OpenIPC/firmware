@@ -1,7 +1,11 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20220722
+# OpenIPC.org | v.20220727
 #
+
+scr_version=1.0.0
+
+args="$@"
 
 set -e
 
@@ -104,6 +108,25 @@ free_resources() {
 		echo ". OK"
 	done
 	sync; echo 3 > /proc/sys/vm/drop_caches
+}
+
+self_update() {
+  if echo ${args} | grep "rootfs" || echo  ${args} | grep "kernel" > /dev/null 2>&1; then
+	  echo -e "\nOffline upgrade, skip sysupgrade version check."
+  else
+	  echo -e "\nOnline upgrade, checking sysupgrade version..."
+	  curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
+	  dstv=`grep scr_version /tmp/sysupgrade | head -1 | cut -f 2 -d '='`
+	  if ! [ "${scr_version}" = "${dstv}" ]; then
+		  echo "A new version is available, trying to update..."
+		  chmod +x /tmp/sysupgrade
+		  echo -e "Done. Restarting...\n"
+		  exec /tmp/sysupgrade ${args}
+		  exit 1
+	  else
+		  echo "Ok, version match."
+	  fi
+  fi
 }
 
 create_lock() {
@@ -249,8 +272,8 @@ print_sysinfo
 echo_c 97 "\nTry '$(basename "$0") --help' for options." && \
 exit 0
 
+self_update
 create_lock
-
 free_resources
 [ "$remote_update" -eq 1 ] && download_firmware
 [ "$update_kernel" -eq 1 ] && do_update_kernel "$kernel_file"
