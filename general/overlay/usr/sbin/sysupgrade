@@ -111,7 +111,7 @@ free_resources() {
 }
 
 self_update() {
-  if echo ${args} | grep "rootfs" || echo  ${args} | grep "kernel" || echo "${args}" | grep -- "-n" > /dev/null 2>&1; then
+  if echo "${args}" | grep "rootfs" || echo  "${args}" | grep "kernel" || echo "${args}" | grep -- "-n" > /dev/null 2>&1; then
 	  echo -e "\nOffline upgrade or Overlay clean, skip sysupgrade version check."
   else
 	  echo -e "\nOnline upgrade, checking sysupgrade version..."
