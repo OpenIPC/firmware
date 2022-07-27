@@ -321,7 +321,7 @@ insert_sns()
 			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
             ;;
 
-	sc2310_i2c|sc2235p_i2c_dc)
+	sc2310_i2c|sc2235p_i2c|sc2235p_i2c_dc)
 			# This was added by ZigFisher
 			bus_type="i2c";
 			pinmux_mode="i2c_dc";
