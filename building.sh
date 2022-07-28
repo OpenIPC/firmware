@@ -683,6 +683,7 @@ xm550() {
 #
 # hi3516dv200                   # OpenIPC
 # hi3516ev200                   # OpenIPC
+# hi3516ev200_fpv               # FPV (ultimate by default)
 # hi3516ev200_dozor             # Dozor
 # hi3516ev200_eltis             # Eltis
 # hi3516ev200_vixand            # Vixand
