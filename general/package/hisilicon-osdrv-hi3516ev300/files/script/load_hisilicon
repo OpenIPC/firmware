@@ -70,8 +70,21 @@ report_error()
 	exit 1
 }
 
+check_allocator() {
+	allocator=$(grep mmz_allocator /proc/cmdline)
+	if [ -z "${allocator}" ]; then
+		if [ ${mem_total} -ge 128 ]; then
+			set_allocator cma
+		else
+			set_allocator hisi
+		fi
+	fi
+}
+
 insert_osal()
 {
+	check_allocator
+
 	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
 	if [ -z "$MMZ" ]; then
 		insmod hi_osal.ko anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
