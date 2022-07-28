@@ -73,7 +73,7 @@ insert_osal() {
 	if [ -z "$MMZ" ]; then
 		insmod osal.ko anony=1 mmz_allocator=gk mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 	else
-		insmod cma_osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
+		insmod osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
 	fi
 }
 
@@ -92,7 +92,6 @@ remove_detect() {
 	rmmod -w gk7205v200_isp
 	rmmod -w gk7205v200_base
 	rmmod -w osal >/dev/null 2>&1
-	rmmod -w cma_osal >/dev/null 2>&1
 	rmmod -w sysconfig
 }
 
