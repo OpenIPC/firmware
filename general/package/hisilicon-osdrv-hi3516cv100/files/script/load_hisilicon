@@ -326,7 +326,7 @@ insert_ko() {
     insert_audio
     echo "==== Your input Sensor type is $SENSOR ===="
 
-    insmod wdt.ko
+    insmod wdt.ko nodeamon=1
 
     # system configuration
     sysctl
