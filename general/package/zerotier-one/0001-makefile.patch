@@ -26,8 +26,8 @@
  	else
 -		override CFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
 -		override CXXFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -fexceptions -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
-+		override CFLAGS+=-mfloat-abi=soft -march=armv6zk -marm -mfpu=vfp -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
-+		override CXXFLAGS+=-mfloat-abi=soft -march=armv6zk -marm -mfpu=vfp -fexceptions -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
++		override CFLAGS+=-mfloat-abi=soft -marm -mno-unaligned-access
++		override CXXFLAGS+=-mfloat-abi=soft -marm -fexceptions -mno-unaligned-access
  		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
  	endif
  endif
