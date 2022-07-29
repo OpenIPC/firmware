@@ -116,7 +116,7 @@ insert_sns() {
     imx236)
         devmem 0x20030030 32 0x6 #Sensor clock 37.125 MHz
         ;;
-    sc2135)
+    sc1035 | sc1135 | sc2135)
         devmem 0x20030030 32 0x5 #Sensor clock 27 MHz
         insmod ssp_ad9020.ko
         ;;
