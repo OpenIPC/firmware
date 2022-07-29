@@ -160,10 +160,12 @@ LIBCURL_OPENIPC_CONF_OPTS += \
 	--disable-pop3 \
 	--disable-rtsp \
 	--disable-smb \
-	--disable-smtp \
 	--disable-telnet \
 	--disable-tftp
 endif
+
+#	--disable-smtp \
+
 
 define LIBCURL_OPENIPC_FIX_DOT_PC
 	printf 'Requires: openssl\n' >>$(@D)/libcurl.pc.in

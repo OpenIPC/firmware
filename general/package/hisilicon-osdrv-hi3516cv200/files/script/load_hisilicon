@@ -89,7 +89,7 @@ insert_isp() {
 
 insert_sns() {
         case $SENSOR in
-        9m034 | jxf22 | ov2718 | ov9732 | ov9750 | ov9752 | jxh62 | sc1235 | sc2235)
+        9m034 | jxf22 | jxf23 | ov2718 | ov9732 | ov9750 | ov9752 | jxh62 | sc1235 | sc2235)
                 devmem 0x200f0040 32 0x2 # I2C0_SCL
                 devmem 0x200f0044 32 0x2 # I2C0_SDA
 

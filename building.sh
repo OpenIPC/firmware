@@ -17,7 +17,7 @@ clone() {
 fresh() {
   echo -e "\nThe start-stop times\n" >/tmp/openipc_buildtime.txt
   date >>/tmp/openipc_buildtime.txt
-  [ -d buildroot-2020.02.12/dl ] && mv buildroot-2020.02.12/dl .
+  [ -d buildroot-2020.02.12/dl ] && mv buildroot-2020.02.12/dl . && rm -rf ./dl/majestic* ./dl/ipctool
   make distclean #clean
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
   [ -d dl ] && mv dl buildroot-2020.02.12/dl || return 0
@@ -271,9 +271,12 @@ hi3518ev200_hs303() {
   soc="hi3518ev200"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename && autoup_rootfs
   #PLATFORM=hisilicon  make br-linux-{dirclean,rebuild}
-  #PLATFORM=hisilicon  make br-hisilicon-osdrv-hi3516cv300-{dirclean,rebuild}
-  #PLATFORM=hisilicon  make br-majestic-hi3516cv300-{dirclean,rebuild}
   #PLATFORM=hisilicon  make br-mbedtls-openipc-{dirclean,rebuild}
+}
+
+hi3518ev200_ultimate() {
+  soc="hi3518ev200"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
 }
 
 #################################################################################
@@ -663,6 +666,7 @@ xm550() {
 # hi3518ev200                   # testing..
 # hi3518ev200_domsip            # DomSip
 # hi3518ev200_hs303             # OpenIPC
+# hi3518ev200_ultimate          # OpenIPC
 #
 # hi3516av100                   # OpenIPC
 # hi3516av100_ultimate          # OpenIPC_ultimate version
@@ -674,6 +678,7 @@ xm550() {
 #
 # hi3516dv200                   # OpenIPC
 # hi3516ev200                   # OpenIPC
+# hi3516ev200_fpv               # FPV (ultimate by default)
 # hi3516ev200_dozor             # Dozor
 # hi3516ev200_eltis             # Eltis
 # hi3516ev200_vixand            # Vixand
