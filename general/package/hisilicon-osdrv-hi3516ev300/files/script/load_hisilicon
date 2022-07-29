@@ -70,13 +70,26 @@ report_error()
 	exit 1
 }
 
+check_allocator() {
+	allocator=$(grep mmz_allocator /proc/cmdline)
+	if [ -z "${allocator}" ]; then
+		if [ ${mem_total} -ge 128 ]; then
+			set_allocator cma
+		else
+			set_allocator hisi
+		fi
+	fi
+}
+
 insert_osal()
 {
+	check_allocator
+
 	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
 	if [ -z "$MMZ" ]; then
 		insmod hi_osal.ko anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 	else
-		insmod cma_osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
+		insmod hi_osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
 	fi
 }
 
@@ -98,7 +111,6 @@ remove_detect()
 	rmmod -w hi3516ev200_isp
 	rmmod -w hi3516ev200_base
 	rmmod -w hi_osal
-	rmmod -w cma_osal
 	rmmod -w sys_config.ko
 }
 
@@ -229,7 +241,6 @@ remove_ko()
 	rmmod -w hi3516ev200_sys
 	rmmod -w hi3516ev200_base
 	rmmod -w hi_osal
-	rmmod -w cma_osal
 	rmmod -w sys_config
 }
 

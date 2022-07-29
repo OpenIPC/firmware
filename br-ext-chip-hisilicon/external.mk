@@ -36,6 +36,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv300/majestic-hi3
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv500/majestic-hi3516cv500.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516ev300/majestic-hi3516ev300.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3519v101/majestic-hi3519v101.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/mavlink-router/mavlink-router.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/microbe-web/microbe-web.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/motors/motors.mk

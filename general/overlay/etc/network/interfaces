@@ -22,7 +22,7 @@ iface wlan0 inet dhcp
     pre-up modprobe mt7601u
     pre-up wpa_passphrase "SSID" "password" >/tmp/wpa_supplicant.conf
     pre-up sed -i '2i \\tscan_ssid=1' /tmp/wpa_supplicant.conf
-    pre-up (sleep 3; wpa_supplicant -B -Dnl80211 -iwlan0 -c/tmp/wpa_supplicant.conf)
+    pre-up (sleep 3; wpa_supplicant -B -D nl80211 -i wlan0 -c/tmp/wpa_supplicant.conf)
     post-down killall -q wpa_supplicant
     post-down echo 1 > /sys/class/gpio/gpio7/value
     post-down echo 7 > /sys/class/gpio/unexport
@@ -32,7 +32,7 @@ iface eth2 inet dhcp
     pre-up wifi xm711
     pre-up wpa_passphrase "SSID" "password" >/tmp/wpa_supplicant.conf
     pre-up sed -i '2i \\tscan_ssid=1' /tmp/wpa_supplicant.conf
-    pre-up (sleep 3; wpa_supplicant -B -Dnl80211 -ieth2 -c/tmp/wpa_supplicant.conf)
+    pre-up (sleep 3; wpa_supplicant -B -D nl80211 -i eth2 -c/tmp/wpa_supplicant.conf)
     post-down killall -q wpa_supplicant
 
 manual usb0

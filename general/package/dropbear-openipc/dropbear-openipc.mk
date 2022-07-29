@@ -5,7 +5,7 @@
 ################################################################################
 
 DROPBEAR_OPENIPC_VERSION = 2022.82
-DROPBEAR_OPENIPC_SITE = https://matt.ucc.asn.au/dropbear/releases
+DROPBEAR_OPENIPC_SITE = http://sources.buildroot.net/dropbear
 DROPBEAR_OPENIPC_SOURCE = dropbear-$(DROPBEAR_OPENIPC_VERSION).tar.bz2
 DROPBEAR_OPENIPC_LICENSE = MIT, BSD-2-Clause, Public domain
 DROPBEAR_OPENIPC_LICENSE_FILES = LICENSE
