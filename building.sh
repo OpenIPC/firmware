@@ -413,6 +413,11 @@ hi3518ev300() {
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
 }
 
+hi3518ev300_ultimate() {
+  soc="hi3518ev300"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
+}
+
 hi3536cv100() {
   soc="hi3536cv100"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
@@ -661,12 +666,11 @@ xm550() {
 # hi3518ev100                   # OpenIPC
 #
 # hi3516cv200                   # testing..
-# hi3518ev200                   # testing..
 # hi3516cv200                   # testing..
-# hi3518ev200                   # testing..
+# hi3518ev200                   # OpenIPC
 # hi3518ev200_domsip            # DomSip
 # hi3518ev200_hs303             # OpenIPC
-# hi3518ev200_ultimate          # OpenIPC
+# hi3518ev200_ultimate          # OpenIPC_ultimate version
 #
 # hi3516av100                   # OpenIPC
 # hi3516av100_ultimate          # OpenIPC_ultimate version
@@ -690,6 +694,7 @@ xm550() {
 # hi3516ev300_tehshield         # Tehshield
 # hi3516ev300_ultimate          # OpenIPC_ultimate version
 # hi3518ev300                   # OpenIPC
+# hi3518ev300_ultimate          # OpenIPC_ultimate version
 #
 # hi3519v101                    # OpenIPC
 # hi3516av200                   # OpenIPC
