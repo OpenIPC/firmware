@@ -4,10 +4,13 @@ export HOME=${HOME:-/root}
 export TZ=$(cat /etc/TZ)
 export SENSOR=$(fw_printenv -n sensor)
 
+echo_c() { echo -ne "\e[1;$1m$2\e[0m"; }
+
 if [ "$PS1" ]; then
 	[ -f /etc/os-release ] && . /etc/os-release
-	[ -f /etc/openipc_banner ] && echo -ne "\n\e[1;36m$(cat /etc/openipc_banner) $GITHUB_VERSION\e[0m\n\n"
-	[ -f /etc/openipc_donators ] && echo -e "\n\e[1;36m$(cat /etc/openipc_donators)\e[0m\n\n"
+	[ -f /etc/openipc_banner ] && echo_c 36 "$(cat /etc/openipc_banner)"
+	echo_c 32 "$(printf "%54s" "${GITHUB_VERSION}")"
+	[ -f /etc/openipc_donors ] && echo_c 36 "\n\n$(cat /etc/openipc_donors)\n\n"
 	#
 	if [ "`id -u`" -eq 0 ]; then
 		export PS1='\u@\h:\w\# '
@@ -19,37 +22,23 @@ fi
 export EDITOR='/bin/vi'
 
 
-
-
 [ -x /usr/bin/arp ] || arp() { cat /proc/net/arp; }
 
 cli() { yaml-cli -i /etc/majestic.yaml $@; }
 
 #[ -x /tmp/ipctool ] || ipctool() { [ -x /tmp/ipctool ] && /tmp/ipctool $@ || (curl -s -L -o /tmp/ipctool https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool-$(uname -m) && \
 [ -x /tmp/ipctool ] || ipctool() { [ -x /tmp/ipctool ] && /tmp/ipctool $@ || (curl -s -L -o /tmp/ipctool https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool && \
-  chmod +x /tmp/ipctool && echo -e "\n\e[1;35mThe ipctool installed as remote GitHub plugin\e[0m\n" && /tmp/ipctool $@); }
+	chmod +x /tmp/ipctool && echo_c 35 "The ipctool installed as remote GitHub plugin" && /tmp/ipctool $@); }
 
 majestic_changes() { diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml; }
 
 show_modules() { echo; cat /proc/modules | cut -f 1 -d " " | while read module; do echo "Module: $module"; \
-  if [ -d "/sys/module/$module/parameters" ]; then ls /sys/module/$module/parameters/ | while read parameter; \
-  do echo -n "Parameter: $parameter --> "; cat /sys/module/$module/parameters/$parameter; done; fi;  echo; done; }
-
-debug_microbe() { curl -L -o /tmp/microbe-web-dev.zip https://github.com/OpenIPC/microbe-web/archive/refs/heads/dev.zip; \
-  unzip -o -d /tmp /tmp/microbe-web-dev.zip; \
-  cp -av /tmp/microbe-web-dev/files/usr/sbin /usr/; \
-  cp -av /tmp/microbe-web-dev/files/var/www /var/; \
-  rm -rf /tmp/microbe-web-dev.zip /tmp/microbe-web-dev; }
+	if [ -d "/sys/module/$module/parameters" ]; then ls /sys/module/$module/parameters/ | while read parameter; \
+	do echo -n "Parameter: $parameter --> "; cat /sys/module/$module/parameters/$parameter; done; fi; echo; done; }
 
 show_fullname() { echo "openipc-$(ipcinfo --chip-name)-$(ipcinfo --short-sensor)"; }
 
 set_fullname() { show_fullname >/etc/hostname; }
 
-
 # Source configuration files from /etc/profile.d
-for i in /etc/profile.d/*.sh ; do
-	if [ -r "$i" ]; then
-		. $i
-	fi
-done
-unset i
+for i in /etc/profile.d/*.sh; do [ -r "$i" ] && . $i; done; unset i
