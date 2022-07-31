@@ -12,8 +12,10 @@ load_majestic() {
 	printf 'Starting %s: ' "$DAEMON"
 	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
 	# shellcheck disable=SC2086 # we need the word splitting
-	if [ -f /etc/coredump.conf ] && [ "true" = "$(grep ^savedumps /etc/coredump.conf | cut -d= -f2)" ]; then
-		ulimit -c unlimited && echo "| /usr/sbin/sendcoredump.sh" > /proc/sys/kernel/core_pattern
+	[ -f /etc/coredump.conf ] && . /etc/coredump.conf
+	if [ "$coredump_enabled" ]; then
+		[ "$(yaml-cli -i /etc/majestic.yaml -g .watchdog.timeout)" -lt "30" ] && yaml-cli -i /etc/majestic.yaml -s .watchdog.timeout 30
+		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" >/proc/sys/kernel/core_pattern
 	fi
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" \
 		-- $DAEMON_ARGS
@@ -76,4 +78,3 @@ case "$1" in
 		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1
 esac
-

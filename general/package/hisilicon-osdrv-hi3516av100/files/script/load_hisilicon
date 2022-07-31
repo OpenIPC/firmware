@@ -292,7 +292,7 @@ insert_ko() {
         insert_audio
 
         insmod hi_mipi.ko
-        insmod wdt.ko
+        insmod wdt.ko #nodeamon=1
         echo "==== Your input Sensor type is $SENSOR ===="
 }
 
