@@ -22,3 +22,5 @@ ln -sfv ../../lib/libc.so ${TARGET_DIR}/usr/bin/ldd
 if ! grep -q ^BR2_PACKAGE_WIFIBROADCAST=y ${BR2_CONFIG}; then
 	rm -f ${TARGET_DIR}/usr/lib/libstdc++*
 fi
+
+rm -f ${TARGET_DIR}/usr/bin/gdbserver

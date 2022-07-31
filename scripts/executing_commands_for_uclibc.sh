@@ -15,3 +15,9 @@ fi
 #
 echo 'Note: BR2_TOOLCHAIN_BUILDROOT_LIBC="uclibc"'
 #
+
+if ! grep -q ^BR2_PACKAGE_WIFIBROADCAST=y ${BR2_CONFIG}; then
+	rm -f ${TARGET_DIR}/usr/lib/libstdc++*
+fi
+
+rm -f ${TARGET_DIR}/usr/bin/gdbserver
