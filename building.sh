@@ -226,6 +226,11 @@ gk7205v300_fpv() {
   fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_fpv all && rename
 }
 
+gk7605v100() {
+  soc="gk7605v100"
+  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
 #################################################################################
 
 gm8135() {
