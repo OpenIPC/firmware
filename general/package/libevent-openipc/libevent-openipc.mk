@@ -14,10 +14,20 @@ LIBEVENT_OPENIPC_LICENSE_FILES = LICENSE
 # their special autogen.sh script, and have custom target and staging
 # installation commands.
 
+define LIBEVENT_OPENIPC_RUN_CRUTCH
+	cd $(@D) && patch -i $(TOPDIR)/../general/package/libevent-openipc/crutch/0001-libevent-mbedtls.patch
+endef
+
 define LIBEVENT_OPENIPC_RUN_AUTOGEN
 	cd $(@D) && PATH=$(BR_PATH) ./autogen.sh
 endef
+
+ifeq ($(BR2_TOOLCHAIN_BUILDROOT_MUSL),y)
+LIBEVENT_OPENIPC_PRE_CONFIGURE_HOOKS +=  LIBEVENT_OPENIPC_RUN_CRUTCH LIBEVENT_OPENIPC_RUN_AUTOGEN
+else
 LIBEVENT_OPENIPC_PRE_CONFIGURE_HOOKS += LIBEVENT_OPENIPC_RUN_AUTOGEN
+endif
+
 
 LIBEVENT_OPENIPC_CONF_OPTS = \
 	--disable-libevent-regress \
