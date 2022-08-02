@@ -1,13 +1,24 @@
 ################################################################################
 #
-# hisilicon-opensdk | updated 2021.11.07
+# openhisilicon
 #
 ################################################################################
 
-HISILICON_OPENSDK_VERSION = 7cc0bab2d40c0b35693f541cacd1bcb85d2c63b6
+HISILICON_OPENSDK_VERSION = experiments
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_LICENSE = GPL-2.0
+HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
+
+ifndef BOARD
+	@$$(call MESSAGE,"Variable BOARD must be defined")
+	@exit
+else
+	CHIP := $(shell echo $(BOARD) | cut -d "_" -f 3)
+endif
+
+HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
+HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
+	CHIPSET=$(CHIP)
 
 $(eval $(kernel-module))
 $(eval $(generic-package))
