@@ -29,13 +29,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/libsrt-openipc/libsrt-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libwebsockets-openipc/libwebsockets-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-fonts/majestic-fonts.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516av100/majestic-hi3516av100.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv100/majestic-hi3516cv100.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv200/majestic-hi3516cv200.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv300/majestic-hi3516cv300.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516cv500/majestic-hi3516cv500.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3516ev300/majestic-hi3516ev300.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-hi3519v101/majestic-hi3519v101.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic/majestic.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/mavlink-router/mavlink-router.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/microbe-web/microbe-web.mk
