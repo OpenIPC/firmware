@@ -15,8 +15,7 @@ include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/libsrt-openipc/libsrt-openipc.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/libwebsockets-openipc/libwebsockets-openipc.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/majestic-fonts/majestic-fonts.mk
-include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/majestic-xm510/majestic-xm510.mk
-include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/majestic-xm530/majestic-xm530.mk
+include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/majestic/majestic.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/microbe-web/microbe-web.mk
 include $(BR2_EXTERNAL_XIONGMAI_PATH)/package/motors/motors.mk
