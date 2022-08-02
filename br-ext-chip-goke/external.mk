@@ -5,6 +5,7 @@ include $(BR2_EXTERNAL_GOKE_PATH)/package/baresip-openipc/baresip-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/goke-opensdk/hisilicon-opensdk.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/goke-osdrv-gk710x.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk7205v200/goke-osdrv-gk7205v200.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/ipctool/ipctool.mk
@@ -20,7 +21,7 @@ include $(BR2_EXTERNAL_GOKE_PATH)/package/libsrt-openipc/libsrt-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/libwebsockets-openipc/libwebsockets-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/majestic-fonts/majestic-fonts.mk
-include $(BR2_EXTERNAL_GOKE_PATH)/package/majestic-gk7205v200/majestic-gk7205v200.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/majestic/majestic.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/mavlink-router/mavlink-router.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/microbe-web/microbe-web.mk

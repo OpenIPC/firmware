@@ -8,9 +8,9 @@ echo_c() { echo -ne "\e[1;$1m$2\e[0m"; }
 
 if [ "$PS1" ]; then
 	[ -f /etc/os-release ] && . /etc/os-release
-	[ -f /etc/openipc_banner ] && echo_c 36 "$(cat /etc/openipc_banner)"
-	echo_c 32 "$(printf "%54s" "${GITHUB_VERSION}")"
-	[ -f /etc/openipc_donors ] && echo_c 36 "\n\n$(cat /etc/openipc_donors)\n\n"
+	[ -f /etc/openipc_banner ] && echo_c 34 "$(cat /etc/openipc_banner)"
+	echo_c 32 "$(printf "%56s" "${GITHUB_VERSION}")"
+	[ -f /etc/openipc_donors ] && echo_c 37 "\n\n$(cat /etc/openipc_donors)\n\n"
 	#
 	if [ "`id -u`" -eq 0 ]; then
 		export PS1='\u@\h:\w\# '
