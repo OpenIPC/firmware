@@ -1,20 +1,17 @@
 ################################################################################
 #
-# hisilicon-opensdk | updated 2021.11.07
+# hisilicon-opensdk | updated 2022.08.02
 #
 ################################################################################
 
-HISILICON_OPENSDK_VERSION = 164afc7dc6b322b3d3175d9eb5cfe1c81de3c00b
-HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(MOTORS_VERSION))
+HISILICON_OPENSDK_VERSION = HEAD
+HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
 
-define HISILICON_OPENSDK_BUILD_CMDS
-	# (cd $(@D)/camhi-motor; $(TARGET_CC) -Os -s main.c -o camhi-motor)
-endef
+HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
+	KVER=$(LINUX_VERSION_PROBED) \
+	KSRC=$(LINUX_DIR)
 
-define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
-	# $(INSTALL) -m 0755 -D $(@D)/camhi-motor/camhi-motor $(TARGET_DIR)/usr/bin/camhi-motor
-endef
-
+$(eval $(kernel-module))
 $(eval $(generic-package))
