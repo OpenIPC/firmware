@@ -36,7 +36,6 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/microbe-web/microbe-web.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/motors/motors.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/mt7601u-ap-openipc/mt7601u-ap-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/node-exporter/node-exporter.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/openhisilicon/openhisilicon.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/opus-openipc/opus-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/rtl8188eus-openipc/rtl8188eus-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/rtw-hostapd/rtw-hostapd.mk
