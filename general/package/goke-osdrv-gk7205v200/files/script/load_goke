@@ -84,28 +84,28 @@ insert_osal() {
 
 	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
 	if [ -z "$MMZ" ]; then
-		insmod osal.ko anony=1 mmz_allocator=gk mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+		insmod osal.ko anony=1 mmz_allocator=gk mmz=anonymous,0,$mmz_start,$mmz_size || insmod ../extra/open_osal.ko anony=1 mmz_allocator=gk mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 	else
-		insmod osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
+		insmod osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || insmod ../extra/open_osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
 	fi
 }
 
 insert_detect() {
-	insmod sysconfig.ko chip=$CHIP_TYPE sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
+	insmod sysconfig.ko chip=$CHIP_TYPE sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD || insmod ../extra/open_sys_config.ko chip=$CHIP_TYPE sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
 	insert_osal
 	insmod gk7205v200_base.ko
-	insmod gk7205v200_isp.ko
-	insmod isp_sensor_i2c.ko
-	insmod isp_sensor_spi.ko
+	insmod gk7205v200_isp.ko || insmod ../extra/open_isp.ko
+	insmod isp_sensor_i2c.ko || insmod ../extra/open_sensor_i2c.ko
+	insmod isp_sensor_spi.ko || insmod ../extra/open_sensor_spi.ko
 }
 
 remove_detect() {
-	rmmod -w isp_sensor_spi
-	rmmod -w isp_sensor_i2c
+	rmmod -w isp_sensor_spi || rmmod -w open_sensor_spi
+	rmmod -w isp_sensor_i2c || rmmod -w open_sensor_i2c
 	rmmod -w gk7205v200_isp
 	rmmod -w gk7205v200_base
-	rmmod -w osal >/dev/null 2>&1
-	rmmod -w sysconfig
+	rmmod -w osal >/dev/null 2>&1 || rmmod -w open_osal >/dev/null 2>&1
+	rmmod -w sysconfig || rmmod -w open_sys_config
 }
 
 insert_audio() {
@@ -129,7 +129,7 @@ remove_audio() {
 }
 
 insert_isp() {
-	insmod gk7205v200_isp.ko
+	insmod gk7205v200_isp.ko || insmod ../extra/open_isp.ko
 }
 
 insert_sil9024() {
@@ -156,12 +156,12 @@ insert_adv7179() {
 
 insert_isp_piris() {
 	if [ "$CHIP_TYPE" == "gk7605v100" -a "$BOARD" == "demo" ]; then
-		insmod isp_piris.ko
+		insmod isp_piris.ko || insmod ../extra/open_piris.ko
 	fi
 }
 
 insert_ko() {
-	insmod sysconfig.ko chip=$CHIP_TYPE sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
+	insmod sysconfig.ko chip=$CHIP_TYPE sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD || insmod ../extra/open_sys_config.ko chip=$CHIP_TYPE sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
 	insert_osal
 	insmod gk7205v200_base.ko
 	insmod gk7205v200_sys.ko
@@ -181,23 +181,23 @@ insert_ko() {
 	insmod gk7205v200_h265e.ko
 	insmod gk7205v200_jpege.ko
 	insmod gk7205v200_ive.ko save_power=0
-	insmod isp_pwm.ko
-	insmod isp_sensor_i2c.ko
-	insmod isp_sensor_spi.ko
+	insmod isp_pwm.ko || insmod ../extra/open_pwm.ko
+	insmod isp_sensor_i2c.ko || insmod ../extra/open_sensor_i2c.ko
+	insmod isp_sensor_spi.ko || insmod ../extra/open_sensor_spi.ko
 	# insert_isp_piris                              # unused on OpenIPC
 	# insert_sil9024;                               # unused on OpenIPC  # BT1120
 	insert_audio
 	insmod mipi_rx.ko
 	# insmod gk7205v200_pm.ko                       # unused on OpenIPC
-	insmod gk7205v200_wdt.ko
+	insmod gk7205v200_wdt.ko || insmod ../extra/open_wdt.ko
 }
 
 remove_ko() {
-	rmmod -w gk7205v200_wdt
+	rmmod -w gk7205v200_wdt || rmmod -w open_wdt
 	# rmmod -w gk7205v200_pm                           # unused on OpenIPC
 	remove_audio
 	rmmod -w mipi_rx
-	# rmmod -w isp_piris                               # unused on OpenIPC
+	# rmmod -w isp_piris || rmmod open_piris           # unused on OpenIPC
 	# rmmod -w sil9024 &> /dev/null                    # unused on OpenIPC
 	rmmod -w gk7205v200_ive
 	rmmod -w gk7205v200_rc
@@ -210,18 +210,18 @@ remove_ko() {
 	# rmmod -w gfbg                                    # unused on OpenIPC
 	# rmmod -w gk7205v200_vo                           # unused on OpenIPC
 	rmmod -w gk7205v200_vpss
-	rmmod -w gk7205v200_isp
+	rmmod -w gk7205v200_isp || rmmod -w open_isp
 	rmmod -w gk7205v200_vi
 	rmmod -w gk7205v200_vgs
 	rmmod -w gk7205v200_rgn
 	# rmmod -w gk7205v200_tde
-	rmmod -w isp_sensor_i2c &>/dev/null
-	rmmod -w isp_sensor_spi &>/dev/null
-	rmmod -w isp_pwm
+	rmmod -w isp_sensor_i2c &>/dev/null || rmmod -w open_sensor_i2c
+	rmmod -w isp_sensor_spi &>/dev/null || rmmod -w open_sensor_spi
+	rmmod -w isp_pwm || rmmod -w open_pwm
 	rmmod -w gk7205v200_sys
 	rmmod -w gk7205v200_base
-	rmmod -w osal
-	rmmod -w sysconfig
+	rmmod -w osal || rmmod -w open_osal
+	rmmod -w sysconfig || rmmod -w open_sys_config
 }
 
 load_usage() {
