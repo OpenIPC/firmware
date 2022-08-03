@@ -122,7 +122,6 @@ board-info:
 	@cat $(BR_EXT_DIR)/board/$(FAMILY)/$(CHIP).config
 	@cat $(BR_EXT_DIR)/board/$(BOARD)/config
 
-
 # -------------------------------------------------------------------------------------------------
 # such targets (with trimmed `br-` prefix) are passed to Buildroot's Makefile
 br-%: $(OUT_DIR)/.config
