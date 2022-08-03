@@ -66,9 +66,9 @@ define HISILICON_OSDRV_HI3516CV300_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv300/files/sensor/*.so
-	ln -sf libsns_imx290_i2c_lvds.so $(TARGET_DIR)/usr/lib/sensors/libsns_imx291_i2c_lvds.so
-	ln -sf libsns_imx290_i2c_lvds.so $(TARGET_DIR)/usr/lib/sensors/libsns_imx307_i2c_lvds.so
-	ln -sf libsns_imx290_i2c_lvds.so $(TARGET_DIR)/usr/lib/sensors/libsns_imx327_i2c_lvds.so
+	ln -sf libsns_imx291_i2c_lvds.so $(TARGET_DIR)/usr/lib/sensors/libsns_imx290_i2c_lvds.so
+	ln -sf libsns_imx291_i2c_lvds.so $(TARGET_DIR)/usr/lib/sensors/libsns_imx307_i2c_lvds.so
+	ln -sf libsns_imx291_i2c_lvds.so $(TARGET_DIR)/usr/lib/sensors/libsns_imx327_i2c_lvds.so
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv300/files/lib/libdnvqe.so
