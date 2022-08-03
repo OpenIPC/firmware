@@ -113,20 +113,20 @@ free_resources() {
 self_update() {
 	if echo "${args}" | grep "rootfs" || echo  "${args}" | grep "kernel" || echo "${args}" | grep -- "-n" > /dev/null 2>&1; then
 		echo -e "\nOffline upgrade or Overlay clean, skip sysupgrade version check."
-  	else
+	else
 		echo -e "\nOnline upgrade, checking sysupgrade version..."
-	  	curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
+		curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
 		if [ -f /tmp/sysupgrade ] && grep -q "#!/bin/sh" /tmp/sysupgrade; then
-	  		dstv=`grep scr_version /tmp/sysupgrade | head -1 | cut -f 2 -d '='`
-	  		if ! [ "${scr_version}" = "${dstv}" ]; then
+			dstv=`grep scr_version /tmp/sysupgrade | head -1 | cut -f 2 -d '='`
+			if ! [ "${scr_version}" = "${dstv}" ]; then
 				echo "A new version is available, trying to run updated script..."
 				chmod +x /tmp/sysupgrade
 				exec /tmp/sysupgrade ${args}
 				echo -e "Done. Restarting...\n"
 				exit 1
-	  		else
+			else
 				echo "Ok, version match."
-	  		fi
+			fi
 		else
 			echo -e "\nVersion check failed. Possible network connection problem, script is corrupt or not found. Continue with bundled version."
 		fi
