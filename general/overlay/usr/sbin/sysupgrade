@@ -3,7 +3,7 @@
 # OpenIPC.org | v.20220803
 #
 
-scr_version=1.0.2
+scr_version=1.0.3
 
 args=" $@"
 
@@ -119,10 +119,10 @@ self_update() {
 		if [ -f /tmp/sysupgrade ] && grep -q "#!/bin/sh" /tmp/sysupgrade; then
 			dstv=`grep scr_version /tmp/sysupgrade | head -1 | cut -f 2 -d '='`
 			if ! [ "${scr_version}" = "${dstv}" ]; then
-				echo "A new version is available, trying to run updated script..."
+				echo "A new version is available, trying to activate updated script..."
 				chmod +x /tmp/sysupgrade
-				exec /tmp/sysupgrade ${args}
 				echo -e "Done. Restarting...\n"
+				exec /tmp/sysupgrade ${args}
 				exit 1
 			else
 				echo "Ok, version match."
