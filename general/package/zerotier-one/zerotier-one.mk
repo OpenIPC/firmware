@@ -20,9 +20,6 @@ endef
 define ZEROTIER_ONE_INSTALL_TARGET_CMDS
 	$(MAKE) -C $(@D) DESTDIR=$(TARGET_DIR) install
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
-	cp ../general/package/zerotier-one/files/zerotier.conf $(TARGET_DIR)/etc
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	cp ../general/package/zerotier-one/files/S90zerotier $(TARGET_DIR)/etc/init.d
 endef

@@ -3,22 +3,28 @@
 # Start zerotier-one
 #
 
+config_file=/etc/webui/zerotier.conf
+[ ! -f "$config_file" ] && echo "Config file not found." && exit 2
+source $config_file
+
 case "$1" in
-  start)
-	if grep -q daemon=1 /etc/zerotier.conf; then
-	    echo "Starting zerotier-one daemon..."
-	    /sbin/modprobe tun
-	    /usr/sbin/zerotier-one -d
-	else
-	    echo "Zerotier-One service disabled in zerotier.conf..."
-	fi
-    ;;
-  stop)
-	echo "Stopping zerotier-one daemon..."
-	kill -9 $(pidof zerotier-one)
-	/sbin/rmmod -w tun
-    ;;
-    *)
-	echo "Usage: $0 {start|stop}"
-	exit 1
+	start)
+		if [ "true" = "$zerotier_enabled" ]; then
+			echo "Starting zerotier-one daemon..."
+			/sbin/modprobe tun
+			/usr/sbin/zerotier-one -d
+		else
+			echo "Zerotier-One service is disabled in ${config_file}."
+			exit 3
+		fi
+		;;
+	stop)
+		echo "Stopping zerotier-one daemon..."
+		kill -9 $(pidof zerotier-one)
+		/sbin/rmmod -w tun
+		;;
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
 esac
