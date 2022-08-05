@@ -5,8 +5,10 @@
 #    default : rmmod all moules and then insmod them
 #
 
-MEM_ALL=64
-#MEM_ALL=128
+chipid=$(ipcinfo --chip_id)
+
+[ "${chipid}" == "xm550" ] && MEM_ALL=128 || MEM_ALL=64
+
 MEM_START=0x800
 MEM_SAMALL_LIN=0x1
 
