@@ -9,12 +9,7 @@ HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
 
-ifndef BOARD
-	@$$(call MESSAGE,"Variable BOARD must be defined")
-	@exit
-else
-	CHIP := $(shell echo $(BOARD) | cut -d "_" -f 3)
-endif
+CHIP := $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 5 | cut -d "." -f 1)
 
 HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
 HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
