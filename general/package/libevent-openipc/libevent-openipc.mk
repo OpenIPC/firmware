@@ -4,46 +4,24 @@
 #
 ################################################################################
 
-LIBEVENT_OPENIPC_VERSION = bf3ce77f6cf113839defa70b30e183d471a0dab5
-LIBEVENT_OPENIPC_SITE = $(call github,libevent,libevent,$(LIBEVENT_OPENIPC_VERSION))
+LIBEVENT_OPENIPC_VERSION = mmap64
+LIBEVENT_OPENIPC_SITE = $(call github,widgetii,libevent,$(LIBEVENT_OPENIPC_VERSION))
 LIBEVENT_OPENIPC_INSTALL_STAGING = YES
 LIBEVENT_OPENIPC_LICENSE = BSD-3-Clause, OpenBSD
 LIBEVENT_OPENIPC_LICENSE_FILES = LICENSE
-
-# This package uses autoconf, but not automake, so we need to call
-# their special autogen.sh script, and have custom target and staging
-# installation commands.
-
-define LIBEVENT_OPENIPC_RUN_CRUTCH
-	cd $(@D) && patch -i $(TOPDIR)/../general/package/libevent-openipc/crutch/0001-libevent-mbedtls.patch
-endef
-
-define LIBEVENT_OPENIPC_RUN_AUTOGEN
-	cd $(@D) && PATH=$(BR_PATH) ./autogen.sh
-endef
-
-ifeq ($(BR2_TOOLCHAIN_BUILDROOT_MUSL),y)
-LIBEVENT_OPENIPC_PRE_CONFIGURE_HOOKS +=  LIBEVENT_OPENIPC_RUN_CRUTCH LIBEVENT_OPENIPC_RUN_AUTOGEN
-else
-LIBEVENT_OPENIPC_PRE_CONFIGURE_HOOKS += LIBEVENT_OPENIPC_RUN_AUTOGEN
-endif
-
-
 LIBEVENT_OPENIPC_CONF_OPTS = \
-	--disable-libevent-regress \
-	--disable-samples \
-	--disable-debug-mode \
-	--disable-largefile
-HOST_LIBEVENT_OPENIPC_CONF_OPTS = \
-	--disable-libevent-regress \
-	--disable-samples \
-	--disable-openssl
+	-DEVENT__DISABLE_BENCHMARK=ON \
+	-DEVENT__DISABLE_SAMPLES=ON \
+	-DEVENT__DISABLE_TESTS=ON \
+	-DCMAKE_BUILD_TYPE=Release
+
 
 define LIBEVENT_OPENIPC_REMOVE_PYSCRIPT
 	rm $(TARGET_DIR)/usr/bin/event_rpcgen.py
 endef
 
 define LIBEVENT_OPENIPC_DELETE_UNUSED
+	rm -r $(TARGET_DIR)/usr/lib/libevent-2.2.so
 	rm -f $(TARGET_DIR)/usr/lib/libevent-2.2.so.1.0.0
 	rm -f $(TARGET_DIR)/usr/lib/libevent-2.2.so.1
 	rm -f $(TARGET_DIR)/usr/lib/libevent.so
@@ -57,19 +35,18 @@ endif
 
 ifeq ($(BR2_PACKAGE_OPENSSL),y)
 LIBEVENT_OPENIPC_DEPENDENCIES += host-pkgconf openssl
-LIBEVENT_OPENIPC_CONF_OPTS += --enable-openssl
+LIBEVENT_OPENIPC_CONF_OPTS += -DEVENT__DISABLE_OPENSSL=OFF
 else
-LIBEVENT_OPENIPC_CONF_OPTS += --disable-openssl
+LIBEVENT_OPENIPC_CONF_OPTS += -DEVENT__DISABLE_OPENSSL=ON
 endif
 
 ifeq ($(BR2_PACKAGE_MBEDTLS_OPENIPC),y)
 LIBEVENT_OPENIPC_DEPENDENCIES += host-pkgconf mbedtls-openipc
-LIBEVENT_OPENIPC_CONF_OPTS += --enable-mbedtls
+LIBEVENT_OPENIPC_CONF_OPTS += -DEVENT__DISABLE_MBEDTLS=OFF
 else
-LIBEVENT_OPENIPC_CONF_OPTS += --disable-mbedtls
+LIBEVENT_OPENIPC_CONF_OPTS += -DEVENT__DISABLE_MBEDTLS=ON
 endif
 
 LIBEVENT_OPENIPC_POST_INSTALL_TARGET_HOOKS += LIBEVENT_OPENIPC_DELETE_UNUSED
 
-$(eval $(autotools-package))
-$(eval $(host-autotools-package))
+$(eval $(cmake-package))
