@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# OpenIPC.org | v.20220515
+# OpenIPC.org | v.20220808
 #
 
 MAX_KERNEL_SIZE=0x200000               #    2MiB,  2097152
@@ -315,6 +315,11 @@ hi3516av100_ultimate() {
 hi3516dv100() {
   soc="hi3516dv100"
   fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
+}
+
+hi3516dv100_ultimate() {
+  soc="hi3516dv100"
+  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
 }
 
 #################################################################################
@@ -680,6 +685,7 @@ xm550() {
 # hi3516av100                   # OpenIPC
 # hi3516av100_ultimate          # OpenIPC_ultimate version
 # hi3516dv100                   # OpenIPC
+# hi3516dv100_ultimate          # OpenIPC_ultimate version
 #
 # hi3516cv300                   # OpenIPC
 # hi3516cv300_ultimate          # OpenIPC_ultimate version
