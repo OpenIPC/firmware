@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-LIBEVENT_OPENIPC_VERSION = mmap64
-LIBEVENT_OPENIPC_SITE = $(call github,widgetii,libevent,$(LIBEVENT_OPENIPC_VERSION))
+LIBEVENT_OPENIPC_VERSION = 99fd68abde4a59b90148db733fc51a7256cbd320
+LIBEVENT_OPENIPC_SITE = $(call github,libevent,libevent,$(LIBEVENT_OPENIPC_VERSION))
 LIBEVENT_OPENIPC_INSTALL_STAGING = YES
 LIBEVENT_OPENIPC_LICENSE = BSD-3-Clause, OpenBSD
 LIBEVENT_OPENIPC_LICENSE_FILES = LICENSE

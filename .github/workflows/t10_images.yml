@@ -80,7 +80,7 @@ jobs:
         id: build-t10-sdk
         continue-on-error: true
         run: |
-          ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/arm-openipc-linux-musleabi_sdk-buildroot.tar.gz"
+          ARCHIVE_SDK="${GITHUB_WORKSPACE}/output/images/mipsel-openipc-linux-musl_sdk-buildroot.tar.gz"
           echo "ARCHIVE_SDK=$ARCHIVE_SDK" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE/output
           make sdk
@@ -124,7 +124,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.ARCHIVE_SDK }}
-          asset_name: "arm-openipc-t10-linux-musleabi_sdk-buildroot.tar.gz"
+          asset_name: "mipsel-openipc-t10-linux-musl_sdk-buildroot.tar.gz"
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
