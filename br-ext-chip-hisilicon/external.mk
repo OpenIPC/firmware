@@ -45,5 +45,6 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/uacme-openipc/uacme-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/uqmi/uqmi.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/vtund-openipc/vtund-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/wifibroadcast/wifibroadcast.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/xmdp/xmdp.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/yaml-cli/yaml-cli.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/zerotier-one/zerotier-one.mk
