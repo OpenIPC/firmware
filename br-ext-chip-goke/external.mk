@@ -36,4 +36,5 @@ include $(BR2_EXTERNAL_GOKE_PATH)/package/uacme-openipc/uacme-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/vtund-openipc/vtund-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/wifibroadcast/wifibroadcast.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/yaml-cli/yaml-cli.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/xmdp/xmdp.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/zerotier-one/zerotier-one.mk
