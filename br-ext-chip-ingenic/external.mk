@@ -8,6 +8,7 @@ include $(BR2_EXTERNAL_INGENIC_PATH)/package/ax-agent/ax-agent.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
+include $(BR2_EXTERNAL_INGENIC_PATH)/package/i2c-telemetry/i2c-telemetry.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/json-c-openipc/json-c-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/lame-openipc/lame-openipc.mk
