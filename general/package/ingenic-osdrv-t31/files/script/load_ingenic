@@ -24,13 +24,19 @@ if [ $? -ne 0 ]; then
     check_return "insmod sinfo"
 fi
 
-echo 1 >/proc/jz/sinfo/info
-check_return "start sinfo"
+if fw_printenv -n sensor >/dev/null; then
+    export SENSOR=$(fw_printenv -n sensor)
+    logger -s -p daemon.info -t ingenic "Get data from environment and set SENSOR as ${SENSOR}"
+else
+    echo 1 >/proc/jz/sinfo/info
+    check_return "start sinfo"
+    SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+    check_return "get sensor type"
+    SENSOR=${SENSOR_INFO#*:}
+    logger -s -p daemon.info -t ingenic "Get data from sinfo and set SENSOR as ${SENSOR}"
+    fw_setenv sensor $SENSOR && logger -s -p daemon.info -t ingenic "Write detected ${SENSOR} to U-Boot ENV"
+fi
 
-SENSOR_INFO=$(cat /proc/jz/sinfo/info)
-check_return "get sensor type"
-
-SENSOR=${SENSOR_INFO#*:}
 
 case ${SENSOR} in
 "sc2232")
