@@ -3,6 +3,8 @@
 # OpenIPC.org | v.20220808
 #
 
+BR_VER=2020.02.12
+
 MAX_KERNEL_SIZE=0x200000               #    2MiB,  2097152
 MAX_KERNEL_SIZE_ULTIMATE=0x300000      #    3MiB,  3145728
 MAX_KERNEL_SIZE_EXPERIMENTAL=0x3E8480  # ~3.9MiB,  4097152
@@ -17,11 +19,11 @@ clone() {
 fresh() {
   echo -e "\nThe start-stop times\n" >/tmp/openipc_buildtime.txt
   date >>/tmp/openipc_buildtime.txt
-  [ -d buildroot-2020.02.12/dl ] && mv buildroot-2020.02.12/dl .
+  [ -d buildroot-${BR_VER}/dl ] && mv buildroot-${BR_VER}/dl .
   rm -rf ./dl/majestic ./dl/ipctool ./dl/microbe-web
   make distclean #clean
   [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
-  [ -d dl ] && mv dl buildroot-2020.02.12/dl || return 0
+  [ -d dl ] && mv dl buildroot-${BR_VER}/dl || return 0
 }
 
 should_fit() {
