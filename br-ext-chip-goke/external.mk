@@ -9,6 +9,7 @@ include $(BR2_EXTERNAL_GOKE_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.
 include $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/goke-osdrv-gk710x.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk7205v200/goke-osdrv-gk7205v200.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/hisilicon-opensdk/hisilicon-opensdk.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/i2c-telemetry/i2c-telemetry.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/json-c-openipc/json-c-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/lame-openipc/lame-openipc.mk
