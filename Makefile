@@ -1,6 +1,6 @@
 
 ROOT_DIR      := $(CURDIR)
-BR_VER        := 2020.02.12
+BR_VER        := 2021.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
 BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
 SCRIPTS_DIR   := $(ROOT_DIR)/scripts
