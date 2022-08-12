@@ -731,7 +731,7 @@ xm550() {
 #
 #######
 #
-nt98562                       # OpenIPC
+# nt98562                       # OpenIPC
 # nt98566                       # OpenIPC
 # nt98566_polcam                # Polcam
 #
