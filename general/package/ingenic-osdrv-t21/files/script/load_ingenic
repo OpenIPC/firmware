@@ -17,13 +17,13 @@ if [ $? -ne 0 ]; then
     insmod ${KMOD_PATH/%\//}/sinfo.ko
     check_return "insmod sinfo"
 fi
+echo 1 >/proc/jz/sinfo/info
+check_return "start sinfo"
 
 if fw_printenv -n sensor >/dev/null; then
     export SENSOR=$(fw_printenv -n sensor)
     logger -s -p daemon.info -t ingenic "Get data from environment and set SENSOR as ${SENSOR}"
 else
-    echo 1 >/proc/jz/sinfo/info
-    check_return "start sinfo"
     SENSOR_INFO=$(cat /proc/jz/sinfo/info)
     check_return "get sensor type"
     SENSOR=${SENSOR_INFO#*:}
