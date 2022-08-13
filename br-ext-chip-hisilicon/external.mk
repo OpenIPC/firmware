@@ -16,6 +16,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv300/hisil
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv500/hisilicon-osdrv-hi3516cv500.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/hisilicon-osdrv-hi3516ev300.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3519v101/hisilicon-osdrv-hi3519v101.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/i2c-telemetry/i2c-telemetry.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/json-c-openipc/json-c-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/lame-openipc/lame-openipc.mk
@@ -45,5 +46,6 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/uacme-openipc/uacme-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/uqmi/uqmi.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/vtund-openipc/vtund-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/wifibroadcast/wifibroadcast.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/xmdp/xmdp.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/yaml-cli/yaml-cli.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/zerotier-one/zerotier-one.mk

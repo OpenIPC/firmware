@@ -1,20 +1,23 @@
 ################################################################################
 #
-# xmdp
+# xmdp | updated 2022.08.10
 #
 ################################################################################
 
 XMDP_LICENSE = Public Domain
 
 define XMDP_EXTRACT_CMDS
-	cp package/x11r7/mcookie/mcookie.c $(@D)/
+	cp -avr ../general/package/xmdp/src/* $(@D)/
 endef
 
+#define XMDP_BUILD_CMDS
+#	(cd $(@D); $(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -O -g -D LINUX -std=c99 -Wall -Wpedantic -lm -o $(PKG_NAME) xmdp.c netip.c utils.c cjson/cJSON.c)
+#endef
+
 define XMDP_BUILD_CMDS
-	(cd $(@D); $(TARGET_CC) -Wall -Os -s mcookie.c -o mcookie)
-	$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) -O -g -D LINUX -std=c99 -Wall -Wpedantic -lm -o $(PKG_BUILD_DIR)/$(PKG_NAME) \
-	$(PKG_BUILD_DIR)/xmdp.c $(PKG_BUILD_DIR)/netip.c $(PKG_BUILD_DIR)/utils.c $(PKG_BUILD_DIR)/cjson/cJSON.c
+	$(TARGET_CONFIGURE_OPTS) $(MAKE) -C $(@D)
 endef
+
 
 define XMDP_INSTALL_TARGET_CMDS
 	install -m 0755 -D $(@D)/xmdp $(TARGET_DIR)/usr/bin/xmdp
