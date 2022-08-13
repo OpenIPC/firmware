@@ -113,7 +113,7 @@ jobs:
           draft: false
           prerelease: ${{ env.PRERELEASE }}
 
-      - name: Upload FW to release
+      - name: Upload NOR FW to release
         if: ${{ !env.ACT }}
         uses: svenstaro/upload-release-action@v2
         continue-on-error: true
@@ -124,7 +124,7 @@ jobs:
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
-      - name: Upload FW to release
+      - name: Upload NAND FW to release
         uses: svenstaro/upload-release-action@v2
         continue-on-error: true
         with:
