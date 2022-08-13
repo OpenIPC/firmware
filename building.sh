@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# OpenIPC.org | v.20220808
+# OpenIPC.org | v.20220813
 #
 
 BR_VER=2021.02.12
@@ -22,7 +22,7 @@ fresh() {
   [ -d buildroot-${BR_VER}/dl ] && mv buildroot-${BR_VER}/dl .
   rm -rf ./dl/majestic ./dl/ipctool ./dl/microbe-web
   make distclean #clean
-  [ -d buildroot* ] && echo -e "\nBuildroot found, OK\n" || make prepare
+  [ -d buildroot-${BR_VER} ] && echo -e "\nBuildroot found, OK\n" || make prepare
   [ -d dl ] && mv dl buildroot-${BR_VER}/dl || return 0
 }
 
