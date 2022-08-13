@@ -26,6 +26,8 @@ jobs:
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
+            # Mitigate #325 issue
+            apt install -y pip && pip install cmake
           fi
 
       - name: Free disk space
