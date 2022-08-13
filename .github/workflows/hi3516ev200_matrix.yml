@@ -1,19 +1,50 @@
-name: "Hi3516Ev300 (ultimate)"
+name: build
 
 on:
+  pull_request:
+    types:
+      - synchronize
+      - reopened
+      - opened
   push:
     branches:
       - production
     tags:
       - "v*"
+    push:
+      paths-ignore:
+        - '**.md'
   schedule:
       - cron: "00 03 * * *"
   workflow_dispatch:
 
 jobs:
-  build_core:
-    name: OpenIPC firmware for Hi3516Ev300 (ultimate)
+  buildroot:
     runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[ci skip]') }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - hi3516ev200
+          - hi3516ev300
+          - hi3518ev300
+          - hi3516dv200
+        release:
+          - lite
+          - ultimate
+        include:
+          - platform: hi3516ev200
+            release: fpv
+          - platform: hi3516ev300
+            release: fpv
+        exclude:
+          - platform: hi3516dv200
+            release: ultimate
+
+    env:
+      HAS_NAND: ${{ matrix.release == 'ultimate' }} && (${{ matrix.platform == 'hi3516ev300' }} || ${{ matrix.platform == 'hi3516ev200' }})
 
     steps:
 
@@ -61,42 +92,57 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-          echo "BOARD=hi3516ev300" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
           make prepare
 
-      - name: Build Hi3516Ev300 (ultimate) firmware
-        id: build-hi3516ev300-ultimate-firmware
+      - name: Build firmware
+        id: build-firmware
         continue-on-error: true
         run: |
-          ARCHIVE_FW="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-ultimate-br.tgz"
-          ARCHIVE_FW_NAND="${GITHUB_WORKSPACE}/output/images/openipc.${BOARD}-nand-br.tgz"
-          echo "ARCHIVE_FW=$ARCHIVE_FW" >> $GITHUB_ENV
-          echo "ARCHIVE_FW_NAND=$ARCHIVE_FW_NAND" >> $GITHUB_ENV
+          BOARD=unknown_unknown_${{ matrix.platform }}
+          if [ "${{ matrix.release }}" != "lite" ]; then
+            SUFF="${{ matrix.release }}-"
+            BOARD="${BOARD}_${{ matrix.release }}"
+          fi
+
+          NORFW_PATH="${GITHUB_WORKSPACE}/output/images/openipc.${{ matrix.platform }}-${SUFF}br.tgz"
+          echo "NORFW_PATH=$NORFW_PATH" >> $GITHUB_ENV
+          NORFW_FILE=$(basename $NORFW_PATH)
+          echo "NORFW_FILE=$NORFW_FILE" >> $GITHUB_ENV
+
           cd $GITHUB_WORKSPACE
-          make PLATFORM=hisilicon BOARD=unknown_unknown_${BOARD}_ultimate all
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${BOARD} (ultimate)" >> $GITHUB_ENV && exit 1
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 10485760 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 10485760... ${BOARD} (ultimate)" >> $GITHUB_ENV && exit 1
+
+          make PLATFORM=hisilicon BOARD=$BOARD all
+
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 10485760 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 10485760... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
           cd ${GITHUB_WORKSPACE}/output/images
-          mv uImage uImage.${BOARD}
-          mv rootfs.squashfs rootfs.squashfs.${BOARD}
-          mv rootfs.ubi rootfs.ubi.${BOARD}
-          mv rootfs.ubifs rootfs.ubifs.${BOARD}
-          md5sum rootfs.squashfs.${BOARD} > rootfs.squashfs.${BOARD}.md5sum
-          md5sum uImage.${BOARD} > uImage.${BOARD}.md5sum
-          md5sum rootfs.ubifs.${BOARD} > rootfs.ubifs.${BOARD}.md5sum
-          md5sum uImage.${BOARD} > uImage.${BOARD}.md5sum
-          tar -cvzf $ARCHIVE_FW uImage* *rootfs.squashfs.${BOARD}*
-          tar -cvzf $ARCHIVE_FW_NAND uImage* *rootfs.ubi*.${BOARD}*
+          mv uImage uImage.${{ matrix.platform }}
+          mv rootfs.squashfs rootfs.squashfs.${{ matrix.platform }}
+          md5sum rootfs.squashfs.${{ matrix.platform }} > rootfs.squashfs.${{ matrix.platform }}.md5sum
+          md5sum uImage.${{ matrix.platform }} > uImage.${{ matrix.platform }}.md5sum
+          tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
+
+          if [ "$HAS_NAND" == "true" ]; then
+            NANDFW_PATH="${GITHUB_WORKSPACE}/output/images/openipc.${{ matrix.platform }}-nand-br.tgz"
+            echo "NANDFW_PATH=$NANDFW_PATH" >> $GITHUB_ENV
+            NANDFW_FILE=$(basename $NANDFW_PATH)
+            echo "NANDFW_FILE=$NANDFW_FILE" >> $GITHUB_ENV
+
+            mv rootfs.ubi rootfs.ubi.${{ matrix.platform }}
+            mv rootfs.ubifs rootfs.ubifs.${{ matrix.platform }}
+            md5sum rootfs.ubifs.${{ matrix.platform }} > rootfs.ubifs.${{ matrix.platform }}.md5sum
+            tar -cvzf $NANDFW_PATH uImage* *rootfs.ubi*.${{ matrix.platform }}*
+          fi
 
       - name: Send error message to telegram channel
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-hi3516ev300-ultimate-firmware.outcome != 'success'
+        if: steps.build-firmware.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
-          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${BOARD} (ultimate)}"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${{ matrix.platform }} (${{ matrix.release }})}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
@@ -120,19 +166,19 @@ jobs:
         continue-on-error: true
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.ARCHIVE_FW }}
-          asset_name: openipc.${{ env.BOARD }}-ultimate-br.tgz
+          file: ${{ env.NORFW_PATH }}
+          asset_name: ${{ env.NORFW_FILE }}
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
       - name: Upload NAND FW to release
-        if: ${{ !env.ACT }}
+        if: ${{ !env.ACT }} && ${{ env.HAS_NAND }}
         uses: svenstaro/upload-release-action@v2
         continue-on-error: true
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.ARCHIVE_FW_NAND }}
-          asset_name: openipc.${{ env.BOARD }}-nand-br.tgz
+          file: ${{ env.NANDFW_PATH }}
+          asset_name: ${{ env.NANDFW_FILE }}
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -145,4 +191,4 @@ jobs:
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
           TG_HEADER=$(echo -e "\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9C\x85 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendDocument \
-            -F chat_id=$TG_CHANNEL -F document="@$ARCHIVE_FW" -F caption="$TG_HEADER"
+            -F chat_id=$TG_CHANNEL -F document="@$NORFW_PATH" -F caption="$TG_HEADER"
