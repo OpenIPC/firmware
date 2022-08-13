@@ -50,7 +50,9 @@ jobs:
 
       - name: Checkout
         id: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
 
       - name: Install build dependencies
         run: |
@@ -77,7 +79,7 @@ jobs:
         run: |
           HEAD_TAG=$(git tag --points-at HEAD)
           GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
-          BRANCH_NAME=$(echo $GITHUB_REF | cut -d'/' -f 3)
+          BRANCH=$(echo $GITHUB_REF | cut -d'/' -f 3)
           if [ -z "$HEAD_TAG" ]; then
             TAG_NAME="latest"
             RELEASE_NAME="Development Build"
@@ -91,7 +93,7 @@ jobs:
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
           cd $GITHUB_WORKSPACE
           make prepare
 
@@ -145,7 +147,7 @@ jobs:
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
           TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${{ matrix.platform }} (${{ matrix.release }})}"
-          TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
+          TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
           exit 2
@@ -191,6 +193,6 @@ jobs:
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
-          TG_HEADER=$(echo -e "\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9C\x85 GitHub Actions")
+          TG_HEADER=$(echo -e "\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9C\x85 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendDocument \
             -F chat_id=$TG_CHANNEL -F document="@$NORFW_PATH" -F caption="$TG_HEADER"
