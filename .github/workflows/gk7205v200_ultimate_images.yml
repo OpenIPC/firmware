@@ -105,6 +105,7 @@ jobs:
           exit 2
 
       - name: Create release
+        if: ${{ !env.ACT }}
         uses: actions/create-release@v1
         continue-on-error: true
         env:
@@ -116,6 +117,7 @@ jobs:
           prerelease: ${{ env.PRERELEASE }}
 
       - name: Upload FW to release
+        if: ${{ !env.ACT }}
         uses: svenstaro/upload-release-action@v2
         continue-on-error: true
         with:
@@ -126,6 +128,7 @@ jobs:
           overwrite: true
 
       - name: Upload SDK to release
+        if: ${{ !env.ACT }}
         uses: svenstaro/upload-release-action@v2
         continue-on-error: true
         with:
@@ -136,6 +139,7 @@ jobs:
           overwrite: true
 
       - name: Send binary file to telegram channel
+        if: ${{ !env.ACT }}
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
