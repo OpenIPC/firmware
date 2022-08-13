@@ -23,6 +23,7 @@ include $(BR2_EXTERNAL_INGENIC_PATH)/package/majestic/majestic.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/majestic-fonts/majestic-fonts.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/microbe-web/microbe-web.mk
+include $(BR2_EXTERNAL_INGENIC_PATH)/package/microsnander/microsnander.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/motors/motors.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/opus-openipc/opus-openipc.mk
