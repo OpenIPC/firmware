@@ -20,7 +20,67 @@ on:
   workflow_dispatch:
 
 jobs:
+  toolchain:
+    name: Build toolchain
+    runs-on: ubuntu-latest
+
+    env:
+      BOARD: hi3516ev200
+
+    outputs:
+      sdk-file: ${{ steps.build-sdk.outputs.sdk-file }}
+
+    steps:
+
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
+
+      - name: Install build dependencies
+        run: |
+          make install-deps
+          mkdir -p tmp
+          if [ ! -z "$ACT" ]; then
+            apt install -y cpio rsync bc
+            echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
+            # Mitigate #325 issue
+            apt install -y pip && pip install cmake
+          fi
+
+      - name: Free disk space
+        if: ${{ !env.ACT }}
+        run: |
+          sudo swapoff -a
+          sudo rm -f /swapfile
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+
+      - name: Build Buildroot SDK
+        id: build-sdk
+        run: |
+          make prepare
+          make PLATFORM=hisilicon BOARD=unknown_unknown_${BOARD}_openipc br-sdk
+          SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
+          echo $SDK_PATH
+          ls -l .
+          echo ==============================================================
+          echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
+          SDK_FILE=$(basename $SDK_PATH)
+          echo "SDK_FILE=$SDK_FILE" >> $GITHUB_ENV
+          echo "::set-output name=sdk-file::$SDK_FILE"
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.SDK_FILE }}
+          path: ${{ env.SDK_PATH }}
+          retention-days: 1
+
   buildroot:
+    name: Build firmware
+    needs: toolchain
     runs-on: ubuntu-latest
 
     strategy:
@@ -97,6 +157,10 @@ jobs:
           cd $GITHUB_WORKSPACE
           make prepare
 
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.toolchain.outputs.sdk-file }}
+
       - name: Build firmware
         id: build-firmware
         continue-on-error: true
@@ -115,6 +179,21 @@ jobs:
           echo "NORFW_FILE=$NORFW_FILE" >> $GITHUB_ENV
 
           cd $GITHUB_WORKSPACE
+          CONF_PATH=$(find . -name "${BOARD}_defconfig")
+
+          echo Using ${{ needs.toolchain.outputs.sdk-file }}
+          echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_PATH=\"$(pwd)/extsdk\"" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"arm-openipc-linux-musleabi\"" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_HEADERS_4_9=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_GCC_8=y" >> $CONF_PATH
+          LIBC="musl"
+          echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
+          mkdir extsdk
+          tar xvf ${{ needs.toolchain.outputs.sdk-file }} --strip-components=1 -C extsdk
 
           make PLATFORM=hisilicon BOARD=$BOARD all
 
@@ -143,7 +222,7 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: steps.build-firmware.outcome != 'success'
+        if: ${{ !env.ACT }} && steps.build-firmware.outcome != 'success'
         run: |
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
           TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${{ matrix.platform }} (${{ matrix.release }})}"
