@@ -89,7 +89,7 @@ jobs:
           tar -cvzf $ARCHIVE_FW uImage* *rootfs.squashfs.${BOARD}*
           tar -cvzf $ARCHIVE_FW_NAND uImage* *rootfs.ubi*.${BOARD}*
 
-      - name: Send warning message to telegram channel
+      - name: Send error message to telegram channel
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
@@ -100,6 +100,7 @@ jobs:
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH_NAME \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
             -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
+          exit 2
 
       - name: Create release
         uses: actions/create-release@v1
