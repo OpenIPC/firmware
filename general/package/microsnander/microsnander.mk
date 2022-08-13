@@ -5,7 +5,7 @@
 ################################################################################
 
 MICROSNANDER_VERSION = df9cc51c27a84c2d7eee8d90b7586a11d97c7ff2
-MICROSNANDER_SITE = $(call github,openipc,motors,$(MOTORS_VERSION))
+MICROSNANDER_SITE = $(call github,openipc,microsnander,$(MICROSNANDER_VERSION))
 MICROSNANDER_LICENSE = MIT
 MICROSNANDER_LICENSE_FILES = LICENSE
 
