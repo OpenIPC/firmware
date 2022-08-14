@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CHIP: hi3516ev200
+      FAMILY: hi3516ev200
 
     outputs:
       sdk-file: ${{ steps.build-sdk.outputs.sdk-file }}
@@ -57,9 +57,8 @@ jobs:
       - name: Build Buildroot SDK
         id: build-sdk
         run: |
-          set -x
           make prepare
-          make BOARD=unknown_unknown_${CHIP}_openipc br-sdk
+          make BOARD=unknown_unknown_${FAMILY}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
           SDK_FILE=$(basename $SDK_PATH)
@@ -96,9 +95,6 @@ jobs:
         exclude:
           - platform: hi3516dv200
             release: ultimate
-
-    env:
-      HAS_NAND: ${{ matrix.release == 'ultimate' }} && (${{ matrix.platform == 'hi3516ev300' }} || ${{ matrix.platform == 'hi3516ev200' }})
 
     steps:
 
@@ -194,8 +190,9 @@ jobs:
           md5sum uImage.${{ matrix.platform }} > uImage.${{ matrix.platform }}.md5sum
           tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
 
-          # TODO: infer from configs
-          if [ "$HAS_NAND" == "true" ]; then
+          HAS_NAND=$(make BOARD=${BOARD} has-nand)
+          echo "HAS_NAND=$HAS_NAND" >> $GITHUB_ENV
+          if [ "$HAS_NAND" == "y" ]; then
             NANDFW_PATH="${GITHUB_WORKSPACE}/output/images/openipc.${{ matrix.platform }}-nand-br.tgz"
             echo "NANDFW_PATH=$NANDFW_PATH" >> $GITHUB_ENV
             NANDFW_FILE=$(basename $NANDFW_PATH)
@@ -244,7 +241,7 @@ jobs:
           overwrite: true
 
       - name: Upload NAND FW to release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.HAS_NAND }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.HAS_NAND == 'y' }}
         uses: svenstaro/upload-release-action@v2
         continue-on-error: true
         with:
