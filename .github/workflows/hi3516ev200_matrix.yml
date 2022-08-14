@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      BOARD: hi3516ev200
+      CHIP: hi3516ev200
 
     outputs:
       sdk-file: ${{ steps.build-sdk.outputs.sdk-file }}
@@ -45,8 +45,6 @@ jobs:
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
-            # Mitigate #325 issue
-            apt install -y pip && pip install cmake
           fi
 
       - name: Free disk space
@@ -59,8 +57,9 @@ jobs:
       - name: Build Buildroot SDK
         id: build-sdk
         run: |
+          set -x
           make prepare
-          make PLATFORM=hisilicon BOARD=unknown_unknown_${BOARD}_openipc br-sdk
+          make BOARD=unknown_unknown_${CHIP}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
           SDK_FILE=$(basename $SDK_PATH)
@@ -116,8 +115,6 @@ jobs:
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
-            # Mitigate #325 issue
-            apt install -y pip && pip install cmake
           fi
 
       - name: Free disk space
@@ -186,7 +183,7 @@ jobs:
           mkdir /tmp/extsdk
           tar xvf ${{ needs.toolchain.outputs.sdk-file }} --strip-components=1 -C /tmp/extsdk >/dev/null
 
-          make PLATFORM=hisilicon BOARD=$BOARD all
+          make BOARD=$BOARD all
 
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 10485760 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 10485760... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
