@@ -155,8 +155,6 @@ jobs:
           name: ${{ needs.toolchain.outputs.sdk-file }}
 
       - name: Build firmware
-        id: build-firmware
-        continue-on-error: true
         run: |
           BOARD=unknown_unknown_${{ matrix.platform }}
           if [ "${{ matrix.release }}" != "lite" ]; then
@@ -216,11 +214,8 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: ${{ !env.ACT }} && steps.build-firmware.outcome != 'success' && github.event_name != 'pull_request'
+        if: ${{ !env.ACT && failure() && github.event_name != 'pull_request' }}
         run: |
-          echo ACT: ${{ !env.ACT }}
-          echo outcome: ${{ steps.build-firmware.outcome }}
-          echo event_name: ${{ github.event_name }}
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
           TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${{ matrix.platform }} (${{ matrix.release }})}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
@@ -229,7 +224,7 @@ jobs:
           exit 2
 
       - name: Create release
-        if: ${{ !env.ACT }} && github.event_name != 'pull_request'
+        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
         uses: actions/create-release@v1
         continue-on-error: true
         env:
@@ -241,7 +236,7 @@ jobs:
           prerelease: ${{ env.PRERELEASE }}
 
       - name: Upload NOR FW to release
-        if: ${{ !env.ACT }} && github.event_name != 'pull_request'
+        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
         uses: svenstaro/upload-release-action@v2
         continue-on-error: true
         with:
@@ -252,7 +247,7 @@ jobs:
           overwrite: true
 
       - name: Upload NAND FW to release
-        if: ${{ !env.ACT }} && ${{ env.HAS_NAND }} && github.event_name != 'pull_request'
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.HAS_NAND }}
         uses: svenstaro/upload-release-action@v2
         continue-on-error: true
         with:
@@ -263,7 +258,7 @@ jobs:
           overwrite: true
 
       - name: Send binary file to telegram channel
-        if: ${{ !env.ACT }} && github.event_name != 'pull_request'
+        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
