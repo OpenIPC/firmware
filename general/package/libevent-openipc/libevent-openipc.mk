@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-LIBEVENT_OPENIPC_VERSION = 99fd68abde4a59b90148db733fc51a7256cbd320
+LIBEVENT_OPENIPC_VERSION = 86b5d2e951eaa88cb5fed2be23fa5af85facad4a
 LIBEVENT_OPENIPC_SITE = $(call github,libevent,libevent,$(LIBEVENT_OPENIPC_VERSION))
 LIBEVENT_OPENIPC_INSTALL_STAGING = YES
 LIBEVENT_OPENIPC_LICENSE = BSD-3-Clause, OpenBSD

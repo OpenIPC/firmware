@@ -2,6 +2,20 @@
 ROOT_DIR      := $(CURDIR)
 BR_VER        := 2021.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
+
+ifeq ($(PLATFORM),)
+    ifneq ($(BOARD),)
+		FULL_PATH := $(shell find br-ext-chip-* -name "$(BOARD)*_defconfig")
+		ifeq ($(FULL_PATH),)
+			FULL_PATH := $(error Cannot find anything for $(BOARD))
+		else ifneq ($(shell echo $(FULL_PATH) | wc -w), 1)
+			FULL_PATH := $(error For provided '$(BOARD)' multiple options found: $(FULL_PATH))
+		endif
+
+		PLATFORM := $(shell echo $(FULL_PATH) | cut -d '/' -f 1 | cut -d '-' -f 4 )
+    endif
+endif
+
 BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
 SCRIPTS_DIR   := $(ROOT_DIR)/scripts
 #BOARDS       := $(shell ls -1 $(BR_EXT_DIR)/configs)
