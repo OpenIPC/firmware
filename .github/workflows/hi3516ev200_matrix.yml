@@ -52,8 +52,6 @@ jobs:
       - name: Free disk space
         if: ${{ !env.ACT }}
         run: |
-          sudo swapoff -a
-          sudo rm -f /swapfile
           sudo apt clean
           docker rmi $(docker image ls -aq)
           df -h
@@ -64,9 +62,6 @@ jobs:
           make prepare
           make PLATFORM=hisilicon BOARD=unknown_unknown_${BOARD}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
-          echo $SDK_PATH
-          ls -l .
-          echo ==============================================================
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
           SDK_FILE=$(basename $SDK_PATH)
           echo "SDK_FILE=$SDK_FILE" >> $GITHUB_ENV
@@ -128,8 +123,6 @@ jobs:
       - name: Free disk space
         if: ${{ !env.ACT }}
         run: |
-          sudo swapoff -a
-          sudo rm -f /swapfile
           sudo apt clean
           docker rmi $(docker image ls -aq)
           df -h
@@ -185,15 +178,15 @@ jobs:
           echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_PATH=\"$(pwd)/extsdk\"" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"arm-openipc-linux-musleabi\"" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_HEADERS_4_9=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_GCC_8=y" >> $CONF_PATH
           LIBC="musl"
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
-          mkdir extsdk
-          tar xvf ${{ needs.toolchain.outputs.sdk-file }} --strip-components=1 -C extsdk
+          mkdir /tmp/extsdk
+          tar xvf ${{ needs.toolchain.outputs.sdk-file }} --strip-components=1 -C /tmp/extsdk >/dev/null
 
           make PLATFORM=hisilicon BOARD=$BOARD all
 
@@ -206,6 +199,7 @@ jobs:
           md5sum uImage.${{ matrix.platform }} > uImage.${{ matrix.platform }}.md5sum
           tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
 
+          # TODO: infer from configs
           if [ "$HAS_NAND" == "true" ]; then
             NANDFW_PATH="${GITHUB_WORKSPACE}/output/images/openipc.${{ matrix.platform }}-nand-br.tgz"
             echo "NANDFW_PATH=$NANDFW_PATH" >> $GITHUB_ENV
@@ -222,8 +216,11 @@ jobs:
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
-        if: ${{ !env.ACT }} && steps.build-firmware.outcome != 'success'
+        if: ${{ !env.ACT }} && steps.build-firmware.outcome != 'success' && github.event_name != 'pull_request'
         run: |
+          echo ACT: ${{ !env.ACT }}
+          echo outcome: ${{ steps.build-firmware.outcome }}
+          echo event_name: ${{ github.event_name }}
           TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
           TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${{ matrix.platform }} (${{ matrix.release }})}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
