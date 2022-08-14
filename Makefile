@@ -4,18 +4,16 @@ BR_VER        := 2021.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
 
 ifeq ($(PLATFORM),)
-    ifeq ($(BOARD),)
-		BOARD = $(error BOARD must be set)
+    ifneq ($(BOARD),)
+		FULL_PATH := $(shell find br-ext-chip-* -name "$(BOARD)*_defconfig")
+		ifeq ($(FULL_PATH),)
+			FULL_PATH := $(error Cannot find anything for $(BOARD))
+		else ifneq ($(shell echo $(FULL_PATH) | wc -w), 1)
+			FULL_PATH := $(error For provided '$(BOARD)' multiple options found: $(FULL_PATH))
+		endif
+
+		PLATFORM := $(shell echo $(FULL_PATH) | cut -d '/' -f 1 | cut -d '-' -f 4 )
     endif
-
-	FULL_PATH := $(shell find br-ext-chip-* -name "$(BOARD)*_defconfig")
-	ifeq ($(FULL_PATH),)
-		FULL_PATH := $(error Cannot find anything for $(BOARD))
-	else ifneq ($(shell echo $(FULL_PATH) | wc -w), 1)
-		FULL_PATH := $(error For provided '$(BOARD)' multiple options found: $(FULL_PATH))
-	endif
-
-	PLATFORM := $(shell echo $(FULL_PATH) | cut -d '/' -f 1 | cut -d '-' -f 4 )
 endif
 
 BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
