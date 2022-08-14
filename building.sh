@@ -1,20 +1,15 @@
 #!/bin/bash
 #
-# OpenIPC.org | v.20220813
+# OpenIPC.org (c)
 #
 
 BR_VER=2021.02.12
 
-MAX_KERNEL_SIZE=0x200000               #    2MiB,  2097152
-MAX_KERNEL_SIZE_ULTIMATE=0x300000      #    3MiB,  3145728
-MAX_KERNEL_SIZE_EXPERIMENTAL=0x3E8480  # ~3.9MiB,  4097152
-MAX_ROOTFS_SIZE=0x500000               #    5MiB,  5242880
-MAX_ROOTFS_SIZE_ULTIMATE=0xA00000      #   10MiB,  10485760
-
-clone() {
-  sudo apt-get update -y ; apt-get install -y bc build-essential git unzip rsync autotools-dev automake libtool
-  git clone --depth=1 https://github.com/OpenIPC/firmware.git
-}
+MAX_KERNEL_SIZE=0x200000              #    2MiB,  2097152
+MAX_KERNEL_SIZE_ULTIMATE=0x300000     #    3MiB,  3145728
+MAX_KERNEL_SIZE_EXPERIMENTAL=0x3E8480 # ~3.9MiB,  4097152
+MAX_ROOTFS_SIZE=0x500000              #    5MiB,  5242880
+MAX_ROOTFS_SIZE_ULTIMATE=0xA00000     #   10MiB,  10485760
 
 fresh() {
   echo -e "\nThe start-stop times\n" >/tmp/openipc_buildtime.txt
@@ -38,24 +33,24 @@ should_fit() {
 
 rename() {
   if grep -q ultimate_defconfig ./output/.config || grep -q fpv_defconfig ./output/.config; then
-      should_fit uImage $MAX_KERNEL_SIZE_ULTIMATE
-      should_fit rootfs.squashfs $MAX_ROOTFS_SIZE_ULTIMATE
+    should_fit uImage $MAX_KERNEL_SIZE_ULTIMATE
+    should_fit rootfs.squashfs $MAX_ROOTFS_SIZE_ULTIMATE
   else
-      should_fit uImage $MAX_KERNEL_SIZE
-      should_fit rootfs.squashfs $MAX_ROOTFS_SIZE
+    should_fit uImage $MAX_KERNEL_SIZE
+    should_fit rootfs.squashfs $MAX_ROOTFS_SIZE
   fi
-  mv -v ./output/images/uImage ./output/images/uImage.${soc}
-  mv -v ./output/images/rootfs.squashfs ./output/images/rootfs.squashfs.${soc}
-  mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${soc}.cpio
-  mv -v ./output/images/rootfs.tar ./output/images/rootfs.${soc}.tar
+  mv -v ./output/images/uImage ./output/images/uImage.${SOC}
+  mv -v ./output/images/rootfs.squashfs ./output/images/rootfs.squashfs.${SOC}
+  mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${SOC}.cpio
+  mv -v ./output/images/rootfs.tar ./output/images/rootfs.${SOC}.tar
   date >>/tmp/openipc_buildtime.txt
 }
 
 rename_initramfs() {
   should_fit uImage $MAX_KERNEL_SIZE_EXPERIMENTAL
-  mv -v ./output/images/uImage ./output/images/uImage.initramfs.${soc}
-  mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${soc}.cpio
-  mv -v ./output/images/rootfs.tar ./output/images/rootfs.${soc}.tar
+  mv -v ./output/images/uImage ./output/images/uImage.initramfs.${SOC}
+  mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${SOC}.cpio
+  mv -v ./output/images/rootfs.tar ./output/images/rootfs.${SOC}.tar
   date >>/tmp/openipc_buildtime.txt
   echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
 }
@@ -64,561 +59,170 @@ autoup_rootfs() {
   echo -e "\n"
   curl -L -o ./output/images/u-boot-hi3518ev200-universal.bin https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-hi3518ev200-universal.bin
   echo -e "\n"
-  ./output/host/bin/mkimage -A arm -O linux -T firmware -n 'OpenIPC v.2.2.7' -a 0x000000000000 -e 0x000000050000 -d ./output/images/u-boot-hi3518ev200-universal.bin ./output/images/autoupdate-uboot.img
+  D=$(date "+%y.%m.%d")
+  RELEASE=$(echo OpenIPC v${D:0:1}.${D:1})
+  ./output/host/bin/mkimage -A arm -O linux -T firmware -n $RELEASE -a 0x0 -e 0x50000 -d ./output/images/u-boot-hi3518ev200-universal.bin ./output/images/autoupdate-uboot.img
   echo -e "\n"
-  ./output/host/bin/mkimage -A arm -O linux -T kernel -C none -n 'OpenIPC v2.2.7' -a 0x000000050000 -e 0x000000250000 -d ./output/images/uImage.${soc} ./output/images/autoupdate-kernel.img
+  ./output/host/bin/mkimage -A arm -O linux -T kernel -C none -n $RELEASE -a 0x50000 -e 0x250000 -d ./output/images/uImage.${SOC} ./output/images/autoupdate-kernel.img
   echo -e "\n"
-  ./output/host/bin/mkimage -A arm -O linux -T filesystem -n 'OpenIPC v.2.2.7' -a 0x000000250000 -e 0x000000750000 -d ./output/images/rootfs.squashfs.${soc} ./output/images/autoupdate-rootfs.img
-}
-
-sdk() {
-  make br-sdk
-}
-
-upload() {
-  TFTP_SERVER="root@172.17.32.17:/mnt/bigger-2tb/Rotator/TFTP"
-  echo -e "\n\nStart transferring files to the TFTP server...\n"
-  scp -P 22 -r ./output/images/rootfs.squashfs.* ./output/images/uImage.* ${TFTP_SERVER}
-}
-
-tg_message() {
-  #TG_TOKEN=
-  #TG_CHANNEL=
-  TG_REPLY="${TG_REPLY:=No comment.\nAll details will come later.}"
-  TG_MESSAGE=$(echo -e "\xF0\x9F\x8C\x8D PARADOX" "%0A${TG_REPLY}")
-  #
-  curl -s -k --connect-timeout 30 --max-time 30 -X POST \
-    https://api.telegram.org/bot${TG_TOKEN}/sendMessage -d chat_id="${TG_CHANNEL}" -d disable_notification="true" -d text="${TG_MESSAGE}" >/dev/null 2>&1
+  ./output/host/bin/mkimage -A arm -O linux -T filesystem -n $RELEASE -a 0x250000 -e 0x750000 -d ./output/images/rootfs.squashfs.${SOC} ./output/images/autoupdate-rootfs.img
 }
 
 #################################################################################
 
-ambarella-s3l() {
-  soc="s3l"
-  fresh && make PLATFORM=ambarella BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-ak3918ev200() {
-  soc="ak3918ev200"
-  fresh && make PLATFORM=anyka BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-ak3916ev300() {
-  soc="ak3916ev300"
-  fresh && make PLATFORM=anyka BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-ak3918ev300() {
-  soc="ak3918ev300"
-  fresh && make PLATFORM=anyka BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-fh8833v100() {
-  soc="fh8833v100"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-fh8852v100() {
-  soc="fh8852v100"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-fh8852v200() {
-  soc="fh8852v200"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-fh8852v210() {
-  soc="fh8852v210"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-fh8856v100() {
-  soc="fh8856v100"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-fh8856v200() {
-  soc="fh8856v200"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-fh8856v210() {
-  soc="fh8856v210"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-fh8858v200() {
-  soc="fh8858v200"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-fh8858v210() {
-  soc="fh8858v210"
-  fresh && make PLATFORM=fullhan BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-gk7101() {
-  soc="gk7101"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-gk7101s() {
-  soc="gk7101s"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-gk7102() {
-  soc="gk7102"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-gk7102s() {
-  soc="gk7102s"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-gk7205v200() {
-  soc="gk7205v200"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-gk7205v200_ultimate() {
-  soc="gk7205v200"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_ultimate all && rename
-}
-
-gk7205v200_fpv() {
-  soc="gk7205v200"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_fpv all && rename
-}
-
-gk7205v200_iscom() {
-  soc="gk7205v200"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_iscom all && rename
-}
-
-gk7205v200_ufanet() {
-  soc="gk7205v200"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_ufanet all && rename
-}
-
-gk7205v210() {
-  soc="gk7205v210"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-gk7205v300() {
-  soc="gk7205v300"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-gk7205v300_ultimate() {
-  soc="gk7205v300"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_ultimate all && rename
-}
-
-gk7205v300_fpv() {
-  soc="gk7205v300"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_fpv all && rename
-}
-
-gk7605v100() {
-  soc="gk7605v100"
-  fresh && make PLATFORM=goke BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-gm8135() {
-  soc="gm8135"
-  fresh && make PLATFORM=grainmedia BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-gm8136() {
-  soc="gm8136"
-  fresh && make PLATFORM=grainmedia BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-hi3516cv100() {
-  soc="hi3516cv100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3518ev100() {
-  soc="hi3518ev100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-hi3516cv200() {
-  soc="hi3516cv200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3518ev200() {
-  soc="hi3518ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3518ev200_domsip() {
-  soc="hi3518ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_domsip all && rename
-}
-
-hi3518ev200_hs303() {
-  soc="hi3518ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename && autoup_rootfs
-  #PLATFORM=hisilicon  make br-linux-{dirclean,rebuild}
-  #PLATFORM=hisilicon  make br-mbedtls-openipc-{dirclean,rebuild}
-}
-
-hi3518ev200_ultimate() {
-  soc="hi3518ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
-}
-
-#################################################################################
-
-hi3516cv300() {
-  soc="hi3516cv300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3516cv300_ultimate() {
-  soc="hi3516cv300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
-}
-
-hi3516ev100() {
-  soc="hi3516ev100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-#################################################################################
-
-hi3516av100() {
-  soc="hi3516av100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3516av100_ultimate() {
-  soc="hi3516av100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
-}
-
-hi3516dv100() {
-  soc="hi3516dv100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3516dv100_ultimate() {
-  soc="hi3516dv100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
-}
-
-#################################################################################
-
-hi3519v101() {
-  soc="hi3519v101"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3516av200() {
-  soc="hi3516av200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3516av200_ultimate() {
-  soc="hi3516av200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
-}
-
-#################################################################################
-
-hi3516av300() {
-  soc="hi3516av300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3516cv500() {
-  soc="hi3516cv500"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3516dv300() {
-  soc="hi3516dv300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-hi3516dv200() {
-  soc="hi3516dv200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3516ev200() {
-  soc="hi3516ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3516ev200_dozor() {
-  soc="hi3516ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_dozor all && rename
-}
-
-hi3516ev200_eltis() {
-  soc="hi3516ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_eltis all && rename
-}
-
-hi3516ev200_vixand() {
-  soc="hi3516ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_vixand all && rename
-}
-
-hi3516ev200_ultimate() {
-  soc="hi3516ev200"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
-}
-
-hi3516ev300() {
-  soc="hi3516ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3516ev300_dev() {
-  soc="hi3516ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_dev all && rename
-}
-
-hi3516ev300_fpv() {
-  soc="hi3516ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_fpv all && rename
-}
-
-hi3516ev300_glibc() {
-  soc="hi3516ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_glibc all && rename
-}
-
-hi3516ev300_tehshield() {
-  soc="hi3516ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_tehshield all && rename
-}
-
-hi3516ev300_ultimate() {
-  soc="hi3516ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
-}
-
-hi3518ev300() {
-  soc="hi3518ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3518ev300_ultimate() {
-  soc="hi3518ev300"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_ultimate all && rename
-}
-
-hi3536cv100() {
-  soc="hi3536cv100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3536dv100() {
-  soc="hi3536dv100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-hi3536dv100_vixand() {
-  soc="hi3536dv100"
-  fresh && make PLATFORM=hisilicon BOARD=unknown_unknown_${soc}_vixand all && rename
-}
-
-#################################################################################
-
-msc313e() {
-  soc="msc313e"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-msc313e_baresip() {
-  soc="msc313e"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_baresip all && rename
-}
-
-msc316dc() {
-  soc="msc316dc"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-msc316dm() {
-  soc="msc316dm"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-nt98562() {
-  soc="nt98562"
-  fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_openipc all && rename
-  #PLATFORM=novatek make br-linux-{dirclean,rebuild}
-}
-
-nt98566() {
-  soc="nt98566"
-  fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-nt98566_polcam() {
-  soc="nt98566"
-  fresh && make PLATFORM=novatek BOARD=unknown_unknown_${soc}_polcam all && rename
-}
-
-#################################################################################
-
-rv1109() {
-  soc="rv1109"
-  fresh && make PLATFORM=rockchip BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-rv1126() {
-  soc="rv1126"
-  fresh && make PLATFORM=rockchip BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-ssc325() {
-  soc="ssc325"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-ssc333() {
-  soc="ssc333"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-ssc335() {
-  soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-ssc335_blackbird() {
-  soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_blackbird all && rename
-}
-
-ssc335_goodcam() {
-  soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_goodcam all && rename
-}
-
-ssc335_initramfs() {
-  soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_initramfs all && rename_initramfs
-}
-
-ssc335_musl() {
-  soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_musl all && rename
-}
-
-ssc335_portal() {
-  soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_portal all && rename
-}
-
-ssc335_rotek() {
-  soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_rotek all && rename
-}
-
-ssc335_tiandy() {
-  soc="ssc335"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_tiandy all && rename
-}
-
-ssc337() {
-  soc="ssc337"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-ssc337_kama() {
-  soc="ssc337"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_kama all && rename
-}
-
-#################################################################################
-
-ssc335de() {
-  soc="ssc335de"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-ssc337de() {
-  soc="ssc337de"
-  fresh && make PLATFORM=sigmastar BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-#################################################################################
-
-t10() {
-  soc="t10"
-  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-t20() {
-  soc="t20"
-  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-t30() {
-  soc="t30"
-  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-t31() {
-  soc="t31"
-  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-t31_vixand() {
-  soc="t31"
-  fresh && make PLATFORM=ingenic BOARD=unknown_unknown_${soc}_vixand all && rename
-}
-
-#################################################################################
-
-xm510() {
-  soc="xm510"
-  fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-xm530() {
-  soc="xm530"
-  fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_${soc}_openipc all && rename
-}
-
-xm550() {
-  soc="xm550"
-  fresh && make PLATFORM=xiongmai BOARD=unknown_unknown_${soc}_openipc all && rename
-}
+FUNCS=(
+  ambarella-s3l
+
+  ak3918ev200
+  ak3916ev300
+  ak3918ev300
+
+  fh8833v100
+  fh8852v100
+  fh8852v200
+  fh8852v210
+  fh8856v100
+  fh8856v200
+  fh8856v210
+  fh8858v200
+  fh8858v210
+
+  gk7101
+  gk7101s
+  gk7102
+  gk7102s
+
+  gk7205v200
+  gk7205v200_ultimate
+  gk7205v200_fpv
+  gk7205v200_iscom
+  gk7205v200_ufanet
+  gk7205v210
+  gk7205v300
+  gk7205v300_ultimate
+  gk7205v300_fpv
+  gk7605v100
+
+  gm8135
+  gm8136
+
+  hi3516cv100
+  hi3518ev100
+
+  hi3516cv200
+  hi3518ev200
+  hi3518ev200_domsip
+  hi3518ev200_hs303
+  hi3518ev200_ultimate
+
+  hi3516cv300
+  hi3516cv300_ultimate
+  hi3516ev100
+
+  hi3516av100
+  hi3516av100_ultimate
+  hi3516dv100
+  hi3516dv100_ultimate
+
+  hi3519v101
+  hi3516av200
+  hi3516av200_ultimate
+
+  hi3516av300
+  hi3516cv500
+  hi3516dv300
+
+  hi3516dv200
+  hi3516ev200
+  hi3516ev200_dozor
+  hi3516ev200_eltis
+  hi3516ev200_vixand
+  hi3516ev200_ultimate
+  hi3516ev300
+  hi3516ev300_dev
+  hi3516ev300_fpv
+  hi3516ev300_glibc
+  hi3516ev300_tehshield
+  hi3516ev300_ultimate
+  hi3518ev300
+  hi3518ev300_ultimate
+
+  hi3536cv100
+  hi3536dv100
+  hi3536dv100_vixand
+
+  msc313e
+  msc313e_baresip
+  msc316dc
+  msc316dm
+
+  nt98562
+  nt98566
+  nt98566_polcam
+
+  rv1109
+  rv1126
+
+  ssc325
+  ssc333
+  ssc335
+  ssc335_blackbird
+  ssc335_goodcam
+  ssc335_initramfs
+  ssc335_musl
+  ssc335_portal
+  ssc335_rotek
+  ssc335_tiandy
+  ssc337
+  ssc337_kama
+
+  ssc335de
+  ssc337de
+
+  t10
+  t20
+  t30
+  t31
+  t31_vixand
+
+  xm510
+  xm530
+  xm550
+)
+
+copy_function() {
+  test -n "$(declare -f "$1")" || return
+  eval "${_/$1/$2}"
+}
+
+uni_build() {
+  BOARD=$FUNCNAME
+  SOC=$(echo $BOARD | cut -d '_' -f 1)
+
+  set -e
+  if [ "$(echo $BOARD | cut -d '_' -f 2)" == "" ]; then
+    BOARD="${BOARD}_openipc"
+  elif [ "$BOARD" == "hi3518ev200_hs303" ]; then
+    BOARD=hi3518ev200_openipc
+    NEED_AUTOUP=1
+  fi
+
+  fresh
+  make BOARD=unknown_unknown_${BOARD} all
+  if [ "$BOARD" == "ssc335_initramfs" ]; then
+    rename_initramfs
+  else
+    rename
+  fi
+
+  if [ ! -z "$NEED_AUTOUP" ]; then
+    autoup_rootfs
+  fi
+}
+
+for i in "${FUNCS[@]}"; do
+  copy_function uni_build $i
+done
 
 #################################################################################
 
@@ -627,7 +231,7 @@ xm550() {
 # Build firmware
 #######
 #
-# ambarella-s3l                   # testing..
+# ambarella-s3l                 # testing..
 #
 #######
 #
@@ -782,4 +386,3 @@ xm550() {
 #
 
 echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
-
