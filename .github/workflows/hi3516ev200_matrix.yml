@@ -1,0 +1,266 @@
+name: build
+
+on:
+  pull_request:
+    types:
+      - synchronize
+      - reopened
+      - opened
+    paths-ignore:
+       - '**.md'
+  push:
+    branches:
+      - production
+    tags:
+      - "v*"
+    paths-ignore:
+       - '**.md'
+  schedule:
+      - cron: "00 03 * * *"
+  workflow_dispatch:
+
+jobs:
+  toolchain:
+    name: Build toolchain
+    runs-on: ubuntu-latest
+
+    env:
+      CHIP: hi3516ev200
+
+    outputs:
+      sdk-file: ${{ steps.build-sdk.outputs.sdk-file }}
+
+    steps:
+
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
+
+      - name: Install build dependencies
+        run: |
+          make install-deps
+          mkdir -p tmp
+          if [ ! -z "$ACT" ]; then
+            apt install -y cpio rsync bc
+            echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
+          fi
+
+      - name: Free disk space
+        if: ${{ !env.ACT }}
+        run: |
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+
+      - name: Build Buildroot SDK
+        id: build-sdk
+        run: |
+          set -x
+          make prepare
+          make BOARD=unknown_unknown_${CHIP}_openipc br-sdk
+          SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
+          echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
+          SDK_FILE=$(basename $SDK_PATH)
+          echo "SDK_FILE=$SDK_FILE" >> $GITHUB_ENV
+          echo "::set-output name=sdk-file::$SDK_FILE"
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.SDK_FILE }}
+          path: ${{ env.SDK_PATH }}
+          retention-days: 1
+
+  buildroot:
+    name: Build firmware
+    needs: toolchain
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - hi3516ev200
+          - hi3516ev300
+          - hi3518ev300
+          - hi3516dv200
+        release:
+          - lite
+          - ultimate
+        include:
+          - platform: hi3516ev200
+            release: fpv
+          - platform: hi3516ev300
+            release: fpv
+        exclude:
+          - platform: hi3516dv200
+            release: ultimate
+
+    env:
+      HAS_NAND: ${{ matrix.release == 'ultimate' }} && (${{ matrix.platform == 'hi3516ev300' }} || ${{ matrix.platform == 'hi3516ev200' }})
+
+    steps:
+
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
+
+      - name: Install build dependencies
+        run: |
+          make install-deps
+          mkdir -p tmp
+          if [ ! -z "$ACT" ]; then
+            apt install -y cpio rsync bc
+            echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
+          fi
+
+      - name: Free disk space
+        if: ${{ !env.ACT }}
+        run: |
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+          df -h
+
+      - name: Prepare buildroot
+        id: prepare
+        run: |
+          HEAD_TAG=$(git tag --points-at HEAD)
+          GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
+          BRANCH=$(echo $GITHUB_REF | cut -d'/' -f 3)
+          if [ -z "$HEAD_TAG" ]; then
+            TAG_NAME="latest"
+            RELEASE_NAME="Development Build"
+            PRERELEASE=true
+          else
+            TAG_NAME=${{ github.ref }}
+            RELEASE_NAME="Release ${{ github.ref }}"
+            PRERELEASE=false
+          fi
+          echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+          cd $GITHUB_WORKSPACE
+          make prepare
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.toolchain.outputs.sdk-file }}
+
+      - name: Build firmware
+        run: |
+          BOARD=unknown_unknown_${{ matrix.platform }}
+          if [ "${{ matrix.release }}" != "lite" ]; then
+            SUFF="${{ matrix.release }}-"
+            BOARD="${BOARD}_${{ matrix.release }}"
+          else
+            BOARD="${BOARD}_openipc"
+          fi
+
+          NORFW_PATH="${GITHUB_WORKSPACE}/output/images/openipc.${{ matrix.platform }}-${SUFF}br.tgz"
+          echo "NORFW_PATH=$NORFW_PATH" >> $GITHUB_ENV
+          NORFW_FILE=$(basename $NORFW_PATH)
+          echo "NORFW_FILE=$NORFW_FILE" >> $GITHUB_ENV
+
+          cd $GITHUB_WORKSPACE
+          CONF_PATH=$(find . -name "${BOARD}_defconfig")
+
+          echo Using ${{ needs.toolchain.outputs.sdk-file }}
+          echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"arm-openipc-linux-musleabi\"" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_HEADERS_4_9=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_GCC_8=y" >> $CONF_PATH
+          LIBC="musl"
+          echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
+          mkdir /tmp/extsdk
+          tar xvf ${{ needs.toolchain.outputs.sdk-file }} --strip-components=1 -C /tmp/extsdk >/dev/null
+
+          make BOARD=$BOARD all
+
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
+          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 10485760 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 10485760... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
+          cd ${GITHUB_WORKSPACE}/output/images
+          mv uImage uImage.${{ matrix.platform }}
+          mv rootfs.squashfs rootfs.squashfs.${{ matrix.platform }}
+          md5sum rootfs.squashfs.${{ matrix.platform }} > rootfs.squashfs.${{ matrix.platform }}.md5sum
+          md5sum uImage.${{ matrix.platform }} > uImage.${{ matrix.platform }}.md5sum
+          tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
+
+          # TODO: infer from configs
+          if [ "$HAS_NAND" == "true" ]; then
+            NANDFW_PATH="${GITHUB_WORKSPACE}/output/images/openipc.${{ matrix.platform }}-nand-br.tgz"
+            echo "NANDFW_PATH=$NANDFW_PATH" >> $GITHUB_ENV
+            NANDFW_FILE=$(basename $NANDFW_PATH)
+            echo "NANDFW_FILE=$NANDFW_FILE" >> $GITHUB_ENV
+
+            mv rootfs.ubi rootfs.ubi.${{ matrix.platform }}
+            mv rootfs.ubifs rootfs.ubifs.${{ matrix.platform }}
+            md5sum rootfs.ubifs.${{ matrix.platform }} > rootfs.ubifs.${{ matrix.platform }}.md5sum
+            tar -cvzf $NANDFW_PATH uImage* *rootfs.ubi*.${{ matrix.platform }}*
+          fi
+
+      - name: Send error message to telegram channel
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
+          TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
+        if: ${{ !env.ACT && failure() && github.event_name != 'pull_request' }}
+        run: |
+          TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
+          TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${{ matrix.platform }} (${{ matrix.release }})}"
+          TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
+          curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
+            -F chat_id=$TG_CHANNEL -F text="$TG_HEADER"
+          exit 2
+
+      - name: Create release
+        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
+        uses: actions/create-release@v1
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: ${{ env.RELEASE_NAME }}
+          draft: false
+          prerelease: ${{ env.PRERELEASE }}
+
+      - name: Upload NOR FW to release
+        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
+        uses: svenstaro/upload-release-action@v2
+        continue-on-error: true
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.NORFW_PATH }}
+          asset_name: ${{ env.NORFW_FILE }}
+          tag: ${{ env.TAG_NAME }}
+          overwrite: true
+
+      - name: Upload NAND FW to release
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.HAS_NAND }}
+        uses: svenstaro/upload-release-action@v2
+        continue-on-error: true
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.NANDFW_PATH }}
+          asset_name: ${{ env.NANDFW_FILE }}
+          tag: ${{ env.TAG_NAME }}
+          overwrite: true
+
+      - name: Send binary file to telegram channel
+        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
+          TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
+        run: |
+          TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
+          TG_HEADER=$(echo -e "\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9C\x85 GitHub Actions")
+          curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendDocument \
+            -F chat_id=$TG_CHANNEL -F document="@$NORFW_PATH" -F caption="$TG_HEADER"

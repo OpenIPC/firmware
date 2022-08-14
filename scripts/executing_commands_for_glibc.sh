@@ -3,7 +3,8 @@
 # Please check BR2_ROOTFS_POST_BUILD_SCRIPT option in config
 #
 
-date "+OPENIPC_VERSION=2.2.%m.%d" >>${TARGET_DIR}/usr/lib/os-release
+D=$(date "+%y.%m.%d")
+echo "OPENIPC_VERSION=${D:0:1}.${D:1}" >>${TARGET_DIR}/usr/lib/os-release
 date "+GITHUB_VERSION=\"${BRANCH_NAME}+${GIT_HASH}, %Y-%m-%d\"" >>${TARGET_DIR}/usr/lib/os-release
 if grep -q fpv_defconfig ${BR2_CONFIG}; then
     echo "BUILD_OPTION=fpv" >>${TARGET_DIR}/usr/lib/os-release
