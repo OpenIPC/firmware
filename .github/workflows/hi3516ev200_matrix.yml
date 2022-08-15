@@ -57,6 +57,7 @@ jobs:
       - name: Build Buildroot SDK
         id: build-sdk
         run: |
+          set -x
           make prepare
           make BOARD=unknown_unknown_${FAMILY}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
