@@ -45,6 +45,9 @@ jobs:
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
+          else
+            # https://github.com/actions/runner-images/issues/2577
+            echo "1.1.1.1 invisible-mirror.net" | sudo tee -a /etc/hosts
           fi
 
       - name: Free disk space
@@ -112,6 +115,9 @@ jobs:
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
+          else
+            # https://github.com/actions/runner-images/issues/2577
+            echo "1.1.1.1 invisible-mirror.net" | sudo tee -a /etc/hosts
           fi
 
       - name: Free disk space
@@ -141,7 +147,6 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
-          cd $GITHUB_WORKSPACE
           make prepare
 
       - uses: actions/download-artifact@v3
@@ -163,7 +168,6 @@ jobs:
           NORFW_FILE=$(basename $NORFW_PATH)
           echo "NORFW_FILE=$NORFW_FILE" >> $GITHUB_ENV
 
-          cd $GITHUB_WORKSPACE
           CONF_PATH=$(find . -name "${BOARD}_defconfig")
 
           echo Using ${{ needs.toolchain.outputs.sdk-file }}
@@ -221,7 +225,6 @@ jobs:
       - name: Create release
         if: ${{ !env.ACT && github.event_name != 'pull_request' }}
         uses: actions/create-release@v1
-        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -233,7 +236,6 @@ jobs:
       - name: Upload NOR FW to release
         if: ${{ !env.ACT && github.event_name != 'pull_request' }}
         uses: svenstaro/upload-release-action@v2
-        continue-on-error: true
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.NORFW_PATH }}
@@ -244,7 +246,6 @@ jobs:
       - name: Upload NAND FW to release
         if: ${{ !env.ACT && github.event_name != 'pull_request' && env.HAS_NAND == 'y' }}
         uses: svenstaro/upload-release-action@v2
-        continue-on-error: true
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.NANDFW_PATH }}
