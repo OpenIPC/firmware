@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CHIP: hi3516ev200
+      FAMILY: hi3516ev200
 
     outputs:
       sdk-file: ${{ steps.build-sdk.outputs.sdk-file }}
@@ -45,6 +45,9 @@ jobs:
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
+          else
+            # https://github.com/actions/runner-images/issues/2577
+            echo "1.1.1.1 invisible-mirror.net" | sudo tee -a /etc/hosts
           fi
 
       - name: Free disk space
@@ -59,7 +62,7 @@ jobs:
         run: |
           set -x
           make prepare
-          make BOARD=unknown_unknown_${CHIP}_openipc br-sdk
+          make BOARD=unknown_unknown_${FAMILY}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
           SDK_FILE=$(basename $SDK_PATH)
@@ -97,9 +100,6 @@ jobs:
           - platform: hi3516dv200
             release: ultimate
 
-    env:
-      HAS_NAND: ${{ matrix.release == 'ultimate' }} && (${{ matrix.platform == 'hi3516ev300' }} || ${{ matrix.platform == 'hi3516ev200' }})
-
     steps:
 
       - name: Checkout
@@ -115,6 +115,9 @@ jobs:
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
+          else
+            # https://github.com/actions/runner-images/issues/2577
+            echo "1.1.1.1 invisible-mirror.net" | sudo tee -a /etc/hosts
           fi
 
       - name: Free disk space
@@ -144,7 +147,6 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
-          cd $GITHUB_WORKSPACE
           make prepare
 
       - uses: actions/download-artifact@v3
@@ -166,7 +168,6 @@ jobs:
           NORFW_FILE=$(basename $NORFW_PATH)
           echo "NORFW_FILE=$NORFW_FILE" >> $GITHUB_ENV
 
-          cd $GITHUB_WORKSPACE
           CONF_PATH=$(find . -name "${BOARD}_defconfig")
 
           echo Using ${{ needs.toolchain.outputs.sdk-file }}
@@ -183,6 +184,9 @@ jobs:
           mkdir /tmp/extsdk
           tar xvf ${{ needs.toolchain.outputs.sdk-file }} --strip-components=1 -C /tmp/extsdk >/dev/null
 
+          HAS_NAND=$(make BOARD=${BOARD} has-nand)
+          echo "HAS_NAND=$HAS_NAND" >> $GITHUB_ENV
+
           make BOARD=$BOARD all
 
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
@@ -194,8 +198,7 @@ jobs:
           md5sum uImage.${{ matrix.platform }} > uImage.${{ matrix.platform }}.md5sum
           tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
 
-          # TODO: infer from configs
-          if [ "$HAS_NAND" == "true" ]; then
+          if [ "$HAS_NAND" == "y" ]; then
             NANDFW_PATH="${GITHUB_WORKSPACE}/output/images/openipc.${{ matrix.platform }}-nand-br.tgz"
             echo "NANDFW_PATH=$NANDFW_PATH" >> $GITHUB_ENV
             NANDFW_FILE=$(basename $NANDFW_PATH)
@@ -223,7 +226,6 @@ jobs:
       - name: Create release
         if: ${{ !env.ACT && github.event_name != 'pull_request' }}
         uses: actions/create-release@v1
-        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -235,7 +237,6 @@ jobs:
       - name: Upload NOR FW to release
         if: ${{ !env.ACT && github.event_name != 'pull_request' }}
         uses: svenstaro/upload-release-action@v2
-        continue-on-error: true
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.NORFW_PATH }}
@@ -244,9 +245,8 @@ jobs:
           overwrite: true
 
       - name: Upload NAND FW to release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.HAS_NAND }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.HAS_NAND == 'y' }}
         uses: svenstaro/upload-release-action@v2
-        continue-on-error: true
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.NANDFW_PATH }}
