@@ -31,7 +31,7 @@ load_majestic() {
 # The daemon does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
 start() {
 	logger -s -p daemon.info -t sigmastar "Check MAC for Sigmastar devices"
-	if [ "$(fw_printenv -n ethaddr)" = "D0:22:12:88:88:88" ]; then
+	if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
 		logger -s -p daemon.info -t sigmastar "The eth0 interface has a lousy MAC, let's try to change it.."
 	else
 		logger -s -p daemon.info -t sigmastar "The eth0 interface has a correct MAC - $(fw_printenv -n ethaddr)"
