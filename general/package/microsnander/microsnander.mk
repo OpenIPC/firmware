@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MICROSNANDER_VERSION = df9cc51c27a84c2d7eee8d90b7586a11d97c7ff2
+MICROSNANDER_VERSION = 17ad43fe93126fcff5135c54d7d375f5dd901387
 MICROSNANDER_SITE = $(call github,openipc,microsnander,$(MICROSNANDER_VERSION))
 MICROSNANDER_LICENSE = MIT
 MICROSNANDER_LICENSE_FILES = LICENSE
@@ -14,7 +14,7 @@ define MICROSNANDER_BUILD_CMDS
 endef
 
 define MICROSNANDER_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 0755 -D $(@D)/src/snander $(TARGET_DIR)/usr/sbin/microsnander
+	$(INSTALL) -m 0755 -D $(@D)/src/microsnander $(TARGET_DIR)/usr/sbin/microsnander
 endef
 
 $(eval $(generic-package))
