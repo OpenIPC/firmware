@@ -23,6 +23,9 @@ jobs:
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
             # Mitigate #325 issue
             apt install -y pip && pip install cmake
+          else
+            # https://github.com/actions/runner-images/issues/2577
+            echo "1.1.1.1 invisible-mirror.net" | sudo tee -a /etc/hosts
           fi
 
       - name: Free disk space
