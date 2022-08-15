@@ -184,6 +184,9 @@ jobs:
           mkdir /tmp/extsdk
           tar xvf ${{ needs.toolchain.outputs.sdk-file }} --strip-components=1 -C /tmp/extsdk >/dev/null
 
+          HAS_NAND=$(make BOARD=${BOARD} has-nand)
+          echo "HAS_NAND=$HAS_NAND" >> $GITHUB_ENV
+
           make BOARD=$BOARD all
 
           [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
@@ -195,8 +198,6 @@ jobs:
           md5sum uImage.${{ matrix.platform }} > uImage.${{ matrix.platform }}.md5sum
           tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
 
-          HAS_NAND=$(make BOARD=${BOARD} has-nand)
-          echo "HAS_NAND=$HAS_NAND" >> $GITHUB_ENV
           if [ "$HAS_NAND" == "y" ]; then
             NANDFW_PATH="${GITHUB_WORKSPACE}/output/images/openipc.${{ matrix.platform }}-nand-br.tgz"
             echo "NANDFW_PATH=$NANDFW_PATH" >> $GITHUB_ENV
