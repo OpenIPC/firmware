@@ -78,11 +78,9 @@ fresh() {
     echo_c 31 "Buildroot sources not found."
   fi
 
-  if [ ! -f ${SRC_CACHE_DIR}/buildroot-${BR_VER}.tar.gz ]; then
-    echo_c 34 "Downloading Buildroot sources to cache directory ..."
-    log_and_run "curl -s -v -k -L -o ${SRC_CACHE_DIR}/buildroot-${BR_VER}.tar.gz https://buildroot.org/downloads/buildroot-${BR_VER}.tar.gz"
-    echo_c 34 "Done.\n"
-  fi
+  echo_c 34 "Downloading Buildroot sources to cache directory ..."
+  log_and_run "curl --continue-at - --output ${SRC_CACHE_DIR}/buildroot-${BR_VER}.tar.gz https://buildroot.org/downloads/buildroot-${BR_VER}.tar.gz"
+  echo_c 34 "Done.\n"
 
   echo_c 34 "Extracting a fresh copy of Buildroot from Buildroot sources ..."
   log_and_run "tar xvf ${SRC_CACHE_DIR}/buildroot-${BR_VER}.tar.gz"
@@ -138,7 +136,7 @@ rename_initramfs() {
 
 autoup_rootfs() {
   echo_c 34 "Downloading u-boot-hi3518ev200-universal.bin"
-  curl -L -o ./output/images/u-boot-hi3518ev200-universal.bin \
+  curl --location --output ./output/images/u-boot-hi3518ev200-universal.bin \
     https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-hi3518ev200-universal.bin
 
   echo_c 34 "Making autoupdate firmware image"
