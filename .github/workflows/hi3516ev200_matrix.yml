@@ -10,13 +10,11 @@ on:
        - '**.md'
   push:
     branches:
-      - production
+      - master
     tags:
       - "v*"
     paths-ignore:
        - '**.md'
-  schedule:
-      - cron: "00 03 * * *"
   workflow_dispatch:
 
 jobs:
@@ -74,6 +72,28 @@ jobs:
           name: ${{ env.SDK_FILE }}
           path: ${{ env.SDK_PATH }}
           retention-days: 1
+
+      - name: Create release
+        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
+        uses: actions/create-release@v1
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: ${{ env.RELEASE_NAME }}
+          draft: false
+          prerelease: ${{ env.PRERELEASE }}
+
+      - name: Upload SDK to release
+        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ env.SDK_PATH }}
+          asset_name: ${{ env.SDK_FILE }}
+          tag: ${{ env.TAG_NAME }}
+          overwrite: true
 
   buildroot:
     name: Build firmware
@@ -226,6 +246,7 @@ jobs:
       - name: Create release
         if: ${{ !env.ACT && github.event_name != 'pull_request' }}
         uses: actions/create-release@v1
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
