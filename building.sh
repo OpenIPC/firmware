@@ -80,7 +80,7 @@ fresh() {
 
   if [ ! -f ${SRC_CACHE_DIR}/buildroot-${BR_VER}.tar.gz ]; then
     echo_c 34 "Downloading Buildroot sources to cache directory ..."
-    log_and_run "curl -s -L -o ${SRC_CACHE_DIR}/buildroot-${BR_VER}.tar.gz https://buildroot.org/downloads/buildroot-${BR_VER}.tar.gz"
+    log_and_run "curl -s -v -k -L -o ${SRC_CACHE_DIR}/buildroot-${BR_VER}.tar.gz https://buildroot.org/downloads/buildroot-${BR_VER}.tar.gz"
     echo_c 34 "Done.\n"
   fi
 
