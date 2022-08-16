@@ -22,8 +22,12 @@ jobs:
     name: Toolchain
     runs-on: ubuntu-latest
 
-    env:
-      FAMILY: hi3516ev200
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - hi3516cv500
+          - hi3516ev200
 
     steps:
 
@@ -34,7 +38,7 @@ jobs:
 
       - name: Determine toolchain name
         run: |
-          TOOLNAME=$(make BOARD=unknown_unknown_${FAMILY}_openipc toolname)
+          TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
       - name: Install build dependencies
@@ -56,7 +60,6 @@ jobs:
           docker rmi $(docker image ls -aq)
 
       - name: Build Buildroot SDK
-        id: build-sdk
         run: |
           HEAD_TAG=$(git tag --points-at HEAD)
           GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
@@ -75,9 +78,14 @@ jobs:
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
 
           make prepare
-          make BOARD=unknown_unknown_${FAMILY}_openipc br-sdk
+          make BOARD=unknown_unknown_${{ matrix.platform }}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
+
+      - name: Determine toolchain name
+        run: |
+          TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
+          echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@v3
         with:
@@ -158,7 +166,6 @@ jobs:
           docker rmi $(docker image ls -aq)
 
       - name: Prepare buildroot
-        id: prepare
         run: |
           HEAD_TAG=$(git tag --points-at HEAD)
           GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
@@ -205,11 +212,26 @@ jobs:
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"arm-openipc-linux-musleabi\"" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_HEADERS_4_9=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_GCC_8=y" >> $CONF_PATH
-          LIBC="musl"
+
+          LIBC=$(echo $TOOLNAME | cut -d '-' -f 3)
+          PREFIX="arm-openipc-linux-"
+          case "$LIBC" in
+            musl|uclibc)
+              PREFIX="${PREFIX}${LIBC}eabi"
+            ;;
+            glibc)
+              PREFIX="${PREFIX}gnueabi"
+            ;;
+          esac
+          arm-openipc-linux-gnueabi-gcc
+          PREFIX=$(echo $TOOLNAME | cut )
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
+          CAP_LIBC=$(echo $LIBC | tr a-z A-Z)
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_${CAP_LIBC}=y" >> $CONF_PATH
+          LXHDRS=$(echo $TOOLNAME | cut -d '-' -f 4)
+          echo "BR2_TOOLCHAIN_EXTERNAL_HEADERS_${LXHDRS}=y" >> $CONF_PATH
+          GCC_VER=$(echo $TOOLNAME | cut -d '-' -f 2)
+          echo "BR2_TOOLCHAIN_EXTERNAL_GCC_${GCC_VER:3}=y" >> $CONF_PATH
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
           mkdir /tmp/extsdk
           tar xvf $TOOLNAME --strip-components=1 -C /tmp/extsdk >/dev/null
