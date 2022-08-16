@@ -46,7 +46,7 @@ log_and_run() {
 
 clone() {
   sudo apt-get update -y
-  apt-get install -y bc build-essential git unzip rsync autotools-dev automake libtool
+  sudo apt-get install -y automake autotools-dev bc build-essential fzf git libtool rsync unzip
   git clone --depth=1 https://github.com/OpenIPC/firmware.git
 }
 
@@ -179,6 +179,7 @@ FUNCS=(
   gk7102
   gk7102s
 
+  gk7202v300
   gk7205v200
   gk7205v200_ultimate
   gk7205v200_fpv
@@ -218,6 +219,8 @@ FUNCS=(
 
   hi3516dv200
   hi3516ev200
+  hi3516ev200_eltis
+  hi3516ev200_fpv
   hi3516ev200_ultimate
   hi3516ev300
   hi3516ev300_dev
@@ -239,7 +242,6 @@ FUNCS=(
 
   nt98562
   nt98566
-  nt98566_polcam
 
   rv1109
   rv1126
@@ -312,161 +314,7 @@ for i in "${FUNCS[@]}"; do
   copy_function uni_build $i
 done
 
-#################################################################################
-
-#################################################################################
-
-# Build firmware
 #######
-#
-# ambarella-s3l                 # testing..
-#
-#######
-#
-# ak3918ev200                   # testing..
-# ak3916ev300                   # testing..
-# ak3918ev300                   # testing..
-#
-#######
-#
-# fh8833v100                    # testing..
-# fh8852v100                    # testing..
-# fh8852v200                    # testing..
-# fh8852v210                    # testing..
-# fh8856v100                    # testing..
-# fh8856v200                    # testing..
-# fh8856v210                    # testing..
-# fh8858v200                    # testing..
-# fh8858v210                    # testing..
-#
-#######
-#
-# gm8135                        # testing..
-# gm8136                        # testing..
-#
-#######
-#
-# gk7101                        # testing..
-# gk7101s                       # testing..
-# gk7102                        # testing..
-# gk7102s                       # testing..
-#
-#######
-#
-# gk7202v300                    # testing..
-# gk7205v200                    # OpenIPC
-# gk7205v200_ultimate           # OpenIPC_ultimate version
-# gk7205v200_fpv                # FPV (ultimate by default)
-# gk7205v210                    # OpenIPC
-# gk7205v300                    # OpenIPC
-# gk7205v300_ultimate           # OpenIPC_ultimate version
-# gk7205v300_fpv                # FPV (ultimate by default)
-# gk7605v100                    # testing..
-#
-#######
-#
-# hi3516cv100                   # OpenIPC
-# hi3518ev100                   # OpenIPC
-#
-# hi3516cv200                   # testing..
-# hi3516cv200                   # testing..
-# hi3518ev200                   # OpenIPC
-# hi3518ev200_hs303             # OpenIPC
-# hi3518ev200_ultimate          # OpenIPC_ultimate version
-#
-# hi3516av100                   # OpenIPC
-# hi3516av100_ultimate          # OpenIPC_ultimate version
-# hi3516dv100                   # OpenIPC
-# hi3516dv100_ultimate          # OpenIPC_ultimate version
-#
-# hi3516cv300                   # OpenIPC
-# hi3516cv300_ultimate          # OpenIPC_ultimate version
-# hi3516ev100                   # OpenIPC
-#
-# hi3516dv200                   # OpenIPC
-# hi3516ev200                   # OpenIPC
-# hi3516ev200_fpv               # FPV (ultimate by default)
-# hi3516ev200_eltis             # Eltis
-# hi3516ev200_ultimate          # OpenIPC_ultimate version
-# hi3516ev300                   # OpenIPC
-# hi3516ev300_dev               # OpenIPC development
-# hi3516ev300_fpv               # FPV (ultimate by default)
-# hi3516ev300_glibc             # testing..
-# hi3516ev300_tehshield         # Tehshield
-# hi3516ev300_ultimate          # OpenIPC_ultimate version
-# hi3518ev300                   # OpenIPC
-# hi3518ev300_ultimate          # OpenIPC_ultimate version
-#
-# hi3519v101                    # OpenIPC
-# hi3516av200                   # OpenIPC
-# hi3516av200_ultimate          # OpenIPC_ultimate version
-#
-# hi3516av300                   # testing..
-# hi3516cv500                   # testing..
-# hi3516dv300                   # testing..
-#
-# hi3536cv100                   # OpenIPC
-# hi3536dv100                   # OpenIPC
-# hi3536dv100_vixand            # Vixand
-#
-#######
-#
-# msc313e                       # OpenIPC
-# msc313e_baresip               # OpenIPC
-# msc316dc                      # OpenIPC
-# msc316dm                      # OpenIPC
-#
-#######
-#
-# nt98562                       # OpenIPC
-# nt98566                       # OpenIPC
-# nt98566_polcam                # Polcam
-#
-#######
-#
-# rv1109                        # testing..
-# rv1126                        # testing..
-#
-#######
-#
-# ssc325                        # OpenIPC
-#
-# ssc333                        # OpenIPC
-#
-# ssc335                        # OpenIPC
-# ssc335_blackbird              # BlackBird
-# ssc335_goodcam                # GoodCam
-# ssc335_initramfs              # Initramfs
-# ssc335_musl                   # Musl
-# ssc335_portal                 # Portal (partner)
-# ssc335_rotek                  # Rotek
-# ssc335_tiandy                 # Tiandy
-#
-# ssc335de                      # OpenIPC
-#
-# ssc337                        # OpenIPC => musl
-# ssc337_kama                   # uClibc
-#
-# ssc337de                      # OpenIPC
-#
-#######
-#
-# t10                           # OpenIPC
-# t20                           # OpenIPC
-# t30                           # OpenIPC
-# t31                           # OpenIPC
-# t31_vixand                    # Vixand partner
-#
-#######
-#
-# xm510                         # testing
-# xm530                         # OK
-# xm550                         # OK
-#
-#######
-#
-# More examples see here: https://openipc.github.io/wiki/
-#
 
 CMD=$1
 
@@ -487,3 +335,4 @@ fi
 
 echo_c 37 "Building OpenIPC ${CMD}"
 uni_build $CMD
+
