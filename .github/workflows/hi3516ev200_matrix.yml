@@ -106,7 +106,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.SDK_PATH }}
-          asset_name: ${{ env.TOOLNAME + ".tgz" }}
+          asset_name: '${{ env.TOOLNAME }}.tgz'
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -188,7 +188,7 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: ${{ env.TOOLNAME + ".tgz" }}
+          name: '${{ env.TOOLNAME }}.tgz'
 
       - name: Build firmware
         run: |
