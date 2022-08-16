@@ -106,7 +106,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.SDK_PATH }}
-          asset_name: ${{ env.TOOLNAME }}
+          asset_name: ${{ env.TOOLNAME + ".tgz" }}
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
@@ -188,7 +188,7 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: ${{ env.TOOLNAME }}
+          name: ${{ env.TOOLNAME + ".tgz" }}
 
       - name: Build firmware
         run: |
@@ -223,7 +223,6 @@ jobs:
               PREFIX="${PREFIX}gnueabi"
             ;;
           esac
-          arm-openipc-linux-gnueabi-gcc
           PREFIX=$(echo $TOOLNAME | cut )
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
           CAP_LIBC=$(echo $LIBC | tr a-z A-Z)
@@ -234,7 +233,7 @@ jobs:
           echo "BR2_TOOLCHAIN_EXTERNAL_GCC_${GCC_VER:3}=y" >> $CONF_PATH
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
           mkdir /tmp/extsdk
-          tar xvf $TOOLNAME --strip-components=1 -C /tmp/extsdk >/dev/null
+          tar xvf ${TOOLNAME}.tgz --strip-components=1 -C /tmp/extsdk >/dev/null
 
           HAS_NAND=$(make BOARD=${BOARD} has-nand)
           echo "HAS_NAND=$HAS_NAND" >> $GITHUB_ENV
