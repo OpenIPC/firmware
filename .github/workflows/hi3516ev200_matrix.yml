@@ -82,11 +82,6 @@ jobs:
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
 
-      - name: Determine toolchain name
-        run: |
-          TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
-          echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
-
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.TOOLNAME }}
@@ -185,6 +180,11 @@ jobs:
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
           make prepare
+
+      - name: Determine toolchain name
+        run: |
+          TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
+          echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
       - uses: actions/download-artifact@v3
         with:
