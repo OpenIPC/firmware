@@ -3,22 +3,101 @@
 # OpenIPC.org (c)
 #
 
+#
+# Constants
+#
+
 BR_VER=2020.02.12
 
 MAX_KERNEL_SIZE=0x200000              #    2MiB,  2097152
 MAX_KERNEL_SIZE_ULTIMATE=0x300000     #    3MiB,  3145728
 MAX_KERNEL_SIZE_EXPERIMENTAL=0x3E8480 # ~3.9MiB,  4097152
 MAX_ROOTFS_SIZE=0x500000              #    5MiB,  5242880
-MAX_ROOTFS_SIZE_ULTIMATE=0xA00000     #   10MiB,  10485760
+MAX_ROOTFS_SIZE_ULTIMATE=0xA00000     #   10MiB, 10485760
+
+_d=$(date +"+%y.%m.%d")
+OPENIPC_VER=$(echo OpenIPC v${_d:0:1}.${_d:1})
+unset _d
+
+SRC_CACHE_DIR="/tmp/buildroot_dl"
+
+#
+# Functions
+#
+
+echo_c() {
+  # 30 grey
+  # 31 red
+  # 32 green
+  # 33 yellow
+  # 34 blue
+  # 35 magenta
+  # 36 cyan
+  # 37 white
+  echo -e "\e[1;$1m$2\e[0m"
+}
+
+log_and_run() {
+  _command=$1
+  echo_c 35 "$_command"
+  $_command
+  unset _command
+}
+
+clone() {
+  sudo apt-get update -y
+  apt-get install -y bc build-essential git unzip rsync autotools-dev automake libtool
+  git clone --depth=1 https://github.com/OpenIPC/firmware.git
+}
 
 fresh() {
-  echo -e "\nThe start-stop times\n" >/tmp/openipc_buildtime.txt
+  if [ -d "$SRC_CACHE_DIR" ]; then
+    echo_c 36 "Found cache directory."
+  else
+    echo_c 31 "Cache directory not found."
+    echo_c 34 "Creating cache directory ..."
+    log_and_run "mkdir -p ${SRC_CACHE_DIR}"
+    echo_c 34 "Done.\n"
+  fi
+
+  if [ -d "buildroot-${BR_VER}" ]; then
+    echo_c 36 "Found existing Buildroot directory."
+
+    if [ -d "buildroot-${BR_VER}/dl" ]; then
+      echo_c 36 "Found existing Buildroot downloads directory."
+      echo_c 34 "Copying Buildroot downloads to cache directory ..."
+      log_and_run "cp -rv buildroot-${BR_VER}/dl/* ${SRC_CACHE_DIR}"
+      echo_c 34 "Done.\n"
+    fi
+
+    echo_c 34 "Cleaning source directory."
+    echo_c 35 "make distclean"
+    make distclean
+    echo_c 34 "Done.\n"
+  else
+    echo_c 31 "Buildroot sources not found."
+  fi
+
+  if [ ! -f ${SRC_CACHE_DIR}/buildroot-${BR_VER}.tar.gz ]; then
+    echo_c 34 "Downloading Buildroot sources to cache directory ..."
+    log_and_run "curl -s -L -o ${SRC_CACHE_DIR}/buildroot-${BR_VER}.tar.gz https://buildroot.org/downloads/buildroot-${BR_VER}.tar.gz"
+    echo_c 34 "Done.\n"
+  fi
+
+  echo_c 34 "Extracting a fresh copy of Buildroot from Buildroot sources ..."
+  log_and_run "tar xvf ${SRC_CACHE_DIR}/buildroot-${BR_VER}.tar.gz"
+  echo_c 34 "Done.\n"
+
+  echo_c 34 "Copying cached source files back to Buildroot ..."
+  log_and_run "mkdir -p buildroot-${BR_VER}/dl/"
+  log_and_run "cp -rv ${SRC_CACHE_DIR}/* buildroot-${BR_VER}/dl/"
+  echo_c 34 "Done.\n"
+
+  # make prepare
+
+  echo_c 33 "Start building OpenIPC Firmware ${OPENIPC_VER} for ${SOC}."
+  echo "The start-stop times" >/tmp/openipc_buildtime.txt
   date >>/tmp/openipc_buildtime.txt
-  [ -d buildroot-${BR_VER}/dl ] && mv buildroot-${BR_VER}/dl .
-  rm -rf ./dl/majestic ./dl/ipctool ./dl/microbe-web
-  make distclean #clean
-  [ -d buildroot-${BR_VER} ] && echo -e "\nBuildroot found, OK\n" || make prepare
-  [ -d dl ] && mv dl buildroot-${BR_VER}/dl || return 0
 }
 
 should_fit() {
@@ -27,6 +106,7 @@ should_fit() {
   filesize=$(stat --printf="%s" ./output/images/$filename)
   if [[ $filesize -gt $maxsize ]]; then
     export TG_NOTIFY="Warning: $filename is too large: $filesize vs $maxsize"
+    echo_c 31 "Warning: $filename is too large: $filesize vs $maxsize"
     exit 1
   fi
 }
@@ -44,6 +124,7 @@ rename() {
   mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${SOC}.cpio
   mv -v ./output/images/rootfs.tar ./output/images/rootfs.${SOC}.tar
   date >>/tmp/openipc_buildtime.txt
+  echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
 }
 
 rename_initramfs() {
@@ -56,16 +137,24 @@ rename_initramfs() {
 }
 
 autoup_rootfs() {
-  echo -e "\n"
-  curl -L -o ./output/images/u-boot-hi3518ev200-universal.bin https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-hi3518ev200-universal.bin
-  echo -e "\n"
-  D=$(date "+%y.%m.%d")
-  RELEASE=$(echo OpenIPC v${D:0:1}.${D:1})
-  ./output/host/bin/mkimage -A arm -O linux -T firmware -n $RELEASE -a 0x0 -e 0x50000 -d ./output/images/u-boot-hi3518ev200-universal.bin ./output/images/autoupdate-uboot.img
-  echo -e "\n"
-  ./output/host/bin/mkimage -A arm -O linux -T kernel -C none -n $RELEASE -a 0x50000 -e 0x250000 -d ./output/images/uImage.${SOC} ./output/images/autoupdate-kernel.img
-  echo -e "\n"
-  ./output/host/bin/mkimage -A arm -O linux -T filesystem -n $RELEASE -a 0x250000 -e 0x750000 -d ./output/images/rootfs.squashfs.${SOC} ./output/images/autoupdate-rootfs.img
+  echo_c 34 "Downloading u-boot-hi3518ev200-universal.bin"
+  curl -L -o ./output/images/u-boot-hi3518ev200-universal.bin \
+    https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-hi3518ev200-universal.bin
+
+  echo_c 34 "Making autoupdate firmware image"
+  ./output/host/bin/mkimage -A arm -O linux -T firmware -n "$OPENIPC_VER" \
+    -a 0x0 -e 0x50000 -d ./output/images/u-boot-hi3518ev200-universal.bin \
+    ./output/images/autoupdate-uboot.img
+
+  echo_c 34 "Making autoupdate kernel image"
+  ./output/host/bin/mkimage -A arm -O linux -T kernel -C none -n "$OPENIPC_VER" \
+    -a 0x50000 -e 0x250000 -d ./output/images/uImage.${SOC} \
+    ./output/images/autoupdate-kernel.img
+
+  echo_c 34 "Making autoupdate rootfs image"
+  ./output/host/bin/mkimage -A arm -O linux -T filesystem -n "$OPENIPC_VER" \
+    -a 0x250000 -e 0x750000 -d ./output/images/rootfs.squashfs.${SOC} \
+    ./output/images/autoupdate-rootfs.img
 }
 
 #################################################################################
@@ -191,7 +280,7 @@ copy_function() {
 
 uni_build() {
   BOARD=$FUNCNAME
-  SOC=$(echo $BOARD | cut -sd '_' -f 1)
+  SOC=$(echo $BOARD | cut -d '_' -f 1)
 
   set -e
   if [ "$(echo $BOARD | cut -sd '_' -f 2)" == "" ]; then
@@ -201,8 +290,11 @@ uni_build() {
     NEED_AUTOUP=1
   fi
 
+  echo_c 33 "\n  SoC: $SOC\nBoard: $BOARD\n"
+
   fresh
-  make BOARD=unknown_unknown_${BOARD} all
+  log_and_run "make BOARD=unknown_unknown_${BOARD} all"
+
   if [ "$BOARD" == "ssc335_initramfs" ]; then
     rename_initramfs
   else
@@ -374,4 +466,13 @@ done
 # More examples see here: https://openipc.github.io/wiki/
 #
 
-echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
+
+if [ $# -eq 0 ]; then
+  echo -ne "Usage: $0 <variant>\nVariants:"
+  for i in "${FUNCS[@]}"; do echo -n " ${i}"; done
+  echo
+  exit 1
+fi
+
+echo_c 37 "Building OpenIPC ${1}"
+$1
