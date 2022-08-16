@@ -197,10 +197,10 @@ copy_function() {
 
 uni_build() {
   BOARD=$FUNCNAME
-  SOC=$(echo $BOARD | cut -d '_' -f 1)
+  SOC=$(echo $BOARD | cut -sd '_' -f 1)
 
   set -e
-  if [ "$(echo $BOARD | cut -d '_' -f 2)" == "" ]; then
+  if [ "$(echo $BOARD | cut -sd '_' -f 2)" == "" ]; then
     BOARD="${BOARD}_openipc"
   elif [ "$BOARD" == "hi3518ev200_hs303" ]; then
     BOARD=hi3518ev200_openipc
