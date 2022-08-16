@@ -279,7 +279,11 @@ copy_function() {
 }
 
 uni_build() {
-  BOARD=$FUNCNAME
+  if [ -z "$1" ]; then
+    BOARD=$FUNCNAME
+  else
+    BOARD=$1
+  fi
   SOC=$(echo $BOARD | cut -d '_' -f 1)
 
   set -e
@@ -466,13 +470,22 @@ done
 # More examples see here: https://openipc.github.io/wiki/
 #
 
+CMD=$1
 
 if [ $# -eq 0 ]; then
-  echo -ne "Usage: $0 <variant>\nVariants:"
-  for i in "${FUNCS[@]}"; do echo -n " ${i}"; done
-  echo
-  exit 1
+  if ! command -v fzf >/dev/null 2>&1; then
+    echo -ne "Usage: $0 <variant>\nVariants:"
+    for i in "${FUNCS[@]}"; do echo -n " ${i}"; done
+    echo
+    exit 1
+  else
+    SELECTED=$(find . -path "*/br-ext-chip-*" -name "*_defconfig" | fzf)
+    if [ -z "$SELECTED" ]; then
+      exit 1
+    fi
+    CMD=$(echo $SELECTED | awk -F_ '{printf "%s_%s", $3, $4}')
+  fi
 fi
 
-echo_c 37 "Building OpenIPC ${1}"
-$1
+echo_c 37 "Building OpenIPC ${CMD}"
+uni_build $CMD
