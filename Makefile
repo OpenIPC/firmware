@@ -56,7 +56,8 @@ $(BR_DIR): $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz
 
 
 install-deps:
-	DEBIAN_FRONTEND=noninteractive sudo apt-get update && sudo apt-get -y install build-essential make libncurses-dev wget
+	DEBIAN_FRONTEND=noninteractive sudo apt-get update && \
+		sudo apt-get -y install build-essential make libncurses-dev wget cpio rsync bc
 
 
 %_info:
@@ -69,6 +70,9 @@ install-deps:
 
 has-nand:
 	@sed -rn "s/^BR2_TARGET_ROOTFS_UBI=(y)/\1/p" $(FULL_PATH)
+
+toolname:
+	@$(SCRIPTS_DIR)/show_toolchains.sh board $(FULL_PATH)
 
 list-configs:
 	@echo

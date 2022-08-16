@@ -19,22 +19,23 @@ on:
 
 jobs:
   toolchain:
-    name: Build toolchain
+    name: Toolchain
     runs-on: ubuntu-latest
 
     env:
       FAMILY: hi3516ev200
 
-    outputs:
-      sdk-file: ${{ steps.build-sdk.outputs.sdk-file }}
-
     steps:
 
       - name: Checkout
-        id: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
+
+      - name: Determine toolchain name
+        run: |
+          TOOLNAME=$(make BOARD=unknown_unknown_${FAMILY}_openipc toolname)
+          echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
       - name: Install build dependencies
         run: |
@@ -53,7 +54,6 @@ jobs:
         run: |
           sudo apt clean
           docker rmi $(docker image ls -aq)
-          df -h
 
       - name: Build Buildroot SDK
         id: build-sdk
@@ -78,13 +78,10 @@ jobs:
           make BOARD=unknown_unknown_${FAMILY}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
-          SDK_FILE=$(basename $SDK_PATH)
-          echo "SDK_FILE=$SDK_FILE" >> $GITHUB_ENV
-          echo "::set-output name=sdk-file::$SDK_FILE"
 
       - uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.SDK_FILE }}
+          name: ${{ env.TOOLNAME }}
           path: ${{ env.SDK_PATH }}
           retention-days: 1
 
@@ -106,12 +103,12 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.SDK_PATH }}
-          asset_name: ${{ env.SDK_FILE }}
+          asset_name: ${{ env.TOOLNAME }}
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
   buildroot:
-    name: Build firmware
+    name: Firmware
     needs: toolchain
     runs-on: ubuntu-latest
 
@@ -138,7 +135,6 @@ jobs:
     steps:
 
       - name: Checkout
-        id: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
@@ -160,7 +156,6 @@ jobs:
         run: |
           sudo apt clean
           docker rmi $(docker image ls -aq)
-          df -h
 
       - name: Prepare buildroot
         id: prepare
@@ -186,7 +181,7 @@ jobs:
 
       - uses: actions/download-artifact@v3
         with:
-          name: ${{ needs.toolchain.outputs.sdk-file }}
+          name: ${{ env.TOOLNAME }}
 
       - name: Build firmware
         run: |
@@ -205,7 +200,7 @@ jobs:
 
           CONF_PATH=$(find . -name "${BOARD}_defconfig")
 
-          echo Using ${{ needs.toolchain.outputs.sdk-file }}
+          echo Using $TOOLNAME
           echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
@@ -217,7 +212,7 @@ jobs:
           LIBC="musl"
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
           mkdir /tmp/extsdk
-          tar xvf ${{ needs.toolchain.outputs.sdk-file }} --strip-components=1 -C /tmp/extsdk >/dev/null
+          tar xvf $TOOLNAME --strip-components=1 -C /tmp/extsdk >/dev/null
 
           HAS_NAND=$(make BOARD=${BOARD} has-nand)
           echo "HAS_NAND=$HAS_NAND" >> $GITHUB_ENV
