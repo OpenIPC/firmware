@@ -95,8 +95,6 @@ FUNCS=(
   gk7205v200
   gk7205v200_ultimate
   gk7205v200_fpv
-  gk7205v200_iscom
-  gk7205v200_ufanet
   gk7205v210
   gk7205v300
   gk7205v300_ultimate
@@ -111,7 +109,6 @@ FUNCS=(
 
   hi3516cv200
   hi3518ev200
-  hi3518ev200_domsip
   hi3518ev200_hs303
   hi3518ev200_ultimate
 
@@ -134,9 +131,6 @@ FUNCS=(
 
   hi3516dv200
   hi3516ev200
-  hi3516ev200_dozor
-  hi3516ev200_eltis
-  hi3516ev200_vixand
   hi3516ev200_ultimate
   hi3516ev300
   hi3516ev300_dev
@@ -269,8 +263,6 @@ done
 # gk7205v200                    # OpenIPC
 # gk7205v200_ultimate           # OpenIPC_ultimate version
 # gk7205v200_fpv                # FPV (ultimate by default)
-# gk7205v200_iscom              # Iscom test
-# gk7205v200_ufanet             # Ufanet
 # gk7205v210                    # OpenIPC
 # gk7205v300                    # OpenIPC
 # gk7205v300_ultimate           # OpenIPC_ultimate version
@@ -285,7 +277,6 @@ done
 # hi3516cv200                   # testing..
 # hi3516cv200                   # testing..
 # hi3518ev200                   # OpenIPC
-# hi3518ev200_domsip            # DomSip
 # hi3518ev200_hs303             # OpenIPC
 # hi3518ev200_ultimate          # OpenIPC_ultimate version
 #
@@ -301,9 +292,7 @@ done
 # hi3516dv200                   # OpenIPC
 # hi3516ev200                   # OpenIPC
 # hi3516ev200_fpv               # FPV (ultimate by default)
-# hi3516ev200_dozor             # Dozor
 # hi3516ev200_eltis             # Eltis
-# hi3516ev200_vixand            # Vixand
 # hi3516ev200_ultimate          # OpenIPC_ultimate version
 # hi3516ev300                   # OpenIPC
 # hi3516ev300_dev               # OpenIPC development
