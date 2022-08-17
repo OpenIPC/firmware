@@ -84,7 +84,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.TOOLNAME }}
+          name: '${{ env.TOOLNAME }}.tgz'
           path: ${{ env.SDK_PATH }}
           retention-days: 1
 
