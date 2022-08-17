@@ -9,7 +9,7 @@ toolchain_by_config() {
   BR2_VER=$(grep BR2_DEFAULT_KERNEL_VERSION $CF)
   if [ ! -z $BR2_VER ]; then
     VENDOR=$(echo $CF | cut -d - -f 4 | cut -d / -f 1 | sed -r 's/\<./\U&/g')
-    VER=$(echo $BR2_VER | cut -d \" -f 2 | awk -F . '{printf "%s_%s", $1, $2}')
+    KVER=$(echo $BR2_VER | cut -d \" -f 2 | awk -F . '{printf "%s_%s", $1, $2}')
     GCC_VER=$(sed -rn "s/^BR2_GCC_VERSION_([0-9]*)_X=y/\1/p" $CF)
     ARCH=$(sed -rn "s/^BR2_(arm[a-z0-9_]+)=y/\1/p" $CF)
     if [ -z "$ARCH" ]; then
@@ -34,10 +34,10 @@ toolchain_by_config() {
     SOC=$(echo $CF | cut -d _ -f 3)
     case $FMT in
       list)
-        echo $ARCH $GCC_VER $LIBC $VER $VENDOR $CF
+        echo $ARCH $GCC_VER $LIBC $KVER $VENDOR $CF
         ;;
       uniq)
-        echo $ARCH $GCC_VER $LIBC $VER
+        echo $ARCH $GCC_VER $LIBC $KVER
         ;;
       *)
         if [ ! -z "$2" ]; then
@@ -60,9 +60,9 @@ toolchain_by_config() {
               ;;
             esac
           HASH=$(echo $VER | sha1sum | cut -c 1-8)
-          echo ${ARCH}-gcc${GCC_VER}-${LIBC}-${VER}-${HASH}
+          echo ${ARCH}-gcc${GCC_VER}-${LIBC}-${KVER}-${HASH}
         else
-          echo ${ARCH}-gcc${GCC_VER}-${LIBC}-${VER}
+          echo ${ARCH}-gcc${GCC_VER}-${LIBC}-${KVER}
         fi
         ;;
     esac
