@@ -180,13 +180,9 @@ FUNCS=(
   gk7102s
 
   gk7202v300
-  gk7205v200
-  gk7205v200_ultimate
-  gk7205v200_fpv
+  gk7205v200  gk7205v200_fpv  gk7205v200_ultimate
   gk7205v210
-  gk7205v300
-  gk7205v300_ultimate
-  gk7205v300_fpv
+  gk7205v300  gk7205v300_fpv  gk7205v300_ultimate
   gk7605v100
 
   gm8135
@@ -196,47 +192,30 @@ FUNCS=(
   hi3518ev100
 
   hi3516cv200
-  hi3518ev200
-  hi3518ev200_hs303
-  hi3518ev200_ultimate
+  hi3518ev200  hi3518ev200_hs303  hi3518ev200_ultimate
 
-  hi3516cv300
-  hi3516cv300_ultimate
+  hi3516cv300  hi3516cv300_ultimate
   hi3516ev100
 
-  hi3516av100
-  hi3516av100_ultimate
-  hi3516dv100
-  hi3516dv100_ultimate
+  hi3516av100  hi3516av100_ultimate
+  hi3516dv100  hi3516dv100_ultimate
 
   hi3519v101
-  hi3516av200
-  hi3516av200_ultimate
+  hi3516av200  hi3516av200_ultimate
 
   hi3516av300
   hi3516cv500
   hi3516dv300
 
   hi3516dv200
-  hi3516ev200
-  hi3516ev200_eltis
-  hi3516ev200_fpv
-  hi3516ev200_ultimate
-  hi3516ev300
-  hi3516ev300_dev
-  hi3516ev300_fpv
-  hi3516ev300_glibc
-  hi3516ev300_tehshield
-  hi3516ev300_ultimate
-  hi3518ev300
-  hi3518ev300_ultimate
+  hi3516ev200  hi3516ev200_fpv  hi3516ev200_ultimate  hi3516ev200_eltis
+  hi3516ev300  hi3516ev300_fpv  hi3516ev300_ultimate  hi3516ev300_dev  hi3516ev300_glibc  hi3516ev300_tehshield
+  hi3518ev300  hi3518ev300_ultimate
 
   hi3536cv100
-  hi3536dv100
-  hi3536dv100_vixand
+  hi3536dv100  hi3536dv100_vixand
 
-  msc313e
-  msc313e_baresip
+  msc313e  msc313e_baresip
   msc316dc
   msc316dm
 
@@ -248,16 +227,8 @@ FUNCS=(
 
   ssc325
   ssc333
-  ssc335
-  ssc335_blackbird
-  ssc335_goodcam
-  ssc335_initramfs
-  ssc335_musl
-  ssc335_portal
-  ssc335_rotek
-  ssc335_tiandy
-  ssc337
-  ssc337_kama
+  ssc335  ssc335_blackbird  ssc335_goodcam  ssc335_initramfs  ssc335_musl  ssc335_portal  ssc335_rotek  ssc335_tiandy
+  ssc337  ssc337_kama
 
   ssc335de
   ssc337de
@@ -265,8 +236,7 @@ FUNCS=(
   t10
   t20
   t30
-  t31
-  t31_vixand
+  t31  t31_vixand
 
   xm510
   xm530
