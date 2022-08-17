@@ -80,6 +80,10 @@ jobs:
           make prepare
           make BOARD=unknown_unknown_${{ matrix.platform }}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
+          # Why do we need this crap?
+          NEW="$(dirname $SDK_PATH)/${TOOLNAME}.tgz"
+          mv $SDK_PATH $NEW
+          SDK_PATH=$NEW
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@v3
@@ -233,6 +237,8 @@ jobs:
           echo "BR2_TOOLCHAIN_EXTERNAL_GCC_${GCC_VER:3}=y" >> $CONF_PATH
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
           mkdir /tmp/extsdk
+          pwd
+          ls -l
           tar xvf ${TOOLNAME}.tgz --strip-components=1 -C /tmp/extsdk >/dev/null
 
           HAS_NAND=$(make BOARD=${BOARD} has-nand)

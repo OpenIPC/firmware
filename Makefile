@@ -72,7 +72,7 @@ has-nand:
 	@sed -rn "s/^BR2_TARGET_ROOTFS_UBI=(y)/\1/p" $(FULL_PATH)
 
 toolname:
-	@$(SCRIPTS_DIR)/show_toolchains.sh board $(FULL_PATH)
+	@$(SCRIPTS_DIR)/show_toolchains.sh $(FULL_PATH) $(BR_VER)
 
 list-configs:
 	@echo

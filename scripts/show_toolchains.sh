@@ -33,14 +33,37 @@ toolchain_by_config() {
 
     SOC=$(echo $CF | cut -d _ -f 3)
     case $FMT in
-      "list")
+      list)
         echo $ARCH $GCC_VER $LIBC $VER $VENDOR $CF
         ;;
-      "uniq")
+      uniq)
         echo $ARCH $GCC_VER $LIBC $VER
         ;;
-      "board")
-        echo ${ARCH}-gcc${GCC_VER}-${LIBC}-${VER}
+      *)
+        if [ ! -z "$2" ]; then
+          BR_DIR=buildroot-$2
+          GCC_VER=$(sed -rn \
+            "s/^\s+default\s+\"([0-9.]+)\"\s+if BR2_GCC_VERSION_${GCC_VER}_X/\1/p" \
+              $BR_DIR/package/gcc/Config.in.host)
+          case $LIBC in
+            musl)
+              VER=$(sed -rn "s/^MUSL_VERSION\s*=\s*([0-9.]+)/\1/p" \
+                $BR_DIR/package/musl/musl.mk)
+              ;;
+            uclibc)
+              VER=$(sed -rn "s/^UCLIBC_VERSION\s*=\s*([0-9.]+)/\1/p" \
+                $BR_DIR/package/uclibc/uclibc.mk)
+              ;;
+            glibc)
+              VER=$(sed -rn "s/^GLIBC_VERSION\s*=\s*([0-9.]+).*/\1/p" \
+              $BR_DIR/package/glibc/glibc.mk  | tail -1)
+              ;;
+            esac
+          HASH=$(echo $VER | sha1sum | cut -c 1-8)
+          echo ${ARCH}-gcc${GCC_VER}-${LIBC}-${VER}-${HASH}
+        else
+          echo ${ARCH}-gcc${GCC_VER}-${LIBC}-${VER}
+        fi
         ;;
     esac
   fi
@@ -49,8 +72,8 @@ toolchain_by_config() {
 if [ $# -eq 0 ]; then
   $0 list | sort
 else
-  if [ "$1" == "board" ]; then
-    toolchain_by_config $2 $1
+  if [ "$1" != "list" ] && [ "$1" != "uniq" ]; then
+    toolchain_by_config $1 $2
   else
     for D in br-ext-chip-*; do
       for CF in $D/configs/*; do
