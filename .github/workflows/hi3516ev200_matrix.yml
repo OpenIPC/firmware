@@ -17,10 +17,6 @@ on:
        - '**.md'
   workflow_dispatch:
 
-env:
-  RELEASES: https://github.com/OpenIPC/firmware/releases/download/latest
-  REPO_NAME: ${{ github.event.repository.name }}
-
 jobs:
   toolchain:
     name: Toolchain
@@ -44,20 +40,34 @@ jobs:
 
       - name: Determine toolchain name and can we skip build
         run: |
+          HEAD_TAG=$(git tag --points-at HEAD)
+          GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
+          if [ -z "$HEAD_TAG" ]; then
+            TAG_NAME="latest"
+            RELEASE_NAME="Development Build"
+            PRERELEASE=true
+          else
+            TAG_NAME=${{ github.ref }}
+            RELEASE_NAME="Release ${{ github.ref }}"
+            PRERELEASE=false
+          fi
+          echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
+          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
+
           make prepare
           TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
           CHECK=$(curl -o /dev/null --silent -Iw '%{http_code}' \
-            ${RELEASES}/${TOOLNAME}.tgz)
-          if [ "$CHECK" != "404" ]; then
+            https://github.com/${GITHUB_REPOSITORY}/${TAG_NAME}/${TOOLNAME}.tgz)
+          if [ "$CHECK" == "302" ]; then
             echo "NEEDED=false" >> $GITHUB_ENV
           fi
 
       - name: Install build dependencies
         if: env.NEEDED
         run: |
-          make install-deps
-          #mkdir -p tmp
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
@@ -75,25 +85,9 @@ jobs:
       - name: Build Buildroot SDK
         if: env.NEEDED
         run: |
-          HEAD_TAG=$(git tag --points-at HEAD)
-          GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
-          if [ -z "$HEAD_TAG" ]; then
-            TAG_NAME="latest"
-            RELEASE_NAME="Development Build"
-            PRERELEASE=true
-          else
-            TAG_NAME=${{ github.ref }}
-            RELEASE_NAME="Release ${{ github.ref }}"
-            PRERELEASE=false
-          fi
-          echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
-          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
-
           make BOARD=unknown_unknown_${{ matrix.platform }}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
-          # Why do we need this crap?
+          # Why do we need this crap (only for weird artifact names)?
           NEW="$(dirname $SDK_PATH)/${TOOLNAME}.tgz"
           mv $SDK_PATH $NEW
           SDK_PATH=$NEW
@@ -174,9 +168,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          make install-deps
           ls -l deps || true
-          #mkdir -p tmp
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
@@ -241,10 +233,9 @@ jobs:
 
           echo Using $TOOLNAME
           if [ ! -f "$TOOLNAME.tgz" ];
-            wget ${RELEASES}/${TOOLNAME}.tgz
+            wget https://github.com/${GITHUB_REPOSITORY}/${TAG_NAME}/${TOOLNAME}.tgz
           fi
 
-          set -x
           echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
@@ -269,8 +260,6 @@ jobs:
           echo "BR2_TOOLCHAIN_EXTERNAL_GCC_${GCC_VER:3:1}=y" >> $CONF_PATH
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
           mkdir /tmp/extsdk
-          pwd
-          ls -l
           tar xvf ${TOOLNAME}.tgz --strip-components=1 -C /tmp/extsdk >/dev/null
 
           HAS_NAND=$(make BOARD=${BOARD} has-nand)
