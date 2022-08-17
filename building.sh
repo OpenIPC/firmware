@@ -7,7 +7,7 @@
 # Constants
 #
 
-BR_VER=2020.02.12
+export BR_VER=2020.02.12
 
 MAX_KERNEL_SIZE=0x200000              #    2MiB,  2097152
 MAX_KERNEL_SIZE_ULTIMATE=0x300000     #    3MiB,  3145728

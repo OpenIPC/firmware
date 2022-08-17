@@ -1,6 +1,6 @@
 
 ROOT_DIR      := $(CURDIR)
-BR_VER        := 2020.02.12
+BR_VER        ?= 2020.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
 
 ifeq ($(PLATFORM),)
