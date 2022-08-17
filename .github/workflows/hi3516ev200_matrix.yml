@@ -45,7 +45,7 @@ jobs:
       - name: Install build dependencies
         run: |
           make install-deps
-          mkdir -p tmp
+          #mkdir -p tmp
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
@@ -118,6 +118,8 @@ jobs:
     name: Firmware
     needs: toolchain
     runs-on: ubuntu-latest
+    env:
+      FURRY: ${{ secrets.FURRY }}
 
     strategy:
       fail-fast: false
@@ -146,10 +148,21 @@ jobs:
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
 
+      - name: Checkout deps
+        if: ${{ env.FURRY != '' }}
+        uses: actions/checkout@v3
+        with:
+          repository: furry-disco/deps
+          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
+          path: deps
+          submodules: recursive
+          ssh-key: ${{ secrets.FURRY }}
+
       - name: Install build dependencies
         run: |
           make install-deps
-          mkdir -p tmp
+          ls -l deps || true
+          #mkdir -p tmp
           if [ ! -z "$ACT" ]; then
             apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
@@ -234,7 +247,7 @@ jobs:
           LXHDRS=$(echo $TOOLNAME | cut -d '-' -f 4)
           echo "BR2_TOOLCHAIN_EXTERNAL_HEADERS_${LXHDRS}=y" >> $CONF_PATH
           GCC_VER=$(echo $TOOLNAME | cut -d '-' -f 2)
-          echo "BR2_TOOLCHAIN_EXTERNAL_GCC_${GCC_VER:3}=y" >> $CONF_PATH
+          echo "BR2_TOOLCHAIN_EXTERNAL_GCC_${GCC_VER:3:1}=y" >> $CONF_PATH
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
           mkdir /tmp/extsdk
           pwd
