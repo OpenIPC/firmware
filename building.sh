@@ -13,7 +13,7 @@ MAX_KERNEL_SIZE_EXPERIMENTAL=0x3E8480 # ~3.9MiB,  4097152
 MAX_ROOTFS_SIZE=0x500000              #    5MiB,  5242880
 MAX_ROOTFS_SIZE_ULTIMATE=0xA00000     #   10MiB, 10485760
 
-_d=$(date +"+%y.%m.%d")
+_d=$(date +"%y.%m.%d")
 OPENIPC_VER=$(echo OpenIPC v${_d:0:1}.${_d:1})
 unset _d
 
