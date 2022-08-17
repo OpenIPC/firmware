@@ -67,6 +67,9 @@ install-deps:
 	$(eval CHIP	:= $(shell echo $@ | cut -d "_" -f 3))
 	@cat $(BR_EXT_DIR)/board/$(FAMILY)/$(CHIP).config
 
+buildroot-version:
+	@echo $(BR_VER)
+
 has-nand:
 	@sed -rn "s/^BR2_TARGET_ROOTFS_UBI=(y)/\1/p" $(FULL_PATH)
 

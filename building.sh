@@ -7,8 +7,6 @@
 # Constants
 #
 
-export BR_VER=2020.02.12
-
 MAX_KERNEL_SIZE=0x200000              #    2MiB,  2097152
 MAX_KERNEL_SIZE_ULTIMATE=0x300000     #    3MiB,  3145728
 MAX_KERNEL_SIZE_EXPERIMENTAL=0x3E8480 # ~3.9MiB,  4097152
@@ -51,6 +49,8 @@ clone() {
 }
 
 fresh() {
+  BR_VER=$1
+
   if [ -d "$SRC_CACHE_DIR" ]; then
     echo_c 36 "Found cache directory."
   else
@@ -296,7 +296,7 @@ uni_build() {
 
   echo_c 33 "\n  SoC: $SOC\nBoard: $BOARD\n"
 
-  fresh
+  fresh $(make BOARD=unknown_unknown_${BOARD} buildroot-version)
   log_and_run "make BOARD=unknown_unknown_${BOARD} all"
 
   if [ "$BOARD" == "ssc335_initramfs" ]; then
@@ -335,4 +335,3 @@ fi
 
 echo_c 37 "Building OpenIPC ${CMD}"
 uni_build $CMD
-
