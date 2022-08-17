@@ -208,6 +208,7 @@ jobs:
           CONF_PATH=$(find . -name "${BOARD}_defconfig")
 
           echo Using $TOOLNAME
+          set -x
           echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
@@ -223,7 +224,6 @@ jobs:
               PREFIX="${PREFIX}gnueabi"
             ;;
           esac
-          PREFIX=$(echo $TOOLNAME | cut )
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
           CAP_LIBC=$(echo $LIBC | tr a-z A-Z)
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_${CAP_LIBC}=y" >> $CONF_PATH
