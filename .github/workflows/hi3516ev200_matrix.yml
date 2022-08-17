@@ -38,6 +38,7 @@ jobs:
 
       - name: Determine toolchain name
         run: |
+          make prepare
           TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
@@ -77,7 +78,6 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
 
-          make prepare
           make BOARD=unknown_unknown_${{ matrix.platform }}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
           # Why do we need this crap?
@@ -183,10 +183,10 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
-          make prepare
 
       - name: Determine toolchain name
         run: |
+          make prepare
           TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
