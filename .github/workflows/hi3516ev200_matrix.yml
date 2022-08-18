@@ -22,7 +22,7 @@ jobs:
     name: Toolchain
     runs-on: ubuntu-latest
     env:
-      NEEDED: true
+      NEED: true
 
     strategy:
       fail-fast: false
@@ -62,14 +62,14 @@ jobs:
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${TOOLNAME}.tgz
           echo Checking $URL
 
-          CHECK=$(curl -o /dev/null --silent -Iw '%{http_code}' $URL)
-          set -x
-          if [ "$CHECK" == "302" ]; then
-            echo "NEEDED=false" >> $GITHUB_ENV
+          HTTP_CODE=$(curl -o /dev/null --silent -Iw '%{http_code}' $URL)
+          echo GitHub returned HTTP code: ${HTTP_CODE}
+          if [ "$HTTP_CODE" == "302" ]; then
+            echo "NEED=false" >> $GITHUB_ENV
           fi
 
       - name: Install build dependencies
-        if: env.NEEDED
+        if: env.NEED == 'true'
         run: |
           make install-deps
           if [ ! -z "$ACT" ]; then
@@ -80,13 +80,13 @@ jobs:
           fi
 
       - name: Free disk space
-        if: ${{ !env.ACT && env.NEEDED }}
+        if: ${{ !env.ACT && env.NEED == 'true' }}
         run: |
           sudo apt clean
           docker rmi $(docker image ls -aq)
 
       - name: Build Buildroot SDK
-        if: env.NEEDED
+        if: env.NEED == 'true'
         run: |
           make BOARD=unknown_unknown_${{ matrix.platform }}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
@@ -97,14 +97,14 @@ jobs:
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@v3
-        if: ${{ (env.ACT || github.event_name == 'pull_request') && env.NEEDED }}
+        if: ${{ (env.ACT || github.event_name == 'pull_request') && env.NEED == 'true' }}
         with:
           name: '${{ env.TOOLNAME }}.tgz'
           path: ${{ env.SDK_PATH }}
           retention-days: 1
 
       - name: Create release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.NEEDED }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.NEED == 'true' }}
         uses: actions/create-release@v1
         continue-on-error: true
         env:
@@ -116,7 +116,7 @@ jobs:
           prerelease: ${{ env.PRERELEASE }}
 
       - name: Upload SDK to release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.NEEDED }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.NEED == 'true' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
