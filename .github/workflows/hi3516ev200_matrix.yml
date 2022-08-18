@@ -59,8 +59,11 @@ jobs:
           make prepare
           TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
-          CHECK=$(curl -o /dev/null --silent -Iw '%{http_code}' \
-            https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${TOOLNAME}.tgz)
+          URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${TOOLNAME}.tgz
+          echo Checking $URL
+
+          CHECK=$(curl -o /dev/null --silent -Iw '%{http_code}' $URL)
+          set -x
           if [ "$CHECK" == "302" ]; then
             echo "NEEDED=false" >> $GITHUB_ENV
           fi
