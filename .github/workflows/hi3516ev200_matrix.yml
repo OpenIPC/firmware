@@ -232,7 +232,7 @@ jobs:
           CONF_PATH=$(find . -name "${BOARD}_defconfig")
 
           echo Using $TOOLNAME
-          if [ ! -f "$TOOLNAME.tgz" ];
+          if [ ! -f "$TOOLNAME.tgz" ]; then
             wget https://github.com/${GITHUB_REPOSITORY}/${TAG_NAME}/${TOOLNAME}.tgz
           fi
 
