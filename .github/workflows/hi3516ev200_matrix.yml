@@ -60,7 +60,7 @@ jobs:
           TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
           CHECK=$(curl -o /dev/null --silent -Iw '%{http_code}' \
-            https://github.com/${GITHUB_REPOSITORY}/${TAG_NAME}/${TOOLNAME}.tgz)
+            https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${TOOLNAME}.tgz
           if [ "$CHECK" == "302" ]; then
             echo "NEEDED=false" >> $GITHUB_ENV
           fi
@@ -233,7 +233,7 @@ jobs:
 
           echo Using $TOOLNAME
           if [ ! -f "$TOOLNAME.tgz" ]; then
-            wget https://github.com/${GITHUB_REPOSITORY}/${TAG_NAME}/${TOOLNAME}.tgz
+            wget https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${TOOLNAME}.tgz
           fi
 
           echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
