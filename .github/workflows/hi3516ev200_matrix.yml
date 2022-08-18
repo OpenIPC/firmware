@@ -19,44 +19,26 @@ on:
 
 jobs:
   toolchain:
-    name: Build toolchain
+    name: Toolchain
     runs-on: ubuntu-latest
-
     env:
-      FAMILY: hi3516ev200
+      NEEDED: true
 
-    outputs:
-      sdk-file: ${{ steps.build-sdk.outputs.sdk-file }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - hi3516cv500
+          - hi3516ev200
 
     steps:
 
       - name: Checkout
-        id: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
 
-      - name: Install build dependencies
-        run: |
-          make install-deps
-          mkdir -p tmp
-          if [ ! -z "$ACT" ]; then
-            apt install -y cpio rsync bc
-            echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
-          else
-            # https://github.com/actions/runner-images/issues/2577
-            echo "1.1.1.1 invisible-mirror.net" | sudo tee -a /etc/hosts
-          fi
-
-      - name: Free disk space
-        if: ${{ !env.ACT }}
-        run: |
-          sudo apt clean
-          docker rmi $(docker image ls -aq)
-          df -h
-
-      - name: Build Buildroot SDK
-        id: build-sdk
+      - name: Determine toolchain name and can we skip build
         run: |
           HEAD_TAG=$(git tag --points-at HEAD)
           GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
@@ -75,21 +57,51 @@ jobs:
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
 
           make prepare
-          make BOARD=unknown_unknown_${FAMILY}_openipc br-sdk
+          TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
+          echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
+          CHECK=$(curl -o /dev/null --silent -Iw '%{http_code}' \
+            https://github.com/${GITHUB_REPOSITORY}/${TAG_NAME}/${TOOLNAME}.tgz)
+          if [ "$CHECK" == "302" ]; then
+            echo "NEEDED=false" >> $GITHUB_ENV
+          fi
+
+      - name: Install build dependencies
+        if: env.NEEDED
+        run: |
+          make install-deps
+          if [ ! -z "$ACT" ]; then
+            echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
+          else
+            # https://github.com/actions/runner-images/issues/2577
+            echo "1.1.1.1 invisible-mirror.net" | sudo tee -a /etc/hosts
+          fi
+
+      - name: Free disk space
+        if: ${{ !env.ACT && env.NEEDED }}
+        run: |
+          sudo apt clean
+          docker rmi $(docker image ls -aq)
+
+      - name: Build Buildroot SDK
+        if: env.NEEDED
+        run: |
+          make BOARD=unknown_unknown_${{ matrix.platform }}_openipc br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
+          # Why do we need this crap (only for weird artifact names)?
+          NEW="$(dirname $SDK_PATH)/${TOOLNAME}.tgz"
+          mv $SDK_PATH $NEW
+          SDK_PATH=$NEW
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
-          SDK_FILE=$(basename $SDK_PATH)
-          echo "SDK_FILE=$SDK_FILE" >> $GITHUB_ENV
-          echo "::set-output name=sdk-file::$SDK_FILE"
 
       - uses: actions/upload-artifact@v3
+        if: ${{ (env.ACT || github.event_name == 'pull_request') && env.NEEDED }}
         with:
-          name: ${{ env.SDK_FILE }}
+          name: '${{ env.TOOLNAME }}.tgz'
           path: ${{ env.SDK_PATH }}
           retention-days: 1
 
       - name: Create release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.NEEDED }}
         uses: actions/create-release@v1
         continue-on-error: true
         env:
@@ -101,19 +113,21 @@ jobs:
           prerelease: ${{ env.PRERELEASE }}
 
       - name: Upload SDK to release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.NEEDED }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.SDK_PATH }}
-          asset_name: ${{ env.SDK_FILE }}
+          asset_name: '${{ env.TOOLNAME }}.tgz'
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
   buildroot:
-    name: Build firmware
+    name: Firmware
     needs: toolchain
     runs-on: ubuntu-latest
+    env:
+      FURRY: ${{ secrets.FURRY }}
 
     strategy:
       fail-fast: false
@@ -138,17 +152,25 @@ jobs:
     steps:
 
       - name: Checkout
-        id: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
 
+      - name: Checkout deps
+        if: ${{ env.FURRY != '' }}
+        uses: actions/checkout@v3
+        with:
+          repository: furry-disco/deps
+          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
+          path: deps
+          submodules: recursive
+          ssh-key: ${{ secrets.FURRY }}
+
       - name: Install build dependencies
         run: |
           make install-deps
-          mkdir -p tmp
+          ls -l deps || true
           if [ ! -z "$ACT" ]; then
-            apt install -y cpio rsync bc
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
           else
             # https://github.com/actions/runner-images/issues/2577
@@ -160,10 +182,8 @@ jobs:
         run: |
           sudo apt clean
           docker rmi $(docker image ls -aq)
-          df -h
 
       - name: Prepare buildroot
-        id: prepare
         run: |
           HEAD_TAG=$(git tag --points-at HEAD)
           GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
@@ -182,11 +202,17 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      - name: Determine toolchain name
+        run: |
           make prepare
+          TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
+          echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
       - uses: actions/download-artifact@v3
+        if: ${{ (env.ACT || github.event_name == 'pull_request') }}
         with:
-          name: ${{ needs.toolchain.outputs.sdk-file }}
+          name: '${{ env.TOOLNAME }}.tgz'
 
       - name: Build firmware
         run: |
@@ -205,19 +231,36 @@ jobs:
 
           CONF_PATH=$(find . -name "${BOARD}_defconfig")
 
-          echo Using ${{ needs.toolchain.outputs.sdk-file }}
+          echo Using $TOOLNAME
+          if [ ! -f "$TOOLNAME.tgz" ]; then
+            wget https://github.com/${GITHUB_REPOSITORY}/${TAG_NAME}/${TOOLNAME}.tgz
+          fi
+
           echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"arm-openipc-linux-musleabi\"" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_HEADERS_4_9=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_GCC_8=y" >> $CONF_PATH
-          LIBC="musl"
+
+          LIBC=$(echo $TOOLNAME | cut -d '-' -f 3)
+          PREFIX="arm-openipc-linux-"
+          case "$LIBC" in
+            musl|uclibc)
+              PREFIX="${PREFIX}${LIBC}eabi"
+            ;;
+            glibc)
+              PREFIX="${PREFIX}gnueabi"
+            ;;
+          esac
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
+          CAP_LIBC=$(echo $LIBC | tr a-z A-Z)
+          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_${CAP_LIBC}=y" >> $CONF_PATH
+          LXHDRS=$(echo $TOOLNAME | cut -d '-' -f 4)
+          echo "BR2_TOOLCHAIN_EXTERNAL_HEADERS_${LXHDRS}=y" >> $CONF_PATH
+          GCC_VER=$(echo $TOOLNAME | cut -d '-' -f 2)
+          echo "BR2_TOOLCHAIN_EXTERNAL_GCC_${GCC_VER:3:1}=y" >> $CONF_PATH
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
           mkdir /tmp/extsdk
-          tar xvf ${{ needs.toolchain.outputs.sdk-file }} --strip-components=1 -C /tmp/extsdk >/dev/null
+          tar xvf ${TOOLNAME}.tgz --strip-components=1 -C /tmp/extsdk >/dev/null
 
           HAS_NAND=$(make BOARD=${BOARD} has-nand)
           echo "HAS_NAND=$HAS_NAND" >> $GITHUB_ENV
