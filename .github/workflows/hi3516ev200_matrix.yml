@@ -97,7 +97,9 @@ jobs:
           echo "SDK_PATH=$SDK_PATH" >> $GITHUB_ENV
 
       - uses: actions/upload-artifact@v3
-        if: ${{ (env.ACT || github.event_name == 'pull_request') && env.NEED == 'true' }}
+        # uncomment one of the options:
+        # 1. Build only there is no such toolchain
+        if: env.NEED == 'true'
         with:
           name: '${{ env.TOOLNAME }}.tgz'
           path: ${{ env.SDK_PATH }}
@@ -213,7 +215,7 @@ jobs:
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
       - uses: actions/download-artifact@v3
-        if: ${{ (env.ACT || github.event_name == 'pull_request') }}
+        continue-on-error: true
         with:
           name: '${{ env.TOOLNAME }}.tgz'
 
