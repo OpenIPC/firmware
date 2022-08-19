@@ -11,12 +11,6 @@ HISILICON_OPENSDK_LICENSE_FILES = LICENSE
 
 FAMILY = $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
 
-ifeq ($(strip $(FAMILY)), hi3516ev200)
-	CHIP=hi3516ev300
-else
-	CHIP=$(FAMILY)
-endif
-
 HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
 HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
 	CHIPSET=$(CHIP)
