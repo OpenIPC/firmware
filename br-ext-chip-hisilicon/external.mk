@@ -1,4 +1,6 @@
 include $(BR2_EXTERNAL_HISILICON_PATH)/linux/linux-ext-hisi_patcher.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/aws-producer/aws-producer.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/aws-webrtc/aws-webrtc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisi_patcher/hisi_patcher.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/aura-httpd/aura-httpd.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/baresip-openipc/baresip-openipc.mk
@@ -44,6 +46,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/rtl8188fu-openipc/rtl8188fu-openi
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/rtl8812au-openipc/rtl8812au-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/uacme-openipc/uacme-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/uqmi-openipc/uqmi.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/usrsctp/usrsctp.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/vtund-openipc/vtund-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/wifibroadcast/wifibroadcast.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/xmdp/xmdp.mk
