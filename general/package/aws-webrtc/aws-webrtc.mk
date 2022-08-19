@@ -22,7 +22,7 @@ AWS_WEBRTC_CONF_OPTS += \
 AWS_WEBRTC_MAKE_OPTS += VERBOSE=1
 
 AWS_WEBRTC_DEPENDENCIES = \
-	libsrtp \
+	libsrtp-openipc \
 	libwebsockets-openipc \
 	aws-producer \
 	usrsctp \
