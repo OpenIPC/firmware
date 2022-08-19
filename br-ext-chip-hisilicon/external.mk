@@ -1,4 +1,5 @@
 include $(BR2_EXTERNAL_HISILICON_PATH)/linux/linux-ext-hisi_patcher.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/aws-producer/aws-producer.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/aws-webrtc/aws-webrtc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisi_patcher/hisi_patcher.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/aura-httpd/aura-httpd.mk
