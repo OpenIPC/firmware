@@ -32,6 +32,7 @@ jobs:
           - hi3516cv300
           - hi3516cv500
           - hi3516ev200
+          - ak3918ev300
 
     steps:
 
@@ -156,6 +157,18 @@ jobs:
             release: fpv
           - platform: hi3516ev300
             release: fpv
+
+          # TODO
+          - platform: ak3916ev300
+            release: lite
+            todo: true
+          - platform: ak3918ev200
+            release: lite
+            todo: true
+          - platform: ak3918ev300
+            release: lite
+            todo: true
+
         exclude:
           - platform: hi3516dv200
             release: ultimate
@@ -313,7 +326,7 @@ jobs:
           exit 2
 
       - name: Create release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && !matrix.todo }}
         uses: actions/create-release@v1
         continue-on-error: true
         env:
@@ -325,7 +338,7 @@ jobs:
           prerelease: ${{ env.PRERELEASE }}
 
       - name: Upload NOR FW to release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && !matrix.todo }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -335,7 +348,7 @@ jobs:
           overwrite: true
 
       - name: Upload NAND FW to release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.HAS_NAND == 'y' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && env.HAS_NAND == 'y' && !matrix.todo }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -345,7 +358,7 @@ jobs:
           overwrite: true
 
       - name: Send binary file to telegram channel
-        if: ${{ !env.ACT && github.event_name != 'pull_request' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && !matrix.todo }}
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
