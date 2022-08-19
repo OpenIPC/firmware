@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-AWS_WEBRTC_VERSION = v1.7.3
+AWS_WEBRTC_VERSION = wo-datachannel
 AWS_WEBRTC_SITE_METHOD = git
-AWS_WEBRTC_SITE = https://github.com/awslabs/amazon-kinesis-video-streams-webrtc-sdk-c
+AWS_WEBRTC_SITE = https://github.com/widgetii/amazon-kinesis-video-streams-webrtc-sdk-c
 AWS_WEBRTC_INSTALL_STAGING = YES
 AWS_WEBRTC_LICENSE = Apache-2.0
 AWS_WEBRTC_LICENSE_FILES = LICENSE
@@ -17,6 +17,7 @@ AWS_WEBRTC_CONF_OPTS += \
 	-DUSE_OPENSSL=OFF \
 	-DUSE_MBEDTLS=ON \
 	-DENABLE_DATA_CHANNEL=OFF \
+	-DBUILD_SAMPLE=OFF \
 	-DBUILD_DEPENDENCIES=OFF
 
 AWS_WEBRTC_MAKE_OPTS += VERBOSE=1
