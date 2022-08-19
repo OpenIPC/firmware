@@ -34,6 +34,10 @@ jobs:
           - hi3516cv300
           - hi3516cv500
           - hi3516ev200
+          # hi3516cv200
+          # hi3516cv300
+          # hi3516cv500
+          # hi3516ev200
           - ak3918ev300
 
     steps:
@@ -142,6 +146,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+<<<<<<< HEAD
         platform:
           - hi3516av100
           - hi3516dv100
@@ -173,6 +178,23 @@ jobs:
             release: fpv
           - platform: gk7205v300
             release: fpv
+        #latform:
+        # - hi3516ev200
+        # - hi3516ev300
+        # - hi3518ev300
+        # - hi3516dv200
+        #elease:
+        # - lite
+        # - ultimate
+        include:
+        # - platform: hi3518ev200
+        #   release: mini
+        # - platform: hi3516cv300
+        #   release: mini
+        # - platform: hi3516ev200
+        #   release: fpv
+        # - platform: hi3516ev300
+        #   release: fpv
 
           # TODO
           - platform: ak3916ev300
@@ -194,6 +216,9 @@ jobs:
             release: ultimate
           - platform: gk7202v300
             release: ultimate
+        #xclude:
+        # - platform: hi3516dv200
+        #   release: ultimate
 
     steps:
 
