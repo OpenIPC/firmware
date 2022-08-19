@@ -13,7 +13,7 @@ FAMILY = $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
 
 HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
 HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
-	CHIPSET=$(CHIP)
+	CHIPSET=$(FAMILY)
 
 $(eval $(kernel-module))
 $(eval $(generic-package))
