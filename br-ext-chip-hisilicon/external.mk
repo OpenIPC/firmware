@@ -36,6 +36,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic-fonts/majestic-fonts.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/mavlink-router/mavlink-router.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/mbedtls-openipc/mbedtls-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/microbe-web/microbe-web.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/mini/mini.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/motors/motors.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/mt7601u-ap-openipc/mt7601u-ap-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/node-exporter/node-exporter.mk
