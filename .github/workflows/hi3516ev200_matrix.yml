@@ -180,7 +180,10 @@ jobs:
       - name: Install build dependencies
         run: |
           make install-deps
-          ls -l deps || true
+          if [ -d deps ]; then
+            ./deps/install.sh
+          fi
+
           if [ ! -z "$ACT" ]; then
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
           else
