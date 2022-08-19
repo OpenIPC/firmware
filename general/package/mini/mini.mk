@@ -17,8 +17,6 @@ ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV200),y)
 	SDK_DIR := glutinium/hisi-osdrv2
 else ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV300),y)
 	SDK_DIR := glutinium/hisi-osdrv3
-else
-	@echo Platform is not supported
 endif
 
 MINI_CONF_OPTS = -DPLATFORM_SDK_DIR=$(SDK_DIR)
