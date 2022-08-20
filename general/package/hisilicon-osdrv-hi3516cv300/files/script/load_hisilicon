@@ -5,7 +5,7 @@
 # ar0237 imx290 imx307 imx323 imx385 jxf22 ov2718 ov2718_2a sc2235
 
 # SoC detect
-chipid=$(ipcinfo --chip_id)
+chipid=$(ipcinfo --chip-id)
 
 # MMZ config
 mem_start=0x80000000;                             # phy mem start
@@ -124,7 +124,7 @@ insert_sns()
 				viu_frequency=198000000;              # 198M, viu clock frequency
 				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
             ;;
@@ -142,7 +142,7 @@ insert_sns()
 				viu_frequency=198000000;              # 198M, viu clock frequency
 				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
             ;;
@@ -154,7 +154,7 @@ insert_sns()
 			elif [ ${chipid} = "hi3516cv300" ]; then
 				viu_frequency=198000000;              # 198M, viu clock frequency
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
 			isp_div=1;                                    # isp div clk, freq = viu_clk_freq / div
@@ -172,7 +172,7 @@ insert_sns()
 				viu_frequency=198000000;              # 198M, viu clock frequency
 				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
             ;;
@@ -190,7 +190,7 @@ insert_sns()
 				viu_frequency=198000000;              # 198M, viu clock frequency
 				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
             ;;
@@ -207,7 +207,7 @@ insert_sns()
 			elif [ ${chipid} = "hi3516cv300" ]; then
 				viu_frequency=198000000;              # 198M, viu clock frequency
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
             ;;
@@ -225,7 +225,7 @@ insert_sns()
 				viu_frequency=198000000;              # 198M, viu clock frequency
 				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
             ;;
@@ -243,7 +243,7 @@ insert_sns()
 				viu_frequency=198000000;              # 198M, viu clock frequency
 				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
             ;;
@@ -284,7 +284,7 @@ insert_sns()
 				viu_frequency=198000000;              # 198M, viu clock frequency
 				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
 			echo "66" > /sys/class/gpio/export;     # GPIO8_2
@@ -304,7 +304,7 @@ insert_sns()
 				viu_frequency=198000000;              # 198M, viu clock frequency
 				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
 			echo "0" > /sys/class/gpio/export; # SENSOR_RSTN @  GPIO0_0 on Dahua boards
@@ -334,7 +334,7 @@ insert_sns()
 				viu_frequency=198000000;              # 198M, viu clock frequency
 				isp_div=2;                            # isp div clk, freq = viu_clk_freq / div
 			else
-				echo "Wrong chip_id: ${chipid}";
+				echo "Wrong chip-id: ${chipid}";
 				exit 1;
 			fi
             ;;

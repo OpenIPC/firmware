@@ -2,7 +2,7 @@
 ####################Variables Definition##########################
 
 # SoC detect
-CHIP_TYPE=$(ipcinfo --chip_id)
+CHIP_TYPE=$(ipcinfo --chip-id)
 
 # Dumb cpu remapping
 if [ "$CHIP_TYPE" == "gk7205v210" ]; then
