@@ -144,7 +144,6 @@ jobs:
         platform:
           - hi3516av100
           - hi3516dv100
-          - hi3519v101
           - hi3516av200
           - hi3516ev200
           - hi3516ev300
@@ -156,6 +155,8 @@ jobs:
         include:
           - platform: hi3518ev200
             release: mini
+          - platform: hi3519v101
+            release: lite
           - platform: hi3516cv300
             release: mini
           - platform: hi3516ev200
