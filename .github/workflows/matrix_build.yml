@@ -348,9 +348,11 @@ jobs:
           echo "BR2_TOOLCHAIN_EXTERNAL_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
 
           SOC=$(echo $TOOLNAME | cut -d '-' -f 1)
+          ABI=""
           case "$SOC" in
             arm*|cortex*)
               PREFIX=arm
+              ABI="eabi"
               ;;
             mips_xburst)
               PREFIX=mipsel
@@ -361,10 +363,10 @@ jobs:
           LIBC=$(echo $TOOLNAME | cut -d '-' -f 3)
           case "$LIBC" in
             musl|uclibc)
-              PREFIX="${PREFIX}${LIBC}eabi"
+              PREFIX="${PREFIX}${LIBC}${ABI}"
             ;;
             glibc)
-              PREFIX="${PREFIX}gnueabi"
+              PREFIX="${PREFIX}gnu{ABI}"
             ;;
           esac
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
