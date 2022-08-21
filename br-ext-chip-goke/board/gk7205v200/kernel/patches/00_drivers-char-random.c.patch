@@ -1,0 +1,29 @@
+--- linux-4.9.37/drivers/char/random.c	2017-07-12 16:42:41.000000000 +0300
++++ linux-4.9.y/drivers/char/random.c	2021-06-07 13:01:33.000000000 +0300
+@@ -812,7 +812,7 @@
+ 	if (crng_init_cnt >= CRNG_INIT_CNT_THRESH) {
+ 		crng_init = 1;
+ 		wake_up_interruptible(&crng_init_wait);
+-		pr_notice("random: fast init done\n");
++		printk_once("random: fast init done\n");
+ 	}
+ 	spin_unlock_irqrestore(&primary_crng.lock, flags);
+ 	return 1;
+@@ -850,7 +850,7 @@
+ 		crng_init = 2;
+ 		process_random_ready_list();
+ 		wake_up_interruptible(&crng_init_wait);
+-		pr_notice("random: crng init done\n");
++		printk_once("random: crng init done\n");
+ 	}
+ 	spin_unlock_irqrestore(&primary_crng.lock, flags);
+ }
+@@ -1744,7 +1744,7 @@
+ 
+ 	if (!crng_ready() && maxwarn > 0) {
+ 		maxwarn--;
+-		printk(KERN_NOTICE "random: %s: uninitialized urandom read "
++		printk_once(KERN_NOTICE "random: %s: uninitialized urandom read "
+ 		       "(%zd bytes read)\n",
+ 		       current->comm, nbytes);
+ 		spin_lock_irqsave(&primary_crng.lock, flags);
