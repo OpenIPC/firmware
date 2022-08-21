@@ -347,8 +347,18 @@ jobs:
           echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
 
+          SOC=$(echo $TOOLNAME | cut -d '-' -f 1)
+          case "$SOC" in
+            arm*|cortex*)
+              PREFIX=arm
+              ;;
+            mips_xburst)
+              PREFIX=mipsel
+              ;;
+          esac
+          PREFIX="${PREFIX}-openipc-linux-"
+
           LIBC=$(echo $TOOLNAME | cut -d '-' -f 3)
-          PREFIX="arm-openipc-linux-"
           case "$LIBC" in
             musl|uclibc)
               PREFIX="${PREFIX}${LIBC}eabi"
