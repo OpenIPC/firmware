@@ -366,7 +366,7 @@ jobs:
               PREFIX="${PREFIX}${LIBC}${ABI}"
             ;;
             glibc)
-              PREFIX="${PREFIX}gnu{ABI}"
+              PREFIX="${PREFIX}gnu${ABI}"
             ;;
           esac
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
