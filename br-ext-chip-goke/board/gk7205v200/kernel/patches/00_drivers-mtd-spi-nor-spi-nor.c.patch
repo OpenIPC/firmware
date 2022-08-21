@@ -691,7 +691,7 @@
  
  	/* Intel/Numonyx -- xxxs33b */
  	{ "160s33b",  INFO(0x898911, 0, 64 * 1024,  32, 0) },
-@@ -859,68 +1323,132 @@
+@@ -859,68 +1323,136 @@
  	/* ISSI */
  	{ "is25cd512", INFO(0x7f9d20, 0, 32 * 1024,   2, SECT_4K) },
  
@@ -795,6 +795,10 @@
 +			PARAMS(xmc), CLK_MHZ_2X(104) },
 +	{ "xm25qh128b",   INFO(0x206018, 0, 64 * 1024,   256, SPI_NOR_QUAD_READ),
 +			PARAMS(xmc), CLK_MHZ_2X(104) },
++	{ "xm25qh64chiq",   INFO(0x204017, 0, 64 * 1024,   128, SPI_NOR_QUAD_READ),
++			PARAMS(xmc), CLK_MHZ_2X(133) },
++	{ "xm25qh128chiq",   INFO(0x204018, 0, 64 * 1024,   256, SPI_NOR_QUAD_READ),
++			PARAMS(xmc), CLK_MHZ_2X(133) },
  
  	/* PMC */
 -	{ "pm25lv512",   INFO(0,        0, 32 * 1024,    2, SECT_4K_PMC) },
@@ -870,7 +874,17 @@
  
  	/* SST -- large erase sizes are "overlays", "sectors" are 4K */
  	{ "sst25vf040b", INFO(0xbf258d, 0, 64 * 1024,  8, SECT_4K | SST_WRITE) },
-@@ -972,43 +1500,101 @@
+@@ -947,6 +1479,9 @@
+ 	{ "m25p64",  INFO(0x202017,  0,  64 * 1024, 128, 0) },
+ 	{ "m25p128", INFO(0x202018,  0, 256 * 1024,  64, 0) },
+ 
++	{ "GM25Q128ASIG", INFO(0x1C4018,  0, 64 * 1024,  256, 0) },
++	{ "NM25Q128EVB", INFO(0x522118,  0, 64 * 1024,  256, 0) },
++
+ 	{ "m25p05-nonjedec",  INFO(0, 0,  32 * 1024,   2, 0) },
+ 	{ "m25p10-nonjedec",  INFO(0, 0,  32 * 1024,   4, 0) },
+ 	{ "m25p20-nonjedec",  INFO(0, 0,  64 * 1024,   4, 0) },
+@@ -972,43 +1507,104 @@
  	{ "m25px64",    INFO(0x207117,  0, 64 * 1024, 128, 0) },
  	{ "m25px80",    INFO(0x207114,  0, 64 * 1024, 16, 0) },
  
@@ -995,10 +1009,13 @@
 +
 +	{ "ZB25VQ64A",INFO(0x5e4017, 0, 64 * 1024, 128,
 +		SPI_NOR_QUAD_READ), PARAMS(spansion), CLK_MHZ_2X(104) },
++        { "ZB25VQ128ASIG",INFO(0x5e4018, 0, 64 * 1024, 256,
++                SPI_NOR_QUAD_READ), PARAMS(spansion), CLK_MHZ_2X(104) },
++	
  	{ },
  };
  
-@@ -1024,6 +1610,11 @@
+@@ -1024,6 +1620,11 @@
  		return ERR_PTR(tmp);
  	}
  
@@ -1010,7 +1027,7 @@
  	for (tmp = 0; tmp < ARRAY_SIZE(spi_nor_ids) - 1; tmp++) {
  		info = &spi_nor_ids[tmp];
  		if (info->id_len) {
-@@ -1036,6 +1627,36 @@
+@@ -1036,6 +1637,36 @@
  	return ERR_PTR(-ENODEV);
  }
  
@@ -1047,7 +1064,7 @@
  static int spi_nor_read(struct mtd_info *mtd, loff_t from, size_t len,
  			size_t *retlen, u_char *buf)
  {
-@@ -1167,14 +1788,22 @@
+@@ -1167,14 +1798,22 @@
  	ret = spi_nor_lock_and_prep(nor, SPI_NOR_OPS_WRITE);
  	if (ret)
  		return ret;
@@ -1070,7 +1087,7 @@
  		/* the size of data remaining on the first page */
  		page_remain = min_t(size_t,
  				    nor->page_size - page_offset, len - i);
-@@ -1211,15 +1840,22 @@
+@@ -1211,15 +1850,22 @@
  	val = read_sr(nor);
  	if (val < 0)
  		return val;
@@ -1095,7 +1112,7 @@
  		dev_err(nor->dev, "Macronix Quad bit not set\n");
  		return -EINVAL;
  	}
-@@ -1227,6 +1863,41 @@
+@@ -1227,6 +1873,41 @@
  	return 0;
  }
  
@@ -1137,7 +1154,7 @@
  /*
   * Write status Register and configuration register with 2 bytes
   * The first byte will be written to the status register, while the
-@@ -1243,29 +1914,168 @@
+@@ -1243,29 +1924,168 @@
  
  static int spansion_quad_enable(struct spi_nor *nor)
  {
@@ -1313,7 +1330,7 @@
  		return -EINVAL;
  	}
  
-@@ -1277,6 +2087,7 @@
+@@ -1277,6 +2097,7 @@
  	int status;
  
  	switch (JEDEC_MFR(info)) {
@@ -1321,7 +1338,7 @@
  	case SNOR_MFR_MACRONIX:
  		status = macronix_quad_enable(nor);
  		if (status) {
-@@ -1285,7 +2096,40 @@
+@@ -1285,7 +2106,40 @@
  		}
  		return status;
  	case SNOR_MFR_MICRON:
@@ -1363,7 +1380,7 @@
  	default:
  		status = spansion_quad_enable(nor);
  		if (status) {
-@@ -1307,8 +2151,375 @@
+@@ -1307,8 +2161,375 @@
  	return 0;
  }
  
@@ -1740,7 +1757,7 @@
  	const struct flash_info *info = NULL;
  	struct device *dev = nor->dev;
  	struct mtd_info *mtd = &nor->mtd;
-@@ -1320,11 +2531,19 @@
+@@ -1320,11 +2541,19 @@
  	if (ret)
  		return ret;
  
@@ -1761,7 +1778,7 @@
  	if (IS_ERR_OR_NULL(info))
  		return -ENOENT;
  
-@@ -1351,9 +2570,15 @@
+@@ -1351,9 +2580,15 @@
  			info = jinfo;
  		}
  	}
@@ -1777,7 +1794,7 @@
  	/*
  	 * Atmel, SST, Intel/Numonyx, and others serial NOR tend to power up
  	 * with the software protection bits set
-@@ -1367,6 +2592,7 @@
+@@ -1367,6 +2602,7 @@
  		write_sr(nor, 0);
  		spi_nor_wait_till_ready(nor);
  	}
@@ -1785,7 +1802,7 @@
  
  	if (!mtd->name)
  		mtd->name = dev_name(dev);
-@@ -1380,7 +2606,8 @@
+@@ -1380,7 +2616,8 @@
  
  	/* NOR protection support for STmicro/Micron chips and similar */
  	if (JEDEC_MFR(info) == SNOR_MFR_MICRON ||
@@ -1795,7 +1812,7 @@
  		nor->flash_lock = stm_lock;
  		nor->flash_unlock = stm_unlock;
  		nor->flash_is_locked = stm_is_locked;
-@@ -1428,92 +2655,61 @@
+@@ -1428,92 +2665,61 @@
  	if (np) {
  		/* If we were instantiated by DT, use it */
  		if (of_property_read_bool(np, "m25p,fast-read"))
@@ -1917,7 +1934,7 @@
  
  	dev_dbg(dev,
  		"mtd .name = %s, .size = 0x%llx (%lldMiB), "
-@@ -1547,6 +2743,64 @@
+@@ -1547,6 +2753,64 @@
  	return NULL;
  }
  

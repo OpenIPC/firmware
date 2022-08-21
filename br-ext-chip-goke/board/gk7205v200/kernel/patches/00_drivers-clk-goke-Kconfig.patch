@@ -35,7 +35,7 @@
 +
 +config RESET_GOKE
 +	bool "Goke Reset Controller Driver"
-+	depends on ARCH_GOKE || COMPILE_TEST || ARCH_GOKE
++	depends on ARCH_GOKE || COMPILE_TEST
 +	select RESET_CONTROLLER
 +	help
 +	  Build reset controller driver for Goke device chipsets.

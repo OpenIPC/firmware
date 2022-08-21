@@ -408,11 +408,11 @@
 +	void *iocfg_regmap = bsp_priv->iocfg_regmap;
 +	int i;
 +
-+	bsp_set_drv_str(iocfg_regmap, REG_CTRL_SDIO1_CLK, 0, 1, 1, 0x4); /* set drv level 4 */
-+	bsp_set_drv_str(iocfg_regmap, REG_CTRL_SDIO1_CMD, 1, 0, 0, 0x7); /* set drv level 7 */
++	bsp_set_drv_str(iocfg_regmap, REG_CTRL_SDIO1_CLK, 0, 1, 0, 0x3); /* 0x3 set drv level 5 */
++	bsp_set_drv_str(iocfg_regmap, REG_CTRL_SDIO1_CMD, 1, 0, 0, 0x2); /* 0x2 set drv level 2 */
 +	for (i = 0; i < IO_CFG_SDIO1_DATA_LINE_COUNT; i++)
 +		bsp_set_drv_str(iocfg_regmap,
-+				io_sdio1_data_reg[i], 1, 0, 0, 0x7); /* set drv level 7 */
++				io_sdio1_data_reg[i], 1, 0, 0, 0x2); /* 0x2 set drv level 2 */
 +}
 +
 +static void bsp_set_io_config(struct sdhci_host *host)

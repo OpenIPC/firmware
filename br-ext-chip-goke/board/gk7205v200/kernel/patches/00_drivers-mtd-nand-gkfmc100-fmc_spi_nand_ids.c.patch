@@ -1,6 +1,6 @@
 --- linux-4.9.37/drivers/mtd/nand/gkfmc100/fmc_spi_nand_ids.c	1970-01-01 03:00:00.000000000 +0300
 +++ linux-4.9.y/drivers/mtd/nand/gkfmc100/fmc_spi_nand_ids.c	2021-06-07 13:01:33.000000000 +0300
-@@ -0,0 +1,2270 @@
+@@ -0,0 +1,2300 @@
 +/*
 + * Copyright (c) Hunan Goke,Chengdu Goke,Shandong Goke. 2021. All rights reserved.
 + */
@@ -590,36 +590,66 @@
 +		},
 +		.driver    = &spi_driver_general,
 +	},
++
++	/* GD 3.3v GD5F1GQ5UEYIGY/GD5F1GQ5UEYIGR 1Gbit */
++	{
++	        .name      = "GD5F1GQ5UEYIG",
++		.id        = {0xc8, 0x51},
++	        .id_len    = 2,
++	        .chipsize  = _128M,
++	        .erasesize = _128K,
++	        .pagesize  = _2K,
++	        .oobsize   = 128,
++	        .badblock_pos = BBP_FIRST_PAGE,
++	        .read      = {
++	            &READ_STD(1, INFINITE, 24),
++	            &READ_FAST(1, INFINITE, 133),
++	            &READ_DUAL(1, INFINITE, 133),
++	            &READ_QUAD(1, INFINITE, 133),
++	            0
++	        },
++	        .write     = {
++	            &WRITE_STD(0, 256, 133),
++	            &WRITE_QUAD(0, 256, 133),
++	            0
++	        },
++	        .erase     = {
++	            &ERASE_SECTOR_128K(0, _128K, 133),
++	            0
++	        },
++	        .driver    = &spi_driver_general,
++	},
++
 +	/* GD 3.3v GD5F2GQ5UEYIG 2Gbit */
 +	{
-+        .name      = "GD5F2GQ5UEYIG",
-+        .id        = {0xc8, 0x52},
-+        .id_len    = 2,
-+        .chipsize  = _256M,
-+        .erasesize = _128K,
-+        .pagesize  = _2K,
-+        .oobsize   = 128,
-+        .badblock_pos = BBP_FIRST_PAGE,
-+        .read      = {
-+            &READ_STD(1, INFINITE, 24),
-+            &READ_FAST(1, INFINITE, 104),
-+            &READ_DUAL(1, INFINITE, 104),
-+            &READ_DUAL_ADDR(2, INFINITE, 104),
-+            &READ_QUAD(1, INFINITE, 104),
-+            &READ_QUAD_ADDR(4, INFINITE, 104),
-+            0
-+        },
-+        .write     = {
-+            &WRITE_STD(0, 256, 104),
-+            &WRITE_QUAD(0, 256, 120),
-+            0
-+        },
-+        .erase     = {
-+            &ERASE_SECTOR_128K(0, _128K, 104),
-+            0
-+        },
-+        .driver    = &spi_driver_general,
-+    },
++	        .name      = "GD5F2GQ5UEYIG",
++	        .id        = {0xc8, 0x52},
++	        .id_len    = 2,
++	        .chipsize  = _256M,
++	        .erasesize = _128K,
++	        .pagesize  = _2K,
++	        .oobsize   = 128,
++	        .badblock_pos = BBP_FIRST_PAGE,
++	        .read      = {
++	            &READ_STD(1, INFINITE, 24),
++	            &READ_FAST(1, INFINITE, 104),
++	            &READ_DUAL(1, INFINITE, 104),
++	            &READ_DUAL_ADDR(2, INFINITE, 104),
++	            &READ_QUAD(1, INFINITE, 104),
++	            &READ_QUAD_ADDR(4, INFINITE, 104),
++	            0
++	        },
++	        .write     = {
++	            &WRITE_STD(0, 256, 104),
++	            &WRITE_QUAD(0, 256, 120),
++	            0
++	        },
++	        .erase     = {
++	            &ERASE_SECTOR_128K(0, _128K, 104),
++	            0
++	        },
++	        .driver    = &spi_driver_general,
++	},
 +
 +	/* GD 3.3v GD5F4GQ4UAYIG 4Gbit */
 +	{
