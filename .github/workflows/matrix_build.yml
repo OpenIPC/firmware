@@ -28,17 +28,18 @@ jobs:
       fail-fast: false
       matrix:
         platform:
+          - ak3918ev300
+          - gk7102
           - hi3516cv100
           - hi3516cv200
-          - hi3519v101
           - hi3516cv300
           - hi3516cv500
           - hi3516ev200
+          - hi3519v101
           - hi3536cv100
+          - t31
           - xm510
           - xm530
-          - ak3918ev300
-          - gk7102
 
     steps:
 
@@ -190,6 +191,14 @@ jobs:
             release: fpv
 
           # MVP
+          - platform: t10
+            release: lite
+          - platform: t20
+            release: lite
+          - platform: t21
+            release: lite
+          - platform: t31
+            release: lite
           - platform: xm510
             release: lite
           - platform: xm530
