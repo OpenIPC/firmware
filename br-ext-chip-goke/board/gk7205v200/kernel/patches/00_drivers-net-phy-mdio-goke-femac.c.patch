@@ -1,6 +1,6 @@
 --- linux-4.9.37/drivers/net/phy/mdio-goke-femac.c	1970-01-01 03:00:00.000000000 +0300
-+++ linux-4.9.y/drivers/net/phy/mdio-goke-femac.c	2021-06-07 13:01:33.000000000 +0300
-@@ -0,0 +1,450 @@
++++ linux-4.9.y/drivers/net/phy/mdio-goke-femac.c	2021-06-07 13:01:34.000000000 +0300
+@@ -0,0 +1,445 @@
 +/*
 + * Copyright (c) Hunan Goke,Chengdu Goke,Shandong Goke. 2021. All rights reserved.
 + */
@@ -24,15 +24,10 @@
 +#define BIT_MASK_FEPHY_ADDR	GENMASK(4, 0)
 +#define BIT_FEPHY_SEL		BIT(5)
 +
-+#if defined(CONFIG_ARCH_CJ104V100)
-+#define BIT_OFFSET_LD_SET	0
-+#define BIT_OFFSET_LDO_SET	5
-+#define BIT_OFFSET_R_TUNING	8
-+#else
 +#define BIT_OFFSET_LD_SET	25
 +#define BIT_OFFSET_LDO_SET	22
 +#define BIT_OFFSET_R_TUNING	16
-+#endif
++
 +#define MII_EXPMD		0x1d
 +#define MII_EXPMA		0x1e
 +

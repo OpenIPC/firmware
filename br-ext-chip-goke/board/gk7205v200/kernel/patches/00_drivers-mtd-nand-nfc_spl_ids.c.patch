@@ -936,12 +936,12 @@
 +}
 +/*****************************************************************************/
 +
-+void nfc_show_info(struct mtd_info *mtd, char *goke, char *chipname)
++void nfc_show_info(struct mtd_info *mtd, char *vendor, char *chipname)
 +{
 +	/* char buf[20]; */
 +	struct nand_dev_t *nand_dev = &__nand_dev;
 +
-+	/* nfc_pr_msg("Nand: %s %s ", goke, chipname); */
++	/* nfc_pr_msg("Nand: %s %s ", vendor, chipname); */
 +
 +	if (IS_NAND_RANDOM(nand_dev))
 +		nfc_pr_msg("Randomizer \n");
