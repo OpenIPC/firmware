@@ -35,6 +35,8 @@ jobs:
           - hi3516cv500
           - hi3516ev200
           - hi3536cv100
+          - xm510
+          - xm530
           - ak3918ev300
           - gk7102
 
@@ -186,6 +188,14 @@ jobs:
             release: fpv
           - platform: gk7205v300
             release: fpv
+
+          # MVP
+          - platform: xm510
+            release: lite
+          - platform: xm530
+            release: lite
+          - platform: xm550
+            release: lite
 
           # TODO
           - platform: ak3916ev300
