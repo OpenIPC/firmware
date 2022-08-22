@@ -1,6 +1,25 @@
+--- a/include/linux/mtd/spi-nor.h
++++ b/include/linux/mtd/spi-nor.h
+@@ -31,6 +31,7 @@
+ #define SNOR_MFR_GD			0xc8
+ #define SNOR_MFR_XTX        0x0b
+ #define SNOR_MFR_PUYA       0x85
++#define SNOR_MFR_FM         0xa1
+ #define SNOR_MFR_ISSI		0x9d
+ 
+ /* Flash set the RESET# from */
 --- a/drivers/mtd/spi-nor/spi-nor.c
 +++ b/drivers/mtd/spi-nor/spi-nor.c
-@@ -1266,26 +1266,26 @@
+@@ -1107,7 +1107,7 @@
+ 	.reads[SNOR_MIDX_1_1_4]	= SNOR_OP_READ(0, 8, SPINOR_OP_READ_1_1_4),
+ 	.reads[SNOR_MIDX_1_4_4]	= SNOR_OP_READ(0, 24, SPINOR_OP_READ_1_4_4),
+ 
+-	.wr_modes		= SNOR_WR_MODES,
++	.wr_modes		= SNOR_MODE_1_1_1,
+ 	.page_programs[SNOR_MIDX_1_1_1]	= SPINOR_OP_PP,
+ 	.page_programs[SNOR_MIDX_1_1_4]	= SPINOR_OP_PP_1_1_4,
+ 
+@@ -1266,26 +1266,31 @@
  	{ "en25f32",    INFO(0x1c3116, 0, 64 * 1024,   64, SECT_4K) },
  	{ "en25p32",    INFO(0x1c2016, 0, 64 * 1024,   64, 0) },
  	{ "en25q32b",   INFO(0x1c3016, 0, 64 * 1024,   64,
@@ -26,6 +45,11 @@
  	{ "en25qh256",  INFO(0x1c7019, 0, 64 * 1024,  512, 0) },
  	{ "en25s64",	INFO(0x1c3817, 0, 64 * 1024,  128, SECT_4K) },
  
++	/* GallopMemory */
++	{ "gm25q128a", INFO(0x1c4018, 0, 64 * 1024,  256,
++			SPI_NOR_DUAL_READ), PARAMS(eon), CLK_MHZ_2X(80) },
++
++
  	/* ESMT */
  	{ "f25l32pa", INFO(0x8c2016, 0, 64 * 1024, 64, SECT_4K) },
  	{ "f25l64qa", INFO(0x8c4117, 0, 64 * 1024, 128,
@@ -34,7 +58,7 @@
  
  	/* Everspin */
  	{ "mr25h256", CAT25_INFO(32 * 1024, 1, 256, 2, SPI_NOR_NO_ERASE
-@@ -1298,22 +1298,22 @@
+@@ -1298,22 +1303,22 @@
  
  	/* GigaDevice 3.3V */
  	{ "gd25q16c", INFO(0xc84015, 0, 64 * 1024, 32,
@@ -64,7 +88,7 @@
  
  	/* Intel/Numonyx -- xxxs33b */
  	{ "160s33b",  INFO(0x898911, 0, 64 * 1024,  32, 0) },
-@@ -1324,7 +1324,7 @@
+@@ -1324,7 +1329,7 @@
  	{ "is25cd512", INFO(0x7f9d20, 0, 32 * 1024,   2, SECT_4K) },
  
  	{ "IS25WP512M-RMLA3", INFO(0x9d701a, 0, 64 * 1024, 1024,
@@ -73,7 +97,7 @@
  
  	/* Macronix/MXIC 3.3V */
  	{ "mx25l512e",   INFO(0xc22010, 0, 64 * 1024,   1, SECT_4K) },
-@@ -1336,9 +1336,9 @@
+@@ -1336,9 +1341,9 @@
  	{ "mx25l3205d",  INFO(0xc22016, 0, 64 * 1024,  64, 0) },
  	{ "mx25l3255e",  INFO(0xc29e16, 0, 64 * 1024,  64, SECT_4K) },
  	{ "mx25l6436f",  INFO(0xc22017, 0, 64 * 1024, 128,
@@ -85,7 +109,7 @@
  	{ "mx25l12855e", INFO(0xc22618, 0, 64 * 1024, 256, 0) },
  	{ "mx25l25635f", INFO(0xc22019, 0, 64 * 1024, 512,
  			SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES), PARAMS(mxic), CLK_MHZ_2X(84) },
-@@ -1346,61 +1346,61 @@
+@@ -1346,65 +1351,65 @@
  			| SPI_NOR_4B_OPCODES) },
  	{ "mx25l25655e", INFO(0xc22619, 0, 64 * 1024, 512, 0) },
  	{ "mx66l51235l/mx25l51245g", INFO(0xc2201a, 0, 64 * 1024, 1024,
@@ -114,7 +138,7 @@
  			SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES), PARAMS(mxic), CLK_MHZ_2X(166) },
  	{ "mx66u1g45gm", INFO(0xc2253b, 0, 64 * 1024, 2048,
 -			SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES), PARAMS(mxic), CLK_MHZ_2X(133) },
-+			SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES), PARAMS(mxic), CLK_MHZ_2X(80) },
++			SPI_NOR_DUAL_READ | SPI_NOR_4B_OPCODES), PARAMS(mxic), CLK_MHZ_2X(80) },
  
  	/* Micron 3.3V */
 -	{ "n25q032",     INFO(0x20ba16, 0, 64 * 1024,   64, SPI_NOR_QUAD_READ),
@@ -160,6 +184,10 @@
 -			PARAMS(xmc), CLK_MHZ_2X(104) },
 -	{ "xm25qh128b",   INFO(0x206018, 0, 64 * 1024,   256, SPI_NOR_QUAD_READ),
 -			PARAMS(xmc), CLK_MHZ_2X(104) },
+-	{ "xm25qh64chiq",   INFO(0x204017, 0, 64 * 1024,   128, SPI_NOR_QUAD_READ),
+-			PARAMS(xmc), CLK_MHZ_2X(133) },
+-	{ "xm25qh128chiq",   INFO(0x204018, 0, 64 * 1024,   256, SPI_NOR_QUAD_READ),
+-			PARAMS(xmc), CLK_MHZ_2X(133) },
 +	{ "xm25qh64a",    INFO(0x207017, 0, 64 * 1024,   128, SPI_NOR_DUAL_READ),
 +			PARAMS(xmc), CLK_MHZ_2X(80) },
 +	{ "xm25qh64b",    INFO(0x206017, 0, 64 * 1024,   128, SPI_NOR_DUAL_READ),
@@ -168,10 +196,14 @@
 +			PARAMS(xmc), CLK_MHZ_2X(80) },
 +	{ "xm25qh128b",   INFO(0x206018, 0, 64 * 1024,   256, SPI_NOR_DUAL_READ),
 +			PARAMS(xmc), CLK_MHZ_2X(80) },
++	{ "xm25qh64chiq",   INFO(0x204017, 0, 64 * 1024,   128, SPI_NOR_DUAL_READ),
++			PARAMS(xmc), CLK_MHZ_2X(80) },
++	{ "xm25qh128chiq",   INFO(0x204018, 0, 64 * 1024,   256, SPI_NOR_DUAL_READ),
++			PARAMS(xmc), CLK_MHZ_2X(80) },
  
  	/* PMC */
  	{ "pm25lv512",	INFO(0,        0, 32 * 1024,    2, SECT_4K_PMC) },
-@@ -1416,12 +1416,12 @@
+@@ -1420,12 +1425,12 @@
  			SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
  	{ "s25fl256s0", INFO(0x010219, 0x4d00, 256 * 1024, 128, 0) },
  	{ "s25fl256s1", INFO(0x010219, 0x4d01,  64 * 1024, 512,
@@ -186,7 +218,7 @@
  	{ "s25sl12800", INFO(0x012018, 0x0300, 256 * 1024,  64, 0) },
  	{ "s25sl12801", INFO(0x012018, 0x0301,  64 * 1024, 256, 0) },
  	{ "s25fl128s",	INFO6(0x012018, 0x4d0180, 64 * 1024, 256, SECT_4K
-@@ -1442,7 +1442,7 @@
+@@ -1446,7 +1451,7 @@
  	{ "s25fl008k",	INFO(0xef4014,      0,  64 * 1024,  16, SECT_4K
  			| SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
  	{ "w25Q16jv-iq/s25fl016k",	INFO(0xef4015,      0,  64 * 1024,  32,
@@ -195,7 +227,7 @@
  	/* { "s25fl064k",	INFO(0xef4017,      0,  64 * 1024, 128, SECT_4K
  			| SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) }, */
  	{ "s25fl132k",	INFO(0x014016,      0,  64 * 1024,  64, SECT_4K) },
-@@ -1510,19 +1510,19 @@
+@@ -1517,19 +1522,19 @@
  			| SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
  	{ "w25x32", INFO(0xef3016, 0, 64 * 1024,  64, SECT_4K) },
  	{ "w25q32", INFO(0xef4016, 0, 64 * 1024,  64,
@@ -220,7 +252,7 @@
  #else	
  	{ "w25q256(f/j)v", INFO(0xef4019, 0, 64 * 1024, 512,
  			SECT_4K | SPI_NOR_QUAD_READ | SPI_NOR_4B_OPCODES), PARAMS(winbond), CLK_MHZ_2X(80) },
-@@ -1544,7 +1544,7 @@
+@@ -1551,7 +1556,7 @@
  	{ "w25q256jw-iq", INFO(0xef6019, 0, 64 * 1024, 512,
  			SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ |
  			SPI_NOR_HAS_LOCK | SPI_NOR_HAS_TB | SPI_NOR_4B_OPCODES),
@@ -229,7 +261,7 @@
  
  	/* Catalyst / On Semiconductor -- non-JEDEC */
  	{ "cat25c11", CAT25_INFO(16, 8, 16, 1, SPI_NOR_NO_ERASE
-@@ -1559,42 +1559,42 @@
+@@ -1566,45 +1571,50 @@
  			| SPI_NOR_NO_FR) },
  	/* Paragon 3.3V */
  	{ "pn25f16s", INFO(0xe04015, 0, 64 * 1024,  32,
@@ -281,18 +313,28 @@
  	{ "ZB25VQ64A",INFO(0x5e4017, 0, 64 * 1024, 128,
 -		SPI_NOR_QUAD_READ), PARAMS(spansion), CLK_MHZ_2X(104) },
 +		SPI_NOR_DUAL_READ), PARAMS(spansion), CLK_MHZ_2X(80) },
+         { "ZB25VQ128ASIG",INFO(0x5e4018, 0, 64 * 1024, 256,
+-                SPI_NOR_QUAD_READ), PARAMS(spansion), CLK_MHZ_2X(104) },
+-	
++                SPI_NOR_DUAL_READ), PARAMS(spansion), CLK_MHZ_2X(80) },
++
++	/* SiliconKaiser 3.3v */
++	{ "sk25p128", INFO(0x256018, 0, 64 * 1024,  256, SPI_NOR_DUAL_READ), PARAMS(xtx), CLK_MHZ_2X(70) },
++
++	{ "sk25p64", INFO(0x256017, 0, 64 * 1024,  128, SPI_NOR_DUAL_READ), PARAMS(xtx), CLK_MHZ_2X(70) },
++
+ 	{ },
+ };
  
- 	/* SiliconKaiser 3.3v */
- 	{ "sk25p128", INFO(0x256018, 0, 64 * 1024,  256), PARAMS(xtx), CLK_MHZ_2X(70) },
-@@ -2258,7 +2258,6 @@
+@@ -2261,6 +2271,7 @@
+ 	/* read the BP bit in RDSR to check whether nor is lock or not */
  	switch (JEDEC_MFR(info)) {
  	case SNOR_MFR_GD:
- 	case SNOR_MFR_FM:
--	case SNOR_MFR_XTX:
++	case SNOR_MFR_FM:
  	case SNOR_MFR_ESMT:
  	case SNOR_MFR_EON:
  	case SNOR_MFR_SPANSION:
-@@ -2273,12 +2272,17 @@
+@@ -2275,12 +2286,17 @@
  			nor->level = bsp_bp_to_level(nor, info, BP_NUM_4);
  		break;
  	case SNOR_MFR_MACRONIX:
@@ -310,3 +352,12 @@
  	default:
  		goto usage;
  	}
+@@ -2617,6 +2633,8 @@
+ 	/* NOR protection support for STmicro/Micron chips and similar */
+ 	if (JEDEC_MFR(info) == SNOR_MFR_MICRON ||
+ 	    JEDEC_MFR(info) == SNOR_MFR_WINBOND ||
++	    JEDEC_MFR(info) == SNOR_MFR_XTX ||
++	    JEDEC_MFR(info) == SNOR_MFR_FM ||
+ 		info->flags & SPI_NOR_HAS_LOCK) {
+ 		nor->flash_lock = stm_lock;
+ 		nor->flash_unlock = stm_unlock;
