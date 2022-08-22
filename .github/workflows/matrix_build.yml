@@ -339,7 +339,8 @@ jobs:
 
           echo Using $TOOLNAME
           if [ ! -f "$TOOLNAME.tgz" ]; then
-            wget https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${TOOLNAME}.tgz
+            wget --retry-on-http-error=503 \
+              https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${TOOLNAME}.tgz
           fi
 
           echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
