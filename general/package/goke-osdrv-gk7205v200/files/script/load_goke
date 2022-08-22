@@ -21,7 +21,7 @@ os_mem_size=${os_mem_size:=32}
 BOARD=demo
 YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 
-cd /lib/modules/4.9.37/goke/
+cd /lib/modules/$(uname -r)/goke/
 
 ##################################################################
 
