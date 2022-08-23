@@ -193,6 +193,7 @@ jobs:
           # Original SDK test
           - platform: gk7205v200
             release: original
+            custom: onlyci
 
           # MVP
           - platform: t10
@@ -213,19 +214,19 @@ jobs:
           # TODO
           - platform: ak3916ev300
             release: lite
-            nosave: nosave
+            custom: onlyci
           - platform: ak3918ev200
             release: lite
-            nosave: nosave
+            custom: onlyci
           - platform: ak3918ev300
             release: lite
-            nosave: nosave
+            custom: onlyci
           - platform: gk7102
             release: lite
-            nosave: nosave
+            custom: onlyci
           - platform: gk7102s
             release: lite
-            nosave: nosave
+            custom: onlyci
 
         exclude:
           - platform: hi3516cv100
@@ -426,7 +427,7 @@ jobs:
           exit 2
 
       - name: Create release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.nosave != 'nosave' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' }}
         uses: actions/create-release@v1
         continue-on-error: true
         env:
@@ -438,7 +439,7 @@ jobs:
           prerelease: ${{ env.PRERELEASE }}
 
       - name: Upload NOR FW to release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.nosave != 'nosave' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -448,7 +449,7 @@ jobs:
           overwrite: true
 
       - name: Upload NAND FW to release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.nosave != 'nosave' && env.HAS_NAND == 'y' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.HAS_NAND == 'y' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -458,7 +459,7 @@ jobs:
           overwrite: true
 
       - name: Send binary file to telegram channel
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.nosave != 'nosave' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' }}
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
