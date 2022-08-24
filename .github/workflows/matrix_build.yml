@@ -29,6 +29,8 @@ jobs:
       matrix:
         platform:
           - ak3918ev300
+          - fh8852v100
+          - fh8852v200
           - gk7102
           - hi3516cv100
           - hi3516cv200
@@ -202,6 +204,10 @@ jobs:
             custom: onlyci
 
           # MVP
+          - platform: fh8852v100
+            release: lite
+          - platform: fh8852v200
+            release: lite
           - platform: nt98562
             release: lite
           - platform: nt98566
