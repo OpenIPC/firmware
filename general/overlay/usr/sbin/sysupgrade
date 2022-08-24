@@ -66,7 +66,6 @@ do_update_rootfs() {
 	unset x
 }
 
-
 do_wipe_overlay() {
 	echo_c 33 "\nOverlayFS"
 	echo "Erase overlay partition"
@@ -77,9 +76,9 @@ download_firmware() {
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
 	if [[ "${osr}" == "lite" ]] || [[ "${osr}" == "" ]]; then
-	    build="-"
+		build="-"
 	else
-	    build="-${osr}-"
+		build="-${osr}-"
 	fi
 	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${soc}${build}br.tgz"
 	echo "Download from $url"
@@ -108,11 +107,11 @@ free_resources() {
 		done
 		echo ". OK"
 	done
-	sync; echo 3 > /proc/sys/vm/drop_caches
+	sync; echo 3 >/proc/sys/vm/drop_caches
 }
 
 self_update() {
-	if echo "${args}" | grep "rootfs" || echo  "${args}" | grep "kernel" || echo "${args}" | grep -- "-n" > /dev/null 2>&1; then
+	if echo "${args}" | grep "rootfs" || echo "${args}" | grep "kernel" || echo "${args}" | grep -- "-n" >/dev/null 2>&1; then
 		echo -e "\nOffline upgrade or Overlay clean, skip sysupgrade version check."
 	else
 		echo -e "\nOnline upgrade, checking sysupgrade version..."
@@ -131,7 +130,7 @@ self_update() {
 		else
 			echo -e "\nVersion check failed. Possible network connection problem, script is corrupt or not found. Continue with bundled version."
 		fi
-  	fi
+	fi
 }
 
 create_lock() {
@@ -172,19 +171,19 @@ print_sysinfo() {
 print_usage() {
 	echo "
 Usage: $0 [options]
-
-  -k			update kernel from online repository
-  -r			update rootfs from online repository
-      --url=[URL]	custom URL to update from (.tgz format)
-      --kernel=[FILE]	update kernel from file (uImage format)
-      --rootfs=[FILE]	update rootfs from file (squashfs format)
-      --force_md5	do not validate MD5 hash
-      --force_soc	do not validate processor
-      --force_ver	do not validate release version
-      --force_all	do not validate anything
-  -n, --wipe_overlay	wipe overlay partition
-  -x, --no_reboot	do not reboot after updating
-  -h, --help		display this help and exit
+Where:
+  -k                  update kernel from online repository
+  -r                  update rootfs from online repository
+      --url=[URL]	    custom URL to update from (.tgz format)
+      --kernel=[FILE] update kernel from file (uImage format)
+      --rootfs=[FILE] update rootfs from file (squashfs format)
+      --force_md5     do not validate MD5 hash
+      --force_soc     do not validate processor
+      --force_ver     do not validate release version
+      --force_all     do not validate anything
+  -n, --wipe_overlay  wipe overlay partition
+  -x, --no_reboot     do not reboot after updating
+  -h, --help          display this help and exit
 "
 }
 
@@ -205,67 +204,67 @@ update_rootfs=0
 
 for i in "$@"; do
 	case $i in
-	--force_all)
-		skip_md5=1
-		skip_soc=1
-		skip_ver=1
-		shift
-		;;
-	--force_md5)
-		skip_md5=1
-		shift
-		;;
-	--force_soc)
-		skip_soc=1
-		shift
-		;;
-	--force_ver)
-		skip_ver=1
-		shift
-		;;
-	-h|--help)
-		print_sysinfo
-		print_usage
-		exit 0
-		;;
-	-k )
-		update_kernel=1
-		remote_update=1
-		shift
-		;;
-	--kernel=*)
-		update_kernel=1
-		kernel_file="${i#*=}"
-		shift
-		;;
-	-n|--wipe_overlay)
-		clear_overlay=1
-		shift
-		;;
-	-r)
-		update_rootfs=1
-		remote_update=1
-		shift
-		;;
-	--rootfs=*)
-		update_rootfs=1
-		rootfs_file="${i#*=}"
-		shift
-		;;
-	--url=*)
-		url="${i#*=}"
-		shift
-		;;
-	-x|--no_reboot)
-		skip_reboot=1
-		shift
-		;;
-	*)
-		print_sysinfo
-		echo_c 97 "\nUnknown option: $1"
-		print_usage
-		exit 1
-		;;
+		--force_all)
+			skip_md5=1
+			skip_soc=1
+			skip_ver=1
+			shift
+			;;
+		--force_md5)
+			skip_md5=1
+			shift
+			;;
+		--force_soc)
+			skip_soc=1
+			shift
+			;;
+		--force_ver)
+			skip_ver=1
+			shift
+			;;
+		-h | --help)
+			print_sysinfo
+			print_usage
+			exit 0
+			;;
+		-k)
+			update_kernel=1
+			remote_update=1
+			shift
+			;;
+		--kernel=*)
+			update_kernel=1
+			kernel_file="${i#*=}"
+			shift
+			;;
+		-n | --wipe_overlay)
+			clear_overlay=1
+			shift
+			;;
+		-r)
+			update_rootfs=1
+			remote_update=1
+			shift
+			;;
+		--rootfs=*)
+			update_rootfs=1
+			rootfs_file="${i#*=}"
+			shift
+			;;
+		--url=*)
+			url="${i#*=}"
+			shift
+			;;
+		-x | --no_reboot)
+			skip_reboot=1
+			shift
+			;;
+		*)
+			print_sysinfo
+			echo_c 37 "\nUnknown option: $1"
+			print_usage
+			exit 1
+			;;
 	esac
 done
 
@@ -280,6 +279,7 @@ exit 0
 self_update
 create_lock
 free_resources
+
 [ "$remote_update" -eq 1 ] && download_firmware
 [ "$update_kernel" -eq 1 ] && do_update_kernel "$kernel_file"
 [ "$update_rootfs" -eq 1 ] && do_update_rootfs "$rootfs_file"
