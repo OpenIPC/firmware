@@ -10,6 +10,7 @@ args=" $@"
 set -e
 
 echo_c() {
+	# 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan, 37 white, 38 grey
 	[ -z "$HASERLVER" ] && t="\e[1;$1m$2\e[0m" || t="$2"
 	echo -e "$t"
 }
@@ -91,11 +92,11 @@ download_firmware() {
 }
 
 free_resources() {
-	# echo_c 97 "\nStop services, unload modules"
+	# echo_c 37 "\nStop services, unload modules"
 	# killall majestic crond klogd ntpd rngd syslogd >/dev/null 2>&1 || true
 	# "load_$vendor" -r >/dev/null 2>&1 || true
 	#
-	echo_c 97 "\nStop services, sync and fresh memory"
+	echo_c 37 "\nStop services, sync and fresh memory"
 	for proc in majestic crond klogd ntpd rngd syslogd
 	do
 		echo -n "Killing $proc "
@@ -165,7 +166,7 @@ get_system_build() {
 print_sysinfo() {
 	get_system_info
 	echo_c 33 "OpenIPC System Updater"
-	echo_c 96 "\nVendor\t$vendor\nSoC\t$soc\nKernel\t$kernel_version\nRootFS\t$system_version"
+	echo_c 36 "\nVendor\t$vendor\nSoC\t$soc\nKernel\t$kernel_version\nRootFS\t$system_version"
 }
 
 print_usage() {
@@ -189,7 +190,7 @@ Usage: $0 [options]
 
 reboot_system() {
 	[ "$skip_reboot" -eq 1 ] && echo_c 31 "\nReboot needed!" && exit 1
-	echo_c 97 "\nUnconditional reboot"
+	echo_c 37 "\nUnconditional reboot"
 	reboot -d 1 -f
 }
 
@@ -273,7 +274,7 @@ print_sysinfo
 [ "$update_kernel" -eq 0 ] && \
 [ "$update_rootfs" -eq 0 ] && \
 [ "$clear_overlay" -eq 0 ] && \
-echo_c 97 "\nTry '$(basename "$0") --help' for options." && \
+echo_c 37 "\nTry '$(basename "$0") --help' for options." && \
 exit 0
 
 self_update
