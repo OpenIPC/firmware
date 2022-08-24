@@ -130,7 +130,7 @@ self_update() {
 }
 
 check_sdcard() {
-	if mount | grep /mnt/mmc; then
+	if mount | grep /mnt/mmc >/dev/null; then
 		echo_c 31 "\nCannot upgrade! There is a mounted SD card!"
 		echo "Please remove the card from the slot and restart sysupgrade."
 		exit 1
