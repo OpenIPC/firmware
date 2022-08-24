@@ -96,18 +96,17 @@ free_resources() {
 	# "load_$vendor" -r >/dev/null 2>&1 || true
 	#
 	echo_c 37 "\nStop services, sync and fresh memory"
-	for proc in majestic crond klogd ntpd rngd syslogd
-	do
+	for proc in majestic crond klogd ntpd rngd syslogd; do
 		echo -n "Killing $proc "
-		while [ -n "$(pidof $proc)" ]
-		do
+		while [ -n "$(pidof $proc)" ]; do
 			killall $proc >/dev/null 2>&1 || true
 			sleep 0.1
 			echo -n "."
 		done
 		echo ". OK"
 	done
-	sync; echo 3 >/proc/sys/vm/drop_caches
+	sync
+	echo 3 >/proc/sys/vm/drop_caches
 }
 
 self_update() {
@@ -281,11 +280,11 @@ done
 
 print_sysinfo
 
-[ "$update_kernel" -eq 0 ] && \
-[ "$update_rootfs" -eq 0 ] && \
-[ "$clear_overlay" -eq 0 ] && \
-echo_c 37 "\nTry '$(basename "$0") --help' for options." && \
-exit 0
+[ "$update_kernel" -eq 0 ] &&
+	[ "$update_rootfs" -eq 0 ] &&
+	[ "$clear_overlay" -eq 0 ] &&
+	echo_c 37 "\nTry '$(basename "$0") --help' for options." &&
+	exit 0
 
 self_update
 
