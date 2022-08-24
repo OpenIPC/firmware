@@ -75,11 +75,8 @@ do_wipe_overlay() {
 download_firmware() {
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
-	if [[ "${osr}" == "lite" ]] || [[ "${osr}" == "" ]]; then
-		build="-"
-	else
-		build="-${osr}-"
-	fi
+	build="-"
+	[ -n "${osr}"] && [ "lite" != "${osr}" ] && build="${build}${osr}-"
 	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${soc}${build}br.tgz"
 	echo "Download from $url"
 	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
