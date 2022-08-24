@@ -284,4 +284,12 @@ free_resources
 [ "$update_kernel" -eq 1 ] && do_update_kernel "$kernel_file"
 [ "$update_rootfs" -eq 1 ] && do_update_rootfs "$rootfs_file"
 [ "$clear_overlay" -eq 1 ] && do_wipe_overlay
-reboot_system
+
+if [ "1" = "$skip_reboot" ]; then
+	echo_c 33 "You asked me not to reboot, so I won't."
+	echo "Please reboot the camera manually whenever possible."
+else
+	reboot_system
+fi
+
+exit 0
