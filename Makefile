@@ -58,7 +58,8 @@ $(BR_DIR): $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz
 install-deps:
 	if [ ! -f /.dockerenv ]; then SUDO=sudo; fi
 	DEBIAN_FRONTEND=noninteractive $(SUDO) apt-get update && \
-		$(SUDO) apt-get -y install build-essential make libncurses-dev wget cpio rsync bc
+		$(SUDO) apt-get -y install \
+		build-essential git make libncurses-dev wget curl cpio rsync bc unzip
 
 
 %_info:
