@@ -82,7 +82,7 @@ jobs:
       - name: Install build dependencies
         if: env.NEED == 'true'
         run: |
-          make install-deps
+          sudo make install-deps
           if [ ! -z "$ACT" ]; then
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
           else
@@ -284,7 +284,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          make install-deps
+          sudo make install-deps
           ls -l deps || true
           if [ ! -z "$ACT" ]; then
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV

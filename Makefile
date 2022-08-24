@@ -56,10 +56,14 @@ $(BR_DIR): $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz
 
 
 install-deps:
-	if [ ! -f /.dockerenv ]; then SUDO=sudo; fi
-	DEBIAN_FRONTEND=noninteractive $(SUDO) apt-get update && \
-		$(SUDO) apt-get -y install \
-		build-essential git make libncurses-dev wget curl cpio rsync bc unzip
+ifneq ($(shell id -u), 0)
+	@echo "You must be root to perform this action."
+else
+	DEBIAN_FRONTEND=noninteractive apt-get update && \
+		apt-get -y install \
+		build-essential git make libncurses-dev wget curl \
+		cpio rsync bc unzip file
+endif
 
 
 %_info:
