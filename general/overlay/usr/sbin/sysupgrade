@@ -133,6 +133,14 @@ self_update() {
 	fi
 }
 
+check_sdcard() {
+	if mount | grep /mnt/mmc; then
+		echo_c 31 "Cannot upgrade! There is a mounted SD card!"
+		echo "Please remove the card from the slot and restart sysupgrade."
+		exit 1
+	fi
+}
+
 create_lock() {
 	[ -f /tmp/sysupgrade.lock ] && echo -e "\e[1;31m\nAnother sysupgrade process is already running!\e[0m\n" && exit 1
 	touch /tmp/sysupgrade.lock
@@ -277,6 +285,9 @@ echo_c 37 "\nTry '$(basename "$0") --help' for options." && \
 exit 0
 
 self_update
+
+check_sdcard
+
 create_lock
 free_resources
 
