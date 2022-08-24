@@ -131,8 +131,8 @@ self_update() {
 
 check_sdcard() {
 	if mount | grep /mnt/mmc >/dev/null; then
-		echo_c 31 "\nCannot upgrade! There is a mounted SD card!"
-		echo "Please remove the card from the slot and restart sysupgrade."
+		echo_c 31 "\nCannot upgrade! There is a mounted SD card in the slot!"
+		echo_c 37 "Please remove the card from the slot and restart sysupgrade."
 		exit 1
 	fi
 }
@@ -297,7 +297,7 @@ free_resources
 
 if [ "1" = "$skip_reboot" ]; then
 	echo_c 33 "You asked me not to reboot, so I won't."
-	echo "Please reboot the camera manually whenever possible."
+	echo_c 37 "Please reboot the camera manually whenever possible."
 else
 	reboot_system
 fi
