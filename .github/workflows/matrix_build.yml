@@ -365,6 +365,7 @@ jobs:
             arm*|cortex*)
               PREFIX=arm
               ABI="eabi"
+              [[ $SOC =~ _hf$ ]] && ABI="${ABI}hf"
               ;;
             mips_xburst)
               PREFIX=mipsel
