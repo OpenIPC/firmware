@@ -142,7 +142,10 @@ check_sdcard() {
 }
 
 create_lock() {
-	[ -f /tmp/sysupgrade.lock ] && echo -e "\e[1;31m\nAnother sysupgrade process is already running!\e[0m\n" && exit 1
+	if [ -f /tmp/sysupgrade.lock ]; then
+		echo_c 31 "\nAnother sysupgrade process is already running!"
+		exit 1
+	fi
 	touch /tmp/sysupgrade.lock
 }
 
