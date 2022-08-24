@@ -37,6 +37,7 @@ jobs:
           - hi3516ev200
           - hi3519v101
           - hi3536cv100
+          - nt98562
           - t31
           - xm510
           - xm530
@@ -196,6 +197,10 @@ jobs:
             custom: onlyci
 
           # MVP
+          - platform: nt98562
+            release: lite
+          - platform: nt98566
+            release: lite
           - platform: t10
             release: lite
           - platform: t20
