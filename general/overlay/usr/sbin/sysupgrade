@@ -133,7 +133,7 @@ check_sdcard() {
 	echo_c 33 "\nUnmounting SD card"
 	stoplist="autoupdate-kernel.img autoupdate-rootfs.img autoupdate-uboot.img"
 	while [ -n "$(mount | grep /mnt/mmc)" ]; do
-		_d=$(mount | grep /mnt/mmc | tail -1 | awk '{print $1}')
+		_d=$(mount | grep /mnt/mmc | tail -1 | awk '{print $3}')
 		echo_c 34 "$_d"
 		for _f in $stoplist; do
 			echo "- checking for ${_d}/${_f}"
