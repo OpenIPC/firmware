@@ -17,6 +17,10 @@ on:
        - '**.md'
   workflow_dispatch:
 
+env:
+  MAX_UIMAGE_LITE: 0x300000
+  MAX_ROOTFS_LITE: 0xa00000
+
 jobs:
   toolchain:
     name: Toolchain
@@ -442,9 +446,19 @@ jobs:
 
           make BOARD=$BOARD all
 
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 10485760 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 10485760... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
-          cd ${GITHUB_WORKSPACE}/output/images
+          check_exceeded() {
+            FILE=${GITHUB_WORKSPACE}/output/images/${1}
+            ACTUAL=$(stat --printf="%s" ${FILE})
+            if [[ ${ACTUAL} -gt ${2} ]]; then
+              OVERRUN=$((${ACTUAL}-${2}))
+              echo "TG_NOTIFY=Warning, ${1} size exceeded by ${OVERRUN}... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV
+              exit 1
+            fi
+          }
+
+          check_exceeded uImage ${MAX_UIMAGE_LITE}
+          check_exceeded rootfs.squashfs ${MAX_ROOTFS_LITE}
+
           mv uImage uImage.${{ matrix.platform }}
           mv rootfs.squashfs rootfs.squashfs.${{ matrix.platform }}
           md5sum rootfs.squashfs.${{ matrix.platform }} > rootfs.squashfs.${{ matrix.platform }}.md5sum
