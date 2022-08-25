@@ -87,61 +87,61 @@ insert_osal()
 
 	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
 	if [ -z "$MMZ" ]; then
-		insmod hi_osal.ko anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+		modprobe open_osal anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 	else
-		insmod hi_osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
+		modprobe open_osal anony=1 mmz_allocator=cma mmz=$MMZ || report_error
 	fi
 }
 
 insert_detect()
 {
 	cd /lib/modules/$(uname -r)/hisilicon
-	insmod sys_config.ko chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
+	modprobe open_sys_config chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
-	insmod hi3516ev200_base.ko
-	insmod hi3516ev200_isp.ko
-	insmod hi_sensor_i2c.ko
-	insmod hi_sensor_spi.ko
+	modprobe open_base
+	modprobe open_isp
+	modprobe open_sensor_i2c
+	modprobe open_sensor_spi
 }
 
 remove_detect()
 {
-	rmmod -w hi_sensor_spi
-	rmmod -w hi_sensor_i2c
-	rmmod -w hi3516ev200_isp
-	rmmod -w hi3516ev200_base
-	rmmod -w hi_osal
-	rmmod -w sys_config.ko
+	rmmod -w open_sensor_spi
+	rmmod -w open_sensor_i2c
+	rmmod -w open_isp
+	rmmod -w open_base
+	rmmod -w open_osal
+	rmmod -w open_sys_config
 }
 
 insert_audio()
 {
-	insmod hi3516ev200_aio.ko
-	insmod hi3516ev200_ai.ko
-	insmod hi3516ev200_ao.ko
-	insmod hi3516ev200_aenc.ko
-	insmod hi3516ev200_adec.ko
-	insmod hi3516ev200_acodec.ko
+	modprobe open_aio
+	modprobe open_ai
+	modprobe open_ao
+	modprobe open_aenc
+	modprobe open_adec
+	modprobe open_acodec
 #	insmod hi_tlv320aic31.ko
 	echo "insert audio"
 }
 
 remove_audio()
 {
-	rmmod -w hi3516ev200_acodec
-#	rmmod -w hi_tlv320aic31.ko
-	rmmod -w hi3516ev200_adec
-	rmmod -w hi3516ev200_aenc
-	rmmod -w hi3516ev200_ao
-	rmmod -w hi3516ev200_ai
-	rmmod -w hi3516ev200_aio
+	rmmod -w open_acodec
+#	rmmod -w hi_tlv320aic31
+	rmmod -w open_adec
+	rmmod -w open_aenc
+	rmmod -w open_ao
+	rmmod -w open_ai
+	rmmod -w open_aio
 
 	echo "remove audio"
 }
 
 insert_isp()
 {
-	insmod hi3516ev200_isp.ko
+	modprobe open_isp.ko
 }
 
 insert_sil9024()
@@ -171,48 +171,48 @@ insert_adv7179()
 insert_piris()
 {
 	if [ "{chipid}" == "hi3516ev300" -a "${board}" == "demo" ];then
-		insmod hi_piris.ko
-		# insmod hi3516ev200_pm.ko   # Maybe need for Hi3518Ev300
+		mopprobe open_piris
+		# modprobe open_pm   # Maybe need for Hi3518Ev300
 	fi
 }
 
 insert_ko()
 {
-	insmod sys_config.ko chip=${chipid} sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
+	modprobe open_sys_config chip=${chipid} sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
-	insmod hi3516ev200_base.ko
-	insmod hi3516ev200_sys.ko
-#	insmod hi3516ev200_tde.ko
-	insmod hi3516ev200_rgn.ko
-	insmod hi3516ev200_vgs.ko
-	insmod hi3516ev200_vi.ko
+	modprobe open_base
+	modprobe open_sys
+#	modprobe open_tde
+	modprobe open_rgn
+	modprobe open_vgs
+	modprobe open_vi
 	insert_isp;
-	insmod hi3516ev200_vpss.ko
-#	insmod hi3516ev200_vo.ko                        # disabled, info by @widgetii
-#	insmod hifb.ko video="hifb:vram0_size:1620"     # default fb0:D1  # disabled, info by @widgetii
-	insmod hi3516ev200_chnl.ko
-	insmod hi3516ev200_vedu.ko
-	insmod hi3516ev200_rc.ko
-	insmod hi3516ev200_venc.ko
-	insmod hi3516ev200_h264e.ko
-	insmod hi3516ev200_h265e.ko
-	insmod hi3516ev200_jpege.ko
-	insmod hi3516ev200_ive.ko save_power=0
-	insmod hi_pwm.ko
-	insmod hi_sensor_i2c.ko
-	insmod hi_sensor_spi.ko
+	modprobe open_vpss
+#	modprobe open_vo                        # disabled, info by @widgetii
+#	insmod hifb video="hifb:vram0_size:1620"     # default fb0:D1  # disabled, info by @widgetii
+	modprobe open_chnl
+	modprobe open_vedu
+	modprobe open_rc
+	modprobe open_venc
+	modprobe open_h264e
+	modprobe open_h265e
+	modprobe open_jpege
+	modprobe open_ive save_power=0
+	modprobe open_pwm
+	modprobe open_sensor_i2c
+	modprobe open_sensor_spi
 	insert_piris
 	insert_sil9024; # BT1120
 #	insert_adv7179; # BT656
 	insert_audio
-	insmod hi_mipi_rx.ko
-#	insmod hi_user.ko
-	insmod hi3516ev200_wdt.ko
+	modprobe open_mipi_rx
+#	modprobe open_user
+	modprobe open_wdt
 }
 
 remove_ko()
 {
-	rmmod -w hi3516ev200_wdt
+	rmmod -w open_wdt
 #	rmmod -w hi_user
 	remove_audio
 #	rmmod -w hi_piris
@@ -220,28 +220,28 @@ remove_ko()
 	rmmod -w hi_mipi_rx
 	rmmod -w hi_sil9024 &> /dev/null
 #	rmmod -w hi_adv7179 &> /dev/null
-	rmmod -w hi3516ev200_ive
-	rmmod -w hi3516ev200_rc
-	rmmod -w hi3516ev200_jpege
-	rmmod -w hi3516ev200_h264e
-	rmmod -w hi3516ev200_h265e
-	rmmod -w hi3516ev200_venc
-	rmmod -w hi3516ev200_vedu
-	rmmod -w hi3516ev200_chnl
+	rmmod -w open_ive
+	rmmod -w open_rc
+	rmmod -w open_jpege
+	rmmod -w open_h264e
+	rmmod -w open_h265e
+	rmmod -w open_venc
+	rmmod -w open_vedu
+	rmmod -w open_chnl
 #	rmmod -w hifb
-#	rmmod -w hi3516ev200_vo
-	rmmod -w hi3516ev200_vpss
-	rmmod -w hi3516ev200_isp
-	rmmod -w hi3516ev200_vi
-	rmmod -w hi3516ev200_vgs
-	rmmod -w hi3516ev200_rgn
-#	rmmod -w hi3516ev200_tde
-	rmmod -w hi_sensor_i2c &> /dev/null
-	rmmod -w hi_sensor_spi &> /dev/null
-	rmmod -w hi3516ev200_sys
-	rmmod -w hi3516ev200_base
-	rmmod -w hi_osal
-	rmmod -w sys_config
+#	rmmod -w open_vo
+	rmmod -w open_vpss
+	rmmod -w open_isp
+	rmmod -w open_vi
+	rmmod -w open_vgs
+	rmmod -w open_rgn
+#	rmmod -w open_tde
+	rmmod -w open_sensor_i2c &> /dev/null
+	rmmod -w open_sensor_spi &> /dev/null
+	rmmod -w open_sys
+	rmmod -w open_base
+	rmmod -w open_osal
+	rmmod -w open_sys_config
 }
 
 
