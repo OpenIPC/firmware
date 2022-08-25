@@ -28,10 +28,10 @@ FFMPEG_OPENIPC_CONF_OPTS = \
 	--disable-avdevice \
 	--disable-filters \
 	--disable-encoders \
-	--disable-decoders --enable-decoder=h264 \
+	--disable-decoders --enable-decoder=h264,hevc \
 	--disable-muxers --enable-muxer=rtsp \
 	--disable-demuxers --enable-demuxer=rtsp \
-	--disable-parsers --enable-parser=h264 \
+	--disable-parsers --enable-parser=h264,hevc \
 	--disable-protocols --enable-protocol=file,tcp \
 	--disable-programs --enable-ffmpeg --enable-small
 
