@@ -95,7 +95,7 @@ insert_osal()
 
 insert_detect()
 {
-	cd /lib/modules/4.9.37/hisilicon
+	cd /lib/modules/$(uname -r)/hisilicon
 	insmod sys_config.ko chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
 	insmod hi3516ev200_base.ko
@@ -387,7 +387,7 @@ if [ "$SENSOR" = "unknown" ]; then
 	exit 1
 else
 	if [ $b_arg_insmod -eq 1 ]; then
-		cd /lib/modules/4.9.37/hisilicon
+		cd /lib/modules/$(uname -r)/hisilicon
 		insert_ko;
 	fi
 fi
