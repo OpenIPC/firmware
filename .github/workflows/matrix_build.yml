@@ -446,9 +446,9 @@ jobs:
 
           make BOARD=$BOARD all
 
+          pushd output/images
           check_exceeded() {
-            FILE=${GITHUB_WORKSPACE}/output/images/${1}
-            ACTUAL=$(stat --printf="%s" ${FILE})
+            ACTUAL=$(stat --printf="%s" ${1})
             if [[ ${ACTUAL} -gt ${2} ]]; then
               OVERRUN=$((${ACTUAL}-${2}))
               echo "TG_NOTIFY=Warning, ${1} size exceeded by ${OVERRUN}... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV
@@ -459,10 +459,10 @@ jobs:
           check_exceeded uImage ${MAX_UIMAGE_LITE}
           check_exceeded rootfs.squashfs ${MAX_ROOTFS_LITE}
 
+          md5sum uImage > uImage.${{ matrix.platform }}.md5sum
           mv uImage uImage.${{ matrix.platform }}
+          md5sum rootfs.squashfs > rootfs.squashfs.${{ matrix.platform }}.md5sum
           mv rootfs.squashfs rootfs.squashfs.${{ matrix.platform }}
-          md5sum rootfs.squashfs.${{ matrix.platform }} > rootfs.squashfs.${{ matrix.platform }}.md5sum
-          md5sum uImage.${{ matrix.platform }} > uImage.${{ matrix.platform }}.md5sum
           tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
 
           if [ "$HAS_NAND" == "y" ]; then
@@ -472,10 +472,11 @@ jobs:
             echo "NANDFW_FILE=$NANDFW_FILE" >> $GITHUB_ENV
 
             mv rootfs.ubi rootfs.ubi.${{ matrix.platform }}
+            md5sum rootfs.ubifs > rootfs.ubifs.${{ matrix.platform }}.md5sum
             mv rootfs.ubifs rootfs.ubifs.${{ matrix.platform }}
-            md5sum rootfs.ubifs.${{ matrix.platform }} > rootfs.ubifs.${{ matrix.platform }}.md5sum
             tar -cvzf $NANDFW_PATH uImage* *rootfs.ubi*.${{ matrix.platform }}*
           fi
+          popd
 
       - name: Send error message to telegram channel
         env:
