@@ -468,3 +468,17 @@ jobs:
           TG_HEADER=$(echo -e "\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9C\x85 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendDocument \
             -F chat_id=$TG_CHANNEL -F document="@$NORFW_PATH" -F caption="$TG_HEADER"
+
+  ci-build-check:
+    if:  always() && github.event.pull_request
+    runs-on: ubuntu-latest
+    name: CI Build Check
+    needs: [buildroot]
+    steps:
+      - run: |
+          result="${{ needs.build.result }}"
+          if [[ $result == "success" || $result == "skipped" ]]; then
+            exit 0
+          else
+            exit 1
+          fi
