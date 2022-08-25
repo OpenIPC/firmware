@@ -99,7 +99,7 @@ insert_detect()
 	modprobe open_sys_config chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
 	modprobe open_base
-	modprobe open_isp
+	modprobe hi3516ev200_isp
 	modprobe open_sensor_i2c
 	modprobe open_sensor_spi
 }
@@ -108,7 +108,7 @@ remove_detect()
 {
 	rmmod -w open_sensor_spi
 	rmmod -w open_sensor_i2c
-	rmmod -w open_isp
+	rmmod -w hi3516ev200_isp
 	rmmod -w open_base
 	rmmod -w open_osal
 	rmmod -w open_sys_config
@@ -141,7 +141,7 @@ remove_audio()
 
 insert_isp()
 {
-	modprobe open_isp.ko
+	modprobe hi3516ev200_isp
 }
 
 insert_sil9024()
@@ -231,7 +231,7 @@ remove_ko()
 #	rmmod -w hifb
 #	rmmod -w open_vo
 	rmmod -w open_vpss
-	rmmod -w open_isp
+	rmmod -w hi3516ev200_isp
 	rmmod -w open_vi
 	rmmod -w open_vgs
 	rmmod -w open_rgn
