@@ -423,7 +423,10 @@ jobs:
 
           LIBC=$(echo $TOOLNAME | cut -d '-' -f 3)
           case "$LIBC" in
-            musl|uclibc)
+            uclibc)
+              PREFIX="${PREFIX}${LIBC}gnu${ABI}"
+            ;;
+            musl)
               PREFIX="${PREFIX}${LIBC}${ABI}"
             ;;
             glibc)
