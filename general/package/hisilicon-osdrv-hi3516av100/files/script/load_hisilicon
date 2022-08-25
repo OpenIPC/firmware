@@ -216,12 +216,6 @@ insert_sns() {
 
                 devmem 0x2003002c 32 0x90007 # sensor unreset, clk 37.125MHz, VI 250MHz
                 ;;
-        ar0330)
-                devmem 0x200f0050 32 0x2 # i2c0_scl
-                devmem 0x200f0054 32 0x2 # i2c0_sda
-
-                devmem 0x2003002c 32 0xB0007 # sensor unreset, clk 27MHz, VI 250MHz
-                ;;
         ov5658)
                 devmem 0x200f0050 32 0x2     # i2c0_scl
                 devmem 0x200f0054 32 0x2     # i2c0_sda
@@ -239,6 +233,12 @@ insert_sns() {
                 devmem 0x200f0054 32 0x2 # i2c0_sda
 
                 devmem 0x2003002c 32 0xB0007 # sensor unreset, clk 27MHz, VI 250MHz
+                ;;
+        ar0330 | ar0330_i2c_dc)
+                devmem 0x200f0050 32 0x2 # i2c0_scl
+                devmem 0x200f0054 32 0x2 # i2c0_sda
+
+                devmem 0x2003002c 32 0xE0007 # sensor unreset, clk 24MHz, VI 250MHz
                 ;;
         os05a)
                 devmem 0x200f0050 32 0x2     # i2c0_scl
