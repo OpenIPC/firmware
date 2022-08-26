@@ -18,8 +18,10 @@ on:
   workflow_dispatch:
 
 env:
-  MAX_UIMAGE_LITE: 0x300000
-  MAX_ROOTFS_LITE: 0xa00000
+  MAX_KERNEL_SIZE: 0x200000
+  MAX_ROOTFS_SIZE: 0x500000
+  MAX_KERNEL_SIZE_ULTIMATE: 0x300000
+  MAX_ROOTFS_SIZE_ULTIMATE: 0xa00000
 
 jobs:
   toolchain:
@@ -454,9 +456,16 @@ jobs:
           }
 
           if [ -f rootfs.squashfs ]; then
-            # TODO: check why it doesn't fail on fpv rootfs?
-            check_exceeded uImage ${MAX_UIMAGE_LITE}
-            check_exceeded rootfs.squashfs ${MAX_ROOTFS_LITE}
+            case ${{ matrix.release }} in
+              lite)
+                check_exceeded uImage ${MAX_KERNEL_SIZE}
+                check_exceeded rootfs.squashfs ${MAX_ROOTFS_SIZE}
+                ;;
+              ultimate|fpv)
+                check_exceeded uImage ${MAX_KERNEL_SIZE_ULTIMATE}
+                check_exceeded rootfs.squashfs ${MAX_ROOTFS_SIZE_ULTIMATE}
+                ;;
+            esac
 
             NORFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-${SUFF}br.tgz"
             echo "NORFW_PATH=$NORFW_PATH" >> $GITHUB_ENV
