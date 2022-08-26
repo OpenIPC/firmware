@@ -446,6 +446,7 @@ jobs:
           GCC_VER=$(echo $TOOLNAME | cut -d '-' -f 2)
           echo "BR2_TOOLCHAIN_EXTERNAL_GCC_${GCC_VER:3:1}=y" >> $CONF_PATH
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
+          cat $CONF_PATH
 
           make BOARD=$BOARD all
 
