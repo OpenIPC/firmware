@@ -48,10 +48,9 @@ clean:
 
 prepare: $(BR_DIR)
 $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz:
-	wget -O $@ \
-		--header="Host: buildroot.org" --no-check-certificate \
+	wget -O $@ -nv \
 		--retry-connrefused --continue --timeout=15 \
-		https://buildroot.org/downloads/buildroot-$(BR_VER).tar.gz
+		http://buildroot.org/downloads/buildroot-$(BR_VER).tar.gz
 
 $(BR_DIR): $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz
 	tar -C $(ROOT_DIR) -xf buildroot-$(BR_VER).tar.gz
