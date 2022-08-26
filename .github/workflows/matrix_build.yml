@@ -427,6 +427,7 @@ jobs:
               UCCFG=/tmp/extsdk/${PREFIX}/sysroot/usr/include/bits/uClibc_config.h
               check_uclibc_feature() { grep -q "\#define ${1} 1" ${UCCFG} && echo y || echo n }
               echo "BR2_ENABLE_LOCALE=$(check_uclibc_feature __UCLIBC_HAS_LOCALE__)" >> $CONF_PATH
+              echo "BR2_TOOLCHAIN_HAS_THREADS_DEBUG=$(check_uclibc_feature __PTHREADS_DEBUG_SUPPORT__)" >> $CONF_PATH
             ;;
             musl)
               PREFIX="${PREFIX}${LIBC}${ABI}"
