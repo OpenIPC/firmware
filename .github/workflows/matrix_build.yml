@@ -455,7 +455,7 @@ jobs:
             fi
           }
 
-          if [ -f rootfs.squashfs ]; then
+          if [ -f uImage ]; then
             case ${{ matrix.release }} in
               lite)
                 check_exceeded uImage ${MAX_KERNEL_SIZE}
