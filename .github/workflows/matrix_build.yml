@@ -476,7 +476,7 @@ jobs:
     needs: [buildroot]
     steps:
       - run: |
-          result="${{ needs.build.result }}"
+          result="${{ needs.buildroot.result }}"
           if [[ $result == "success" || $result == "skipped" ]]; then
             exit 0
           else
