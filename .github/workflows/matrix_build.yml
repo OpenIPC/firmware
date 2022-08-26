@@ -399,6 +399,7 @@ jobs:
           fi
           mkdir /tmp/extsdk
           tar xvf ${TOOLNAME}.tgz --strip-components=1 -C /tmp/extsdk >/dev/null
+          set -x
 
           echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
           echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
@@ -425,6 +426,7 @@ jobs:
             uclibc)
               PREFIX="${PREFIX}${LIBC}gnu${ABI}"
               UCCFG=/tmp/extsdk/${PREFIX}/sysroot/usr/include/bits/uClibc_config.h
+              ls -la $UCCFG
               check_uclibc_feature () { grep -q "\#define ${1} 1" ${UCCFG} && echo y || echo n; }
               echo "BR2_ENABLE_LOCALE=$(check_uclibc_feature __UCLIBC_HAS_LOCALE__)" >> $CONF_PATH
               echo "BR2_TOOLCHAIN_HAS_THREADS_DEBUG=$(check_uclibc_feature __PTHREADS_DEBUG_SUPPORT__)" >> $CONF_PATH
@@ -460,6 +462,14 @@ jobs:
           }
 
           if [ -f uImage ]; then
+            # TODO: doesn't fit to lite
+            case ${{ matrix.platform }} in
+              hi3516cv500|hi3516dv300|hi3516av300)
+                MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
+                MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
+              ;;
+            esac
+
             case ${{ matrix.release }} in
               lite)
                 check_exceeded uImage ${MAX_KERNEL_SIZE}
@@ -492,7 +502,16 @@ jobs:
             mv rootfs.ubi rootfs.ubi.${{ matrix.platform }}
             md5sum rootfs.ubifs > rootfs.ubifs.${{ matrix.platform }}.md5sum
             mv rootfs.ubifs rootfs.ubifs.${{ matrix.platform }}
-            tar -cvzf $NANDFW_PATH uImage* *rootfs.ubi*.${{ matrix.platform }}*
+            case ${{ matrix.platform }} in
+              rv*)
+                mv zboot.img boot.img.${{ matrix.platform }}
+                md5sum boot.img.${BOARD} > boot.img.${BOARD}.md5sum
+                tar -cvzf $NANDFW_PATH boot.img* *rootfs.ubi*.${{ matrix.platform }}*
+                ;;
+              *)
+                tar -cvzf $NANDFW_PATH uImage* *rootfs.ubi*.${{ matrix.platform }}*
+                ;;
+            esac
           fi
           popd
 
