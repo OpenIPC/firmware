@@ -5,6 +5,7 @@ include $(BR2_EXTERNAL_FULLHAN_PATH)/package/fullhan_patcher/fullhan_patcher.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/aura-httpd/aura-httpd.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
+include $(BR2_EXTERNAL_FULLHAN_PATH)/package/ffmpeg-openipc/ffmpeg-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_FULLHAN_PATH)/package/json-c-openipc/json-c-openipc.mk
