@@ -505,7 +505,7 @@ jobs:
             case ${{ matrix.platform }} in
               rv*)
                 mv zboot.img boot.img.${{ matrix.platform }}
-                md5sum boot.img.${BOARD} > boot.img.${BOARD}.md5sum
+                md5sum boot.img.${{ matrix.platform }} > boot.img.${{ matrix.platform }}.md5sum
                 tar -cvzf $NANDFW_PATH boot.img* *rootfs.ubi*.${{ matrix.platform }}*
                 ;;
               *)
