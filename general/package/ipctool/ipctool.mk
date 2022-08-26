@@ -4,13 +4,11 @@
 #
 ################################################################################
 
-IPCTOOL_VERSION = HEAD
+IPCTOOL_VERSION = $(shell git ls-remote https://github.com/OpenIPC/ipctool/ master | awk '{ print $$1 }')
 IPCTOOL_SITE = https://github.com/OpenIPC/ipctool.git
 IPCTOOL_SITE_METHOD = git
 IPCTOOL_LICENSE = MIT
 IPCTOOL_LICENSE_FILES = LICENSE
-
-IPCTOOL_OVERRIDE_SRCDIR_RSYNC_EXCLUSIONS=--include .git
 
 IPCTOOL_CONF_OPTS += -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release
 
