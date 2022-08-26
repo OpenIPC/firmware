@@ -7,6 +7,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/baresip-openipc/baresip-openipc.m
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/f2fs-tools-openipc/f2fs-tools-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/ffmpeg-openipc/ffmpeg-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/gdbserver-lite/gdbserver-lite.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisi_gpio/hisi_gpio.mk
