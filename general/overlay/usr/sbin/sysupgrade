@@ -9,6 +9,8 @@ args=" $@"
 
 set -e
 
+LOCK_FILE=/tmp/sysupgrade.lock
+
 echo_c() {
 	# 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan, 37 white, 38 grey
 	[ -z "$HASERLVER" ] && t="\e[1;$1m$2\e[0m" || t="$2"
@@ -148,11 +150,11 @@ check_sdcard() {
 }
 
 create_lock() {
-	if [ -f /tmp/sysupgrade.lock ]; then
+	if [ -f $LOCK_FILE ]; then
 		echo_c 31 "\nAnother sysupgrade process is already running!"
 		exit 1
 	fi
-	touch /tmp/sysupgrade.lock
+	touch $LOCK_FILE
 }
 
 get_device() {
@@ -206,9 +208,16 @@ Where:
 }
 
 reboot_system() {
-	[ "$skip_reboot" -eq 1 ] && echo_c 31 "\nReboot needed!" && exit 1
-	echo_c 37 "\nUnconditional reboot"
-	reboot -d 1 -f
+	if [ "1" = "$skip_reboot" ]; then
+		echo_c 33 "\nYou asked me not to reboot, so I won't."
+		echo_c 31 "Although a reboot is required to apply the changes."
+		echo_c 37 "Please reboot the camera manually whenever possible."
+		rm $LOCK_FILE
+		exit 1
+	else
+		echo_c 37 "\nUnconditional reboot"
+		reboot -d 1 -f
+	fi
 }
 
 clear_overlay=0
@@ -310,11 +319,6 @@ free_resources
 [ "$update_rootfs" -eq 1 ] && do_update_rootfs "$rootfs_file"
 [ "$clear_overlay" -eq 1 ] && do_wipe_overlay
 
-if [ "1" = "$skip_reboot" ]; then
-	echo_c 33 "You asked me not to reboot, so I won't."
-	echo_c 37 "Please reboot the camera manually whenever possible."
-else
-	reboot_system
-fi
+reboot_system
 
 exit 0
