@@ -48,7 +48,7 @@ case "$1" in
 		if ! lsmod | grep "88XXau"; then
 		  load_rtl
 		fi
-	  elif ${driver} = "ath" ]; then
+	  elif [ ${driver} = "ath" ]; then
 		if ! lsmod | grep "ath9k_htc"; then
           load_ath
 		fi
