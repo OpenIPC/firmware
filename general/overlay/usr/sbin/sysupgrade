@@ -3,7 +3,7 @@
 # OpenIPC.org | v.20220824
 #
 
-scr_version=1.0.4
+scr_version=1.0.5
 
 args=" $@"
 
@@ -130,11 +130,21 @@ self_update() {
 }
 
 check_sdcard() {
-	if mount | grep /mnt/mmc >/dev/null; then
-		echo_c 31 "\nCannot upgrade! There is a mounted SD card in the slot!"
-		echo_c 37 "Please remove the card from the slot and restart sysupgrade."
-		exit 1
-	fi
+	echo_c 33 "\nUnmounting SD card"
+	stoplist="autoupdate-kernel.img autoupdate-rootfs.img autoupdate-uboot.img"
+	while [ -n "$(mount | grep /mnt/mmc)" ]; do
+		_d=$(mount | grep /mnt/mmc | tail -1 | awk '{print $3}')
+		echo_c 34 "$_d"
+		for _f in $stoplist; do
+			echo "- checking for ${_d}/${_f}"
+			if [ -f "${_d}/${_f}" ]; then
+				echo_c 31 "\nCannot upgrade! Recovery file ${_d}/${_f} found on the mounted SD card!"
+				echo_c 37 "Please remove the card from the slot and restart sysupgrade."
+				exit 1
+			fi
+		done; unset _f
+		umount $_d
+	done; unset _d
 }
 
 create_lock() {
@@ -190,6 +200,7 @@ Where:
       --force_all      do not validate anything
   -n, --wipe_overlay   wipe overlay partition
   -x, --no_reboot      do not reboot after updating
+  -z, --no_update      do not update self
   -h, --help           display this help and exit
 "
 }
@@ -266,6 +277,10 @@ for i in "$@"; do
 			skip_reboot=1
 			shift
 			;;
+		-z | --no_update)
+			skip_selfupdate=1
+			shift
+			;;
 		*)
 			print_sysinfo
 			echo_c 37 "\nUnknown option: $1"
@@ -283,7 +298,7 @@ print_sysinfo
 	echo_c 37 "\nTry '$(basename "$0") --help' for options." &&
 	exit 0
 
-self_update
+[ "1" != "$skip_selfupdate" ] && self_update
 
 check_sdcard
 
