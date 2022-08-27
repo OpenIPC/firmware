@@ -400,11 +400,12 @@ jobs:
           mkdir /tmp/extsdk
           tar xvf ${TOOLNAME}.tgz --strip-components=1 -C /tmp/extsdk >/dev/null
 
-          echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_CXX=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
+          TLEXT=BR2_TOOLCHAIN_EXTERNAL
+          echo "${TLEXT}=y" >> $CONF_PATH
+          echo "${TLEXT}_CUSTOM=y" >> $CONF_PATH
+          echo "${TLEXT}_PREINSTALLED=y" >> $CONF_PATH
+          echo "${TLEXT}_CXX=y" >> $CONF_PATH
+          echo "${TLEXT}_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
 
           SOC=$(echo $TOOLNAME | cut -d '-' -f 1)
           ABI=""
@@ -426,8 +427,9 @@ jobs:
               PREFIX="${PREFIX}${LIBC}gnu${ABI}"
               UCCFG=/tmp/extsdk/${PREFIX}/sysroot/usr/include/bits/uClibc_config.h
               check_uclibc_feature() { grep -q "\#define ${1} 1" ${UCCFG} && echo y || echo n }
-              echo "BR2_ENABLE_LOCALE=$(check_uclibc_feature __UCLIBC_HAS_LOCALE__)" >> $CONF_PATH
-              echo "BR2_TOOLCHAIN_HAS_THREADS_DEBUG=$(check_uclibc_feature __PTHREADS_DEBUG_SUPPORT__)" >> $CONF_PATH
+              echo "${TLEXT}_LOCALE=$(check_uclibc_feature __UCLIBC_HAS_LOCALE__)" >> $CONF_PATH
+              echo "${TLEXT}_HAS_THREADS_DEBUG=$(check_uclibc_feature __PTHREADS_DEBUG_SUPPORT__)" >> $CONF_PATH
+              echo "${TLEXT}_HAS_SSP=y" >> $CONF_PATH
             ;;
             musl)
               PREFIX="${PREFIX}${LIBC}${ABI}"
@@ -436,13 +438,13 @@ jobs:
               PREFIX="${PREFIX}gnu${ABI}"
             ;;
           esac
-          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
+          echo "${TLEXT}_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
           CAP_LIBC=$(echo $LIBC | tr a-z A-Z)
-          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_${CAP_LIBC}=y" >> $CONF_PATH
+          echo "${TLEXT}_CUSTOM_${CAP_LIBC}=y" >> $CONF_PATH
           LXHDRS=$(echo $TOOLNAME | cut -d '-' -f 4)
-          echo "BR2_TOOLCHAIN_EXTERNAL_HEADERS_${LXHDRS}=y" >> $CONF_PATH
+          echo "${TLEXT}_HEADERS_${LXHDRS}=y" >> $CONF_PATH
           GCC_VER=$(echo $TOOLNAME | cut -d '-' -f 2)
-          echo "BR2_TOOLCHAIN_EXTERNAL_GCC_${GCC_VER:3:1}=y" >> $CONF_PATH
+          echo "${TLEXT}_GCC_${GCC_VER:3:1}=y" >> $CONF_PATH
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
 
           make BOARD=$BOARD all
