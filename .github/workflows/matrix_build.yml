@@ -17,6 +17,12 @@ on:
        - '**.md'
   workflow_dispatch:
 
+env:
+  MAX_KERNEL_SIZE: 0x200000
+  MAX_ROOTFS_SIZE: 0x500000
+  MAX_KERNEL_SIZE_ULTIMATE: 0x300000
+  MAX_ROOTFS_SIZE_ULTIMATE: 0xa00000
+
 jobs:
   toolchain:
     name: Toolchain
@@ -29,7 +35,10 @@ jobs:
       matrix:
         platform:
           - ak3918ev300
+          - fh8852v100
+          - fh8852v200
           - gk7102
+          - gm8136
           - hi3516cv100
           - hi3516cv200
           - hi3516cv300
@@ -37,6 +46,13 @@ jobs:
           - hi3516ev200
           - hi3519v101
           - hi3536cv100
+          - msc313e
+          - msc316dc
+          - msc316dm
+          - nt98562
+          - rv1126
+          - s3l
+          - ssc335
           - t31
           - xm510
           - xm530
@@ -81,7 +97,7 @@ jobs:
       - name: Install build dependencies
         if: env.NEED == 'true'
         run: |
-          make install-deps
+          sudo make install-deps
           if [ ! -z "$ACT" ]; then
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
           else
@@ -196,6 +212,24 @@ jobs:
             custom: onlyci
 
           # MVP
+          - platform: fh8852v100
+            release: lite
+          - platform: fh8852v200
+            release: lite
+          - platform: gm8136
+            release: lite
+          - platform: nt98562
+            release: lite
+          - platform: nt98566
+            release: lite
+          - platform: ssc335
+            release: lite
+          - platform: ssc335de
+            release: lite
+          - platform: ssc337
+            release: lite
+          - platform: ssc337de
+            release: lite
           - platform: t10
             release: lite
           - platform: t20
@@ -225,6 +259,27 @@ jobs:
             release: lite
             custom: onlyci
           - platform: gk7102s
+            release: lite
+            custom: onlyci
+          - platform: msc313e
+            release: lite
+            custom: onlyci
+          - platform: msc316dc
+            release: lite
+            custom: onlyci
+          - platform: msc316dm
+            release: lite
+            custom: onlyci
+          - platform: rv1109
+            release: lite
+            custom: onlyci
+          - platform: rv1126
+            release: lite
+            custom: onlyci
+          - platform: s3l
+            release: lite
+            custom: onlyci
+          - platform: ssc325
             release: lite
             custom: onlyci
 
@@ -279,7 +334,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          make install-deps
+          sudo make install-deps
           ls -l deps || true
           if [ ! -z "$ACT" ]; then
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
@@ -335,24 +390,23 @@ jobs:
             BOARD="${BOARD}_openipc"
           fi
 
-          NORFW_PATH="${GITHUB_WORKSPACE}/output/images/openipc.${{ matrix.platform }}-${SUFF}br.tgz"
-          echo "NORFW_PATH=$NORFW_PATH" >> $GITHUB_ENV
-          NORFW_FILE=$(basename $NORFW_PATH)
-          echo "NORFW_FILE=$NORFW_FILE" >> $GITHUB_ENV
-
           CONF_PATH=$(find . -name "${BOARD}_defconfig")
 
           echo Using $TOOLNAME
           if [ ! -f "$TOOLNAME.tgz" ]; then
-            wget --retry-on-http-error=503 \
+            wget -nv --retry-on-http-error=503 --continue --timeout=15 \
               https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${TOOLNAME}.tgz
           fi
+          mkdir /tmp/extsdk
+          tar xvf ${TOOLNAME}.tgz --strip-components=1 -C /tmp/extsdk >/dev/null
+          set -x
 
-          echo "BR2_TOOLCHAIN_EXTERNAL=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_CXX=y" >> $CONF_PATH
-          echo "BR2_TOOLCHAIN_EXTERNAL_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
+          TLEXT=BR2_TOOLCHAIN_EXTERNAL
+          echo "${TLEXT}=y" >> $CONF_PATH
+          echo "${TLEXT}_CUSTOM=y" >> $CONF_PATH
+          echo "${TLEXT}_PREINSTALLED=y" >> $CONF_PATH
+          echo "${TLEXT}_CXX=y" >> $CONF_PATH
+          echo "${TLEXT}_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
 
           SOC=$(echo $TOOLNAME | cut -d '-' -f 1)
           ABI=""
@@ -360,6 +414,7 @@ jobs:
             arm*|cortex*)
               PREFIX=arm
               ABI="eabi"
+              [[ $SOC =~ _hf$ ]] && ABI="${ABI}hf"
               ;;
             mips_xburst)
               PREFIX=mipsel
@@ -369,49 +424,98 @@ jobs:
 
           LIBC=$(echo $TOOLNAME | cut -d '-' -f 3)
           case "$LIBC" in
-            musl|uclibc)
+            uclibc)
+              PREFIX="${PREFIX}${LIBC}gnu${ABI}"
+              UCCFG=/tmp/extsdk/${PREFIX}/sysroot/usr/include/bits/uClibc_config.h
+              check_uclibc_feature() { grep -q "\#define ${1} 1" ${UCCFG} && echo y || echo n; }
+              echo "${TLEXT}_LOCALE=$(check_uclibc_feature __UCLIBC_HAS_LOCALE__)" >> $CONF_PATH
+              echo "${TLEXT}_HAS_THREADS_DEBUG=$(check_uclibc_feature __PTHREADS_DEBUG_SUPPORT__)" >> $CONF_PATH
+              echo "${TLEXT}_HAS_SSP=y" >> $CONF_PATH
+            ;;
+            musl)
               PREFIX="${PREFIX}${LIBC}${ABI}"
             ;;
             glibc)
               PREFIX="${PREFIX}gnu${ABI}"
             ;;
           esac
-          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
+          echo "${TLEXT}_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
           CAP_LIBC=$(echo $LIBC | tr a-z A-Z)
-          echo "BR2_TOOLCHAIN_EXTERNAL_CUSTOM_${CAP_LIBC}=y" >> $CONF_PATH
+          echo "${TLEXT}_CUSTOM_${CAP_LIBC}=y" >> $CONF_PATH
           LXHDRS=$(echo $TOOLNAME | cut -d '-' -f 4)
-          echo "BR2_TOOLCHAIN_EXTERNAL_HEADERS_${LXHDRS}=y" >> $CONF_PATH
+          echo "${TLEXT}_HEADERS_${LXHDRS}=y" >> $CONF_PATH
           GCC_VER=$(echo $TOOLNAME | cut -d '-' -f 2)
-          echo "BR2_TOOLCHAIN_EXTERNAL_GCC_${GCC_VER:3:1}=y" >> $CONF_PATH
+          echo "${TLEXT}_GCC_${GCC_VER:3:1}=y" >> $CONF_PATH
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(TOPDIR)/../scripts/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
-          mkdir /tmp/extsdk
-          tar xvf ${TOOLNAME}.tgz --strip-components=1 -C /tmp/extsdk >/dev/null
-
-          HAS_NAND=$(make BOARD=${BOARD} has-nand)
-          echo "HAS_NAND=$HAS_NAND" >> $GITHUB_ENV
+          cat $CONF_PATH
 
           make BOARD=$BOARD all
 
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) -gt 3145728 ]] && echo "TG_NOTIFY=Warning, kernel size exceeded : $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/uImage) ... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
-          [[ $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) -gt 10485760 ]] && echo "TG_NOTIFY=Warning, rootfs size exceeded - $(stat --printf="%s" ${GITHUB_WORKSPACE}/output/images/rootfs.squashfs) vs 10485760... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV && exit 1
-          cd ${GITHUB_WORKSPACE}/output/images
-          mv uImage uImage.${{ matrix.platform }}
-          mv rootfs.squashfs rootfs.squashfs.${{ matrix.platform }}
-          md5sum rootfs.squashfs.${{ matrix.platform }} > rootfs.squashfs.${{ matrix.platform }}.md5sum
-          md5sum uImage.${{ matrix.platform }} > uImage.${{ matrix.platform }}.md5sum
-          tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
+          IMAGES_DIR=${GITHUB_WORKSPACE}/output/images
+          pushd output/images
+          check_exceeded() {
+            ACTUAL=$(stat --printf="%s" ${1})
+            echo Debug ${1}: ${ACTUAL} vs ${2}...
+            if [[ ${ACTUAL} -gt ${2} ]]; then
+              OVERRUN=$((${ACTUAL}-${2}))
+              echo "TG_NOTIFY=Warning, ${1} size exceeded by ${OVERRUN}... ${{ matrix.platform }} (${{ matrix.release }})" >> $GITHUB_ENV
+              exit 1
+            fi
+          }
 
-          if [ "$HAS_NAND" == "y" ]; then
-            NANDFW_PATH="${GITHUB_WORKSPACE}/output/images/openipc.${{ matrix.platform }}-nand-br.tgz"
+          if [ -f uImage ]; then
+            # TODO: doesn't fit to lite
+            case ${{ matrix.platform }} in
+              hi3516cv500|hi3516dv300|hi3516av300)
+                MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
+                MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
+              ;;
+            esac
+
+            case ${{ matrix.release }} in
+              lite)
+                check_exceeded uImage ${MAX_KERNEL_SIZE}
+                check_exceeded rootfs.squashfs ${MAX_ROOTFS_SIZE}
+                ;;
+              ultimate|fpv)
+                check_exceeded uImage ${MAX_KERNEL_SIZE_ULTIMATE}
+                check_exceeded rootfs.squashfs ${MAX_ROOTFS_SIZE_ULTIMATE}
+                ;;
+            esac
+
+            NORFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-${SUFF}br.tgz"
+            echo "NORFW_PATH=$NORFW_PATH" >> $GITHUB_ENV
+            NORFW_FILE=$(basename $NORFW_PATH)
+            echo "NORFW_FILE=$NORFW_FILE" >> $GITHUB_ENV
+
+            md5sum uImage > uImage.${{ matrix.platform }}.md5sum
+            mv uImage uImage.${{ matrix.platform }}
+            md5sum rootfs.squashfs > rootfs.squashfs.${{ matrix.platform }}.md5sum
+            mv rootfs.squashfs rootfs.squashfs.${{ matrix.platform }}
+            tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
+          fi
+
+          if [ -f rootfs.ubifs ]; then
+            NANDFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-nand-br.tgz"
             echo "NANDFW_PATH=$NANDFW_PATH" >> $GITHUB_ENV
             NANDFW_FILE=$(basename $NANDFW_PATH)
             echo "NANDFW_FILE=$NANDFW_FILE" >> $GITHUB_ENV
 
             mv rootfs.ubi rootfs.ubi.${{ matrix.platform }}
+            md5sum rootfs.ubifs > rootfs.ubifs.${{ matrix.platform }}.md5sum
             mv rootfs.ubifs rootfs.ubifs.${{ matrix.platform }}
-            md5sum rootfs.ubifs.${{ matrix.platform }} > rootfs.ubifs.${{ matrix.platform }}.md5sum
-            tar -cvzf $NANDFW_PATH uImage* *rootfs.ubi*.${{ matrix.platform }}*
+            case ${{ matrix.platform }} in
+              rv*)
+                mv zboot.img boot.img.${{ matrix.platform }}
+                md5sum boot.img.${{ matrix.platform }} > boot.img.${{ matrix.platform }}.md5sum
+                tar -cvzf $NANDFW_PATH boot.img* *rootfs.ubi*.${{ matrix.platform }}*
+                ;;
+              *)
+                tar -cvzf $NANDFW_PATH uImage* *rootfs.ubi*.${{ matrix.platform }}*
+                ;;
+            esac
           fi
+          popd
 
       - name: Send error message to telegram channel
         env:
@@ -439,7 +543,7 @@ jobs:
           prerelease: ${{ env.PRERELEASE }}
 
       - name: Upload NOR FW to release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NORFW_FILE != '' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -449,7 +553,7 @@ jobs:
           overwrite: true
 
       - name: Upload NAND FW to release
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.HAS_NAND == 'y' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NANDFW_FILE != '' }}
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
