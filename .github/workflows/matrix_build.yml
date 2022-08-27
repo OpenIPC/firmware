@@ -427,7 +427,7 @@ jobs:
             uclibc)
               PREFIX="${PREFIX}${LIBC}gnu${ABI}"
               UCCFG=/tmp/extsdk/${PREFIX}/sysroot/usr/include/bits/uClibc_config.h
-              check_uclibc_feature() { grep -q "\#define ${1} 1" ${UCCFG} && echo y || echo n }
+              check_uclibc_feature() { grep -q "\#define ${1} 1" ${UCCFG} && echo y || echo n; }
               echo "${TLEXT}_LOCALE=$(check_uclibc_feature __UCLIBC_HAS_LOCALE__)" >> $CONF_PATH
               echo "${TLEXT}_HAS_THREADS_DEBUG=$(check_uclibc_feature __PTHREADS_DEBUG_SUPPORT__)" >> $CONF_PATH
               echo "${TLEXT}_HAS_SSP=y" >> $CONF_PATH
