@@ -4,6 +4,7 @@ include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/grainmedia_patcher/grainmedia_pa
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/aura-httpd/aura-httpd.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
+include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/ffmpeg-openipc/ffmpeg-openipc.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/ipctool/ipctool.mk
 include $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/json-c-openipc/json-c-openipc.mk

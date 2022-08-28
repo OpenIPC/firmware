@@ -48,7 +48,9 @@ clean:
 
 prepare: $(BR_DIR)
 $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz:
-	wget -O $@ --header="Host: buildroot.org" --no-check-certificate https://buildroot.org/downloads/buildroot-$(BR_VER).tar.gz
+	wget -O $@ -nv \
+		--retry-connrefused --continue --timeout=15 \
+		http://buildroot.org/downloads/buildroot-$(BR_VER).tar.gz
 
 $(BR_DIR): $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz
 	tar -C $(ROOT_DIR) -xf buildroot-$(BR_VER).tar.gz
@@ -56,8 +58,14 @@ $(BR_DIR): $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz
 
 
 install-deps:
-	DEBIAN_FRONTEND=noninteractive sudo apt-get update && \
-		sudo apt-get -y install build-essential make libncurses-dev wget cpio rsync bc
+ifneq ($(shell id -u), 0)
+	@echo "You must be root to perform this action."
+else
+	DEBIAN_FRONTEND=noninteractive apt-get update && \
+		apt-get -y install \
+		build-essential git make libncurses-dev wget curl \
+		cpio rsync bc unzip file
+endif
 
 
 %_info:

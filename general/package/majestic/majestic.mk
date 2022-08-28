@@ -14,10 +14,6 @@ FAMILY := $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
 # TODO: change field number removing unknown_unknown
 RELEASE := $(shell grep "BR2_DEFCONFIG" $(BR2_CONFIG) | head -1 | cut -d "_" -f 5)
 
-ifneq ($(RELEASE),ultimate)
-	RELEASE := lite
-endif
-
 ifeq ($(BR2_PACKAGE_INGENIC_OSDRV_T20),y)
 	FAMILY := t21
 else ifeq ($(BR2_PACKAGE_INGENIC_OSDRV_T30),y)
@@ -26,6 +22,20 @@ else ifeq ($(BR2_PACKAGE_INGENIC_OSDRV_T31),y)
 	FAMILY := t31
 else ifeq ($(BR2_PACKAGE_SIGMASTAR_OSDRV_SSC335),y)
 	FAMILY := ssc335
+endif
+
+ifeq ($(RELEASE),fpv)
+	# keep
+else ifeq ($(RELEASE),ultimate)
+	# we don't have Majestic binary Ultimate distributions for these
+	# platforms so use Lite
+	ifeq ($(FAMILY),hi3516av100)
+		RELEASE := lite
+	else ifeq ($(FAMILY),hi3519v101)
+		RELEASE := lite
+	endif
+else
+	RELEASE := lite
 endif
 
 MAJESTIC_SOURCE := majestic.$(FAMILY).$(RELEASE).master.tar.bz2

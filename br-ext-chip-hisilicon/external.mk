@@ -7,6 +7,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/baresip-openipc/baresip-openipc.m
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/f2fs-tools-openipc/f2fs-tools-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/ffmpeg-openipc/ffmpeg-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/fwprintenv-openipc/fwprintenv-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/gdbserver-lite/gdbserver-lite.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisi_gpio/hisi_gpio.mk
@@ -16,7 +17,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/hisil
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv200/hisilicon-osdrv-hi3516cv200.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv300/hisilicon-osdrv-hi3516cv300.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv500/hisilicon-osdrv-hi3516cv500.mk
-include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev300/hisilicon-osdrv-hi3516ev300.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516ev200/hisilicon-osdrv-hi3516ev200.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3519v101/hisilicon-osdrv-hi3519v101.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/i2c-telemetry/i2c-telemetry.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/ipctool/ipctool.mk

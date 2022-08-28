@@ -2,7 +2,7 @@
 ####################Variables Definition##########################
 
 # SoC detect
-CHIP_TYPE=$(ipcinfo --chip_id)
+CHIP_TYPE=$(ipcinfo --chip-name)
 
 # Dumb cpu remapping
 if [ "$CHIP_TYPE" == "gk7205v210" ]; then
@@ -21,7 +21,7 @@ os_mem_size=${os_mem_size:=32}
 BOARD=demo
 YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 
-cd /lib/modules/4.9.37/goke/
+cd /lib/modules/$(uname -r)/goke/
 
 ##################################################################
 
@@ -84,19 +84,19 @@ insert_osal() {
 
 	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
 	if [ -z "$MMZ" ]; then
-		insmod ../extra/open_osal.ko anony=1 mmz_allocator=gk mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+		modprobe open_osal anony=1 mmz_allocator=gk mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 	else
-		insmod ../extra/open_osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
+		modprobe open_osal anony=1 mmz_allocator=cma mmz=$MMZ || report_error
 	fi
 }
 
 insert_detect() {
-	insmod ../extra/open_sys_config.ko chip=$CHIP_TYPE sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
+	modprobe open_sys_config chip=$CHIP_TYPE sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
 	insert_osal
 	insmod gk7205v200_base.ko
-	insmod ../extra/open_isp.ko
-	insmod ../extra/open_sensor_i2c.ko
-	insmod ../extra/open_sensor_spi.ko
+	modprobe open_isp
+	modprobe open_sensor_i2c
+	modprobe open_sensor_spi
 }
 
 remove_detect() {
@@ -129,7 +129,7 @@ remove_audio() {
 }
 
 insert_isp() {
-	insmod ../extra/open_isp.ko
+	modprobe open_isp
 }
 
 insert_sil9024() {
@@ -156,12 +156,12 @@ insert_adv7179() {
 
 insert_isp_piris() {
 	if [ "$CHIP_TYPE" == "gk7605v100" -a "$BOARD" == "demo" ]; then
-		insmod ../extra/open_piris.ko
+		modprobe open_piris
 	fi
 }
 
 insert_ko() {
-	insmod ../extra/open_sys_config.ko chip=$CHIP_TYPE sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
+	modprobe open_sys_config chip=$CHIP_TYPE sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
 	insert_osal
 	insmod gk7205v200_base.ko
 	insmod gk7205v200_sys.ko
@@ -181,22 +181,22 @@ insert_ko() {
 	insmod gk7205v200_h265e.ko
 	insmod gk7205v200_jpege.ko
 	insmod gk7205v200_ive.ko save_power=0
-	insmod ../extra/open_pwm.ko
-	insmod ../extra/open_sensor_i2c.ko
-	insmod ../extra/open_sensor_spi.ko
+	modprobe open_pwm
+	modprobe open_sensor_i2c
+	modprobe open_sensor_spi
 	# insert_isp_piris                              # unused on OpenIPC
 	# insert_sil9024;                               # unused on OpenIPC  # BT1120
 	insert_audio
-	insmod mipi_rx.ko
+	modprobe open_mipi_rx
 	# insmod gk7205v200_pm.ko                       # unused on OpenIPC
-	insmod ../extra/open_wdt.ko
+	modprobe open_wdt
 }
 
 remove_ko() {
 	rmmod -w open_wdt
 	# rmmod -w gk7205v200_pm                           # unused on OpenIPC
 	remove_audio
-	rmmod -w mipi_rx
+	rmmod -w open_mipi_rx
 	# rmmod -w open_piris                              # unused on OpenIPC
 	# rmmod -w sil9024 &> /dev/null                    # unused on OpenIPC
 	rmmod -w gk7205v200_ive
