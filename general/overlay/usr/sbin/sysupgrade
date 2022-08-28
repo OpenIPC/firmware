@@ -1,13 +1,15 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20220824
+# OpenIPC.org | v.20220827
 #
 
-scr_version=1.0.5
+scr_version=1.0.6
 
 args=" $@"
 
 set -e
+
+LOCK_FILE=/tmp/sysupgrade.lock
 
 echo_c() {
 	# 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan, 37 white, 38 grey
@@ -21,13 +23,13 @@ die() {
 }
 
 check_soc() {
-	[ "$skip_soc" -eq 1 ] && echo "Skip SoC validation" && return 0
+	[ "1" = "$skip_soc" ] && echo "Skip SoC validation" && return 0
 	[ "$1" = "$soc" ] && echo "SoC OK" && return 0
 	die "Wrong SoC!"
 }
 
 compare_versions() {
-	[ "$skip_ver" -eq 1 ] && echo "Skip version checking" && return 1
+	[ "1" = "$skip_ver" ] && echo "Skip version checking" && return 1
 	[ "$1" = "$2" ] && echo_c 32 "Same version, nothing to update" && return 0
 	echo_c 32 "New version, going to update" && return 1
 }
@@ -82,7 +84,7 @@ download_firmware() {
 	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
 	[ "$(curl -o /dev/null -s -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
 	curl --connect-timeout 30 -s -m 60 -L "$url" ${progress} -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
-	if [ "$skip_md5" -eq 0 ]; then
+	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 	fi
 }
@@ -148,11 +150,11 @@ check_sdcard() {
 }
 
 create_lock() {
-	if [ -f /tmp/sysupgrade.lock ]; then
+	if [ -f $LOCK_FILE ]; then
 		echo_c 31 "\nAnother sysupgrade process is already running!"
 		exit 1
 	fi
-	touch /tmp/sysupgrade.lock
+	touch $LOCK_FILE
 }
 
 get_device() {
@@ -189,36 +191,35 @@ print_usage() {
 	echo "
 Usage: $0 [options]
 Where:
-  -k                   update kernel from online repository
-  -r                   update rootfs from online repository
-      --url=[URL]	     custom URL to update from (.tgz format)
-      --kernel=[FILE]  update kernel from file (uImage format)
-      --rootfs=[FILE]  update rootfs from file (squashfs format)
-      --force_md5      do not validate MD5 hash
-      --force_soc      do not validate processor
-      --force_ver      do not validate release version
-      --force_all      do not validate anything
-  -n, --wipe_overlay   wipe overlay partition
-  -x, --no_reboot      do not reboot after updating
-  -z, --no_update      do not update self
-  -h, --help           display this help and exit
+  -k                   Update kernel from online repository.
+  -r                   Update rootfs from online repository.
+  -w                   Update Web UI to development version.
+      --url=[URL]      Custom URL to update from (.tgz format).
+      --kernel=[FILE]  Update kernel from file (uImage format).
+      --rootfs=[FILE]  Update rootfs from file (squashfs format).
+      --force_md5      Do not validate MD5 hash.
+      --force_soc      Do not validate processor.
+      --force_ver      Do not validate release version.
+      --force_all      Do not validate anything.
+  -n, --wipe_overlay   Wipe overlay partition.
+  -x, --no_reboot      Do not reboot after updating.
+  -z, --no_update      Do not update self.
+  -h, --help           Display this help and exit.
 "
 }
 
 reboot_system() {
-	[ "$skip_reboot" -eq 1 ] && echo_c 31 "\nReboot needed!" && exit 1
-	echo_c 37 "\nUnconditional reboot"
-	reboot -d 1 -f
+	if [ "1" = "$skip_reboot" ]; then
+		echo_c 33 "\nYou asked me not to reboot, so I won't."
+		echo_c 31 "Although a reboot is required to apply the changes."
+		echo_c 37 "Please reboot the camera manually whenever possible."
+		rm $LOCK_FILE
+		exit 1
+	else
+		echo_c 37 "\nUnconditional reboot"
+		reboot -d 1 -f
+	fi
 }
-
-clear_overlay=0
-remote_update=0
-skip_md5=0
-skip_soc=0
-skip_ver=0
-skip_reboot=0
-update_kernel=0
-update_rootfs=0
 
 for i in "$@"; do
 	case $i in
@@ -277,6 +278,10 @@ for i in "$@"; do
 			skip_reboot=1
 			shift
 			;;
+		-w)
+			update_webui=1
+			shift
+			;;
 		-z | --no_update)
 			skip_selfupdate=1
 			shift
@@ -292,29 +297,35 @@ done
 
 print_sysinfo
 
-[ "$update_kernel" -eq 0 ] &&
-	[ "$update_rootfs" -eq 0 ] &&
-	[ "$clear_overlay" -eq 0 ] &&
+[ "1" != "$clear_overlay" ] &&
+[ "1" != "$update_kernel" ] &&
+[ "1" != "$update_rootfs" ] &&
+[ "1" != "$update_webui" ] &&
 	echo_c 37 "\nTry '$(basename "$0") --help' for options." &&
 	exit 0
 
 [ "1" != "$skip_selfupdate" ] && self_update
+
+if [ "1" = "$update_webui" ]; then
+	if [ "1" = "$update_rootfs" ]; then
+		update_webui=0
+		echo_c 31 "\nCannot update Web UI along with RootFS!"
+		echo_c 37 "Please update RootFS then reboot the camera and re-run $0 -w to update Web UI in a separate run."
+		sleep 5
+	fi
+fi
 
 check_sdcard
 
 create_lock
 free_resources
 
-[ "$remote_update" -eq 1 ] && download_firmware
-[ "$update_kernel" -eq 1 ] && do_update_kernel "$kernel_file"
-[ "$update_rootfs" -eq 1 ] && do_update_rootfs "$rootfs_file"
-[ "$clear_overlay" -eq 1 ] && do_wipe_overlay
+[ "1" = "$remote_update" ] && download_firmware
+[ "1" = "$update_kernel" ] && do_update_kernel "$kernel_file"
+[ "1" = "$update_rootfs" ] && do_update_rootfs "$rootfs_file"
+[ "1" = "$clear_overlay" ] && do_wipe_overlay
+[ "1" = "$update_webui" ] && updatewebui.sh -b dev
 
-if [ "1" = "$skip_reboot" ]; then
-	echo_c 33 "You asked me not to reboot, so I won't."
-	echo_c 37 "Please reboot the camera manually whenever possible."
-else
-	reboot_system
-fi
+reboot_system
 
 exit 0
