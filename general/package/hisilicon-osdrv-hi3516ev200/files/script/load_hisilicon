@@ -171,7 +171,7 @@ insert_adv7179()
 insert_piris()
 {
 	if [ "{chipid}" == "hi3516ev300" -a "${board}" == "demo" ];then
-		mopprobe open_piris
+		modprobe open_piris
 		# modprobe open_pm   # Maybe need for Hi3518Ev300
 	fi
 }
