@@ -488,10 +488,10 @@ jobs:
             NORFW_FILE=$(basename $NORFW_PATH)
             echo "NORFW_FILE=$NORFW_FILE" >> $GITHUB_ENV
 
-            md5sum uImage > uImage.${{ matrix.platform }}.md5sum
             mv uImage uImage.${{ matrix.platform }}
-            md5sum rootfs.squashfs > rootfs.squashfs.${{ matrix.platform }}.md5sum
             mv rootfs.squashfs rootfs.squashfs.${{ matrix.platform }}
+            md5sum rootfs.squashfs.${{ matrix.platform }} > rootfs.squashfs.${{ matrix.platform }}.md5sum
+            md5sum uImage.${{ matrix.platform }} > uImage.${{ matrix.platform }}.md5sum
             tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
           fi
 
@@ -502,8 +502,8 @@ jobs:
             echo "NANDFW_FILE=$NANDFW_FILE" >> $GITHUB_ENV
 
             mv rootfs.ubi rootfs.ubi.${{ matrix.platform }}
-            md5sum rootfs.ubifs > rootfs.ubifs.${{ matrix.platform }}.md5sum
             mv rootfs.ubifs rootfs.ubifs.${{ matrix.platform }}
+            md5sum rootfs.ubifs.${{ matrix.platform }} > rootfs.ubifs.${{ matrix.platform }}.md5sum
             case ${{ matrix.platform }} in
               rv*)
                 mv zboot.img boot.img.${{ matrix.platform }}
@@ -523,7 +523,7 @@ jobs:
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
         if: ${{ !env.ACT && failure() && github.event_name != 'pull_request' }}
         run: |
-          TG_OPTIONS="-s --connect-timeout 30 --max-time 30"
+          TG_OPTIONS="-s --connect-timeout 30 --retry 10 --verbose"
           TG_NOTIFY="${TG_NOTIFY:=Warning, Buildroot compiling error... ${{ matrix.platform }} (${{ matrix.release }})}"
           TG_HEADER=$(echo -e "\r\n$TG_NOTIFY \r\n\r\nCommit: $GIT_HASH \r\nBranch: $BRANCH \r\nTag: $TAG_NAME \r\n\r\n\xE2\x9A\xA0 GitHub Actions")
           curl $TG_OPTIONS -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot$TG_TOKEN/sendMessage \
