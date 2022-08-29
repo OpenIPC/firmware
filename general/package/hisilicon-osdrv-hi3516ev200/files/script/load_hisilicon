@@ -4,13 +4,13 @@
 #
 
 # Board
-board=demo;
+board=demo
 
 # SoC detect
 chipid=$(ipcinfo --chip-name)
 
 # Memory config
-mem_start=0x40000000        # phy mem start
+mem_start=0x40000000 # phy mem start
 
 mem_total=$(fw_printenv -n totalmem | tr -d 'M')
 mem_total=${mem_total:=64}
@@ -18,7 +18,7 @@ mem_total=${mem_total:=64}
 os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
 
-YUV_TYPE0=0;                # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
+YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 
 ##################################################################
 #
@@ -64,8 +64,7 @@ YUV_TYPE0=0;                # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 #
 ##################################################################
 
-report_error()
-{
+report_error() {
 	echo "******* Error: There's something wrong, please check! *****"
 	exit 1
 }
@@ -81,8 +80,7 @@ check_allocator() {
 	fi
 }
 
-insert_osal()
-{
+insert_osal() {
 	check_allocator
 
 	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
@@ -93,8 +91,7 @@ insert_osal()
 	fi
 }
 
-insert_detect()
-{
+insert_detect() {
 	cd /lib/modules/$(uname -r)/hisilicon
 	modprobe open_sys_config chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
@@ -104,8 +101,7 @@ insert_detect()
 	modprobe open_sensor_spi
 }
 
-remove_detect()
-{
+remove_detect() {
 	rmmod -w open_sensor_spi
 	rmmod -w open_sensor_i2c
 	rmmod -w hi3516ev200_isp
@@ -114,22 +110,20 @@ remove_detect()
 	rmmod -w open_sys_config
 }
 
-insert_audio()
-{
+insert_audio() {
 	modprobe open_aio
 	modprobe open_ai
 	modprobe open_ao
 	modprobe open_aenc
 	modprobe open_adec
 	modprobe open_acodec
-#	insmod hi_tlv320aic31.ko
+	#	insmod hi_tlv320aic31.ko
 	echo "insert audio"
 }
 
-remove_audio()
-{
+remove_audio() {
 	rmmod -w open_acodec
-#	rmmod -w hi_tlv320aic31
+	#	rmmod -w hi_tlv320aic31
 	rmmod -w open_adec
 	rmmod -w open_aenc
 	rmmod -w open_ao
@@ -139,57 +133,52 @@ remove_audio()
 	echo "remove audio"
 }
 
-insert_isp()
-{
+insert_isp() {
 	modprobe hi3516ev200_isp
 }
 
-insert_sil9024()
-{
+insert_sil9024() {
 	i2c_sel=2
-	if [ "${chipid}" == "hi3516ev300" ];then
+	if [ "${chipid}" == "hi3516ev300" ]; then
 		i2c_sel=1
 	fi
 
-	if [ "${board}" == "sck" ];then
-		insmod hi_sil9024.ko norm=12 i2c_num=$i2c_sel  #1080P@30fps
+	if [ "${board}" == "sck" ]; then
+		insmod hi_sil9024.ko norm=12 i2c_num=$i2c_sel #1080P@30fps
 	fi
 }
 
-insert_adv7179()
-{
+insert_adv7179() {
 	i2c_sel=2
-	if [ "${chipid}" == "hi3516ev300" ];then
+	if [ "${chipid}" == "hi3516ev300" ]; then
 		i2c_sel=1
 	fi
 
-	if [ "${board}" == "sck" ];then
+	if [ "${board}" == "sck" ]; then
 		insmod hi_adv7179.ko norm_mode=0 i2c_num=$i2c_sel # norm_mode = 0:PAL, 1:NTSC
 	fi
 }
 
-insert_piris()
-{
-	if [ "{chipid}" == "hi3516ev300" -a "${board}" == "demo" ];then
+insert_piris() {
+	if [ "{chipid}" == "hi3516ev300" -a "${board}" == "demo" ]; then
 		modprobe open_piris
 		# modprobe open_pm   # Maybe need for Hi3518Ev300
 	fi
 }
 
-insert_ko()
-{
+insert_ko() {
 	modprobe open_sys_config chip=${chipid} sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
 	modprobe open_base
 	modprobe open_sys
-#	modprobe open_tde
+	#	modprobe open_tde
 	modprobe open_rgn
 	modprobe open_vgs
 	modprobe open_vi
-	insert_isp;
+	insert_isp
 	modprobe open_vpss
-#	modprobe open_vo                        # disabled, info by @widgetii
-#	insmod hifb video="hifb:vram0_size:1620"     # default fb0:D1  # disabled, info by @widgetii
+	#	modprobe open_vo                             # disabled, info by @widgetii
+	#	insmod hifb video="hifb:vram0_size:1620"     # default fb0:D1  # disabled, info by @widgetii
 	modprobe open_chnl
 	modprobe open_vedu
 	modprobe open_rc
@@ -202,24 +191,23 @@ insert_ko()
 	modprobe open_sensor_i2c
 	modprobe open_sensor_spi
 	insert_piris
-	insert_sil9024; # BT1120
-#	insert_adv7179; # BT656
+	insert_sil9024 # BT1120
+	#	insert_adv7179; # BT656
 	insert_audio
 	modprobe open_mipi_rx
-#	modprobe open_user
+	#	modprobe open_user
 	modprobe open_wdt
 }
 
-remove_ko()
-{
+remove_ko() {
 	rmmod -w open_wdt
-#	rmmod -w hi_user
+	#	rmmod -w hi_user
 	remove_audio
-#	rmmod -w hi_piris
+	#	rmmod -w hi_piris
 	rmmod -w hi_pwm
 	rmmod -w hi_mipi_rx
-	rmmod -w hi_sil9024 &> /dev/null
-#	rmmod -w hi_adv7179 &> /dev/null
+	rmmod -w hi_sil9024 &>/dev/null
+	#	rmmod -w hi_adv7179 &> /dev/null
 	rmmod -w open_ive
 	rmmod -w open_rc
 	rmmod -w open_jpege
@@ -228,25 +216,23 @@ remove_ko()
 	rmmod -w open_venc
 	rmmod -w open_vedu
 	rmmod -w open_chnl
-#	rmmod -w hifb
-#	rmmod -w open_vo
+	#	rmmod -w hifb
+	#	rmmod -w open_vo
 	rmmod -w open_vpss
 	rmmod -w hi3516ev200_isp
 	rmmod -w open_vi
 	rmmod -w open_vgs
 	rmmod -w open_rgn
-#	rmmod -w open_tde
-	rmmod -w open_sensor_i2c &> /dev/null
-	rmmod -w open_sensor_spi &> /dev/null
+	#	rmmod -w open_tde
+	rmmod -w open_sensor_i2c &>/dev/null
+	rmmod -w open_sensor_spi &>/dev/null
 	rmmod -w open_sys
 	rmmod -w open_base
 	rmmod -w open_osal
 	rmmod -w open_sys_config
 }
 
-
-load_usage()
-{
+load_usage() {
 	echo "Usage:  ./load_hisilicon [-option] [sensor_name]"
 	echo "options:"
 	echo "    -i                       insert modules"
@@ -258,22 +244,21 @@ load_usage()
 	echo -e "for example: ./load_hisilicon -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
 }
 
-calc_mmz_info()
-{
-        mmz_start=`echo "$mem_start $os_mem_size"  |
-        awk 'BEGIN { temp = 0; }
+calc_mmz_info() {
+	mmz_start=$(echo "$mem_start $os_mem_size" |
+		awk 'BEGIN { temp = 0; }
         {
                 temp = $1/1024/1024 + $2;
         }
-        END { printf("0x%x00000\n", temp); }'`
+        END { printf("0x%x00000\n", temp); }')
 
-        mmz_size=`echo "$mem_total $os_mem_size"  |
-        awk 'BEGIN { temp = 0; }
+	mmz_size=$(echo "$mem_total $os_mem_size" |
+		awk 'BEGIN { temp = 0; }
         {
                 temp = $1 - $2;
         }
-        END { printf("%dM\n", temp); }'`
-        echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+        END { printf("%dM\n", temp); }')
+	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
 }
 
 ######################parse arg###################################
@@ -285,78 +270,77 @@ b_arg_remove=0
 b_arg_os_mem=0
 b_arg_board=0
 
-for arg in $@
-do
-	if [ $b_arg_sensor0 -eq 1 ] ; then
-		b_arg_sensor0=0;
-		SENSOR_MANUAL=$arg;
+for arg in $@; do
+	if [ $b_arg_sensor0 -eq 1 ]; then
+		b_arg_sensor0=0
+		SENSOR_MANUAL=$arg
 		export SENSOR=${SENSOR_MANUAL}
 	fi
 
-	if [ $b_arg_os_mem -eq 1 ] ; then
-		b_arg_os_mem=0;
-		os_mem_size=$arg;
+	if [ $b_arg_os_mem -eq 1 ]; then
+		b_arg_os_mem=0
+		os_mem_size=$arg
 
 		if [ -z $os_mem_size ]; then
 			echo "[error] os_mem_size is null"
-			exit;
+			exit
 		fi
 	fi
 
-	if [ $b_arg_yuv_type0 -eq 1 ] ; then
-		b_arg_yuv_type0=0;
-		YUV_TYPE0=$arg;
+	if [ $b_arg_yuv_type0 -eq 1 ]; then
+		b_arg_yuv_type0=0
+		YUV_TYPE0=$arg
 	fi
 
-	if [ $b_arg_board -eq 1 ] ; then
-		b_arg_board=0;
-		BOARD=$arg;
+	if [ $b_arg_board -eq 1 ]; then
+		b_arg_board=0
+		BOARD=$arg
 	fi
 
 	case $arg in
-		"-i")
-			b_arg_insmod=1;
-			;;
-		"-r")
-			b_arg_remove=1;
-			;;
-		"-a")
-			b_arg_insmod=1;
-			b_arg_remove=1;
-			;;
-		"-h")
-			load_usage;
-			;;
-		"-sensor0")
-			b_arg_sensor0=1;
-			;;
-		"-sensor")
-			b_arg_sensor0=1;
-			;;
-		"-osmem")
-			b_arg_os_mem=1;
-			;;
-		"-yuv0")
-			b_arg_yuv_type0=1;
-			;;
-		"-board")
-			b_arg_board=1;
-			;;
+	"-i")
+		b_arg_insmod=1
+		;;
+	"-r")
+		b_arg_remove=1
+		;;
+	"-a")
+		b_arg_insmod=1
+		b_arg_remove=1
+		;;
+	"-h")
+		load_usage
+		;;
+	"-sensor0")
+		b_arg_sensor0=1
+		;;
+	"-sensor")
+		b_arg_sensor0=1
+		;;
+	"-osmem")
+		b_arg_os_mem=1
+		;;
+	"-yuv0")
+		b_arg_yuv_type0=1
+		;;
+	"-board")
+		b_arg_board=1
+		;;
 	esac
 done
 #######################parse arg end########################
-if [ $os_mem_size -ge $mem_total ] ; then
+if [ $os_mem_size -ge $mem_total ]; then
 	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
-	exit;
+	exit
 fi
 
-calc_mmz_info;
+calc_mmz_info
 
 #######################Action###############################
 
 if [ $# -lt 1 ]; then
-    load_usage;
-    exit 0;
+	load_usage
+	exit 0
 fi
 
 # Sensor config
@@ -380,7 +364,7 @@ else
 fi
 
 if [ $b_arg_remove -eq 1 ]; then
-	remove_ko;
+	remove_ko
 fi
 
 if [ "$SENSOR" = "unknown" ]; then
@@ -388,6 +372,6 @@ if [ "$SENSOR" = "unknown" ]; then
 else
 	if [ $b_arg_insmod -eq 1 ]; then
 		cd /lib/modules/$(uname -r)/hisilicon
-		insert_ko;
+		insert_ko
 	fi
 fi
