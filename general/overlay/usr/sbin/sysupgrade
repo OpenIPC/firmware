@@ -3,7 +3,7 @@
 # OpenIPC.org | v.20220827
 #
 
-scr_version=1.0.6
+scr_version=1.0.7
 
 args=" $@"
 
@@ -109,9 +109,7 @@ free_resources() {
 }
 
 self_update() {
-	if echo "${args}" | grep "rootfs" || echo "${args}" | grep "kernel" || echo "${args}" | grep -- "-n" >/dev/null 2>&1; then
-		echo -e "\nOffline operations."
-	else
+	if echo "${args}" | grep -E "\-(k|r|w|url)" >/dev/null 2>&1; then
 		echo -e "\nChecking for sysupgrade update..."
 		curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
 		if [ -f /tmp/sysupgrade ] && grep -q "#!/bin/sh" /tmp/sysupgrade; then
@@ -128,6 +126,8 @@ self_update() {
 		else
 			echo -e "\nVersion checking failed, proceeding with the installed version."
 		fi
+	else
+		echo -e "\nOffline operations."
 	fi
 }
 
