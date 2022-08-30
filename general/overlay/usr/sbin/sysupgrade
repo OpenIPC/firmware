@@ -3,7 +3,7 @@
 # OpenIPC.org | v.20220827
 #
 
-scr_version=1.0.7
+scr_version=1.0.8
 
 args=" $@"
 
@@ -108,8 +108,15 @@ free_resources() {
 	echo 3 >/proc/sys/vm/drop_caches
 }
 
+sync_time() {
+	echo_c 37 "\nSynchronizing time"
+	ntpd -Nnq
+	echo_c 33 "$(date)"
+}
+
 self_update() {
 	if echo "${args}" | grep -E "\-(k|r|w|url)" >/dev/null 2>&1; then
+		sync_time
 		echo -e "\nChecking for sysupgrade update..."
 		curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
 		if [ -f /tmp/sysupgrade ] && grep -q "#!/bin/sh" /tmp/sysupgrade; then
@@ -183,7 +190,7 @@ get_system_build() {
 
 print_sysinfo() {
 	get_system_info
-	echo_c 33 "OpenIPC System Updater"
+	echo_c 33 "OpenIPC System Updater v${scr_version}"
 	echo_c 36 "\nVendor\t$vendor\nSoC\t$soc\nKernel\t$kernel_version\nRootFS\t$system_version"
 }
 
