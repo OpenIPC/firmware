@@ -122,7 +122,7 @@ rename() {
   mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${SOC}.cpio
   mv -v ./output/images/rootfs.tar ./output/images/rootfs.${SOC}.tar
   date >>/tmp/openipc_buildtime.txt
-  echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
+  echo_c 31 "\n\n$(cat /tmp/openipc_buildtime.txt)\n\n"
 }
 
 rename_initramfs() {
@@ -131,25 +131,25 @@ rename_initramfs() {
   mv -v ./output/images/rootfs.cpio ./output/images/rootfs.${SOC}.cpio
   mv -v ./output/images/rootfs.tar ./output/images/rootfs.${SOC}.tar
   date >>/tmp/openipc_buildtime.txt
-  echo -e "\n\n$(cat /tmp/openipc_buildtime.txt)"
+  echo_c 31 "\n\n$(cat /tmp/openipc_buildtime.txt)\n\n"
 }
 
 autoup_rootfs() {
-  echo_c 34 "Downloading u-boot-hi3518ev200-universal.bin"
+  echo_c 34 "\nDownloading u-boot-hi3518ev200-universal.bin"
   curl --location --output ./output/images/u-boot-hi3518ev200-universal.bin \
     https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-hi3518ev200-universal.bin
 
-  echo_c 34 "Making autoupdate firmware image"
+  echo_c 34 "\nMaking autoupdate u-boot image"
   ./output/host/bin/mkimage -A arm -O linux -T firmware -n "$OPENIPC_VER" \
     -a 0x0 -e 0x50000 -d ./output/images/u-boot-hi3518ev200-universal.bin \
     ./output/images/autoupdate-uboot.img
 
-  echo_c 34 "Making autoupdate kernel image"
+  echo_c 34 "\nMaking autoupdate kernel image"
   ./output/host/bin/mkimage -A arm -O linux -T kernel -C none -n "$OPENIPC_VER" \
     -a 0x50000 -e 0x250000 -d ./output/images/uImage.${SOC} \
     ./output/images/autoupdate-kernel.img
 
-  echo_c 34 "Making autoupdate rootfs image"
+  echo_c 34 "\nMaking autoupdate rootfs image"
   ./output/host/bin/mkimage -A arm -O linux -T filesystem -n "$OPENIPC_VER" \
     -a 0x250000 -e 0x750000 -d ./output/images/rootfs.squashfs.${SOC} \
     ./output/images/autoupdate-rootfs.img

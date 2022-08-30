@@ -22,7 +22,7 @@ env:
   MAX_ROOTFS_SIZE: 0x500000
   MAX_KERNEL_SIZE_ULTIMATE: 0x300000
   MAX_ROOTFS_SIZE_ULTIMATE: 0xa00000
-  TG_OPTIONS: -s --connect-timeout 30 --retry 10 --verbose
+  TG_OPTIONS: -s --connect-timeout 30 --retry 10 --http1.1 --verbose
 
 jobs:
   toolchain:
