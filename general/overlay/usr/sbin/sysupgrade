@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20220827
+# OpenIPC.org | v.20220831
 #
 
-scr_version=1.0.8
+scr_version=1.0.9
 
 args=" $@"
 
@@ -106,6 +106,12 @@ free_resources() {
 	done
 	sync
 	echo 3 >/proc/sys/vm/drop_caches
+
+	echo_c 34 "\nUptime:"
+	uptime
+
+	echo_c 34 "\nMemory"
+	free
 }
 
 sync_time() {
