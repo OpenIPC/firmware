@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-WIFIBROADCAST_VERSION = 51251b8c484b8c4f548aa3bbb1633e0edbb605dc
+WIFIBROADCAST_VERSION = 3ff62387e68f0649899b00a8b8e1a451a04ffb25
 WIFIBROADCAST_SITE = $(call github,svpcom,wifibroadcast,$(WIFIBROADCAST_VERSION))
 WIFIBROADCAST_LICENSE = GPL-2.0
 
