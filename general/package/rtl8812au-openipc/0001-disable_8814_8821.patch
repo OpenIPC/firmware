@@ -1,6 +1,6 @@
---- a/Makefile	2022-01-23 16:37:12.818897741 +0300
-+++ b/Makefile	2022-01-23 16:37:49.374948068 +0300
-@@ -22,8 +22,8 @@
+--- a/Makefile	2022-09-01 20:50:34.085515706 +0300
++++ b/Makefile	2022-09-01 21:37:32.114576023 +0300
+@@ -39,8 +39,8 @@
  
  ########################## WIFI IC ############################
  CONFIG_RTL8812A = y
@@ -10,13 +10,34 @@
 +CONFIG_RTL8814A = n
  ######################### Interface ###########################
  CONFIG_USB_HCI = y
- ########################### Android ###########################
-@@ -178,7 +178,7 @@
- HCI_NAME = usb
+ ########################## Features ###########################
+@@ -206,9 +206,9 @@
+ EXTRA_CFLAGS += -DDBG=0
  endif
  
 -ifeq ($(CONFIG_RTL8812A)_$(CONFIG_RTL8821A)_$(CONFIG_RTL8814A), y_y_y)
 +ifeq ($(CONFIG_RTL8812A)_$(CONFIG_RTL8821A)_$(CONFIG_RTL8814A), y_n_n)
  
- EXTRA_CFLAGS += -DDRV_NAME=\"rtl88XXau\"
+-EXTRA_CFLAGS += -DDRV_NAME=\"rtl88xxau_wfb\"
++EXTRA_CFLAGS += -DDRV_NAME=\"rtl88xxau\"
  ifeq ($(CONFIG_USB_HCI), y)
+ USER_MODULE_NAME = 88XXau
+ endif
+@@ -291,7 +291,7 @@
+ 				hal/btc/halbtc8821c2ant.o
+ endif
+ 
+-include $(TopDIR)/hal/phydm/phydm.mk
++include $(src)/hal/phydm/phydm.mk
+ 
+ ########### HAL_RTL8812A_RTL8821A #################################
+ ifneq ($(CONFIG_RTL8812A)_$(CONFIG_RTL8821A), n_n)
+@@ -1523,7 +1523,7 @@
+ 
+ USER_MODULE_NAME ?=
+ ifneq ($(USER_MODULE_NAME),)
+-MODULE_NAME := $(USER_MODULE_NAME)_wfb
++MODULE_NAME := $(USER_MODULE_NAME)
+ endif
+ 
+ ifneq ($(KERNELRELEASE),)

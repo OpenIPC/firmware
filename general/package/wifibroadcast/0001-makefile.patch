@@ -1,13 +1,14 @@
---- a/Makefile	2022-01-14 15:05:39.292506627 +0300
-+++ b/Makefile	2022-01-14 21:45:46.027792951 +0300
-@@ -1,57 +1,25 @@
+--- a/Makefile	2022-09-01 22:07:30.449753541 +0300
++++ b/Makefile	2022-09-01 20:42:21.816597209 +0300
+@@ -1,58 +1,25 @@
  ARCH ?= $(shell uname -i)
 -PYTHON ?= /usr/bin/python3
 -COMMIT ?= $(shell git rev-parse HEAD)
 -VERSION ?= $(shell $(PYTHON) ./version.py $(shell git show -s --format="%ct" $(shell git rev-parse HEAD)) $(shell git rev-parse --abbrev-ref HEAD))
+-SOURCE_DATE_EPOCH ?= $(shell git show -s --format="%ct" $(shell git rev-parse HEAD))
 +VERSION ?= $(shell git rev-parse HEAD)
  
--export VERSION COMMIT
+-export VERSION COMMIT SOURCE_DATE_EPOCH
 +LDFLAGS := -lrt -lpcap -lsodium
 +CFLAGS := -Wall -O2 -DWFB_VERSION='"$(VERSION)"'
  
@@ -46,25 +47,25 @@
 -	$(CC) -o $@ $^ $(_LDFLAGS)
 -
 -test:
--	PYTHONPATH=`pwd` trial telemetry.tests
+-	PYTHONPATH=`pwd` trial3 wfb_ng.tests
 -
 -rpm:  all_bin env
 -	rm -rf dist
 -	./env/bin/python ./setup.py bdist_rpm --force-arch $(ARCH)
--	rm -rf wifibroadcast.egg-info/
+-	rm -rf wfb_ng.egg-info/
 -
 -deb:  all_bin env
 -	rm -rf deb_dist
 -	./env/bin/python ./setup.py --command-packages=stdeb.command bdist_deb
--	rm -rf wifibroadcast.egg-info/ wifibroadcast-$(VERSION).tar.gz
+-	rm -rf wfb_ng.egg-info/ wfb-ng-$(VERSION).tar.gz
 -
 -bdist: all_bin
 -	rm -rf dist
 -	$(PYTHON) ./setup.py bdist --plat-name linux-$(ARCH)
--	rm -rf wifibroadcast.egg-info/
+-	rm -rf wfb_ng.egg-info/
 +	$(CC) -o $@ $^ $(LDFLAGS)
  
  clean:
--	rm -rf env wfb_rx wfb_tx wfb_keygen dist deb_dist build wifibroadcast.egg-info _trial_temp *~ src/*.o
+-	rm -rf env wfb_rx wfb_tx wfb_keygen dist deb_dist build wfb_ng.egg-info wfb-ng-*.tar.gz _trial_temp *~ src/*.o
 -
 +	rm -rf wfb_rx wfb_tx wfb_keygen *~ src/*.o
