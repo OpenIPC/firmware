@@ -10,6 +10,7 @@ keydir="/etc"
 load_rtl() {
   modprobe cfg80211
   modprobe 88XXau rtw_tx_pwr_idx_override=${driver_txpower_override}
+  sleep 3
 }
 
 load_ath() {
