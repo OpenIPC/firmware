@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-AWS_WEBRTC_VERSION = wo-datachannel
+AWS_WEBRTC_VERSION = develop
 AWS_WEBRTC_SITE_METHOD = git
-AWS_WEBRTC_SITE = https://github.com/widgetii/amazon-kinesis-video-streams-webrtc-sdk-c
+AWS_WEBRTC_SITE = https://github.com/OpenIPC/webrtc-c
 AWS_WEBRTC_INSTALL_STAGING = YES
 AWS_WEBRTC_LICENSE = Apache-2.0
 AWS_WEBRTC_LICENSE_FILES = LICENSE
@@ -24,7 +24,6 @@ AWS_WEBRTC_MAKE_OPTS += VERBOSE=1
 
 AWS_WEBRTC_DEPENDENCIES = \
 	libsrtp-openipc \
-	libwebsockets-openipc \
 	aws-producer \
 	usrsctp \
 	mbedtls-openipc
