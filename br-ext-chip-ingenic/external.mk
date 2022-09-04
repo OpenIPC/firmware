@@ -4,7 +4,6 @@ include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t21/ingenic-osdrv-t21
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t31/ingenic-osdrv-t31.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic_patcher/ingenic_patcher.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/aura-httpd/aura-httpd.mk
-include $(BR2_EXTERNAL_INGENIC_PATH)/package/ax-agent/ax-agent.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ffmpeg-openipc/ffmpeg-openipc.mk
