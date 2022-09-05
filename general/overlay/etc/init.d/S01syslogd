@@ -3,7 +3,7 @@
 DAEMON="syslogd"
 PIDFILE="/var/run/$DAEMON.pid"
 
-SYSLOGD_ARGS="-C64"
+SYSLOGD_ARGS="-C64 -t"
 
 # shellcheck source=/dev/null
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
