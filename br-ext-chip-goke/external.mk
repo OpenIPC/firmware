@@ -1,7 +1,6 @@
 include $(BR2_EXTERNAL_GOKE_PATH)/linux/linux-ext-goke_patcher.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/goke_patcher/goke_patcher.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/aura-httpd/aura-httpd.mk
-include $(BR2_EXTERNAL_GOKE_PATH)/package/ax-agent/ax-agent.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/baresip-openipc/baresip-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
