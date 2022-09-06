@@ -236,7 +236,7 @@ FUNCS=(
   t10
   t20
   t30
-  t31  t31_ultimate
+  t31
 
   xm510
   xm530
