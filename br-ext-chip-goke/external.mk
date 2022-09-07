@@ -1,7 +1,6 @@
 include $(BR2_EXTERNAL_GOKE_PATH)/linux/linux-ext-goke_patcher.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/goke_patcher/goke_patcher.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/aura-httpd/aura-httpd.mk
-include $(BR2_EXTERNAL_GOKE_PATH)/package/ax-agent/ax-agent.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/baresip-openipc/baresip-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
@@ -32,6 +31,7 @@ include $(BR2_EXTERNAL_GOKE_PATH)/package/motors/motors.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/mt7601u-ap-openipc/mt7601u-ap-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/opus-openipc/opus-openipc.mk
+include $(BR2_EXTERNAL_GOKE_PATH)/package/quirc-openipc/quirc-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/rtl8188fu-openipc/rtl8188fu-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/rtl8812au-openipc/rtl8812au-openipc.mk
 include $(BR2_EXTERNAL_GOKE_PATH)/package/uacme-openipc/uacme-openipc.mk

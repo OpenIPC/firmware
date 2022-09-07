@@ -1,6 +1,6 @@
 ################################################################################
 #
-# openhisilicon
+# hisilicon-opensdk
 #
 ################################################################################
 
@@ -17,8 +17,11 @@ HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
 	DISABLE_PM=1 \
 	DISABLE_TDE=1 \
 	DISABLE_VO=1 \
-	DISABLE_ISP=1 \
 	CHIPARCH=$(FAMILY)
+
+ifeq ($(FAMILY),hi3516ev200)
+	HISILICON_OPENSDK_MODULE_MAKE_OPTS += DISABLE_ISP=1
+endif
 
 $(eval $(kernel-module))
 $(eval $(generic-package))

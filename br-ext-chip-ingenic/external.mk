@@ -4,7 +4,6 @@ include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t21/ingenic-osdrv-t21
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t31/ingenic-osdrv-t31.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic_patcher/ingenic_patcher.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/aura-httpd/aura-httpd.mk
-include $(BR2_EXTERNAL_INGENIC_PATH)/package/ax-agent/ax-agent.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/dropbear-openipc/dropbear-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/fdk-aac-openipc/fdk-aac-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/ffmpeg-openipc/ffmpeg-openipc.mk
@@ -28,6 +27,7 @@ include $(BR2_EXTERNAL_INGENIC_PATH)/package/microsnander/microsnander.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/motors/motors.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/node-exporter/node-exporter.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/opus-openipc/opus-openipc.mk
+include $(BR2_EXTERNAL_INGENIC_PATH)/package/quirc-openipc/quirc-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/rtl8188fu-openipc/rtl8188fu-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/uacme-openipc/uacme-openipc.mk
 include $(BR2_EXTERNAL_INGENIC_PATH)/package/vtund-openipc/vtund-openipc.mk

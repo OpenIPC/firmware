@@ -192,7 +192,7 @@ FUNCS=(
   hi3518ev100
 
   hi3516cv200
-  hi3518ev200  hi3518ev200_hs303  hi3518ev200_ultimate
+  hi3518ev200  hi3518ev200_hs303v1  hi3518ev200_ultimate
 
   hi3516cv300  hi3516cv300_ultimate
   hi3516ev100
@@ -236,7 +236,7 @@ FUNCS=(
   t10
   t20
   t30
-  t31  t31_vixand
+  t31  t31_ultimate
 
   xm510
   xm530
@@ -259,7 +259,7 @@ uni_build() {
   set -e
   if [ "$(echo $BOARD | cut -sd '_' -f 2)" == "" ]; then
     BOARD="${BOARD}_openipc"
-  elif [ "$BOARD" == "hi3518ev200_hs303" ]; then
+  elif [ "$BOARD" == "hi3518ev200_hs303v1" ]; then
     BOARD=hi3518ev200_openipc
     NEED_AUTOUP=1
   fi
