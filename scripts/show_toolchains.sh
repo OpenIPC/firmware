@@ -25,7 +25,7 @@ toolchain_by_config() {
     if [ -z "$ARCH" ]; then
       ARCH=$(sed -rn "s/^BR2_(mips_[a-z]*)=y/\1/p" $CF)
     else
-      THUMB=$(sed -rn "s/BR2_ARM_INSTRUCTIONS_(THUMB2)=y/\1/p" $CF)
+      THUMB=$(sed -rn "s/^BR2_ARM_INSTRUCTIONS_(THUMB2)=y/\1/p" $CF)
       if [ ! -z "$THUMB" ]; then
         ARCH="${ARCH}_${THUMB,,}"
       fi
