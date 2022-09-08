@@ -20,13 +20,18 @@ toolchain_by_config() {
     else
       # Here we have something from ARM modern family
       HF=$(sed -rn "s/^BR2_ARM_EABI(HF)=y/\1/p" $CF | tr '[:upper:]' '[:lower:]')
-      if [ ! -z "$HF" ]; then
-        ARCH="${ARCH}_${HF}"
-      fi
     fi
 
     if [ -z "$ARCH" ]; then
       ARCH=$(sed -rn "s/^BR2_(mips_[a-z]*)=y/\1/p" $CF)
+    else
+      THUMB=$(sed -rn "s/BR2_ARM_INSTRUCTIONS_(THUMB2)=y/\1/p" $CF)
+      if [ ! -z "$THUMB" ]; then
+        ARCH="${ARCH}_${THUMB,,}"
+      fi
+      if [ ! -z "$HF" ]; then
+        ARCH="${ARCH}_${HF}"
+      fi
     fi
 
     LIBC=$(sed -rn "s/^BR2_TOOLCHAIN_BUILDROOT_LIBC=\"(.*)\"/\1/p" $CF)
