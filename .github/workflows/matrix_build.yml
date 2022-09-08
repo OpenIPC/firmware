@@ -561,6 +561,18 @@ jobs:
           tag: ${{ env.TAG_NAME }}
           overwrite: true
 
+      - name: Publish image -> toolchain mapping
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' }}
+        env:
+          MAP_TOKEN: ${{ secrets.MAP_TOKEN }}
+        run: |
+          curl \
+            -X POST \
+            -F "release=${{ matrix.platform }}_${{ matrix.release }}" \
+            -F "toolchain=${TOOLNAME}" \
+            -H "Authorization: Bearer ${MAP_TOKEN}" \
+            https://openipc.org/map_toolchain || true
+
       - name: Send binary file to telegram channel
         if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' }}
         env:
