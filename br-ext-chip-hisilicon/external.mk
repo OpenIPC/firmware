@@ -30,6 +30,7 @@ include $(BR2_EXTERNAL_HISILICON_PATH)/package/libogg-openipc/libogg-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libre-openipc/libre-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/librem-openipc/librem-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libsrt-openipc/libsrt-openipc.mk
+include $(BR2_EXTERNAL_HISILICON_PATH)/package/libsrtp-openipc/libsrtp-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/libwebsockets-openipc/libwebsockets-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/linux-firmware-openipc/linux-firmware-openipc.mk
 include $(BR2_EXTERNAL_HISILICON_PATH)/package/majestic/majestic.mk
