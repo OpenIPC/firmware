@@ -22,7 +22,7 @@ int claim_gpio(int gpio) {
     return -1;
   }
 
-  if (gpio_request(gpio, 0) < 0)
+  if (gpio_request(gpio, 0) > 0)
     return -1;
 
   pr_debug("GPIO[%i] Setting direction...\n", gpio);
