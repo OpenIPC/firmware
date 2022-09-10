@@ -94,7 +94,7 @@ free_resources() {
 	# killall majestic crond klogd ntpd rngd syslogd >/dev/null 2>&1 || true
 	# "load_$vendor" -r >/dev/null 2>&1 || true
 	#
-	echo_c 37 "\nStop services, sync and fresh memory"
+	echo_c 37 "\nStop services, sync files, free up memory"
 	for proc in majestic crond klogd ntpd rngd syslogd; do
 		echo -n "Killing $proc "
 		while [ -n "$(pidof $proc)" ]; do
