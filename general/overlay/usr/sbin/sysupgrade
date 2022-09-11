@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20220831
+# OpenIPC.org | v.20220910
 #
 
 scr_version=1.0.9
@@ -83,7 +83,7 @@ download_firmware() {
 	echo "Download from $url"
 	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
 	[ "$(curl -o /dev/null -s -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
-	curl --connect-timeout 30 -s -m 60 -L "$url" ${progress} -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+	curl --connect-timeout 30 -s -m 120 -L "$url" ${progress} -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 	fi
