@@ -135,13 +135,13 @@ rename_initramfs() {
 }
 
 autoup_rootfs() {
-  echo_c 34 "\nDownloading u-boot-hi3518ev200-universal.bin"
-  curl --location --output ./output/images/u-boot-hi3518ev200-universal.bin \
-    https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-hi3518ev200-universal.bin
+  echo_c 34 "\nDownloading u-boot created by OpenIPC"
+  curl --location --output ./output/images/u-boot-${SOC}-universal.bin \
+    https://github.com/OpenIPC/firmware/releases/download/latest/u-boot-${SOC}-universal.bin
 
   echo_c 34 "\nMaking autoupdate u-boot image"
   ./output/host/bin/mkimage -A arm -O linux -T firmware -n "$OPENIPC_VER" \
-    -a 0x0 -e 0x50000 -d ./output/images/u-boot-hi3518ev200-universal.bin \
+    -a 0x0 -e 0x50000 -d ./output/images/u-boot-${SOC}-universal.bin \
     ./output/images/autoupdate-uboot.img
 
   echo_c 34 "\nMaking autoupdate kernel image"
@@ -192,7 +192,7 @@ FUNCS=(
   hi3518ev100
 
   hi3516cv200
-  hi3518ev200  hi3518ev200_hs303v1  hi3518ev200_ultimate
+  hi3518ev200  hi3518ev200_ultimate
 
   hi3516cv300  hi3516cv300_ultimate
   hi3516ev100
@@ -259,8 +259,9 @@ uni_build() {
   set -e
   if [ "$(echo $BOARD | cut -sd '_' -f 2)" == "" ]; then
     BOARD="${BOARD}_openipc"
-  elif [ "$BOARD" == "hi3518ev200_hs303v1" ]; then
-    BOARD=hi3518ev200_openipc
+  fi
+
+  if [ "$BOARD" == "hi3518ev200_openipc" ]; then
     NEED_AUTOUP=1
   fi
 
