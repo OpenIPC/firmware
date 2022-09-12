@@ -83,7 +83,7 @@ download_firmware() {
 	echo "Download from $url"
 	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
 	[ "$(curl -o /dev/null -s -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
-	curl --connect-timeout 30 -s -m 60 -L "$url" ${progress} -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+	curl --connect-timeout 30 -s -m 120 -L "$url" ${progress} -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 	fi
@@ -94,7 +94,7 @@ free_resources() {
 	# killall majestic crond klogd ntpd rngd syslogd >/dev/null 2>&1 || true
 	# "load_$vendor" -r >/dev/null 2>&1 || true
 	#
-	echo_c 37 "\nStop services, sync and fresh memory"
+	echo_c 37 "\nStop services, sync files, free up memory"
 	for proc in majestic crond klogd ntpd rngd syslogd; do
 		echo -n "Killing $proc "
 		while [ -n "$(pidof $proc)" ]; do
