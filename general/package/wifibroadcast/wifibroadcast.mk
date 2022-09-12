@@ -4,11 +4,11 @@
 #
 ################################################################################
 
-WIFIBROADCAST_VERSION = 3ff62387e68f0649899b00a8b8e1a451a04ffb25
+WIFIBROADCAST_VERSION = c00f4ca0817919e6ba5780212781e03dada206a6
 WIFIBROADCAST_SITE = $(call github,svpcom,wifibroadcast,$(WIFIBROADCAST_VERSION))
 WIFIBROADCAST_LICENSE = GPL-2.0
 
-WIFIBROADCAST_DEPENDENCIES += libpcap libsodium iw netcat
+WIFIBROADCAST_DEPENDENCIES += libpcap libsodium iw
 
 WIFIBROADCAST_MAKE_OPTS = \
 	CC="$(TARGET_CC)" \
