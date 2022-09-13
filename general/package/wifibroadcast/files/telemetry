@@ -13,9 +13,9 @@ start_telemetry() {
 	  ln -s /usr/bin/wfb_tx /usr/bin/telemetry_tx ; chmod +x /usr/bin/telemetry_tx
   else
 	if [ ${one_way} = "false" ]; then
-	  telemetry_rx -p ${radio_port} -u ${port_rx} -K ${keydir}/drone.key -k ${fec_k} -n ${fec_n} -i ${stream_rx} ${wlan} &
+	  telemetry_rx -p ${stream_rx} -u ${port_rx} -K ${keydir}/drone.key -k ${fec_k} -n ${fec_n} -i ${link_id} ${wlan} &
 	fi
-	telemetry_tx -p ${radio_port} -u ${port_tx} -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} -T ${fec_timeout} -i ${stream_tx} ${wlan} &
+	telemetry_tx -p ${stream_tx} -u ${port_tx} -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} -T ${fec_timeout} -i ${link_id} ${wlan} &
   fi
 }
 
