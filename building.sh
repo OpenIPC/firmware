@@ -160,7 +160,6 @@ autoup_rootfs() {
 FUNCS=(
   ambarella-s3l
 
-  ak3918ev200
   ak3916ev300
   ak3918ev300
 
