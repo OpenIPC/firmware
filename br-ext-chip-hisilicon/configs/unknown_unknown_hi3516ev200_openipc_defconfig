@@ -47,6 +47,7 @@ BR2_TARGET_GENERIC_HOSTNAME="openipc-hi3516ev200"
 BR2_GLOBAL_PATCH_DIR="$(TOPDIR)/../general/package/all-patches"
 
 # OpenIPC packages
+BR2_PACKAGE_AWS_WEBRTC=y
 BR2_PACKAGE_BUSYBOX_CONFIG="$(TOPDIR)/../general/package/busybox/busybox.config"
 BR2_PACKAGE_DROPBEAR_OPENIPC=y
 # BR2_PACKAGE_FDK_AAC_OPENIPC is not set
