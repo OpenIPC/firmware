@@ -15,6 +15,7 @@ USRSCTP_CONF_OPTS += \
 	-Dsctp_werror=0 \
 	-Dsctp_build_programs=0 \
 	-Dsctp_debug=0 \
+	-DBUILD_SHARED_LIBS=OFF \
 	-DCMAKE_BUILD_TYPE=Release
 
 USRSCTP_MAKE_OPTS += VERBOSE=1
