@@ -32,6 +32,9 @@ define WIFIBROADCAST_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	cp ../general/package/wifibroadcast/files/telemetry $(TARGET_DIR)/usr/bin
 
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
+	cp ../general/package/wifibroadcast/files/tweaksys $(TARGET_DIR)/usr/bin
+
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
 	cp ../general/package/wifibroadcast/files/telemetry.conf $(TARGET_DIR)/etc
 endef

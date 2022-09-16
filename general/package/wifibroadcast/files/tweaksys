@@ -1,0 +1,73 @@
+#!/bin/sh
+
+chip=$(ipcinfo -c)
+family=$(ipcinfo -f)
+vendor=$(ipcinfo -v)
+sensor=$(ipcinfo -s)
+
+cli="yaml-cli -i /etc/majestic.yaml"
+
+all_other() {
+  # remove unneded modules
+  sed -i "s!insmod ${family}_rgn.ko!#insmod ${family}_rgn.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${family}_jpege.ko!#insmod ${family}_jpege.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${family}_ive.ko save_power=0!#insmod ${family}_ive.ko save_power=0!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${family}_aio.ko!#insmod ${family}_aio.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${family}_ai.ko!#insmod ${family}_ai.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${family}_ao.ko!#insmod ${family}_ao.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${family}_aenc.ko!#insmod ${family}_aenc.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${family}_adec.ko!#insmod ${family}_adec.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${family}_acodec.ko!#insmod ${family}_acodec.ko!g" /usr/bin/load_${vendor}
+  # change fps 25 -> 30
+  sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx307_i2c_2l_1080p.ini
+  # disable mavlink routerd autostart
+  sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
+  # majestic basic settings
+  ${cli} -s .isp.slowShutter disabled
+  ${cli} -s .image.contrast 50
+  ${cli} -s .image.luminance 50
+  ${cli} -s .video0.bitrate 5120
+  ${cli} -s .video0.codec h264
+  ${cli} -s .video0.rcMode cbr
+  ${cli} -s .video0.gopSize 0.1
+  ${cli} -s .hls.enabled false
+  ${cli} -s .netip.enabled false
+  ${cli} -s .rtsp.enabled false
+  ${cli} -s .jpeg.enabled false
+  # lowdelay support only imx307 sensor
+  if [ ${sensor} = "imx307" ]; then
+      ${cli} -s .isp.lowDelay true
+	  # ${cli} -s .video0.sliceUnits: 4
+  fi
+# add outgoing rtp stream to udp
+cat >> /etc/majestic.yaml << EOF
+outgoing:
+  - udp://127.0.0.1:5600
+EOF
+  # complete tweaks
+  touch /etc/system.ok
+  echo "Preparing system done."
+  reboot
+}
+
+case "$1" in
+  gk7205v200 | hi3516ev200)
+	echo "Preparig system tweaks for ${chip}..."
+	# set osmem
+	fw_setenv osmem 40M
+	# change uart1 to uart0
+    sed -i "s!Device = /dev/ttyAMA1!Device = /dev/ttyAMA0!g" /etc/mavlink.conf
+	sed -i "s!console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
+	# remove unneded
+    rm -f /etc/modules /etc/init.d/S60crond /etc/init.d/S49ntpd /etc/init.d/S50httpd /etc/init.d/S02klogd
+
+	all_other
+	;;
+  gk7205v300 | hi3516ev300)
+	echo "Preparig system tweaks for ${chip}..."
+	all_other
+	;;
+	*)
+	echo "Usage: $0 {gk7205v200|gk7205v300|hi3516ev200|hi3516ev300}"
+	exit 1
+esac
