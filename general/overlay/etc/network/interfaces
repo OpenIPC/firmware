@@ -16,10 +16,20 @@ iface wlan0 inet dhcp
     pre-up modprobe mt7601u
     pre-up wpa_passphrase "SSID" "password" >/tmp/wpa_supplicant.conf
     pre-up sed -i '2i \\tscan_ssid=1' /tmp/wpa_supplicant.conf
-    pre-up (sleep 3; wpa_supplicant -B -D nl80211 -i wlan0 -c/tmp/wpa_supplicant.conf)
+    pre-up sleep 3
+    pre-up wpa_supplicant -B -D nl80211 -i wlan0 -c/tmp/wpa_supplicant.conf
     post-down killall -q wpa_supplicant
     post-down echo 1 > /sys/class/gpio/gpio7/value
     post-down echo 7 > /sys/class/gpio/unexport
+
+manual wg0
+iface wg0 inet static
+    address 192.168.99.1
+    netmask 255.255.255.0
+    pre-up modprobe wireguard
+    pre-up ip link add dev wg0 type wireguard
+    pre-up wg setconf wg0 /etc/wireguard.conf
+    post-down ip link del dev wg0
 
 source-dir /etc/network/interfaces.d
 
