@@ -33,5 +33,5 @@ iface wg0 inet static
     pre-up wg setconf wg0 /etc/wireguard.conf
     post-down ip link del dev wg0
 
-source-dir /etc/network/interfaces.d
+#source-dir /etc/network/interfaces.d
 
