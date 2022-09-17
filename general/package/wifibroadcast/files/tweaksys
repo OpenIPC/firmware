@@ -4,20 +4,24 @@ chip=$(ipcinfo -c)
 family=$(ipcinfo -f)
 vendor=$(ipcinfo -v)
 sensor=$(ipcinfo -s)
+prefix=${family}
 
 cli="yaml-cli -i /etc/majestic.yaml"
 
 all_other() {
+  if [ ${vendor} = "hisilicon" ]; then
+	prefix="open"
+  fi
   # remove unneded modules
-  sed -i "s!insmod ${family}_rgn.ko!#insmod ${family}_rgn.ko!g" /usr/bin/load_${vendor}
-  sed -i "s!insmod ${family}_jpege.ko!#insmod ${family}_jpege.ko!g" /usr/bin/load_${vendor}
-  sed -i "s!insmod ${family}_ive.ko save_power=0!#insmod ${family}_ive.ko save_power=0!g" /usr/bin/load_${vendor}
-  sed -i "s!insmod ${family}_aio.ko!#insmod ${family}_aio.ko!g" /usr/bin/load_${vendor}
-  sed -i "s!insmod ${family}_ai.ko!#insmod ${family}_ai.ko!g" /usr/bin/load_${vendor}
-  sed -i "s!insmod ${family}_ao.ko!#insmod ${family}_ao.ko!g" /usr/bin/load_${vendor}
-  sed -i "s!insmod ${family}_aenc.ko!#insmod ${family}_aenc.ko!g" /usr/bin/load_${vendor}
-  sed -i "s!insmod ${family}_adec.ko!#insmod ${family}_adec.ko!g" /usr/bin/load_${vendor}
-  sed -i "s!insmod ${family}_acodec.ko!#insmod ${family}_acodec.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${prefix}_rgn.ko!#insmod ${prefix}_rgn.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${prefix}_jpege.ko!#insmod ${prefix}_jpege.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${prefix}_ive.ko save_power=0!#insmod ${prefix}_ive.ko save_power=0!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${prefix}_aio.ko!#insmod ${prefix}_aio.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${prefix}_ai.ko!#insmod ${prefix}_ai.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${prefix}_ao.ko!#insmod ${prefix}_ao.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${prefix}_aenc.ko!#insmod ${prefix}_aenc.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${prefix}_adec.ko!#insmod ${prefix}_adec.ko!g" /usr/bin/load_${vendor}
+  sed -i "s!insmod ${prefix}_acodec.ko!#insmod ${prefix}_acodec.ko!g" /usr/bin/load_${vendor}
   # change fps 25 -> 30
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx307_i2c_2l_1080p.ini
   # disable mavlink routerd autostart
