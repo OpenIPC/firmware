@@ -59,7 +59,7 @@ fresh() {
     if [ -d "buildroot-${BR_VER}/dl" ]; then
       echo_c 36 "Found existing Buildroot downloads directory."
       echo_c 34 "Copying Buildroot downloads to cache directory ..."
-      log_and_run "cp -rv buildroot-${BR_VER}/dl/* ${SRC_CACHE_DIR}"
+      log_and_run "cp -rvf buildroot-${BR_VER}/dl/* ${SRC_CACHE_DIR}"
       echo_c 34 "Done.\n"
     fi
 
@@ -81,7 +81,7 @@ fresh() {
 
   echo_c 34 "Copying cached source files back to Buildroot ..."
   log_and_run "mkdir -p buildroot-${BR_VER}/dl/"
-  log_and_run "cp -rv ${SRC_CACHE_DIR}/* buildroot-${BR_VER}/dl/"
+  log_and_run "cp -rvf ${SRC_CACHE_DIR}/* buildroot-${BR_VER}/dl/"
   echo_c 34 "Done.\n"
 
   # make prepare
