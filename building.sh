@@ -241,11 +241,8 @@ copy_function() {
 }
 
 uni_build() {
-  if [ -z "$1" ]; then
-    BOARD=$FUNCNAME
-  else
-    BOARD=$1
-  fi
+  [ -z "$BOARD" ] && BOARD=$FUNCNAME
+
   SOC=$(echo $BOARD | cut -d '_' -f 1)
 
   set -e
@@ -259,17 +256,22 @@ uni_build() {
 
   echo_c 33 "\n  SoC: $SOC\nBoard: $BOARD\n"
 
-  fresh $(make BOARD=unknown_unknown_${BOARD} buildroot-version)
-  log_and_run "make BOARD=unknown_unknown_${BOARD} all"
-
-  if [ "$BOARD" == "ssc335_initramfs" ]; then
-    rename_initramfs
-  else
-    rename
+  if [ "all" = "${COMMAND}" ]; then
+    fresh $(make BOARD=unknown_unknown_${BOARD} buildroot-version)
   fi
 
-  if [ ! -z "$NEED_AUTOUP" ]; then
-    autoup_rootfs
+  log_and_run "make BOARD=unknown_unknown_${BOARD} ${COMMAND}"
+
+  if [ "all" = "${COMMAND}" ]; then
+    if [ "$BOARD" == "ssc335_initramfs" ]; then
+      rename_initramfs
+    else
+      rename
+    fi
+
+    if [ ! -z "$NEED_AUTOUP" ]; then
+      autoup_rootfs
+    fi
   fi
 }
 
@@ -279,8 +281,6 @@ done
 
 #######
 
-CMD=$1
-
 if [ $# -eq 0 ]; then
   if ! command -v fzf >/dev/null 2>&1; then
     echo -ne "Usage: $0 <variant>\nVariants:"
@@ -289,12 +289,15 @@ if [ $# -eq 0 ]; then
     exit 1
   else
     SELECTED=$(find . -path "*/br-ext-chip-*" -name "*_defconfig" | fzf)
-    if [ -z "$SELECTED" ]; then
-      exit 1
-    fi
-    CMD=$(echo $SELECTED | awk -F_ '{printf "%s_%s", $3, $4}')
+    [ -z "$SELECTED" ] && exit 1
+    BOARD=$(echo $SELECTED | awk -F_ '{printf "%s_%s", $3, $4}')
   fi
+else
+  BOARD=$1
 fi
 
-echo_c 37 "Building OpenIPC ${CMD}"
-uni_build $CMD
+COMMAND=$2
+[ -z "$COMMAND" ] && COMMAND=all
+
+echo_c 37 "Building OpenIPC for ${BOARD}"
+uni_build $BOARD $COMMAND
