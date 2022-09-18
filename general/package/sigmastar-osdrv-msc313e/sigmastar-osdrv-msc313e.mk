@@ -34,7 +34,6 @@ define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-msc313e/files/sensor/*JXF22*.so
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-msc313e/files/sensor/*SC2235*.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-msc313e/files/sensor/*imx307*.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-msc313e/files/sensor/*imx323*.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-msc313e/files/sensor/*sc2235*.so
