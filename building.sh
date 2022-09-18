@@ -24,14 +24,7 @@ SRC_CACHE_DIR="/tmp/buildroot_dl"
 #
 
 echo_c() {
-  # 30 grey
-  # 31 red
-  # 32 green
-  # 33 yellow
-  # 34 blue
-  # 35 magenta
-  # 36 cyan
-  # 37 white
+  # 30 grey, 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan,37 white
   echo -e "\e[1;$1m$2\e[0m"
 }
 
