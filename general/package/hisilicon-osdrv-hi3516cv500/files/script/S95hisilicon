@@ -43,6 +43,7 @@ start() {
 	load_hisilicon -i
 	# sample_bindvivo_HISI_V4A 1
 	#
+	export SENSOR=$(fw_printenv -n sensor)
 	load_majestic
 }
 
