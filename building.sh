@@ -24,14 +24,7 @@ SRC_CACHE_DIR="/tmp/buildroot_dl"
 #
 
 echo_c() {
-  # 30 grey
-  # 31 red
-  # 32 green
-  # 33 yellow
-  # 34 blue
-  # 35 magenta
-  # 36 cyan
-  # 37 white
+  # 30 grey, 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan,37 white
   echo -e "\e[1;$1m$2\e[0m"
 }
 
@@ -66,7 +59,7 @@ fresh() {
     if [ -d "buildroot-${BR_VER}/dl" ]; then
       echo_c 36 "Found existing Buildroot downloads directory."
       echo_c 34 "Copying Buildroot downloads to cache directory ..."
-      log_and_run "cp -rv buildroot-${BR_VER}/dl/* ${SRC_CACHE_DIR}"
+      log_and_run "cp -rvf buildroot-${BR_VER}/dl/* ${SRC_CACHE_DIR}"
       echo_c 34 "Done.\n"
     fi
 
@@ -88,7 +81,7 @@ fresh() {
 
   echo_c 34 "Copying cached source files back to Buildroot ..."
   log_and_run "mkdir -p buildroot-${BR_VER}/dl/"
-  log_and_run "cp -rv ${SRC_CACHE_DIR}/* buildroot-${BR_VER}/dl/"
+  log_and_run "cp -rvf ${SRC_CACHE_DIR}/* buildroot-${BR_VER}/dl/"
   echo_c 34 "Done.\n"
 
   # make prepare
@@ -248,11 +241,8 @@ copy_function() {
 }
 
 uni_build() {
-  if [ -z "$1" ]; then
-    BOARD=$FUNCNAME
-  else
-    BOARD=$1
-  fi
+  [ -z "$BOARD" ] && BOARD=$FUNCNAME
+
   SOC=$(echo $BOARD | cut -d '_' -f 1)
 
   set -e
@@ -266,17 +256,22 @@ uni_build() {
 
   echo_c 33 "\n  SoC: $SOC\nBoard: $BOARD\n"
 
-  fresh $(make BOARD=unknown_unknown_${BOARD} buildroot-version)
-  log_and_run "make BOARD=unknown_unknown_${BOARD} all"
-
-  if [ "$BOARD" == "ssc335_initramfs" ]; then
-    rename_initramfs
-  else
-    rename
+  if [ "all" = "${COMMAND}" ]; then
+    fresh $(make BOARD=unknown_unknown_${BOARD} buildroot-version)
   fi
 
-  if [ ! -z "$NEED_AUTOUP" ]; then
-    autoup_rootfs
+  log_and_run "make BOARD=unknown_unknown_${BOARD} ${COMMAND}"
+
+  if [ "all" = "${COMMAND}" ]; then
+    if [ "$BOARD" == "ssc335_initramfs" ]; then
+      rename_initramfs
+    else
+      rename
+    fi
+
+    if [ ! -z "$NEED_AUTOUP" ]; then
+      autoup_rootfs
+    fi
   fi
 }
 
@@ -286,8 +281,6 @@ done
 
 #######
 
-CMD=$1
-
 if [ $# -eq 0 ]; then
   if ! command -v fzf >/dev/null 2>&1; then
     echo -ne "Usage: $0 <variant>\nVariants:"
@@ -296,12 +289,15 @@ if [ $# -eq 0 ]; then
     exit 1
   else
     SELECTED=$(find . -path "*/br-ext-chip-*" -name "*_defconfig" | fzf)
-    if [ -z "$SELECTED" ]; then
-      exit 1
-    fi
-    CMD=$(echo $SELECTED | awk -F_ '{printf "%s_%s", $3, $4}')
+    [ -z "$SELECTED" ] && exit 1
+    BOARD=$(echo $SELECTED | awk -F_ '{printf "%s_%s", $3, $4}')
   fi
+else
+  BOARD=$1
 fi
 
-echo_c 37 "Building OpenIPC ${CMD}"
-uni_build $CMD
+COMMAND=$2
+[ -z "$COMMAND" ] && COMMAND=all
+
+echo_c 37 "Building OpenIPC for ${BOARD}"
+uni_build $BOARD $COMMAND

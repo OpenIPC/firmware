@@ -23,8 +23,7 @@ SCRIPTS_DIR   := $(ROOT_DIR)/scripts
 .PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
 
 usage help:
-	@echo -e \
-	"\n\
+	@echo "\n\
 	BR-OpenIPC usage:\n\
 	  - make help|usage - print this help\n\
 	  - make install-deps - install system deps\n\
@@ -32,12 +31,11 @@ usage help:
 	  - make list-configs - show available hardware configs list\n\
 	  - make BOARD=<BOARD-ID> board-info - write to stdout information about selected board\n\
 	  - make BOARD=<BOARD-ID> all - build all needed for a board (toolchain, kernel and rootfs images)\n\
-	  - make overlayed-rootfs-<FS-TYPE> ROOTFS_OVERLAYS=... - create rootfs image that contains original\n\
 	  - make clean - cleaning before reassembly\n\
 	  - make distclean - switching to the factory state\n\
-	  Buildroot target dir overlayed by some custom layers.\n\
-	  Example:\n\
-	      make overlayed-rootfs-squashfs ROOTFS_OVERLAYS=./examples/echo_server/overlay\n\
+	  - make overlayed-rootfs-<FS-TYPE> ROOTFS_OVERLAYS=... - create rootfs image that contains original Buildroot target dir overlayed by some custom layers.\n\
+	Example:\n\
+	    make overlayed-rootfs-squashfs ROOTFS_OVERLAYS=./examples/echo_server/overlay\n\
 	"
 
 distclean:
