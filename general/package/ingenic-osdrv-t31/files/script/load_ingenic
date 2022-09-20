@@ -97,5 +97,6 @@ if [ $? -ne 0 ]; then
     insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_t31.ko ${SENSOR_PARAM}
     check_return "insmod sensor drv"
 fi
-# temporary hax to claim gpio 57,58 on HICHIP boards
-insmod ${KMOD_PATH/%\//}/ircut.ko; rmmod ircut
+#
+# Need for gpio 57,58 on HICHIP boards
+insmod ${KMOD_PATH/%\//}/gpio.ko
