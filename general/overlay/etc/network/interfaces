@@ -17,6 +17,7 @@ iface wlan0 inet dhcp
     pre-up echo 0 > /sys/class/gpio/gpio7/value
     pre-up modprobe mt7601u
     pre-up wpa_passphrase "SSID" "password" >/tmp/wpa_supplicant.conf
+    pre-up if [ -e "/mnt/mmcblk0p1/wpa_supplicant.conf" ]; then cp /mnt/mmcblk0p1/wpa_supplicant.conf /tmp; fi
     pre-up sed -i '2i \\tscan_ssid=1' /tmp/wpa_supplicant.conf
     pre-up sleep 3
     pre-up wpa_supplicant -B -D nl80211 -i wlan0 -c/tmp/wpa_supplicant.conf
