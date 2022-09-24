@@ -1,5 +1,4 @@
 
-manual usb0
 iface usb0 inet dhcp
     pre-up echo 9 > /sys/class/gpio/export
     pre-up echo out > /sys/class/gpio/gpio9/direction
