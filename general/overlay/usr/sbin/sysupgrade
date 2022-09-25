@@ -175,7 +175,7 @@ get_device() {
 }
 
 get_kernel_version() {
-	echo -n "0x$(xxd -l 4 -s 8 -p "$1" | xargs)"
+	date "+%H:%M:%S %Y-%m-%d" @$((0x$(xxd -l 4 -s 8 -p "$1" | xargs)))
 }
 
 get_system_info() {
