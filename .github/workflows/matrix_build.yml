@@ -23,6 +23,9 @@ env:
   MAX_KERNEL_SIZE_ULTIMATE: 0x300000
   MAX_ROOTFS_SIZE_ULTIMATE: 0xa00000
   TG_OPTIONS: -s --connect-timeout 30 --retry 10 --http1.1 --verbose
+  BR_VER_hi3516cv500: 2021.02.12
+  BR_VER_hi3516dv300: 2021.02.12
+  BR_VER_hi3516av300: 2021.02.12
 
 jobs:
   toolchain:
@@ -82,6 +85,11 @@ jobs:
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
+
+          if [[ -n "$BR_VER_${{ matrix.platform }}" ]]; then
+            export BR_VER=$BR_VER_${{ matrix.platform }}
+            echo "BR_VER=$BR_VER" >> $GITHUB_ENV
+          fi
 
           make prepare
           TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
@@ -368,6 +376,11 @@ jobs:
 
       - name: Determine toolchain name
         run: |
+          if [[ -n "$BR_VER_${{ matrix.platform }}" ]]; then
+            export BR_VER=$BR_VER_${{ matrix.platform }}
+            echo "BR_VER=$BR_VER" >> $GITHUB_ENV
+          fi
+
           make prepare
           TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
