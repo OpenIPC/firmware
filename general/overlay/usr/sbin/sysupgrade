@@ -267,6 +267,7 @@ for i in "$@"; do
 		--kernel=*)
 			update_kernel=1
 			kernel_file="${i#*=}"
+			[ "$kernel_file" != ${kernel_file#/mnt/mmc} ] && skip_unmount=1
 			shift
 			;;
 		-n | --wipe_overlay)
@@ -281,6 +282,7 @@ for i in "$@"; do
 		--rootfs=*)
 			update_rootfs=1
 			rootfs_file="${i#*=}"
+			[ "$rootfs_file" != ${rootfs_file#/mnt/mmc} ] && skip_unmount=1
 			shift
 			;;
 		--url=*)
@@ -328,7 +330,7 @@ if [ "1" = "$update_webui" ]; then
 	fi
 fi
 
-check_sdcard
+[ "1" != "$skip_unmount" ] && check_sdcard
 
 create_lock
 free_resources
