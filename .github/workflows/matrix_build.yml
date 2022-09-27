@@ -90,6 +90,9 @@ jobs:
             export BR_VER=$BR_VER_${{ matrix.platform }}
             echo "BR_VER=$BR_VER" >> $GITHUB_ENV
           fi
+          if [[ "$BR_VER" == "2021.02.12" ]]; then
+            rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch
+          fi
 
           make prepare
           TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
@@ -379,6 +382,9 @@ jobs:
           if [[ -n "$BR_VER_${{ matrix.platform }}" ]]; then
             export BR_VER=$BR_VER_${{ matrix.platform }}
             echo "BR_VER=$BR_VER" >> $GITHUB_ENV
+          fi
+          if [[ "$BR_VER" == "2021.02.12" ]]; then
+            rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch
           fi
 
           make prepare
