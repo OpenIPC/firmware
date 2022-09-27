@@ -422,7 +422,7 @@ jobs:
           echo "${TLEXT}_CUSTOM=y" >> $CONF_PATH
           echo "${TLEXT}_PREINSTALLED=y" >> $CONF_PATH
           echo "${TLEXT}_CXX=y" >> $CONF_PATH
-          echo "${TLEXT}_INET_RPC=y" >> $CONF_PATH
+          echo "${TLEXT}_INET_RPC=n" >> $CONF_PATH
           echo "${TLEXT}_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
 
           SOC=$(echo $TOOLNAME | cut -d '-' -f 1)
