@@ -436,7 +436,8 @@ jobs:
             ;;
             glibc)
               PREFIX="${PREFIX}gnu${ABI}"
-              check_glibc_rpc_feature() { IS_IN_LIBC=`test -f $(1)/usr/include/rpc/rpc.h && echo y` ; }
+              RPCH=/tmp/extsdk/${PREFIX}/sysroot/usr/include/rpc/rpc.h
+              check_glibc_rpc_feature() { test -f $RPCH && echo y || echo n ; }
               echo "${TLEXT}_INET_RPC=$(check_glibc_rpc_feature)" >> $CONF_PATH
             ;;
           esac
