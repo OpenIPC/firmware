@@ -26,7 +26,7 @@ BR_VER        ?= 2020.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
 
 ifeq ($(BR_VER),2021.02.12)
-	DUMMY := $(shell rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch)
+	DUMMY := $(shell rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch 2>/dev/null)
 endif
 
 .PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
