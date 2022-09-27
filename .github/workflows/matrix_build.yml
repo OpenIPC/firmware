@@ -403,7 +403,6 @@ jobs:
           echo "${TLEXT}_CUSTOM=y" >> $CONF_PATH
           echo "${TLEXT}_PREINSTALLED=y" >> $CONF_PATH
           echo "${TLEXT}_CXX=y" >> $CONF_PATH
-          echo "${TLEXT}_INET_RPC=n" >> $CONF_PATH
           echo "${TLEXT}_PATH=\"/tmp/extsdk\"" >> $CONF_PATH
 
           SOC=$(echo $TOOLNAME | cut -d '-' -f 1)
@@ -435,6 +434,8 @@ jobs:
             ;;
             glibc)
               PREFIX="${PREFIX}gnu${ABI}"
+              check_glibc_rpc_feature() { IS_IN_LIBC=`test -f $(1)/usr/include/rpc/rpc.h && echo y` ; }
+              echo "${TLEXT}_INET_RPC=$(check_glibc_rpc_feature)" >> $CONF_PATH
             ;;
           esac
           echo "${TLEXT}_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
