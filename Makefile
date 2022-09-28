@@ -1,9 +1,6 @@
-
-ROOT_DIR      := $(CURDIR)
-BR_VER        ?= 2020.02.12
-BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
-
-ifeq ($(PLATFORM),)
+ifneq ($(PLATFORM),)
+	PLATFORM := $(error Setting PLATFORM in make arguments is deprecated, please remove it)
+else
     ifneq ($(BOARD),)
 		FULL_PATH := $(shell find br-ext-chip-* -name "$(BOARD)*_defconfig")
 		ifeq ($(FULL_PATH),)
@@ -13,12 +10,24 @@ ifeq ($(PLATFORM),)
 		endif
 
 		PLATFORM := $(shell echo $(FULL_PATH) | cut -d '/' -f 1 | cut -d '-' -f 4 )
+
+		FAMILY := $(shell grep "/board/" $(FULL_PATH) | head -1 | cut -d "/" -f 3)
+		ifeq ($(FAMILY),hi3516cv500)
+			BR_VER ?= 2021.02.12
+		endif
     endif
 endif
 
+ROOT_DIR      := $(CURDIR)
 BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
 SCRIPTS_DIR   := $(ROOT_DIR)/scripts
-#BOARDS       := $(shell ls -1 $(BR_EXT_DIR)/configs)
+
+BR_VER        ?= 2020.02.12
+BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
+
+ifeq ($(BR_VER),2021.02.12)
+	DUMMY := $(shell rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch 2>/dev/null)
+endif
 
 .PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
 

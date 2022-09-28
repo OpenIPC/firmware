@@ -83,8 +83,9 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
 
-          make prepare
-          TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
+          BOARD=unknown_unknown_${{ matrix.platform }}_openipc
+          make BOARD=$BOARD prepare
+          TOOLNAME=$(make BOARD=$BOARD toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${TOOLNAME}.tgz
           echo Checking $URL
@@ -368,8 +369,9 @@ jobs:
 
       - name: Determine toolchain name
         run: |
-          make prepare
-          TOOLNAME=$(make BOARD=unknown_unknown_${{ matrix.platform }}_openipc toolname)
+          BOARD=unknown_unknown_${{ matrix.platform }}_openipc
+          make BOARD=$BOARD prepare
+          TOOLNAME=$(make BOARD=$BOARD toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
       - uses: actions/download-artifact@v3
@@ -434,6 +436,9 @@ jobs:
             ;;
             glibc)
               PREFIX="${PREFIX}gnu${ABI}"
+              RPCH=/tmp/extsdk/${PREFIX}/sysroot/usr/include/rpc/rpc.h
+              check_glibc_rpc_feature() { test -f $RPCH && echo y || echo n ; }
+              echo "${TLEXT}_INET_RPC=$(check_glibc_rpc_feature)" >> $CONF_PATH
             ;;
           esac
           echo "${TLEXT}_CUSTOM_PREFIX=\"${PREFIX}\"" >> $CONF_PATH
