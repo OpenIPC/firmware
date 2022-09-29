@@ -1,0 +1,14 @@
+
+microcom -s 115200 /dev/ttyUSB2
+
+AT^CURC=0   - disable diagnostic messages
+AT+CMGF=1   - set text mode (not binary)
+AT+CMGL     - list of new messages
+AT+CMGL=?   - list of all messages numbers
+AT+CMGR=1   - read message number 1
+AT+CMGD=1   - delete message number 1
+
+Links
+    https://www.diafaan.com/sms-tutorials/gsm-modem-tutorial/online-sms-pdu-decoder/
+    http://www.developershome.com/sms/resultCodes2.asp#16.2.1.1.Table
+    https://github.com/pkot/gnokii.git
