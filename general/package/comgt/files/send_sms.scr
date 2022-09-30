@@ -1,0 +1,30 @@
+# send using this command:
+# gcom -d /dev/ttyUSB0 -v -e -s sendsms.comgt
+
+# Ensure you fill in your phone number below or it wont send!
+
+opengt
+  # set the terminal settings
+  set com 115200n81
+  # echo commands
+  set comecho on
+  # use a tiny delay between each keypress
+  set senddelay 0.02
+  # wait for things to be silent on the serial port
+  waitquiet 1 0.2
+  # reset things a bit
+  flash 0.1
+  # set it to textmode
+  send "AT+CMGF=1^m"
+  # wait for OK
+  waitfor 1 "OK"
+  # tell it we want to send a SMS and to what number
+  send "AT+CMGS=\"003538XXXXXXXX\"^m"
+  # the modem will present a > and wait for you to input your message
+  waitfor 1 ">"
+  send $env("SMS_MSG") 
+  # and expect you to end your message with ^Z
+  send "^Z"
+  # wait for it to send
+  waitfor 5 "OK"
+  exit 0
