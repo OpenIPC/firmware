@@ -144,7 +144,7 @@ insert_ko() {
     insmod hi3516cv500_h265e.ko
     insmod hi3516cv500_jpege.ko
 
-    # insmod hi3516cv500_ive.ko save_power=1
+    insmod hi3516cv500_ive.ko save_power=1
     # insmod hi_ipcm.ko
     # insmod hi3516cv500_nnie.ko nnie_save_power=1 nnie_max_tskbuf_num=32
     insmod hi_pwm.ko
@@ -161,9 +161,11 @@ insert_ko() {
     # insmod hi_user.ko
 
     # insert_gyro
+    insmod hi3516cv500_wdt.ko
 }
 
 remove_ko() {
+    rmmod -w hi3516cv500_wdt
     # rmmod_gyro
     # rmmod -w hi_user
     remove_audio
@@ -175,7 +177,7 @@ remove_ko() {
 
     # rmmod -w hi3516cv500_nnie nnie_save_power=1 nnie_max_tskbuf_num=32
     # rmmod -w hi_ipcm
-    # rmmod -w hi3516cv500_ive
+    rmmod -w hi3516cv500_ive
     rmmod -w hi3516cv500_rc
     rmmod -w hi3516cv500_jpege
     rmmod -w hi3516cv500_h264e
