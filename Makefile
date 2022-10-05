@@ -14,6 +14,10 @@ else
 		FAMILY := $(shell grep "/board/" $(FULL_PATH) | head -1 | cut -d "/" -f 3)
 		ifeq ($(FAMILY),hi3516cv500)
 			BR_VER ?= 2021.02.12
+		else ifeq ($(FAMILY),hi3516ev200)
+			BR_VER ?= 2021.02.12
+		else ifeq ($(FAMILY),gk7205v200)
+			BR_VER ?= 2021.02.12
 		endif
     endif
 endif
