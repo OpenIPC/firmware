@@ -45,7 +45,6 @@ MAJESTIC_DEPENDENCIES = \
 	mbedtls-openipc \
 	json-c-openipc \
 	zlib \
-	lame-openipc \
 	opus-openipc \
 	libogg-openipc
 
