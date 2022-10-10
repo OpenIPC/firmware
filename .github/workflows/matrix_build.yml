@@ -83,7 +83,7 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
 
-          BOARD=unknown_unknown_${{ matrix.platform }}_openipc
+          BOARD=${{ matrix.platform }}_lite
           make BOARD=$BOARD prepare
           TOOLNAME=$(make BOARD=$BOARD toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
@@ -116,7 +116,7 @@ jobs:
       - name: Build Buildroot SDK
         if: env.NEED == 'true'
         run: |
-          make BOARD=unknown_unknown_${{ matrix.platform }}_openipc br-sdk
+          make BOARD=${{ matrix.platform }}_lite br-sdk
           SDK_PATH=$(find output/images -name "*_sdk-buildroot.tar.gz")
           # Why do we need this crap (only for weird artifact names)?
           NEW="$(dirname $SDK_PATH)/${TOOLNAME}.tgz"
@@ -371,7 +371,7 @@ jobs:
 
       - name: Determine toolchain name
         run: |
-          BOARD=unknown_unknown_${{ matrix.platform }}_openipc
+          BOARD=${{ matrix.platform }}_lite
           make BOARD=$BOARD prepare
           TOOLNAME=$(make BOARD=$BOARD toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
@@ -383,12 +383,12 @@ jobs:
 
       - name: Build firmware
         run: |
-          BOARD=unknown_unknown_${{ matrix.platform }}
+          BOARD=${{ matrix.platform }}
           if [ "${{ matrix.release }}" != "lite" ]; then
             SUFF="${{ matrix.release }}-"
             BOARD="${BOARD}_${{ matrix.release }}"
           else
-            BOARD="${BOARD}_openipc"
+            BOARD="${BOARD}_lite"
           fi
 
           CONF_PATH=$(find . -name "${BOARD}_defconfig")
