@@ -83,7 +83,8 @@ jobs:
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
 
-          make BOARD=${{ matrix.platform }}_lite prepare
+          BOARD=${{ matrix.platform }}_lite
+          make BOARD=$BOARD prepare
           TOOLNAME=$(make BOARD=$BOARD toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${TOOLNAME}.tgz
@@ -370,7 +371,8 @@ jobs:
 
       - name: Determine toolchain name
         run: |
-          make BOARD=${{ matrix.platform }}_lite prepare
+          BOARD=${{ matrix.platform }}_lite
+          make BOARD=$BOARD prepare
           TOOLNAME=$(make BOARD=$BOARD toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
