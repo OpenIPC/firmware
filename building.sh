@@ -247,20 +247,20 @@ uni_build() {
 
   set -e
   if [ "$(echo $BOARD | cut -sd '_' -f 2)" == "" ]; then
-    BOARD="${BOARD}_openipc"
+    BOARD="${BOARD}_lite"
   fi
 
-  if [ "$BOARD" == "hi3518ev200_openipc" ]; then
+  if [ "$BOARD" == "hi3518ev200_lite" ]; then
     NEED_AUTOUP=1
   fi
 
   echo_c 33 "\n  SoC: $SOC\nBoard: $BOARD\n"
 
   if [ "all" = "${COMMAND}" ]; then
-    fresh $(make BOARD=unknown_unknown_${BOARD} buildroot-version)
+    fresh $(make BOARD=${BOARD} buildroot-version)
   fi
 
-  log_and_run "make BOARD=unknown_unknown_${BOARD} ${COMMAND}"
+  log_and_run "make BOARD=${BOARD} ${COMMAND}"
 
   if [ "all" = "${COMMAND}" ]; then
     if [ "$BOARD" == "ssc335_initramfs" ]; then
@@ -290,7 +290,7 @@ if [ $# -eq 0 ]; then
   else
     SELECTED=$(find . -path "*/br-ext-chip-*" -name "*_defconfig" | fzf)
     [ -z "$SELECTED" ] && exit 1
-    BOARD=$(echo $SELECTED | awk -F_ '{printf "%s_%s", $3, $4}')
+    BOARD=$(echo $SELECTED | cut -d / -f 4 | awk -F_ '{printf "%s_%s", $1, $2}')
   fi
 else
   BOARD=$1
