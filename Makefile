@@ -17,7 +17,7 @@ else
 		else ifeq ($(FAMILY),hi3536dv100)
 			BR_VER ?= 2021.02.12
 		else ifeq ($(FAMILY),hi3516cv500)
-			BR_VER ?= 2021.02.12
+			BR_VER ?= 2022.08
 		else ifeq ($(FAMILY),hi3516ev200)
 			BR_VER ?= 2021.02.12
 		else ifeq ($(FAMILY),gk7205v200)
@@ -33,7 +33,7 @@ SCRIPTS_DIR   := $(ROOT_DIR)/scripts
 BR_VER        ?= 2020.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
 
-ifeq ($(BR_VER),2021.02.12)
+ifneq ($(shell echo $(BR_VER)|cut -d. -f 1),2020)
 	DUMMY := $(shell rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch 2>/dev/null)
 endif
 
