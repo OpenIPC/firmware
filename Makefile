@@ -33,8 +33,15 @@ SCRIPTS_DIR   := $(ROOT_DIR)/scripts
 BR_VER        ?= 2020.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
 
+# TODO: remove this bad item after dropping BR2020.02.12 support
 ifneq ($(shell echo $(BR_VER)|cut -d. -f 1),2020)
 	DUMMY := $(shell rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch 2>/dev/null)
+endif
+
+# TODO: elaborate how to compile wireguard-linux-compat under GCC 12 without
+# this patch
+ifneq ($(BR_VER),2022.08)
+	DUMMY := $(shell rm general/package/all-patches/wireguard-linux-compat/remove_fallthrough.patch 2>/dev/null)
 endif
 
 .PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
