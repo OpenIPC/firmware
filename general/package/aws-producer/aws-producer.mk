@@ -22,7 +22,8 @@ AWS_PRODUCER_CONF_OPTS += \
 
 define AWS_PRODUCER_POST_CONF_FIXUP
 	$(Q)sed -i 's/inline/inline static/g' \
-		$(@D)/dependency/libkvspic/kvspic-src/src/common/include/com/amazonaws/kinesis/video/common/CommonDefs.h
+		$(@D)/dependency/libkvspic/kvspic-src/src/common/include/com/amazonaws/kinesis/video/common/CommonDefs.h \
+		|| true
 endef
 
 AWS_PRODUCER_POST_CONFIGURE_HOOKS += AWS_PRODUCER_POST_CONF_FIXUP
