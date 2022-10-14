@@ -1,0 +1,10 @@
+config BR2_PACKAGE_SSW101B
+	bool "ssw101b"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Wireless driver ssw101b.
+
+	  SigmaStar ssw101b WiFi driver
+
+comment "SSW101B needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
