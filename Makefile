@@ -175,7 +175,7 @@ endif
 
 # TODO: elaborate how to compile wireguard-linux-compat under GCC 12 without
 # this patch
-ifeq (,$(filter $(BR_VER),2020.02.12 2021.02.12))
+ifneq (,$(filter $(BR_VER),2020.02.12 2021.02.12))
 	-rm general/package/all-patches/wireguard-linux-compat/remove_fallthrough.patch 2>/dev/null
 endif
 
