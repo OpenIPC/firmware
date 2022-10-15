@@ -17,7 +17,7 @@ else
 		else ifeq ($(FAMILY),hi3536dv100)
 			BR_VER ?= 2021.02.12
 		else ifeq ($(FAMILY),hi3516cv500)
-			BR_VER ?= 2021.02.12
+			BR_VER ?= 2022.08
 		else ifeq ($(FAMILY),hi3516ev200)
 			BR_VER ?= 2021.02.12
 		else ifeq ($(FAMILY),gk7205v200)
@@ -32,10 +32,6 @@ SCRIPTS_DIR   := $(ROOT_DIR)/scripts
 
 BR_VER        ?= 2020.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
-
-ifeq ($(BR_VER),2021.02.12)
-	DUMMY := $(shell rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch 2>/dev/null)
-endif
 
 .PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
 
@@ -131,9 +127,21 @@ $(OUT_DIR)/toolchain-params.mk: $(OUT_DIR)/.config $(SCRIPTS_DIR)/create_toolcha
 	$(CREATE_TOOLCHAIN_PARAMS)
 
 
+# TODO:
+# 1. Remove this bad item after dropping BR2020.02.12 support
+# 2. Elaborate how to compile wireguard-linux-compat under GCC 12 without
+# this patch
+define remove-patches
+	$(if $(filter $(shell echo $(BR_VER)|cut -d. -f 1),2020),,rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch)
+
+	$(if $(filter $(BR_VER),2020.02.12 2021.02.12),rm general/package/all-patches/wireguard-linux-compat/remove_fallthrough.patch)
+endef
+
+
 # -------------------------------------------------------------------------------------------------
 # build all needed for a board
 all: $(OUT_DIR)/.config $(OUT_DIR)/toolchain-params.mk
+	$(remove-patches)
 	$(BOARD_MAKE) all
 
 
@@ -171,6 +179,7 @@ board-info:
 # -------------------------------------------------------------------------------------------------
 # such targets (with trimmed `br-` prefix) are passed to Buildroot's Makefile
 br-%: $(OUT_DIR)/.config
+	$(remove-patches)
 	$(BOARD_MAKE) $(subst br-,,$@)
 
 
