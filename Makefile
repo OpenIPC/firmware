@@ -132,9 +132,9 @@ $(OUT_DIR)/toolchain-params.mk: $(OUT_DIR)/.config $(SCRIPTS_DIR)/create_toolcha
 # 2. Elaborate how to compile wireguard-linux-compat under GCC 12 without
 # this patch
 define remove-patches
-	$(if $(filter $(shell echo $(BR_VER)|cut -d. -f 1),2020),,rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch)
+	$(if $(filter $(shell echo $(BR_VER)|cut -d. -f 1),2020),,-rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch)
 
-	$(if $(filter $(BR_VER),2020.02.12 2021.02.12),rm general/package/all-patches/wireguard-linux-compat/remove_fallthrough.patch)
+	$(if $(filter $(BR_VER),2020.02.12 2021.02.12),-rm general/package/all-patches/wireguard-linux-compat/remove_fallthrough.patch)
 endef
 
 
