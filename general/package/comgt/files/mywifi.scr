@@ -28,5 +28,5 @@ opengt
     print "Hangup modem\n"
     send "AT+CHUP^m"
     waitquiet 1 0.2
-    exec "logger -r ring"+$s
+    system "logger -r ring"+$s
     goto wait_first_ring
