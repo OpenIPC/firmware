@@ -564,7 +564,7 @@ jobs:
           overwrite: true
 
       - name: Send binary file to telegram channel
-        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' }}
+        if: ${{ !env.ACT && github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NORFW_FILE != '' }}
         env:
           TG_TOKEN: ${{ secrets.TELEGRAM_TOKEN_BOT_OPENIPC }}
           TG_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL_OPENIPC_DEV }}
