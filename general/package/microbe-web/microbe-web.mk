@@ -15,6 +15,7 @@ define MICROBE_WEB_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	cp ../general/package/microbe-web/files/S50httpd $(TARGET_DIR)/etc/init.d
+	cp -rv $(@D)/files/etc/init.d/* $(TARGET_DIR)/etc/init.d
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr
 	cp -rv $(@D)/files/usr/sbin $(TARGET_DIR)/usr
