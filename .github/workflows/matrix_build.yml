@@ -475,11 +475,11 @@ jobs:
             esac
 
             case ${{ matrix.release }} in
-              lite)
+              lite|fpv)
                 check_exceeded uImage ${MAX_KERNEL_SIZE}
                 check_exceeded rootfs.squashfs ${MAX_ROOTFS_SIZE}
                 ;;
-              ultimate|fpv)
+              ultimate)
                 check_exceeded uImage ${MAX_KERNEL_SIZE_ULTIMATE}
                 check_exceeded rootfs.squashfs ${MAX_ROOTFS_SIZE_ULTIMATE}
                 ;;
