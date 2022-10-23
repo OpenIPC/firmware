@@ -165,41 +165,41 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - hi3516cv100
-          - hi3518cv100
-          - hi3518ev100
-          - hi3516av100
-          - hi3516dv100
-          - hi3516cv200
-          - hi3518ev200
-          - hi3519v101
-          - hi3516av200
-          - hi3516cv300
-          - hi3516ev100
-          - hi3516cv500
-          - hi3516dv300
-          - hi3516av300
-          - hi3516ev200
-          - hi3516ev300
-          - hi3518ev300
-          - hi3516dv200
-          - hi3536cv100
-          - hi3536dv100
-          - gk7205v200
-          - gk7205v210
-          - gk7205v300
-          - gk7202v300
-          - gk7605v100
-          - t31
-        release:
-          - lite
-          - ultimate
+      # platform:
+      #   - hi3516cv100
+      #   - hi3518cv100
+      #   - hi3518ev100
+      #   - hi3516av100
+      #   - hi3516dv100
+      #   - hi3516cv200
+      #   - hi3518ev200
+      #   - hi3519v101
+      #   - hi3516av200
+      #   - hi3516cv300
+      #   - hi3516ev100
+      #   - hi3516cv500
+      #   - hi3516dv300
+      #   - hi3516av300
+      #   - hi3516ev200
+      #   - hi3516ev300
+      #   - hi3518ev300
+      #   - hi3516dv200
+      #   - hi3536cv100
+      #   - hi3536dv100
+      #   - gk7205v200
+      #   - gk7205v210
+      #   - gk7205v300
+      #   - gk7202v300
+      #   - gk7605v100
+      #   - t31
+      # release:
+      #   - lite
+      #   - ultimate
         include:
-          - platform: hi3518ev200
-            release: mini
-          - platform: hi3516cv300
-            release: mini
+      #   - platform: hi3518ev200
+      #     release: mini
+      #   - platform: hi3516cv300
+      #     release: mini
           - platform: hi3516ev200
             release: fpv
           - platform: hi3516ev300
@@ -209,75 +209,75 @@ jobs:
           - platform: gk7205v300
             release: fpv
 
-          # Original SDK test
-          - platform: gk7205v200
-            release: original
-            custom: onlyci
+      #   # Original SDK test
+      #   - platform: gk7205v200
+      #     release: original
+      #     custom: onlyci
 
-          # MVP
-          - platform: fh8852v100
-            release: lite
-          - platform: fh8852v200
-            release: lite
-          - platform: gm8136
-            release: lite
-          - platform: nt98562
-            release: lite
-          - platform: nt98566
-            release: lite
-          - platform: rv1109
-            release: lite
-          - platform: rv1126
-            release: lite
-          - platform: ssc335
-            release: lite
-          - platform: ssc335de
-            release: lite
-          - platform: ssc337
-            release: lite
-          - platform: ssc337de
-            release: lite
-          - platform: t10
-            release: lite
-          - platform: t20
-            release: lite
-          - platform: t21
-            release: lite
-          - platform: xm510
-            release: lite
-          - platform: xm530
-            release: lite
-          - platform: xm550
-            release: lite
+      #   # MVP
+      #   - platform: fh8852v100
+      #     release: lite
+      #   - platform: fh8852v200
+      #     release: lite
+      #   - platform: gm8136
+      #     release: lite
+      #   - platform: nt98562
+      #     release: lite
+      #   - platform: nt98566
+      #     release: lite
+      #   - platform: rv1109
+      #     release: lite
+      #   - platform: rv1126
+      #     release: lite
+      #   - platform: ssc335
+      #     release: lite
+      #   - platform: ssc335de
+      #     release: lite
+      #   - platform: ssc337
+      #     release: lite
+      #   - platform: ssc337de
+      #     release: lite
+      #   - platform: t10
+      #     release: lite
+      #   - platform: t20
+      #     release: lite
+      #   - platform: t21
+      #     release: lite
+      #   - platform: xm510
+      #     release: lite
+      #   - platform: xm530
+      #     release: lite
+      #   - platform: xm550
+      #     release: lite
 
-          # TODO
-          - platform: ak3916ev300
-            release: lite
-            custom: onlyci
-          - platform: ak3918ev300
-            release: lite
-            custom: onlyci
-          - platform: gk7102
-            release: lite
-            custom: onlyci
-          - platform: gk7102s
-            release: lite
-            custom: onlyci
-          - platform: msc313e
-            release: lite
-            custom: onlyci
-          - platform: msc316dc
-            release: lite
-            custom: onlyci
-          - platform: msc316dm
-            release: lite
-            custom: onlyci
-          - platform: s3l
-            release: lite
-            custom: onlyci
-          - platform: ssc325
-            release: lite
-            custom: onlyci
+      #   # TODO
+      #   - platform: ak3916ev300
+      #     release: lite
+      #     custom: onlyci
+      #   - platform: ak3918ev300
+      #     release: lite
+      #     custom: onlyci
+      #   - platform: gk7102
+      #     release: lite
+      #     custom: onlyci
+      #   - platform: gk7102s
+      #     release: lite
+      #     custom: onlyci
+      #   - platform: msc313e
+      #     release: lite
+      #     custom: onlyci
+      #   - platform: msc316dc
+      #     release: lite
+      #     custom: onlyci
+      #   - platform: msc316dm
+      #     release: lite
+      #     custom: onlyci
+      #   - platform: s3l
+      #     release: lite
+      #     custom: onlyci
+      #   - platform: ssc325
+      #     release: lite
+      #     custom: onlyci
 
         exclude:
           - platform: hi3516cv100
