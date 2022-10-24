@@ -472,14 +472,20 @@ jobs:
                 MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
                 MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
               ;;
+              hi3516ev200|hi3516ev300)
+                if [[ "${{ matrix.release }}" == "fpv" ]]; then
+                  MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
+                  MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
+                fi
+              ;;
             esac
 
             case ${{ matrix.release }} in
-              lite)
+              lite|fpv)
                 check_exceeded uImage ${MAX_KERNEL_SIZE}
                 check_exceeded rootfs.squashfs ${MAX_ROOTFS_SIZE}
                 ;;
-              ultimate|fpv)
+              ultimate)
                 check_exceeded uImage ${MAX_KERNEL_SIZE_ULTIMATE}
                 check_exceeded rootfs.squashfs ${MAX_ROOTFS_SIZE_ULTIMATE}
                 ;;
