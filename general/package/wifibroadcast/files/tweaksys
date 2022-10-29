@@ -12,7 +12,9 @@ all_other() {
   if [ ${vendor} = "hisilicon" ]; then
 	prefix="open"
   fi
-  # remove unneded modules
+  # don't load f2fs module (disabled in kernel)
+  sed -i "s!f2fs!#f2fs!g" /etc/modules
+  # remove unneeded modules
   sed -i "s!insmod ${prefix}_rgn.ko!#insmod ${prefix}_rgn.ko!g" /usr/bin/load_${vendor}
   sed -i "s!insmod ${prefix}_jpege.ko!#insmod ${prefix}_jpege.ko!g" /usr/bin/load_${vendor}
   sed -i "s!insmod ${prefix}_ive.ko save_power=0!#insmod ${prefix}_ive.ko save_power=0!g" /usr/bin/load_${vendor}
@@ -24,7 +26,7 @@ all_other() {
   sed -i "s!insmod ${prefix}_acodec.ko!#insmod ${prefix}_acodec.ko!g" /usr/bin/load_${vendor}
   # change fps 25 -> 30
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx307_i2c_2l_1080p.ini
-  sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx307_i2c_4l_1080p.ini
+  sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
   # disable mavlink routerd autostart
   sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
   # majestic basic settings
@@ -65,14 +67,16 @@ case "$1" in
 	# change uart1 to uart0
 	sed -i "s!Device = /dev/ttyAMA1!Device = /dev/ttyAMA0!g" /etc/mavlink.conf
 	sed -i "s!console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
-	# don't load f2fs module (disabled in kernel)
-	sed -i "s!f2fs!#f2fs!g" /etc/modules
 	# remove unneeded to reduce some memory
 	rm -f /etc/init.d/S60crond /etc/init.d/S49ntpd /etc/init.d/S02klogd
 	all_other
 	;;
   gk7205v300 | hi3516ev300)
 	echo "Preparig system tweaks for ${chip}..."
+	# set sensor config for smtsec board
+	if [ ${chip} = "gk7205v300" ] && [ ${sensor} = "imx307" ]; then
+		${cli} -s .isp.sensorConfig /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
+	fi
 	all_other
 	;;
 	*)
