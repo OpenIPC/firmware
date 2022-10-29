@@ -1,32 +1,26 @@
-diff --git a/home/goody/of_mdio.c b/output/build/linux-4.9.37/drivers/of/of_mdio.c
-index 262281bd..5f338cd6 100644
 --- a/drivers/of/of_mdio.c
 +++ b/drivers/of/of_mdio.c
 @@ -25,6 +25,11 @@
  MODULE_AUTHOR("Grant Likely <grant.likely@secretlab.ca>");
  MODULE_LICENSE("GPL");
  
-+int higmacphy = 0;
++int higmacphy = -1;
 +EXPORT_SYMBOL(higmacphy);
-+MODULE_PARM_DESC(higmacphy, "Select phyaddr for higmac driver.\n");
++MODULE_PARM_DESC(higmacphy, "Force higmac driver to use specified PHY addr instead of DTS default value.\n");
 +module_param_named(higmacphy, higmacphy, int, 0600);
 +
  /* Extract the clause 22 phy ID from the compatible string of the form
   * ethernet-phy-idAAAA.BBBB */
  static int of_get_phy_id(struct device_node *device, u32 *phy_id)
-@@ -248,7 +256,14 @@ int of_mdiobus_register(struct mii_bus *mdio, struct device_node *np)
- 		if (of_find_property(child, "reg", NULL))
+@@ -233,6 +238,11 @@ int of_mdiobus_register(struct mii_bus *mdio, struct device_node *np)
  			continue;
+ 		}
  
--		for (addr = 0; addr < PHY_MAX_ADDR; addr++) {
-+		if (higmacphy>0) {
-+			dev_info(&mdio->dev, "higmacphy addr is set in kernel arguments: phy %s at address %i\n",
-+				 child->name, higmacphy);
-+
-+			if (of_mdiobus_child_is_phy(child))
-+				of_mdiobus_register_phy(mdio, child, higmacphy);
++		if (higmacphy != -1) {
++			dev_info(&mdio->dev, "higmac phy addr in %s is set to %i\n", child->name, higmacphy);
++			addr = higmacphy;
 +		}
-+		else for (addr = 0; addr < PHY_MAX_ADDR; addr++) {
- 			/* skip already registered PHYs */
- 			if (mdiobus_is_registered_device(mdio, addr))
- 				continue;
++
+ 		if (of_mdiobus_child_is_phy(child))
+ 			of_mdiobus_register_phy(mdio, child, addr);
+ 		else
