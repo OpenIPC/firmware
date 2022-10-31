@@ -31,6 +31,7 @@ all_other() {
   sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
   # majestic basic settings
   ${cli} -s .isp.slowShutter disabled
+  ${cli} -s .isp.drc 500
   ${cli} -s .image.contrast 50
   ${cli} -s .image.luminance 50
   ${cli} -s .video0.bitrate 4096
