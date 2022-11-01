@@ -22,6 +22,8 @@ else
 			BR_VER ?= 2021.02.12
 		else ifeq ($(FAMILY),gk7205v200)
 			BR_VER ?= 2021.02.12
+		#else ifeq ($(FAMILY),rv11xx)
+		#	BR_VER ?= 2022.08
 		endif
     endif
 endif
