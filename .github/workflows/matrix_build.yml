@@ -381,14 +381,7 @@ jobs:
 
       - name: Build firmware
         run: |
-          BOARD=${{ matrix.platform }}
-          if [ "${{ matrix.release }}" != "lite" ]; then
-            SUFF="${{ matrix.release }}-"
-            BOARD="${BOARD}_${{ matrix.release }}"
-          else
-            BOARD="${BOARD}_lite"
-          fi
-
+          BOARD=${{ matrix.platform }}_${{ matrix.release }}
           CONF_PATH=$(find . -name "${BOARD}_defconfig")
 
           echo Using $TOOLNAME
@@ -491,7 +484,7 @@ jobs:
                 ;;
             esac
 
-            NORFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-${SUFF}br.tgz"
+            NORFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-${{ matrix.release }}-nor.tgz"
             echo "NORFW_PATH=$NORFW_PATH" >> $GITHUB_ENV
             NORFW_FILE=$(basename $NORFW_PATH)
             echo "NORFW_FILE=$NORFW_FILE" >> $GITHUB_ENV
@@ -503,8 +496,8 @@ jobs:
             tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
           fi
 
-          if [ -f rootfs.ubifs ]; then
-            NANDFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-nand-br.tgz"
+          if [ -f rootfs.ubifs ] && [ "${{ matrix.release }}" != "lite" ]; then
+            NANDFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-${{ matrix.release }}-nand.tgz"
             echo "NANDFW_PATH=$NANDFW_PATH" >> $GITHUB_ENV
             NANDFW_FILE=$(basename $NANDFW_PATH)
             echo "NANDFW_FILE=$NANDFW_FILE" >> $GITHUB_ENV
