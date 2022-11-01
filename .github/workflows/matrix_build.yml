@@ -496,7 +496,7 @@ jobs:
             tar -cvzf $NORFW_PATH uImage* *rootfs.squashfs.${{ matrix.platform }}*
           fi
 
-          if [ -f rootfs.ubifs ] && [ "${{ matrix.release }}" != "lite" ]; then
+          if [ -f rootfs.ubifs ] ; then
             NANDFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-${{ matrix.release }}-nand.tgz"
             echo "NANDFW_PATH=$NANDFW_PATH" >> $GITHUB_ENV
             NANDFW_FILE=$(basename $NANDFW_PATH)
