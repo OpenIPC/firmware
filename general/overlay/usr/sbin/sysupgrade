@@ -77,9 +77,9 @@ do_wipe_overlay() {
 download_firmware() {
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
-	build="-"
-	[ -n "${osr}" ] && [ "lite" != "${osr}" ] && build="${build}${osr}-"
-	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${soc}${build}br.tgz"
+	ftype=$(get_flash_type)
+	build="${soc}-${osr}-${ftype}"
+	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${build}.tgz"
 	echo "Download from $url"
 	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
 	[ "$(curl -o /dev/null -s -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
@@ -195,6 +195,11 @@ get_system_version() {
 
 get_system_build() {
 	grep "BUILD_OPTION" "/etc/os-release" | head -1 | cut -d= -f2
+}
+
+get_flash_type() {
+	has_nand=$(fw_printenv bootcmd | grep nand | wc -l)
+	[ "1" = "$has_nand" ] && echo "nand" || echo "nor"
 }
 
 print_sysinfo() {
