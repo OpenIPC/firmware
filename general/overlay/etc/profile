@@ -4,6 +4,7 @@ export HOME=${HOME:-/root}
 export TZ=$(cat /etc/TZ)
 export SENSOR=$(fw_printenv -n sensor)
 export ARCH=$(uname -m)
+export HISTFILE=/tmp/.ash_history
 
 echo_c() { echo -ne "\e[1;$1m$2\e[0m"; }
 
@@ -34,7 +35,7 @@ cli() { yaml-cli -i /etc/majestic.yaml $@; }
 
 differ() { diff -rN "/rom$1" "$1"; }
 
-[ -x /tmp/ipctool ] || ipctool() { 	[ -x /tmp/ipctool ] && /tmp/ipctool $@ || (curl -s -L -o /tmp/ipctool https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool$ARC && \
+[ -x /tmp/ipctool ] || ipctool() { [ -x /tmp/ipctool ] && /tmp/ipctool $@ || (curl -s -L -o /tmp/ipctool https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool$ARC && \
 	chmod +x /tmp/ipctool && echo_c 35 "The ipctool installed as remote GitHub plugin" && /tmp/ipctool $@); }
 
 majestic_changes() { diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml; }
