@@ -3,7 +3,7 @@
 # OpenIPC.org | v.20220831
 #
 
-scr_version=1.0.10
+scr_version=1.0.11
 
 args=" $@"
 
@@ -110,8 +110,11 @@ free_resources() {
 	echo_c 34 "\nUptime:"
 	uptime
 
-	echo_c 34 "\nMemory"
+	echo_c 34 "\nMemory:"
 	free
+
+	echo_c 34 "\nProcesses:"
+	ps | grep -v '\['
 }
 
 sync_time() {
