@@ -32,32 +32,20 @@ else
 fi
 
 case ${SENSOR} in
-"sc2232")
-    ISP_PARAM="isp_clk=90000000"
-    SENSOR_PARAM=""
-    ;;
-"sc2135")
-    ISP_PARAM="isp_clk=100000000"
-    SENSOR_PARAM=""
-    ;;
-"sc2335")
-    ISP_PARAM="isp_clk=125000000"
-    SENSOR_PARAM=""
-    ;;
-"sc5235")
-    ISP_PARAM="isp_clk=200000000"
-    SENSOR_PARAM=""
-    ;;
 "gc2053")
     ISP_PARAM="isp_clk=125000000"
     SENSOR_PARAM="sensor_max_fps=25 data_interface=1"
     ;;
-"imx307")
-    ISP_PARAM="isp_clk=125000000 ispw=1920 isph=1080 isptop=20 ispleft=12"
+"jxf23")
+    ISP_PARAM="isp_clk=90000000"
     SENSOR_PARAM=""
     ;;
-"jxf22")
+"sc2232")
     ISP_PARAM="isp_clk=90000000"
+    SENSOR_PARAM=""
+    ;;
+"sc2335")
+    ISP_PARAM="isp_clk=125000000"
     SENSOR_PARAM=""
     ;;
 *)
