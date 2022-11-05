@@ -484,7 +484,7 @@ jobs:
                 ;;
             esac
 
-            NORFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-${{ matrix.release }}-nor.tgz"
+            NORFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-nor-${{ matrix.release }}.tgz"
             echo "NORFW_PATH=$NORFW_PATH" >> $GITHUB_ENV
             NORFW_FILE=$(basename $NORFW_PATH)
             echo "NORFW_FILE=$NORFW_FILE" >> $GITHUB_ENV
@@ -497,7 +497,7 @@ jobs:
           fi
 
           if [ -f rootfs.ubifs ] ; then
-            NANDFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-${{ matrix.release }}-nand.tgz"
+            NANDFW_PATH="${IMAGES_DIR}/openipc.${{ matrix.platform }}-nand-${{ matrix.release }}.tgz"
             echo "NANDFW_PATH=$NANDFW_PATH" >> $GITHUB_ENV
             NANDFW_FILE=$(basename $NANDFW_PATH)
             echo "NANDFW_FILE=$NANDFW_FILE" >> $GITHUB_ENV

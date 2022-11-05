@@ -3,7 +3,7 @@
 # OpenIPC.org | v.20220831
 #
 
-scr_version=1.0.11
+scr_version=1.0.12
 
 args=" $@"
 
@@ -78,7 +78,7 @@ download_firmware() {
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
 	ftype=$(get_flash_type)
-	build="${soc}-${osr}-${ftype}"
+	build="${soc}-${ftype}-${osr}"
 	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${build}.tgz"
 	echo "Download from $url"
 	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
