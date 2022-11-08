@@ -12,16 +12,8 @@ else
 		PLATFORM := $(shell echo $(FULL_PATH) | cut -d '/' -f 1 | cut -d '-' -f 4 )
 
 		FAMILY := $(shell grep "/board/" $(FULL_PATH) | head -1 | cut -d "/" -f 3)
-		ifeq ($(FAMILY),hi3516av100)
-			BR_VER ?= 2021.02.12
-		else ifeq ($(FAMILY),hi3536dv100)
-			BR_VER ?= 2021.02.12
-		else ifeq ($(FAMILY),hi3516cv500)
+		ifeq ($(FAMILY),hi3516cv500)
 			BR_VER ?= 2022.08
-		else ifeq ($(FAMILY),hi3516ev200)
-			BR_VER ?= 2021.02.12
-		else ifeq ($(FAMILY),gk7205v200)
-			BR_VER ?= 2021.02.12
 		endif
     endif
 endif
@@ -30,7 +22,7 @@ ROOT_DIR      := $(CURDIR)
 BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
 SCRIPTS_DIR   := $(ROOT_DIR)/scripts
 
-BR_VER        ?= 2020.02.12
+BR_VER        ?= 2021.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
 
 .PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
@@ -127,13 +119,8 @@ $(OUT_DIR)/toolchain-params.mk: $(OUT_DIR)/.config $(SCRIPTS_DIR)/create_toolcha
 	$(CREATE_TOOLCHAIN_PARAMS)
 
 
-# TODO:
-# 1. Remove this bad item after dropping BR2020.02.12 support
-# 2. Elaborate how to compile wireguard-linux-compat under GCC 12 without
-# this patch
+# TODO: Elaborate how to compile wireguard-linux-compat under GCC 12 without this patch
 define remove-patches
-	$(if $(filter $(shell echo $(BR_VER)|cut -d. -f 1),2020),,-rm general/package/all-patches/m4/0003-c-stack-stop-using-SIGSTKSZ.patch)
-
 	$(if $(filter $(BR_VER),2020.02.12 2021.02.12),-rm general/package/all-patches/wireguard-linux-compat/remove_fallthrough.patch)
 endef
 
