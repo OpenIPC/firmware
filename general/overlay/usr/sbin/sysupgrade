@@ -78,7 +78,7 @@ download_firmware() {
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
 	ftype=$(ipcinfo -F)
-	if $(echo ${ftype} | grep -q "ipcinfo"); then
+	if $(echo ${ftype} | (! grep -qE 'nor|nand')); then
 		ftype=$(get_flash_type)
 	fi
 	build="${soc}-${ftype}-${osr}"
