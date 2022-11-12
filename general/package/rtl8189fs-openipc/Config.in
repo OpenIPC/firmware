@@ -1,0 +1,10 @@
+config BR2_PACKAGE_RTL8189FS_OPENIPC
+	bool "rtl8189fs-openipc"
+	depends on BR2_LINUX_KERNEL
+	help
+	  A driver for the RTL8189FS
+
+	  https://github.com/jwrdegoede/rtl8189ES_linux
+
+comment "rtl8189fs needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL

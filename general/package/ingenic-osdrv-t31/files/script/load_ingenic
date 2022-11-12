@@ -39,22 +39,6 @@ fi
 
 
 case ${SENSOR} in
-"sc2232")
-    ISP_PARAM="isp_clk=125000000"
-    SENSOR_PARAM=""
-    ;;
-"sc2135")
-    ISP_PARAM="isp_clk=100000000"
-    SENSOR_PARAM=""
-    ;;
-"sc2335")
-    ISP_PARAM="isp_clk=100000000 isp_ch0_pre_dequeue_time=20 isp_ch0_pre_dequeue_interrupt_process=0 isp_memopt=1"
-    SENSOR_PARAM=""
-    ;;
-"sc5235")
-    ISP_PARAM="isp_clk=200000000"
-    SENSOR_PARAM=""
-    ;;
 "gc2053")
     ISP_PARAM="isp_clk=125000000"
     SENSOR_PARAM="sensor_max_fps=25 data_interface=1"
@@ -67,14 +51,30 @@ case ${SENSOR} in
     ISP_PARAM="isp_clk=125000000"
     SENSOR_PARAM=""
     ;;
-"sc200ai")
-    ISP_PARAM="isp_clk=100000000 isp_ch0_pre_dequeue_time=20 isp_ch0_pre_dequeue_interrupt_process=0 isp_memopt=1"
-    SENSOR_PARAM="shvflip=1"
+"jxh62")
+    ISP_PARAM=""
+    SENSOR_PARAM=""
     ;;
 "jxq03"|"jxq03p")
     ISP_PARAM="isp_clk=150000000"
     SENSOR_PARAM=""
-    ;;    
+    ;;
+"sc200ai")
+    ISP_PARAM="isp_clk=100000000 isp_ch0_pre_dequeue_time=20 isp_ch0_pre_dequeue_interrupt_process=0 isp_memopt=1"
+    SENSOR_PARAM="shvflip=1"
+    ;;
+"sc2232")
+    ISP_PARAM="isp_clk=125000000"
+    SENSOR_PARAM=""
+    ;;
+"sc2335")
+    ISP_PARAM="isp_clk=100000000 isp_ch0_pre_dequeue_time=20 isp_ch0_pre_dequeue_interrupt_process=0 isp_memopt=1"
+    SENSOR_PARAM=""
+    ;;
+"sc5235")
+    ISP_PARAM="isp_clk=200000000"
+    SENSOR_PARAM=""
+    ;;
 *)
     ISP_PARAM="isp_clk=125000000"
     SENSOR_PARAM=""

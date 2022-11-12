@@ -118,6 +118,9 @@ insert_sns() {
     mt9p006)
         devmem 0x20030030 32 0x1  #Sensor clock 24 MHz
         devmem 0x2003002c 32 0x6a #VI input associated clock phase reversed
+        devmem 0x200f0138 32 0 # pinmux [GPIO0_6] SVB_PWM TEMPER_DQ
+        devmem 0x20140400 32 0x60 # set GPIO 0_6 direction OUTPUT
+        devmem 0x201403FC 32 0xff # set GPIO 0_6 0
         insmod ssp_ad9020.ko
         ;;
     hm1375 | ar0330)
