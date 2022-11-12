@@ -37,6 +37,9 @@ define WIFIBROADCAST_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
 	cp ../general/package/wifibroadcast/files/telemetry.conf $(TARGET_DIR)/etc
+  
+  $(INSTALL) -m 755 -d $(TARGET_DIR)/etc
+	cp ../general/package/wifibroadcast/files/mavlink.conf $(TARGET_DIR)/etc
 endef
 
 $(eval $(generic-package))
