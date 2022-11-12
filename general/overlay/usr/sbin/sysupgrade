@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20220831
+# OpenIPC.org | v.20221111
 #
 
-scr_version=1.0.12
+scr_version=1.0.13
 
 args=" $@"
 
@@ -77,7 +77,10 @@ do_wipe_overlay() {
 download_firmware() {
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
-	ftype=$(get_flash_type)
+	ftype=$(ipcinfo -F)
+	if $(echo ${ftype} | (! grep -qE 'nor|nand')); then
+		ftype=$(get_flash_type)
+	fi
 	build="${soc}-${ftype}-${osr}"
 	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${build}.tgz"
 	echo "Download from $url"
@@ -197,9 +200,10 @@ get_system_build() {
 	grep "BUILD_OPTION" "/etc/os-release" | head -1 | cut -d= -f2
 }
 
+# This flash type detection is deprecated and will be removed in the next updates...
 get_flash_type() {
-	has_nand=$(fw_printenv bootcmd | grep nand | wc -l)
-	[ "1" = "$has_nand" ] && echo "nand" || echo "nor"
+  has_nand=$(fw_printenv bootcmd | grep nand | wc -l)
+  [ "1" = "$has_nand" ] && echo "nand" || echo "nor"
 }
 
 print_sysinfo() {
