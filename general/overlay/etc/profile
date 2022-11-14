@@ -6,6 +6,10 @@ export SENSOR=$(fw_printenv -n sensor)
 export ARCH=$(uname -m)
 export HISTFILE=/tmp/.ash_history
 
+export DEBUG=$(($(fw_printenv -n debug)))
+[ $DEBUG -ge 1 ] && [ -f "${HISTFILE//tmp/root}" ] && cp ${HISTFILE//tmp/root} /tmp/
+[ $DEBUG -ge 2 ] && export HISTFILE=${HISTFILE//tmp/root}
+
 echo_c() { echo -ne "\e[1;$1m$2\e[0m"; }
 
 if [ "$PS1" ]; then
