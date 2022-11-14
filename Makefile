@@ -1,7 +1,7 @@
 ifneq ($(PLATFORM),)
 	PLATFORM := $(error Setting PLATFORM in make arguments is deprecated, please remove it)
 else
-    ifneq ($(BOARD),)
+	ifneq ($(BOARD),)
 		FULL_PATH := $(shell find br-ext-chip-* -name "$(BOARD)*_defconfig")
 		ifeq ($(FULL_PATH),)
 			FULL_PATH := $(error Cannot find anything for $(BOARD))
@@ -15,7 +15,7 @@ else
 		ifeq ($(FAMILY),hi3516cv500)
 			BR_VER ?= 2022.08
 		endif
-    endif
+	endif
 endif
 
 ROOT_DIR      := $(CURDIR)
