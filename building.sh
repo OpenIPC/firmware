@@ -84,7 +84,7 @@ fresh() {
   log_and_run "cp -rvf ${SRC_CACHE_DIR}/* buildroot-${BR_VER}/dl/"
   echo_c 34 "Done.\n"
 
-  # make prepare
+  make prepare
 
   echo_c 33 "Start building OpenIPC Firmware ${OPENIPC_VER} for ${SOC}."
   echo "The start-stop times" >/tmp/openipc_buildtime.txt
