@@ -83,6 +83,7 @@ case "$1" in
 	  echo "Done."
 
 	  if [ ${telemetry} = "true" ]; then
+    devmem 0x120c0010 32 0x1e04
 		/usr/bin/mavlink-routerd &
 		/usr/bin/telemetry start
 	  fi
