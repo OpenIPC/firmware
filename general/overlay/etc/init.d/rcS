@@ -6,6 +6,11 @@
 export TZ=$(cat /etc/TZ)
 
 
+# Set the firmware creation time as the base system time
+#
+/bin/date -s @$(stat -t /etc/os-release | cut -d" " -f12)
+
+
 # Start all init scripts in /etc/init.d
 # executing them in numerical order.
 #
