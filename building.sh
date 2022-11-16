@@ -196,7 +196,7 @@ done
 
 FUNCS=()
 
-echo "Building list of projects"
+# building list of projects
 AVAILABLE_PROJECTS=$(find br-ext-chip-*/configs/* -name "*_defconfig")
 for p in $AVAILABLE_PROJECTS; do
   _p=${p##*/}; _p=${_p//_defconfig/}
@@ -230,6 +230,8 @@ if [ $# -eq 0 ]; then
 else
   BOARD=$1
 fi
+
+[ -z "$BOARD" ] && exit 1
 
 COMMAND=$2
 [ -z "$COMMAND" ] && COMMAND=all
