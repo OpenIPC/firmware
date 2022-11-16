@@ -18,6 +18,7 @@ OPENIPC_VER=$(echo OpenIPC v${_d:0:1}.${_d:1})
 unset _d
 
 SRC_CACHE_DIR="/tmp/buildroot_dl"
+LOCK_FILE="$(pwd)/openipc.lock"
 
 #
 # Functions
@@ -28,11 +29,65 @@ echo_c() {
   echo -e "\e[1;$1m$2\e[0m"
 }
 
+check_or_set_lock() {
+  if [ -f "$LOCK_FILE" ] && ps -ax | grep "^\s*\b$(cat "$LOCK_FILE")\b" >/dev/null; then
+    echo_c 31 "Another instance running with PID $(cat "$LOCK_FILE")."
+    exit 1
+  fi
+
+  echo_c 32 "Starting OpenIPC builder."
+  echo $$ >$LOCK_FILE
+}
+
+build_list_of_projects() {
+  FUNCS=()
+  AVAILABLE_PROJECTS=$(find br-ext-chip-*/configs/* -name "*_defconfig")
+  local p
+  for p in $AVAILABLE_PROJECTS; do
+    p=${p##*/}; p=${p//_defconfig/}
+    FUNCS+=($p)
+  done
+}
+
+select_project() {
+  if [ $# -eq 0 ]; then
+    if [ -n "$(command -v fzf)" ]; then
+      local entries=$(echo $AVAILABLE_PROJECTS | sed "s/ /\n/g" | fzf)
+      [ -z "$entries" ] && echo_c 31 "Cancelled." && drop_lock_and_exit
+      BOARD=$(echo $entries | cut -d / -f 3 | awk -F_ '{printf "%s_%s", $1, $2}')
+    elif [ -n "$(command -v whiptail)" ]; then
+      local cmd="whiptail --title \"Available projects\" --menu \"Please select a project from the list:\" --notags 20 76 12"
+      local entry
+      for entry in $AVAILABLE_PROJECTS; do
+        local project=${entry##*/}; project=${project//_defconfig/}
+        local vendor=${entry%%/*}; vendor=${vendor##*-}
+        local flavor=${project##*_}
+        local chip=${project%%_*}
+        cmd="${cmd} \"${project}\" \"${vendor^} ${chip^^} ${flavor}\""
+      done
+      BOARD=$(eval "${cmd} 3>&1 1>&2 2>&3")
+      [ $? != 0 ] && echo_c 31 "Cancelled." && drop_lock_and_exit
+    else
+      echo -ne "Usage: $0 <variant>\nVariants:"
+      local i
+      for i in "${FUNCS[@]}"; do echo -n " ${i}"; done
+      echo
+      drop_lock_and_exit
+    fi
+  else
+    BOARD=$1
+  fi
+}
+
+drop_lock_and_exit() {
+  [ -f "$LOCK_FILE" ] && rm $LOCK_FILE
+  exit 0
+}
+
 log_and_run() {
-  _command=$1
-  echo_c 35 "$_command"
-  $_command
-  unset _command
+  local command=$1
+  echo_c 35 "$command"
+  $command
 }
 
 clone() {
@@ -92,9 +147,9 @@ fresh() {
 }
 
 should_fit() {
-  filename=$1
-  maxsize=$2
-  filesize=$(stat --printf="%s" ./output/images/$filename)
+  local filename=$1
+  local maxsize=$2
+  local filesize=$(stat --printf="%s" ./output/images/$filename)
   if [[ $filesize -gt $maxsize ]]; then
     export TG_NOTIFY="Warning: $filename is too large: $filesize vs $maxsize"
     echo_c 31 "Warning: $filename is too large: $filesize vs $maxsize"
@@ -169,9 +224,9 @@ uni_build() {
 
   echo_c 33 "\n  SoC: $SOC\nBoard: $BOARD\n"
 
-#  if [ "all" = "${COMMAND}" ]; then
-#    fresh $(make BOARD=${BOARD} buildroot-version)
-#  fi
+  if [ "all" = "${COMMAND}" ]; then
+    fresh $(make BOARD=${BOARD} buildroot-version)
+  fi
 
   log_and_run "make BOARD=${BOARD} ${COMMAND}"
 
@@ -188,53 +243,23 @@ uni_build() {
   fi
 }
 
-for i in "${FUNCS[@]}"; do
-  copy_function uni_build $i
-done
-
 #######
 
-FUNCS=()
+check_or_set_lock
 
-# building list of projects
-AVAILABLE_PROJECTS=$(find br-ext-chip-*/configs/* -name "*_defconfig")
-for p in $AVAILABLE_PROJECTS; do
-  _p=${p##*/}; _p=${_p//_defconfig/}
-  FUNCS+=($_p)
-done
+build_list_of_projects
+select_project
 
-if [ $# -eq 0 ]; then
-  if [ -n "$(command -v fzf)" ]; then
-    SELECTED=$(echo $AVAILABLE_PROJECTS | sed "s/ /\n/g" | fzf)
-    [ -z "$SELECTED" ] && exit 1
-    BOARD=$(echo $SELECTED | cut -d / -f 3 | awk -F_ '{printf "%s_%s", $1, $2}')
-  elif [ -n "$(command -v whiptail)" ]; then
-    cmd="whiptail --title \"Available projects\""
-    cmd="${cmd} --menu \"Please select a project from the list:\" 20 76 12"
-    for p in $AVAILABLE_PROJECTS; do
-      _p=${p##*/}; _p=${_p//_defconfig/}  # project
-      _v=${p%%/*}; _v=${_v##*-}           # vendor
-      _f=${_p##*_}                        # flavor
-      _c=${_p%%_*}                        # chip
-      cmd="${cmd} \"${_p}\" \"${_v^} ${_c^^} ${_f}\""
-    done; unset _p; unset _v; unset _f; unset _c
-    BOARD=$(eval "${cmd} 3>&1 1>&2 2>&3")
-    unset cmd
-    [ $? != 0 ] && echo_c 31 "Cancelled." && exit 1
-  else
-    echo -ne "Usage: $0 <variant>\nVariants:"
-    for i in "${FUNCS[@]}"; do echo -n " ${i}"; done
-    echo
-    exit 1
-  fi
-else
-  BOARD=$1
-fi
-
-[ -z "$BOARD" ] && exit 1
+[ -z "$BOARD" ] && echo_c 31 "Nothing selected." && drop_lock_and_exit
 
 COMMAND=$2
 [ -z "$COMMAND" ] && COMMAND=all
 
+for i in "${FUNCS[@]}"; do
+  copy_function uni_build $i
+done
+
 echo_c 37 "Building OpenIPC for ${BOARD}"
 uni_build $BOARD $COMMAND
+
+drop_lock_and_exit
