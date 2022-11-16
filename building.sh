@@ -207,7 +207,7 @@ if [ $# -eq 0 ]; then
   if [ -n "$(command -v fzf)" ]; then
     SELECTED=$(echo $AVAILABLE_PROJECTS | sed "s/ /\n/g" | fzf)
     [ -z "$SELECTED" ] && exit 1
-    BOARD=$(echo $SELECTED | cut -d / -f 4 | awk -F_ '{printf "%s_%s", $1, $2}')
+    BOARD=$(echo $SELECTED | cut -d / -f 3 | awk -F_ '{printf "%s_%s", $1, $2}')
   elif [ -n "$(command -v whiptail)" ]; then
     cmd="whiptail --title \"Available projects\""
     cmd="${cmd} --menu \"Please select a project from the list:\" 20 76 12"
