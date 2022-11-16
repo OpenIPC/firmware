@@ -148,93 +148,6 @@ autoup_rootfs() {
     ./output/images/autoupdate-rootfs.img
 }
 
-#################################################################################
-
-FUNCS=(
-  ambarella-s3l
-
-  ak3916ev300
-  ak3918ev300
-
-  fh8833v100
-  fh8852v100
-  fh8852v200
-  fh8852v210
-  fh8856v100
-  fh8856v200
-  fh8856v210
-  fh8858v200
-  fh8858v210
-
-  gk7101
-  gk7101s
-  gk7102
-  gk7102s
-
-  gk7202v300
-  gk7205v200  gk7205v200_fpv  gk7205v200_ultimate
-  gk7205v210
-  gk7205v300  gk7205v300_fpv  gk7205v300_ultimate
-  gk7605v100
-
-  gm8135
-  gm8136
-
-  hi3516cv100
-  hi3518ev100
-
-  hi3516cv200
-  hi3518ev200  hi3518ev200_ultimate
-
-  hi3516cv300  hi3516cv300_ultimate
-  hi3516ev100
-
-  hi3516av100  hi3516av100_ultimate
-  hi3516dv100  hi3516dv100_ultimate
-
-  hi3519v101
-  hi3516av200  hi3516av200_ultimate
-
-  hi3516av300
-  hi3516cv500
-  hi3516dv300
-
-  hi3516dv200
-  hi3516ev200  hi3516ev200_fpv  hi3516ev200_ultimate  hi3516ev200_eltis
-  hi3516ev300  hi3516ev300_fpv  hi3516ev300_ultimate  hi3516ev300_dev  hi3516ev300_glibc  hi3516ev300_tehshield
-  hi3518ev300  hi3518ev300_ultimate
-
-  hi3536cv100
-  hi3536dv100  hi3536dv100_vixand
-
-  msc313e  msc313e_baresip
-  msc316dc
-  msc316dm
-
-  nt98562
-  nt98566
-
-  rv1109
-  rv1126
-
-  ssc325
-  ssc333
-  ssc335  ssc335_blackbird  ssc335_goodcam  ssc335_initramfs  ssc335_musl  ssc335_portal  ssc335_rotek  ssc335_tiandy
-  ssc337  ssc337_kama
-
-  ssc335de
-  ssc337de
-
-  t10
-  t20
-  t30
-  t31  t31_ultimate
-
-  xm510
-  xm530
-  xm550
-)
-
 copy_function() {
   test -n "$(declare -f "$1")" || return
   eval "${_/$1/$2}"
@@ -256,14 +169,14 @@ uni_build() {
 
   echo_c 33 "\n  SoC: $SOC\nBoard: $BOARD\n"
 
-  if [ "all" = "${COMMAND}" ]; then
-    fresh $(make BOARD=${BOARD} buildroot-version)
-  fi
+#  if [ "all" = "${COMMAND}" ]; then
+#    fresh $(make BOARD=${BOARD} buildroot-version)
+#  fi
 
   log_and_run "make BOARD=${BOARD} ${COMMAND}"
 
-  if [ "all" = "${COMMAND}" ]; then
-    if [ "$BOARD" == "ssc335_initramfs" ]; then
+  if [ "all" == "${COMMAND}" ]; then
+    if [ "ssc335_initramfs" == "$BOARD" ]; then
       rename_initramfs
     else
       rename
@@ -281,16 +194,38 @@ done
 
 #######
 
+FUNCS=()
+
+echo "Building list of projects"
+AVAILABLE_PROJECTS=$(find br-ext-chip-*/configs/* -name "*_defconfig")
+for p in $AVAILABLE_PROJECTS; do
+  _p=${p##*/}; _p=${_p//_defconfig/}
+  FUNCS+=($_p)
+done
+
 if [ $# -eq 0 ]; then
-  if ! command -v fzf >/dev/null 2>&1; then
+  if [ -n "$(command -v fzf)" ]; then
+    SELECTED=$(echo $AVAILABLE_PROJECTS | fzf)
+    [ -z "$SELECTED" ] && exit 1
+    BOARD=$(echo $SELECTED | cut -d / -f 4 | awk -F_ '{printf "%s_%s", $1, $2}')
+  elif [ -n "$(command -v whiptail)" ]; then
+    cmd="whiptail --title \"Available projects\""
+    cmd="${cmd} --menu \"Please select a project from the list:\" 20 76 12"
+    for p in $AVAILABLE_PROJECTS; do
+      _p=${p##*/}; _p=${_p//_defconfig/}  # project
+      _v=${p%%/*}; _v=${_v##*-}           # vendor
+      _f=${_p##*_}                        # flavor
+      _c=${_p%%_*}                        # chip
+      cmd="${cmd} \"${_p}\" \"${_v^} ${_c^^} ${_f}\""
+    done; unset _p; unset _v; unset _f; unset _c
+    BOARD=$(eval "${cmd} 3>&1 1>&2 2>&3")
+    unset cmd
+    [ $? != 0 ] && echo_c 31 "Cancelled." && exit 1
+  else
     echo -ne "Usage: $0 <variant>\nVariants:"
     for i in "${FUNCS[@]}"; do echo -n " ${i}"; done
     echo
     exit 1
-  else
-    SELECTED=$(find . -path "*/br-ext-chip-*" -name "*_defconfig" | fzf)
-    [ -z "$SELECTED" ] && exit 1
-    BOARD=$(echo $SELECTED | cut -d / -f 4 | awk -F_ '{printf "%s_%s", $1, $2}')
   fi
 else
   BOARD=$1
