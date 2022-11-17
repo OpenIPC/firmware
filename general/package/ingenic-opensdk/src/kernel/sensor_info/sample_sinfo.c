@@ -106,6 +106,7 @@ enum SENSOR_TYPE
 	SENSOR_TYPE_SC500AI,
 	SENSOR_TYPE_JXQ03,
 	SENSOR_TYPE_JXQ03P,
+	SENSOR_TYPE_GC2083,
 };
 
 typedef struct SENSOR_INFO_S
@@ -196,6 +197,7 @@ SENSOR_INFO_T g_sinfo[] =
 	{"sc500ai"},
 	{"jxq03"},
 	{"jxq03p"},
+	{"gc2083"},
 };
 int main(int argc,char **argv)
 {
