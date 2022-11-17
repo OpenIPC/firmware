@@ -33,8 +33,13 @@ else
     SENSOR_INFO=$(cat /proc/jz/sinfo/info)
     check_return "get sensor type"
     SENSOR=${SENSOR_INFO#*:}
-    logger -s -p daemon.info -t ingenic "Get data from sinfo and set SENSOR as ${SENSOR}"
-    fw_setenv sensor $SENSOR && logger -s -p daemon.info -t ingenic "Write detected ${SENSOR} to U-Boot ENV"
+    if [ "sensor not found" = "$SENSOR" ]; then
+        unset SENSOR
+        fw_setenv sensor
+    else
+        logger -s -p daemon.info -t ingenic "Get data from sinfo and set SENSOR as ${SENSOR}"
+        fw_setenv sensor $SENSOR && logger -s -p daemon.info -t ingenic "Write detected ${SENSOR} to U-Boot ENV"
+    fi
 fi
 
 
