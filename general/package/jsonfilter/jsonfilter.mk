@@ -10,7 +10,7 @@ JSONFILTER_SITE = git://git.openwrt.org/project/jsonpath.git
 JSONFILTER_LICENSE = ISC, BSD-3-Clause
 
 JSONFILTER_DEPENDENCIES = \
-    $(if $(BR2_PACKAGE_JSON_C),json-c) \
+    $(if $(BR2_PACKAGE_JSON_C_OPENIPC),json-c-openipc) \
     $(if $(BR2_PACKAGE_LIBUBOX),libubox)
 
 define JSONFILTER_INSTALL_TARGET_CMDS
