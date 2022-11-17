@@ -104,7 +104,7 @@ jobs:
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
           else
             # https://github.com/actions/runner-images/issues/2577
-            echo "1.1.1.1 invisible-mirror.net" | sudo tee -a /etc/hosts
+            echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
           fi
 
       - name: Free disk space
@@ -338,7 +338,7 @@ jobs:
             echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
           else
             # https://github.com/actions/runner-images/issues/2577
-            echo "1.1.1.1 invisible-mirror.net" | sudo tee -a /etc/hosts
+            echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
           fi
 
       - name: Free disk space
