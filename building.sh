@@ -18,6 +18,7 @@ OPENIPC_VER=$(echo OpenIPC v${_d:0:1}.${_d:1})
 unset _d
 
 SRC_CACHE_DIR="/tmp/buildroot_dl"
+LOCK_FILE="$(pwd)/openipc.lock"
 
 #
 # Functions
@@ -28,11 +29,65 @@ echo_c() {
   echo -e "\e[1;$1m$2\e[0m"
 }
 
+check_or_set_lock() {
+  if [ -f "$LOCK_FILE" ] && ps -ax | grep "^\s*\b$(cat "$LOCK_FILE")\b" >/dev/null; then
+    echo_c 31 "Another instance running with PID $(cat "$LOCK_FILE")."
+    exit 1
+  fi
+
+  echo_c 32 "Starting OpenIPC builder."
+  echo $$ >$LOCK_FILE
+}
+
+build_list_of_projects() {
+  FUNCS=()
+  AVAILABLE_PROJECTS=$(find br-ext-chip-*/configs/* -name "*_defconfig")
+  local p
+  for p in $AVAILABLE_PROJECTS; do
+    p=${p##*/}; p=${p//_defconfig/}
+    FUNCS+=($p)
+  done
+}
+
+select_project() {
+  if [ $# -eq 0 ]; then
+    if [ -n "$(command -v fzf)" ]; then
+      local entries=$(echo $AVAILABLE_PROJECTS | sed "s/ /\n/g" | fzf)
+      [ -z "$entries" ] && echo_c 31 "Cancelled." && drop_lock_and_exit
+      BOARD=$(echo $entries | cut -d / -f 3 | awk -F_ '{printf "%s_%s", $1, $2}')
+    elif [ -n "$(command -v whiptail)" ]; then
+      local cmd="whiptail --title \"Available projects\" --menu \"Please select a project from the list:\" --notags 20 76 12"
+      local entry
+      for entry in $AVAILABLE_PROJECTS; do
+        local project=${entry##*/}; project=${project//_defconfig/}
+        local vendor=${entry%%/*}; vendor=${vendor##*-}
+        local flavor=${project##*_}
+        local chip=${project%%_*}
+        cmd="${cmd} \"${project}\" \"${vendor^} ${chip^^} ${flavor}\""
+      done
+      BOARD=$(eval "${cmd} 3>&1 1>&2 2>&3")
+      [ $? != 0 ] && echo_c 31 "Cancelled." && drop_lock_and_exit
+    else
+      echo -ne "Usage: $0 <variant>\nVariants:"
+      local i
+      for i in "${FUNCS[@]}"; do echo -n " ${i}"; done
+      echo
+      drop_lock_and_exit
+    fi
+  else
+    BOARD=$1
+  fi
+}
+
+drop_lock_and_exit() {
+  [ -f "$LOCK_FILE" ] && rm $LOCK_FILE
+  exit 0
+}
+
 log_and_run() {
-  _command=$1
-  echo_c 35 "$_command"
-  $_command
-  unset _command
+  local command=$1
+  echo_c 35 "$command"
+  $command
 }
 
 clone() {
@@ -92,9 +147,9 @@ fresh() {
 }
 
 should_fit() {
-  filename=$1
-  maxsize=$2
-  filesize=$(stat --printf="%s" ./output/images/$filename)
+  local filename=$1
+  local maxsize=$2
+  local filesize=$(stat --printf="%s" ./output/images/$filename)
   if [[ $filesize -gt $maxsize ]]; then
     export TG_NOTIFY="Warning: $filename is too large: $filesize vs $maxsize"
     echo_c 31 "Warning: $filename is too large: $filesize vs $maxsize"
@@ -148,93 +203,6 @@ autoup_rootfs() {
     ./output/images/autoupdate-rootfs.img
 }
 
-#################################################################################
-
-FUNCS=(
-  ambarella-s3l
-
-  ak3916ev300
-  ak3918ev300
-
-  fh8833v100
-  fh8852v100
-  fh8852v200
-  fh8852v210
-  fh8856v100
-  fh8856v200
-  fh8856v210
-  fh8858v200
-  fh8858v210
-
-  gk7101
-  gk7101s
-  gk7102
-  gk7102s
-
-  gk7202v300
-  gk7205v200  gk7205v200_fpv  gk7205v200_ultimate
-  gk7205v210
-  gk7205v300  gk7205v300_fpv  gk7205v300_ultimate
-  gk7605v100
-
-  gm8135
-  gm8136
-
-  hi3516cv100
-  hi3518ev100
-
-  hi3516cv200
-  hi3518ev200  hi3518ev200_ultimate
-
-  hi3516cv300  hi3516cv300_ultimate
-  hi3516ev100
-
-  hi3516av100  hi3516av100_ultimate
-  hi3516dv100  hi3516dv100_ultimate
-
-  hi3519v101
-  hi3516av200  hi3516av200_ultimate
-
-  hi3516av300
-  hi3516cv500
-  hi3516dv300
-
-  hi3516dv200
-  hi3516ev200  hi3516ev200_fpv  hi3516ev200_ultimate  hi3516ev200_eltis
-  hi3516ev300  hi3516ev300_fpv  hi3516ev300_ultimate  hi3516ev300_dev  hi3516ev300_glibc  hi3516ev300_tehshield
-  hi3518ev300  hi3518ev300_ultimate
-
-  hi3536cv100
-  hi3536dv100  hi3536dv100_vixand
-
-  msc313e  msc313e_baresip
-  msc316dc
-  msc316dm
-
-  nt98562
-  nt98566
-
-  rv1109
-  rv1126
-
-  ssc325
-  ssc333
-  ssc335  ssc335_blackbird  ssc335_goodcam  ssc335_initramfs  ssc335_musl  ssc335_portal  ssc335_rotek  ssc335_tiandy
-  ssc337  ssc337_kama
-
-  ssc335de
-  ssc337de
-
-  t10
-  t20
-  t30
-  t31  t31_ultimate
-
-  xm510
-  xm530
-  xm550
-)
-
 copy_function() {
   test -n "$(declare -f "$1")" || return
   eval "${_/$1/$2}"
@@ -262,8 +230,8 @@ uni_build() {
 
   log_and_run "make BOARD=${BOARD} ${COMMAND}"
 
-  if [ "all" = "${COMMAND}" ]; then
-    if [ "$BOARD" == "ssc335_initramfs" ]; then
+  if [ "all" == "${COMMAND}" ]; then
+    if [ "ssc335_initramfs" == "$BOARD" ]; then
       rename_initramfs
     else
       rename
@@ -275,29 +243,23 @@ uni_build() {
   fi
 }
 
-for i in "${FUNCS[@]}"; do
-  copy_function uni_build $i
-done
-
 #######
 
-if [ $# -eq 0 ]; then
-  if ! command -v fzf >/dev/null 2>&1; then
-    echo -ne "Usage: $0 <variant>\nVariants:"
-    for i in "${FUNCS[@]}"; do echo -n " ${i}"; done
-    echo
-    exit 1
-  else
-    SELECTED=$(find . -path "*/br-ext-chip-*" -name "*_defconfig" | fzf)
-    [ -z "$SELECTED" ] && exit 1
-    BOARD=$(echo $SELECTED | cut -d / -f 4 | awk -F_ '{printf "%s_%s", $1, $2}')
-  fi
-else
-  BOARD=$1
-fi
+check_or_set_lock
+
+build_list_of_projects
+select_project
+
+[ -z "$BOARD" ] && echo_c 31 "Nothing selected." && drop_lock_and_exit
 
 COMMAND=$2
 [ -z "$COMMAND" ] && COMMAND=all
 
+for i in "${FUNCS[@]}"; do
+  copy_function uni_build $i
+done
+
 echo_c 37 "Building OpenIPC for ${BOARD}"
 uni_build $BOARD $COMMAND
+
+drop_lock_and_exit
