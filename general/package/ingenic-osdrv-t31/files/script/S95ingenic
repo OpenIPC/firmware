@@ -44,6 +44,12 @@ start() {
 	#
 	# export SENSOR=$(fw_printenv -n sensor)
 	export SENSOR=$(cat /proc/jz/sinfo/info | sed -e 's/.*://')
+	SENSOR=$(cat /proc/jz/sinfo/info | sed -e 's/.*://')
+	if [ "sensor not found" = "$SENSOR" ]; then
+		unset SENSOR
+	else
+		export SENSOR=$SENSOR
+	fi
 	load_majestic
 }
 
