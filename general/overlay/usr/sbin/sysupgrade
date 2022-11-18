@@ -35,7 +35,7 @@ compare_versions() {
 }
 
 do_update_kernel() {
-	x=$1
+	local x=$1
 	[ -z "$x" ] && x="/tmp/uImage.$soc"
 	echo_c 33 "\nKernel"
 	echo "Update kernel from $x"
@@ -44,16 +44,15 @@ do_update_kernel() {
 	compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 	flashcp -v "$x" "$kernel_device"
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
-	unset x
 }
 
 do_update_rootfs() {
-	x=$1
+	local	x=$1
 	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$soc"
 	echo_c 33 "\nRootFS"
 	echo "Update rootfs from $x"
 	[ ! -f "$x" ] && die "File ${x} not found"
-	y=/tmp/rootfs
+	local y=/tmp/rootfs
 	if mkdir -p "$y" && loop=$(losetup -f) && losetup "$loop" "$x" && mount "$loop" "$y"; then
 		check_soc "$(head -1 ${y}/etc/hostname | cut -d- -f2)"
 		compare_versions "$system_version" "$(get_system_version "$y")" && return 0
@@ -61,11 +60,9 @@ do_update_rootfs() {
 	else
 		die "Unable to mount $y!"
 	fi
-	unset y
 
 	flashcp -v "$x" "$(get_device "rootfs")"
 	echo_c 32 "RootFS updated to $(get_system_version "")"
-	unset x
 }
 
 do_wipe_overlay() {
@@ -154,18 +151,19 @@ check_sdcard() {
 	echo_c 33 "\nUnmounting SD card"
 	stoplist="autoupdate-kernel.img autoupdate-rootfs.img autoupdate-uboot.img"
 	while [ -n "$(mount | grep /mnt/mmc)" ]; do
-		_d=$(mount | grep /mnt/mmc | tail -1 | awk '{print $3}')
-		echo_c 34 "$_d"
-		for _f in $stoplist; do
-			echo "- checking for ${_d}/${_f}"
-			if [ -f "${_d}/${_f}" ]; then
-				echo_c 31 "\nCannot upgrade! Recovery file ${_d}/${_f} found on the mounted SD card!"
+		local d=$(mount | grep /mnt/mmc | tail -1 | awk '{print $3}')
+		echo_c 34 "$d"
+		local f
+		for f in $stoplist; do
+			echo "- checking for ${d}/${f}"
+			if [ -f "${d}/${f}" ]; then
+				echo_c 31 "\nCannot upgrade! Recovery file ${d}/${f} found on the mounted SD card!"
 				echo_c 37 "Please remove the card from the slot and restart sysupgrade."
 				exit 1
 			fi
-		done; unset _f
-		umount $_d
-	done; unset _d
+		done
+		umount $d
+	done
 }
 
 create_lock() {
