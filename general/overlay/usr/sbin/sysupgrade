@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20221111
+# OpenIPC.org | v.20221118
 #
 
-scr_version=1.0.13
+scr_version=1.0.14
 
 args=" $@"
 
@@ -40,7 +40,13 @@ do_update_kernel() {
 	echo_c 33 "\nKernel"
 	echo "Update kernel from $x"
 	[ ! -f "$x" ] && die "File $x not found"
-	check_soc "$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)"
+	local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
+	# FIXME: Ingenic kernels do not include proper SoC identifiers.
+	case "$soc" in
+	t31) [ "t" != "$ksoc" ] && die "Wrong SoC!" ;;
+	t21) [ "" != "$ksoc" ] && die "Wrong SoC!" ;;
+	*) check_soc "$ksoc"
+	esac
 	compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 	flashcp -v "$x" "$kernel_device"
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
