@@ -49,7 +49,7 @@ case ${SENSOR} in
     SENSOR_PARAM="sensor_max_fps=25 data_interface=1"
     ;;
 "gc2083")
-    ISP_PARAM="isp_clk=200000000 isp_memopt=1 isp_day_night_switch_drop_frame_num=1 isp_ch0_pre_dequeue_time=12 isp_ch0_pre_dequeue_interrupt_process=0 isp_ch0_pre_dequeue_valid_lines=540"
+    ISP_PARAM="isp_clk=200000000"
     SENSOR_PARAM="shvflip=1"
     ;;
 "gc4653")
