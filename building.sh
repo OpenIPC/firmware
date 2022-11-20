@@ -248,7 +248,12 @@ uni_build() {
 check_or_set_lock
 
 build_list_of_projects
-select_project
+
+if [ -n "$1" ]; then
+  BOARD=$1
+else
+  select_project
+fi
 
 [ -z "$BOARD" ] && echo_c 31 "Nothing selected." && drop_lock_and_exit
 
