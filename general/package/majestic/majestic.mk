@@ -13,16 +13,6 @@ FAMILY := $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
 
 RELEASE := $(shell grep "BR2_DEFCONFIG" $(BR2_CONFIG) | head -1 | cut -d "_" -f 3)
 
-ifeq ($(BR2_PACKAGE_INGENIC_OSDRV_T20),y)
-	FAMILY := t21
-else ifeq ($(BR2_PACKAGE_INGENIC_OSDRV_T30),y)
-	FAMILY := t31
-else ifeq ($(BR2_PACKAGE_INGENIC_OSDRV_T31),y)
-	FAMILY := t31
-else ifeq ($(BR2_PACKAGE_SIGMASTAR_OSDRV_SSC335),y)
-	FAMILY := ssc335
-endif
-
 ifeq ($(RELEASE),ultimate)
 	# we don't have Majestic binary Ultimate distributions for these
 	# platforms so use Lite
