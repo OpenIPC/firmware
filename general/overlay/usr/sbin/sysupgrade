@@ -3,7 +3,7 @@
 # OpenIPC.org | v.20221118
 #
 
-scr_version=1.0.14
+scr_version=1.0.15
 
 args=" $@"
 
@@ -80,10 +80,8 @@ do_wipe_overlay() {
 download_firmware() {
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
-	ftype=$(ipcinfo -F)
-	if $(echo ${ftype} | (! grep -qE 'nor|nand')); then
-		ftype=$(get_flash_type)
-	fi
+	ftype=$(ipcinfo -F 2>/dev/null)
+	[ ${#ftype} -gt 4 ] && ftype=$(get_flash_type)
 	build="${soc}-${ftype}-${osr}"
 	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${build}.tgz"
 	echo "Download from $url"
