@@ -16,7 +16,7 @@ define MAVFWD_BUILD_CMDS
 endef
 
 define MAVFWD_INSTALL_TARGET_CMDS
-    $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
+    $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/sbin
     $(INSTALL) -m 0755 -D $(@D)/mavfwd $(TARGET_DIR)/usr/sbin/mavfwd
 endef
 
