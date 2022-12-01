@@ -36,6 +36,7 @@ jobs:
       matrix:
         platform:
           - ak3918ev300
+          - dm36x
           - fh8852v100
           - fh8852v200
           - gk7102
@@ -255,6 +256,9 @@ jobs:
             release: lite
             custom: onlyci
           - platform: ak3918ev300
+            release: lite
+            custom: onlyci
+          - platform: dm36x
             release: lite
             custom: onlyci
           - platform: gk7102
