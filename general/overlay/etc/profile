@@ -40,7 +40,7 @@ cli() { yaml-cli -i /etc/majestic.yaml $@; }
 differ() { diff -rN "/rom$1" "$1"; }
 
 [ -x /tmp/ipctool ] || ipctool() { [ -x /tmp/ipctool ] && /tmp/ipctool $@ || (curl -s -L -o /tmp/ipctool https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool$ARC && \
-	chmod +x /tmp/ipctool && echo_c 35 "The ipctool installed as remote GitHub plugin" && /tmp/ipctool $@); }
+	chmod +x /tmp/ipctool && echo_c 35 "The ipctool installed as remote GitHub plugin\n\n" && /tmp/ipctool $@); }
 
 majestic_changes() { diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml; }
 
