@@ -87,7 +87,6 @@ case "$1" in
 			# UART2_RX mux
 			devmem 0x120c0010 32 0x1e04
 		fi
-		/usr/bin/mavlink-routerd &
 		/usr/bin/telemetry start
 	  fi
 

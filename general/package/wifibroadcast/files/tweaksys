@@ -27,8 +27,6 @@ all_other() {
   # change fps 25 -> 30
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx307_i2c_2l_1080p.ini
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
-  # disable mavlink routerd autostart
-  sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
   # majestic basic settings
   ${cli} -s .isp.slowShutter disabled
   ${cli} -s .isp.drc 350
@@ -36,18 +34,17 @@ all_other() {
   # ${cli} -s .isp.dis true
   ${cli} -s .image.contrast 50
   ${cli} -s .image.luminance 50
-  ${cli} -s .video0.bitrate 4096
+  ${cli} -s .video0.bitrate 5120
   ${cli} -s .video0.codec h264
   ${cli} -s .video0.rcMode cbr
-  ${cli} -s .video0.gopSize 0.1
+  ${cli} -s .video0.gopSize 0
   ${cli} -s .hls.enabled false
   ${cli} -s .netip.enabled false
-  ${cli} -s .rtsp.enabled false
   ${cli} -s .jpeg.enabled false
   # lowdelay support only imx307 sensor
   if [ ${sensor} = "imx307" ]; then
-	  ${cli} -s .video0.size 1920x1080
-	  ${cli} -s .video0.fps 30
+	  # ${cli} -s .video0.size 1280x720
+	  # ${cli} -s .video0.fps 30
 	  ${cli} -s .isp.lowDelay true
 	  # ${cli} -s .video0.sliceUnits 4
   fi
@@ -65,21 +62,36 @@ EOF
 case "$1" in
   gk7205v200 | hi3516ev200)
 	echo "Preparing system tweaks for ${chip}..."
-	# set osmem
-	fw_setenv osmem 40M
-	# change uart2 to uart0 (uart2 used by default [RX ONLY!] If you need two way, use uart0)
-	#sed -i "s!Device = /dev/ttyAMA2!Device = /dev/ttyAMA0!g" /etc/mavlink.conf
-	#sed -i "s!console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
+
+	# set custom config
+	if [ ${chip} = "gk7205v200" ] && [ ${sensor} = "imx307" ]; then
+	  echo "switch to custom sensor config"
+	  # ${cli} -s .isp.sensorConfig /etc/sensors/60fps/720p_imx307_i2c_2l.ini
+	fi
+
+	# fix osmem in bootargs
+	bootargs=$(fw_printenv -n bootargs)
+	if echo ${bootargs} | grep -q "32M"; then
+	  newbootargs="mem=\${osmem} "$(echo ${bootargs} | cut -d " " -f2-)
+	  fw_setenv bootargs ${newbootargs}
+	  fw_setenv osmem 40M
+	fi
+
+	sed -i "s!console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
+
 	# remove unneeded to reduce some memory
 	rm -f /etc/init.d/S60crond /etc/init.d/S49ntpd /etc/init.d/S02klogd
+
 	all_other
 	;;
   gk7205v300 | hi3516ev300)
 	echo "Preparing system tweaks for ${chip}..."
+
 	# set sensor config for smtsec board
 	if [ ${chip} = "gk7205v300" ] && [ ${sensor} = "imx307" ]; then
 		${cli} -s .isp.sensorConfig /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
 	fi
+
 	all_other
 	;;
 	*)
