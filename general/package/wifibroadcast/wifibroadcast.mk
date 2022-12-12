@@ -5,7 +5,7 @@
 ################################################################################
 
 WIFIBROADCAST_VERSION = c00f4ca0817919e6ba5780212781e03dada206a6
-WIFIBROADCAST_SITE = $(call github,svpcom,wifibroadcast,$(WIFIBROADCAST_VERSION))
+WIFIBROADCAST_SITE = $(call github,svpcom,wfb-ng,$(WIFIBROADCAST_VERSION))
 WIFIBROADCAST_LICENSE = GPL-2.0
 
 WIFIBROADCAST_DEPENDENCIES += libpcap libsodium iw
