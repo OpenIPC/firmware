@@ -23,6 +23,8 @@ case "$1" in
   start)
 	  echo "Loading MAVLink telemetry service..."
 
+	  mavfwd --master ${serial} --baudrate ${baud} --out 127.0.0.1:${port_tx} --in 127.0.0.1:${port_rx} &
+
 	  start_telemetry
 
 	  echo "Done."
