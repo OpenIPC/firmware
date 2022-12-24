@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MOTORS_VERSION = 32ba1309e739c068a89132aaebcde69b71fdaf4a
+MOTORS_VERSION = d6a16ef7907c62381b24cd27a00cbf00e038f110
 MOTORS_SITE = $(call github,openipc,motors,$(MOTORS_VERSION))
 MOTORS_LICENSE = MIT
 MOTORS_LICENSE_FILES = LICENSE
