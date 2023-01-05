@@ -21,6 +21,7 @@ define INGENIC_OSDRV_T20_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/sensor/params/jxh62.bin
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/sensor/params/sc2135.bin
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/sensor/params/sc2232.bin
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/sensor/params/sc2235.bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.14/ingenic
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/*.ko
@@ -36,6 +37,7 @@ define INGENIC_OSDRV_T20_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/sensor_jxh62.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/sensor_sc2135.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/sensor_sc2232.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/sensor_sc2235.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/script/load*
