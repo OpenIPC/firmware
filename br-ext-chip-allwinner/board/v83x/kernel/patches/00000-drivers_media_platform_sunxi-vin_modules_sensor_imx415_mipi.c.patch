@@ -539,7 +539,7 @@ diff -drupN a/drivers/media/platform/sunxi-vin/modules/sensor/imx415_mipi.c b/dr
 +	{0x3000, 0x00}, /*operation*/
 +	{0x3002, 0x00},
 +};
-+static struct regval/*ist sensor_10bit_90fps_regs[] = {
++static struct regval_list sensor_10bit_90fps_regs[] = {
 +	/*All Pixel - 23/*Mbps - 27MHz*/
 +	{0x3000, 0x00},
 +	{0x3001, 0x00},
