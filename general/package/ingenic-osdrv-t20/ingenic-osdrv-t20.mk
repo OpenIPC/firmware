@@ -31,7 +31,7 @@ define INGENIC_OSDRV_T20_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/sinfo.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/tx-isp-t10.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/tx-isp-t20.ko
-	ln -sf tx-isp-t20.ko $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/tx-isp-t20l.ko
+	ln -sf tx-isp-t20.ko $(TARGET_DIR)/lib/modules/3.10.14/ingenic/tx-isp-t20l.ko
 
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/sensor_jxf22.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/kmod/sensor_jxh42.ko
