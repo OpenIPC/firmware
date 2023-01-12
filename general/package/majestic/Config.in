@@ -1,6 +1,12 @@
 config BR2_PACKAGE_MAJESTIC
 	bool "Majestic streamer"
 	default n
+	select BR2_PACKAGE_LIBEVENT_OPENIPC
+	select BR2_PACKAGE_LIBOGG_OPENIPC
+	select BR2_PACKAGE_JSON_C_OPENIPC
+	select BR2_PACKAGE_MBEDTLS_OPENIPC
+	select BR2_PACKAGE_OPUS_OPENIPC
+	select BR2_PACKAGE_ZLIB
 	help
 	  Tiny but powerful IPC streaming software
 	  (non-commercial version for personal use only)
