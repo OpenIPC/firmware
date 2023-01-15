@@ -1,6 +1,7 @@
 #!/bin/sh
 
 KMOD_PATH=/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic
+SOC=$(ipcinfo --chip-name || fw_printenv -n soc)
 
 echo 1 >/proc/sys/vm/overcommit_memory
 
@@ -40,17 +41,21 @@ case ${SENSOR} in
     ISP_PARAM="isp_clk=90000000"
     SENSOR_PARAM=""
     ;;
+"jxf37")
+    ISP_PARAM="isp_clk=90000000"
+    SENSOR_PARAM="sensor_gpio_func=0"
+    ;;
 "sc2232")
     ISP_PARAM="isp_clk=90000000"
     SENSOR_PARAM=""
     ;;
 "sc2335")
     ISP_PARAM="isp_clk=125000000"
-    SENSOR_PARAM=""
+    SENSOR_PARAM="sensor_gpio_func=0"
     ;;
 *)
-    ISP_PARAM="isp_clk=125000000"
-    SENSOR_PARAM=""
+    ISP_PARAM="isp_clk=90000000"
+    SENSOR_PARAM="sensor_gpio_func=0"
     break
     ;;
 esac
@@ -63,7 +68,7 @@ echo --------------------
 
 lsmod | grep "tx_isp" >/dev/null
 if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/tx-isp-t21.ko ${ISP_PARAM}
+    insmod ${KMOD_PATH/%\//}/tx-isp-${SOC}.ko ${ISP_PARAM}
     check_return "insmod isp drv"
 fi
 
