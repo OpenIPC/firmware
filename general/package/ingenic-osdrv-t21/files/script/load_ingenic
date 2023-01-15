@@ -38,16 +38,28 @@ case ${SENSOR} in
     SENSOR_PARAM="sensor_max_fps=25 data_interface=1"
     ;;
 "jxf23")
-    ISP_PARAM="isp_clk=90000000"
-    SENSOR_PARAM=""
+    ISP_PARAM="isp_clk=125000000"
+    SENSOR_PARAM="sensor_gpio_func=0"
     ;;
 "jxf37")
     ISP_PARAM="isp_clk=90000000"
     SENSOR_PARAM="sensor_gpio_func=0"
     ;;
+"ov2735b")
+    ISP_PARAM="isp_clk=125000000"
+    SENSOR_PARAM="sensor_gpio_func=0"
+    ;;
 "sc2232")
     ISP_PARAM="isp_clk=90000000"
     SENSOR_PARAM=""
+    ;;
+"sc2232h")
+    ISP_PARAM="isp_clk=125000000"
+    SENSOR_PARAM="sensor_gpio_func=0"
+    ;;
+"sc2332")
+    ISP_PARAM=""
+    SENSOR_PARAM="sensor_gpio_func=0"
     ;;
 "sc2335")
     ISP_PARAM="isp_clk=125000000"
@@ -80,6 +92,6 @@ fi
 
 lsmod | grep ${SENSOR} >/dev/null
 if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_t21.ko ${SENSOR_PARAM}
+    insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_${SOC}.ko ${SENSOR_PARAM}
     check_return "insmod sensor drv"
 fi
