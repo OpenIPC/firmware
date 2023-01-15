@@ -37,7 +37,7 @@ all_other() {
   ${cli} -s .video0.bitrate 5120
   ${cli} -s .video0.codec h264
   ${cli} -s .video0.rcMode cbr
-  ${cli} -s .video0.gopSize 0
+  ${cli} -s .video0.gopSize 0.2
   ${cli} -s .hls.enabled false
   ${cli} -s .netip.enabled false
   ${cli} -s .jpeg.enabled false
