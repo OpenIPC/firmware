@@ -25,11 +25,11 @@ detect_wifi_card() {
 		modprobe mac80211
 		modprobe ath9k_htc
 	  ;;
-      "148f:3070")
-        driver="ralink"
+	  "148f:3070")
+		driver="ralink"
 		modprobe rt2800usb
 		modprobe rt2x00usb
-      ;;
+	  ;;
 	esac
   done
 
