@@ -52,8 +52,11 @@ clean:
 prepare: $(BR_DIR)
 $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz:
 	wget -O $@ -nv \
-		--retry-connrefused --continue --timeout=15 \
-		http://buildroot.org/downloads/buildroot-$(BR_VER).tar.gz
+		--retry-connrefused --continue --timeout=3 \
+		http://buildroot.org/downloads/buildroot-$(BR_VER).tar.gz || \
+	wget -O $@ -nv \
+		--retry-connrefused --continue --timeout=3 \
+		https://github.com/buildroot/buildroot/archive/refs/tags/$(BR_VER).tar.gz
 
 $(BR_DIR): $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz
 	tar -C $(ROOT_DIR) -xf buildroot-$(BR_VER).tar.gz

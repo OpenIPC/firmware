@@ -13,7 +13,7 @@ start_telemetry() {
 	  ln -s /usr/bin/wfb_tx /usr/bin/telemetry_tx ; chmod +x /usr/bin/telemetry_tx
   else
 	if [ ${one_way} = "false" ]; then
-	  telemetry_rx -p ${stream_rx} -u ${port_rx} -K ${keydir}/drone.key -k ${fec_k} -n ${fec_n} -i ${link_id} ${wlan} &
+	  telemetry_rx -p ${stream_rx} -u ${port_rx} -K ${keydir}/drone.key -i ${link_id} ${wlan} &
 	fi
 	telemetry_tx -p ${stream_tx} -u ${port_tx} -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} -T ${fec_timeout} -i ${link_id} ${wlan} &
   fi
@@ -21,20 +21,24 @@ start_telemetry() {
 
 case "$1" in
   start)
-	  echo "Loading MAVLink telemetry service..."
+	echo "Loading MAVLink telemetry service..."
 
+	if [ ${router} -eq 1 ]; then
+	  /usr/bin/mavlink-routerd &
+	else
 	  mavfwd --master ${serial} --baudrate ${baud} --out 127.0.0.1:${port_tx} --in 127.0.0.1:${port_rx} &
+	fi
 
-	  start_telemetry
+	start_telemetry
 
-	  echo "Done."
-    ;;
+	echo "Done."
+	;;
   stop)
-    echo "Stopping telemetry service..."
-    kill -9 $(pidof telemetry_rx)
-    kill -9 $(pidof telemetry_tx)
-    ;;
+	echo "Stopping telemetry service..."
+	kill -9 $(pidof telemetry_rx)
+	kill -9 $(pidof telemetry_tx)
+	;;
     *)
-    echo "Usage: $0 {start|stop}"
-    exit 1
+	echo "Usage: $0 {start|stop}"
+	exit 1
 esac
