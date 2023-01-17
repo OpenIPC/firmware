@@ -8,25 +8,63 @@
 keydir="/etc"
 chip=$(ipcinfo -c)
 
-load_rtl() {
-  modprobe cfg80211
-  modprobe 88XXau rtw_tx_pwr_idx_override=${driver_txpower_override}
-  sleep 3
+driver=""
+
+detect_wifi_card() {
+  echo "Detecting wifi card vendor..."
+  devices=$(lsusb | cut -d ' ' -f6 | sort | uniq)
+  for card in ${devices}
+	do
+	  case "${card}" in
+	  "0bda:8812" | "0bda:881a")
+		driver="realtek"
+		modprobe 88XXau rtw_tx_pwr_idx_override=${driver_txpower_override}
+	  ;;
+	  "0cf3:9271")
+		driver="atheros"
+		modprobe mac80211
+		modprobe ath9k_htc
+	  ;;
+	  "148f:3070")
+		driver="ralink"
+		modprobe mac80211
+		modprobe rt2x00usb
+		modprobe rt2800usb
+	  ;;
+	esac
+  done
+
+  if [ -z "${driver}" ]; then
+	echo "No usb wifi card detected. Check wifi stick connection, usb power or possible bad soldering."
+	exit
+  else
+	echo "Detected:" ${driver}
+  fi
+
+  echo "Awaiting interface ${wlan} in system..."
+
+  local n=0
+  while ! $(ifconfig -a | grep -q ${wlan})
+  do
+	if [ ${n} -ge 5 ]; then
+	  echo "No interface ${wlan}. Check wifi stick connection, usb power or possible bad soldering."
+	  exit
+	fi
+	sleep 0.5
+	n=$(expr ${n} + 1)
+  done
 }
 
-load_ath() {
+load_modules() {
   modprobe cfg80211
-  modprobe mac80211
-  modprobe ath9k_htc
-  sleep 3
+  detect_wifi_card
 }
 
 load_interface() {
-
-  if [ ${driver} = "rtl" ]; then
+  if [ ${driver} = "realtek" ]; then
 	  ifconfig ${wlan} up
 	  iwconfig ${wlan} mode monitor
-  elif [ ${driver} = "ath" ]; then
+  elif [ ${driver} = "atheros" ] | [ ${driver} = "ralink" ]; then
 	  iwconfig ${wlan} mode monitor
 	  ifconfig ${wlan} up
   fi
@@ -49,31 +87,19 @@ case "$1" in
 
     if [ ${daemon} -eq 1 ]; then
 
-	  echo "Loading modules for selected driver..."
+	  echo "Loading modules and wifi card driver..."
 
-	  if [ ${driver} = "rtl"  ]; then
-		if ! lsmod | grep "88XXau"; then
-		  load_rtl
-		fi
-	  elif [ ${driver} = "ath" ]; then
-		if ! lsmod | grep "ath9k_htc"; then
-          load_ath
-		fi
-	  fi
+	  load_modules
 
-	  echo "Done."
 	  echo "Preparing interface wlan..."
 	  
 	  load_interface
 	  
-	  echo "Done."
-
 	  if ! cat ${keydir}/drone.key > /dev/null 2>&1; then
 		echo "Generating drone & ground station keys..."
 		cd ${keydir} ; wfb_keygen
-		echo "Done."
 	  else
-		echo "Drone key exist... Done."
+		echo "Drone key exist..."
 	  fi
 
 	  echo "Starting Wifibroadcast service..."

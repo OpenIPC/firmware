@@ -1,5 +1,8 @@
 config BR2_PACKAGE_WIFIBROADCAST
 	bool "wifibroadcast"
+	select BR2_PACKAGE_LIBPCAP
+	select BR2_PACKAGE_LIBSODIUM
+	select BR2_PACKAGE_IW
 	help
 	  Transmit hd video over wifi for the UAV.
 
