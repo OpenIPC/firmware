@@ -27,6 +27,8 @@ all_other() {
   # change fps 25 -> 30
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx307_i2c_2l_1080p.ini
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
+  # disable mavlink routerd autostart
+  sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
   # majestic basic settings
   ${cli} -s .isp.slowShutter disabled
   ${cli} -s .isp.drc 350
@@ -34,7 +36,7 @@ all_other() {
   # ${cli} -s .isp.dis true
   ${cli} -s .image.contrast 50
   ${cli} -s .image.luminance 50
-  ${cli} -s .video0.bitrate 5120
+  ${cli} -s .video0.bitrate 4096
   ${cli} -s .video0.codec h264
   ${cli} -s .video0.rcMode cbr
   ${cli} -s .video0.gopSize 0.2
@@ -43,7 +45,7 @@ all_other() {
   ${cli} -s .jpeg.enabled false
   # lowdelay support only imx307 sensor
   if [ ${sensor} = "imx307" ]; then
-	  # ${cli} -s .video0.size 1280x720
+	  ${cli} -s .video0.size 1280x720
 	  # ${cli} -s .video0.fps 30
 	  ${cli} -s .isp.lowDelay true
 	  # ${cli} -s .video0.sliceUnits 4
