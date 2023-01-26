@@ -9,6 +9,10 @@ HISILICON_OSDRV_HI3516CV100_SITE =
 HISILICON_OSDRV_HI3516CV100_LICENSE = MIT
 HISILICON_OSDRV_HI3516CV100_LICENSE_FILES = LICENSE
 
+define HISILICON_OSDRV_HI3516CV100_BUILD_CMDS
+    $(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/libhisicompat all
+endef
+
 define HISILICON_OSDRV_HI3516CV100_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/script/S95hisilicon
@@ -65,6 +69,7 @@ define HISILICON_OSDRV_HI3516CV100_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/sensor/*.so
 
+
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/lib/libaec.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/lib/libanr.so
@@ -89,6 +94,8 @@ define HISILICON_OSDRV_HI3516CV100_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/lib/libupvqe.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/lib/libVoiceEngine.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/lib/libvqev2.so
+
+    $(INSTALL) -D -m 0755 $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/libhisicompat/libhisicompat.so $(TARGET_DIR)/usr/lib
 endef
 
 $(eval $(generic-package))
