@@ -20,9 +20,9 @@ define GOKE_OSDRV_GK710X_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/firmware
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/firmware $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/sensor/fw/*.bin
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.4.43-Goke/goke
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.4.43-Goke/goke $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/kmod/*.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.4.43-Goke/goke $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/sensor/*.ko
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.4.43-gk/goke
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.4.43-gk/goke $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/kmod/*.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.4.43-gk/goke $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/sensor/*.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/script/load_*
