@@ -1,5 +1,9 @@
 config BR2_PACKAGE_BARESIP_OPENIPC
 	bool "baresip-openipc"
+	depends on BR2_PACKAGE_LIBRE_OPENIPC
+	depends on BR2_PACKAGE_LIBREM_OPENIPC
+	select BR2_PACKAGE_LIBRE_OPENIPC
+	select BR2_PACKAGE_LIBREM_OPENIPC
 	default n
 	help
 	  Baresip is a portable and modular SIP User-Agent with audio 
