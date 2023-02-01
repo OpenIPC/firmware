@@ -45,8 +45,9 @@ define INGENIC_OSDRV_T21_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t21/files/kmod/sensor_ov2735b_t21z.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t21/files/kmod/sensor_sc2232_t21n.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t21/files/kmod/sensor_sc2300_t21z.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t21/files/kmod/sensor_sc2335_t21n.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t21/files/kmod/sensor_sc2335_t21z.ko
-	ln -sf sensor_sc2335_t21z.ko $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic/sensor_sc2335_t21n.ko
+	# ln -sf sensor_sc2335_t21z.ko $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic/sensor_sc2335_t21f.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t21/files/script/load*
