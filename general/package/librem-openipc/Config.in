@@ -1,5 +1,7 @@
 config BR2_PACKAGE_LIBREM_OPENIPC
 	bool "librem-openipc"
+	depends on BR2_PACKAGE_LIBRE_OPENIPC
+	select BR2_PACKAGE_LIBRE_OPENIPC
 	default n
 	help
 	  librem is a Audio and video processing media library.
