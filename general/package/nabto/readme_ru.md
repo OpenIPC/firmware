@@ -1,17 +1,18 @@
 [Nabto Edge Embedded SDK](https://github.com/nabto/nabto-embedded-sdk)
 
-The package includes the tcp_tunnel_device assembly from sdk. The example shows how you can access an rtsp stream from anywhere in the world through the [Nabto](https://www.nabto.com/) platform.
+Пакет включает сборку tcp_tunnel_device из sdk. В примере показано как можно получить доступ к rtsp потоку из любой точки мира посредством платформы [Nabto](https://www.nabto.com/).
 
-###### Registration
 
-To configure the camera, you will need to register in the [Nabto Cloud Console](https://console.cloud.nabto.com) and get the `Product-ID` (pr-xxxxxxxxx) and `Deviсe-ID` (de-xxxxxxxxx).
-for each device to be connected, the `fingerprint` for completion will be received only after the camera has been configured.
+###### Регистрация
 
-###### Camera setup
+Для настройки камеры понадобится регистрация в облаке [Nabto Cloud Console](https://console.cloud.nabto.com) и получение `Product-ID` (pr-xxxxxxxx) и `Deviсe-ID` (de-xxxxxxxx) 
+для каждого подключаемого устройства, `fingerprint` для завершения будет получен только после настройки камеры.
 
-Start `tcp_tunnel_device` with key `--demo-init` and enter data (pr-xxxxxxxxxx & de-xxxxxxxxxx) obtained during registration in [Nabto Cloud Console](https://console.cloud.nabto.com) and creation of device.
+###### Настройка камеры
 
-Then select the proxied service, in this case `rtsp` and specify endpoint `/stream=0`:
+Запустить в консоли `tcp_tunnel_device` с ключом `--demo-init` и ввести данные (pr-xxxxxxxx & de-xxxxxxxx) полученные при регистрации в облаке [Nabto Cloud Console](https://console.cloud.nabto.com) и создании устройства.
+
+Далее выбрать проксируемый сервис, в данном случае `rtsp` и указать endpoint `/stream=0`:
 
 ```
 Next step is to add TCP tunnel services.
@@ -26,15 +27,13 @@ Enter your RTSP endpoint (default: /video): /stream=0
 Added rtsp service on localhost port 554 with metadata rtsp-path => /stream=0
 ```
 
-When finished, a `fingerprint` will be issued, which must be saved in the device settings in the cloud.
+По окончании будет выдан `fingerprint`, который необходимо сохранить в настройках устройства в облаке.
 
-###### Launch
-
+###### Запуск
 ```
 tcp_tunnel_device
 ```
-
-Make sure that the connection was successful (example):
+убедиться что подключение прошло успешно (пример):
 
 ```
 root@openipc-t31:# tcp_tunnel_device 
@@ -62,17 +61,17 @@ root@openipc-t31:# tcp_tunnel_device
 Attached to the basestation
 ```
 
-###### Retrieving a stream
+###### Получение потока
 
-In the example we will fetch the thread on the linux machine, but the releases on [github](https://github.com/nabto/nabto-client-edge-tunnel) have a windows version of the client.
+В примере будем забирать поток на linux машине, но в релизах на [github](https://github.com/nabto/nabto-client-edge-tunnel) есть версия клиента под windows.
 
-Clone and build the client (downloaded from releases).
+Клонируем и собираем клиента (качаем из релизов).
 
-There are 2 ways of "pairing" - `Local Open` and `Password Open`. The first mode allows you to easily find and bind the device if it is in the same local network, the second option if the device is remote...
-As a universal example, we will use the variant with a remote device.
+Есть 2 способа "спаривания" - `Local Open` и `Password Open`. Первый режим позволяет легко найти и привязать устройство, если оно находится в одной локальной сети, второй вариант если устройство удаленное. 
+В качестве универсального примера используем вариант с удаленным устройством.
 
-Run `edge_tunnel_client` with the key `--pair-string` and a string with the necessary device credentials `p=pr-ydk3xhyn,d=de-orruyc4n,pwd=X9NphkArpzLU,sct=9jLgbUb4FWhe`.
-The string is already present in the output of the camera connected to the cloud, so just copy it from the previous step of the camera setup and select `(0) Open Password`, when asked for username we specify `admin`:
+Запускаем `edge_tunnel_client` с ключом `--pair-string` и строкой с необходимыми учетными данными устройства `p=pr-ydk3xhyn,d=de-orruyc4n,pwd=X9NphkArpzLU,sct=9jLgbUb4FWhe`. 
+Строка в готовом виде присутствует в выводе подключенной к облаку камеры, потому просто копируем ее из предыдущего шага настройки камеры и выбираем `(0) Open Password`, при запросе username укажем `admin`:
 
 ```
 $./edge_tunnel_client --pair-string p=pr-ydk3xhyn,d=de-orruyc4n,pwd=X9NphkArpzLU,sct=9jLgbUb4FWhe
@@ -87,8 +86,7 @@ New Username: admin
 The device [0] pr-ydk3xhyn.de-orruyc4n has been set into the bookmarks as index 0
 
 ```
-
-The configuration is complete. Launch the client and check the list of services provided by the camera:
+Настройка завершена. Запускаем клиент и проверяем список предоставляемых камерой сервисов:
 
 ```
 $ ./edge_tunnel_client --services
@@ -97,7 +95,7 @@ Available services ...
 Service: rtsp       Type: rtsp       Host: 127.0.0.1  Port: 554
 ```
 
-In this example, the camera only provides access to the rtsp stream. Connecting:
+В данном примере камера предоставляет доступ только к rtsp потоку. Подключаемся:
 
 ```
 ./edge_tunnel_client --service rtsp
@@ -105,11 +103,11 @@ Connected to the device [0] pr-ydk3xhyn.de-orruyc4n
 TCP Tunnel opened for the service rtsp listening on the local port 44391
 ```
 
-At `127.0.0.1:44391` an rtsp stream will be available, use ffplay making sure to select the tcp transport:
+На `127.0.0.1:44391` будет доступен rtsp поток, используем ffplay обязательно выбрав транспорт tcp:
 
 ```
 ffplay -rtsp_transport tcp rtsp://127.0.0.1:44391/stream=0
 ```
 
-For more details on platform features and settings, see the official [documentation](https://docs.nabto.com/developer/guides.html)
+Более подробно о возможностях платформы и настройках в официальной [документации](https://docs.nabto.com/developer/guides.html)
 
