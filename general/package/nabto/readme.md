@@ -5,7 +5,8 @@
 
 ###### Регистрация
 
-Для настройки камеры понадобится регистрация в облаке [Nabto Cloud Console](https://console.cloud.nabto.com) и получение `Product-ID` (pr-xxxxxxxx) и `Deviсe-ID` (de-xxxxxxxx) для каждого подключаемого устройства, `fingerprint` для завершения будет получен только после настройки камеры.
+Для настройки камеры понадобится регистрация в облаке [Nabto Cloud Console](https://console.cloud.nabto.com) и получение `Product-ID` (pr-xxxxxxxx) и `Deviсe-ID` (de-xxxxxxxx) 
+для каждого подключаемого устройства, `fingerprint` для завершения будет получен только после настройки камеры.
 
 ###### Настройка камеры
 
@@ -53,8 +54,8 @@ root@openipc-t31:# tcp_tunnel_device
 # Open Pairing String:    p=pr-ydk3xhyn,d=de-orruyc4n,pwd=X9NphkArpzLU,sct=9jLgbUb4FWhe
 # 
 ######## Configured TCP Services ########
-# Id               Type             Host             Port             
-# rtsp             rtsp             127.0.0.1        554              
+# Id               Type             Host             Port
+# rtsp             rtsp             127.0.0.1        554
 ########
 
 Attached to the basestation
