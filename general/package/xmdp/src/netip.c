@@ -13,6 +13,8 @@
 #include "netip.h"
 #include "utils.h"
 
+#include <sys/select.h>
+
 #define PACKED __attribute__((packed))
 
 #define OP_LOGIN 1000
