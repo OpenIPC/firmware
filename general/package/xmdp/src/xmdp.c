@@ -239,18 +239,17 @@ int scan() {
   free(seen_vec);
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     int opt;
-
-    while ((opt = getopt(argc, argv, "t:")) != -1)
+    while ((opt = getopt(argc, argv, "t:")) != -1) {
         switch (opt) {
 		case 't':
 			scansec = atoi(optarg);
 			break;
 		default:
-			printf("Usage: %s [-t scansec]\n", argv[0]);
-        }
-
-    return scan();
+			printf("Usage: %s [-t seconds]\n", argv[0]);
+			exit(EXIT_FAILURE);
+		}
+	}
+  	return scan();
 }
