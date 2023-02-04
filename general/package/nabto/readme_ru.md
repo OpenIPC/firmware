@@ -15,6 +15,17 @@
 Далее выбрать проксируемый сервис, в данном случае `rtsp` и указать endpoint `/stream=0`:
 
 ```
+root@openipc-t31:# tcp_tunnel_device --demo-init
+
+No device configuration found. Creating configuration: /home/user/.nabto/edge/config/device.json.
+The device configuration requires a Product ID and a Device ID, created in the Nabto Cloud Console.
+Product Id: pr-ydk3xhyn
+Device Id: de-orruyc4n
+
+
+Demo initialization will make a simple IAM setup, be aware that this is not what you want in production.
+'Local Open Pairing' and 'Password Open Pairing' are enabled. Newly paired users get the 'Administrator' role.
+
 Next step is to add TCP tunnel services.
 What type of service do you want to add?
 [0]: continue
@@ -28,6 +39,12 @@ Added rtsp service on localhost port 554 with metadata rtsp-path => /stream=0
 ```
 
 По окончании будет выдан `fingerprint`, который необходимо сохранить в настройках устройства в облаке.
+
+```
+The configuration and state has been initialized
+The Fingerprint must be configured for this device in the Nabto Cloud Console before it will be allowed to attach to the Basestation. If you want to reuse an already configured fingerprint, you can copy the corresponding private key to /home/user/.nabto/edge/keys/device.key
+The device Fingerprint is: 3de2ec6ded2cc975bf87ed63b2303e02b8051fb7359b19a3d950ed0158bb3813
+```
 
 ###### Запуск
 ```
@@ -71,7 +88,7 @@ Attached to the basestation
 В качестве универсального примера используем вариант с удаленным устройством.
 
 Запускаем `edge_tunnel_client` с ключом `--pair-string` и строкой с необходимыми учетными данными устройства `p=pr-ydk3xhyn,d=de-orruyc4n,pwd=X9NphkArpzLU,sct=9jLgbUb4FWhe`. 
-Строка в готовом виде присутствует в выводе подключенной к облаку камеры, потому просто копируем ее из предыдущего шага настройки камеры и выбираем `(0) Open Password`, при запросе username укажем `admin`:
+Строка в готовом виде присутствует в выводе подключенной к облаку камеры, потому просто копируем ее из предыдущего шага настройки камеры и выбираем `0` - Password Open, при запросе New username укажем `admin`:
 
 ```
 $./edge_tunnel_client --pair-string p=pr-ydk3xhyn,d=de-orruyc4n,pwd=X9NphkArpzLU,sct=9jLgbUb4FWhe
