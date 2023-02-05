@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Wpedantic
+CFLAGS=-Os -Wall -Wpedantic
 LDFLAGS=-lm
 
 all: xmdp
