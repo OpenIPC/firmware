@@ -10,6 +10,9 @@ chip=$(ipcinfo -c)
 
 driver=""
 
+# "0bda:8813" -> (8814) -> 8814au
+# "0846:9052" -> (8811) -> 8821au
+
 detect_wifi_card() {
   echo "Detecting wifi card vendor..."
   devices=$(lsusb | cut -d ' ' -f6 | sort | uniq)
