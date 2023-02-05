@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -20,6 +21,8 @@
 #define TIMEOUT 5 // seconds
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
+
+static int scansec = 0;
 
 const char brpkt[] =
     "\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xfa\x05"
@@ -91,7 +94,10 @@ void sigalarm(int sig) {
   }
 }
 
-int main() {
+int scan() {
+  time_t start, current;
+  start = time(NULL);
+
   bsock = socket(AF_INET, SOCK_DGRAM, 0);
   if (bsock == -1) {
     perror("socket");
@@ -128,6 +134,12 @@ int main() {
   uint32_t *seen_vec = malloc(seen_cap * sizeof(*seen_vec));
 
   while (1) {
+	current = time(NULL);
+
+	if ((scansec > 0) && (current-start > scansec)) {
+	  exit(EXIT_SUCCESS);
+	}
+
     char buf[1024];
     struct sockaddr_in their_addr;
     socklen_t addr_len = sizeof their_addr;
@@ -225,4 +237,19 @@ int main() {
   }
 
   free(seen_vec);
+}
+
+int main(int argc, char *argv[]) {
+    int opt;
+    while ((opt = getopt(argc, argv, "t:")) != -1) {
+        switch (opt) {
+		case 't':
+			scansec = atoi(optarg);
+			break;
+		default:
+			printf("Usage: %s [-t seconds]\n", argv[0]);
+			exit(EXIT_FAILURE);
+		}
+	}
+  	return scan();
 }
