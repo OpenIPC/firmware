@@ -14,6 +14,7 @@ define INGENIC_OSDRV_T20_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/script/S95ingenic
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensor
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/sensor/*.yaml
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/sensor/params/*.bin
 
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t20/files/sensor/params/jxf22.bin
