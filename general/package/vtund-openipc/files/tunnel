@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20220806
+# OpenIPC.org | v.20230212
 # by Igor Zalatov, aka FlyRouter, aka ZigFisher
 # Busybox applets: awk cat echo insmod ip modprobe sha1sum sleep tr tunctl udhcpc uptime
 #
@@ -11,14 +11,16 @@ vtund_server=$1
 vtund_server=${vtund_server:=vtun.localhost}
 vtund_port="5000"
 vtund_iface="tunnel"
+vtund_salt=""
 device_name="IPC-VTUND"
+kernel_module=""
 working_dir="/tmp"
 
 
 identity() {
   identity_src=$(ip r | awk '/default/ {print $5}' | head -n 1)
   identity_mac=$(cat /sys/class/net/${identity_src}/address | tr 'a-z' 'A-Z')
-  identity_pas=$(echo ${identity_mac} | sha1sum | awk '{print $1}')
+  identity_pas=$(echo ${vtund_salt}${identity_mac} | sha1sum | awk '{print $1}')
   identity_tid=$(echo ${identity_mac} | tr -d ':')
   identity_cfg=${working_dir}/vtund.conf
 }
@@ -48,7 +50,7 @@ config() {
     echo "    program \"udhcpc -T 1 -t 5 -R -b -O staticroutes -S -s tapip -p ${working_dir}/udhcpc-${vtund_iface}.pid -i ${vtund_iface} -x hostname:${device_name}-${identity_tid}\";"
     echo "  };"
     echo "  down {"
-    echo "    ifconfig \"tunnel down\";"
+    echo "    ifconfig \"${vtund_iface} down\";"
     echo "  };"
     echo "}"
   ) >${identity_cfg}
