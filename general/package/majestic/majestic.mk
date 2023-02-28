@@ -1,6 +1,6 @@
 ################################################################################
 #
-# majestic
+# majestic 
 #
 ################################################################################
 
@@ -12,6 +12,12 @@ MAJESTIC_LICENSE_FILES = LICENSE
 FAMILY := $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
 
 RELEASE := $(shell grep "BR2_DEFCONFIG" $(BR2_CONFIG) | head -1 | cut -d "_" -f 3)
+
+ifeq ($(RELEASE),lte)
+    RELEASE := fpv
+endif
+
+#    $(warning $(RELEASE))
 
 ifeq ($(RELEASE),ultimate)
 	# we don't have Majestic binary Ultimate distributions for these
