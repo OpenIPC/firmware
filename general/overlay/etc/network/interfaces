@@ -37,7 +37,7 @@ iface wg0 inet static
 #source-dir /etc/network/interfaces.d
 
 #lte 3372 hilink
-auto eth1
+manual eth1
 iface eth1 inet dhcp
     pre-up sleep 4
     pre-up usb_modeswitch -v 0x12d1 -p 0x1f01 -J
