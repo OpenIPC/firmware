@@ -67,7 +67,7 @@ load_interface() {
   if [ ${driver} = "realtek" ]; then
 	  ifconfig ${wlan} up
 	  iwconfig ${wlan} mode monitor
-  elif [ ${driver} = "atheros" ] | [ ${driver} = "ralink" ]; then
+  elif [ ${driver} = "atheros" ] || [ ${driver} = "ralink" ]; then
 	  iwconfig ${wlan} mode monitor
 	  ifconfig ${wlan} up
   fi
