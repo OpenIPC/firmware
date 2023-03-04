@@ -15,6 +15,7 @@ define NOVATEK_OSDRV_NT9856X_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/sensor/config/sen_sc*.cfg
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/sensor/*.yaml
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/profiles
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/profiles $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/sensor/profiles/isp*.cfg
