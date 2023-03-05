@@ -18,14 +18,50 @@ define INGENIC_OSDRV_T30_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/sensor/params/*.bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/*.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_imx307_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_os02b10_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_jxf22_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_gc2053_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_ov2732_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_ps5280_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_fuxsc1020_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_jxk03_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_ps5250_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_ps5260_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_imx385_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_jxf23_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_imx291_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_ov5648_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc4335_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_os05a10_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_ps5270_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc2310_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_ov2735_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc2232h_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc1245a_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc1245_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc5235_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_imx323_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc2232_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_ov2735b_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_imx335_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_gc2023_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc1235_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_bg0806_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc4236_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_ov2718_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_jxh62_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_gc2033_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_ov4689_t30.ko
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_imx327_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc2235_t30.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sensor_sc2135_t30.ko
+
 
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/audio.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/gpio.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/sinfo.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/tx-isp-t30.ko
-
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/kmod/*.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/script/load*
