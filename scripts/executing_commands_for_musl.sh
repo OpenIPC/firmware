@@ -20,7 +20,10 @@ ln -sfv /lib/libc.so ${TARGET_DIR}/lib/ld-uClibc.so.0
 ln -sfv ../../lib/libc.so ${TARGET_DIR}/usr/bin/ldd
 #
 
-if ! grep -q ^BR2_PACKAGE_WIFIBROADCAST=y ${BR2_CONFIG} && ! grep -q ^BR2_PACKAGE_LIBV4L=y ${BR2_CONFIG} ; then
+if ! grep -q ^BR2_PACKAGE_WIFIBROADCAST=y ${BR2_CONFIG} && \
+   ! grep -q ^BR2_PACKAGE_LIBV4L=y ${BR2_CONFIG} && \
+   ! grep -q ^BR2_PACKAGE_INGENIC_OSDRV_T30=y ${BR2_CONFIG} \
+; then
 	rm -f ${TARGET_DIR}/usr/lib/libstdc++*
 fi
 
