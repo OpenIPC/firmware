@@ -19,7 +19,7 @@ detect_wifi_card() {
   for card in ${devices}
 	do
 	  case "${card}" in
-	  "0bda:8812" | "0bda:881a" | "0b05:17d2")
+	  "0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101")
 		driver="realtek"
 		modprobe 88XXau rtw_tx_pwr_idx_override=${driver_txpower_override}
 	  ;;
@@ -67,7 +67,7 @@ load_interface() {
   if [ ${driver} = "realtek" ]; then
 	  ifconfig ${wlan} up
 	  iwconfig ${wlan} mode monitor
-  elif [ ${driver} = "atheros" ] | [ ${driver} = "ralink" ]; then
+  elif [ ${driver} = "atheros" ] || [ ${driver} = "ralink" ]; then
 	  iwconfig ${wlan} mode monitor
 	  ifconfig ${wlan} up
   fi
