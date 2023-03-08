@@ -1,0 +1,77 @@
+#!/bin/sh
+
+KMOD_PATH=/lib/modules/3.10.14__isvp_monkey_1.0__/ingenic
+
+echo 1 >/proc/sys/vm/overcommit_memory
+
+check_return() {
+    if [ $? -ne 0 ]; then
+        echo err: $1
+        echo exit
+        exit
+    fi
+}
+
+lsmod | grep "sinfo" >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/sinfo.ko
+    check_return "insmod sinfo"
+fi
+echo 1 >/proc/jz/sinfo/info
+check_return "start sinfo"
+
+if fw_printenv -n sensor >/dev/null; then
+    export SENSOR=$(fw_printenv -n sensor)
+    logger -s -p daemon.info -t ingenic "Get data from environment and set SENSOR as ${SENSOR}"
+else
+    SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+    check_return "get sensor type"
+    SENSOR=${SENSOR_INFO#*:}
+    if [ "sensor not found" = "$SENSOR" ]; then
+        unset SENSOR
+        fw_setenv sensor
+    else
+        logger -s -p daemon.info -t ingenic "Get data from sinfo and set SENSOR as ${SENSOR}"
+        fw_setenv sensor $SENSOR && logger -s -p daemon.info -t ingenic "Write detected ${SENSOR} to U-Boot ENV"
+    fi
+fi
+
+
+case ${SENSOR} in
+*)
+    ISP_PARAM=""
+    SENSOR_PARAM=""
+    break
+    ;;
+esac
+
+echo --------------------
+echo "ISP_PARAM: ${ISP_PARAM}"
+echo "SENSOR: ${SENSOR}"
+echo "SENSOR_PARAM: ${SENSOR_PARAM}"
+echo --------------------
+
+lsmod | grep "tx_isp" >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/tx-isp-t30.ko ${ISP_PARAM}
+    check_return "insmod isp drv"
+fi
+
+lsmod | grep "audio" >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/audio.ko
+    check_return "insmod audio"
+fi
+
+lsmod | grep ${SENSOR} >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_t30.ko ${SENSOR_PARAM}
+    check_return "insmod sensor drv"
+fi
+#
+# Need for claim gpio 57,58 on HICHIP (CamHi/Xin) boards
+insmod ${KMOD_PATH/%\//}/gpio.ko
+echo $(yaml-cli -i /etc/majestic.yaml -g .nightMode.irCutPin1) >/proc/jz/claim/gpio
+echo $(yaml-cli -i /etc/majestic.yaml -g .nightMode.irCutPin2) >/proc/jz/claim/gpio
+# echo $(yaml-cli -i /etc/majestic.yaml -g .nightMode.irSensorPin) >/proc/jz/claim/gpio
+#
