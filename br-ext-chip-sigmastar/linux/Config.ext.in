@@ -12,4 +12,9 @@ config BR2_LINUX_KERNEL_EXT_SIGMASTAR_PATCHER_LIST
 	help
 	  Space-separated list of patches to be applied
 
+config BR2_LINUX_KERNEL_EXT_SIGMASTAR_INITRAMFS
+	bool "SigmaStar initramfs"
+	help
+	  Simple initramfs that boots the rootfs from sdcard
+
 endif  # BR2_LINUX_KERNEL_EXT_SIGMASTAR_PATCHER
