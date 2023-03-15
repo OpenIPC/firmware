@@ -1,0 +1,7 @@
+config BR2_PACKAGE_RTL8733BU_OPENIPC
+	bool "rtl8733bu-openipc"
+	help
+	  RTL8733BU wifi driver
+
+comment "RTL8733BU needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
