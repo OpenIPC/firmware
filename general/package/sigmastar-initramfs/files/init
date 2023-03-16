@@ -1,0 +1,21 @@
+#!/bin/sh
+mount -t devtmpfs devtmpfs /dev
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+
+sleep 1
+fsck.fat -a /dev/mmcblk0p1
+mkdir -p /root /sdcard /tmp
+mount -r /dev/mmcblk0p1 /sdcard
+
+echo OpenIPC: Copy squashfs
+cp -f /sdcard/rootfs.squashfs.* /tmp || exec sh
+mount /tmp/rootfs.squashfs.* /root || exec sh
+
+umount /sdcard
+umount /dev
+umount /proc
+umount /sys
+
+echo OpenIPC: Switch to new root
+exec switch_root /root /init
