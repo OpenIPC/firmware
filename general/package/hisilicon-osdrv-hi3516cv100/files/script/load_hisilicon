@@ -88,7 +88,7 @@ insert_sns() {
         devmem 0x20030030 32 0x5 #Sensor clock 27MHz
         insmod ssp_pana.ko
         ;;
-    imx104 | imx123 | imx138 | imx222 | imx225 | imx322 | imx323)
+    imx104 | imx123 | imx138_spi | imx222 | imx225 | imx322 | imx323)
         devmem 0x200f000c 32 0x1 #pinmux SPI0
         devmem 0x200f0010 32 0x1 #pinmux SPI0
         devmem 0x200f0014 32 0x1 #pinmux SPI0
