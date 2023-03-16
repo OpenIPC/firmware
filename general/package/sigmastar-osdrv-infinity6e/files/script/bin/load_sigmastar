@@ -1,0 +1,101 @@
+#!/bin/sh
+#
+# OpenIPC.org | 2023.03.01
+#
+# Usage: load_sigmastar [-r|-i|-a]
+#         -r : remove all modules
+#         -i : insert all modules
+#    default : remove and insert all modules
+
+PATH_MODULE=/lib/modules/4.9.84/sigmastar
+PATH_FIRMWARE=/etc/sensors/venc_fw/chagall.bin
+
+# Sensor
+sensor=
+
+# Watchdog
+watchdog -t 10 /dev/watchdog
+
+insert_ko() {
+    insmod ${PATH_MODULE}/mhal.ko
+    insmod ${PATH_MODULE}/mi_common.ko
+    insmod ${PATH_MODULE}/mi_sys.ko cmdQBufSize=768 logBufSize=256
+    insmod ${PATH_MODULE}/mi_rgn.ko
+    insmod ${PATH_MODULE}/mi_ldc.ko
+    insmod ${PATH_MODULE}/mi_ai.ko
+    insmod ${PATH_MODULE}/mi_ao.ko
+    insmod ${PATH_MODULE}/mi_mipitx.ko
+    insmod ${PATH_MODULE}/mi_sensor.ko
+    insmod ${PATH_MODULE}/mi_shadow.ko
+    insmod ${PATH_MODULE}/mi_divp.ko thread_priority=98
+    insmod ${PATH_MODULE}/mi_vif.ko thread_priority=98
+    insmod ${PATH_MODULE}/mi_vpe.ko thread_priority=98
+
+    case $sensor in
+        imx415)
+            insmod ${PATH_MODULE}/mi_venc.ko fw_path=${PATH_FIRMWARE};
+            ;;
+        *)
+            echo -e "\n\e[1;31mAn UNSUPPORTED sensor type is specified - ${sensor}\e[0m\n" | logger -s -t OpenIPC;
+            ;;
+    esac
+
+    if [ ! -e /dev/mi_poll ]; then
+        major=$(awk '$2=="mi_poll" {print $1}' /proc/devices | head -n 1)
+        mknod /dev/mi_poll c $major 0
+    fi
+
+    # Change iqfile folder
+    echo isproot /etc/sensors/iqfile > /dev/ispmid
+
+    case $sensor in
+        imx415)
+            insmod ${PATH_MODULE}/sensor_${sensor}_mipi.ko chmap=1;
+            ;;
+        *)
+            echo -e "\n\e[1;31mAn UNSUPPORTED sensor type is specified - ${sensor}\e[0m\n" | logger -s -t OpenIPC;
+            ;;
+    esac
+
+    mdev -s
+}
+
+remove_ko() {
+    rmmod -w drv_ms_cus_${sensor}_MIPI
+    rmmod -w mi_venc
+    rmmod -w mi_shadow
+    rmmod -w mi_sensor
+    rmmod -w mi_mipitx
+    rmmod -w mi_ao
+    rmmod -w mi_ai
+    rmmod -w mi_vpe
+    rmmod -w mi_vif
+    rmmod -w mi_divp
+    rmmod -w mi_ldc
+    rmmod -w mi_rgn
+    rmmod -w mi_sys
+    rmmod -w mi_common
+    rmmod -w mhal
+}
+
+if [ -z ${sensor} ]; then
+    echo -e "\n\e[1;31mThe sensor parameter is MISSING\e[0m\n" | logger -s -t OpenIPC
+    exit 1
+else
+    echo -e "\n\e[1;32mThe sensor is assigned - ${sensor}\e[0m\n" | logger -s -t OpenIPC
+fi
+
+if [ "$1" = "-i" ]; then
+    insert_ko
+fi
+
+if [ "$1" = "-r" ]; then
+    remove_ko
+fi
+
+if [ $# -eq 0 ] || [ "$1" = "-a" ]; then
+    remove_ko
+    insert_ko
+fi
+
+exit 0

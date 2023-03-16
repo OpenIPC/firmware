@@ -1,0 +1,72 @@
+#!/bin/sh
+DAEMON="majestic"
+PIDFILE="/var/run/$DAEMON.pid"
+DAEMON_ARGS="-s"
+
+[ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
+
+load_majestic() {
+	printf 'Starting %s: ' "$DAEMON"
+	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
+	[ -f /etc/coredump.conf ] && . /etc/coredump.conf
+	if [ "$coredump_enabled" ]; then
+		[ "$(yaml-cli -i /etc/majestic.yaml -g .watchdog.timeout)" -lt "30" ] && yaml-cli -i /etc/majestic.yaml -s .watchdog.timeout 30
+		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" >/proc/sys/kernel/core_pattern
+	fi
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" \
+		-- $DAEMON_ARGS
+	status=$?
+	if [ "$status" -eq 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+	return "$status"
+}
+
+# The daemon does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
+start() {
+	logger -s -p daemon.info -t sigmastar "Check MAC for Sigmastar devices"
+	if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
+		logger -s -p daemon.info -t sigmastar "The eth0 interface has a lousy MAC, let's try to change it.."
+	else
+		logger -s -p daemon.info -t sigmastar "The eth0 interface has a correct MAC - $(fw_printenv -n ethaddr)"
+	fi
+	logger -s -p daemon.info -t sigmastar "Loading of kernel modules and initialization of the video system has started"
+	export TZ=$(cat /etc/TZ)
+	load_sigmastar -i
+	load_majestic
+}
+
+stop() {
+	printf 'Stopping %s: ' "$DAEMON"
+	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
+	start-stop-daemon -K -q -p "$PIDFILE"
+	status=$?
+	if [ "$status" -eq 0 ]; then
+		rm -f "$PIDFILE"
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+	return "$status"
+}
+
+restart() {
+	stop
+	sleep 1
+	reload
+}
+
+reload() {
+	load_majestic
+}
+
+case "$1" in
+	start|stop|restart|reload)
+		"$1"
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+esac
