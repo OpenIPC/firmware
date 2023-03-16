@@ -1,0 +1,9 @@
+config BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY6E
+	bool "sigmastar-osdrv-infinity6e"
+	help
+	  sigmastar-osdrv-infinity6e - SigmaStar kernel modules and libs
+
+config BR2_PACKAGE_SIGMASTAR_OSDRV_SENSOR
+	depends on BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY6E
+	string "Camera sensor"
+	default "imx415"
