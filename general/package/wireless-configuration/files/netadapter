@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# SSC338Q CamHi
+if lsusb | grep -q f72b; then
+	if [ $1 = "startup" ]; then
+		modprobe 8733bu
+	fi
+	exit 0
+fi
+
+# HI3516EV300 CamHi
+if lsusb | grep -q 7601; then
+	if [ $1 = "startup" ]; then
+		devmem 0x100C0080 32 0x530
+		echo 7 > /sys/class/gpio/export
+		echo out > /sys/class/gpio/gpio7/direction
+		echo 0 > /sys/class/gpio/gpio7/value
+		modprobe mt7601u
+	elif [ $1 = "shutdown" ]; then
+		echo 1 > /sys/class/gpio/gpio7/value
+		echo 7 > /sys/class/gpio/unexport
+	fi
+	exit 0
+fi
