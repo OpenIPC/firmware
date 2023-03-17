@@ -19,10 +19,10 @@ fi
 if [ $1 = "startup" ]; then
 	/etc/network/netadapter $1
 	ifconfig eth0 192.168.2.10
-	ifup wlan0
 fi
 
 if [ $1 = "shutdown" ]; then
+	killall -q udhcpd
 	killall -q wpa_supplicant
 	/etc/network/netadapter $1
 fi
