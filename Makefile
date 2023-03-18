@@ -14,6 +14,8 @@ else
 		FAMILY := $(shell grep "/board/" $(FULL_PATH) | head -1 | cut -d "/" -f 3)
 		ifeq ($(FAMILY),hi3516cv500)
 			BR_VER ?= 2022.08
+		else ifeq ($(FAMILY),infinity6e)
+			BR_VER ?= 2023.02
 		endif
 	endif
 endif
@@ -28,20 +30,23 @@ BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
 .PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
 
 usage help:
-	@echo "\n\
-	BR-OpenIPC usage:\n\
-	  - make help|usage - print this help\n\
-	  - make install-deps - install system deps\n\
-	  - make prepare - download and unpack buildroot\n\
-	  - make list-configs - show available hardware configs list\n\
-	  - make BOARD=<BOARD-ID> board-info - write to stdout information about selected board\n\
-	  - make BOARD=<BOARD-ID> all - build all needed for a board (toolchain, kernel and rootfs images)\n\
-	  - make clean - cleaning before reassembly\n\
-	  - make distclean - switching to the factory state\n\
-	  - make overlayed-rootfs-<FS-TYPE> ROOTFS_OVERLAYS=... - create rootfs image that contains original Buildroot target dir overlayed by some custom layers.\n\
-	Example:\n\
-	    make overlayed-rootfs-squashfs ROOTFS_OVERLAYS=./examples/echo_server/overlay\n\
-	"
+	@printf "\n \
+	BR-OpenIPC usage:\n \
+	  - make help | usage - print this help\n \
+	  - make install-deps - install system deps\n \
+	  - make prepare - download and unpack buildroot\n \
+	  - make list-configs - show available hardware configs list\n \
+	  - make BOARD=<BOARD-ID> board-info - show information about\n \
+	  	  selected board\n \
+	  - make BOARD=<BOARD-ID> all - build all needed for a board\n \
+	  	  (toolchain, kernel and rootfs images)\n \
+	  - make clean - cleaning before reassembly\n \
+	  - make distclean - switching to the factory state\n \
+	  - make overlayed-rootfs-<FS-TYPE> ROOTFS_OVERLAYS=... - create rootfs\n \
+	  	  image that contains original Buildroot target dir overlayed\n \
+	  	  by some custom layers\n\n \
+	  Example:\n \
+	    make overlayed-rootfs-squashfs ROOTFS_OVERLAYS=./examples/echo_server/overlay\n\n"
 
 distclean:
 	@rm -rf output buildroot-$(BR_VER)
@@ -92,8 +97,13 @@ toolname:
 	@$(SCRIPTS_DIR)/show_toolchains.sh $(FULL_PATH) $(BR_VER)
 
 list-configs:
+ifndef BOARD
+	$(error Variable BOARD must be defined to list configs)
+else
 	@echo
 	@ls -1 $(BR_EXT_DIR)/configs
+	@echo
+endif
 
 
 # -------------------------------------------------------------------------------------------------
@@ -113,9 +123,10 @@ endef
 # -------------------------------------------------------------------------------------------------
 $(OUT_DIR)/.config:
 ifndef BOARD
-	@echo "Variable BOARD must be defined to initialize output directory" >&2 && exit 1
-endif
+	$(error Variable BOARD must be defined to initialize output directory)
+else
 	$(BOARD_MAKE) BR2_DEFCONFIG=$(BR_EXT_DIR)/configs/$(BOARD)_defconfig defconfig
+endif
 
 
 $(OUT_DIR)/toolchain-params.mk: $(OUT_DIR)/.config $(SCRIPTS_DIR)/create_toolchain_binding.sh
