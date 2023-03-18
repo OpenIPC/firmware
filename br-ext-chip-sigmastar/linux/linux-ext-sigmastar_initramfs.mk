@@ -4,7 +4,9 @@
 #
 ################################################################################
 
+ifeq ($(BR2_LINUX_KERNEL_EXT_SIGMASTAR_INITRAMFS),y)
 LINUX_EXTENSIONS += sigmastar-initramfs
+endif
 
 SIGMASTAR_INITRAMFS_BUSYBOX_VERSION = 1.36.0
 SIGMASTAR_INITRAMFS_BUSYBOX_SOURCE = busybox-$(SIGMASTAR_INITRAMFS_BUSYBOX_VERSION).tar.bz2
