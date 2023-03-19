@@ -17,12 +17,12 @@ if [ $1 = "connect" ]; then
 fi
 
 if [ $1 = "startup" ]; then
-	/etc/network/netadapter $1
+	/etc/wireless/netadapter $1
 	ifconfig eth0 192.168.2.10
 fi
 
 if [ $1 = "shutdown" ]; then
 	killall -q udhcpd
 	killall -q wpa_supplicant
-	/etc/network/netadapter $1
+	/etc/wireless/netadapter $1
 fi
