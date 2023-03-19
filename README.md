@@ -1,7 +1,9 @@
 ![OpenIPC Logo](https://cdn.themactep.com/images/logo_openipc.png)
 
 
-## OpenIPC firmware    [![Gitter](https://badges.gitter.im/Join%20Chat.svg)][gitter]
+## OpenIPC firmware
+
+[![Telegram](https://openipc.org/images/telegram_button.svg)][telegram]
 _(based on Buildroot)_
 
 OpenIPC is a rapidly developing open source alternative [firmware][firmware] for 
@@ -17,7 +19,7 @@ More information about the [project][project] is available in our [website][webs
 and on the [wiki][wiki].
 
 [firmware]: https://github.com/openipc/firmware/
-[gitter]: https://gitter.im/openipc
+[telegram]: https://t.me/OpenIPC
 [project]: https://github.com/openipc/
 [website]: https://openipc.org/
 [wiki]: https://openipc.github.io/wiki/
