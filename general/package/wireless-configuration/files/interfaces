@@ -7,9 +7,9 @@ iface eth0 inet dhcp
 
 auto wlan0
 iface wlan0 inet dhcp
-    pre-up /etc/network/netsetup startup
-    post-up /etc/network/netsetup connect
-    post-down /etc/network/netsetup shutdown
+    pre-up /etc/wireless/netsetup startup
+    post-up /etc/wireless/netsetup connect
+    post-down /etc/wireless/netsetup shutdown
 
 manual wg0
 iface wg0 inet static

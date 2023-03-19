@@ -1,21 +1,37 @@
 #!/bin/sh
+rootfs=/squashfs
+overlay=$rootfs/mnt
+rootdir=/overlay/root
+workdir=/overlay/work
+
 mount -t devtmpfs devtmpfs /dev
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 
 sleep 1
 fsck.fat -a /dev/mmcblk0p1
-mkdir -p /root /sdcard /tmp
+mkdir -p $rootfs /overlay /sdcard /tmp
 mount -r /dev/mmcblk0p1 /sdcard
 
 echo OpenIPC: Copy squashfs
 cp -f /sdcard/rootfs.squashfs.* /tmp || exec sh
-mount /tmp/rootfs.squashfs.* /root || exec sh
+mount /tmp/rootfs.squashfs.* $rootfs || exec sh
+mount -t tmpfs tmpfs /overlay
+if [ -f /sdcard/settings.tar ]; then
+	tar -xf /sdcard/settings.tar -C /overlay
+fi
+
+echo OpenIPC: Mount overlayfs
+mkdir -p $rootdir $workdir
+mount -t overlay overlay -o lowerdir=$rootfs,upperdir=$rootdir,workdir=$workdir $overlay
+mount -o move /dev $overlay/dev
+mount -o move /overlay $overlay/overlay
+ln -sf ../wireless/interfaces $overlay/etc/network/interfaces
+cp -f /bin/savesettings $overlay/usr/bin
 
 umount /sdcard
-umount /dev
 umount /proc
 umount /sys
 
 echo OpenIPC: Switch to new root
-exec switch_root /root /init
+exec switch_root $overlay /sbin/init
