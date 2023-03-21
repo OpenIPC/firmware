@@ -1,5 +1,5 @@
---- a/make-linux.mk	2023-02-20 14:31:41.466735021 +0300
-+++ b/make-linux.mk	2023-02-20 14:38:58.419080939 +0300
+--- a/make-linux.mk	2023-03-21 11:52:14.865595394 +0300
++++ b/make-linux.mk	2023-03-21 12:00:11.781207402 +0300
 @@ -25,7 +25,7 @@
  # otherwise build into binary as done on Mac and Windows.
  ONE_OBJS+=osdep/PortMapper.o
@@ -33,7 +33,7 @@
  	RUSTFLAGS=--release
  endif
  
-@@ -296,7 +296,7 @@
+@@ -299,7 +299,7 @@
  
  # Static builds, which are currently done for a number of Linux targets
  ifeq ($(ZT_STATIC),1)
@@ -42,7 +42,7 @@
  endif
  
  # For building an official semi-static binary on CentOS 7
-@@ -314,13 +314,13 @@
+@@ -317,13 +317,13 @@
  
  # ARM32 hell -- use conservative CFLAGS
  ifeq ($(ZT_ARCHITECTURE),3)
@@ -61,7 +61,7 @@
  		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
  	endif
  endif
-@@ -340,8 +340,8 @@
+@@ -343,8 +343,8 @@
  endif
  
  # Position Independence
@@ -72,7 +72,7 @@
  
  .PHONY: all
  all:	one
-@@ -365,7 +365,7 @@
+@@ -368,7 +368,7 @@
  $(ONE_OBJS): zeroidc
  
  libzerotiercore.a:	FORCE
