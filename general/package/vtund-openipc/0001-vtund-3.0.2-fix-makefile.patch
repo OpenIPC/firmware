@@ -1,6 +1,21 @@
 --- a/Makefile.in	2008-01-08 01:35:55.000000000 +0300
 +++ b/Makefile.in	2021-05-07 22:18:22.310801557 +0300
-@@ -74,27 +74,27 @@
+@@ -60,10 +60,12 @@
+ vtund: $(OBJS)
+ 	$(CC) $(CFLAGS) -o vtund $(OBJS) $(LFD_OBJS) $(LDFLAGS)
+ 
+-cfg_file.tab.c: cfg_file.y cfg_kwords.h config.h
++cfg_file.tab.h:
+ 	$(YACC) $(YACCFLAGS) -b cfg_file cfg_file.y
+ 
+-cfg_file.lex.c: cfg_file.l cfg_kwords.h config.h
++cfg_file.tab.c: cfg_file.y cfg_kwords.h config.h cfg_file.tab.h
++
++cfg_file.lex.c: cfg_file.l cfg_kwords.h config.h cfg_file.tab.h
+ 	$(LEX) $(LEXFLAGS) cfg_file.l > cfg_file.lex.c 
+ 
+ depend:
+ @@ -74,27 +74,27 @@
  
  distclean: clean
  	rm -f $(CONFIGURE_FILES)
