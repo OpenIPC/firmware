@@ -1,36 +1,32 @@
 #!/bin/sh
-if [ -z $1 ]; then
+usage() {
 	echo wireless connect
 	echo wireless setup
 	echo wireless show
-	exit 0
-fi
+}
 
-if [ $1 = "connect" ]; then
+if [ -z $1 ]; then
+	usage
+elif [ $1 = "connect" ]; then
 	killall -q netsetup
 	killall -q udhcpd
 	killall -q wpa_supplicant
-	/etc/network/netsetup connect
-fi
-
-if [ $1 = "setup" ]; then
+	/etc/wireless/netsetup connect
+elif [ $1 = "setup" ]; then
 	if [ -z $2 ] || [ -z $3 ]; then
 		echo wireless setup [SSID] [PASS]
 		exit 0
 	fi
-
-	sed -i "s/SSID=.*/SSID=$2/" /etc/network/netsetup
-	sed -i "s/PASS=.*/PASS=$3/" /etc/network/netsetup
-	sed -i "s/MODE=.*/MODE=client/" /etc/network/netsetup
-
+	sed -i "s/SSID=.*/SSID=$2/" /etc/wireless/netsetup
+	sed -i "s/PASS=.*/PASS=$3/" /etc/wireless/netsetup
+	sed -i "s/MODE=.*/MODE=client/" /etc/wireless/netsetup
 	echo SSID: $2
 	echo PASS: $3
-fi
-
-if [ $1 = "show" ]; then
-	SSID=$(grep SSID= /etc/network/netsetup | awk -F= '{print $2}')
-	PASS=$(grep PASS= /etc/network/netsetup | awk -F= '{print $2}')
-
+elif [ $1 = "show" ]; then
+	SSID=$(grep SSID= /etc/wireless/netsetup | awk -F= '{print $2}')
+	PASS=$(grep PASS= /etc/wireless/netsetup | awk -F= '{print $2}')
 	echo SSID: $SSID
 	echo PASS: $PASS
+else
+	usage
 fi

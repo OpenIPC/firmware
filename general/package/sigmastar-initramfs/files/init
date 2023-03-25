@@ -1,6 +1,5 @@
 #!/bin/sh
 rootfs=/squashfs
-overlay=$rootfs/mnt
 rootdir=/overlay/root
 workdir=/overlay/work
 
@@ -10,28 +9,30 @@ mount -t sysfs sysfs /sys
 
 sleep 1
 fsck.fat -a /dev/mmcblk0p1
-mkdir -p $rootfs /overlay /sdcard /tmp
-mount -r /dev/mmcblk0p1 /sdcard
+mkdir -p $rootfs /mnt /overlay /sdcard /tmp
 
 echo OpenIPC: Copy squashfs
+mount -r /dev/mmcblk0p1 /sdcard || exec sh
 cp -f /sdcard/rootfs.squashfs.* /tmp || exec sh
 mount /tmp/rootfs.squashfs.* $rootfs || exec sh
-mount -t tmpfs tmpfs /overlay
-if [ -f /sdcard/settings.tar ]; then
-	tar -xf /sdcard/settings.tar -C /overlay
-fi
+
+mount -t tmpfs tmpfs -o size=5M /overlay
+[ -f /sdcard/settings.tar ] && tar -xf /sdcard/settings.tar -C /overlay
 
 echo OpenIPC: Mount overlayfs
 mkdir -p $rootdir $workdir
-mount -t overlay overlay -o lowerdir=$rootfs,upperdir=$rootdir,workdir=$workdir $overlay
-mount -o move /dev $overlay/dev
-mount -o move /overlay $overlay/overlay
-ln -sf ../wireless/interfaces $overlay/etc/network/interfaces
-cp -f /bin/savesettings $overlay/usr/bin
+mount -t overlay overlay -o lowerdir=$rootfs,upperdir=$rootdir,workdir=$workdir /mnt
+
+mount -o move /dev /mnt/dev
+mount -o move /overlay /mnt/overlay
+mount -o move $rootfs /mnt/rom
+
+ln -sf ../wireless/interfaces /mnt/etc/network/interfaces
+cp -f /bin/savesettings /mnt/usr/sbin
 
 umount /sdcard
 umount /proc
 umount /sys
 
 echo OpenIPC: Switch to new root
-exec switch_root $overlay /sbin/init
+exec switch_root /mnt /sbin/init
