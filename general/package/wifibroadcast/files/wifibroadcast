@@ -124,8 +124,8 @@ case "$1" in
 	kill -9 $(pidof wfb_tx)
 	kill -9 $(pidof telemetry_rx)
 	kill -9 $(pidof telemetry_tx)
-    kill -9 $(pidof mavlink-routerd)
-    kill -9 $(pidof mavfwd)
+	kill -9 $(pidof mavlink-routerd)
+	kill -9 $(pidof mavfwd)
     ;;
     *)
     echo "Usage: $0 {start|stop}"
