@@ -3,6 +3,7 @@
 # Start wifibroadcast
 #
 
+. /etc/datalink.conf
 . /etc/wfb.conf
 
 keydir="/etc"
@@ -83,11 +84,6 @@ start_wfb() {
 
 case "$1" in
   start)
-	if ! [ -f /etc/system.ok ]; then
-		killall majestic
-		/usr/bin/tweaksys ${chip}
-	fi
-
     if [ ${daemon} -eq 1 ]; then
 
 	  echo "Loading modules and wifi card driver..."
@@ -124,8 +120,12 @@ case "$1" in
 	fi
     ;;
   stop)
-    echo "Stopping wifibroadcast service..."
-    kill -9 $(pidof wfb_tx)
+    echo "Stopping all services..."
+	kill -9 $(pidof wfb_tx)
+	kill -9 $(pidof telemetry_rx)
+	kill -9 $(pidof telemetry_tx)
+	kill -9 $(pidof mavlink-routerd)
+	kill -9 $(pidof mavfwd)
     ;;
     *)
     echo "Usage: $0 {start|stop}"

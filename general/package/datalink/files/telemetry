@@ -3,6 +3,7 @@
 # Start telemetry
 #
 
+. /etc/datalink.conf
 . /etc/telemetry.conf
 
 keydir="/etc"
@@ -23,20 +24,22 @@ case "$1" in
   start)
 	echo "Loading MAVLink telemetry service..."
 
-	if [ ${router} -eq 1 ]; then
+	if [ ${router} -eq 1 ] || [ ${transport} = "lte" ]; then
 	  /usr/bin/mavlink-routerd &
 	else
 	  mavfwd --master ${serial} --baudrate ${baud} --out 127.0.0.1:${port_tx} --in 127.0.0.1:${port_rx} &
 	fi
-
-	start_telemetry
-
+	if [ ${transport} = "wfb" ]; then
+		start_telemetry
+	fi
 	echo "Done."
 	;;
   stop)
-	echo "Stopping telemetry service..."
+	echo "Stopping telemetry services..."
 	kill -9 $(pidof telemetry_rx)
 	kill -9 $(pidof telemetry_tx)
+	kill -9 $(pidof mavlink-routerd)
+	kill -9 $(pidof mavfwd)
 	;;
     *)
 	echo "Usage: $0 {start|stop}"
