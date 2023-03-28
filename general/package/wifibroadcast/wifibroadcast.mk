@@ -25,17 +25,8 @@ define WIFIBROADCAST_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
 	cp ../general/package/wifibroadcast/files/wfb.conf $(TARGET_DIR)/etc
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	cp ../general/package/wifibroadcast/files/S98wfb $(TARGET_DIR)/etc/init.d
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	cp ../general/package/wifibroadcast/files/telemetry $(TARGET_DIR)/usr/bin
-
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	cp ../general/package/wifibroadcast/files/tweaksys $(TARGET_DIR)/usr/bin
-
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
-	cp ../general/package/wifibroadcast/files/telemetry.conf $(TARGET_DIR)/etc
+	cp ../general/package/wifibroadcast/files/wifibroadcast $(TARGET_DIR)/usr/bin
 endef
 
 $(eval $(generic-package))
