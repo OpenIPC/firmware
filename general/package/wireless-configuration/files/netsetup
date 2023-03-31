@@ -18,7 +18,7 @@ fi
 
 if [ $1 = "startup" ]; then
 	/etc/wireless/netadapter $1
-	ifconfig eth0 192.168.2.10
+	ifconfig wlan0 192.168.1.10
 fi
 
 if [ $1 = "shutdown" ]; then
