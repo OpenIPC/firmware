@@ -209,6 +209,14 @@ jobs:
             release: fpv
           - platform: gk7205v300
             release: fpv
+          - platform: hi3516ev200
+            release: lte
+          - platform: hi3516ev300
+            release: lte
+          - platform: gk7205v200
+            release: lte
+          - platform: gk7205v300
+            release: lte
 
           # Original SDK test
           - platform: gk7205v200
@@ -478,7 +486,7 @@ jobs:
             esac
 
             case ${{ matrix.release }} in
-              lite|fpv)
+              lite|fpv|lte)
                 check_exceeded uImage ${MAX_KERNEL_SIZE}
                 check_exceeded rootfs.squashfs ${MAX_ROOTFS_SIZE}
                 ;;
