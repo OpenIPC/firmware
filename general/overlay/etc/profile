@@ -30,8 +30,6 @@ export EDITOR='/bin/vi'
 
 [ -x /usr/bin/arp ] || arp() { cat /proc/net/arp; }
 
-cli() { yaml-cli -i /etc/majestic.yaml $@; }
-
 differ() { diff -rN "/rom$1" "$1"; }
 
 [ -x /tmp/ipctool ] || ipctool() { [ -x /tmp/ipctool ] && /tmp/ipctool $@ || (curl -s -L -o /tmp/ipctool https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool$ARC && \
