@@ -1,0 +1,11 @@
+#!/bin/sh
+
+cmd=`echo $0 | cut -d / -f 4`
+
+case "${cmd}" in
+  cli)
+	yaml-cli -i /etc/majestic.yaml $@;
+  ;;
+	*)
+  ;;
+esac
