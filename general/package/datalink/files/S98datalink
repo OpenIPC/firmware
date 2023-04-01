@@ -6,7 +6,7 @@
 . /etc/datalink.conf
 
 chip=$(ipcinfo -c)
-cli="yaml-cli -i /etc/majestic.yaml"
+fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
 
 case "$1" in
   start)
@@ -17,10 +17,10 @@ case "$1" in
 
 	echo "Starting FPV datalink..."
 
-	if [ ${transport} = "lte" ]; then
+	if [ ${fw} = "lte" ]; then
 	  if [ ${usb_modem} = "true" ]; then
 		echo "Starting lte modem configuration..."
-		echo "Running usb_modswitch or other shit here..."
+		echo "ToDo: Running usb_modeswitch or other shit here..."
 	  fi
 	  # for the future
 	  #cli -s .outgoing.url1 udp://${gs_ipaddr}:${gs_port}

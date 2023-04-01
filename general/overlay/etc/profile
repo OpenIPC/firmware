@@ -3,7 +3,6 @@ export HOME=$(grep -e "^${USER:-root}:" /etc/passwd | cut -d ":" -f 6)
 export HOME=${HOME:-/root}
 export TZ=$(cat /etc/TZ)
 export SENSOR=$(fw_printenv -n sensor)
-export ARCH=$(uname -m)
 
 echo_c() { echo -ne "\e[1;$1m$2\e[0m"; }
 
@@ -20,20 +19,11 @@ if [ "$PS1" ]; then
 	fi
 fi
 
-if echo $ARCH | grep -q mips; then
-	export ARC='-mips32'
-else
-	export ARC=''
-fi
-
 export EDITOR='/bin/vi'
 
 [ -x /usr/bin/arp ] || arp() { cat /proc/net/arp; }
 
 differ() { diff -rN "/rom$1" "$1"; }
-
-[ -x /tmp/ipctool ] || ipctool() { [ -x /tmp/ipctool ] && /tmp/ipctool $@ || (curl -s -L -o /tmp/ipctool https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool$ARC && \
-	chmod +x /tmp/ipctool && echo_c 35 "The ipctool installed as remote GitHub plugin\n\n" && /tmp/ipctool $@); }
 
 majestic_changes() { diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml; }
 

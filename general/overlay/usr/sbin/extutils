@@ -1,10 +1,26 @@
 #!/bin/sh
 
-cmd=`echo $0 | cut -d / -f 4`
+CMD=$(echo $0 | cut -d / -f 4)
+ARCH=$(uname -m)
 
-case "${cmd}" in
+if echo $ARCH | grep -q mips; then
+    ARC='-mips32'
+else
+    ARC=''
+fi
+
+case "${CMD}" in
   cli)
-	yaml-cli -i /etc/majestic.yaml $@;
+	yaml-cli -i /etc/majestic.yaml $@
+  ;;
+  ipctool)
+	IPCTOOL=/tmp/ipctool
+	if [ ! -x $IPCTOOL ]; then
+		curl -s -L -o $IPCTOOL https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool$ARC
+		chmod +x $IPCTOOL
+		echo "The ipctool installed as remote GitHub plugin"
+	fi
+	$IPCTOOL $@
   ;;
 	*)
   ;;

@@ -1,11 +1,11 @@
 ################################################################################
 #
-# mavfwd | updated 2022.11.21
+# mavfwd
 #
 ################################################################################
 
-MAVFWD_VERSION = $(shell git ls-remote https://github.com/widgetii/mavfwd/ master | awk '{ print $$1 }')
-MAVFWD_SITE = $(call github,widgetii,mavfwd,$(MAVFWD_VERSION))
+MAVFWD_VERSION = $(shell git ls-remote https://github.com/OpenIPC/mavfwd/ master | awk '{ print $$1 }')
+MAVFWD_SITE = $(call github,OpenIPC,mavfwd,$(MAVFWD_VERSION))
 MAVFWD_LICENSE = MIT
 MAVFWD_LICENSE_FILES = LICENSE
 

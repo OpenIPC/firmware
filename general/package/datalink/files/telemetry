@@ -8,6 +8,8 @@
 
 keydir="/etc"
 
+fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
+
 start_telemetry() {
   if [ ! -f /usr/bin/telemetry_rx -a ! -f /usr/bin/telemetry_tx ]; then
 	  ln -s /usr/bin/wfb_rx /usr/bin/telemetry_rx ; chmod +x /usr/bin/telemetry_rx
@@ -24,12 +26,12 @@ case "$1" in
   start)
 	echo "Loading MAVLink telemetry service..."
 
-	if [ ${router} -eq 1 ] || [ ${transport} = "lte" ]; then
+	if [ ${router} -eq 1 ] || [ ${fw} = "lte" ]; then
 	  /usr/bin/mavlink-routerd &
 	else
 	  mavfwd --master ${serial} --baudrate ${baud} --out 127.0.0.1:${port_tx} --in 127.0.0.1:${port_rx} &
 	fi
-	if [ ${transport} = "wfb" ]; then
+	if [ ${fw} = "fpv" ]; then
 		start_telemetry
 	fi
 	echo "Done."

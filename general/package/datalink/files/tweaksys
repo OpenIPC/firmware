@@ -6,8 +6,6 @@ vendor=$(ipcinfo -v)
 sensor=$(ipcinfo -s)
 prefix=${family}
 
-cli="yaml-cli -i /etc/majestic.yaml"
-
 all_other() {
   if [ ${vendor} = "hisilicon" ]; then
 	prefix="open"
@@ -30,25 +28,25 @@ all_other() {
   # disable mavlink routerd autostart
   sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
   # majestic basic settings
-  ${cli} -s .isp.slowShutter disabled
-  ${cli} -s .isp.drc 350
+  cli -s .isp.slowShutter disabled
+  cli -s .isp.drc 350
   # enable digital image stabilization 
-  # ${cli} -s .isp.dis true
-  ${cli} -s .image.contrast 50
-  ${cli} -s .image.luminance 50
-  ${cli} -s .video0.bitrate 4096
-  ${cli} -s .video0.codec h264
-  ${cli} -s .video0.rcMode cbr
-  ${cli} -s .video0.gopSize 0.2
-  ${cli} -s .hls.enabled false
-  ${cli} -s .netip.enabled false
-  ${cli} -s .jpeg.enabled false
+  # cli -s .isp.dis true
+  cli -s .image.contrast 50
+  cli -s .image.luminance 50
+  cli -s .video0.bitrate 4096
+  cli -s .video0.codec h264
+  cli -s .video0.rcMode cbr
+  cli -s .video0.gopSize 0.2
+  cli -s .hls.enabled false
+  cli -s .netip.enabled false
+  cli -s .jpeg.enabled false
   # lowdelay support only imx307 sensor
   if [ ${sensor} = "imx307" ]; then
-	  ${cli} -s .video0.size 1280x720
-	  # ${cli} -s .video0.fps 30
-	  ${cli} -s .isp.lowDelay true
-	  # ${cli} -s .video0.sliceUnits 4
+	  cli -s .video0.size 1280x720
+	  # cli -s .video0.fps 30
+	  cli -s .isp.lowDelay true
+	  # cli -s .video0.sliceUnits 4
   fi
 # tune socket buffer
 cat >> /etc/sysctl.conf << EOF
@@ -73,7 +71,7 @@ case "$1" in
 	# set custom config
 	if [ ${chip} = "gk7205v200" ] && [ ${sensor} = "imx307" ]; then
 	  echo "switch to custom sensor config"
-	  # ${cli} -s .isp.sensorConfig /etc/sensors/60fps/720p_imx307_i2c_2l.ini
+	  # cli -s .isp.sensorConfig /etc/sensors/60fps/720p_imx307_i2c_2l.ini
 	fi
 
 	# fix osmem in bootargs
@@ -96,7 +94,7 @@ case "$1" in
 
 	# set sensor config for smtsec board
 	if [ ${chip} = "gk7205v300" ] && [ ${sensor} = "imx307" ]; then
-		${cli} -s .isp.sensorConfig /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
+		cli -s .isp.sensorConfig /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
 	fi
 
 	all_other
