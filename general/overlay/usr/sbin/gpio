@@ -1,0 +1,68 @@
+#!/bin/sh
+
+help() {
+    echo "gpio <set|clear|toggle> <pin>"
+    echo "gpio <unexport|release> <pin>"
+    echo "gpio read <pin>"
+}
+
+exp() {
+    if [ ! -d /sys/class/gpio/gpio$1 ]; then
+        echo $1 > /sys/class/gpio/export
+        echo out > /sys/class/gpio/gpio$1/direction
+    elif [ $(cat /sys/class/gpio/gpio$1/direction) = "in" ]; then
+        echo Pin $1 is currently configured as input. Be careful!
+        exit 0
+    fi
+}
+
+write(){
+    echo $1 > /sys/class/gpio/gpio$2/value
+}
+
+read() {
+    echo $(cat /sys/class/gpio/gpio$1/value)
+}
+
+unexport() {
+    if [ -d /sys/class/gpio/gpio$1 ]; then
+        echo $1 > /sys/class/gpio/unexport
+    fi
+}
+
+if [ -n $1 ] && [ -n $2 ] && [ $2 -eq $2 ]; then
+        case $1 in
+            set)
+                exp $2
+                write 1 $2
+                ;;
+
+            clear)
+                exp $2
+                write 0 $2
+                ;;
+
+            toggle)
+                exp $2
+                if [ read -eq 0 ]; then
+                    write 1 $2
+                else
+                    write 0 $2
+                fi
+                ;;
+
+            unexport|release)
+                unexport $2
+                ;;
+
+            read)
+                echo $(read $2)
+                ;;
+
+            *)  
+                help
+                ;;
+        esac
+else
+    help
+fi
