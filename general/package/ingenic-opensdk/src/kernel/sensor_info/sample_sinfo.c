@@ -113,7 +113,6 @@ SENSOR_INFO_T g_sinfo[] =
 	{"sc500ai"},
 	{"jxq03"},
 	{"jxq03p"},
-	{"sc3338"},
 
 };
 int main(int argc,char **argv)
