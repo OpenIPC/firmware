@@ -12,8 +12,7 @@ help() {
 
 setRed() {
     if [ -n "$GPIO_RED" ]; then
-        [ $1 -eq 1 ] && gpio set "$GPIO_RED"
-        [ $1 -eq 0 ] && gpio clear "$GPIO_RED"
+        [ $1 -eq 1 ] && gpio set "$GPIO_RED" || gpio clear "$GPIO_RED"
     else
         echo "Red GPIO undefined"
     fi
@@ -21,8 +20,7 @@ setRed() {
 
 setGreen() {
     if [ -n "$GPIO_GREEN" ]; then
-        [ $1 -eq 1 ] && gpio set "$GPIO_GREEN"
-        [ $1 -eq 0 ] && gpio clear "$GPIO_GREEN"
+        [ $1 -eq 1 ] && gpio set "$GPIO_GREEN" || gpio clear "$GPIO_GREEN"
     else
         echo "Green GPIO undefined"
     fi
@@ -30,8 +28,7 @@ setGreen() {
 
 setBlue() {
     if [ -n "$GPIO_BLUE" ]; then
-        [ $1 -eq 1 ] && gpio set "$GPIO_BLUE"
-        [ $1 -eq 0 ] && gpio clear "$GPIO_BLUE"
+        [ $1 -eq 1 ] && gpio set "$GPIO_BLUE" || gpio clear "$GPIO_BLUE"
     else
         echo "Blue GPIO undefined"
     fi
