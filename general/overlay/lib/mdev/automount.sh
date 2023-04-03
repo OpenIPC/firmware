@@ -21,6 +21,13 @@ my_mount()
         exit 1
     fi
 
+    type=$(df -T | grep "/dev/$1" | awk '{print $2}')
+    if [ -n $type ]; then
+        mount -o remount,ro "/dev/$1"
+        fsck -a -t $type "/dev/$1"
+        mount -o remount,rw "/dev/$1"
+    fi
+
     # copy files from autoconfig folder
     [ -d "${destdir}/$1/autoconfig" ] && cp -afv ${destdir}/$1/autoconfig/* / | logger -s -p daemon.info -t autoconfig
 
