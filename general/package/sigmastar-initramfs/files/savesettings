@@ -1,9 +1,0 @@
-#!/bin/sh
-file=/mnt/mmcblk0p1/settings.tar
-
-if cat /proc/mounts | grep -q mmcblk0p1; then
-	[ -f $file ] && [ $(expr $(date +%s) - $(date +%s -r $file)) -le 1 ] && exit 0
-	tar -cf $file -C /overlay root && echo OpenIPC: Save settings to sdcard
-else
-	echo OpenIPC: Cannot save settings to sdcard
-fi
