@@ -1,0 +1,24 @@
+#!/bin/sh
+DAEMON="inotifyd"
+PIDFILE="/var/run/$DAEMON.pid"
+INOTIFYD_ARGS="savesettings /etc:w"
+
+case "$1" in
+	start)
+		printf "Starting $DAEMON: "
+		start-stop-daemon -q -S -b -m -p $PIDFILE -x $DAEMON -- $INOTIFYD_ARGS
+		[ $? = 0 ] && echo "OK" || echo "FAIL"
+		;;
+
+	stop)
+		printf "Stopping $DAEMON: "
+		start-stop-daemon -q -K -p $PIDFILE
+		[ $? = 0 ] && echo "OK" || echo "FAIL"
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+esac
+
+exit $?
