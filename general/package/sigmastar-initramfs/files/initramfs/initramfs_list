@@ -6,7 +6,6 @@ dir /sys 755 0 0
 
 file /init initramfs/init 755 0 0
 file /bin/fsck.fat initramfs/fsck.fat 755 0 0
-file /bin/savesettings initramfs/savesettings 755 0 0
 
 file /bin/busybox initramfs/busybox 755 0 0
 slink /bin/sh busybox 777 0 0
