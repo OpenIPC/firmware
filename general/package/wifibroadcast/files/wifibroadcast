@@ -11,6 +11,19 @@ chip=$(ipcinfo -c)
 
 driver=""
 
+set_mcs() {
+  mcs=$(ls -l /lib/firmware/ath9k_htc | grep "htc_9271-1.4.0.fw" | cut -d "." -f6)
+  if [ -z "${mcs}" ]; then
+	setmcs ${mcs_index}
+  fi
+  if [ ${mcs_index} -eq 1 ] || [ ${mcs_index} -eq 3 ]; then
+	  if [ ! ${mcs_index} -eq ${mcs} ]; then
+		setmcs ${mcs_index}
+		sleep 3
+	  fi
+  fi
+}
+
 # "0bda:8813" -> (8814) -> 8814au
 # "0846:9052" -> (8811) -> 8821au
 
@@ -24,18 +37,13 @@ detect_wifi_card() {
 		driver="realtek"
 		modprobe 88XXau rtw_tx_pwr_idx_override=${driver_txpower_override}
 	  ;;
-	  "0cf3:9271")
+	  "0cf3:9271" | "040d:3801")
 		driver="atheros"
+		set_mcs
 		modprobe mac80211
 		modprobe ath9k_htc
 	  ;;
-	  "148f:3070")
-		driver="ralink"
-		modprobe mac80211
-		modprobe rt2x00usb
-		modprobe rt2800usb
-	  ;;
-	esac
+	  esac
   done
 
   if [ -z "${driver}" ]; then
@@ -68,13 +76,19 @@ load_interface() {
   if [ ${driver} = "realtek" ]; then
 	  ifconfig ${wlan} up
 	  iwconfig ${wlan} mode monitor
-  elif [ ${driver} = "atheros" ] || [ ${driver} = "ralink" ]; then
+  elif [ ${driver} = "atheros" ]; then
 	  iwconfig ${wlan} mode monitor
 	  ifconfig ${wlan} up
   fi
 
   iw reg set ${region}
-  iwconfig ${wlan} channel ${channel}
+
+  if [ ! -z "${frequency}" ]; then
+	  iwconfig ${wlan} freq ${frequency}
+  else
+	  iwconfig ${wlan} channel ${channel}
+  fi
+
   iw dev ${wlan} set txpower fixed $((${txpower} * 100))
 }
 

@@ -5,11 +5,11 @@
 
 case "$1" in
   start)
-    if grep -q telemetry=true /etc/wfb.conf; then
+    if grep -q telemetry=true /etc/datalink.conf; then
       echo "Starting mavlink router daemon..."
       /usr/bin/mavlink-routerd &
     else
-      echo "Telemetry service disabled in wfb.conf..."
+      echo "Telemetry service disabled in datalink.conf..."
     fi
     ;;
   stop)
