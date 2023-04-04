@@ -173,7 +173,7 @@ SENSOR_INFO_T g_sinfo[] =
 	{"sc500ai", 0x30,  "cgu_cim", 24000000, {0xce, 0x1f}, 1, {0x3107, 0x3108}, 2, 2, NULL},
 	{"jxq03",  0x40,  "cgu_cim", 24000000, {0x05, 0x07}, 1, {0xa, 0xb}, 1, 2, NULL},
 	{"jxq03p",  0x40,  "cgu_cim", 24000000, {0x08, 0x43}, 1, {0xa, 0xb}, 1, 2, NULL},
-
+	{"sc3338", 0x30,  "cgu_cim", 24000000, {0xcc, 0x41}, 1, {0x3107, 0x3108}, 2, 2, NULL},
 };
 
 static int8_t g_sensor_id = -1;
