@@ -84,6 +84,10 @@ case ${SENSOR} in
     ISP_PARAM="isp_clk=100000000 isp_ch0_pre_dequeue_time=20 isp_ch0_pre_dequeue_interrupt_process=0 isp_memopt=1"
     SENSOR_PARAM=""
     ;;
+"sc3338")
+    ISP_PARAM="isp_clk=150000000"
+    SENSOR_PARAM=""
+    ;;
 "sc5235")
     ISP_PARAM="isp_clk=200000000"
     SENSOR_PARAM=""
