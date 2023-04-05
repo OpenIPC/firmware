@@ -19,7 +19,5 @@ fi
 # Ingenic T21
 if [ "$CONFIG" = "t21_lite_defconfig" ]; then
         gpio clear 50
-        modprobe cfg80211
-        modprobe mac80211
         modprobe 8188fu
 fi
