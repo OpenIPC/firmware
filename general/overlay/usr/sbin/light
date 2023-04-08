@@ -1,7 +1,7 @@
 #!/bin/sh
 
-GPIO_RED=78
-GPIO_GREEN=75
+GPIO_RED=
+GPIO_GREEN=
 GPIO_BLUE=
 
 help() {
@@ -14,7 +14,7 @@ setRed() {
     if [ -n "$GPIO_RED" ]; then
         [ $1 -eq 1 ] && gpio set "$GPIO_RED" || gpio clear "$GPIO_RED"
     else
-        echo "Red GPIO undefined"
+        echo "[INFO] Status Lights: Red GPIO undefined in /usr/sbin/light" > /dev/kmsg   
     fi
 }
 
@@ -22,7 +22,7 @@ setGreen() {
     if [ -n "$GPIO_GREEN" ]; then
         [ $1 -eq 1 ] && gpio set "$GPIO_GREEN" || gpio clear "$GPIO_GREEN"
     else
-        echo "Green GPIO undefined"
+        echo "[INFO] Status Lights: Green GPIO undefined in /usr/sbin/light" > /dev/kmsg   
     fi
 }
 
@@ -30,7 +30,7 @@ setBlue() {
     if [ -n "$GPIO_BLUE" ]; then
         [ $1 -eq 1 ] && gpio set "$GPIO_BLUE" || gpio clear "$GPIO_BLUE"
     else
-        echo "Blue GPIO undefined"
+        echo "[INFO] Status Lights: Blue GPIO undefined in /usr/sbin/light" > /dev/kmsg   
     fi
 }
 

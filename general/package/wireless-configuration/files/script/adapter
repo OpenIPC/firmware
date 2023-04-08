@@ -15,3 +15,9 @@ if [ "$CONFIG" = "hi3516ev300_ultimate_defconfig" ]; then
 	echo 7 > /sys/class/gpio/unexport
 	modprobe mt7601usta
 fi
+
+# Ingenic T21
+if [ "$CONFIG" = "t21_lite_defconfig" ]; then
+        gpio clear 50
+        modprobe 8188fu
+fi
