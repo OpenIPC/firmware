@@ -20,6 +20,8 @@ endef
 
 define QUIRC_OPENIPC_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 0755 -D $(@D)/qrscan $(TARGET_DIR)/usr/sbin
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/sbin
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(QUIRC_OPENIPC_PKGDIR)files/qrparse
 endef
 
 $(eval $(generic-package))
