@@ -24,9 +24,10 @@ do
 
         # 20 counts =~ 5 seconds @ 0.25 sleep intervals
         if [ $count -eq 20 ]; then
-            echo RESETTING FIRMWARE
+            echo 'RESETTING FIRMWARE'
             firstboot
         fi
     fi
-    sleep 0.25 # This interval uses 1% CPU. Less sleep = more CPU
+    # This interval uses 1% CPU. Less sleep = more CPU
+    sleep 0.25
 done
