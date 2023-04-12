@@ -8,11 +8,16 @@
 
 keydir="/etc"
 chip=$(ipcinfo -c)
+vendor=$(ipcinfo -v)
 
 driver=""
 
 set_mcs() {
-  mcs=$(ls -l /lib/firmware/ath9k_htc | grep "htc_9271-1.4.0.fw" | cut -d "." -f6)
+  if [ ${vendor} = "ingenic" ]; then
+	mcs=$(ls -l /lib/firmware | grep "htc_9271" | awk {'print $11'} | cut -d "." -f3)
+  else
+	mcs=$(ls -l /lib/firmware/ath9k_htc | grep "htc_9271-1.4.0.fw" | cut -d "." -f6)
+  fi
   if [ -z "${mcs}" ]; then
 	setmcs ${mcs_index}
   fi

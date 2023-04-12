@@ -6,12 +6,10 @@ vendor=$(ipcinfo -v)
 sensor=$(ipcinfo -s)
 prefix=${family}
 
-all_other() {
+hisi_goke() {
   if [ ${vendor} = "hisilicon" ]; then
 	prefix="open"
   fi
-  # don't load f2fs module (disabled in kernel)
-  sed -i "s!f2fs!#f2fs!g" /etc/modules
   # remove unneeded modules
   sed -i "s!insmod ${prefix}_rgn.ko!#insmod ${prefix}_rgn.ko!g" /usr/bin/load_${vendor}
   sed -i "s!insmod ${prefix}_jpege.ko!#insmod ${prefix}_jpege.ko!g" /usr/bin/load_${vendor}
@@ -25,6 +23,11 @@ all_other() {
   # change fps 25 -> 30
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx307_i2c_2l_1080p.ini
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
+}
+
+all_other() {
+  # don't load f2fs module (disabled in kernel)
+  sed -i "s!f2fs!#f2fs!g" /etc/modules
   # disable mavlink routerd autostart
   sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
   # majestic basic settings
@@ -87,6 +90,7 @@ case "$1" in
 	# remove unneeded to reduce some memory
 	rm -f /etc/init.d/S60crond /etc/init.d/S49ntpd /etc/init.d/S02klogd
 
+	hisi_goke
 	all_other
 	;;
   gk7205v300 | hi3516ev300)
@@ -97,9 +101,15 @@ case "$1" in
 		cli -s .isp.sensorConfig /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
 	fi
 
+	hisi_goke
+	all_other
+	;;
+  t31l | t31n | t31x | t31zx)
+	echo "Preparing system tweaks for ${chip}..."
+
 	all_other
 	;;
 	*)
-	echo "Usage: $0 {gk7205v200|gk7205v300|hi3516ev200|hi3516ev300}"
+	echo "Usage: $0 {gk7205v200|gk7205v300|hi3516ev200|hi3516ev300|t31l|t31n|t31x|t31zx}"
 	exit 1
 esac
