@@ -24,9 +24,6 @@ define WIRELESS_CONFIGURATION_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/sbin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(WIRELESS_CONFIGURATION_PATH)/script/wireless
-
-	# Set config for wireless adapter
-	sed -i "s/CONFIG=/CONFIG=$(notdir $(DEFCONFIG))/g" $(TARGET_DIR)/etc/network/adapter
 endef
 
 $(eval $(generic-package))
