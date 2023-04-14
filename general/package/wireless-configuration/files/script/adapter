@@ -2,22 +2,21 @@
 CONFIG=
 
 # SSC338Q CamHi
-if [ "$CONFIG" = "ssc338q_sdcard_defconfig" ]; then
+if [ "$CONFIG" = "ssc338q_lite_defconfig" ] || [ "$CONFIG" = "ssc338q_sdcard_defconfig" ]; then
 	modprobe 8733bu
 fi
 
 # HI3516EV300 CamHi
 if [ "$CONFIG" = "hi3516ev300_ultimate_defconfig" ]; then
 	devmem 0x100C0080 32 0x530
-	echo 7 > /sys/class/gpio/export
-	echo out > /sys/class/gpio/gpio7/direction
-	echo 0 > /sys/class/gpio/gpio7/value
-	echo 7 > /sys/class/gpio/unexport
+	gpio clear 7
+	gpio unexport 7
 	modprobe mt7601usta
 fi
 
-# Ingenic T21
+# T21 BJS
 if [ "$CONFIG" = "t21_lite_defconfig" ]; then
-        gpio clear 50
-        modprobe 8188fu
+	gpio clear 50
+	gpio unexport 50
+	modprobe 8188fu
 fi
