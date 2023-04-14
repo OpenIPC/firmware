@@ -159,7 +159,7 @@ should_fit() {
 }
 
 rename() {
-  if grep -q ultimate_defconfig ./output/.config || grep -q fpv_defconfig ./output/.config || grep -q lte_defconfig ./output/.config || grep -q sdcard_defconfig ./output/.config; then
+  if grep -q ultimate_defconfig ./output/.config || grep -q sdcard_defconfig ./output/.config; then
     should_fit uImage $MAX_KERNEL_SIZE_ULTIMATE
     should_fit rootfs.squashfs $MAX_ROOTFS_SIZE_ULTIMATE
   else
