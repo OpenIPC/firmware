@@ -55,6 +55,7 @@ jobs:
           - rv1126
           - s3l
           - ssc335
+          - ssc338q
           - t31
           - xm510
           - xm530
@@ -245,6 +246,8 @@ jobs:
           - platform: ssc337
             release: lite
           - platform: ssc337de
+            release: lite
+          - platform: ssc338q
             release: lite
           - platform: t10
             release: lite
@@ -473,7 +476,7 @@ jobs:
           if [ -f uImage ]; then
             # TODO: doesn't fit to lite
             case ${{ matrix.platform }} in
-              hi3516cv500|hi3516dv300|hi3516av300)
+              hi3516cv500|hi3516dv300|hi3516av300|ssc338q)
                 MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
                 MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
               ;;
