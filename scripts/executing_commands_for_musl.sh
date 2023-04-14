@@ -31,3 +31,11 @@ if ! grep -q ^BR2_PACKAGE_WIFIBROADCAST=y ${BR2_CONFIG} && \
 fi
 
 rm -f ${TARGET_DIR}/usr/bin/gdbserver
+
+if grep -q fpv_defconfig ${BR2_CONFIG} || grep -q lte_defconfig ${BR2_CONFIG}; then
+  soc=$(grep defconfig ${BR2_CONFIG} | rev | cut -d "_" -f3- | cut -d "/" -f1 | rev)
+  release=$(cat ${TARGET_DIR}/usr/lib/os-release | grep BUILD_OPTION | cut -d "=" -f2)
+  for e in $(cat ${BASE_DIR}/../scripts/excludes/${soc}_${release}.list); do
+	rm -f ${TARGET_DIR}${e}
+  done
+fi

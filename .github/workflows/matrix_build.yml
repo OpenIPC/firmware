@@ -480,12 +480,6 @@ jobs:
                 MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
                 MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
               ;;
-              hi3516ev200|hi3516ev300)
-                if [[ "${{ matrix.release }}" == "fpv" ]]; then
-                  MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
-                  MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
-                fi
-              ;;
             esac
 
             case ${{ matrix.release }} in
