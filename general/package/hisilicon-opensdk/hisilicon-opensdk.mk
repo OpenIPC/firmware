@@ -33,7 +33,7 @@ endef
 
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
-	$(INSTALL) -D -m 0755 $(@D)/libraries/sensor/$(FAMILY)/sony_imx335/libsns_imx335.so $(TARGET_DIR)/usr/lib/sensors
+	$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(FAMILY)/sony_imx335/libsns_imx335.so $(TARGET_DIR)/usr/lib/sensors
 endef
 
 $(eval $(kernel-module))
