@@ -1,9 +1,0 @@
-#!/bin/sh
-file=/mnt/mmcblk0p1/settings.tar
-
-if cat /proc/mounts | grep -q mmcblk0p1 && [ -e /mnt/mmcblk0p1 ]; then
-	[ -e $file ] && time=$(expr $(date +%s) - $(date +%s -r $file));
-	if [ -z $time ] || [ $time -lt 0 ] || [ $time -ge 5 ]; then
-		tar -cf $file -C /overlay root
-	fi
-fi
