@@ -12,6 +12,9 @@ grep -q overlay /proc/filesystems || exit
 
 if ! grep -q 'root=.*nfs\|mmcblk\|ram' /proc/cmdline; then
   if grep -q ubifs /proc/cmdline; then
+    if [ ! -e /dev/ubi1_0 ] && grep -q rootfs_data /proc/mtd; then
+      mount -t sysfs sysfs /sys && ubimkvol /dev/ubi1 -N rootfs_data -m && umount /sys
+    fi
     mount -t ubifs ubi0:rootfs_data /overlay
   else
     mtdblkdev=$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd | sed 's/mtd/mtdblock/')
