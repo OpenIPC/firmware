@@ -24,6 +24,76 @@
  		jz = &jz_gpio_chips[g->port];
  		if (GPIO_AS_FUNC(g->func)) {
  			if(jz->dev_map[0] & g->pins) {
+--- a/arch/mips/xburst/soc-t10/common/platform.c
++++ b/arch/mips/xburst/soc-t10/common/platform.c
+@@ -960,3 +960,13 @@
+        return 1;
+ }
+ __setup("ispmem=", ispmem_parse);
++
++int disable_gmac = 0;
++EXPORT_SYMBOL(disable_gmac);
++
++static int __init extras_parse(char *str)
++{
++       disable_gmac = 1;
++       return 0;
++}
++__setup("nogmac", extras_parse);
+--- a/arch/mips/xburst/soc-t20/common/platform.c
++++ b/arch/mips/xburst/soc-t20/common/platform.c
+@@ -927,3 +927,13 @@
+        return 1;
+ }
+ __setup("ispmem=", ispmem_parse);
++
++int disable_gmac = 0;
++EXPORT_SYMBOL(disable_gmac);
++
++static int __init extras_parse(char *str)
++{
++       disable_gmac = 1;
++       return 0;
++}
++__setup("nogmac", extras_parse);
+--- a/arch/mips/xburst/soc-t21/common/platform.c
++++ b/arch/mips/xburst/soc-t21/common/platform.c
+@@ -935,6 +935,16 @@
+        *size = ispmem_size;
+ }
+ 
++int disable_gmac = 0;
++EXPORT_SYMBOL(disable_gmac);
++
++static int __init extras_parse(char *str)
++{
++       disable_gmac = 1;
++       return 0;
++}
++__setup("nogmac", extras_parse);
++
+ #ifndef CONFIG_PROC_FS
+ #error NOT config procfs
+ #endif
+--- a/arch/mips/xburst/soc-t30/common/platform.c
++++ b/arch/mips/xburst/soc-t30/common/platform.c
+@@ -936,6 +936,16 @@
+        *size = ispmem_size;
+ }
+ 
++int disable_gmac = 0;
++EXPORT_SYMBOL(disable_gmac);
++
++static int __init extras_parse(char *str)
++{
++       disable_gmac = 1;
++       return 0;
++}
++__setup("nogmac", extras_parse);
++
+ #ifndef CONFIG_PROC_FS
+ #error NOT config procfs
+ #endif
 --- a/arch/mips/xburst/soc-t31/common/platform.c
 +++ b/arch/mips/xburst/soc-t31/common/platform.c
 @@ -1032,6 +1032,16 @@
