@@ -80,7 +80,7 @@ fi
 
 lsmod | grep "audio" >/dev/null
 if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/audio.ko
+    insmod ${KMOD_PATH/%\//}/audio2.ko
     check_return "insmod audio"
 fi
 
