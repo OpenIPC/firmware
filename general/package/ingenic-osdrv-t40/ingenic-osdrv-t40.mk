@@ -25,6 +25,7 @@ define INGENIC_OSDRV_T40_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t40/files/sensor/params/sc8238-t40.bin
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t40/files/sensor/params/sc830ai-t40.bin
 
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.4.94/ingenic
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.4.94/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t40/files/kmod/audio.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.4.94/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t40/files/kmod/avpu.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.4.94/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t40/files/kmod/dtrng_dev.ko
