@@ -14,9 +14,9 @@ FPATH = gs
 endif
 endif
 
-$(info    $(FAMILY))
-$(info    $(RELEASE))
-$(info    $(FPATH))
+#$(info    $(FAMILY))
+#$(info    $(RELEASE))
+#$(info    $(FPATH))
 
 
 define DATALINK_INSTALL_TARGET_CMDS

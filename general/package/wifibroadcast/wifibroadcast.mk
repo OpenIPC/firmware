@@ -14,9 +14,9 @@ FPATH = gs
 endif
 endif
 
-$(info    $(FAMILY))
-$(info    $(RELEASE))
-$(info    $(FPATH))
+#$(info    $(FAMILY))
+#$(info    $(RELEASE))
+#$(info    $(FPATH))
 
 WIFIBROADCAST_DEPENDENCIES += libpcap libsodium iw
 
