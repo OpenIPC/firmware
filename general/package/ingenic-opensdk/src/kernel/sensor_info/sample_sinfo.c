@@ -114,7 +114,9 @@ SENSOR_INFO_T g_sinfo[] =
 	{"jxq03"},
 	{"jxq03p"},
 	{"sc3338"},
-
+	{"imx334"},
+	{"imx335"},
+	{"imx415"},
 };
 int main(int argc,char **argv)
 {
