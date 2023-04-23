@@ -6,6 +6,17 @@
 WIFIBROADCAST_VERSION = 23.01
 WIFIBROADCAST_SITE = $(call github,svpcom,wfb-ng,wfb-ng-$(WIFIBROADCAST_VERSION))
 WIFIBROADCAST_LICENSE = GPL-2.0
+FPATH = air
+
+ifeq ($(FAMILY),hi3536dv100)
+ifeq ($(RELEASE),fpv)
+FPATH = gs
+endif
+endif
+
+$(info    $(FAMILY))
+$(info    $(RELEASE))
+$(info    $(FPATH))
 
 WIFIBROADCAST_DEPENDENCIES += libpcap libsodium iw
 
@@ -23,10 +34,10 @@ define WIFIBROADCAST_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 0755 -D $(@D)/wfb_keygen $(TARGET_DIR)/usr/bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
-	cp ../general/package/wifibroadcast/files/wfb.conf $(TARGET_DIR)/etc
+	cp ../general/package/wifibroadcast/files/$(FPATH)/wfb.conf $(TARGET_DIR)/etc
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	cp ../general/package/wifibroadcast/files/wifibroadcast $(TARGET_DIR)/usr/bin
+	cp ../general/package/wifibroadcast/files/$(FPATH)/wifibroadcast $(TARGET_DIR)/usr/bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	cp ../general/package/wifibroadcast/files/setmcs $(TARGET_DIR)/usr/bin
