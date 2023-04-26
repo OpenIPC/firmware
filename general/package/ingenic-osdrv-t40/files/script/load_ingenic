@@ -38,22 +38,22 @@ fi
 
 case ${SENSOR} in
 "imx307")
-    AVPU_PARAM="clk_name='mpll' avpu_clk=550000000"
-    ISP_PARAM="clk_name='mpll' isp_clk=367000000 isp_memopt=2"
+    AVPU_PARAM="clk_name=mpll avpu_clk=550000000"
+    ISP_PARAM="clk_name=mpll isp_clk=367000000 isp_memopt=2"
     SENSOR_PARAM=""
     ;;
 "imx335")
-    AVPU_PARAM="clk_name='vpll' avpu_clk=654000000"
-    ISP_PARAM="clk_name='mpll' isp_clk=367000000 isp_memopt=2"
+    AVPU_PARAM="clk_name=vpll avpu_clk=654000000"
+    ISP_PARAM="clk_name=mpll isp_clk=367000000 isp_memopt=2"
     SENSOR_PARAM=""
     ;;
 "imx415")
-    AVPU_PARAM="clk_name='vpll' avpu_clk=654000000"
+    AVPU_PARAM="clk_name=vpll avpu_clk=654000000"
     ISP_PARAM="isp_clk=350000000"
     SENSOR_PARAM=""
     ;;
 *)
-    AVPU_PARAM="clk_name='vpll' avpu_clk=654000000"
+    AVPU_PARAM="clk_name=vpll avpu_clk=654000000"
     ISP_PARAM="isp_clk=350000000"
     SENSOR_PARAM=""
     break
