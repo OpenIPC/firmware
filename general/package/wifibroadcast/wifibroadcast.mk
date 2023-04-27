@@ -8,15 +8,15 @@ WIFIBROADCAST_SITE = $(call github,svpcom,wfb-ng,wfb-ng-$(WIFIBROADCAST_VERSION)
 WIFIBROADCAST_LICENSE = GPL-2.0
 FPATH = air
 
+FAMILY := $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
+
+RELEASE := $(shell grep "BR2_DEFCONFIG" $(BR2_CONFIG) | head -1 | cut -d "_" -f 3)
+
 ifeq ($(FAMILY),hi3536dv100)
 ifeq ($(RELEASE),fpv)
 FPATH = gs
 endif
 endif
-
-#$(info    $(FAMILY))
-#$(info    $(RELEASE))
-#$(info    $(FPATH))
 
 WIFIBROADCAST_DEPENDENCIES += libpcap libsodium iw
 
