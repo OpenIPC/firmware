@@ -76,14 +76,15 @@ do_update_rootfs() {
 do_wipe_overlay() {
 	echo_c 33 "\nOverlayFS"
 	echo "Erase overlay partition"
-	flash_eraseall -j "$(get_device "rootfs_data")"
+	[ $(ipcinfo -F) = "nand" ] || jffs2="-j"
+	flash_eraseall $jffs2 "$(get_device "rootfs_data")"
 }
 
 download_firmware() {
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
 	ftype=$(ipcinfo -F 2>/dev/null)
-	[ ${#ftype} -gt 4 ] && ftype=$(get_flash_type)
+	[ ${#ftype} -ge 4 ] && ftype=$(get_flash_type)
 	build="${soc}-${ftype}-${osr}"
 	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${build}.tgz"
 	echo "Download from $url"
