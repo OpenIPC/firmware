@@ -63,8 +63,9 @@ do_update_rootfs() {
 	local y=/tmp/rootfs
 	if mkdir -p "$y" && loop=$(losetup -f) && losetup "$loop" "$x" && mount "$loop" "$y"; then
 		check_soc "$(head -1 ${y}/etc/hostname | cut -d- -f2)"
-		compare_versions "$system_version" "$(get_system_version "$y")" && return 0
+		compare_versions "$system_version" "$(get_system_version "$y")" && exit_update=1
 		umount "$y" && rm -rf "$y" && losetup -d "$loop"
+		[ "$exit_update" ] && return 0
 	else
 		die "Unable to mount $y!"
 	fi
