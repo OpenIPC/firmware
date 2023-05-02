@@ -75,7 +75,7 @@ else
 	DEBIAN_FRONTEND=noninteractive apt-get update && \
 		apt-get -y install \
 		build-essential git make libncurses-dev wget curl \
-		cpio rsync bc unzip file
+		cpio rsync bc unzip file lzop
 endif
 
 

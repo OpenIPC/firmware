@@ -63,8 +63,9 @@ do_update_rootfs() {
 	local y=/tmp/rootfs
 	if mkdir -p "$y" && loop=$(losetup -f) && losetup "$loop" "$x" && mount "$loop" "$y"; then
 		check_soc "$(head -1 ${y}/etc/hostname | cut -d- -f2)"
-		compare_versions "$system_version" "$(get_system_version "$y")" && return 0
+		compare_versions "$system_version" "$(get_system_version "$y")" && exit_update=1
 		umount "$y" && rm -rf "$y" && losetup -d "$loop"
+		[ "$exit_update" ] && return 0
 	else
 		die "Unable to mount $y!"
 	fi
@@ -76,14 +77,15 @@ do_update_rootfs() {
 do_wipe_overlay() {
 	echo_c 33 "\nOverlayFS"
 	echo "Erase overlay partition"
-	flash_eraseall -j "$(get_device "rootfs_data")"
+	[ $(ipcinfo -F) = "nand" ] || jffs2="-j"
+	flash_eraseall $jffs2 "$(get_device "rootfs_data")"
 }
 
 download_firmware() {
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
 	ftype=$(ipcinfo -F 2>/dev/null)
-	[ ${#ftype} -gt 4 ] && ftype=$(get_flash_type)
+	[ ${#ftype} -ge 4 ] && ftype=$(get_flash_type)
 	build="${soc}-${ftype}-${osr}"
 	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${build}.tgz"
 	echo "Download from $url"
