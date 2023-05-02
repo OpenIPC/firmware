@@ -9,14 +9,16 @@ fi
 # HI3516EV300 CamHi
 if [ "$SOC" == "hi3516ev300" ]; then
 	devmem 0x100C0080 32 0x530
-	gpio clear 7
-	gpio unexport 7
+	echo 7 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio7/direction
+	echo 0 > /sys/class/gpio/gpio7/value
 	modprobe mt7601usta
 fi
 
 # T21 BJS
 if [ "$SOC" == "t21" ]; then
-	gpio clear 50
-	gpio unexport 50
+	echo 50 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio50/direction
+	echo 0 > /sys/class/gpio/gpio50/value
 	modprobe 8188fu
 fi
