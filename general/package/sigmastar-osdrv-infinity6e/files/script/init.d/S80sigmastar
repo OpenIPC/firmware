@@ -13,8 +13,7 @@ load_majestic() {
 		[ "$(yaml-cli -i /etc/majestic.yaml -g .watchdog.timeout)" -lt "30" ] && yaml-cli -i /etc/majestic.yaml -s .watchdog.timeout 30
 		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" >/proc/sys/kernel/core_pattern
 	fi
-	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" \
-		-- $DAEMON_ARGS
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		echo "OK"
@@ -34,7 +33,7 @@ start() {
 	fi
 	logger -s -p daemon.info -t sigmastar "Loading of kernel modules and initialization of the video system has started"
 	export TZ=$(cat /etc/TZ)
-	load_sigmastar -i
+	load_sigmastar
 	load_majestic
 }
 
