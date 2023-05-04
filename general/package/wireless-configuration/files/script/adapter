@@ -12,6 +12,7 @@ if [ "$SOC" == "hi3516ev300" ]; then
 	echo 7 > /sys/class/gpio/export
 	echo out > /sys/class/gpio/gpio7/direction
 	echo 0 > /sys/class/gpio/gpio7/value
+	echo 7 > /sys/class/gpio/unexport
 	modprobe mt7601usta
 fi
 
@@ -20,5 +21,6 @@ if [ "$SOC" == "t21" ]; then
 	echo 50 > /sys/class/gpio/export
 	echo out > /sys/class/gpio/gpio50/direction
 	echo 0 > /sys/class/gpio/gpio50/value
+	echo 50 > /sys/class/gpio/unexport
 	modprobe 8188fu
 fi

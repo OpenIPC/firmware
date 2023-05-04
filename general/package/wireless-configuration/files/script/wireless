@@ -19,14 +19,21 @@ case "$PHASE" in
 	pre-up)
 		/etc/network/adapter
 		wpa_passphrase "$WPA_SSID" "$WPA_PASS" > $WPA_TEMP
-		[ "$WPA_MODE" = "client" ] && sed -i '2i \\tscan_ssid=1' $WPA_TEMP
-		[ "$WPA_MODE" = "server" ] && sed -i '2i \\tmode=2' $WPA_TEMP
+		if [ "$WPA_MODE" = "server" ]; then
+			sed -i '2i \\tmode=2' $WPA_TEMP
+		else
+			sed -i '2i \\tscan_ssid=1' $WPA_TEMP
+		fi
 		exit 0
 		;;
 
 	post-up)
-		wpa_supplicant -B -i wlan0 -c $WPA_TEMP
-		[ "$WPA_MODE" = "server" ] && udhcpd
+		if [ "$WPA_MODE" = "server" ]; then
+			timeout 3m udhcpd -f &> /dev/null &
+			timeout 3m wpa_supplicant -i wlan0 -c $WPA_TEMP &> /dev/null &
+		else
+			wpa_supplicant -B -i wlan0 -c $WPA_TEMP
+		fi
 		exit 0
 		;;
 
