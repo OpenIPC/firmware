@@ -22,6 +22,7 @@ endif
 
 ROOT_DIR      := $(CURDIR)
 BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
+GENERAL_DIR   := $(ROOT_DIR)/general
 SCRIPTS_DIR   := $(ROOT_DIR)/scripts
 
 BR_VER        ?= 2021.02.12
@@ -112,7 +113,7 @@ OUT_DIR ?= $(ROOT_DIR)/output
 # Buildroot considers relative paths relatively to its' own root directory. So we use absolute paths
 # to avoid ambiguity
 override OUT_DIR := $(abspath $(OUT_DIR))
-BOARD_MAKE := $(MAKE) -C $(BR_DIR) BR2_EXTERNAL=$(BR_EXT_DIR) O=$(OUT_DIR)
+BOARD_MAKE := $(MAKE) -C $(BR_DIR) BR2_EXTERNAL=$(GENERAL_DIR):$(BR_EXT_DIR) O=$(OUT_DIR)
 
 define CREATE_TOOLCHAIN_PARAMS
     eval $$($(BOARD_MAKE) -s --no-print-directory VARS=GNU_TARGET_NAME printvars) \
