@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# load vendor specific drivers
+# 
+vendor=$(ipcinfo -v)
+
+case "$1" in
+  start)
+	logger -s -p daemon.info -t ${vendor} "Check MAC for ${vendor} devices..."
+	logger -s -p daemon.info -t ${vendor} "$(check_mac)"
+    echo -e '\nLoading of kernel modules...'
+    load_${vendor} -i
+    ;;
+esac

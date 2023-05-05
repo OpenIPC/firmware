@@ -13,6 +13,9 @@ case "${CMD}" in
   cli)
 	yaml-cli -i /etc/majestic.yaml $@
   ;;
+  sensor_cli)
+	yaml-cli -i /etc/sensor/$(fw_printenv -n sensor).yaml $@
+  ;;
   ipctool)
 	IPCTOOL=/tmp/ipctool
 	if [ ! -x $IPCTOOL ]; then
@@ -21,6 +24,14 @@ case "${CMD}" in
 		echo "The ipctool installed as remote GitHub plugin"
 	fi
 	$IPCTOOL $@
+  ;;
+  check_mac)
+	if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
+		status="The eth0 interface has a lousy MAC, please change it.."
+	else
+		status="The eth0 interface has a correct MAC - $(fw_printenv -n ethaddr)"
+	fi
+    echo ${status}
   ;;
 	*)
   ;;
