@@ -52,6 +52,7 @@ define INGENIC_OSDRV_T31_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t31/files/kmod/sensor_sc5235_t31.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t31/files/script/load*
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t31/files/script/ircut_demo
 
 	# $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors/params

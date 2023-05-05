@@ -10,9 +10,6 @@ NOVATEK_OSDRV_NT9856X_LICENSE = MIT
 NOVATEK_OSDRV_NT9856X_LICENSE_FILES = LICENSE
 
 define NOVATEK_OSDRV_NT9856X_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/script/S95novatek
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/sensor/config/sen_sc*.cfg
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_NOVATEK_PATH)/package/novatek-osdrv-nt9856x/files/sensor/*.yaml
