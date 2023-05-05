@@ -11,10 +11,10 @@ DF_SDWAN_EDGE_LICENSE 				= PROPRIETARY
 DF_SDWAN_EDGE_LICENSE_FILES		= LICENSE
 
 # - Detect CPU family
-FAMILY := $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
+DF_SDWAN_EDGE_FAMILY := $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
 
 # - File name on server
-DF_SDWAN_EDGE_SOURCE := df_sdwan_edge.$(FAMILY).tar.xz
+DF_SDWAN_EDGE_SOURCE := df_sdwan_edge.$(DF_SDWAN_EDGE_FAMILY).tar.xz
 
 # - Install commands
 define DF_SDWAN_EDGE_INSTALL_TARGET_CMDS

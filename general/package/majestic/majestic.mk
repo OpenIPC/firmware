@@ -9,25 +9,24 @@ MAJESTIC_SITE = https://openipc.s3-eu-west-1.amazonaws.com
 MAJESTIC_LICENSE = PROPRIETARY
 MAJESTIC_LICENSE_FILES = LICENSE
 
-FAMILY := $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
+MAJESTIC_FAMILY := $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
+MAJESTIC_RELEASE := $(shell grep "BR2_DEFCONFIG" $(BR2_CONFIG) | head -1 | cut -d "_" -f 3)
 
-RELEASE := $(shell grep "BR2_DEFCONFIG" $(BR2_CONFIG) | head -1 | cut -d "_" -f 3)
-
-ifeq ($(RELEASE),ultimate)
+ifeq ($(MAJESTIC_RELEASE),ultimate)
 	# we don't have Majestic binary Ultimate distributions for these
 	# platforms so use Lite
-	ifeq ($(FAMILY),hi3516av100)
-		RELEASE := lite
-	else ifeq ($(FAMILY),hi3519v101)
-		RELEASE := lite
+	ifeq ($(MAJESTIC_FAMILY),hi3516av100)
+		MAJESTIC_RELEASE := lite
+	else ifeq ($(MAJESTIC_FAMILY),hi3519v101)
+		MAJESTIC_RELEASE := lite
 	endif
 endif
 
-ifeq ($(RELEASE),lte)
-	RELEASE := fpv
+ifeq ($(MAJESTIC_RELEASE),lte)
+	MAJESTIC_RELEASE := fpv
 endif
 
-MAJESTIC_SOURCE := majestic.$(FAMILY).$(RELEASE).master.tar.bz2
+MAJESTIC_SOURCE := majestic.$(MAJESTIC_FAMILY).$(MAJESTIC_RELEASE).master.tar.bz2
 
 MAJESTIC_DEPENDENCIES = \
 	libevent-openipc \

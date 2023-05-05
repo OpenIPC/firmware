@@ -35,10 +35,10 @@ function apply_patches() {
 DST=$1
 shift
 
-if [ -f $DST/.fullhan-patched ]; then
+if [ -f $DST/.vendor-patched ]; then
     log Patched already
     exit
 fi
 
 apply_patches $@
-touch $DST/.fullhan-patched
+touch $DST/.vendor-patched

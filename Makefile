@@ -9,8 +9,7 @@ else
 			FULL_PATH := $(error For provided '$(BOARD)' multiple options found: $(FULL_PATH))
 		endif
 
-		PLATFORM := $(shell echo $(FULL_PATH) | cut -d '/' -f 1 | cut -d '-' -f 4 )
-
+		PLATFORM := $(shell echo $(FULL_PATH) | cut -d '/' -f 1 | cut -d '-' -f 4)
 		FAMILY := $(shell grep "/board/" $(FULL_PATH) | head -1 | cut -d "/" -f 3)
 		ifeq ($(FAMILY),hi3516cv500)
 			BR_VER ?= 2022.08
@@ -113,7 +112,7 @@ OUT_DIR ?= $(ROOT_DIR)/output
 # Buildroot considers relative paths relatively to its' own root directory. So we use absolute paths
 # to avoid ambiguity
 override OUT_DIR := $(abspath $(OUT_DIR))
-BOARD_MAKE := $(MAKE) -C $(BR_DIR) BR2_EXTERNAL=$(GENERAL_DIR):$(BR_EXT_DIR) O=$(OUT_DIR)
+BOARD_MAKE := $(MAKE) -C $(BR_DIR) BR2_EXTERNAL=$(GENERAL_DIR) O=$(OUT_DIR)
 
 define CREATE_TOOLCHAIN_PARAMS
     eval $$($(BOARD_MAKE) -s --no-print-directory VARS=GNU_TARGET_NAME printvars) \
