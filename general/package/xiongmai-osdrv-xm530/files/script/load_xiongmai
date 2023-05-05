@@ -108,6 +108,23 @@ remove_ko()
 	remove_sns
 }
 
+make_symlink() {
+if [ ! -f /usr/lib/libsns.so ]; then
+	SNS_TYPE=$(ipcinfo --short-sensor)
+	logger -s -p daemon.info -t xiongmai "You sensor is $SNS_TYPE and symlink to libsns.so not found"
+	case $SNS_TYPE in
+	imx335|sc335e)
+		logger -s -p daemon.info -t xiongmai "Create new symlink to libsns_X50_XM530.so"
+		ln -sf /usr/lib/sensors/libsns_X50_XM530.so /usr/lib/libsns.so
+		;;
+	*)
+		logger -s -p daemon.info -t xiongmai "Create new symlink to libsns_X123_XM530.so"
+		ln -sf /usr/lib/sensors/libsns_X123_XM530.so /usr/lib/libsns.so
+		;;
+	esac
+fi
+}
+
 load_usage()
 {
 	echo "Usage:  ./loadxm530 [-option]"
@@ -123,6 +140,7 @@ if [ "$1" = "-i" ]
 then
 cd /lib/modules/3.10.103\+/xiongmai
 insert_ko
+make_symlink
 fi
 
 if [ "$1" = "-r" ]
@@ -141,4 +159,3 @@ then
 remove_ko
 insert_ko
 fi
-

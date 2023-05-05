@@ -10,9 +10,6 @@ INGENIC_OSDRV_T30_LICENSE = MIT
 INGENIC_OSDRV_T30_LICENSE_FILES = LICENSE
 
 define INGENIC_OSDRV_T30_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/script/S95ingenic
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensor
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/sensor/*.yaml
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-osdrv-t30/files/sensor/params/bg0806.bin

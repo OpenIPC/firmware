@@ -1,9 +1,19 @@
 #!/bin/sh
 
-KMOD_PATH=/lib/modules/3.10.14/ingenic
+KMOD_PATH=/lib/modules/$(uname -r)/ingenic
+vendor=$(ipcinfo -v)
+
+if [ ! -f /usr/sbin/sensor_cli ]; then
+    ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
+fi
+
 SOC=$(ipcinfo --chip-name || fw_printenv -n soc)
 
 echo 1 >/proc/sys/vm/overcommit_memory
+
+log_vendor() {
+  logger -s -p daemon.info -t ${vendor} "$1"
+}
 
 check_return() {
     if [ $? -ne 0 ]; then
@@ -18,18 +28,23 @@ if [ $? -ne 0 ]; then
     insmod ${KMOD_PATH/%\//}/sinfo.ko
     check_return "insmod sinfo"
 fi
-echo 1 >/proc/jz/sinfo/info
-check_return "start sinfo"
 
 if fw_printenv -n sensor >/dev/null; then
     export SENSOR=$(fw_printenv -n sensor)
-    logger -s -p daemon.info -t ingenic "Get data from environment and set SENSOR as ${SENSOR}"
+    log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
 else
-    SENSOR_INFO=$(cat /proc/jz/sinfo/info)
-    check_return "get sensor type"
-    SENSOR=${SENSOR_INFO#*:}
-    logger -s -p daemon.info -t ingenic "Get data from sinfo and set SENSOR as ${SENSOR}"
-    fw_setenv sensor $SENSOR && logger -s -p daemon.info -t ingenic "Write detected ${SENSOR} to U-Boot ENV"
+	echo 1 >/proc/jz/sinfo/info
+	check_return "start sinfo"
+	SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+	check_return "get sensor type"
+	SENSOR=${SENSOR_INFO#*:}
+    if [ "sensor not found" = "$SENSOR" ]; then
+        unset SENSOR
+        fw_setenv sensor
+    else
+        log_vendor "Get data from sinfo and set SENSOR as ${SENSOR}"
+        fw_setenv sensor $SENSOR && log_vendor "Write detected ${SENSOR} to U-Boot ENV"
+    fi
 fi
 
 case ${SENSOR} in

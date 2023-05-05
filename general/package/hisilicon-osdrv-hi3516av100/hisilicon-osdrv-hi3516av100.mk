@@ -10,9 +10,6 @@ HISILICON_OSDRV_HI3516AV100_LICENSE = MIT
 HISILICON_OSDRV_HI3516AV100_LICENSE_FILES = LICENSE
 
 define HISILICON_OSDRV_HI3516AV100_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516av100/files/script/S95hisilicon
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516av100/files/sensor/config/*.ini
 

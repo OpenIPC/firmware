@@ -10,9 +10,6 @@ SIGMASTAR_OSDRV_MSC313E_LICENSE = MIT
 SIGMASTAR_OSDRV_MSC313E_LICENSE_FILES = LICENSE
 
 define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-msc313e/files/script/S95sigmastar
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iqfile
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-msc313e/files/sensor/iqfile/*.xml
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-msc313e/files/sensor/iqfile/f22*.mz

@@ -10,9 +10,6 @@ SIGMASTAR_OSDRV_SSC335_LICENSE = MIT
 SIGMASTAR_OSDRV_SSC335_LICENSE_FILES = LICENSE
 
 define SIGMASTAR_OSDRV_SSC335_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/script/S95sigmastar
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iqfile
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/sensor/iqfile/filter.txt
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(BR2_EXTERNAL_SIGMASTAR_PATH)/package/sigmastar-osdrv-ssc335/files/sensor/iqfile/imx307_iqfile.bin
