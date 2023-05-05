@@ -10,9 +10,6 @@ GRAINMEDIA_OSDRV_GM8136_LICENSE = MIT
 GRAINMEDIA_OSDRV_GM8136_LICENSE_FILES = LICENSE
 
 define GRAINMEDIA_OSDRV_GM8136_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/grainmedia-osdrv-gm8136/files/script/S95grainmedia
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_GRAINMEDIA_PATH)/package/grainmedia-osdrv-gm8136/files/sensor/config/*
 

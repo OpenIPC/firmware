@@ -18,9 +18,6 @@ else ifeq ($(CHIP),gk7102s)
 endif
 
 define GOKE_OSDRV_GK710X_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/script/S95goke
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/sensor/config/*.bin
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/sensor/config/sc1135.bin
@@ -34,7 +31,7 @@ define GOKE_OSDRV_GK710X_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.4.43-Goke/goke $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/sensor/*.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/script/load_*
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/script/load*
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_GOKE_PATH)/package/goke-osdrv-gk710x/files/script/ircut_demo
 
 	# $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors

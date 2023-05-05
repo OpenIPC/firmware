@@ -14,9 +14,6 @@ define HISILICON_OSDRV_HI3516CV100_BUILD_CMDS
 endef
 
 define HISILICON_OSDRV_HI3516CV100_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/script/S95hisilicon
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/sensor/config/*.ini
 
@@ -63,7 +60,7 @@ define HISILICON_OSDRV_HI3516CV100_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.0.8/hisilicon $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/kmod/wdt.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/script/load_hisilicon
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/script/load*
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(BR2_EXTERNAL_HISILICON_PATH)/package/hisilicon-osdrv-hi3516cv100/files/script/ircut_demo
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
