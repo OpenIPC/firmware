@@ -27,11 +27,8 @@ case "${CMD}" in
   ;;
   check_mac)
 	if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
-		status="The eth0 interface has a lousy MAC, please change it.."
-	else
-		status="The eth0 interface has a correct MAC - $(fw_printenv -n ethaddr)"
+		echo "Warning. Wired network interface has default MAC address, please change it."
 	fi
-    echo ${status}
   ;;
 	*)
   ;;
