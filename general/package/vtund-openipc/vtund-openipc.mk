@@ -18,8 +18,8 @@ VTUND_OPENIPC_CONF_ENV = CFLAGS="$(TARGET_CFLAGS) -std=gnu89"
 
 define VTUND_OPENIPC_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/sbin
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(TOPDIR)/../general/package/vtund-openipc/files/tapip
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(TOPDIR)/../general/package/vtund-openipc/files/tunnel
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(VTUND_OPENIPC_PKGDIR)/files/tapip
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(VTUND_OPENIPC_PKGDIR)/files/tunnel
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(@D)/vtund
 endef
 

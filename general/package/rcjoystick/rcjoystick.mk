@@ -7,7 +7,7 @@
 RCJOYSTICK_LICENSE = GPL-2.0
 
 define RCJOYSTICK_EXTRACT_CMDS
-	cp -avr ../general/package/rcjoystick/src/* $(@D)/
+	cp -avr $(RCJOYSTICK_PKGDIR)/src/* $(@D)/
 endef
 
 RCJOYSTICK_MAKE_OPTS = \
@@ -18,7 +18,7 @@ define RCJOYSTICK_BUILD_CMDS
 endef
 
 define RCJOYSTICK_INSTALL_TARGET_CMDS
-	install -m 0755 -D $(@D)/rcjoystick $(TARGET_DIR)/usr/bin/rcjoystick
+	$(INSTALL) -m 0755 -D $(@D)/rcjoystick $(TARGET_DIR)/usr/bin/rcjoystick
 endef
 
 $(eval $(generic-package))

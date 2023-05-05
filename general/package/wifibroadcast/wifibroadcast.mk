@@ -34,18 +34,18 @@ define WIFIBROADCAST_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 0755 -D $(@D)/wfb_keygen $(TARGET_DIR)/usr/bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
-	cp ../general/package/wifibroadcast/files/$(FPATH)/wfb.conf $(TARGET_DIR)/etc
+	cp $(WIFIBROADCAST_PKGDIR)/files/$(FPATH)/wfb.conf $(TARGET_DIR)/etc
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	cp ../general/package/wifibroadcast/files/$(FPATH)/wifibroadcast $(TARGET_DIR)/usr/bin
+	cp $(WIFIBROADCAST_PKGDIR)/files/$(FPATH)/wifibroadcast $(TARGET_DIR)/usr/bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	cp ../general/package/wifibroadcast/files/setmcs $(TARGET_DIR)/usr/bin
+	cp $(WIFIBROADCAST_PKGDIR)/files/setmcs $(TARGET_DIR)/usr/bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/firmware/ath9k_htc
-	cp ../general/package/wifibroadcast/files/htc_9271.fw.1 $(TARGET_DIR)/lib/firmware/ath9k_htc
+	cp $(WIFIBROADCAST_PKGDIR)/files/htc_9271.fw.1 $(TARGET_DIR)/lib/firmware/ath9k_htc
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/firmware/ath9k_htc
-	cp ../general/package/wifibroadcast/files/htc_9271.fw.3 $(TARGET_DIR)/lib/firmware/ath9k_htc
+	cp $(WIFIBROADCAST_PKGDIR)/files/htc_9271.fw.3 $(TARGET_DIR)/lib/firmware/ath9k_htc
 endef
 
 $(eval $(generic-package))
