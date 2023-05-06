@@ -11,7 +11,7 @@ FAMILY = $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
 
 
 define INGENIC_OPENSDK_EXTRACT_CMDS
-	cp $(BR2_EXTERNAL_INGENIC_PATH)/package/ingenic-opensdk/src/kernel/* $(@D)/
+	cp $(BR2_EXTERNAL_INGENIC_PATH)/../general/package/ingenic-opensdk/src/kernel/* $(@D)/
 endef
 
 INGENIC_OPENSDK_MODULE_MAKE_OPTS = \
