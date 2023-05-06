@@ -1,8 +1,17 @@
 #!/bin/sh
 
-KMOD_PATH=/lib/modules/4.4.94/ingenic
+KMOD_PATH=/lib/modules/$(uname -r)/ingenic
+vendor=$(ipcinfo -v)
+
+if [ ! -f /usr/sbin/sensor_cli ]; then
+	ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
+fi
 
 echo 1 >/proc/sys/vm/overcommit_memory
+
+log_vendor() {
+  logger -s -p daemon.info -t ${vendor} "$1"
+}
 
 check_return() {
     if [ $? -ne 0 ]; then
@@ -17,22 +26,22 @@ if [ $? -ne 0 ]; then
     insmod ${KMOD_PATH/%\//}/sinfo.ko
     check_return "insmod sinfo"
 fi
-echo 1 >/proc/jz/sinfo/info
-check_return "start sinfo"
 
 if fw_printenv -n sensor >/dev/null; then
     export SENSOR=$(fw_printenv -n sensor)
-    logger -s -p daemon.info -t ingenic "Get data from environment and set SENSOR as ${SENSOR}"
+    log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
 else
-    SENSOR_INFO=$(cat /proc/jz/sinfo/info)
-    check_return "get sensor type"
-    SENSOR=${SENSOR_INFO#*:}
+	echo 1 >/proc/jz/sinfo/info
+	check_return "start sinfo"
+	SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+	check_return "get sensor type"
+	SENSOR=${SENSOR_INFO#*:}
     if [ "sensor not found" = "$SENSOR" ]; then
         unset SENSOR
         fw_setenv sensor
     else
-        logger -s -p daemon.info -t ingenic "Get data from sinfo and set SENSOR as ${SENSOR}"
-        fw_setenv sensor $SENSOR && logger -s -p daemon.info -t ingenic "Write detected ${SENSOR} to U-Boot ENV"
+        log_vendor "Get data from sinfo and set SENSOR as ${SENSOR}"
+        fw_setenv sensor $SENSOR && log_vendor "Write detected ${SENSOR} to U-Boot ENV"
     fi
 fi
 
@@ -79,21 +88,20 @@ if [ $? -ne 0 ]; then
     check_return "insmod isp drv"
 fi
 
+lsmod | grep ${SENSOR} >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_t40.ko ${SENSOR_PARAM}
+    check_return "insmod sensor drv"
+fi
+
 lsmod | grep "audio" >/dev/null
 if [ $? -ne 0 ]; then
     insmod ${KMOD_PATH/%\//}/audio.ko
     check_return "insmod audio"
 fi
 
-lsmod | grep ${SENSOR} >/dev/null
-if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_t40.ko ${SENSOR_PARAM}
-    check_return "insmod sensor drv"
-fi
-#
 # Need for claim gpio
 insmod ${KMOD_PATH/%\//}/gpio.ko
 echo $(yaml-cli -i /etc/majestic.yaml -g .nightMode.irCutPin1) >/proc/jz/claim/gpio
 echo $(yaml-cli -i /etc/majestic.yaml -g .nightMode.irCutPin2) >/proc/jz/claim/gpio
 # echo $(yaml-cli -i /etc/majestic.yaml -g .nightMode.irSensorPin) >/proc/jz/claim/gpio
-#
