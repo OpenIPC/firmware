@@ -1,0 +1,5 @@
+config BR2_PACKAGE_VENDOR_PATCHER
+	bool
+	depends on BR2_LINUX_KERNEL
+	help
+	  Linux patcher for OpenIPC

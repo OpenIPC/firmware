@@ -8,7 +8,7 @@ I2C_TELEMETRY_LICENSE = MIT
 I2C_TELEMETRY_LICENSE_FILES = LICENSE
 
 define I2C_TELEMETRY_EXTRACT_CMDS
-	cp -av ../general/package/i2c-telemetry/src/* $(@D)/
+	cp -av $(I2C_TELEMETRY_PKGDIR)/src/* $(@D)/
 endef
 
 define I2C_TELEMETRY_BUILD_CMDS

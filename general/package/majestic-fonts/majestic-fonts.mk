@@ -9,7 +9,7 @@ MAJESTIC_FONTS_LICENSE = MIT
 MAJESTIC_FONTS_LICENSE_FILES = LICENSE
 
 define MAJESTIC_FONTS_EXTRACT_CMDS
-	cp ../general/package/majestic-fonts/files/* $(@D)/
+	cp $(MAJESTIC_FONTS_PKGDIR)/files/* $(@D)/
 endef
 
 define MAJESTIC_FONTS_INSTALL_TARGET_CMDS

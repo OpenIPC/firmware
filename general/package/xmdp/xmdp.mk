@@ -7,7 +7,7 @@
 XMDP_LICENSE = Public Domain
 
 define XMDP_EXTRACT_CMDS
-	cp -avr ../general/package/xmdp/src/* $(@D)/
+	cp -avr $(XMDP_PKGDIR)/src/* $(@D)/
 endef
 
 XMDP_MAKE_OPTS = \

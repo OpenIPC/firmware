@@ -11,8 +11,6 @@ MINI_GIT_SUBMODULES = YES
 MINI_LICENSE = GPL-3.0
 MINI_LICENSE_FILES = LICENSE
 
-FAMILY := $(shell grep "/board/" $(BR2_CONFIG) | head -1 | cut -d "/" -f 3)
-
 ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV200),y)
 	SDK_DIR := glutinium/hisi-osdrv2
 else ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV300),y)
