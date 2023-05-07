@@ -14,8 +14,7 @@ start() {
 	printf 'Starting %s: ' "$DAEMON"
 	[ -f /usr/sbin/$DAEMON ] || echo -en "DISABLED, "
 	# shellcheck disable=SC2086 # we need the word splitting
-	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" \
-		-- $SNMPD_ARGS
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" -- $SNMPD_ARGS
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		echo "OK"
@@ -47,10 +46,9 @@ restart() {
 
 case "$1" in
 	start|stop|restart)
-		"$1";;
+		"$1" ;;
 	reload)
-		# Restart, since there is no true "reload" feature.
-		restart;;
+		restart ;;
 	*)
 		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1

@@ -4,32 +4,32 @@ CMD=$(echo $0 | cut -d / -f 4)
 ARCH=$(uname -m)
 
 if echo $ARCH | grep -q mips; then
-    ARC='-mips32'
+	ARC='-mips32'
 else
-    ARC=''
+	ARC=''
 fi
 
 case "${CMD}" in
-  cli)
-	yaml-cli -i /etc/majestic.yaml $@
-  ;;
-  sensor_cli)
-	yaml-cli -i /etc/sensor/$(fw_printenv -n sensor).yaml $@
-  ;;
-  ipctool)
-	IPCTOOL=/tmp/ipctool
-	if [ ! -x $IPCTOOL ]; then
-		curl -s -L -o $IPCTOOL https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool$ARC
-		chmod +x $IPCTOOL
-		echo "The ipctool installed as remote GitHub plugin"
-	fi
-	$IPCTOOL $@
-  ;;
-  check_mac)
-	if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
-		XMMAC="$(ipcinfo --xm-mac)" && [ -n "${XMMAC}" ] && [ ! "Nothing found." = "${XMMAC}" ] && fw_setenv ethaddr ${XMMAC} && reboot -f || echo "Warning. Wired network interface has default MAC address, please change it."
-	fi
-  ;;
+	cli)
+		yaml-cli -i /etc/majestic.yaml $@
+		;;
+	sensor_cli)
+		yaml-cli -i /etc/sensor/$(fw_printenv -n sensor).yaml $@
+		;;
+	ipctool)
+		IPCTOOL=/tmp/ipctool
+		if [ ! -x $IPCTOOL ]; then
+			curl -s -L -o $IPCTOOL https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool$ARC
+			chmod +x $IPCTOOL
+			echo "The ipctool installed as remote GitHub plugin"
+		fi
+		$IPCTOOL $@
+		;;
+	check_mac)
+		if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
+			XMMAC="$(ipcinfo --xm-mac)" && [ -n "${XMMAC}" ] && [ ! "Nothing found." = "${XMMAC}" ] && fw_setenv ethaddr ${XMMAC} && reboot -f || echo "Warning. Wired network interface has default MAC address, please change it."
+		fi
+		;;
 	*)
-  ;;
+		;;
 esac

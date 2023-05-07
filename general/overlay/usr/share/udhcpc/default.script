@@ -108,8 +108,8 @@ esac
 
 HOOK_DIR="$0.d"
 for hook in "${HOOK_DIR}/"*; do
-    [ -f "${hook}" -a -x "${hook}" ] || continue
-    "${hook}" "${@}"
+	[ -f "${hook}" -a -x "${hook}" ] || continue
+	"${hook}" "${@}"
 done
 
 exit 0
