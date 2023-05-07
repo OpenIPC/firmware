@@ -13,7 +13,7 @@ MINI_SNMPD_OPENIPC_AUTORECONF = YES
 define MINI_SNMPD_OPENIPC_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	cp ../general/package/mini-snmpd-openipc/files/S50snmpd $(TARGET_DIR)/etc/init.d
+	cp $(MINI_SNMPD_OPENIPC_PKGDIR)/files/S50snmpd $(TARGET_DIR)/etc/init.d
 
 endef
 

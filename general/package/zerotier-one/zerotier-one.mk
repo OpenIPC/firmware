@@ -27,7 +27,7 @@ define ZEROTIER_ONE_INSTALL_TARGET_CMDS
 
 	if grep -q "BR2_PACKAGE_MICROBE_WEB=y" $(BR2_CONFIG); then \
 		$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d ; \
-		cp ../general/package/zerotier-one/files/S90zerotier $(TARGET_DIR)/etc/init.d ; \
+		cp $(ZEROTIER_ONE_PKGDIR)/files/S90zerotier $(TARGET_DIR)/etc/init.d ; \
 	fi
 endef
 
