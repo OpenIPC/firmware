@@ -14,8 +14,8 @@ log_vendor() {
 }
 
 check_vb() {
-  if [ "$(fw_printenv -n totalmem)" = "64M"] && [ "$(fw_printenv -n rmem)" = "40M" ]; then
-	log_vendor "Setting osmem & rmem..."
+  if [ "$(fw_printenv -n totalmem)" = "64M" ] && [ "$(fw_printenv -n rmem)" = "40M" ]; then
+	log_vendor "Setting osmem, rmem & blkcnt..."
 	fw_setenv osmem 39M && fw_setenv rmem 25M@0x2700000 && cli -s .isp.blkCnt 1 && reboot
   fi
 }
