@@ -40,7 +40,7 @@ do_update_kernel() {
 	echo_c 33 "\nKernel"
 	echo "Update kernel from $x"
 	[ ! -f "$x" ] && die "File $x not found"
-  if [ "1" != "$skip_soc" ]; then
+	if [ "1" != "$skip_soc" ]; then
 		local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
 		# FIXME: Ingenic kernels do not include proper SoC identifiers.
 		case "$soc" in
@@ -55,7 +55,7 @@ do_update_kernel() {
 }
 
 do_update_rootfs() {
-	local	x=$1
+	local x=$1
 	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$soc"
 	echo_c 33 "\nRootFS"
 	echo "Update rootfs from $x"

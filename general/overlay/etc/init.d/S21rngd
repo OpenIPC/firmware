@@ -31,18 +31,11 @@ stop()
 }
 
 case "$1" in
-	start)
-		start
-		;;
-	stop)
-		stop
-		;;
+	start|stop)
+		"$1" ;;
 	restart|reload)
-		stop
-		start
-		;;
+		stop; start ;;
 	*)
 		echo "Usage: $0 {start|stop|restart|reload}" >&2
 		exit 1
-		;;
 esac
