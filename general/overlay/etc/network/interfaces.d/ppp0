@@ -1,4 +1,3 @@
-
 iface ppp0 inet ppp
     pre-up echo 61 > /sys/class/gpio/export
     pre-up echo out > /sys/class/gpio/gpio61/direction
