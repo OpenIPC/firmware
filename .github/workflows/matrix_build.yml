@@ -17,6 +17,10 @@ on:
        - '**.md'
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
+
 env:
   MAX_KERNEL_SIZE: 0x200000
   MAX_ROOTFS_SIZE: 0x500000
