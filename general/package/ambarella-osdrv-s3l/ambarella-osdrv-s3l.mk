@@ -24,7 +24,6 @@ define AMBARELLA_OSDRV_S3L_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(AMBARELLA_OSDRV_S3L_PKGDIR)/files/sensor/*.so
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
-
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(AMBARELLA_OSDRV_S3L_PKGDIR)/files/lib/xxx.so
 endef
 
