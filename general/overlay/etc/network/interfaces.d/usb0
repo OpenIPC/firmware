@@ -1,9 +1,0 @@
-iface usb0 inet dhcp
-    pre-up echo 9 > /sys/class/gpio/export
-    pre-up echo out > /sys/class/gpio/gpio9/direction
-    pre-up echo 0 > /sys/class/gpio/gpio9/value
-    pre-up modprobe usbserial vendor=0x2c7c product=0x6026
-    pre-up modprobe rndis_host
-    pre-up sleep 10
-    post-down echo 1 > /sys/class/gpio/gpio9/value
-    post-down echo 9 > /sys/class/gpio/unexport
