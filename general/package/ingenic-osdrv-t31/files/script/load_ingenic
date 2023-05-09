@@ -13,6 +13,15 @@ log_vendor() {
   logger -s -p daemon.info -t ${vendor} "$1"
 }
 
+check_vb() {
+  if [ "$(fw_printenv -n totalmem)" = "64M" ] && [ "$(fw_printenv -n rmem)" = "40M" ]; then
+	log_vendor "Setting osmem, rmem & blkcnt..."
+	fw_setenv osmem 39M && fw_setenv rmem 25M@0x2700000 && cli -s .isp.blkCnt 1 && reboot
+  fi
+}
+
+check_vb
+
 check_return() {
     if [ $? -ne 0 ]; then
         echo err: $1
