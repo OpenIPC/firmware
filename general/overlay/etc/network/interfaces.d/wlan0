@@ -1,4 +1,3 @@
-manual wlan0
 iface wlan0 inet dhcp
     pre-up devmem 0x100C0080 32 0x530
     pre-up echo 7 > /sys/class/gpio/export
