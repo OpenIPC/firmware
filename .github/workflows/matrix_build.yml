@@ -339,6 +339,16 @@ jobs:
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
 
+      - name: Install build dependencies
+        run: |
+          sudo make install-deps
+          if [ ! -z "$ACT" ]; then
+            echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
+          else
+            # https://github.com/actions/runner-images/issues/2577
+            echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
+          fi
+
       - name: Free disk space
         if: ${{ !env.ACT }}
         run: |
