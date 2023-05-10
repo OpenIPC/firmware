@@ -36,8 +36,6 @@ usage help:
 	  - make install-deps - install system deps\n \
 	  - make prepare - download and unpack buildroot\n \
 	  - make list-configs - show available hardware configs list\n \
-	  - make BOARD=<BOARD-ID> board-info - show information about\n \
-	  	  selected board\n \
 	  - make BOARD=<BOARD-ID> all - build all needed for a board\n \
 	  	  (toolchain, kernel and rootfs images)\n \
 	  - make clean - cleaning before reassembly\n \
@@ -166,16 +164,6 @@ overlayed-rootfs-%: $(OUT_DIR)/.config
 	$(BOARD_MAKE) $(subst overlayed-,,$@) \
 	    BASE_TARGET_DIR=$(abspath $(ROOTFS_OVERLAYED_DIR)) \
 	    ROOTFS_$(call UPPERCASE,$(subst overlayed-rootfs-,,$@))_FINAL_IMAGE_NAME=$(ROOTFS_OVERLAYED_IMAGE).$(subst overlayed-rootfs-,,$@)
-
-
-# -------------------------------------------------------------------------------------------------
-board-info:
-	@cat $(BR_EXT_DIR)/board/$(BOARD)/config | grep RAM_LINUX_SIZE
-	$(eval VENDOR := $(shell echo $(BOARD) | cut -d "_" -f 1))
-	$(eval FAMILY := $(shell cat $(BR_EXT_DIR)/board/$(BOARD)/config | grep FAMILY | cut -d "=" -f 2))
-	$(eval CHIP   := $(shell echo $(BOARD) | cut -d "_" -f 3))
-	@cat $(BR_EXT_DIR)/board/$(FAMILY)/$(CHIP).config
-	@cat $(BR_EXT_DIR)/board/$(BOARD)/config
 
 # -------------------------------------------------------------------------------------------------
 # such targets (with trimmed `br-` prefix) are passed to Buildroot's Makefile
