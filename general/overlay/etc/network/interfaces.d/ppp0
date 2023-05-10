@@ -1,7 +1,0 @@
-iface ppp0 inet ppp
-    pre-up echo 61 > /sys/class/gpio/export
-    pre-up echo out > /sys/class/gpio/gpio61/direction
-    pre-up echo 0 > /sys/class/gpio/gpio61/value
-    pre-up sleep 7
-    post-down echo 1 > /sys/class/gpio/gpio61/value
-    post-down echo 61 > /sys/class/gpio/unexport
