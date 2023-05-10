@@ -339,29 +339,6 @@ jobs:
         with:
           fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
 
-      - name: Checkout deps
-        if: ${{ env.FURRY != '' }}
-        uses: actions/checkout@v3
-        with:
-          repository: furry-disco/deps
-          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
-          path: deps
-          submodules: recursive
-          ssh-key: ${{ secrets.FURRY }}
-
-      - name: Install build dependencies
-        run: |
-          sudo make install-deps
-          if [ -d deps ]; then
-            ./deps/install.sh
-          fi
-          if [ ! -z "$ACT" ]; then
-            echo "FORCE_UNSAFE_CONFIGURE=1" >> $GITHUB_ENV
-          else
-            # https://github.com/actions/runner-images/issues/2577
-            echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
-          fi
-
       - name: Free disk space
         if: ${{ !env.ACT }}
         run: |
