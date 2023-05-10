@@ -100,8 +100,17 @@ if [ $? -ne 0 ]; then
     check_return "insmod audio"
 fi
 
-# Need for claim gpio
-insmod ${KMOD_PATH/%\//}/gpio.ko
-echo $(yaml-cli -i /etc/majestic.yaml -g .nightMode.irCutPin1) >/proc/jz/claim/gpio
-echo $(yaml-cli -i /etc/majestic.yaml -g .nightMode.irCutPin2) >/proc/jz/claim/gpio
-# echo $(yaml-cli -i /etc/majestic.yaml -g .nightMode.irSensorPin) >/proc/jz/claim/gpio
+lsmod | grep "gpio" >/dev/null
+if [ $? -ne 0 ]; then
+    insmod ${KMOD_PATH/%\//}/gpio.ko
+    check_return "insmod gpio"
+fi
+
+if [ ! -z "$(lsmod | grep "gpio")" ]; then
+	GPIOS=".nightMode.irCutPin1 .nightMode.irCutPin2 .nightMode.irSensorPin .nightMode.backlightPin .audio.speakerPin"
+	for GPIO in $(echo ${GPIOS} | tr ' ' '\n')
+	do
+	  G=$(cli -g ${GPIO})
+	  [ ! -z "${G}" ] && echo ${G} > /proc/jz/claim/gpio
+	done
+fi
