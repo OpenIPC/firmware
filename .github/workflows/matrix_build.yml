@@ -344,9 +344,8 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: furry-disco/deps
-          fetch-depth: 0  # OR "2" -> To retrieve the preceding commit.
+          fetch-depth: 0
           path: deps
-          submodules: recursive
           ssh-key: ${{ secrets.FURRY }}
 
       - name: Install build dependencies
