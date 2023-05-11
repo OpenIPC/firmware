@@ -1,13 +1,12 @@
 #!/bin/sh
 
 KMOD_PATH=/lib/modules/$(uname -r)/ingenic
+SOC=$(ipcinfo -f || fw_printenv -n soc)
 vendor=$(ipcinfo -v)
 
 if [ ! -f /usr/sbin/sensor_cli ]; then
     ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
 fi
-
-SOC=$(ipcinfo --chip-name || fw_printenv -n soc)
 
 echo 1 >/proc/sys/vm/overcommit_memory
 
