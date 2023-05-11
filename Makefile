@@ -30,21 +30,18 @@ BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
 .PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
 
 usage help:
-	@printf "\n \
-	BR-OpenIPC usage:\n \
-	  - make help | usage - print this help\n \
-	  - make install-deps - install system deps\n \
-	  - make prepare - download and unpack buildroot\n \
-	  - make list-configs - show available hardware configs list\n \
-	  - make BOARD=<BOARD-ID> all - build all needed for a board\n \
-	  	  (toolchain, kernel and rootfs images)\n \
-	  - make clean - cleaning before reassembly\n \
-	  - make distclean - switching to the factory state\n \
-	  - make overlayed-rootfs-<FS-TYPE> ROOTFS_OVERLAYS=... - create rootfs\n \
-	  	  image that contains original Buildroot target dir overlayed\n \
-	  	  by some custom layers\n\n \
-	  Example:\n \
-	    make overlayed-rootfs-squashfs ROOTFS_OVERLAYS=./examples/echo_server/overlay\n\n"
+	@printf "BR-OpenIPC usage:\n \
+	- make help | usage - print this help\n \
+	- make install-deps - install system dependencies\n \
+	- make prepare - download and unpack buildroot\n \
+	- make list-configs - show available board configurations\n \
+	- make <DEFCONFIG> - build the targeted device, includes prepare\n \
+	- make BOARD=<BOARD-ID> all - build the targeted device\n \
+	- make clean - cleaning before reassembly\n \
+	- make distclean - switching to the factory state\n \
+	- make overlayed-rootfs-<FS-TYPE> ROOTFS_OVERLAYS=[path] - create rootfs overlay\n\n \
+	Example:\n \
+	- make overlayed-rootfs-squashfs ROOTFS_OVERLAYS=echo_server/overlay\n\n"
 
 distclean:
 	@rm -rf output buildroot-$(BR_VER)
@@ -76,15 +73,6 @@ else
 		cpio rsync bc unzip file lzop
 endif
 
-
-%_info:
-	@echo
-	@cat $(BR_EXT_DIR)/board/$(subst _info,,$@)/config | grep RAM_LINUX_SIZE
-	$(eval VENDOR 	:= $(shell echo $@ | cut -d "_" -f 1))
-	$(eval FAMILY 	:= $(shell cat $(BR_EXT_DIR)/board/$(subst _info,,$@)/config | grep FAMILY | cut -d "=" -f 2))
-	$(eval CHIP	:= $(shell echo $@ | cut -d "_" -f 3))
-	@cat $(BR_EXT_DIR)/board/$(FAMILY)/$(CHIP).config
-
 buildroot-version:
 	@echo $(BR_VER)
 
@@ -95,14 +83,12 @@ toolname:
 	@$(SCRIPTS_DIR)/show_toolchains.sh $(FULL_PATH) $(BR_VER)
 
 list-configs:
-ifndef BOARD
-	$(error Variable BOARD must be defined to list configs)
-else
+	@ls -1 br-ext-chip-*/configs
 	@echo
-	@ls -1 $(BR_EXT_DIR)/configs
-	@echo
-endif
 
+%_defconfig: prepare
+	$(BOARD_MAKE) BR2_DEFCONFIG=$(ROOT_DIR)/$(shell find br-ext-chip-* -name $@) defconfig
+	$(BOARD_MAKE) all
 
 # -------------------------------------------------------------------------------------------------
 OUT_DIR ?= $(ROOT_DIR)/output
