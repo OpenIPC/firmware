@@ -22,7 +22,7 @@ endif
 ROOT_DIR      := $(CURDIR)
 BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
 GENERAL_DIR   := $(ROOT_DIR)/general
-SCRIPTS_DIR   := $(ROOT_DIR)/scripts
+SCRIPTS_DIR   := $(GENERAL_DIR)/scripts
 
 BR_VER        ?= 2021.02.12
 BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
