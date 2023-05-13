@@ -4,7 +4,7 @@
 #
 ###########################################################################
 
-LIBRE_OPENIPC_VERSION = 1.1.0
+LIBRE_OPENIPC_VERSION = 2.1.1
 LIBRE_OPENIPC_SOURCE = v$(LIBRE_OPENIPC_VERSION).tar.gz
 LIBRE_OPENIPC_SITE = https://github.com/baresip/re/archive
 LIBRE_OPENIPC_INSTALL_STAGING = YES
