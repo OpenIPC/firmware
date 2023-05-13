@@ -1,0 +1,13 @@
+--- a/src/compat/siphash/siphash.c	2023-05-12 15:21:03.029519429 +0300
++++ b/src/compat/siphash/siphash.c	2023-05-12 15:19:42.105522000 +0300
+@@ -13,6 +13,10 @@
+ #include <linux/siphash.h>
+ #include <asm/unaligned.h>
+ 
++#if GCC_VERSION >= 70000
++#define fallthrough __attribute__((fallthrough))
++#endif
++
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0)
+ #ifdef __LITTLE_ENDIAN
+ #define bytemask_from_count(cnt)	(~(~0ul << (cnt)*8))

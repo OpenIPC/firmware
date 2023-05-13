@@ -1,173 +1,63 @@
-ifneq ($(PLATFORM),)
-	PLATFORM := $(error Setting PLATFORM in make arguments is deprecated, please remove it)
-else
-	ifneq ($(BOARD),)
-		FULL_PATH := $(shell find br-ext-chip-* -name "$(BOARD)*_defconfig")
-		ifeq ($(FULL_PATH),)
-			FULL_PATH := $(error Cannot find anything for $(BOARD))
-		else ifneq ($(shell echo $(FULL_PATH) | wc -w), 1)
-			FULL_PATH := $(error For provided '$(BOARD)' multiple options found: $(FULL_PATH))
-		endif
+BR_DIR = $(PWD)/buildroot-$(BR_VER)
+BR_MAKE = $(MAKE) -C $(BR_DIR) BR2_EXTERNAL=$(PWD)/general O=$(PWD)/output
 
-		PLATFORM := $(shell echo $(FULL_PATH) | cut -d '/' -f 1 | cut -d '-' -f 4)
-		FAMILY := $(shell grep "/board/" $(FULL_PATH) | head -1 | cut -d "/" -f 3)
-		ifeq ($(FAMILY),hi3516cv500)
-			BR_VER ?= 2022.08
-		else ifeq ($(FAMILY),infinity6e)
-			BR_VER ?= 2023.02
-		endif
+ifdef BOARD
+	CHECK = $(wildcard $(BR_DIR))
+	CONFIG = $(shell find br-ext-chip-*/configs -type f | grep -m1 $(BOARD))
+endif
+
+ifeq ($(CONFIG),)
+	BR_VER = $(error variable BOARD must be defined to initialize build)
+else
+	ifneq ($(shell grep GCC_VERSION_12 $(CONFIG)),)
+		BR_VER = 2023.02
+	else
+		BR_VER = 2021.02.12
 	endif
 endif
 
-ROOT_DIR      := $(CURDIR)
-BR_EXT_DIR    := $(ROOT_DIR)/br-ext-chip-$(PLATFORM)
-GENERAL_DIR   := $(ROOT_DIR)/general
-SCRIPTS_DIR   := $(GENERAL_DIR)/scripts
+.PHONY: all clean defconfig distclean help prepare toolname
 
-BR_VER        ?= 2021.02.12
-BR_DIR        := $(ROOT_DIR)/buildroot-$(BR_VER)
-
-.PHONY: usage help clean distclean prepare install-deps all toolchain-params run-tests overlayed-rootfs-%
-
-usage help:
+help:
 	@printf "BR-OpenIPC usage:\n \
-	- make help | usage - print this help\n \
+	- make clean - remove defconfig and target folder\n \
+	- make distclean - remove buildroot and output folder\n \
 	- make install-deps - install system dependencies\n \
-	- make prepare - download and unpack buildroot\n \
 	- make list-configs - show available board configurations\n \
-	- make <DEFCONFIG> - build the targeted device, includes prepare\n \
-	- make BOARD=<BOARD-ID> all - build the targeted device\n \
-	- make clean - cleaning before reassembly\n \
-	- make distclean - switching to the factory state\n \
-	- make overlayed-rootfs-<FS-TYPE> ROOTFS_OVERLAYS=[path] - create rootfs overlay\n\n \
-	Example:\n \
-	- make overlayed-rootfs-squashfs ROOTFS_OVERLAYS=echo_server/overlay\n\n"
+	- make all BOARD=<device> - builds the selected board\n\n"
 
-distclean:
-	@rm -rf output buildroot-$(BR_VER)
+all: defconfig
+	@$(BR_MAKE) all
 
-clean:
-	@rm -rf output/target output/.config
+br-%: defconfig
+	@$(BR_MAKE) $(subst br-,,$@)
 
-prepare: $(BR_DIR)
-$(ROOT_DIR)/buildroot-$(BR_VER).tar.gz:
-	wget -O $@ -nv \
-		--retry-connrefused --continue --timeout=3 \
-		http://buildroot.org/downloads/buildroot-$(BR_VER).tar.gz || \
-	wget -O $@ -nv \
-		--retry-connrefused --continue --timeout=3 \
+defconfig: prepare
+	@$(BR_MAKE) BR2_DEFCONFIG=$(PWD)/$(CONFIG) defconfig
+
+toolname: prepare
+	@general/scripts/show_toolchains.sh $(CONFIG) $(BR_VER)
+
+prepare:
+ifeq ($(CHECK),)
+	@wget -O $(BR_DIR).tar.gz -nv --retry-connrefused --timeout=3 \
 		https://github.com/buildroot/buildroot/archive/refs/tags/$(BR_VER).tar.gz
-
-$(BR_DIR): $(ROOT_DIR)/buildroot-$(BR_VER).tar.gz
-	tar -C $(ROOT_DIR) -xf buildroot-$(BR_VER).tar.gz
-	rm -f buildroot-$(BR_VER).tar.gz
-
-
-install-deps:
-ifneq ($(shell id -u), 0)
-	@echo "You must be root to perform this action."
-else
-	DEBIAN_FRONTEND=noninteractive apt-get update && \
-		apt-get -y install \
-		build-essential git make libncurses-dev wget curl \
-		cpio rsync bc unzip file lzop
+	@tar -C $(PWD) -xf $(BR_DIR).tar.gz
+	@rm -f $(BR_DIR).tar.gz
 endif
 
 buildroot-version:
 	@echo $(BR_VER)
 
-has-nand:
-	@sed -rn "s/^BR2_TARGET_ROOTFS_UBI=(y)/\1/p" $(FULL_PATH)
+clean:
+	@rm -rf output/target output/.config
 
-toolname:
-	@$(SCRIPTS_DIR)/show_toolchains.sh $(FULL_PATH) $(BR_VER)
+distclean:
+	@rm -rf output buildroot-*.*
 
 list-configs:
 	@ls -1 br-ext-chip-*/configs
-	@echo
 
-%_defconfig: prepare
-	$(BOARD_MAKE) BR2_DEFCONFIG=$(ROOT_DIR)/$(shell find br-ext-chip-* -name $@) defconfig
-	$(BOARD_MAKE) all
-
-# -------------------------------------------------------------------------------------------------
-OUT_DIR ?= $(ROOT_DIR)/output
-
-# Buildroot considers relative paths relatively to its' own root directory. So we use absolute paths
-# to avoid ambiguity
-override OUT_DIR := $(abspath $(OUT_DIR))
-BOARD_MAKE := $(MAKE) -C $(BR_DIR) BR2_EXTERNAL=$(GENERAL_DIR) O=$(OUT_DIR)
-
-define CREATE_TOOLCHAIN_PARAMS
-    eval $$($(BOARD_MAKE) -s --no-print-directory VARS=GNU_TARGET_NAME printvars) \
-    && $(SCRIPTS_DIR)/create_toolchain_binding.sh $(OUT_DIR)/host/bin $$GNU_TARGET_NAME \
-    > $(OUT_DIR)/toolchain-params.mk
-endef
-
-# -------------------------------------------------------------------------------------------------
-$(OUT_DIR)/.config:
-ifndef BOARD
-	$(error Variable BOARD must be defined to initialize output directory)
-else
-	$(BOARD_MAKE) BR2_DEFCONFIG=$(BR_EXT_DIR)/configs/$(BOARD)_defconfig defconfig
-endif
-
-
-$(OUT_DIR)/toolchain-params.mk: $(OUT_DIR)/.config $(SCRIPTS_DIR)/create_toolchain_binding.sh
-	$(CREATE_TOOLCHAIN_PARAMS)
-
-
-# TODO: Elaborate how to compile wireguard-linux-compat under GCC 12 without this patch
-define remove-patches
-	$(if $(filter $(BR_VER),2020.02.12 2021.02.12),-rm general/package/all-patches/wireguard-linux-compat/remove_fallthrough.patch)
-endef
-
-
-# -------------------------------------------------------------------------------------------------
-# build all needed for a board
-all: $(OUT_DIR)/.config $(OUT_DIR)/toolchain-params.mk
-	$(remove-patches)
-	$(BOARD_MAKE) all
-
-
-# -------------------------------------------------------------------------------------------------
-# re-create params file
-toolchain-params:
-	$(CREATE_TOOLCHAIN_PARAMS)
-
-# -------------------------------------------------------------------------------------------------
-# create rootfs image that contains original Buildroot target dir overlayed by some custom layers
-# space-separated list of overlays
-
-ROOTFS_OVERLAYS ?=
-# overlayed rootfs directory
-ROOTFS_OVERLAYED_DIR ?= $(OUT_DIR)/target-overlayed
-# overlayed rootfs image's name (without prefix)
-ROOTFS_OVERLAYED_IMAGE ?= rootfs-overlayed
-
-overlayed-rootfs-%: $(OUT_DIR)/.config
-	$(SCRIPTS_DIR)/create_overlayed_rootfs.sh $(ROOTFS_OVERLAYED_DIR) $(OUT_DIR)/target $(ROOTFS_OVERLAYS)
-	$(BOARD_MAKE) $(subst overlayed-,,$@) \
-	    BASE_TARGET_DIR=$(abspath $(ROOTFS_OVERLAYED_DIR)) \
-	    ROOTFS_$(call UPPERCASE,$(subst overlayed-rootfs-,,$@))_FINAL_IMAGE_NAME=$(ROOTFS_OVERLAYED_IMAGE).$(subst overlayed-rootfs-,,$@)
-
-# -------------------------------------------------------------------------------------------------
-# such targets (with trimmed `br-` prefix) are passed to Buildroot's Makefile
-br-%: $(OUT_DIR)/.config
-	$(remove-patches)
-	$(BOARD_MAKE) $(subst br-,,$@)
-
-
-# -------------------------------------------------------------------------------------------------
-run-tests:
-	$(MAKE) -C $(ROOT_DIR)/tests
-
-
-# -------------------------------------------------------------------------------------------------
-# there are some extra targets of specific packages
-include $(sort $(wildcard $(ROOT_DIR)/extra/*.mk))
-
-
-# -------------------------------------------------------------------------------------------------
-# util stuff is below
-UPPERCASE = $(shell echo $(1) | tr a-z A-Z)
+install-deps:
+	@sudo apt-get install -y build-essential libncurses-dev \
+		bc cpio curl file git lzop make rsync unzip wget
