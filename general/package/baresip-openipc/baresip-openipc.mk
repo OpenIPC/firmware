@@ -4,7 +4,7 @@
 #
 #############################################################
 
-BARESIP_OPENIPC_VERSION = 1.0.0
+BARESIP_OPENIPC_VERSION = 2.0.1
 BARESIP_OPENIPC_SOURCE = v$(BARESIP_OPENIPC_VERSION).tar.gz
 BARESIP_OPENIPC_SITE = https://github.com/baresip/baresip/archive
 BARESIP_OPENIPC_DEPENDENCIES = libre-openipc librem-openipc zlib
