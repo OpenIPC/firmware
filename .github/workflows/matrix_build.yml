@@ -74,17 +74,10 @@ jobs:
 
       - name: Determine toolchain name and can we skip build
         run: |
-          HEAD_TAG=$(git tag --points-at HEAD)
           GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
-          if [ -z "$HEAD_TAG" ]; then
-            TAG_NAME="latest"
-            RELEASE_NAME="Development Build"
-            PRERELEASE=true
-          else
-            TAG_NAME=${{ github.ref }}
-            RELEASE_NAME="Release ${{ github.ref }}"
-            PRERELEASE=false
-          fi
+          RELEASE_NAME="Development Build"
+          TAG_NAME="latest"
+          PRERELEASE=true
           echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
@@ -357,18 +350,11 @@ jobs:
 
       - name: Prepare buildroot
         run: |
-          HEAD_TAG=$(git tag --points-at HEAD)
           GIT_HASH=$(git rev-parse --short $GITHUB_SHA)
           BRANCH=$(echo $GITHUB_REF | cut -d'/' -f 3)
-          if [ -z "$HEAD_TAG" ]; then
-            TAG_NAME="latest"
-            RELEASE_NAME="Development Build"
-            PRERELEASE=true
-          else
-            TAG_NAME=${{ github.ref }}
-            RELEASE_NAME="Release ${{ github.ref }}"
-            PRERELEASE=false
-          fi
+          RELEASE_NAME="Development Build"
+          TAG_NAME="latest"
+          PRERELEASE=true
           echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
