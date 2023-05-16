@@ -34,7 +34,7 @@ rm -f ${TARGET_DIR}/usr/bin/gdbserver
 
 soc=$(grep defconfig ${BR2_CONFIG} | rev | cut -d "_" -f3- | cut -d "/" -f1 | rev)
 release=$(cat ${TARGET_DIR}/usr/lib/os-release | grep BUILD_OPTION | cut -d "=" -f2)
-exlist="${BR2_EXTERNAL_SCRIPTS_PATH}/excludes/${soc}_${release}.list"
+exlist="${BR2_EXTERNAL_SCRIPTS}/excludes/${soc}_${release}.list"
 
 if [ -f ${exlist} ]; then
   for e in $(cat ${exlist}); do
