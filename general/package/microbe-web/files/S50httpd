@@ -10,11 +10,11 @@ HTTPD_ARGS="httpd -p 85 -f -c $CONFFILE -r Authentication"
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
 
 if [ "$(fw_printenv -n debug)" ]; then
-  echo "Development mode. Disabling Basic Auth"
-  sed -i "/^\/cgi-bin:admin:/s/^/#/" $CONFFILE
+	echo "Development mode"
+	sed -i "/^\/cgi-bin:admin:/s/^/#/" $CONFFILE
 else
-  echo "Production mode. Enabling Basic Auth"
-  sed -i "/^#\/cgi-bin:admin:/s/^#//" $CONFFILE
+	echo "Production mode"
+	sed -i "/^#\/cgi-bin:admin:/s/^#//" $CONFFILE
 fi
 
 # The httpd does not create a pidfile, so pass "-n" in the command line

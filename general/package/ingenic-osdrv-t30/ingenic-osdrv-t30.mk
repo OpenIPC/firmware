@@ -12,6 +12,7 @@ INGENIC_OSDRV_T30_LICENSE_FILES = LICENSE
 define INGENIC_OSDRV_T30_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensor
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/*.yaml
+
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/bg0806.bin
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/gc2023.bin
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/gc2033.bin
@@ -23,7 +24,6 @@ define INGENIC_OSDRV_T30_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/jxf22.bin
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/jxf23.bin
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/jxh62.bin
-
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/ncu_bg0806.bin
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/ncu_gc2023.bin
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/ncu_gc2033.bin
@@ -51,7 +51,6 @@ define INGENIC_OSDRV_T30_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/ncu_sc2235.bin
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/ncu_sc4236.bin
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/ncu_sc5235.bin
-
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/os02b10.bin
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/os05a10.bin
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T30_PKGDIR)/files/sensor/params/ov2735b.bin

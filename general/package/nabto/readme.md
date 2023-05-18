@@ -54,7 +54,7 @@ tcp_tunnel_device
 Make sure that the connection was successful (example):
 
 ```
-root@openipc-t31:# tcp_tunnel_device 
+root@openipc-t31:# tcp_tunnel_device
 
 ######## Nabto TCP Tunnel Device ########
 # Product ID:        pr-ydk3xhyn
@@ -63,14 +63,14 @@ root@openipc-t31:# tcp_tunnel_device
 # Version:           0.0.0-branch.heads/master.commits.1910+a49d27fc.dirty
 # Local UDP Port:    5592
 # Friendly Name:     "Tcp Tunnel"
-# 
+#
 # The device offers Local Open Pairing
-# 
+#
 # The device has Password Open Pairing enabled
 # Open Pairing Password:  X9NphkArpzLU
 # Open Pairing SCT:       9jLgbUb4FWhe
 # Open Pairing String:    p=pr-ydk3xhyn,d=de-orruyc4n,pwd=X9NphkArpzLU,sct=9jLgbUb4FWhe
-# 
+#
 ######## Configured TCP Services ########
 # Id               Type             Host             Port
 # rtsp             rtsp             127.0.0.1        554
