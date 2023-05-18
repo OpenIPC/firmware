@@ -5,54 +5,54 @@ SOC=$(ipcinfo -f || fw_printenv -n soc)
 vendor=$(ipcinfo -v)
 
 if [ ! -f /usr/sbin/sensor_cli ]; then
-    ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
+	ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
 fi
 
 echo 1 >/proc/sys/vm/overcommit_memory
 
 log_vendor() {
-  logger -s -p daemon.info -t ${vendor} "$1"
+	logger -s -p daemon.info -t ${vendor} "$1"
 }
 
 check_return() {
-    if [ $? -ne 0 ]; then
-        echo err: $1
-        echo exit
-        exit
-    fi
+	if [ $? -ne 0 ]; then
+		echo err: $1
+		echo exit
+		exit
+	fi
 }
 
 lsmod | grep "sinfo" >/dev/null
 if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/sinfo.ko
-    check_return "insmod sinfo"
+	insmod ${KMOD_PATH/%\//}/sinfo.ko
+	check_return "insmod sinfo"
 fi
 
 if fw_printenv -n sensor >/dev/null; then
-    export SENSOR=$(fw_printenv -n sensor)
-    log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
+	export SENSOR=$(fw_printenv -n sensor)
+	log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
 else
 	echo 1 >/proc/jz/sinfo/info
 	check_return "start sinfo"
-    SENSOR_INFO=$(cat /proc/jz/sinfo/info)
-    check_return "get sensor type"
-    SENSOR=${SENSOR_INFO#*:}
-    if [ "sensor not found" = "$SENSOR" ]; then
-        unset SENSOR
-        fw_setenv sensor
-    else
-        log_vendor "Get data from sinfo and set SENSOR as ${SENSOR}"
-        fw_setenv sensor $SENSOR && log_vendor "Write detected ${SENSOR} to U-Boot ENV"
-    fi
+	SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+	check_return "get sensor type"
+	SENSOR=${SENSOR_INFO#*:}
+	if [ "sensor not found" = "$SENSOR" ]; then
+		unset SENSOR
+		fw_setenv sensor
+	else
+		log_vendor "Get data from sinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && log_vendor "Write detected ${SENSOR} to U-Boot ENV"
+	fi
 fi
 
 
 case ${SENSOR} in
 *)
-    ISP_PARAM=""
-    SENSOR_PARAM=""
-    break
-    ;;
+	ISP_PARAM=""
+	SENSOR_PARAM=""
+	break
+	;;
 esac
 
 echo --------------------
@@ -63,26 +63,26 @@ echo --------------------
 
 lsmod | grep "tx_isp" >/dev/null
 if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/tx-isp-${SOC}.ko ${ISP_PARAM}
-    check_return "insmod isp drv"
+	insmod ${KMOD_PATH/%\//}/tx-isp-${SOC}.ko ${ISP_PARAM}
+	check_return "insmod isp drv"
 fi
 
 lsmod | grep ${SENSOR} >/dev/null
 if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_${SOC}.ko ${SENSOR_PARAM}
-    check_return "insmod sensor drv"
+	insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_${SOC}.ko ${SENSOR_PARAM}
+	check_return "insmod sensor drv"
 fi
 
 lsmod | grep "audio" >/dev/null
 if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/audio.ko
-    check_return "insmod audio"
+	insmod ${KMOD_PATH/%\//}/audio.ko
+	check_return "insmod audio"
 fi
 
 lsmod | grep "gpio" >/dev/null
 if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/gpio.ko
-    check_return "insmod gpio"
+	insmod ${KMOD_PATH/%\//}/gpio.ko
+	check_return "insmod gpio"
 fi
 
 if [ ! -z "$(lsmod | grep "gpio")" ]; then
