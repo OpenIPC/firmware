@@ -14,7 +14,7 @@ define AMBARELLA_OSDRV_S3L_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(AMBARELLA_OSDRV_S3L_PKGDIR)/files/sensor/config/*.cfg
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.104/ambarella	
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.104/ambarella
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.104/ambarella $(AMBARELLA_OSDRV_S3L_PKGDIR)/files/kmod/*.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin

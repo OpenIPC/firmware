@@ -58,7 +58,7 @@ define INGENIC_OSDRV_T21_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors/params/WDR $(INGENIC_OSDRV_T21_PKGDIR)/files/sensor/params/WDR/*.bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(INGENIC_OSDRV_T21_PKGDIR)/files/lib/*.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(INGENIC_OSDRV_T21_PKGDIR)/files/lib/*.so
 endef
 
 $(eval $(generic-package))
