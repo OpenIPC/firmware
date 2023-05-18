@@ -5,7 +5,7 @@ SOC=$(ipcinfo -f || fw_printenv -n soc)
 vendor=$(ipcinfo -v)
 
 if [ ! -f /usr/sbin/sensor_cli ]; then
-    ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
+	ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
 fi
 
 echo 1 >/proc/sys/vm/overcommit_memory
@@ -15,63 +15,63 @@ log_vendor() {
 }
 
 check_return() {
-    if [ $? -ne 0 ]; then
-        echo err: $1
-        echo exit
-        exit
-    fi
+	if [ $? -ne 0 ]; then
+		echo err: $1
+		echo exit
+		exit
+	fi
 }
 
 lsmod | grep "sinfo" >/dev/null
 if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/sinfo.ko
-    check_return "insmod sinfo"
+	insmod ${KMOD_PATH/%\//}/sinfo.ko
+	check_return "insmod sinfo"
 fi
 
 if fw_printenv -n sensor >/dev/null; then
-    export SENSOR=$(fw_printenv -n sensor)
-    log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
+	export SENSOR=$(fw_printenv -n sensor)
+	log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
 else
 	echo 1 >/proc/jz/sinfo/info
 	check_return "start sinfo"
 	SENSOR_INFO=$(cat /proc/jz/sinfo/info)
 	check_return "get sensor type"
 	SENSOR=${SENSOR_INFO#*:}
-    if [ "sensor not found" = "$SENSOR" ]; then
-        unset SENSOR
-        fw_setenv sensor
-    else
-        log_vendor "Get data from sinfo and set SENSOR as ${SENSOR}"
-        fw_setenv sensor $SENSOR && log_vendor "Write detected ${SENSOR} to U-Boot ENV"
-    fi
+	if [ "sensor not found" = "$SENSOR" ]; then
+		unset SENSOR
+		fw_setenv sensor
+	else
+		log_vendor "Get data from sinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && log_vendor "Write detected ${SENSOR} to U-Boot ENV"
+	fi
 fi
 
 case ${SENSOR} in
 "jxf22")
-    ISP_PARAM="isp_clk=90000000"
-    SENSOR_PARAM=""
-    ;;
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	;;
 "jxh42")
-    ISP_PARAM="isp_clk=90000000"
-    SENSOR_PARAM=""
-    ;;
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	;;
 "sc2135")
-    ISP_PARAM="isp_clk=100000000"
-    SENSOR_PARAM=""
-    ;;
+	ISP_PARAM="isp_clk=100000000"
+	SENSOR_PARAM=""
+	;;
 "sc2232")
-    ISP_PARAM="isp_clk=90000000"
-    SENSOR_PARAM=""
-    ;;
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	;;
 "sc2235")
-    ISP_PARAM="isp_clk=90000000"
-    SENSOR_PARAM=""
-    ;;
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	;;
 *)
-    ISP_PARAM="isp_clk=90000000"
-    SENSOR_PARAM=""
-    break
-    ;;
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	break
+	;;
 esac
 
 echo --------------------
@@ -94,7 +94,7 @@ fi
 
 lsmod | grep "audio" >/dev/null
 if [ $? -ne 0 ]; then
-    insmod ${KMOD_PATH/%\//}/audio2.ko
-    check_return "insmod audio"
+	insmod ${KMOD_PATH/%\//}/audio2.ko
+	check_return "insmod audio"
 fi
 
