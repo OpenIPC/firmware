@@ -1,15 +1,18 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20230503
+# OpenIPC.org | v.20230518
 #
 
-scr_version=1.0.17
+scr_version=1.0.18
 
 args=" $@"
 
 set -e
 
 LOCK_FILE=/tmp/sysupgrade.lock
+IPCINFO=/tmp/ipcinfo
+
+[ -f ${IPCINFO} ] && chmod +x ${IPCINFO} || IPCINFO=$(which ipcinfo)
 
 echo_c() {
 	# 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan, 37 white, 38 grey
@@ -83,10 +86,11 @@ do_wipe_overlay() {
 
 download_firmware() {
 	echo_c 33 "\nFirmware"
+	[ "$branch_dev" = "1" ] && branch="dev" || branch="latest"
 	osr=$(get_system_build)
 	ftype=$(get_flash_type)
 	build="${soc}-${ftype}-${osr}"
-	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/latest/openipc.${build}.tgz"
+	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/${branch}/openipc.${build}.tgz"
 	echo "Download from $url"
 	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
 	[ "$(curl -o /dev/null -s -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
@@ -190,7 +194,7 @@ get_kernel_version() {
 }
 
 get_system_info() {
-	vendor=$(ipcinfo --vendor)
+	vendor=$(${IPCINFO} -v)
 	soc=$(fw_printenv -n soc) || die "SoC is not defined in U-Boot environment"
 	kernel_device=$(get_device "kernel")
 	kernel_version=$(get_kernel_version "$kernel_device")
@@ -206,7 +210,7 @@ get_system_build() {
 }
 
 get_flash_type() {
-	local x=$(ipcinfo -F)
+	local x=$(${IPCINFO} -F)
 	[ -z "$1" ] && [ "$x" = "nand" ] && $(fw_printenv bootcmd | grep -qv nand) && x=nor
 	echo "$x"
 }
@@ -224,6 +228,7 @@ Where:
   -k                   Update kernel from online repository.
   -r                   Update rootfs from online repository.
   -w                   Update Web UI to development version.
+  -d                   Update firmware from development branch.
       --url=[URL]      Custom URL to update from (.tgz format).
       --kernel=[FILE]  Update kernel from file (uImage format).
       --rootfs=[FILE]  Update rootfs from file (squashfs format).
@@ -269,6 +274,10 @@ for i in "$@"; do
 			;;
 		--force_ver)
 			skip_ver=1
+			shift
+			;;
+		-d)
+			branch_dev=1
 			shift
 			;;
 		-h | --help)
