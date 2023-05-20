@@ -9,7 +9,7 @@ function apply_patch() {
     SRC=$2
 
     if [[ -d $SRC ]]; then
-        if [[ ${SRC:${#SRC}-1} != '/' ]]; then
+        if [[ "overlay" == $(basename "$SRC") ]]; then
             log Apply \"$SRC\" as overlay directory
             cp -r $SRC/* $DST/
         else
