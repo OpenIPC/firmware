@@ -5,7 +5,7 @@
 
 D=$(date "+%y.%m.%d")
 echo "OPENIPC_VERSION=${D:0:1}.${D:1}" >>${TARGET_DIR}/usr/lib/os-release
-date "+GITHUB_VERSION=\"${BRANCH}+${GIT_HASH}, %Y-%m-%d\"" >>${TARGET_DIR}/usr/lib/os-release
+date "+GITHUB_VERSION=\"${GIT_BRANCH}+${GIT_HASH}, %Y-%m-%d\"" >>${TARGET_DIR}/usr/lib/os-release
 date "+TIME_STAMP=%s" >>${TARGET_DIR}/usr/lib/os-release
 if grep -q fpv_defconfig ${BR2_CONFIG}; then
   echo "BUILD_OPTION=fpv" >>${TARGET_DIR}/usr/lib/os-release
