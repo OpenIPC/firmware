@@ -19,7 +19,7 @@ for FILENAME in ${INDIR}/*.config; do
   OLD_SOC=$(echo $OLD_CONFIG | cut -f 1 -d .)
   map_soc $OLD_SOC
   NEW_CONFIG=$(echo $OLD_CONFIG | sed "s/$OLD_SOC/$NEW_SOC/")
-  ./scripts/clone_config_hisi2goke.sh $INDIR/$OLD_CONFIG $OUTDIR/$NEW_CONFIG
+  general/scripts/clone_config_hisi2goke.sh $INDIR/$OLD_CONFIG $OUTDIR/$NEW_CONFIG
   git add $OUTDIR/$NEW_CONFIG
 done
 popd > /dev/null
