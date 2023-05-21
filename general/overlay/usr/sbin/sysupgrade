@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20230518
+# OpenIPC.org | v.20230520
 #
 
-scr_version=1.0.18
+scr_version=1.0.19
 
 args=" $@"
 
@@ -53,7 +53,7 @@ do_update_kernel() {
 		esac
 		compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 	fi
-	flashcp -v "$x" "$kernel_device"
+	busybox flashcp -v "$x" "$kernel_device"
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
 }
 
@@ -72,8 +72,7 @@ do_update_rootfs() {
 	else
 		die "Unable to mount $y!"
 	fi
-
-	flashcp -v "$x" "$(get_device "rootfs")"
+	busybox flashcp -v "$x" "$(get_device "rootfs")"
 	echo_c 32 "RootFS updated to $(get_system_version "")"
 }
 
@@ -81,7 +80,7 @@ do_wipe_overlay() {
 	echo_c 33 "\nOverlayFS"
 	echo "Erase overlay partition"
 	[ $(get_flash_type mtd) = "nand" ] || jffs2="-j"
-	flash_eraseall $jffs2 "$(get_device "rootfs_data")"
+	busybox flash_eraseall $jffs2 "$(get_device "rootfs_data")"
 }
 
 download_firmware() {
@@ -252,7 +251,7 @@ reboot_system() {
 		exit 1
 	else
 		echo_c 37 "\nUnconditional reboot"
-		reboot -d 1 -f
+		busybox reboot -d 1 -f
 	fi
 }
 
