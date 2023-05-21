@@ -1,15 +1,15 @@
 --- a/arch/arm/include/asm/uaccess.h
 +++ b/arch/arm/include/asm/uaccess.h
-@@ -121,7 +121,7 @@
+@@ -161,7 +161,7 @@
  #define __get_user_check(x,p)							\
  	({								\
  		unsigned long __limit = current_thread_info()->addr_limit - 1; \
 -		register const typeof(*(p)) __user *__p asm("r0") = (p);\
 +		register typeof(*(p)) __user *__p asm("r0") = (p);\
- 		register unsigned long __r2 asm("r2");			\
+ 		register typeof(x) __r2 asm("r2");			\
  		register unsigned long __l asm("r1") = __limit;		\
  		register int __e asm("r0");				\
-@@ -165,8 +165,8 @@
+@@ -220,8 +220,8 @@
  	({								\
  		unsigned long __limit = current_thread_info()->addr_limit - 1; \
  		const typeof(*(p)) __user *__tmp_p = (p);		\
