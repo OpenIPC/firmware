@@ -6,5 +6,4 @@ export BR2_EXTERNAL_VENDOR = $(BR2_EXTERNAL)/../$(EXTERNAL_VENDOR)
 export BR2_EXTERNAL_SCRIPTS = $(BR2_EXTERNAL)/scripts
 export BR2_EXTERNAL_LIBC = $(shell $(BR2_EXTERNAL_SCRIPTS)/show_toolchains.sh $(BR2_DEFCONFIG) | cut -d "-" -f 3)
 
-include $(BR2_EXTERNAL)/linux/linux-ext-vendor-patcher.mk
 include $(sort $(wildcard $(BR2_EXTERNAL)/package/*/*.mk))
