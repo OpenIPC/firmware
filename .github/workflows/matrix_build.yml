@@ -368,6 +368,20 @@ jobs:
           TOOLNAME=$(make BOARD=$BOARD toolname)
           echo "TOOLNAME=$TOOLNAME" >> $GITHUB_ENV
 
+      - name: Setup ccache
+        if: github.event_name != 'pull_request'
+        uses: actions/cache@v3
+        with:
+          path: /tmp/ccache
+          key: ${{ env.TOOLNAME }}
+
+      - name: Restore ccache
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v3
+        with:
+          path: /tmp/ccache
+          key: ${{ env.TOOLNAME }}
+
       - uses: actions/download-artifact@v3
         continue-on-error: true
         with:
@@ -436,6 +450,9 @@ jobs:
           GCC_VER=$(echo $TOOLNAME | cut -d '-' -f 2)
           echo "${TLEXT}_GCC_${GCC_VER:3:1}=y" >> $CONF_PATH
           echo "BR2_ROOTFS_POST_BUILD_SCRIPT=\"\$(BR2_EXTERNAL_SCRIPTS_PATH)/executing_commands_for_${LIBC}.sh\"" >> $CONF_PATH
+
+          echo BR2_CCACHE=y >> $CONF_PATH
+          echo BR2_CCACHE_DIR=\"/tmp/ccache\" >> $CONF_PATH
           cat $CONF_PATH
 
           make BOARD=$BOARD all
