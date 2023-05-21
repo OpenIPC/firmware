@@ -1,0 +1,448 @@
+name: build
+
+on:
+  pull_request:
+    types:
+      - synchronize
+      - reopened
+      - opened
+  push:
+    branches:
+      - 'master'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  MAX_KERNEL_SIZE: 0x200000
+  MAX_ROOTFS_SIZE: 0x500000
+  MAX_KERNEL_SIZE_ULTIMATE: 0x300000
+  MAX_ROOTFS_SIZE_ULTIMATE: 0xA00000
+  MAX_KERNEL_SIZE_NAND: 0x0800000
+  MAX_ROOTFS_SIZE_NAND: 0x1200000
+  TAG_NAME: latest
+
+jobs:
+  toolchain:
+    name: Toolchain
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - ak3918ev300
+          - dm36x
+          - fh8852v100
+          - fh8852v200
+          - gk7102
+          - gm8136
+          - hi3516cv100
+          - hi3516cv200
+          - hi3516cv300
+          - hi3516cv500
+          - hi3516ev200
+          - hi3519v101
+          - hi3536cv100
+          - msc313e
+          - msc316dc
+          - msc316dm
+          - nt98562
+          - rv1126
+          - s3l
+          - ssc335
+          - ssc338q
+          - t31
+          - t40
+          - xm510
+          - xm530
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Determine toolchain
+        run: |
+          make BOARD=${{matrix.platform}}_lite prepare
+          GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
+          echo GCC=${GCC} >> ${GITHUB_ENV}
+          URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
+          echo ${URL}
+          if ! wget --spider ${URL} 2> /dev/null; then
+            echo BUILD=true >> ${GITHUB_ENV}
+          fi
+
+      - name: Build toolchain
+        if: env.BUILD
+        run: |
+          make BOARD=${{matrix.platform}}_lite br-sdk
+          SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
+          mv ${SDK} ${GCC}.tgz
+
+      - name: Upload toolchain
+        if: env.BUILD && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{env.TAG_NAME}}
+          files: ${{env.GCC}}.tgz
+
+  buildroot:
+    name: Firmware
+    needs: toolchain
+    runs-on: ubuntu-latest
+    env:
+      TG_TOKEN: ${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}
+      TG_CHANNEL: ${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
+      TG_OPTIONS: -s --connect-timeout 30 --retry 10 --http1.1 -o /dev/null -w %{http_code}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - hi3516cv100
+          - hi3518cv100
+          - hi3518ev100
+          - hi3516av100
+          - hi3516dv100
+          - hi3516cv200
+          - hi3518ev200
+          - hi3519v101
+          - hi3516av200
+          - hi3516cv300
+          - hi3516ev100
+          - hi3516cv500
+          - hi3516dv300
+          - hi3516av300
+          - hi3516ev200
+          - hi3516ev300
+          - hi3518ev300
+          - hi3516dv200
+          - hi3536cv100
+          - hi3536dv100
+          - gk7205v200
+          - gk7205v210
+          - gk7205v300
+          - gk7202v300
+          - gk7605v100
+          - t31
+          - t40
+
+        release:
+          - lite
+          - ultimate
+
+        include:
+          - platform: hi3518ev200
+            release: mini
+          - platform: hi3516cv300
+            release: mini
+          - platform: hi3516ev200
+            release: fpv
+          - platform: hi3516ev300
+            release: fpv
+          - platform: gk7205v200
+            release: fpv
+          - platform: gk7205v300
+            release: fpv
+          - platform: hi3516ev200
+            release: lte
+          - platform: hi3516ev300
+            release: lte
+          - platform: gk7205v200
+            release: lte
+          - platform: gk7205v300
+            release: lte
+
+          # Original SDK test
+          - platform: gk7205v200
+            release: original
+            custom: onlyci
+
+          # MVP
+          - platform: fh8852v100
+            release: lite
+          - platform: fh8852v200
+            release: lite
+          - platform: gm8136
+            release: lite
+          - platform: nt98562
+            release: lite
+          - platform: nt98566
+            release: lite
+          - platform: rv1109
+            release: lite
+          - platform: rv1126
+            release: lite
+          - platform: ssc335
+            release: lite
+          - platform: ssc335de
+            release: lite
+          - platform: ssc337
+            release: lite
+          - platform: ssc337de
+            release: lite
+          - platform: ssc338q
+            release: lite
+          - platform: t10
+            release: lite
+          - platform: t20
+            release: lite
+          - platform: t21
+            release: lite
+          - platform: t30
+            release: lite
+          - platform: xm510
+            release: lite
+          - platform: xm530
+            release: lite
+          - platform: xm550
+            release: lite
+
+          # TODO
+          - platform: ak3916ev300
+            release: lite
+            custom: onlyci
+          - platform: ak3918ev300
+            release: lite
+            custom: onlyci
+          - platform: dm36x
+            release: lite
+            custom: onlyci
+          - platform: gk7102
+            release: lite
+          - platform: gk7102s
+            release: lite
+          - platform: msc313e
+            release: lite
+            custom: onlyci
+          - platform: msc316dc
+            release: lite
+            custom: onlyci
+          - platform: msc316dm
+            release: lite
+            custom: onlyci
+          - platform: s3l
+            release: lite
+            custom: onlyci
+          - platform: ssc325
+            release: lite
+            custom: onlyci
+
+        exclude:
+          - platform: hi3516cv100
+            release: ultimate
+          - platform: hi3518cv100
+            release: ultimate
+          - platform: hi3518ev100
+            release: ultimate
+          - platform: hi3516cv200
+            release: ultimate
+          - platform: hi3519v101
+            release: ultimate
+          - platform: hi3516ev100
+            release: ultimate
+          - platform: hi3516cv500
+            release: ultimate
+          - platform: hi3516dv300
+            release: ultimate
+          - platform: hi3516av300
+            release: ultimate
+          - platform: hi3516dv200
+            release: ultimate
+          - platform: hi3536cv100
+            release: ultimate
+          - platform: hi3536dv100
+            release: ultimate
+          - platform: gk7605v100
+            release: ultimate
+          - platform: gk7205v210
+            release: ultimate
+          - platform: gk7202v300
+            release: ultimate
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Determine toolchain
+        run: |
+          make BOARD=${{matrix.platform}}_lite prepare
+          GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
+          echo GCC=${GCC} >> ${GITHUB_ENV}
+          URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
+          echo ${URL}
+          wget -q -c --retry-on-http-error=503 --timeout=15 ${URL}
+
+      - name: Setup ccache
+        if: github.event_name != 'pull_request'
+        uses: actions/cache@v3
+        with:
+          path: /tmp/ccache
+          key: ${{env.GCC}}
+
+      - name: Restore ccache
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v3
+        with:
+          path: /tmp/ccache
+          key: ${{env.GCC}}
+
+      - name: Restore download
+        uses: actions/cache/restore@v3
+        with:
+          path: /tmp/download
+          key: buildroot-cache
+
+      - name: Build firmware
+        run: |
+          FAMILY=${{matrix.platform}}
+          RELEASE=${{matrix.release}}
+          CONFIG=$(find br-ext-chip-* -name ${FAMILY}_${RELEASE}_defconfig)
+          IMAGES=${GITHUB_WORKSPACE}/output/images
+
+          DIR=/tmp/openipc
+          SDK=/tmp/extsdk
+          mkdir -p ${DIR} ${SDK}
+          tar xf ${GCC}.tgz --strip-components=1 -C ${SDK}
+
+          EXT=BR2_TOOLCHAIN_EXTERNAL
+          echo ${EXT}=y >> ${CONFIG}
+          echo ${EXT}_CUSTOM=y >> ${CONFIG}
+          echo ${EXT}_PREINSTALLED=y >> ${CONFIG}
+          echo ${EXT}_CXX=y >> ${CONFIG}
+          echo ${EXT}_PATH=\"${SDK}\" >> ${CONFIG}
+
+          PREFIX=$(ls -d ${SDK}/*openipc* | xargs basename)
+          GCCV=$(echo ${GCC} | cut -d "-" -f 2)
+          LIBC=$(echo ${GCC} | cut -d "-" -f 3)
+          KVER=$(echo ${GCC} | cut -d "-" -f 4)
+          echo ${EXT}_CUSTOM_PREFIX=\"${PREFIX}\" >> ${CONFIG}
+          echo ${EXT}_CUSTOM_${LIBC^^}=y >> ${CONFIG}
+          echo ${EXT}_HEADERS_${KVER}=y >> ${CONFIG}
+          echo ${EXT}_GCC_${GCCV:3:1}=y >> ${CONFIG}
+
+          if [ ${LIBC} = "glibc" ]; then
+            RPC=${SDK}/${PREFIX}/sysroot/usr/include/rpc/rpc.h
+            check() { test -f $RPC && echo y || echo n; }
+            echo ${EXT}_INET_RPC=$(check) >> ${CONFIG}
+          elif [ ${LIBC} = "uclibc" ]; then
+            CFG=${SDK}/${PREFIX}/sysroot/usr/include/bits/uClibc_config.h
+            check() { grep -q "${1} 1" ${CFG} && echo y || echo n; }
+            echo ${EXT}_LOCALE=$(check __UCLIBC_HAS_LOCALE__) >> ${CONFIG}
+            echo ${EXT}_HAS_THREADS_DEBUG=$(check __PTHREADS_DEBUG_SUPPORT__) >> ${CONFIG}
+            echo ${EXT}_HAS_SSP=y >> ${CONFIG}
+          fi
+
+          echo BR2_CCACHE=y >> ${CONFIG}
+          echo BR2_CCACHE_DIR=\"/tmp/ccache\" >> ${CONFIG}
+          export BR2_DL_DIR=/tmp/download
+
+          export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
+          export GIT_BRANCH=${GITHUB_REF_NAME}
+          echo GIT_HASH=${GIT_HASH} >> ${GITHUB_ENV}
+          echo GIT_BRANCH=${GIT_BRANCH} >> ${GITHUB_ENV}
+
+          echo ------------------------------------------------------------
+          echo ${CONFIG}
+          echo ------------------------------------------------------------
+          cat ${CONFIG}
+          echo ------------------------------------------------------------
+          make BOARD=${FAMILY}_${RELEASE} all
+          echo ------------------------------------------------------------
+
+          check_size() {
+            FILE=$(basename ${1})
+            SIZE1=$(expr $(stat --printf="%s" ${1}) / 1024)
+            SIZE2=$(expr ${2} / 1024)
+            echo - ${FILE}: [${SIZE1}KB/${SIZE2}KB]
+            if [ ${SIZE1} -gt ${SIZE2} ]; then
+              echo -- Error: ${FILE} size exceeded by $(expr ${SIZE1} - ${SIZE2})KB
+              exit 1
+            fi
+          }
+
+          if [ ${RELEASE} == "ultimate" ] || grep -q GLIBC=y ${CONFIG}; then
+            MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
+            MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
+          fi
+
+          if [ -e ${IMAGES}/uImage ]; then
+            check_size ${IMAGES}/uImage ${MAX_KERNEL_SIZE}
+            mv ${IMAGES}/uImage ${DIR}/uImage.${FAMILY}
+            md5sum ${DIR}/uImage.${FAMILY} > ${DIR}/uImage.${FAMILY}.md5sum
+          fi
+
+          if [ -e ${IMAGES}/zboot.img ]; then
+            check_size ${IMAGES}/zboot.img ${MAX_KERNEL_SIZE_NAND}
+            mv ${IMAGES}/zboot.img ${DIR}/boot.img.${FAMILY}
+            md5sum ${DIR}/boot.img.${FAMILY} > ${DIR}/boot.img.${FAMILY}.md5sum
+            rm -f ${IMAGES}/rootfs.squashfs
+          fi
+
+          if [ -e ${IMAGES}/rootfs.squashfs ]; then
+            check_size ${IMAGES}/rootfs.squashfs ${MAX_ROOTFS_SIZE}
+            mv ${IMAGES}/rootfs.squashfs ${DIR}/rootfs.squashfs.${FAMILY}
+            md5sum ${DIR}/rootfs.squashfs.${FAMILY} > ${DIR}/rootfs.squashfs.${FAMILY}.md5sum
+
+            NORFW=${IMAGES}/openipc.${FAMILY}-nor-${RELEASE}.tgz
+            echo NORFW=${NORFW} >> ${GITHUB_ENV}
+            tar czf ${NORFW} -C ${DIR} $(ls ${DIR})
+          fi
+
+          if [ -e ${IMAGES}/rootfs.ubi ]; then
+            check_size ${IMAGES}/rootfs.ubi ${MAX_ROOTFS_SIZE_NAND}
+            mv ${IMAGES}/rootfs.ubi ${DIR}/rootfs.ubi.${FAMILY}
+            md5sum ${DIR}/rootfs.ubi.${FAMILY} > ${DIR}/rootfs.ubi.${FAMILY}.md5sum
+            rm -f ${DIR}/rootfs.squashfs*
+
+            NANDFW=${IMAGES}/openipc.${FAMILY}-nand-${RELEASE}.tgz
+            echo NANDFW=${NANDFW} >> ${GITHUB_ENV}
+            tar czf ${NANDFW} -C ${DIR} $(ls ${DIR})
+          fi
+
+      - name: Upload firmware
+        if: github.event_name != 'pull_request' && matrix.custom != 'onlyci'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{env.TAG_NAME}}
+          files: |
+            ${{env.NORFW}}
+            ${{env.NANDFW}}
+
+      - name: Send error
+        if: github.event_name != 'pull_request' && failure()
+        run: |
+          TG_WARN="Error: ${{matrix.platform}}_${{matrix.release}}\n"
+          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\n\n"
+          TG_ICON="\xE2\x9A\xA0 GitHub Actions"
+          TG_HEADER=$(echo -e ${TG_WARN}${TG_MSG}${TG_ICON})
+          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendMessage -F chat_id=${TG_CHANNEL} -F text="${TG_HEADER}")
+          echo Telegram response: ${HTTP}
+          exit 2
+
+      - name: Send binary
+        if: github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NORFW
+        run: |
+          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\n\n"
+          TG_ICON="\xE2\x9C\x85 GitHub Actions"
+          TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
+          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
+          echo Telegram response: ${HTTP}
+
+  ci-build-check:
+    if: github.event_name == 'pull_request' && always()
+    runs-on: ubuntu-latest
+    name: CI buildcheck
+    needs: buildroot
+    steps:
+      - run: |
+          result=${{needs.buildroot.result}}
+          if [[ ${result} = "success" || ${result} = "skipped" ]]; then
+            exit 0
+          else
+            exit 1
+          fi

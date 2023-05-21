@@ -1,18 +1,17 @@
+BR_VER = 2021.02.12
 BR_DIR = $(PWD)/buildroot-$(BR_VER)
 BR_MAKE = $(MAKE) -C $(BR_DIR) BR2_EXTERNAL=$(PWD)/general O=$(PWD)/output
+CHECK = $(wildcard $(BR_DIR))
 
 ifdef BOARD
-	CHECK = $(wildcard $(BR_DIR))
 	CONFIG = $(shell find br-ext-chip-*/configs -type f | grep -m1 $(BOARD))
 endif
 
 ifeq ($(CONFIG),)
-	BR_VER = $(error variable BOARD must be defined to initialize build)
+	CONFIG = $(error variable BOARD must be defined to initialize build)
 else
 	ifneq ($(shell grep GCC_VERSION_12 $(CONFIG)),)
 		BR_VER = 2023.02
-	else
-		BR_VER = 2021.02.12
 	endif
 endif
 
@@ -22,7 +21,6 @@ help:
 	@printf "BR-OpenIPC usage:\n \
 	- make clean - remove defconfig and target folder\n \
 	- make distclean - remove buildroot and output folder\n \
-	- make install-deps - install system dependencies\n \
 	- make list-configs - show available board configurations\n \
 	- make all BOARD=<device> - builds the selected board\n\n"
 
@@ -57,7 +55,3 @@ distclean:
 
 list-configs:
 	@ls -1 br-ext-chip-*/configs
-
-install-deps:
-	@sudo apt-get install -y build-essential libncurses-dev \
-		bc cpio curl file git lzop make rsync unzip wget
