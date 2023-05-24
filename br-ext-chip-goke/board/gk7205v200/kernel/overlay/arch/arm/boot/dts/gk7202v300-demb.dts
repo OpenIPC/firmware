@@ -149,3 +149,8 @@
 	status = "okay";
 };
 
+&usbdrd3_0 {
+    dwc3@0x100e0000 {
+        dr_mode = "host";
+    };
+};
