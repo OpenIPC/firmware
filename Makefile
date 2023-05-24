@@ -1,7 +1,7 @@
 BR_VER = 2021.02.12
-BR_DIR = $(PWD)/buildroot-$(BR_VER)
-BR_MAKE = $(MAKE) -C $(BR_DIR) BR2_EXTERNAL=$(PWD)/general O=$(PWD)/output
-CHECK = $(wildcard $(BR_DIR))
+BR_LINK = https://github.com/buildroot/buildroot/archive/refs/tags
+BR_MAKE = $(MAKE) -C buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(PWD)/output
+BR_FILE = /tmp/download/buildroot-$(BR_VER).tar.gz
 
 ifdef BOARD
 	CONFIG = $(shell find br-ext-chip-*/configs -type f | grep -m1 $(BOARD))
@@ -21,8 +21,8 @@ help:
 	@printf "BR-OpenIPC usage:\n \
 	- make clean - remove defconfig and target folder\n \
 	- make distclean - remove buildroot and output folder\n \
-	- make list-configs - show available board configurations\n \
-	- make all BOARD=<device> - builds the selected board\n\n"
+	- make list-configs - show available device configurations\n \
+	- make all BOARD=<config> - builds the selected device\n\n"
 
 all: defconfig
 	@$(BR_MAKE) all
@@ -37,12 +37,9 @@ toolname: prepare
 	@general/scripts/show_toolchains.sh $(CONFIG) $(BR_VER)
 
 prepare:
-ifeq ($(CHECK),)
-	@wget -O $(BR_DIR).tar.gz -nv --retry-connrefused --timeout=3 \
-		https://github.com/buildroot/buildroot/archive/refs/tags/$(BR_VER).tar.gz
-	@tar -C $(PWD) -xf $(BR_DIR).tar.gz
-	@rm -f $(BR_DIR).tar.gz
-endif
+	@mkdir -p /tmp/download
+	@test -e $(BR_FILE) || wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE)
+	@test -e buildroot-$(BR_VER) || tar -xf $(BR_FILE) -C $(PWD)
 
 buildroot-version:
 	@echo $(BR_VER)
@@ -51,7 +48,7 @@ clean:
 	@rm -rf output/target output/.config
 
 distclean:
-	@rm -rf output buildroot-*.*
+	@rm -rf output buildroot-$(BR_VER) $(BR_FILE)
 
 list-configs:
 	@ls -1 br-ext-chip-*/configs

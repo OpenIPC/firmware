@@ -19,7 +19,7 @@ env:
   MAX_KERNEL_SIZE_ULTIMATE: 0x300000
   MAX_ROOTFS_SIZE_ULTIMATE: 0xA00000
   MAX_KERNEL_SIZE_NAND: 0x0800000
-  MAX_ROOTFS_SIZE_NAND: 0x1200000
+  MAX_ROOTFS_SIZE_NAND: 0x1000000
   TAG_NAME: latest
 
 jobs:
@@ -65,11 +65,10 @@ jobs:
 
       - name: Determine toolchain
         run: |
-          make BOARD=${{matrix.platform}}_lite prepare
           GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
           echo GCC=${GCC} >> ${GITHUB_ENV}
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
-          echo ${URL}
+          echo Check: ${URL}
           if ! wget --spider ${URL} 2> /dev/null; then
             echo BUILD=true >> ${GITHUB_ENV}
           fi
@@ -268,14 +267,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Restore download
+        uses: actions/cache/restore@v3
+        with:
+          path: /tmp/download
+          key: buildroot-cache
+
       - name: Determine toolchain
         run: |
-          make BOARD=${{matrix.platform}}_lite prepare
           GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
           echo GCC=${GCC} >> ${GITHUB_ENV}
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
-          echo ${URL}
-          wget -q -c --retry-on-http-error=503 --timeout=15 ${URL}
+          echo Download: ${URL}
+          wget -c -q --timeout=15 --retry-on-http-error=503 ${URL}
 
       - name: Setup ccache
         if: github.event_name != 'pull_request'
@@ -291,12 +295,6 @@ jobs:
           path: /tmp/ccache
           key: ${{env.GCC}}
 
-      - name: Restore download
-        uses: actions/cache/restore@v3
-        with:
-          path: /tmp/download
-          key: buildroot-cache
-
       - name: Build firmware
         run: |
           FAMILY=${{matrix.platform}}
@@ -304,9 +302,8 @@ jobs:
           CONFIG=$(find br-ext-chip-* -name ${FAMILY}_${RELEASE}_defconfig)
           IMAGES=${GITHUB_WORKSPACE}/output/images
 
-          DIR=/tmp/openipc
           SDK=/tmp/extsdk
-          mkdir -p ${DIR} ${SDK}
+          mkdir -p ${SDK}
           tar xf ${GCC}.tgz --strip-components=1 -C ${SDK}
 
           EXT=BR2_TOOLCHAIN_EXTERNAL
@@ -355,12 +352,11 @@ jobs:
           echo ------------------------------------------------------------
 
           check_size() {
-            FILE=$(basename ${1})
             SIZE1=$(expr $(stat --printf="%s" ${1}) / 1024)
             SIZE2=$(expr ${2} / 1024)
-            echo - ${FILE}: [${SIZE1}KB/${SIZE2}KB]
+            echo - ${1}: [${SIZE1}KB/${SIZE2}KB]
             if [ ${SIZE1} -gt ${SIZE2} ]; then
-              echo -- Error: ${FILE} size exceeded by $(expr ${SIZE1} - ${SIZE2})KB
+              echo -- Error: ${1} size exceeded by $(expr ${SIZE1} - ${SIZE2})KB
               exit 1
             fi
           }
@@ -370,38 +366,41 @@ jobs:
             MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
           fi
 
+          mkdir -p /tmp/openipc
+          cd /tmp/openipc
+
           if [ -e ${IMAGES}/uImage ]; then
-            check_size ${IMAGES}/uImage ${MAX_KERNEL_SIZE}
-            mv ${IMAGES}/uImage ${DIR}/uImage.${FAMILY}
-            md5sum ${DIR}/uImage.${FAMILY} > ${DIR}/uImage.${FAMILY}.md5sum
+            mv ${IMAGES}/uImage uImage.${FAMILY}
+            md5sum uImage.${FAMILY} > uImage.${FAMILY}.md5sum
+            check_size uImage.${FAMILY} ${MAX_KERNEL_SIZE}
           fi
 
           if [ -e ${IMAGES}/zboot.img ]; then
-            check_size ${IMAGES}/zboot.img ${MAX_KERNEL_SIZE_NAND}
-            mv ${IMAGES}/zboot.img ${DIR}/boot.img.${FAMILY}
-            md5sum ${DIR}/boot.img.${FAMILY} > ${DIR}/boot.img.${FAMILY}.md5sum
+            mv ${IMAGES}/zboot.img boot.img.${FAMILY}
+            md5sum boot.img.${FAMILY} > boot.img.${FAMILY}.md5sum
+            check_size boot.img.${FAMILY} ${MAX_KERNEL_SIZE_NAND}
             rm -f ${IMAGES}/rootfs.squashfs
           fi
 
           if [ -e ${IMAGES}/rootfs.squashfs ]; then
-            check_size ${IMAGES}/rootfs.squashfs ${MAX_ROOTFS_SIZE}
-            mv ${IMAGES}/rootfs.squashfs ${DIR}/rootfs.squashfs.${FAMILY}
-            md5sum ${DIR}/rootfs.squashfs.${FAMILY} > ${DIR}/rootfs.squashfs.${FAMILY}.md5sum
+            mv ${IMAGES}/rootfs.squashfs rootfs.squashfs.${FAMILY}
+            md5sum rootfs.squashfs.${FAMILY} > rootfs.squashfs.${FAMILY}.md5sum
+            check_size rootfs.squashfs.${FAMILY} ${MAX_ROOTFS_SIZE}
 
             NORFW=${IMAGES}/openipc.${FAMILY}-nor-${RELEASE}.tgz
             echo NORFW=${NORFW} >> ${GITHUB_ENV}
-            tar czf ${NORFW} -C ${DIR} $(ls ${DIR})
+            tar czf ${NORFW} $(ls)
           fi
 
           if [ -e ${IMAGES}/rootfs.ubi ]; then
-            check_size ${IMAGES}/rootfs.ubi ${MAX_ROOTFS_SIZE_NAND}
-            mv ${IMAGES}/rootfs.ubi ${DIR}/rootfs.ubi.${FAMILY}
-            md5sum ${DIR}/rootfs.ubi.${FAMILY} > ${DIR}/rootfs.ubi.${FAMILY}.md5sum
-            rm -f ${DIR}/rootfs.squashfs*
+            mv ${IMAGES}/rootfs.ubi rootfs.ubi.${FAMILY}
+            md5sum rootfs.ubi.${FAMILY} > rootfs.ubi.${FAMILY}.md5sum
+            check_size rootfs.ubi.${FAMILY} ${MAX_ROOTFS_SIZE_NAND}
+            rm -f rootfs.squashfs*
 
             NANDFW=${IMAGES}/openipc.${FAMILY}-nand-${RELEASE}.tgz
             echo NANDFW=${NANDFW} >> ${GITHUB_ENV}
-            tar czf ${NANDFW} -C ${DIR} $(ls ${DIR})
+            tar czf ${NANDFW} $(ls)
           fi
 
       - name: Upload firmware
@@ -436,7 +435,7 @@ jobs:
   ci-build-check:
     if: github.event_name == 'pull_request' && always()
     runs-on: ubuntu-latest
-    name: CI buildcheck
+    name: CI Build Check
     needs: buildroot
     steps:
       - run: |
