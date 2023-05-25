@@ -1,9 +1,10 @@
-EXTERNAL_FAMILY = $(shell grep -oE "board.\w+" $(BR2_CONFIG) | cut -d "/" -f 2)
-EXTERNAL_RELEASE = $(shell grep -oE "\w+_defconfig" $(BR2_CONFIG) | cut -d "_" -f 2)
-EXTERNAL_VENDOR = $(shell grep -oE "br-ext-chip-\w+" $(BR2_CONFIG))
+export OPENIPC_VENDOR = $(call qstrip,$(BR2_OPENIPC_VENDOR))
+export OPENIPC_FAMILY = $(call qstrip,$(BR2_OPENIPC_FAMILY))
+export OPENIPC_MODEL = $(call qstrip,$(BR2_OPENIPC_MODEL))
+export OPENIPC_RELEASE = $(call qstrip,$(BR2_OPENIPC_RELEASE))
 
-export BR2_EXTERNAL_VENDOR = $(BR2_EXTERNAL)/../$(EXTERNAL_VENDOR)
+export BR2_EXTERNAL_LIBC ?= $(call qstrip,$(BR2_TOOLCHAIN_BUILDROOT_LIBC))
 export BR2_EXTERNAL_SCRIPTS = $(BR2_EXTERNAL)/scripts
-export BR2_EXTERNAL_LIBC = $(shell $(BR2_EXTERNAL_SCRIPTS)/show_toolchains.sh $(BR2_DEFCONFIG) | cut -d "-" -f 3)
+export BR2_EXTERNAL_VENDOR = $(BR2_EXTERNAL)/../br-ext-chip-$(BR2_OPENIPC_VENDOR)
 
 include $(sort $(wildcard $(BR2_EXTERNAL)/package/*/*.mk))
