@@ -12,6 +12,10 @@ MAJESTIC_LICENSE_FILES = LICENSE
 MAJESTIC_FAMILY = $(EXTERNAL_FAMILY)
 MAJESTIC_RELEASE = $(EXTERNAL_RELEASE)
 
+ifeq ($(MAJESTIC_FAMILY),t10)
+	MAJESTIC_FAMILY = t21
+endif
+
 ifeq ($(MAJESTIC_RELEASE),ultimate)
 	# we don't have Majestic binary Ultimate distributions for these
 	# platforms so use Lite
