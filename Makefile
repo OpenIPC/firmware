@@ -18,11 +18,12 @@ endif
 .PHONY: all clean defconfig distclean help prepare toolname
 
 help:
-	@printf "BR-OpenIPC usage:\n \
+	@echo -e "BR-OpenIPC usage:\n \
 	- make clean - remove defconfig and target folder\n \
 	- make distclean - remove buildroot and output folder\n \
-	- make list-configs - show available device configurations\n \
-	- make all BOARD=<config> - builds the selected device\n\n"
+	- make list - show available device configurations\n \
+	- make info BOARD=<config> - show device information\n \
+	- make all BOARD=<config> - builds the selected device\n"
 
 all: defconfig
 	@$(BR_MAKE) all
@@ -50,5 +51,8 @@ clean:
 distclean:
 	@rm -rf output buildroot-$(BR_VER) $(BR_FILE)
 
-list-configs:
+info:
+	@cat $(CONFIG) | grep BR2_OPENIPC | tr -d '"' | sed "s|BR2_OPENIPC_||g"
+
+list:
 	@ls -1 br-ext-chip-*/configs
