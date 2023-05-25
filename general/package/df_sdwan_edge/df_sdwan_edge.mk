@@ -6,12 +6,10 @@
 
 # - Package information
 DF_SDWAN_EDGE_VERSION = current
+DF_SDWAN_EDGE_SOURCE = df_sdwan_edge.$(OPENIPC_FAMILY).tar.xz
 DF_SDWAN_EDGE_SITE = http://getdataflow.ru/download/sdwan/openipc
 DF_SDWAN_EDGE_LICENSE = PROPRIETARY
 DF_SDWAN_EDGE_LICENSE_FILES = LICENSE
-
-# - File name on server
-DF_SDWAN_EDGE_SOURCE = df_sdwan_edge.$(EXTERNAL_FAMILY).tar.xz
 
 # - Install commands
 define DF_SDWAN_EDGE_INSTALL_TARGET_CMDS
@@ -37,7 +35,6 @@ define DF_SDWAN_EDGE_INSTALL_TARGET_CMDS
 	# --- Install service
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	$(INSTALL) -m 755 $(@D)/service/S45sdwan-edge $(TARGET_DIR)/etc/init.d/S45sdwan-edge
-
 endef
 
 $(eval $(generic-package))

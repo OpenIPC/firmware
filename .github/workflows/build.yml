@@ -314,13 +314,14 @@ jobs:
           echo ${EXT}_PATH=\"${SDK}\" >> ${CONFIG}
 
           PREFIX=$(ls -d ${SDK}/*openipc* | xargs basename)
-          GCCV=$(echo ${GCC} | cut -d "-" -f 2)
           LIBC=$(echo ${GCC} | cut -d "-" -f 3)
           KVER=$(echo ${GCC} | cut -d "-" -f 4)
           echo ${EXT}_CUSTOM_PREFIX=\"${PREFIX}\" >> ${CONFIG}
           echo ${EXT}_CUSTOM_${LIBC^^}=y >> ${CONFIG}
           echo ${EXT}_HEADERS_${KVER}=y >> ${CONFIG}
-          echo ${EXT}_GCC_${GCCV:3:1}=y >> ${CONFIG}
+
+          GCCV=$(echo ${GCC} | grep -oP "gcc\K\d+")
+          echo ${EXT}_GCC_${GCCV}=y >> ${CONFIG}
 
           if [ ${LIBC} = "glibc" ]; then
             RPC=${SDK}/${PREFIX}/sysroot/usr/include/rpc/rpc.h
@@ -336,7 +337,9 @@ jobs:
 
           echo BR2_CCACHE=y >> ${CONFIG}
           echo BR2_CCACHE_DIR=\"/tmp/ccache\" >> ${CONFIG}
+
           export BR2_DL_DIR=/tmp/download
+          export BR2_EXTERNAL_LIBC=${LIBC}
 
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
           export GIT_BRANCH=${GITHUB_REF_NAME}
@@ -348,7 +351,9 @@ jobs:
           echo ------------------------------------------------------------
           cat ${CONFIG}
           echo ------------------------------------------------------------
-          make BOARD=${FAMILY}_${RELEASE} all
+          make info BOARD=${FAMILY}_${RELEASE}
+          echo ------------------------------------------------------------
+          make all BOARD=${FAMILY}_${RELEASE}
           echo ------------------------------------------------------------
 
           check_size() {
@@ -361,7 +366,7 @@ jobs:
             fi
           }
 
-          if [ ${RELEASE} == "ultimate" ] || grep -q GLIBC=y ${CONFIG}; then
+          if [ ${RELEASE} == "ultimate" ] || [ ${LIBC} = "glibc" ]; then
             MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
             MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
           fi
