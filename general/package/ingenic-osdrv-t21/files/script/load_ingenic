@@ -1,7 +1,7 @@
 #!/bin/sh
 
 KMOD_PATH=/lib/modules/$(uname -r)/ingenic
-SOC=$(ipcinfo -f || fw_printenv -n soc)
+SOC=$(ipcinfo -c)
 vendor=$(ipcinfo -v)
 
 if [ ! -f /usr/sbin/sensor_cli ]; then
