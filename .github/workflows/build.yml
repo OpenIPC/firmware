@@ -279,7 +279,7 @@ jobs:
           echo GCC=${GCC} >> ${GITHUB_ENV}
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
           echo Download: ${URL}
-          wget -c -q --timeout=15 --retry-on-http-error=503 ${URL}
+          wget -c -q --timeout=15 --retry-on-http-error=429,503 ${URL}
 
       - name: Setup ccache
         if: github.event_name != 'pull_request'
