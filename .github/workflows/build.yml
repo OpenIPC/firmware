@@ -1,5 +1,4 @@
 name: build
-
 on:
   pull_request:
     types:
@@ -14,87 +13,21 @@ on:
   workflow_dispatch:
 
 env:
+  TAG_NAME: latest
   MAX_KERNEL_SIZE: 0x200000
   MAX_ROOTFS_SIZE: 0x500000
   MAX_KERNEL_SIZE_ULTIMATE: 0x300000
   MAX_ROOTFS_SIZE_ULTIMATE: 0xA00000
   MAX_KERNEL_SIZE_NAND: 0x0800000
   MAX_ROOTFS_SIZE_NAND: 0x1000000
-  TAG_NAME: latest
+  TG_TOKEN: ${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}
+  TG_CHANNEL: ${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
+  TG_OPTIONS: -s --connect-timeout 30 --retry 10 --http1.1 -o /dev/null -w %{http_code}
 
 jobs:
-  toolchain:
-    name: Toolchain
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - ak3918ev300
-          - dm36x
-          - fh8852v100
-          - fh8852v200
-          - gk7102
-          - gm8136
-          - hi3516cv100
-          - hi3516cv200
-          - hi3516cv300
-          - hi3516cv500
-          - hi3516ev200
-          - hi3519v101
-          - hi3536cv100
-          - msc313e
-          - msc316dc
-          - msc316dm
-          - nt98562
-          - rv1126
-          - s3l
-          - ssc335
-          - ssc338q
-          - t31
-          - t40
-          - xm510
-          - xm530
-
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Determine toolchain
-        run: |
-          GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
-          echo GCC=${GCC} >> ${GITHUB_ENV}
-          URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
-          echo Check: ${URL}
-          if ! wget --spider ${URL} 2> /dev/null; then
-            echo BUILD=true >> ${GITHUB_ENV}
-          fi
-
-      - name: Build toolchain
-        if: env.BUILD
-        run: |
-          make BOARD=${{matrix.platform}}_lite br-sdk
-          SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
-          mv ${SDK} ${GCC}.tgz
-
-      - name: Upload toolchain
-        if: env.BUILD && github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{env.TAG_NAME}}
-          files: ${{env.GCC}}.tgz
-
   buildroot:
     name: Firmware
-    needs: toolchain
     runs-on: ubuntu-latest
-    env:
-      TG_TOKEN: ${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}
-      TG_CHANNEL: ${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
-      TG_OPTIONS: -s --connect-timeout 30 --retry 10 --http1.1 -o /dev/null -w %{http_code}
 
     strategy:
       fail-fast: false
@@ -267,12 +200,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore download
-        uses: actions/cache/restore@v3
-        with:
-          path: /tmp/download
-          key: buildroot-cache
-
       - name: Determine toolchain
         run: |
           GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
@@ -294,6 +221,12 @@ jobs:
         with:
           path: /tmp/ccache
           key: ${{env.GCC}}
+
+      - name: Restore download
+        uses: actions/cache/restore@v3
+        with:
+          path: /tmp/download
+          key: buildroot-cache
 
       - name: Build firmware
         run: |
@@ -337,9 +270,7 @@ jobs:
 
           echo BR2_CCACHE=y >> ${CONFIG}
           echo BR2_CCACHE_DIR=\"/tmp/ccache\" >> ${CONFIG}
-
           export BR2_DL_DIR=/tmp/download
-          export BR2_EXTERNAL_LIBC=${LIBC}
 
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
           export GIT_BRANCH=${GITHUB_REF_NAME}
@@ -347,11 +278,9 @@ jobs:
           echo GIT_BRANCH=${GIT_BRANCH} >> ${GITHUB_ENV}
 
           echo ------------------------------------------------------------
-          echo ${CONFIG}
+          make info BOARD=${FAMILY}_${RELEASE}
           echo ------------------------------------------------------------
           cat ${CONFIG}
-          echo ------------------------------------------------------------
-          make info BOARD=${FAMILY}_${RELEASE}
           echo ------------------------------------------------------------
           make all BOARD=${FAMILY}_${RELEASE}
           echo ------------------------------------------------------------

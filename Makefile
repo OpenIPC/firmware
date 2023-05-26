@@ -34,13 +34,13 @@ br-%: defconfig
 defconfig: prepare
 	@$(BR_MAKE) BR2_DEFCONFIG=$(PWD)/$(CONFIG) defconfig
 
-toolname: prepare
-	@general/scripts/show_toolchains.sh $(CONFIG) $(BR_VER)
-
 prepare:
 	@mkdir -p /tmp/download
 	@test -e $(BR_FILE) || wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE)
 	@test -e buildroot-$(BR_VER) || tar -xf $(BR_FILE) -C $(PWD)
+
+toolname:
+	@general/scripts/show_toolchains.sh $(CONFIG)
 
 buildroot-version:
 	@echo $(BR_VER)
@@ -52,6 +52,7 @@ distclean:
 	@rm -rf output buildroot-$(BR_VER) $(BR_FILE)
 
 info:
+	@echo $(CONFIG):
 	@cat $(CONFIG) | grep BR2_OPENIPC | tr -d '"' | sed "s|BR2_OPENIPC_||g"
 
 list:
