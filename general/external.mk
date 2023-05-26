@@ -1,6 +1,6 @@
 export OPENIPC_VENDOR = $(call qstrip,$(BR2_OPENIPC_VENDOR))
-export OPENIPC_FAMILY = $(call qstrip,$(BR2_OPENIPC_FAMILY))
 export OPENIPC_MODEL = $(call qstrip,$(BR2_OPENIPC_MODEL))
+export OPENIPC_FAMILY = $(call qstrip,$(BR2_OPENIPC_FAMILY))
 export OPENIPC_RELEASE = $(call qstrip,$(BR2_OPENIPC_RELEASE))
 
 export BR2_EXTERNAL_LIBC ?= $(call qstrip,$(BR2_TOOLCHAIN_BUILDROOT_LIBC))
