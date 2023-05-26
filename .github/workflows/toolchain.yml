@@ -1,0 +1,79 @@
+name: toolchain
+on:
+  workflow_dispatch:
+
+env:
+  TAG_NAME: latest
+
+jobs:
+  toolchain:
+    name: Toolchain
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - ak3918ev300
+          - dm36x
+          - fh8852v100
+          - fh8852v200
+          - gk7102
+          - gm8136
+          - hi3516cv100
+          - hi3516cv200
+          - hi3516cv300
+          - hi3516cv500
+          - hi3516ev200
+          - hi3519v101
+          - hi3536cv100
+          - msc313e
+          - msc316dc
+          - msc316dm
+          - nt98562
+          - rv1126
+          - s3l
+          - ssc335
+          - ssc338q
+          - t31
+          - t40
+          - xm510
+          - xm530
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Determine toolchain
+        run: |
+          GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
+          echo GCC=${GCC} >> ${GITHUB_ENV}
+          URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
+          echo Check: ${URL}
+          if ! wget --spider ${URL} 2> /dev/null; then
+            echo BUILD=true >> ${GITHUB_ENV}
+          fi
+
+      - name: Restore download
+        if: env.BUILD
+        uses: actions/cache/restore@v3
+        with:
+          path: /tmp/download
+          key: buildroot-cache
+
+      - name: Build toolchain
+        if: env.BUILD
+        run: |
+          export BR2_DL_DIR=/tmp/download
+          make BOARD=${{matrix.platform}}_lite br-sdk
+          SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
+          mv ${SDK} ${GCC}.tgz
+
+      - name: Upload toolchain
+        if: env.BUILD
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{env.TAG_NAME}}
+          files: ${{env.GCC}}.tgz
