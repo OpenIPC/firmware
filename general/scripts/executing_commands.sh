@@ -8,15 +8,16 @@ date +GITHUB_VERSION="\"${GIT_BRANCH-local}+${GIT_HASH-build}, %Y-%m-%d"\" >> ${
 echo BUILD_OPTION=${OPENIPC_RELEASE} >> ${FILE}
 date +TIME_STAMP=%s >> ${FILE}
 
-echo --- BR2_TOOLCHAIN_BUILDROOT_LIBC: ${BR2_EXTERNAL_LIBC}
+LIBC=$(grep -oP "TOOLCHAIN_USES.\K\w+" ${BR2_CONFIG} | awk '{print tolower($0)}')
+echo --- BR2_TOOLCHAIN_BUILDROOT_LIBC: ${LIBC}
 rm -f ${TARGET_DIR}/usr/bin/gdbserver
 
 CONF="INGENIC_OSDRV_T30=y|LIBV4L=y|MAVLINK_ROUTER=y|WIFIBROADCAST=y"
-if [ ${BR2_EXTERNAL_LIBC} != "glibc" ] && ! grep -qE ${CONF} ${BR2_CONFIG}; then
+if [ ${LIBC} != "glibc" ] && ! grep -qP ${CONF} ${BR2_CONFIG}; then
   rm -f ${TARGET_DIR}/usr/lib/libstdc++*
 fi
 
-if [ ${BR2_EXTERNAL_LIBC} = "musl" ]; then
+if [ ${LIBC} = "musl" ]; then
   NAME=${OPENIPC_RELEASE/lte/fpv}
   LIST=${BR2_EXTERNAL_SCRIPTS}/excludes/${OPENIPC_MODEL}_${NAME}.list
   test -e ${LIST} && xargs -a ${LIST} -i rm -f ${TARGET_DIR}{}
