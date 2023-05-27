@@ -8,19 +8,17 @@ date +GITHUB_VERSION="\"${GIT_BRANCH-local}+${GIT_HASH-build}, %Y-%m-%d"\" >> ${
 echo BUILD_OPTION=${OPENIPC_RELEASE} >> ${FILE}
 date +TIME_STAMP=%s >> ${FILE}
 
-LIBC=$(grep -oP "TOOLCHAIN_USES.\K\w+" ${BR2_CONFIG} | awk '{print tolower($0)}')
-echo --- BR2_TOOLCHAIN_BUILDROOT_LIBC: ${LIBC}
 rm -f ${TARGET_DIR}/usr/bin/gdbserver
 
 CONF="INGENIC_OSDRV_T30=y|LIBV4L=y|MAVLINK_ROUTER=y|WIFIBROADCAST=y"
-if [ ${LIBC} != "glibc" ] && ! grep -qP ${CONF} ${BR2_CONFIG}; then
+if ! grep -q "USES_GLIBC" ${BR2_CONFIG} && ! grep -qP ${CONF} ${BR2_CONFIG}; then
   rm -f ${TARGET_DIR}/usr/lib/libstdc++*
 fi
 
-if [ ${LIBC} = "musl" ]; then
+if grep -q "USES_MUSL" ${BR2_CONFIG}; then
   NAME=${OPENIPC_RELEASE/lte/fpv}
   LIST=${BR2_EXTERNAL_SCRIPTS}/excludes/${OPENIPC_MODEL}_${NAME}.list
-  test -e ${LIST} && xargs -a ${LIST} -i rm -f ${TARGET_DIR}{}
+  test -e ${LIST} && xargs -a ${LIST} -i rm -rf ${TARGET_DIR}{}
 
   ln -sf /lib/libc.so ${TARGET_DIR}/lib/ld-uClibc.so.0
   ln -sf ../../lib/libc.so ${TARGET_DIR}/usr/bin/ldd
