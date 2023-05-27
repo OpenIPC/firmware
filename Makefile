@@ -1,7 +1,7 @@
 BR_VER = 2021.02.12
 BR_LINK = https://github.com/buildroot/buildroot/archive/refs/tags
-BR_MAKE = $(MAKE) -C buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(PWD)/output
 BR_FILE = /tmp/download/buildroot-$(BR_VER).tar.gz
+BR_MAKE = $(MAKE) -C buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(PWD)/output
 
 ifdef BOARD
 	CONFIG = $(shell find br-ext-chip-*/configs -type f | grep -m1 $(BOARD))
