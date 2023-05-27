@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 
 env:
-  REMOVE: linux* gcc glibc aws* majestic mini
+  REMOVE: gcc gdb glibc linux* toolchain* aws* majestic mini
 
 jobs:
   download:

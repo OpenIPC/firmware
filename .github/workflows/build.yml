@@ -200,27 +200,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine toolchain
-        run: |
-          GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
-          echo GCC=${GCC} >> ${GITHUB_ENV}
-          URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
-          echo Download: ${URL}
-          wget -c -q --timeout=15 --retry-on-http-error=429,503 ${URL}
-
       - name: Setup ccache
         if: github.event_name != 'pull_request'
         uses: actions/cache@v3
         with:
           path: /tmp/ccache
-          key: ${{env.GCC}}
+          key: ${{matrix.platform}}_${{matrix.release}}
 
       - name: Restore ccache
         if: github.event_name == 'pull_request'
         uses: actions/cache/restore@v3
         with:
           path: /tmp/ccache
-          key: ${{env.GCC}}
+          key: ${{matrix.platform}}_${{matrix.release}}
 
       - name: Restore download
         uses: actions/cache/restore@v3
@@ -232,57 +224,25 @@ jobs:
         run: |
           FAMILY=${{matrix.platform}}
           RELEASE=${{matrix.release}}
-          CONFIG=$(find br-ext-chip-* -name ${FAMILY}_${RELEASE}_defconfig)
           IMAGES=${GITHUB_WORKSPACE}/output/images
-
-          SDK=/tmp/extsdk
-          mkdir -p ${SDK}
-          tar xf ${GCC}.tgz --strip-components=1 -C ${SDK}
-
-          EXT=BR2_TOOLCHAIN_EXTERNAL
-          echo ${EXT}=y >> ${CONFIG}
-          echo ${EXT}_CUSTOM=y >> ${CONFIG}
-          echo ${EXT}_PREINSTALLED=y >> ${CONFIG}
-          echo ${EXT}_CXX=y >> ${CONFIG}
-          echo ${EXT}_PATH=\"${SDK}\" >> ${CONFIG}
-
-          PREFIX=$(ls -d ${SDK}/*openipc* | xargs basename)
-          LIBC=$(echo ${GCC} | cut -d "-" -f 3)
-          KVER=$(echo ${GCC} | cut -d "-" -f 4)
-          echo ${EXT}_CUSTOM_PREFIX=\"${PREFIX}\" >> ${CONFIG}
-          echo ${EXT}_CUSTOM_${LIBC^^}=y >> ${CONFIG}
-          echo ${EXT}_HEADERS_${KVER}=y >> ${CONFIG}
-
-          GCCV=$(echo ${GCC} | grep -oP "gcc\K\d+")
-          echo ${EXT}_GCC_${GCCV}=y >> ${CONFIG}
-
-          if [ ${LIBC} = "glibc" ]; then
-            RPC=${SDK}/${PREFIX}/sysroot/usr/include/rpc/rpc.h
-            check() { test -f $RPC && echo y || echo n; }
-            echo ${EXT}_INET_RPC=$(check) >> ${CONFIG}
-          elif [ ${LIBC} = "uclibc" ]; then
-            CFG=${SDK}/${PREFIX}/sysroot/usr/include/bits/uClibc_config.h
-            check() { grep -q "${1} 1" ${CFG} && echo y || echo n; }
-            echo ${EXT}_LOCALE=$(check __UCLIBC_HAS_LOCALE__) >> ${CONFIG}
-            echo ${EXT}_HAS_THREADS_DEBUG=$(check __PTHREADS_DEBUG_SUPPORT__) >> ${CONFIG}
-            echo ${EXT}_HAS_SSP=y >> ${CONFIG}
-          fi
-
-          echo BR2_CCACHE=y >> ${CONFIG}
-          echo BR2_CCACHE_DIR=\"/tmp/ccache\" >> ${CONFIG}
-          export BR2_DL_DIR=/tmp/download
+          CONFIG=$(find br-ext-chip-*/configs -name ${FAMILY}_${RELEASE}_defconfig)
 
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
           export GIT_BRANCH=${GITHUB_REF_NAME}
           echo GIT_HASH=${GIT_HASH} >> ${GITHUB_ENV}
           echo GIT_BRANCH=${GIT_BRANCH} >> ${GITHUB_ENV}
 
+          export BR2_DL_DIR=/tmp/download
+          echo BR2_CCACHE=y >> ${CONFIG}
+          mkdir -p /tmp/ccache
+          ln -s /tmp/ccache ${HOME}/.buildroot-ccache
+
           echo ------------------------------------------------------------
-          make info BOARD=${FAMILY}_${RELEASE}
+          make BOARD=${CONFIG} info
           echo ------------------------------------------------------------
           cat ${CONFIG}
           echo ------------------------------------------------------------
-          make all BOARD=${FAMILY}_${RELEASE}
+          make BOARD=${CONFIG} all
           echo ------------------------------------------------------------
 
           check_size() {
@@ -295,7 +255,7 @@ jobs:
             fi
           }
 
-          if [ ${RELEASE} == "ultimate" ] || [ ${LIBC} = "glibc" ]; then
+          if [ ${RELEASE} = "ultimate" ] || grep -q "USES_GLIBC" ${CONFIG}; then
             MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
             MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
           fi
@@ -365,17 +325,3 @@ jobs:
           TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
           HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
           echo Telegram response: ${HTTP}
-
-  ci-build-check:
-    if: github.event_name == 'pull_request' && always()
-    runs-on: ubuntu-latest
-    name: CI Build Check
-    needs: buildroot
-    steps:
-      - run: |
-          result=${{needs.buildroot.result}}
-          if [[ ${result} = "success" || ${result} = "skipped" ]]; then
-            exit 0
-          else
-            exit 1
-          fi
