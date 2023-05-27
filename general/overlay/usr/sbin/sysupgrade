@@ -3,7 +3,7 @@
 # OpenIPC.org | v.20230520
 #
 
-scr_version=1.0.19
+scr_version=1.0.20
 
 args=" $@"
 
@@ -355,11 +355,10 @@ if [ "1" = "$update_webui" ]; then
 	fi
 fi
 
-[ "1" != "$skip_unmount" ] && check_sdcard
-
 create_lock
 free_resources
 
+[ "1" != "$skip_unmount" ] && check_sdcard
 [ "1" = "$remote_update" ] && download_firmware
 [ "1" = "$update_kernel" ] && do_update_kernel "$kernel_file"
 [ "1" = "$update_rootfs" ] && do_update_rootfs "$rootfs_file"
