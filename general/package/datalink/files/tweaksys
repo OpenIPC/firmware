@@ -96,6 +96,9 @@ case "$1" in
   gk7205v300 | hi3516ev300)
 	echo "Preparing system tweaks for ${chip}..."
 
+	# increase osmem
+	mem=$(fw_printenv -n osmem) && [ "${mem}" = "32M" ] && fw_setenv osmem 64M && set_allocator cma || echo "Memory allocated for the system:" ${mem}
+
 	# set sensor config for smtsec board
 	if [ ${chip} = "gk7205v300" ] && [ ${sensor} = "imx307" ]; then
 		cli -s .isp.sensorConfig /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
