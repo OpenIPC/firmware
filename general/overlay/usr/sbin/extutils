@@ -11,7 +11,7 @@ fi
 
 case "${CMD}" in
 	cli)
-		yaml-cli -i /etc/majestic.yaml $@
+		yaml-cli -i /etc/majestic.yaml "$@"
 		;;
 	sensor_cli)
 		yaml-cli -i /etc/sensor/$(fw_printenv -n sensor).yaml $@
