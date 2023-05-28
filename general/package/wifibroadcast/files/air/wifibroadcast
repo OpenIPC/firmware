@@ -93,8 +93,8 @@ load_interface() {
   else
 	  iwconfig ${wlan} channel ${channel}
   fi
-
-  iw dev ${wlan} set txpower fixed $((${txpower} * 100))
+  # dirty fix crash if txpower set. setting txpower disabled because patched driver always set txpower level 58
+  # iw dev ${wlan} set txpower fixed $((${txpower} * 100))
 }
 
 start_wfb() {
