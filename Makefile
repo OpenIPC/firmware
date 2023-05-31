@@ -17,6 +17,7 @@ endif
 
 .PHONY: all clean defconfig distclean help prepare toolname
 
+
 help:
 	@echo -e "BR-OpenIPC usage:\n \
 	- make clean - remove defconfig and target folder\n \
