@@ -1,4 +1,4 @@
-BR_VER = 2021.02.12
+BR_VER = 2023.02.1
 BR_MAKE = $(MAKE) -C buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
 BR_LINK = https://github.com/buildroot/buildroot/archive/refs/tags
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
@@ -10,10 +10,6 @@ endif
 
 ifeq ($(CONFIG),)
 	CONFIG = $(error variable BOARD must be defined to initialize build)
-else
-	ifneq ($(shell grep GCC_VERSION_12 $(CONFIG)),)
-		BR_VER = 2023.02
-	endif
 endif
 
 .PHONY: all clean defconfig distclean help prepare toolname
