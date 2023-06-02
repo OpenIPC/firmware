@@ -1,7 +1,0 @@
-diff -drupN a/drivers/video/fbdev/sunxi/disp2/hdmi_ep952/Makefile b/drivers/video/fbdev/sunxi/disp2/hdmi_ep952/Makefile
---- a/drivers/video/fbdev/sunxi/disp2/hdmi_ep952/Makefile	1970-01-01 03:00:00.000000000 +0300
-+++ b/drivers/video/fbdev/sunxi/disp2/hdmi_ep952/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -0,0 +1,3 @@
-+obj-$(CONFIG_HDMI_EP952_DISP2_SUNXI)  += ep952.o
-+
-+ep952-y := hdmi_ep952.o EP952api.o EP952Controller.o EP952_If.o EP952SettingsData.o DDC_If.o Edid.o EP952SettingsData.o HDCP.o

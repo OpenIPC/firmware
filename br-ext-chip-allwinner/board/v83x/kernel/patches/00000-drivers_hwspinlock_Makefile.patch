@@ -1,8 +1,0 @@
-diff -drupN a/drivers/hwspinlock/Makefile b/drivers/hwspinlock/Makefile
---- a/drivers/hwspinlock/Makefile	2018-08-06 17:23:04.000000000 +0300
-+++ b/drivers/hwspinlock/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -7,3 +7,4 @@ obj-$(CONFIG_HWSPINLOCK_OMAP)		+= omap_h
- obj-$(CONFIG_HWSPINLOCK_QCOM)		+= qcom_hwspinlock.o
- obj-$(CONFIG_HWSPINLOCK_SIRF)		+= sirf_hwspinlock.o
- obj-$(CONFIG_HSEM_U8500)		+= u8500_hsem.o
-+obj-$(CONFIG_HWSPINLOCK_SUNXI)          += sunxi_hwspinlock.o

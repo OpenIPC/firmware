@@ -1,9 +1,0 @@
-diff -drupN a/fs/squashfs/squashfs.h b/fs/squashfs/squashfs.h
---- a/fs/squashfs/squashfs.h	2017-10-21 18:09:07.000000000 +0300
-+++ b/fs/squashfs/squashfs.h	2022-06-09 05:02:35.000000000 +0300
-@@ -111,3 +111,5 @@ extern const struct inode_operations squ
- 
- /* xattr.c */
- extern const struct xattr_handler *squashfs_xattr_handlers[];
-+/* lzma wrapper.c */
-+extern  const struct squashfs_decompressor squashfs_lzma_comp_ops;

@@ -1,9 +1,0 @@
-diff -drupN a/fs/squashfs/Makefile b/fs/squashfs/Makefile
---- a/fs/squashfs/Makefile	2017-10-21 18:09:07.000000000 +0300
-+++ b/fs/squashfs/Makefile	2022-06-09 05:02:35.000000000 +0300
-@@ -14,4 +14,5 @@ squashfs-$(CONFIG_SQUASHFS_XATTR) += xat
- squashfs-$(CONFIG_SQUASHFS_LZ4) += lz4_wrapper.o
- squashfs-$(CONFIG_SQUASHFS_LZO) += lzo_wrapper.o
- squashfs-$(CONFIG_SQUASHFS_XZ) += xz_wrapper.o
-+squashfs-$(CONFIG_SQUASHFS_LZMA) += lzma_wrapper.o hardware_lzma.o
- squashfs-$(CONFIG_SQUASHFS_ZLIB) += zlib_wrapper.o

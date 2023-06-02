@@ -1,9 +1,0 @@
-diff -drupN a/drivers/net/ethernet/allwinner/Makefile b/drivers/net/ethernet/allwinner/Makefile
---- a/drivers/net/ethernet/allwinner/Makefile	2018-08-06 17:23:04.000000000 +0300
-+++ b/drivers/net/ethernet/allwinner/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -3,3 +3,5 @@
- #
- 
- obj-$(CONFIG_SUN4I_EMAC) += sun4i-emac.o
-+obj-$(CONFIG_SUNXI_GMAC) += sunxi_gmac.o
-+sunxi_gmac-objs := sunxi-gmac.o sunxi_gmac_ops.o

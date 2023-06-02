@@ -1,9 +1,0 @@
-diff -drupN a/drivers/android/Makefile b/drivers/android/Makefile
---- a/drivers/android/Makefile	2018-08-06 17:23:04.000000000 +0300
-+++ b/drivers/android/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -1,3 +1,4 @@
- ccflags-y += -I$(src)			# needed for trace events
- 
--obj-$(CONFIG_ANDROID_BINDER_IPC)	+= binder.o
-+obj-$(CONFIG_ANDROID_BINDER_IPC)	+= binder.o binder_alloc.o
-+obj-$(CONFIG_ANDROID_BINDER_IPC_SELFTEST) += binder_alloc_selftest.o

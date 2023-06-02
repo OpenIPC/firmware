@@ -1,8 +1,0 @@
-diff -drupN a/drivers/char/hw_random/Makefile b/drivers/char/hw_random/Makefile
---- a/drivers/char/hw_random/Makefile	2017-10-21 18:09:07.000000000 +0300
-+++ b/drivers/char/hw_random/Makefile	2022-06-09 05:02:28.000000000 +0300
-@@ -33,3 +33,4 @@ obj-$(CONFIG_HW_RANDOM_MSM) += msm-rng.o
- obj-$(CONFIG_HW_RANDOM_ST) += st-rng.o
- obj-$(CONFIG_HW_RANDOM_XGENE) += xgene-rng.o
- obj-$(CONFIG_HW_RANDOM_STM32) += stm32-rng.o
-+obj-$(CONFIG_HW_RANDOM_INGENIC) += ingenic-rng.o

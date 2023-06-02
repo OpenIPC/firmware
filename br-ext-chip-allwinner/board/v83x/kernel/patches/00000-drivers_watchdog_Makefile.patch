@@ -1,8 +1,0 @@
-diff -drupN a/drivers/watchdog/Makefile b/drivers/watchdog/Makefile
---- a/drivers/watchdog/Makefile	2018-08-06 17:23:04.000000000 +0300
-+++ b/drivers/watchdog/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -216,3 +216,4 @@ obj-$(CONFIG_MAX77620_WATCHDOG) += max77
- obj-$(CONFIG_ZIIRAVE_WATCHDOG) += ziirave_wdt.o
- obj-$(CONFIG_SOFT_WATCHDOG) += softdog.o
- obj-$(CONFIG_MENF21BMC_WATCHDOG) += menf21bmc_wdt.o
-+obj-$(CONFIG_AXP2XX_WATCHDOG) += axp2xx_wdt.o

@@ -1,8 +1,0 @@
---- linux-4.9.37/drivers/phy/Makefile	2017-07-12 16:42:41.000000000 +0300
-+++ linux-4.9.y/drivers/phy/Makefile	2021-06-07 13:01:34.000000000 +0300
-@@ -59,4 +59,5 @@
- obj-$(CONFIG_PHY_PISTACHIO_USB)		+= phy-pistachio-usb.o
- obj-$(CONFIG_PHY_CYGNUS_PCIE)		+= phy-bcm-cygnus-pcie.o
- obj-$(CONFIG_ARCH_TEGRA) += tegra/
-+obj-$(CONFIG_ARCH_GOKE) += goke/
- obj-$(CONFIG_PHY_NS2_PCIE)		+= phy-bcm-ns2-pcie.o

@@ -1,8 +1,0 @@
-diff -drupN a/fs/Makefile b/fs/Makefile
---- a/fs/Makefile	2017-10-21 18:09:07.000000000 +0300
-+++ b/fs/Makefile	2022-06-09 05:02:34.000000000 +0300
-@@ -126,3 +126,4 @@ obj-y				+= exofs/ # Multiple modules
- obj-$(CONFIG_CEPH_FS)		+= ceph/
- obj-$(CONFIG_PSTORE)		+= pstore/
- obj-$(CONFIG_EFIVAR_FS)		+= efivarfs/
-+obj-$(CONFIG_YAFFS_FS)		+= yaffs2/

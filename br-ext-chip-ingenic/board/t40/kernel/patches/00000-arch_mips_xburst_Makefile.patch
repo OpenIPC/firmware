@@ -1,8 +1,0 @@
-diff -drupN a/arch/mips/xburst/Makefile b/arch/mips/xburst/Makefile
---- a/arch/mips/xburst/Makefile	1970-01-01 03:00:00.000000000 +0300
-+++ b/arch/mips/xburst/Makefile	2022-06-09 05:02:27.000000000 +0300
-@@ -0,0 +1,4 @@
-+obj-y			+= common/
-+obj-y			+= debug/
-+obj-$(CONFIG_SOC_X1000) += soc-x1000/
-+obj-$(CONFIG_SOC_X1800) += soc-x1800/
