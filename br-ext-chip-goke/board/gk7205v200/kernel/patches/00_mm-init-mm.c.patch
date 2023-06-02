@@ -1,8 +1,0 @@
---- linux-4.9.37/mm/init-mm.c	2017-07-12 16:42:41.000000000 +0300
-+++ linux-4.9.y/mm/init-mm.c	2021-06-07 13:01:34.000000000 +0300
-@@ -25,3 +25,5 @@
- 	.user_ns	= &init_user_ns,
- 	INIT_MM_CONTEXT(init_mm)
- };
-+
-+EXPORT_SYMBOL(init_mm);

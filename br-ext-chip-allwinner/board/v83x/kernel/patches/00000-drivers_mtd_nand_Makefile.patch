@@ -1,9 +1,0 @@
-diff -drupN a/drivers/mtd/nand/Makefile b/drivers/mtd/nand/Makefile
---- a/drivers/mtd/nand/Makefile	2018-08-06 17:23:04.000000000 +0300
-+++ b/drivers/mtd/nand/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -58,5 +58,3 @@ obj-$(CONFIG_MTD_NAND_HISI504)	        +
- obj-$(CONFIG_MTD_NAND_BRCMNAND)		+= brcmnand/
- obj-$(CONFIG_MTD_NAND_QCOM)		+= qcom_nandc.o
- obj-$(CONFIG_MTD_NAND_MTK)		+= mtk_nand.o mtk_ecc.o
--
--nand-objs := nand_base.o nand_bbt.o nand_timings.o

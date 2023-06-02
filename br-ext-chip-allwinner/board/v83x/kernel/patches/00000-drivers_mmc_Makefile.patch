@@ -1,9 +1,0 @@
-diff -drupN a/drivers/mmc/Makefile b/drivers/mmc/Makefile
---- a/drivers/mmc/Makefile	2018-08-06 17:23:04.000000000 +0300
-+++ b/drivers/mmc/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -6,4 +6,4 @@ subdir-ccflags-$(CONFIG_MMC_DEBUG) := -D
- 
- obj-$(CONFIG_MMC)		+= core/
- obj-$(CONFIG_MMC)		+= card/
--obj-$(subst m,y,$(CONFIG_MMC))	+= host/
-+obj-$(CONFIG_MMC)		+= host/

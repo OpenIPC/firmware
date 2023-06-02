@@ -1,9 +1,0 @@
-diff -drupN a/kernel/power/Makefile b/kernel/power/Makefile
---- a/kernel/power/Makefile	2018-08-06 17:23:04.000000000 +0300
-+++ b/kernel/power/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -14,3 +14,5 @@ obj-$(CONFIG_PM_AUTOSLEEP)	+= autosleep.
- obj-$(CONFIG_PM_WAKELOCKS)	+= wakelock.o
- 
- obj-$(CONFIG_MAGIC_SYSRQ)	+= poweroff.o
-+
-+obj-$(CONFIG_SUSPEND)	+= wakeup_reason.o

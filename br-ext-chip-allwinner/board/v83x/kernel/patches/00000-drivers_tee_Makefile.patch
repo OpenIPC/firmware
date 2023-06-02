@@ -1,9 +1,0 @@
-diff -drupN a/drivers/tee/Makefile b/drivers/tee/Makefile
---- a/drivers/tee/Makefile	1970-01-01 03:00:00.000000000 +0300
-+++ b/drivers/tee/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -0,0 +1,5 @@
-+obj-$(CONFIG_TEE) += tee.o
-+tee-objs += tee_core.o
-+tee-objs += tee_shm.o
-+tee-objs += tee_shm_pool.o
-+obj-$(CONFIG_OPTEE) += optee/
