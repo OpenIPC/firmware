@@ -1,8 +1,0 @@
-diff -drupN a/drivers/cpufreq/Makefile b/drivers/cpufreq/Makefile
---- a/drivers/cpufreq/Makefile	2017-10-21 18:09:07.000000000 +0300
-+++ b/drivers/cpufreq/Makefile	2022-06-09 05:02:28.000000000 +0300
-@@ -104,3 +104,4 @@ obj-$(CONFIG_SH_CPU_FREQ)		+= sh-cpufreq
- obj-$(CONFIG_SPARC_US2E_CPUFREQ)	+= sparc-us2e-cpufreq.o
- obj-$(CONFIG_SPARC_US3_CPUFREQ)		+= sparc-us3-cpufreq.o
- obj-$(CONFIG_UNICORE32)			+= unicore2-cpufreq.o
-+obj-$(CONFIG_T40_CPUFREQ)		+= ingenic-cpufreq.o

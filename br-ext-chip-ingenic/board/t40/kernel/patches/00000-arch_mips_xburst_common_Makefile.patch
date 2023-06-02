@@ -1,9 +1,0 @@
-diff -drupN a/arch/mips/xburst/common/Makefile b/arch/mips/xburst/common/Makefile
---- a/arch/mips/xburst/common/Makefile	1970-01-01 03:00:00.000000000 +0300
-+++ b/arch/mips/xburst/common/Makefile	2022-06-09 05:02:27.000000000 +0300
-@@ -0,0 +1,4 @@
-+obj-y	+= prom.o mxu-xburst.o jz_notifier.o
-+obj-$(CONFIG_XBURST_CPU_SCACHE)	+= sc-xburst.o
-+obj-y += initrd-check.o
-+obj-$(CONFIG_XBURST_MXUV2)	+= mxu-v2-ex.obj
-Двоичные файлы a/arch/mips/xburst/common/mxu-v2-ex.obj и b/arch/mips/xburst/common/mxu-v2-ex.obj различаются

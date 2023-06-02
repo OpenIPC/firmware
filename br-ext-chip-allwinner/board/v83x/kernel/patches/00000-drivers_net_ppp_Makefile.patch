@@ -1,9 +1,0 @@
-diff -drupN a/drivers/net/ppp/Makefile b/drivers/net/ppp/Makefile
---- a/drivers/net/ppp/Makefile	2018-08-06 17:23:04.000000000 +0300
-+++ b/drivers/net/ppp/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -11,3 +11,5 @@ obj-$(CONFIG_PPP_SYNC_TTY) += ppp_synctt
- obj-$(CONFIG_PPPOE) += pppox.o pppoe.o
- obj-$(CONFIG_PPPOL2TP) += pppox.o
- obj-$(CONFIG_PPTP) += pppox.o pptp.o
-+obj-$(CONFIG_PPPOLAC) += pppox.o pppolac.o
-+obj-$(CONFIG_PPPOPNS) += pppox.o pppopns.o

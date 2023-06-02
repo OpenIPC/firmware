@@ -1,8 +1,0 @@
-diff -drupN a/drivers/staging/android/fiq_debugger/Makefile b/drivers/staging/android/fiq_debugger/Makefile
---- a/drivers/staging/android/fiq_debugger/Makefile	1970-01-01 03:00:00.000000000 +0300
-+++ b/drivers/staging/android/fiq_debugger/Makefile	2022-06-12 05:28:14.000000000 +0300
-@@ -0,0 +1,4 @@
-+obj-y			+= fiq_debugger.o
-+obj-$(CONFIG_ARM)	+= fiq_debugger_arm.o
-+obj-$(CONFIG_ARM64)	+= fiq_debugger_arm64.o
-+obj-$(CONFIG_FIQ_WATCHDOG)	+= fiq_watchdog.o

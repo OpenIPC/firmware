@@ -1,8 +1,0 @@
-diff -drupN a/drivers/media/platform/sunxi-vfe/Kconfig b/drivers/media/platform/sunxi-vfe/Kconfig
---- a/drivers/media/platform/sunxi-vfe/Kconfig	1970-01-01 03:00:00.000000000 +0300
-+++ b/drivers/media/platform/sunxi-vfe/Kconfig	2022-06-12 05:28:14.000000000 +0300
-@@ -0,0 +1,4 @@
-+config CSI_VFE
-+	tristate "v4l2 driver for SUNXI"
-+	default m
-+	select VIDEOBUF2_DMA_CONTIG

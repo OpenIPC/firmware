@@ -1,9 +1,0 @@
-diff -drupN a/arch/mips/xburst/soc-x1000/Makefile b/arch/mips/xburst/soc-x1000/Makefile
---- a/arch/mips/xburst/soc-x1000/Makefile	1970-01-01 03:00:00.000000000 +0300
-+++ b/arch/mips/xburst/soc-x1000/Makefile	2022-06-09 05:02:27.000000000 +0300
-@@ -0,0 +1,5 @@
-+obj-y += setup.o
-+obj-y += socid.o
-+obj-y += regs_save_restore.o
-+obj-$(CONFIG_EARLY_PRINTK) += early_printk.o
-+obj-$(CONFIG_PM) += pm.o
