@@ -200,19 +200,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Determine toolchain
+        run: |
+          GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
+          echo GCC=${GCC} >> ${GITHUB_ENV}
+
       - name: Setup ccache
         if: github.event_name != 'pull_request'
         uses: actions/cache@v3
         with:
           path: /tmp/ccache
-          key: ${{matrix.platform}}_${{matrix.release}}
+          key: ${{env.GCC}}
 
       - name: Restore ccache
         if: github.event_name == 'pull_request'
         uses: actions/cache/restore@v3
         with:
           path: /tmp/ccache
-          key: ${{matrix.platform}}_${{matrix.release}}
+          key: ${{env.GCC}}
 
       - name: Restore download
         uses: actions/cache/restore@v3
@@ -225,7 +230,7 @@ jobs:
           FAMILY=${{matrix.platform}}
           RELEASE=${{matrix.release}}
           IMAGES=${GITHUB_WORKSPACE}/output/images
-          CONFIG=$(find br-ext-chip-*/configs -name ${FAMILY}_${RELEASE}_defconfig)
+          CONFIG=$(find br-ext-chip-* -name ${FAMILY}_${RELEASE}_defconfig)
 
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
           export GIT_BRANCH=${GITHUB_REF_NAME}
