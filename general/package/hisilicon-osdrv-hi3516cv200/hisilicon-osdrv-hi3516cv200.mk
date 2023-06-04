@@ -90,6 +90,7 @@ define HISILICON_OSDRV_HI3516CV200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(HISILICON_OSDRV_HI3516CV200_PKGDIR)/files/sensor/libsns_ov9732.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(HISILICON_OSDRV_HI3516CV200_PKGDIR)/files/sensor/libsns_ov9750.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(HISILICON_OSDRV_HI3516CV200_PKGDIR)/files/sensor/libsns_ov9752.so
+	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(HISILICON_OSDRV_HI3516CV200_PKGDIR)/files/sensor/libsns_ov9750_v2.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(HISILICON_OSDRV_HI3516CV200_PKGDIR)/files/sensor/libsns_sc1135.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(HISILICON_OSDRV_HI3516CV200_PKGDIR)/files/sensor/libsns_sc1145.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(HISILICON_OSDRV_HI3516CV200_PKGDIR)/files/sensor/libsns_sc1235.so
