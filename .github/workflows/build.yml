@@ -202,35 +202,32 @@ jobs:
 
       - name: Determine toolchain
         run: |
-          GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
-          echo GCC=${GCC} >> ${GITHUB_ENV}
+          echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
+          CONFIG=$(make BOARD=${{matrix.platform}}_${{matrix.release}} info)
+          VENDOR=$(echo ${CONFIG} | grep -oP "VENDOR=\K\w+")
+          FAMILY=$(echo ${CONFIG} | grep -oP "FAMILY=\K\w+")
+          echo CCACHE=${VENDOR}-${FAMILY} >> ${GITHUB_ENV}
 
       - name: Setup ccache
         if: github.event_name != 'pull_request'
         uses: actions/cache@v3
         with:
           path: /tmp/ccache
-          key: ${{env.GCC}}
+          key: ${{env.CCACHE}}
 
       - name: Restore ccache
         if: github.event_name == 'pull_request'
         uses: actions/cache/restore@v3
         with:
           path: /tmp/ccache
-          key: ${{env.GCC}}
-
-      - name: Restore download
-        uses: actions/cache/restore@v3
-        with:
-          path: /tmp/download
-          key: buildroot-cache
+          key: ${{env.CCACHE}}
 
       - name: Build firmware
         run: |
-          FAMILY=${{matrix.platform}}
+          MODEL=${{matrix.platform}}
           RELEASE=${{matrix.release}}
+          CONFIG=$(find br-ext-chip-* -name ${MODEL}_${RELEASE}_defconfig)
           IMAGES=${GITHUB_WORKSPACE}/output/images
-          CONFIG=$(find br-ext-chip-* -name ${FAMILY}_${RELEASE}_defconfig)
 
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
           export GIT_BRANCH=${GITHUB_REF_NAME}
@@ -269,35 +266,35 @@ jobs:
           cd /tmp/openipc
 
           if [ -e ${IMAGES}/uImage ]; then
-            mv ${IMAGES}/uImage uImage.${FAMILY}
-            md5sum uImage.${FAMILY} > uImage.${FAMILY}.md5sum
-            check_size uImage.${FAMILY} ${MAX_KERNEL_SIZE}
+            mv ${IMAGES}/uImage uImage.${MODEL}
+            md5sum uImage.${MODEL} > uImage.${MODEL}.md5sum
+            check_size uImage.${MODEL} ${MAX_KERNEL_SIZE}
           fi
 
           if [ -e ${IMAGES}/zboot.img ]; then
-            mv ${IMAGES}/zboot.img boot.img.${FAMILY}
-            md5sum boot.img.${FAMILY} > boot.img.${FAMILY}.md5sum
-            check_size boot.img.${FAMILY} ${MAX_KERNEL_SIZE_NAND}
+            mv ${IMAGES}/zboot.img boot.img.${MODEL}
+            md5sum boot.img.${MODEL} > boot.img.${MODEL}.md5sum
+            check_size boot.img.${MODEL} ${MAX_KERNEL_SIZE_NAND}
             rm -f ${IMAGES}/rootfs.squashfs
           fi
 
           if [ -e ${IMAGES}/rootfs.squashfs ]; then
-            mv ${IMAGES}/rootfs.squashfs rootfs.squashfs.${FAMILY}
-            md5sum rootfs.squashfs.${FAMILY} > rootfs.squashfs.${FAMILY}.md5sum
-            check_size rootfs.squashfs.${FAMILY} ${MAX_ROOTFS_SIZE}
+            mv ${IMAGES}/rootfs.squashfs rootfs.squashfs.${MODEL}
+            md5sum rootfs.squashfs.${MODEL} > rootfs.squashfs.${MODEL}.md5sum
+            check_size rootfs.squashfs.${MODEL} ${MAX_ROOTFS_SIZE}
 
-            NORFW=${IMAGES}/openipc.${FAMILY}-nor-${RELEASE}.tgz
+            NORFW=${IMAGES}/openipc.${MODEL}-nor-${RELEASE}.tgz
             echo NORFW=${NORFW} >> ${GITHUB_ENV}
             tar czf ${NORFW} $(ls)
           fi
 
           if [ -e ${IMAGES}/rootfs.ubi ]; then
-            mv ${IMAGES}/rootfs.ubi rootfs.ubi.${FAMILY}
-            md5sum rootfs.ubi.${FAMILY} > rootfs.ubi.${FAMILY}.md5sum
-            check_size rootfs.ubi.${FAMILY} ${MAX_ROOTFS_SIZE_NAND}
+            mv ${IMAGES}/rootfs.ubi rootfs.ubi.${MODEL}
+            md5sum rootfs.ubi.${MODEL} > rootfs.ubi.${MODEL}.md5sum
+            check_size rootfs.ubi.${MODEL} ${MAX_ROOTFS_SIZE_NAND}
             rm -f rootfs.squashfs*
 
-            NANDFW=${IMAGES}/openipc.${FAMILY}-nand-${RELEASE}.tgz
+            NANDFW=${IMAGES}/openipc.${MODEL}-nand-${RELEASE}.tgz
             echo NANDFW=${NANDFW} >> ${GITHUB_ENV}
             tar czf ${NANDFW} $(ls)
           fi

@@ -48,6 +48,7 @@ jobs:
 
       - name: Determine toolchain
         run: |
+          echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
           GCC=$(make BOARD=${{matrix.platform}}_lite toolname)
           echo GCC=${GCC} >> ${GITHUB_ENV}
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
@@ -55,13 +56,6 @@ jobs:
           if ! wget --spider ${URL} 2> /dev/null; then
             echo BUILD=true >> ${GITHUB_ENV}
           fi
-
-      - name: Restore download
-        if: env.BUILD
-        uses: actions/cache/restore@v3
-        with:
-          path: /tmp/download
-          key: buildroot-cache
 
       - name: Build toolchain
         if: env.BUILD
