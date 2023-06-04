@@ -31,35 +31,8 @@ define INGENIC_OSDRV_T31_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/*.ko
 
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/audio.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/avpu.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/gpio.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sinfo.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/tx-isp-t31.ko
-
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_gc2053_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_gc2083_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_gc4653_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_imx307_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_jxf37_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_jxh62_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_jxq03_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_jxq03p_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_sc200ai_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_sc2232h_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_sc2335_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_sc3338_t31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_swan_1.0__/ingenic $(INGENIC_OSDRV_T31_PKGDIR)/files/kmod/sensor_sc5235_t31.ko
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(INGENIC_OSDRV_T31_PKGDIR)/files/script/load*
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(INGENIC_OSDRV_T31_PKGDIR)/files/script/ircut_demo
-
-	# $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors/params
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors/params $(INGENIC_OSDRV_T31_PKGDIR)/files/sensor/params/*.bin
-
-	# $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors/params/WDR
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors/params/WDR $(INGENIC_OSDRV_T31_PKGDIR)/files/sensor/params/WDR/*.bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(INGENIC_OSDRV_T31_PKGDIR)/files/lib/*.so
