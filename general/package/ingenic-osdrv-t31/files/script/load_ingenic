@@ -55,7 +55,7 @@ sync_sensor_param() {
 
 lsmod | grep "sinfo" >/dev/null
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/sinfo.ko
+	modprobe sinfo
 	check_return "insmod sinfo"
 fi
 
@@ -162,31 +162,31 @@ echo --------------------
 
 lsmod | grep "avpu" >/dev/null
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/avpu.ko ${AVPU_PARAM}
+	modprobe avpu ${AVPU_PARAM}
 	check_return "insmod avpu"
 fi
 
 lsmod | grep "tx_isp" >/dev/null
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/tx-isp-${SOC}.ko ${ISP_PARAM}
+	modprobe tx-isp-${SOC} ${ISP_PARAM}
 	check_return "insmod isp drv"
 fi
 
 lsmod | grep ${SENSOR} >/dev/null
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_${SOC}.ko ${SENSOR_PARAM} ${SENSOR_EXT_PARAM}
+	modprobe sensor_${SENSOR}_${SOC} ${SENSOR_PARAM} ${SENSOR_EXT_PARAM}
 	check_return "insmod sensor drv"
 fi
 
 lsmod | grep "audio" >/dev/null
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/audio.ko
+	modprobe audio
 	check_return "insmod audio"
 fi
 
 lsmod | grep "gpio" >/dev/null
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/gpio.ko
+	modprobe gpio
 	check_return "insmod gpio"
 fi
 
