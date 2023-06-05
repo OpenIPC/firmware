@@ -200,30 +200,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine toolchain
-        run: |
-          echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
-          CONFIG=$(make BOARD=${{matrix.platform}}_${{matrix.release}} info)
-          VENDOR=$(echo ${CONFIG} | grep -oP "VENDOR=\K\w+")
-          FAMILY=$(echo ${CONFIG} | grep -oP "FAMILY=\K\w+")
-          echo CCACHE=${VENDOR}-${FAMILY} >> ${GITHUB_ENV}
-
       - name: Setup ccache
         if: github.event_name != 'pull_request'
         uses: actions/cache@v3
         with:
           path: /tmp/ccache
-          key: ${{env.CCACHE}}
+          key: ${{matrix.platform}}
 
       - name: Restore ccache
         if: github.event_name == 'pull_request'
         uses: actions/cache/restore@v3
         with:
           path: /tmp/ccache
-          key: ${{env.CCACHE}}
+          key: ${{matrix.platform}}
 
       - name: Build firmware
         run: |
+          echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
           MODEL=${{matrix.platform}}
           RELEASE=${{matrix.release}}
           CONFIG=$(find br-ext-chip-* -name ${MODEL}_${RELEASE}_defconfig)
