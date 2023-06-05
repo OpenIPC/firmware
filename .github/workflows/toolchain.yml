@@ -62,7 +62,6 @@ jobs:
         run: |
           CONFIG=$(find br-ext-chip-* -name ${{matrix.platform}}_lite_defconfig)
           sed -i "s|EXTERNAL=y|EXTERNAL=n|g" ${CONFIG}
-          export BR2_DL_DIR=/tmp/download
           make BOARD=${CONFIG} br-sdk
           SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
           mv ${SDK} ${GCC}.tgz
