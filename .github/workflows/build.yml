@@ -234,7 +234,6 @@ jobs:
           echo GIT_HASH=${GIT_HASH} >> ${GITHUB_ENV}
           echo GIT_BRANCH=${GIT_BRANCH} >> ${GITHUB_ENV}
 
-          export BR2_DL_DIR=/tmp/download
           echo BR2_CCACHE=y >> ${CONFIG}
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.buildroot-ccache
@@ -252,7 +251,7 @@ jobs:
             SIZE2=$(expr ${2} / 1024)
             echo - ${1}: [${SIZE1}KB/${SIZE2}KB]
             if [ ${SIZE1} -gt ${SIZE2} ]; then
-              echo -- Error: ${1} size exceeded by $(expr ${SIZE1} - ${SIZE2})KB
+              echo -- Error: size exceeded by $(expr ${SIZE1} - ${SIZE2})KB
               exit 1
             fi
           }
