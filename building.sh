@@ -92,7 +92,7 @@ log_and_run() {
 
 clone() {
   sudo apt-get update -y
-  sudo apt-get install -y automake make wget cpio file autotools-dev bc build-essential curl fzf git libtool rsync unzip
+  sudo apt-get install -y automake make wget cpio file autotools-dev bc build-essential curl fzf git libtool rsync unzip libncurses-dev lzop
   git clone --depth=1 https://github.com/OpenIPC/firmware.git
 }
 
