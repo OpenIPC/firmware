@@ -5,7 +5,7 @@ FILE=${TARGET_DIR}/usr/lib/os-release
 
 echo OPENIPC_VERSION=${DATE:0:1}.${DATE:1} >> ${FILE}
 date +GITHUB_VERSION="\"${GIT_BRANCH-local}+${GIT_HASH-build}, %Y-%m-%d"\" >> ${FILE}
-echo BUILD_OPTION=${OPENIPC_RELEASE} >> ${FILE}
+echo BUILD_OPTION=${OPENIPC_FLAVOR} >> ${FILE}
 date +TIME_STAMP=%s >> ${FILE}
 rm -f ${TARGET_DIR}/usr/bin/gdbserver
 
@@ -15,7 +15,7 @@ if ! grep -q "USES_GLIBC" ${BR2_CONFIG} && ! grep -qP ${CONF} ${BR2_CONFIG}; the
 fi
 
 if grep -q "USES_MUSL" ${BR2_CONFIG}; then
-  LIST=${BR2_EXTERNAL}/scripts/excludes/${OPENIPC_MODEL}_${OPENIPC_RELEASE}.list
+  LIST=${BR2_EXTERNAL}/scripts/excludes/${OPENIPC_SOC_MODEL}_${OPENIPC_FLAVOR}.list
   test -e ${LIST} && xargs -a ${LIST} -I % rm -rf ${TARGET_DIR}/%
 
   ln -sf /lib/libc.so ${TARGET_DIR}/lib/ld-uClibc.so.0
