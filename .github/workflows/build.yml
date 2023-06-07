@@ -203,14 +203,14 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/ccache
-          key: ${{matrix.platform}}
+          key: ${{matrix.platform}}_${{matrix.release}}
 
       - name: Restore ccache
         if: github.event_name == 'pull_request'
         uses: actions/cache/restore@v3
         with:
           path: /tmp/ccache
-          key: ${{matrix.platform}}
+          key: ${{matrix.platform}}_${{matrix.release}}
 
       - name: Build firmware
         run: |
