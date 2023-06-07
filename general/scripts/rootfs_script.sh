@@ -7,7 +7,6 @@ echo OPENIPC_VERSION=${DATE:0:1}.${DATE:1} >> ${FILE}
 date +GITHUB_VERSION="\"${GIT_BRANCH-local}+${GIT_HASH-build}, %Y-%m-%d"\" >> ${FILE}
 echo BUILD_OPTION=${OPENIPC_FLAVOR} >> ${FILE}
 date +TIME_STAMP=%s >> ${FILE}
-rm -f ${TARGET_DIR}/usr/bin/gdbserver
 
 CONF="INGENIC_OSDRV_T30=y|LIBV4L=y|MAVLINK_ROUTER=y|WIFIBROADCAST=y"
 if ! grep -q "USES_GLIBC" ${BR2_CONFIG} && ! grep -qP ${CONF} ${BR2_CONFIG}; then
