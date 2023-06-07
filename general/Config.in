@@ -1,17 +1,17 @@
-config BR2_OPENIPC_VENDOR
-	string "openipc vendor"
+config BR2_OPENIPC_SOC_VENDOR
+	string "openipc soc vendor"
 	default "hisilicon"
 
-config BR2_OPENIPC_MODEL
-	string "openipc model"
+config BR2_OPENIPC_SOC_MODEL
+	string "openipc soc model"
 	default "hi3516ev300"
 
-config BR2_OPENIPC_FAMILY
-	string "openipc family"
+config BR2_OPENIPC_SOC_FAMILY
+	string "openipc soc family"
 	default "hi3516ev200"
 
-config BR2_OPENIPC_RELEASE
-	string "openipc release"
+config BR2_OPENIPC_FLAVOR
+	string "openipc flavor"
 	default "lite"
 
 source "$BR2_EXTERNAL_GENERAL_PATH/package/Config.in"
