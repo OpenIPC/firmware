@@ -228,6 +228,7 @@ jobs:
           echo BR2_CCACHE=y >> ${CONFIG}
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.buildroot-ccache
+          START=$(date +%s)
 
           echo ------------------------------------------------------------
           make BOARD=${CONFIG} info
@@ -236,6 +237,10 @@ jobs:
           echo ------------------------------------------------------------
           make BOARD=${CONFIG} all
           echo ------------------------------------------------------------
+
+          TIME=$(date -d @$(expr $(date +%s) - ${START}) -u +%M:%S)
+          echo TIME=${TIME} >> ${GITHUB_ENV}
+          echo Build time: ${TIME}
 
           check_size() {
             SIZE1=$(expr $(stat --printf="%s" ${1}) / 1024)
@@ -312,7 +317,7 @@ jobs:
       - name: Send binary
         if: github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NORFW
         run: |
-          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\n\n"
+          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\nTime: ${TIME}\n\n"
           TG_ICON="\xE2\x9C\x85 GitHub Actions"
           TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
           HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
