@@ -47,9 +47,5 @@ clean:
 distclean:
 	@rm -rf buildroot-$(BR_VER) $(BR_FILE) $(TARGET)
 
-info:
-	@echo $(CONFIG):
-	@cat $(CONFIG) | grep BR2_OPENIPC | tr -d '"' | sed "s|BR2_OPENIPC_||g"
-
 list:
 	@ls -1 br-ext-chip-*/configs
