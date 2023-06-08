@@ -228,7 +228,7 @@ jobs:
           echo BR2_CCACHE=y >> ${CONFIG}
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.buildroot-ccache
-          START=$(date +%s)
+          SECONDS=0
 
           echo ------------------------------------------------------------
           make BOARD=${CONFIG} info
@@ -238,7 +238,7 @@ jobs:
           make BOARD=${CONFIG} all
           echo ------------------------------------------------------------
 
-          TIME=$(date -d @$(expr $(date +%s) - ${START}) -u +%M:%S)
+          TIME=$(date -d @$SECONDS +%M:%S)
           echo TIME=${TIME} >> ${GITHUB_ENV}
           echo Build time: ${TIME}
 
