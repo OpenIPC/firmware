@@ -1,0 +1,13 @@
+diff --git a/scripts/mkcompile_h b/scripts/mkcompile_h
+index f221ddf690..88039ad467 100755
+--- a/scripts/mkcompile_h
++++ b/scripts/mkcompile_h
+@@ -88,6 +88,8 @@ UTS_TRUNCATE="cut -b -$UTS_LEN"
+ # changed comment in the
+ # first line.
+ 
++sed -i "s|COMPILER.*|COMPILER \"buildroot-gcc-$($CC -dumpversion)\"|g" .tmpcompile
++
+ if [ -r $TARGET ] && \
+       grep -v 'UTS_VERSION' $TARGET > .tmpver.1 && \
+       grep -v 'UTS_VERSION' .tmpcompile > .tmpver.2 && \
