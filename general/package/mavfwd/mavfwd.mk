@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-# MAVFWD_VERSION = $(shell git ls-remote https://github.com/OpenIPC/mavfwd/ master | awk '{ print $$1 }')
+# MAVFWD_VERSION = HEAD
 MAVFWD_VERSION = 220d30e118d26008e94445887a03d77ba73c2d29
-MAVFWD_SITE = $(call github,OpenIPC,mavfwd,$(MAVFWD_VERSION))
+MAVFWD_SITE = $(call github,openipc,mavfwd,$(MAVFWD_VERSION))
 MAVFWD_LICENSE = MIT
 MAVFWD_LICENSE_FILES = LICENSE
 

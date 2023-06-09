@@ -44,11 +44,8 @@ define MAJESTIC_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/majestic
-endef
 
-define MAJESTIC_REMOVE_DOWNLOAD
-	rm -f $(BR2_DL_DIR)/majestic/$(MAJESTIC_SOURCE)
+	rm -rf $(MAJESTIC_DL_DIR)
 endef
-MAJESTIC_PRE_DOWNLOAD_HOOKS += MAJESTIC_REMOVE_DOWNLOAD
 
 $(eval $(generic-package))

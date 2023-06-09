@@ -1,10 +1,10 @@
 ################################################################################
 #
-# motors | updated 2023.05.11
+# motors
 #
 ################################################################################
 
-MOTORS_VERSION = 63e955dc0d3e048f801bd4ee2fcdc1dbfe562c0c
+MOTORS_VERSION = HEAD
 MOTORS_SITE = $(call github,openipc,motors,$(MOTORS_VERSION))
 MOTORS_LICENSE = MIT
 MOTORS_LICENSE_FILES = LICENSE
