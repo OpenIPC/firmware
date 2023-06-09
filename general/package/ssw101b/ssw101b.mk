@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-SSW101B_VERSION = b7e425bcba9f17a87c48658c700823f02160e5ff
+SSW101B_VERSION = HEAD
 SSW101B_SITE = $(call github,openipc,ssw101b,$(SSW101B_VERSION))
 SSW101B_LICENSE = GPL-2.0
 

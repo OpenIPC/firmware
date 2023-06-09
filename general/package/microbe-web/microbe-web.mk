@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-MICROBE_WEB_VERSION = $(shell git ls-remote https://github.com/OpenIPC/microbe-web/ master | awk '{ print $$1 }')
+MICROBE_WEB_VERSION = HEAD
 MICROBE_WEB_SITE = $(call github,openipc,microbe-web,$(MICROBE_WEB_VERSION))
 MICROBE_WEB_LICENSE = MIT
 MICROBE_WEB_LICENSE_FILES = LICENSE
