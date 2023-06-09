@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-ATBM603X_VERSION = f01238ec655f8736d54033b986fbf889f1eef01c
-ATBM603X_SITE = $(call github,OpenIPC,atbm_60xx,$(ATBM603X_VERSION))
+ATBM603X_VERSION = HEAD
+ATBM603X_SITE = $(call github,openipc,atbm_60xx,$(ATBM603X_VERSION))
 ATBM603X_LICENSE = GPL-2.0
 
 ATBM603X_MODULE_MAKE_OPTS = \

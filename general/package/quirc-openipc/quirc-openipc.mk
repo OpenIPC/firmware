@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-QUIRC_OPENIPC_VERSION = 33251ce2005855392666fd8c7436d8c309a127d7
+QUIRC_OPENIPC_VERSION = HEAD
 QUIRC_OPENIPC_SITE = $(call github,openipc,quirc,$(QUIRC_OPENIPC_VERSION))
 QUIRC_OPENIPC_DEPENDENCIES += libjpeg
 QUIRC_OPENIPC_LICENSE = ISC
