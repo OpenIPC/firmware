@@ -16,7 +16,7 @@ We kindly ask you to be understanding and until documentation and releases are c
 * Switcam HS303 v2
 * Switcam HS303 v3
 * Ezviz (any)
-* Xiaomi (any)
+* Xiaomi (mjsxj02hl)
 
 If you broke your device, please rollback your firmware to 01.05.2023 or return to the firmware of the [sub-project](https://github.com/topics/device-openipc).
 
