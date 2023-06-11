@@ -4,8 +4,10 @@
 #
 ################################################################################
 
-QUIRC_OPENIPC_VERSION = HEAD
-QUIRC_OPENIPC_SITE = $(call github,openipc,quirc,$(QUIRC_OPENIPC_VERSION))
+QUIRC_OPENIPC_SITE_METHOD = git
+QUIRC_OPENIPC_SITE = https://github.com/openipc/quirc
+QUIRC_OPENIPC_VERSION = $(shell git ls-remote $(QUIRC_OPENIPC_SITE) HEAD | head -1 | awk '{ print $$1 }')
+
 QUIRC_OPENIPC_DEPENDENCIES += libjpeg
 QUIRC_OPENIPC_LICENSE = ISC
 QUIRC_OPENIPC_LICENSE_FILES = LICENSE.txt

@@ -4,8 +4,10 @@
 #
 ################################################################################
 
-IPCTOOL_VERSION = HEAD
-IPCTOOL_SITE = $(call github,openipc,ipctool,$(IPCTOOL_VERSION))
+IPCTOOL_SITE_METHOD = git
+IPCTOOL_SITE = http://github.com/openipc/ipctool
+IPCTOOL_VERSION = $(shell git ls-remote $(IPCTOOL_SITE) HEAD | head -1 | awk '{ print $$1 }')
+
 IPCTOOL_LICENSE = MIT
 IPCTOOL_LICENSE_FILES = LICENSE
 

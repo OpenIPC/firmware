@@ -4,9 +4,10 @@
 #
 ################################################################################
 
-MINI_VERSION = HEAD
-MINI_SITE = https://github.com/OpenIPC/mini.git
 MINI_SITE_METHOD = git
+MINI_SITE = https://github.com/openipc/mini
+MINI_VERSION = $(shell git ls-remote $(MINI_SITE) HEAD | head -1 | awk '{ print $$1 }')
+
 MINI_GIT_SUBMODULES = YES
 MINI_LICENSE = GPL-3.0
 MINI_LICENSE_FILES = LICENSE
