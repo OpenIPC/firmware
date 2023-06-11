@@ -23,17 +23,29 @@ export EDITOR='/bin/vi'
 
 [ -x /usr/bin/arp ] || arp() { cat /proc/net/arp; }
 
-differ() { diff -rN "/rom$1" "$1"; }
+differ() {
+	diff -rN "/rom$1" "$1"
+}
 
-majestic_changes() { diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml; }
+majestic_changes() {
+	diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml
+}
 
-show_modules() { echo; cat /proc/modules | cut -f 1 -d " " | while read module; do echo "Module: $module"; \
+show_modules() {
+	echo; cat /proc/modules | cut -f 1 -d " " | while read module; do echo "Module: $module"; \
 	if [ -d "/sys/module/$module/parameters" ]; then ls /sys/module/$module/parameters/ | while read parameter; \
-	do echo -n "Parameter: $parameter --> "; cat /sys/module/$module/parameters/$parameter; done; fi; echo; done; }
+	do echo -n "Parameter: $parameter --> "; cat /sys/module/$module/parameters/$parameter; done; fi; echo; done
+}
 
-show_fullname() { echo "openipc-$(ipcinfo --chip-name)-$(ipcinfo --short-sensor)"; }
+show_fullname() {
+	echo "openipc-$(ipcinfo --chip-name)-$(ipcinfo --short-sensor)"
+}
 
-set_fullname() { show_fullname >/etc/hostname; }
+set_fullname() {
+	show_fullname >/etc/hostname
+}
 
 # Source configuration files from /etc/profile.d
-for i in /etc/profile.d/*.sh; do [ -r "$i" ] && . $i; done; unset i
+for i in /etc/profile.d/*.sh; do
+	[ -r "$i" ] && . $i
+done; unset i

@@ -17,9 +17,7 @@ RESOLV_CONF="/tmp/resolv.conf"
 # Handle stateful DHCPv6 like DHCPv4
 [ -n "$ipv6" ] && ip="$ipv6/128"
 
-if [ -z "${IF_WAIT_DELAY}" ]; then
-	IF_WAIT_DELAY=10
-fi
+[ -z "${IF_WAIT_DELAY}" ] && IF_WAIT_DELAY=10
 
 wait_for_ipv6_default_route() {
 	printf "Waiting for IPv6 default route to appear"
