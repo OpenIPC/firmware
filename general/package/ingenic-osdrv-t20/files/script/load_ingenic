@@ -11,7 +11,7 @@ fi
 echo 1 >/proc/sys/vm/overcommit_memory
 
 log_vendor() {
-  logger -s -p daemon.info -t ${vendor} "$1"
+	logger -s -p daemon.info -t ${vendor} "$1"
 }
 
 check_return() {

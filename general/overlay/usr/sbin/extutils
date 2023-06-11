@@ -13,9 +13,11 @@ case "${CMD}" in
 	cli)
 		yaml-cli -i /etc/majestic.yaml "$@"
 		;;
+
 	sensor_cli)
 		yaml-cli -i /etc/sensor/$(fw_printenv -n sensor).yaml $@
 		;;
+
 	ipctool)
 		IPCTOOL=/tmp/ipctool
 		if [ ! -x $IPCTOOL ]; then
@@ -25,11 +27,13 @@ case "${CMD}" in
 		fi
 		$IPCTOOL $@
 		;;
+
 	check_mac)
 		if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
 			XMMAC="$(ipcinfo --xm-mac)" && [ -n "${XMMAC}" ] && [ ! "Nothing found." = "${XMMAC}" ] && fw_setenv ethaddr ${XMMAC} && reboot -f || echo "Warning. Wired network interface has default MAC address, please change it."
 		fi
 		;;
+
 	*)
 		;;
 esac

@@ -7,13 +7,20 @@
 
 case "$IF_BRIDGE_PORTS" in
 	"")
-		exit 0 ;;
+		exit 0
+		;;
+
 	none)
-		INTERFACES="" ;;
+		INTERFACES=""
+		;;
+
 	all)
-		INTERFACES=$(grep eth /proc/net/dev|sed 's/\(\ *\)\(eth[^:]*\)\(.*\)/\2/') ;;
+		INTERFACES=$(grep eth /proc/net/dev|sed 's/\(\ *\)\(eth[^:]*\)\(.*\)/\2/')
+		;;
+
 	*)
-		INTERFACES="$IF_BRIDGE_PORTS" ;;
+		INTERFACES="$IF_BRIDGE_PORTS"
+		;;
 esac
 
 brctl addbr $IFACE &&
