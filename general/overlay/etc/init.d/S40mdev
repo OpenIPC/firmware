@@ -9,13 +9,17 @@ case "$1" in
 		echo /sbin/mdev >/proc/sys/kernel/hotplug
 		/sbin/mdev -s
 		;;
+
 	stop)
 		;;
+
 	restart|reload)
 		;;
+
 	*)
-		echo "Usage: $0 {start|stop|restart}"
+		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1
+		;;
 esac
 
 exit $?

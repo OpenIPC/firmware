@@ -47,9 +47,9 @@ do_update_kernel() {
 		local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
 		# FIXME: Ingenic kernels do not include proper SoC identifiers.
 		case "$soc" in
-		t31) [ "t" != "$ksoc" ] && die "Wrong SoC!" ;;
-		t21) [ "" != "$ksoc" ] && die "Wrong SoC!" ;;
-		*) check_soc "$ksoc"
+			t31) [ "t" != "$ksoc" ] && die "Wrong SoC!" ;;
+			t21) [ "" != "$ksoc" ] && die "Wrong SoC!" ;;
+			*) check_soc "$ksoc"
 		esac
 		compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 	fi
@@ -263,69 +263,84 @@ for i in "$@"; do
 			skip_ver=1
 			shift
 			;;
+
 		--force_md5)
 			skip_md5=1
 			shift
 			;;
+
 		--force_soc)
 			skip_soc=1
 			shift
 			;;
+
 		--force_ver)
 			skip_ver=1
 			shift
 			;;
+
 		-d)
 			branch_dev=1
 			shift
 			;;
+
 		-h | --help)
 			print_sysinfo
 			print_usage
 			exit 0
 			;;
+
 		-k)
 			update_kernel=1
 			remote_update=1
 			shift
 			;;
+
 		--kernel=*)
 			update_kernel=1
 			kernel_file="${i#*=}"
 			[ "$kernel_file" != ${kernel_file#/mnt/mmc} ] && skip_unmount=1
 			shift
 			;;
+
 		-n | --wipe_overlay)
 			clear_overlay=1
 			shift
 			;;
+
 		-r)
 			update_rootfs=1
 			remote_update=1
 			shift
 			;;
+
 		--rootfs=*)
 			update_rootfs=1
 			rootfs_file="${i#*=}"
 			[ "$rootfs_file" != ${rootfs_file#/mnt/mmc} ] && skip_unmount=1
 			shift
 			;;
+
 		--url=*)
 			url="${i#*=}"
 			shift
 			;;
-		-x | --no_reboot)
-			skip_reboot=1
-			shift
-			;;
+
 		-w)
 			update_webui=1
 			shift
 			;;
+
+		-x | --no_reboot)
+			skip_reboot=1
+			shift
+			;;
+
 		-z | --no_update)
 			skip_selfupdate=1
 			shift
 			;;
+
 		*)
 			print_sysinfo
 			echo_c 37 "\nUnknown option: $1"
