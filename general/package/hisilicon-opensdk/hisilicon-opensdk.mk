@@ -4,8 +4,10 @@
 #
 ################################################################################
 
-HISILICON_OPENSDK_VERSION = HEAD
-HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
+HISILICON_OPENSDK_SITE_METHOD = git
+HISILICON_OPENSDK_SITE = https://github.com/openipc/openhisilicon
+HISILICON_OPENSDK_VERSION = $(shell git ls-remote $(HISILICON_OPENSDK_SITE) HEAD | head -1 | awk '{ print $$1 }')
+
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
 

@@ -4,8 +4,10 @@
 #
 ################################################################################
 
-MOTORS_VERSION = HEAD
-MOTORS_SITE = $(call github,openipc,motors,$(MOTORS_VERSION))
+MOTORS_SITE_METHOD = git
+MOTORS_SITE = https://github.com/openipc/motors
+MOTORS_VERSION = $(shell git ls-remote $(MOTORS_SITE) HEAD | head -1 | awk '{ print $$1 }')
+
 MOTORS_LICENSE = MIT
 MOTORS_LICENSE_FILES = LICENSE
 

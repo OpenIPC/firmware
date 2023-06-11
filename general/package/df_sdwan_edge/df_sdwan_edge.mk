@@ -8,6 +8,7 @@
 DF_SDWAN_EDGE_VERSION = current
 DF_SDWAN_EDGE_SOURCE = df_sdwan_edge.$(OPENIPC_SOC_FAMILY).tar.xz
 DF_SDWAN_EDGE_SITE = http://getdataflow.ru/download/sdwan/openipc
+
 DF_SDWAN_EDGE_LICENSE = PROPRIETARY
 DF_SDWAN_EDGE_LICENSE_FILES = LICENSE
 

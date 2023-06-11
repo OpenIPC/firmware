@@ -4,8 +4,10 @@
 #
 ################################################################################
 
-FDK_AAC_OPENIPC_VERSION = tinification
-FDK_AAC_OPENIPC_SITE = $(call github,widgetii,fdk-aac,$(FDK_AAC_OPENIPC_VERSION))
+FDK_AAC_OPENIPC_SITE_METHOD = git
+FDK_AAC_OPENIPC_SITE = https://github.com/widgetii/fdk-aac
+FDK_AAC_OPENIPC_VERSION = $(shell git ls-remote $(FDK_AAC_OPENIPC_SITE) tinification | head -1 | awk '{ print $$1 }')
+
 FDK_AAC_OPENIPC_LICENSE = fdk-aac license
 FDK_AAC_OPENIPC_LICENSE_FILES = NOTICE
 FDK_AAC_OPENIPC_INSTALL_STAGING = YES
