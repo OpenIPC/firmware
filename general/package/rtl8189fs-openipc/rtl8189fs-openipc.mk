@@ -4,8 +4,10 @@
 #
 ################################################################################
 
-RTL8189FS_OPENIPC_VERSION = rtl8189fs
-RTL8189FS_OPENIPC_SITE = $(call github,jwrdegoede,rtl8189ES_linux,$(RTL8189FS_OPENIPC_VERSION))
+RTL8189FS_OPENIPC_SITE_METHOD = git
+RTL8189FS_OPENIPC_SITE = https://github.com/jwrdegoede/rtl8189ES_linux
+RTL8189FS_OPENIPC_VERSION = $(shell git ls-remote $(RTL8189FS_OPENIPC_SITE) rtl8189fs | head -1 | awk '{ print $$1 }')
+
 RTL8189FS_OPENIPC_LICENSE = GPL-2.0
 RTL8189FS_OPENIPC_LICENSE_FILES = COPYING
 

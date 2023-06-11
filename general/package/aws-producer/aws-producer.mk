@@ -4,9 +4,10 @@
 #
 ################################################################################
 
-AWS_PRODUCER_VERSION = c7fce9e06021452ff3c42dc70c8360606b22ad53
-AWS_PRODUCER_SITE = https://github.com/awslabs/amazon-kinesis-video-streams-producer-c.git
 AWS_PRODUCER_SITE_METHOD = git
+AWS_PRODUCER_SITE = https://github.com/awslabs/amazon-kinesis-video-streams-producer-c
+AWS_PRODUCER_VERSION = $(shell git ls-remote $(AWS_PRODUCER_SITE) HEAD | head -1 | awk '{ print $$1 }')
+
 AWS_PRODUCER_INSTALL_STAGING = YES
 AWS_PRODUCER_LICENSE = Apache-2.0
 AWS_PRODUCER_LICENSE_FILES = BSD

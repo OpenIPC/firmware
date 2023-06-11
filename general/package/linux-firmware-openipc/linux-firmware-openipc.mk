@@ -4,11 +4,9 @@
 #
 ################################################################################
 
-LINUX_FIRMWARE_OPENIPC_VERSION = 20190717
-LINUX_FIRMWARE_OPENIPC_SOURCE = linux-firmware-$(LINUX_FIRMWARE_OPENIPC_VERSION).tar.gz
-LINUX_FIRMWARE_OPENIPC_SITE = https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/snapshot
-#LINUX_FIRMWARE_OPENIPC_SITE = http://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
-#LINUX_FIRMWARE_OPENIPC_SITE_METHOD = git
+LINUX_FIRMWARE_OPENIPC_SITE_METHOD = git
+LINUX_FIRMWARE_OPENIPC_SITE = https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware
+LINUX_FIRMWARE_OPENIPC_VERSION = $(shell git ls-remote $(LINUX_FIRMWARE_OPENIPC_SITE) HEAD | head -1 | awk '{ print $$1 }')
 
 # WiFi RTL8188EU
 ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_RTL8188EU),y)

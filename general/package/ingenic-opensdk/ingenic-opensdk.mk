@@ -4,8 +4,10 @@
 #
 ################################################################################
 
-INGENIC_OPENSDK_VERSION = HEAD
-INGENIC_OPENSDK_SITE = $(call github,openipc,openingenic,$(INGENIC_OPENSDK_VERSION))
+INGENIC_OPENSDK_SITE_METHOD = git
+INGENIC_OPENSDK_SITE = https://github.com/openipc/openingenic
+INGENIC_OPENSDK_VERSION = $(shell git ls-remote $(INGENIC_OPENSDK_SITE) HEAD | head -1 | awk '{ print $$1 }')
+
 INGENIC_OPENSDK_LICENSE = GPL-3.0
 INGENIC_OPENSDK_LICENSE_FILES = LICENSE
 
