@@ -9,43 +9,29 @@ LINUX_FIRMWARE_OPENIPC_SITE = https://git.kernel.org/pub/scm/linux/kernel/git/fi
 LINUX_FIRMWARE_OPENIPC_VERSION = $(shell git ls-remote $(LINUX_FIRMWARE_OPENIPC_SITE) HEAD | head -1 | awk '{ print $$1 }')
 
 # WiFi RTL8188EU
-ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_RTL8188EU),y)
+ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_RTL_8188EU),y)
 LINUX_FIRMWARE_OPENIPC_FILES += rtlwifi/rtl8188eufw.bin
 LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES += LICENCE.rtlwifi_firmware.txt
 endif
 
-# WiFi MT7601U
-ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_MT7601U),y)
+# ar9271
+ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_ATHEROS_9271),y)
+LINUX_FIRMWARE_OPENIPC_FILES += ath9k_htc/htc_9271-1.4.0.fw
+LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES += LICENCE.atheros_firmware
+endif
+
+# MT7601
+ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_MEDIATEK_MT7601U),y)
 LINUX_FIRMWARE_OPENIPC_FILES += mediatek/mt7601u.bin
 LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES += LICENCE.ralink_a_mediatek_company_firmware
 endif
 
-# WiFi ATH9K_HTC
-ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_ATHEROS_9271),y)
-LINUX_FIRMWARE_OPENIPC_FILES += ath9k_htc/htc_9271-1.4.0.fw
-LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES += LICENCE.open-ath9k-htc-firmware
-endif
-
-ifneq ($(LINUX_FIRMWARE_OPENIPC_FILES),)
-define LINUX_FIRMWARE_OPENIPC_INSTALL_FILES
-	cd $(@D) && \
-		$(TAR) cf install.tar $(sort $(LINUX_FIRMWARE_OPENIPC_FILES)) && \
-		$(TAR) xf install.tar -C $(TARGET_DIR)/lib/firmware
-endef
-endif
-
-ifneq ($(LINUX_FIRMWARE_OPENIPC_DIRS),)
-# We need to rm-rf the destination directory to avoid copying
-# into it in itself, should we re-install the package.
-define LINUX_FIRMWARE_OPENIPC_INSTALL_DIRS
-	$(foreach d,$(LINUX_FIRMWARE_OPENIPC_DIRS), \
-		rm -rf $(TARGET_DIR)/lib/firmware/$(d); \
-		mkdir -p $(dir $(TARGET_DIR)/lib/firmware/$(d)); \
-		cp -a $(@D)/$(d) $(TARGET_DIR)/lib/firmware/$(d)$(sep))
-endef
-endif
-
 ifneq ($(LINUX_FIRMWARE_OPENIPC_FILES)$(LINUX_FIRMWARE_OPENIPC_DIRS),)
+
+define LINUX_FIRMWARE_OPENIPC_BUILD_CMDS
+	cd $(@D) && \
+	$(TAR) cf br-firmware.tar $(sort $(LINUX_FIRMWARE_OPENIPC_FILES) $(LINUX_FIRMWARE_OPENIPC_DIRS))
+endef
 
 # Most firmware files are under a proprietary license, so no need to
 # repeat it for every selections above. Those firmwares that have more
@@ -61,12 +47,38 @@ LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES += WHENCE
 # duplicates
 LINUX_FIRMWARE_OPENIPC_LICENSE_FILES = $(sort $(LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES))
 
-endif
+# Some firmware are distributed as a symlink, for drivers to load them using a
+# defined name other than the real one. Since 9cfefbd7fbda ("Remove duplicate
+# symlinks") those symlink aren't distributed in linux-firmware but are created
+# automatically by its copy-firmware.sh script during the installation, which
+# parses the WHENCE file where symlinks are described. We follow the same logic
+# here, adding symlink only for firmwares installed in the target directory.
+#
+# For testing the presence of firmwares in the target directory we first make
+# sure we canonicalize the pointed-to file, to cover the symlinks of the form
+# a/foo -> ../b/foo  where a/ (the directory where to put the symlink) does
+# not yet exist.
+define LINUX_FIRMWARE_OPENIPC_INSTALL_FW
+	mkdir -p $(1)
+	$(TAR) xf $(@D)/br-firmware.tar -C $(1)
+	cd $(1) ; \
+	sed -r -e '/^Link: (.+) -> (.+)$$/!d; s//\1 \2/' $(@D)/WHENCE | \
+	while read f d; do \
+		if test -f $$(readlink -m $$(dirname "$$f")/$$d); then \
+			mkdir -p $$(dirname "$$f") || exit 1; \
+			ln -sf $$d "$$f" || exit 1; \
+		fi ; \
+	done
+endef
+
+endif  # LINUX_FIRMWARE_OPENIPC_FILES || LINUX_FIRMWARE_OPENIPC_DIRS
 
 define LINUX_FIRMWARE_OPENIPC_INSTALL_TARGET_CMDS
-	mkdir -p $(TARGET_DIR)/lib/firmware
-	$(LINUX_FIRMWARE_OPENIPC_INSTALL_FILES)
-	$(LINUX_FIRMWARE_OPENIPC_INSTALL_DIRS)
+	$(call LINUX_FIRMWARE_OPENIPC_INSTALL_FW, $(TARGET_DIR)/lib/firmware)
+endef
+
+define LINUX_FIRMWARE_INSTALL_OPENIPC_IMAGES_CMDS
+	$(call LINUX_FIRMWARE_OPENIPC_INSTALL_FW, $(BINARIES_DIR))
 endef
 
 $(eval $(generic-package))
