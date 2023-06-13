@@ -5,7 +5,7 @@ BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
 TARGET ?= $(PWD)/output
 
 ifdef BOARD
-	CONFIG = $(shell find br-ext-chip-*/configs -type f | grep -m1 $(BOARD))
+	CONFIG = $(shell find br-ext-chip-*/configs -type f,l | grep -m1 $(BOARD))
 endif
 
 ifeq ($(CONFIG),)
