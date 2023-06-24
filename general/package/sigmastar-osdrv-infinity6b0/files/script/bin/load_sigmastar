@@ -1,0 +1,90 @@
+#!/bin/sh
+#
+# OpenIPC.org | 2023.06.01
+#
+
+PATH_MODULE=/lib/modules/4.9.84/sigmastar
+PATH_FIRMWARE=/etc/sensors/venc_fw/chagall.bin
+
+# Sensor
+SENSOR=$(fw_printenv -n sensor)
+
+# Watchdog
+watchdog -t 10 /dev/watchdog
+
+set_sensor() {
+  case $SENSOR in
+    gc2053)
+      # Untested | The information is obtained from the Gospell firmware
+      insmod ${PATH_MODULE}/sensor_gc2053_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2
+      ;;
+    gc4653)
+      # Untested | The information is obtained from the Anjoy firmware
+      insmod ${PATH_MODULE}/sensor_gc4653_mipi.ko chmap=1
+      ;;
+    imx307)
+      # Untested | The information is obtained from the Anjoy and Brovotech (mclk=37.125M) firmware
+      insmod ${PATH_MODULE}/sensor_imx307_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2 mclk=37.125M
+      ;;
+    imx335)
+      # Untested | The information is obtained from the Anjoy firmware
+      insmod ${PATH_MODULE}/sensor_imx335_mipi.ko chmap=1
+      ;;
+    sc2239)
+      # Untested | The information is obtained from the IMOU firmware
+      insmod ${PATH_MODULE}/sensor_sc2239_mipi.ko chmap=1
+      ;;
+    sc2335)
+      # Untested | The information is obtained from the Tiandy firmware
+      insmod ${PATH_MODULE}/sensor_sc2335_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2
+      ;;
+    sc3335)
+      # Untested | The information is obtained from the Uniview firmware
+      insmod ${PATH_MODULE}/sensor_sc3335_mipi.ko chmap=1
+      ;;
+    auto)
+      insmod ${PATH_MODULE}/sensor_imx307_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2 mclk=37.125M
+      insmod ${PATH_MODULE}/sensor_gc2053_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2
+      insmod ${PATH_MODULE}/sensor_sc2335_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2
+      ;;
+    *)
+      echo -e "\n\e[1;31mAn UNSUPPORTED sensor type is specified - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
+      ;;
+  esac
+}
+
+insert_ko() {
+  insmod ${PATH_MODULE}/mhal.ko
+  insmod ${PATH_MODULE}/mi_common.ko
+  insmod ${PATH_MODULE}/mi_sys.ko cmdQBufSize=256 logBufSize=256
+  insmod ${PATH_MODULE}/mi_rgn.ko
+  insmod ${PATH_MODULE}/mi_ai.ko
+  insmod ${PATH_MODULE}/mi_ao.ko
+  insmod ${PATH_MODULE}/mi_sensor.ko
+  insmod ${PATH_MODULE}/mi_shadow.ko
+  insmod ${PATH_MODULE}/mi_divp.ko
+  insmod ${PATH_MODULE}/mi_vif.ko
+  insmod ${PATH_MODULE}/mi_vpe.ko
+  insmod ${PATH_MODULE}/mi_venc.ko fw_path=${PATH_FIRMWARE}
+  set_sensor
+
+  major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
+  mknod /dev/mi_poll c $major 0
+
+  echo isproot /etc/sensors/iqfile > /dev/ispmid
+  mdev -s
+}
+
+if [ -z ${SENSOR} ]; then
+  echo -e "\n\e[1;31mThe sensor parameter is MISSING\e[0m\n" | logger -s -t OpenIPC
+  echo -e "\n\e[1;33mUsage: fw_setenv sensor imx415\e[0m\n" | logger -s -t OpenIPC
+  exit 1
+else
+  echo -e "\n\e[1;32mThe sensor is assigned - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
+fi
+
+if [ ! -e /dev/mi_poll ]; then
+  insert_ko
+fi
+
+exit 0
