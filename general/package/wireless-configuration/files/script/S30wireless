@@ -1,5 +1,0 @@
-#!/bin/sh
-if [ "$1" == "start" ] && [ -e /etc/network/interfaces.conf ]; then
-	cp -f /etc/network/interfaces.conf /etc/network/interfaces
-	rm -f /etc/network/interfaces.conf
-fi
