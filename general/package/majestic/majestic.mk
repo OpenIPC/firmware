@@ -14,11 +14,13 @@ MAJESTIC_LICENSE_FILES = LICENSE
 MAJESTIC_FAMILY = $(OPENIPC_SOC_FAMILY)
 MAJESTIC_RELEASE = $(OPENIPC_FLAVOR)
 
+# we don't have Majestic ultimate for these platforms
 ifeq ($(MAJESTIC_RELEASE),ultimate)
-	# we don't have Majestic ultimate for these platforms
 	ifeq ($(MAJESTIC_FAMILY),hi3516av100)
 		MAJESTIC_RELEASE = lite
 	else ifeq ($(MAJESTIC_FAMILY),hi3519v101)
+		MAJESTIC_RELEASE = lite
+	else ifeq ($(MAJESTIC_FAMILY),infinity6e)
 		MAJESTIC_RELEASE = lite
 	endif
 endif
