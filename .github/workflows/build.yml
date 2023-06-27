@@ -56,6 +56,7 @@ jobs:
           - gk7205v300
           - gk7202v300
           - gk7605v100
+          - ssc338q
           - t31
           - t40
 
@@ -112,8 +113,6 @@ jobs:
           - platform: ssc337
             release: lite
           - platform: ssc337de
-            release: lite
-          - platform: ssc338q
             release: lite
           - platform: t10
             release: lite
@@ -250,7 +249,8 @@ jobs:
             fi
           }
 
-          if [ ${RELEASE} = "ultimate" ] || grep -q "USES_GLIBC" ${CONFIG}; then
+          EXCLUDE="hi3516cv500"
+          if [ ${RELEASE} = "ultimate" ] || grep -qP ${EXCLUDE} ${CONFIG}; then
             MAX_KERNEL_SIZE=${MAX_KERNEL_SIZE_ULTIMATE}
             MAX_ROOTFS_SIZE=${MAX_ROOTFS_SIZE_ULTIMATE}
           fi
