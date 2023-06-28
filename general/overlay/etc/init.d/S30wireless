@@ -1,0 +1,64 @@
+#!/bin/sh
+
+[ "$1" != "start" ] && exit 0
+device=$(fw_printenv -n wlandevice)
+[ -z "$device" ] && exit 0
+
+set_eth0() {
+	sed -i "s|^#auto|auto|g" /etc/network/interfaces.d/eth0
+	sed -i "s|^auto|#auto|g" /etc/network/interfaces.d/wlan0
+	exit 0
+}
+
+set_wlan0() {
+	sed -i "s|^auto|#auto|g" /etc/network/interfaces.d/eth0
+	sed -i "s|^#auto|auto|g" /etc/network/interfaces.d/wlan0
+	exit 0
+}
+
+# HI3516EV300 CamHi
+if [ "$device" = "mt7601u-hi3516ev300-camhi" ]; then
+	devmem 0x100C0080 32 0x530
+	echo 7 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio7/direction
+	echo 0 > /sys/class/gpio/gpio7/value
+	sleep 1
+	if lsusb | grep -q 7601; then
+		modprobe mt7601u
+		set_wlan0
+	fi
+fi
+
+# SSC338Q CamHi
+if [ "$device" = "8733bu-ssc338q-camhi" ]; then
+	if lsusb | grep -q f72b; then
+		modprobe 8733bu
+		set_wlan0
+	fi
+fi
+
+# SSC337DE Foscam
+if [ "$device" = "8188fu-ssc337de-foscam" ]; then
+	echo 15 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio15/direction
+	echo 0 > /sys/class/gpio/gpio15/value
+	sleep 1
+	if lsusb | grep -q f179; then
+		modprobe 8188fu
+		set_wlan0
+	fi
+fi
+
+# T21 BJS
+if [ "$device" = "8188fu-t21-bjs" ]; then
+	echo 50 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio50/direction
+	echo 0 > /sys/class/gpio/gpio50/value
+	sleep 1
+	if lsusb | grep -q f179; then
+		modprobe 8188fu
+		set_wlan0
+	fi
+fi
+
+set_eth0
