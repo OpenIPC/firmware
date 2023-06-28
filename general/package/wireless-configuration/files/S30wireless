@@ -1,6 +1,0 @@
-#!/bin/sh
-template="auto wlan0\niface wlan0 inet dhcp\n\tpost-up wireless\n\tpost-down wireless"
-
-if [ "$1" = "start" ]; then
-  /etc/network/adapter && echo -e "$template" > /etc/network/interfaces.d/wlan0
-fi
