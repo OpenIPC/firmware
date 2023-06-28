@@ -20,6 +20,8 @@ ifeq ($(MAJESTIC_RELEASE),ultimate)
 		MAJESTIC_RELEASE = lite
 	else ifeq ($(MAJESTIC_FAMILY),hi3519v101)
 		MAJESTIC_RELEASE = lite
+	else ifeq ($(MAJESTIC_FAMILY),infinity6b0)
+		MAJESTIC_RELEASE = lite
 	else ifeq ($(MAJESTIC_FAMILY),infinity6e)
 		MAJESTIC_RELEASE = lite
 	endif
