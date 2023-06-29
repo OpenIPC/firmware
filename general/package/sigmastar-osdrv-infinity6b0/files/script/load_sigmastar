@@ -77,7 +77,7 @@ insert_ko() {
 
 if [ -z ${SENSOR} ]; then
   echo -e "\n\e[1;31mThe sensor parameter is MISSING\e[0m\n" | logger -s -t OpenIPC
-  echo -e "\n\e[1;33mUsage: fw_setenv sensor imx415\e[0m\n" | logger -s -t OpenIPC
+  echo -e "\n\e[1;33mUsage: fw_setenv sensor [SENSOR]\e[0m\n" | logger -s -t OpenIPC
   exit 1
 else
   echo -e "\n\e[1;32mThe sensor is assigned - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC

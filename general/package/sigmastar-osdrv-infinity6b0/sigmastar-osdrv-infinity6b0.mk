@@ -21,7 +21,7 @@ define SIGMASTAR_OSDRV_INFINITY6B0_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/venc_fw $(SIGMASTAR_OSDRV_INFINITY6B0_PKGDIR)/files/sensor/venc_fw/chagall.bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(SIGMASTAR_OSDRV_INFINITY6B0_PKGDIR)/files/script/bin/*
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(SIGMASTAR_OSDRV_INFINITY6B0_PKGDIR)/files/bin/*
 endef
 
 $(eval $(generic-package))
