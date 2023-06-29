@@ -14,4 +14,8 @@ config BR2_OPENIPC_FLAVOR
 	string "OpenIPC flavor"
 	default "lite"
 
+config BR2_OPENIPC_FLASH_SIZE
+	string "OpenIPC flash size"
+	default "8"
+
 source "$BR2_EXTERNAL_GENERAL_PATH/package/Config.in"
