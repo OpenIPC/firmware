@@ -1,5 +1,5 @@
 BR_VER = 2023.02.1
-BR_MAKE = $(MAKE) -C buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
+BR_MAKE = $(MAKE) -C $(TARGET)/buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
 BR_LINK = https://github.com/buildroot/buildroot/archive/refs/tags
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
 TARGET ?= $(PWD)/output
@@ -44,17 +44,18 @@ defconfig: prepare
 	@$(BR_MAKE) BR2_DEFCONFIG=$(PWD)/$(CONFIG) defconfig
 
 prepare:
-	@test -e $(BR_FILE) || wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE)
-	@test -e buildroot-$(BR_VER) || tar -xf $(BR_FILE) -C $(PWD)
+	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
+		wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE); \
+		mkdir -p $(TARGET); tar -xf $(BR_FILE) -C $(TARGET); fi
 
 toolname:
 	@general/scripts/show_toolchains.sh $(CONFIG)
 
 clean:
-	@rm -rf $(TARGET)/target $(TARGET)/.config
+	@rm -rf $(TARGET)/images $(TARGET)/target
 
 distclean:
-	@rm -rf buildroot-$(BR_VER) $(BR_FILE) $(TARGET)
+	@rm -rf $(BR_FILE) $(TARGET)
 
 list:
 	@ls -1 br-ext-chip-*/configs
@@ -64,10 +65,10 @@ deps:
 		curl file fzf git libncurses-dev libtool lzop make rsync unzip wget
 
 select:
-	$(eval MENULIST = $(shell find ./br-ext-*/configs/*_defconfig | sort | \
+	$(eval MENU_LIST = $(shell find ./br-ext-*/configs/*_defconfig | sort | \
 		sed -E "s|br-ext-chip-(.+).configs.(.+)_defconfig|'\2' '\1 \2'|"))
 	@$(MAKE) BOARD=$(shell whiptail --title "Available boards" --menu "Please select a board:" \
-		20 76 12 --notags $(MENULIST) 3>&1 1>&2 2>&3) all
+		20 76 12 --notags $(MENU_LIST) 3>&1 1>&2 2>&3) all
 
 repack:
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
@@ -97,11 +98,11 @@ endef
 
 define REPACK_FIRMWARE
 	mkdir -p $(TARGET)/images/$(3)
-	cd $(TARGET)/images && cp -f $(1) $(3)/$(1).$(BR2_OPENIPC_SOC_MODEL)
-	cd $(TARGET)/images && cp -f $(2) $(3)/$(2).$(BR2_OPENIPC_SOC_MODEL)
-	cd $(TARGET)/images && md5sum $(1) > $(3)/$(1).$(BR2_OPENIPC_SOC_MODEL).md5sum
-	cd $(TARGET)/images && md5sum $(2) > $(3)/$(2).$(BR2_OPENIPC_SOC_MODEL).md5sum
-	cd $(TARGET)/images && tar -czf $(TARGET)/openipc.$(BR2_OPENIPC_SOC_MODEL)-$(3)-$(BR2_OPENIPC_FLAVOR).tgz \
-		$(3)/$(1).$(BR2_OPENIPC_SOC_MODEL) $(3)/$(1).$(BR2_OPENIPC_SOC_MODEL).md5sum \
-		$(3)/$(2).$(BR2_OPENIPC_SOC_MODEL) $(3)/$(2).$(BR2_OPENIPC_SOC_MODEL).md5sum
+	cd $(TARGET)/images/$(3) && cp -f ../$(1) $(1).$(BR2_OPENIPC_SOC_MODEL)
+	cd $(TARGET)/images/$(3) && cp -f ../$(2) $(2).$(BR2_OPENIPC_SOC_MODEL)
+	cd $(TARGET)/images/$(3) && md5sum $(1).$(BR2_OPENIPC_SOC_MODEL) > $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum
+	cd $(TARGET)/images/$(3) && md5sum $(2).$(BR2_OPENIPC_SOC_MODEL) > $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum
+	cd $(TARGET)/images/$(3) && tar -czf $(TARGET)/openipc.$(BR2_OPENIPC_SOC_MODEL)-$(3)-$(BR2_OPENIPC_FLAVOR).tgz \
+		$(1).$(BR2_OPENIPC_SOC_MODEL) $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum \
+		$(2).$(BR2_OPENIPC_SOC_MODEL) $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum
 endef

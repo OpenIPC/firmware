@@ -14,7 +14,7 @@ env:
   TAG_NAME: latest
   TG_TOKEN: ${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}
   TG_CHANNEL: ${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
-  TG_OPTIONS: -s --connect-timeout 30 --retry 10 --http1.1 -o /dev/null -w %{http_code}
+  TG_OPTIONS: --connect-timeout 30 --retry 10 --http1.1 -o /dev/null -w %{http_code}
 
 jobs:
   buildroot:
@@ -207,7 +207,6 @@ jobs:
       - name: Build firmware
         run: |
           echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
-          CONFIG=$(find br-ext-chip-* -name ${{matrix.platform}}_${{matrix.release}}_defconfig)
 
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
           export GIT_BRANCH=${GITHUB_REF_NAME}
@@ -216,14 +215,7 @@ jobs:
 
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.ccache
-
-          echo ------------------------------------------------------------
-          echo ${CONFIG}
-          echo ------------------------------------------------------------
-          cat ${CONFIG}
-          echo ------------------------------------------------------------
-          make BOARD=${CONFIG} all
-          echo ------------------------------------------------------------
+          make BOARD=${{matrix.platform}}_${{matrix.release}} all
 
           TIME=$(date -d @${SECONDS} +%M:%S)
           echo TIME=${TIME} >> ${GITHUB_ENV}
