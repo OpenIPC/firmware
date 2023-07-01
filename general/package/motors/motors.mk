@@ -6,7 +6,7 @@
 
 MOTORS_SITE_METHOD = git
 MOTORS_SITE = https://github.com/openipc/motors
-MOTORS_VERSION = $(shell git ls-remote $(MOTORS_SITE) HEAD | head -1 | awk '{ print $$1 }')
+MOTORS_VERSION = $(call EXTERNAL_SHA,$(MOTORS_SITE),HEAD)
 
 MOTORS_LICENSE = MIT
 MOTORS_LICENSE_FILES = LICENSE

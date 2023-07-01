@@ -6,7 +6,7 @@
 
 MINI_SITE_METHOD = git
 MINI_SITE = https://github.com/openipc/mini
-MINI_VERSION = $(shell git ls-remote $(MINI_SITE) HEAD | head -1 | awk '{ print $$1 }')
+MINI_VERSION = $(call EXTERNAL_SHA,$(MINI_SITE),HEAD)
 
 MINI_GIT_SUBMODULES = YES
 MINI_LICENSE = GPL-3.0

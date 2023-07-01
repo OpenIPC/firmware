@@ -4,9 +4,8 @@
 #
 ################################################################################
 
-MAJESTIC_VERSION = current
-MAJESTIC_SOURCE = majestic.$(MAJESTIC_FAMILY).$(MAJESTIC_RELEASE).master.tar.bz2
 MAJESTIC_SITE = https://openipc.s3-eu-west-1.amazonaws.com
+MAJESTIC_SOURCE = majestic.$(MAJESTIC_FAMILY).$(MAJESTIC_RELEASE).master.tar.bz2
 
 MAJESTIC_LICENSE = PROPRIETARY
 MAJESTIC_LICENSE_FILES = LICENSE

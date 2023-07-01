@@ -6,7 +6,7 @@
 
 YAML_CLI_SITE_METHOD = git
 YAML_CLI_SITE = https://github.com/openipc/yaml-cli
-YAML_CLI_VERSION = $(shell git ls-remote $(YAML_CLI_SITE) HEAD | head -1 | awk '{ print $$1 }')
+YAML_CLI_VERSION = $(call EXTERNAL_SHA,$(YAML_CLI_SITE),HEAD)
 
 YAML_CLI_LICENSE = MIT
 YAML_CLI_LICENSE_FILES = LICENSE

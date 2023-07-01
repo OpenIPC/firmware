@@ -5,8 +5,8 @@
 ################################################################################
 
 IPCTOOL_SITE_METHOD = git
-IPCTOOL_SITE = http://github.com/openipc/ipctool
-IPCTOOL_VERSION = $(shell git ls-remote $(IPCTOOL_SITE) HEAD | head -1 | awk '{ print $$1 }')
+IPCTOOL_SITE = https://github.com/openipc/ipctool
+IPCTOOL_VERSION = $(call EXTERNAL_SHA,$(IPCTOOL_SITE),HEAD)
 
 IPCTOOL_LICENSE = MIT
 IPCTOOL_LICENSE_FILES = LICENSE

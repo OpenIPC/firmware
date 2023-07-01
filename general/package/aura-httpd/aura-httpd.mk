@@ -6,7 +6,7 @@
 
 AURA_HTTPD_SITE_METHOD = git
 AURA_HTTPD_SITE = https://github.com/nekromant/aura-httpd
-AURA_HTTPD_VERSION = $(shell git ls-remote $(AURA_HTTPD_SITE) HEAD | head -1 | awk '{ print $$1 }')
+AURA_HTTPD_VERSION = $(call EXTERNAL_SHA,$(AURA_HTTPD_SITE),HEAD)
 
 AURA_HTTPD_LICENSE = MIT
 AURA_HTTPD_LICENSE_FILES = LICENSE
