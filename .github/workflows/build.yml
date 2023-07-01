@@ -209,6 +209,7 @@ jobs:
       - name: Build firmware
         run: |
           echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
+          echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
 
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
           export GIT_BRANCH=${GITHUB_REF_NAME}
