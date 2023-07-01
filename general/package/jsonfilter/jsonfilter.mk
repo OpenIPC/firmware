@@ -5,8 +5,8 @@
 ################################################################################
 
 JSONFILTER_SITE_METHOD = git
-JSONFILTER_SITE = git://git.openwrt.org/project/jsonpath
-JSONFILTER_VERSION = $(shell git ls-remote $(JSONFILTER_SITE) HEAD | head -1 | awk '{ print $$1 }')
+JSONFILTER_SITE = https://github.com/openwrt/jsonpath
+JSONFILTER_VERSION = $(call EXTERNAL_SHA,$(JSONFILTER_SITE),HEAD)
 
 JSONFILTER_LICENSE = ISC, BSD-3-Clause
 

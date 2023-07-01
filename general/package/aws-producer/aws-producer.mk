@@ -6,7 +6,7 @@
 
 AWS_PRODUCER_SITE_METHOD = git
 AWS_PRODUCER_SITE = https://github.com/awslabs/amazon-kinesis-video-streams-producer-c
-AWS_PRODUCER_VERSION = $(shell git ls-remote $(AWS_PRODUCER_SITE) HEAD | head -1 | awk '{ print $$1 }')
+AWS_PRODUCER_VERSION = $(call EXTERNAL_SHA,$(AWS_PRODUCER_SITE),HEAD)
 
 AWS_PRODUCER_INSTALL_STAGING = YES
 AWS_PRODUCER_LICENSE = Apache-2.0
