@@ -11,16 +11,22 @@ MAX_ROOTFS_SIZE_16M := 10240
 MAX_KERNEL_SIZE_128M := 4096
 MAX_ROOTFS_SIZE_128M := 16384
 
-ifneq ($(filter $(MAKECMDGOALS), all repack),)
-LIST = $(shell find ./br-ext-*/configs/*_defconfig | sort | \
+CONFIG = $(error variable BOARD is not defined)
+TIMER := $(shell date +%s)
+
+ifeq ($(MAKECMDGOALS),all)
+ifeq ($(BOARD),)
+LIST := $(shell find ./br-ext-*/configs/*_defconfig | sort | \
 	sed -E "s|br-ext-chip-(.+).configs.(.+)_defconfig|'\2' '\1 \2'|")
-BOARD = $(or $(shell whiptail --title "Available boards" --menu "Please select a board:" 20 76 12 \
-	--notags $(LIST) 3>&1 1>&2 2>&3),$(error variable BOARD must be defined))
+BOARD := $(or $(shell whiptail --title "Available boards" --menu "Please select a board:" 20 76 12 \
+	--notags $(LIST) 3>&1 1>&2 2>&3),$(CONFIG))
+endif
+endif
+
+ifneq ($(BOARD),)
 CONFIG := $(shell find br-ext-*/configs/*_defconfig | grep -m1 $(BOARD))
 include $(CONFIG)
 endif
-
-TIMER := $(shell date +%s)
 
 help:
 	@printf "BR-OpenIPC usage:\n \
@@ -43,6 +49,7 @@ defconfig:
 	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
 		wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE); \
 		mkdir -p $(TARGET); tar -xf $(BR_FILE) -C $(TARGET); fi
+	@echo --- $(or $(CONFIG),$(error variable CONFIG is not defined))
 	@$(BR_MAKE) BR2_DEFCONFIG=$(PWD)/$(CONFIG) defconfig
 
 toolname:
