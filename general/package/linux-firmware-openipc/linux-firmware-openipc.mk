@@ -4,29 +4,41 @@
 #
 ################################################################################
 
-LINUX_FIRMWARE_OPENIPC_SITE_METHOD = git
-LINUX_FIRMWARE_OPENIPC_SITE = https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware
-LINUX_FIRMWARE_OPENIPC_VERSION = $(call EXTERNAL_SHA,$(LINUX_FIRMWARE_OPENIPC_SITE),HEAD)
+LINUX_FIRMWARE_OPENIPC_SITE = https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
 
-# WiFi RTL8188EU
+ifeq ($(LOCAL_DOWNLOAD),y)
+LINUX_FIRMWARE_OPENIPC_SITE_METHOD = git
+LINUX_FIRMWARE_OPENIPC_VERSION = $(shell git ls-remote $(LINUX_FIRMWARE_OPENIPC_SITE) HEAD | head -1 | cut -f1)
+endif
+
+# RTL8188EU
 ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_RTL_8188EU),y)
 LINUX_FIRMWARE_OPENIPC_FILES += rtlwifi/rtl8188eufw.bin
 LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES += LICENCE.rtlwifi_firmware.txt
 endif
 
-# ar9271
+# AR9271
 ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_ATHEROS_9271),y)
 LINUX_FIRMWARE_OPENIPC_FILES += ath9k_htc/htc_9271-1.4.0.fw
 LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES += LICENCE.atheros_firmware
 endif
 
-# MT7601
+# MT7601U
 ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_MEDIATEK_MT7601U),y)
 LINUX_FIRMWARE_OPENIPC_FILES += mediatek/mt7601u.bin
 LINUX_FIRMWARE_OPENIPC_ALL_LICENSE_FILES += LICENCE.ralink_a_mediatek_company_firmware
 endif
 
 ifneq ($(LINUX_FIRMWARE_OPENIPC_FILES)$(LINUX_FIRMWARE_OPENIPC_DIRS),)
+
+ifeq ($(LOCAL_DOWNLOAD),)
+define LINUX_FIRMWARE_OPENIPC_EXTRACT_CMDS
+	$(WGET) $(LINUX_FIRMWARE_OPENIPC_SITE)/plain/WHENCE -O $(@D)/WHENCE
+	$(foreach mk,$(LINUX_FIRMWARE_OPENIPC_FILES),mkdir -p $(dir $(@D)/$(mk))$(sep))
+	$(foreach dl,$(LINUX_FIRMWARE_OPENIPC_FILES), \
+		$(WGET) $(LINUX_FIRMWARE_OPENIPC_SITE)/plain/$(dl) -O $(@D)/$(dl)$(sep))
+endef
+endif
 
 define LINUX_FIRMWARE_OPENIPC_BUILD_CMDS
 	cd $(@D) && \

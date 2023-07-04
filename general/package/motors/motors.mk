@@ -4,9 +4,14 @@
 #
 ################################################################################
 
+ifeq ($(LOCAL_DOWNLOAD),y)
 MOTORS_SITE_METHOD = git
 MOTORS_SITE = https://github.com/openipc/motors
-MOTORS_VERSION = $(call EXTERNAL_SHA,$(MOTORS_SITE),HEAD)
+MOTORS_VERSION = $(shell git ls-remote $(MOTORS_SITE) HEAD | head -1 | cut -f1)
+else
+MOTORS_SITE = https://github.com/openipc/motors/archive
+MOTORS_SOURCE = master.tar.gz
+endif
 
 MOTORS_LICENSE = MIT
 MOTORS_LICENSE_FILES = LICENSE
