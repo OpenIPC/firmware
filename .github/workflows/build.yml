@@ -223,12 +223,12 @@ jobs:
           TIME=$(date -d @${SECONDS} +%M:%S)
           echo TIME=${TIME} >> ${GITHUB_ENV}
 
-          NORFW=${GITHUB_WORKSPACE}/output/openipc.${{matrix.platform}}-nor-${{matrix.release}}.tgz
+          NORFW=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-nor-${{matrix.release}}.tgz
           if [ -e ${NORFW} ]; then
             echo NORFW=${NORFW} >> ${GITHUB_ENV}
           fi
 
-          NANDFW=${GITHUB_WORKSPACE}/output/openipc.${{matrix.platform}}-nand-${{matrix.release}}.tgz
+          NANDFW=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-nand-${{matrix.release}}.tgz
           if [ -e ${NANDFW} ]; then
             echo NANDFW=${NANDFW} >> ${GITHUB_ENV}
           fi
