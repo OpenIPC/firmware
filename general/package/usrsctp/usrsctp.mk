@@ -4,9 +4,10 @@
 #
 ################################################################################
 
-USRSCTP_VERSION = 1ade45cbadfd19298d2c47dc538962d4425ad2dd
-USRSCTP_SITE = https://github.com/sctplab/usrsctp.git
 USRSCTP_SITE_METHOD = git
+USRSCTP_SITE = https://github.com/sctplab/usrsctp
+USRSCTP_VERSION = 1ade45cbadfd19298d2c47dc538962d4425ad2dd
+
 USRSCTP_INSTALL_STAGING = YES
 USRSCTP_LICENSE = Apache-2.0
 USRSCTP_LICENSE_FILES = BSD

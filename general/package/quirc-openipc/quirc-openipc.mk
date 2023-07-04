@@ -4,9 +4,14 @@
 #
 ################################################################################
 
+ifeq ($(LOCAL_DOWNLOAD),y)
 QUIRC_OPENIPC_SITE_METHOD = git
 QUIRC_OPENIPC_SITE = https://github.com/openipc/quirc
-QUIRC_OPENIPC_VERSION = $(call EXTERNAL_SHA,$(QUIRC_OPENIPC_SITE),HEAD)
+QUIRC_OPENIPC_VERSION = $(shell git ls-remote $(QUIRC_OPENIPC_SITE) HEAD | head -1 | cut -f1)
+else
+QUIRC_OPENIPC_SITE = https://github.com/openipc/quirc/archive
+QUIRC_OPENIPC_SOURCE = master.tar.gz
+endif
 
 QUIRC_OPENIPC_DEPENDENCIES += libjpeg
 QUIRC_OPENIPC_LICENSE = ISC

@@ -1,4 +1,4 @@
-BR_VER = 2023.02.1
+BR_VER = 2023.02.2
 BR_MAKE = $(MAKE) -C $(TARGET)/buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
 BR_LINK = https://github.com/buildroot/buildroot/archive/refs/tags
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
@@ -46,10 +46,10 @@ br-%: defconfig
 	@$(BR_MAKE) $(subst br-,,$@)
 
 defconfig:
+	@echo --- $(or $(CONFIG),$(error variable BOARD is not found))
 	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
 		wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE); \
 		mkdir -p $(TARGET); tar -xf $(BR_FILE) -C $(TARGET); fi
-	@echo --- $(or $(CONFIG),$(error variable CONFIG is not defined))
 	@$(BR_MAKE) BR2_DEFCONFIG=$(PWD)/$(CONFIG) defconfig
 
 toolname:
@@ -103,8 +103,7 @@ define REPACK_FIRMWARE
 	cd $(TARGET)/images/$(3) && cp -f ../$(2) $(2).$(BR2_OPENIPC_SOC_MODEL)
 	cd $(TARGET)/images/$(3) && md5sum $(1).$(BR2_OPENIPC_SOC_MODEL) > $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum
 	cd $(TARGET)/images/$(3) && md5sum $(2).$(BR2_OPENIPC_SOC_MODEL) > $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum
-	cd $(TARGET)/images/$(3) && tar -czf \
-		$(TARGET)/images/openipc.$(BR2_OPENIPC_SOC_MODEL)-$(3)-$(BR2_OPENIPC_FLAVOR).tgz \
+	cd $(TARGET)/images/$(3) && tar -czf ../openipc.$(BR2_OPENIPC_SOC_MODEL)-$(3)-$(BR2_OPENIPC_FLAVOR).tgz \
 		$(1).$(BR2_OPENIPC_SOC_MODEL) $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum \
 		$(2).$(BR2_OPENIPC_SOC_MODEL) $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum
 	rm -rf $(TARGET)/images/$(3)

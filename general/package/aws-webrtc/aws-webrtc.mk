@@ -4,9 +4,14 @@
 #
 ################################################################################
 
+ifeq ($(LOCAL_DOWNLOAD),y)
 AWS_WEBRTC_SITE_METHOD = git
 AWS_WEBRTC_SITE = https://github.com/OpenIPC/webrtc-c
-AWS_WEBRTC_VERSION = $(call EXTERNAL_SHA,$(AWS_WEBRTC_SITE),develop)
+AWS_WEBRTC_VERSION = $(shell git ls-remote $(AWS_WEBRTC_SITE) develop | head -1 | cut -f1)
+else
+AWS_WEBRTC_SITE = https://github.com/OpenIPC/webrtc-c/archive
+AWS_WEBRTC_SOURCE = develop.tar.gz
+endif
 
 AWS_WEBRTC_INSTALL_STAGING = YES
 AWS_WEBRTC_LICENSE = Apache-2.0
