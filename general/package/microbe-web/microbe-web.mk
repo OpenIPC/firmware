@@ -4,9 +4,14 @@
 #
 ################################################################################
 
+ifeq ($(LOCAL_DOWNLOAD),y)
 MICROBE_WEB_SITE_METHOD = git
 MICROBE_WEB_SITE = https://github.com/openipc/microbe-web
-MICROBE_WEB_VERSION = $(call EXTERNAL_SHA,$(MICROBE_WEB_SITE),HEAD)
+MICROBE_WEB_VERSION = $(shell git ls-remote $(MICROBE_WEB_SITE) HEAD | head -1 | cut -f1)
+else
+MICROBE_WEB_SITE = https://github.com/openipc/microbe-web/archive
+MICROBE_WEB_SOURCE = master.tar.gz
+endif
 
 MICROBE_WEB_LICENSE = MIT
 MICROBE_WEB_LICENSE_FILES = LICENSE

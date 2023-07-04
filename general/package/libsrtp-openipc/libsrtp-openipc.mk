@@ -4,9 +4,14 @@
 #
 ################################################################################
 
+ifeq ($(LOCAL_DOWNLOAD),y)
 LIBSRTP_OPENIPC_SITE_METHOD = git
 LIBSRTP_OPENIPC_SITE = https://github.com/cisco/libsrtp
-LIBSRTP_OPENIPC_VERSION = $(call EXTERNAL_SHA,$(LIBSRTP_OPENIPC_SITE),HEAD)
+LIBSRTP_OPENIPC_VERSION = $(shell git ls-remote $(LIBSRTP_OPENIPC_SITE) HEAD | head -1 | cut -f1)
+else
+LIBSRTP_OPENIPC_SITE = https://github.com/cisco/libsrtp/archive
+LIBSRTP_OPENIPC_SOURCE = master.tar.gz
+endif
 
 LIBSRTP_OPENIPC_INSTALL_STAGING = YES
 LIBSRTP_OPENIPC_LICENSE = BSD-3-Clause

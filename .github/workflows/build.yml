@@ -206,11 +206,15 @@ jobs:
           path: /tmp/ccache
           key: ${{matrix.platform}}_${{matrix.release}}
 
-      - name: Build firmware
+      - name: Download source
         run: |
           echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
           echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
+          make BOARD=${{matrix.platform}}_${{matrix.release}} br-source
+          echo - Download time: $(date -d @${SECONDS} +%M:%S)
 
+      - name: Build firmware
+        run: |
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
           export GIT_BRANCH=${GITHUB_REF_NAME}
           echo GIT_HASH=${GIT_HASH} >> ${GITHUB_ENV}
