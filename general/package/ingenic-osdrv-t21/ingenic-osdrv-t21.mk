@@ -40,6 +40,7 @@ define INGENIC_OSDRV_T21_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(INGENIC_OSDRV_T21_PKGDIR)/files/kmod/sensor_jxf23_t21n.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(INGENIC_OSDRV_T21_PKGDIR)/files/kmod/sensor_jxf37_t21l.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(INGENIC_OSDRV_T21_PKGDIR)/files/kmod/sensor_jxf37_t21n.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(INGENIC_OSDRV_T21_PKGDIR)/files/kmod/sensor_ov2735b_t21z.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(INGENIC_OSDRV_T21_PKGDIR)/files/kmod/sensor_sc2232_t21n.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.14__isvp_turkey_1.0__/ingenic $(INGENIC_OSDRV_T21_PKGDIR)/files/kmod/sensor_sc2300_t21z.ko

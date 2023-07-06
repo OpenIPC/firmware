@@ -3,10 +3,10 @@ device=$(fw_printenv -n wlandevice)
 
 if [ "$1" = "start" ] && [ ! -z "$device" ]; then
 	if /etc/wireless "$device"; then
-		sed -i "s|^auto|#auto|g" /etc/network/interfaces.d/eth0
-		sed -i "s|^#auto|auto|g" /etc/network/interfaces.d/wlan0
+		sed -i "s/^auto/#auto/g" /etc/network/interfaces.d/eth0
+		sed -i "s/^#auto/auto/g" /etc/network/interfaces.d/wlan0
 	else
-		sed -i "s|^#auto|auto|g" /etc/network/interfaces.d/eth0
-		sed -i "s|^auto|#auto|g" /etc/network/interfaces.d/wlan0
+		sed -i "s/^#auto/auto/g" /etc/network/interfaces.d/eth0
+		sed -i "s/^auto/#auto/g" /etc/network/interfaces.d/wlan0
 	fi
 fi

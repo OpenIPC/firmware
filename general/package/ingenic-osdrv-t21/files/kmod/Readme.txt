@@ -3,6 +3,7 @@ FILE                    MD5SUM                              SIZE        GRAB    
 sensor_jxf23_t21n.ko    d7dadc963c26ce7ca465d361df48a94c    18264       @flyrouter      T21N    CamHi
 sensor_jxf23_t21z.ko    fcdecb6440d83bb206df4b9cf52c2c48    17888       @john           T21Z    CamHi
 sensor_jxf37_t21l.ko    0096780fc07334729e61b35580c3ddf8    17030       @metsys1        T21L    CIP-37210v2
+sensor_jxf37_t21n.ko    0096780fc07334729e61b35580c3ddf8    17030       @metsys1        T21N    CIP-37210v2
 sensor_jxf37_t21z.ko    3dc2e89d30e968bb85cf048e1d688251    16998       @themactep      T21Z    Shopper+
 sensor_os02b10_t21z.ko  b1b8c6d95306789aeb459d5012b07846    14996       @bob-builder    T21Z    Wansview
 sensor_os02g10_t21z.ko  04f44457f7aeeba058ea676daf96bc8e    16223       @bob-builder    T21Z    Wansview
