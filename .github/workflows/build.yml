@@ -1,10 +1,8 @@
 name: build
 on:
   pull_request:
-    types:
-      - synchronize
-      - reopened
-      - opened
+    branches:
+      - master
   push:
     branches:
       - master
@@ -14,7 +12,7 @@ env:
   TAG_NAME: latest
   TG_TOKEN: ${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}
   TG_CHANNEL: ${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
-  TG_OPTIONS: --connect-timeout 30 --retry 10 --http1.1 -o /dev/null -w %{http_code}
+  TG_OPTIONS: -s -o /dev/null -w %{http_code}
 
 jobs:
   buildroot:
@@ -206,7 +204,7 @@ jobs:
           path: /tmp/ccache
           key: ${{matrix.platform}}_${{matrix.release}}
 
-      - name: Download source
+      - name: Download files
         run: |
           echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
           echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
@@ -246,6 +244,15 @@ jobs:
             ${{env.NORFW}}
             ${{env.NANDFW}}
 
+      - name: Send binary
+        if: github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NORFW
+        run: |
+          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\nTime: ${TIME}\n\n"
+          TG_ICON="\xE2\x9C\x85 GitHub Actions"
+          TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
+          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
+          echo Telegram response: ${HTTP}
+
       - name: Send error
         if: github.event_name != 'pull_request' && failure()
         run: |
@@ -254,14 +261,4 @@ jobs:
           TG_ICON="\xE2\x9A\xA0 GitHub Actions"
           TG_HEADER=$(echo -e ${TG_WARN}${TG_MSG}${TG_ICON})
           HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendMessage -F chat_id=${TG_CHANNEL} -F text="${TG_HEADER}")
-          echo Telegram response: ${HTTP}
-          exit 2
-
-      - name: Send binary
-        if: github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NORFW
-        run: |
-          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\nTime: ${TIME}\n\n"
-          TG_ICON="\xE2\x9C\x85 GitHub Actions"
-          TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
-          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
           echo Telegram response: ${HTTP}

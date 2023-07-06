@@ -49,6 +49,8 @@ jobs:
       - name: Build toolchain
         run: |
           echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
+          echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
+
           CONFIG=$(find br-ext-chip-* -name ${{matrix.platform}}_lite_defconfig)
           GCC=$(make BOARD=${CONFIG} toolname)
           echo GCC=${GCC} >> ${GITHUB_ENV}
