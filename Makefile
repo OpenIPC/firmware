@@ -1,6 +1,6 @@
 BR_VER = 2023.02.2
 BR_MAKE = $(MAKE) -C $(TARGET)/buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
-BR_LINK = https://github.com/buildroot/buildroot/archive/refs/tags
+BR_LINK = https://github.com/buildroot/buildroot/archive
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
 TARGET ?= $(PWD)/output
 
@@ -44,12 +44,14 @@ build: defconfig
 br-%: defconfig
 	@$(BR_MAKE) $(subst br-,,$@)
 
-defconfig:
+defconfig: prepare
 	@echo --- $(or $(CONFIG),$(error variable BOARD is not found))
+	@$(BR_MAKE) BR2_DEFCONFIG=$(PWD)/$(CONFIG) defconfig
+
+prepare:
 	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
 		wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE); \
 		mkdir -p $(TARGET); tar -xf $(BR_FILE) -C $(TARGET); fi
-	@$(BR_MAKE) BR2_DEFCONFIG=$(PWD)/$(CONFIG) defconfig
 
 toolname:
 	@general/scripts/show_toolchains.sh $(CONFIG)
