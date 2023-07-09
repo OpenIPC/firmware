@@ -208,6 +208,9 @@ jobs:
         run: |
           echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
           echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
+          make prepare
+          git clone https://github.com/openipc/br-cache
+          ln -s ${GITHUB_WORKSPACE}/br-cache $(ls -d output/buildroot-*)/dl
           make BOARD=${{matrix.platform}}_${{matrix.release}} br-source
           echo - Download time: $(date -d @${SECONDS} +%M:%S)
 
