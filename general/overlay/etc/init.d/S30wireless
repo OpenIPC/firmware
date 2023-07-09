@@ -1,5 +1,5 @@
 #!/bin/sh
-device=$(fw_printenv -n wlandevice)
+device=$(fw_printenv -n wlandev)
 
 if [ "$1" = "start" ] && [ ! -z "$device" ]; then
 	if /etc/wireless "$device"; then
