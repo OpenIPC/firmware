@@ -55,4 +55,32 @@ if [ "$1" = "mt7601u-t31-camhi" ]; then
 	exit 0
 fi
 
+# T31 CamHi with Quectel EC200S-CN, EC200T-EU and usb0
+if [ "$1" = "ec200-t31-camhi" ]; then
+	set_gpio 61 0
+	modprobe usbserial vendor=0x2c7c product=0x6026
+	modprobe rndis_host
+	sleep 10
+	exit 0
+fi
+
+# T31 CamHi with Fibocom L610-CN and usb0
+if [ "$1" = "l610-t31-camhi" ]; then
+	set_gpio 61 0
+	modprobe usbserial vendor=0x1782 product=0x4d11
+	modprobe rndis_host
+	sleep 10
+	exit 0
+fi
+
+# T31 CamHi with Fibocom L716-CN and usb0
+if [ "$1" = "l716-t31-camhi" ]; then
+	set_gpio 61 0
+	modprobe usbserial vendor=0x2cb7 product=0x0001
+	modprobe rndis_host
+	sleep 10
+	exit 0
+fi
+
+
 exit 1
