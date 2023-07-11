@@ -6,7 +6,6 @@ TARGET ?= $(PWD)/output
 
 MAX_KERNEL_SIZE_8M := 2048
 MAX_ROOTFS_SIZE_8M := 5120
-MAX_KERNEL_SIZE_16M := 3072
 MAX_ROOTFS_SIZE_16M := 10240
 MAX_KERNEL_SIZE_128M := 4096
 MAX_ROOTFS_SIZE_128M := 16384
@@ -73,11 +72,10 @@ timer:
 
 repack:
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
-ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
 	@$(call CHECK_SIZE,uImage,$(MAX_KERNEL_SIZE_8M))
+ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
 	@$(call CHECK_SIZE,rootfs.squashfs,$(MAX_ROOTFS_SIZE_8M))
 else
-	@$(call CHECK_SIZE,uImage,$(MAX_KERNEL_SIZE_16M))
 	@$(call CHECK_SIZE,rootfs.squashfs,$(MAX_ROOTFS_SIZE_16M))
 endif
 	@$(call REPACK_FIRMWARE,uImage,rootfs.squashfs,nor)
