@@ -4,11 +4,11 @@ BR_LINK = https://github.com/buildroot/buildroot/archive/refs/tags
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
 TARGET ?= $(PWD)/output
 
-MAX_KERNEL_SIZE_8M := 2048
-MAX_ROOTFS_SIZE_8M := 5120
-MAX_ROOTFS_SIZE_16M := 10240
-MAX_KERNEL_SIZE_128M := 4096
-MAX_ROOTFS_SIZE_128M := 16384
+MAX_KERNEL_SIZE_NOR := 2048
+MAX_ROOTFS_SIZE_NOR := 5120
+MAX_ROOTFS_SIZE_16M := 8192
+MAX_KERNEL_SIZE_NAND := 4096
+MAX_ROOTFS_SIZE_NAND := 16384
 
 CONFIG = $(error variable BOARD is not defined)
 TIMER := $(shell date +%s)
@@ -16,7 +16,7 @@ TIMER := $(shell date +%s)
 ifeq ($(MAKECMDGOALS),all)
 ifeq ($(BOARD),)
 LIST := $(shell find ./br-ext-*/configs/*_defconfig | sort | \
-	sed -E "s|br-ext-chip-(.+).configs.(.+)_defconfig|'\2' '\1 \2'|")
+	sed -E "s/br-ext-chip-(.+).configs.(.+)_defconfig/'\2' '\1 \2'/")
 BOARD := $(or $(shell whiptail --title "Available boards" --menu "Please select a board:" 20 76 12 \
 	--notags $(LIST) 3>&1 1>&2 2>&3),$(CONFIG))
 endif
@@ -72,9 +72,9 @@ timer:
 
 repack:
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
-	@$(call CHECK_SIZE,uImage,$(MAX_KERNEL_SIZE_8M))
+	@$(call CHECK_SIZE,uImage,$(MAX_KERNEL_SIZE_NOR))
 ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
-	@$(call CHECK_SIZE,rootfs.squashfs,$(MAX_ROOTFS_SIZE_8M))
+	@$(call CHECK_SIZE,rootfs.squashfs,$(MAX_ROOTFS_SIZE_NOR))
 else
 	@$(call CHECK_SIZE,rootfs.squashfs,$(MAX_ROOTFS_SIZE_16M))
 endif
@@ -82,8 +82,8 @@ endif
 endif
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
 	$(eval KERNEL_BIN = $(or $(BR2_LINUX_KERNEL_IMAGE_NAME),uImage))
-	@$(call CHECK_SIZE,$(KERNEL_BIN),$(MAX_KERNEL_SIZE_128M))
-	@$(call CHECK_SIZE,rootfs.ubi,$(MAX_ROOTFS_SIZE_128M))
+	@$(call CHECK_SIZE,$(KERNEL_BIN),$(MAX_KERNEL_SIZE_NAND))
+	@$(call CHECK_SIZE,rootfs.ubi,$(MAX_ROOTFS_SIZE_NAND))
 	@$(call REPACK_FIRMWARE,$(KERNEL_BIN),rootfs.ubi,nand)
 endif
 
