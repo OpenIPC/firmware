@@ -1,0 +1,18 @@
+--- a/Makefile	2023-07-04 13:52:08.000000000 +0300
++++ b/Makefile	2023-07-11 00:10:53.987288000 +0300
+@@ -2,13 +2,8 @@
+ 
+ OBJECTS_O = onvif_simple_server.o device_service.o media_service.o ptz_service.o utils.o log.o
+ OBJECTS_W = wsd_simple_server.o utils.o log.o
+-ifdef HAVE_MBEDTLS
+-INCLUDE = -DHAVE_MBEDTLS -I../mbedtls/include -ffunction-sections -fdata-sections
+-LIBS_O = -Wl,--gc-sections ../mbedtls/library/libmbedcrypto.a -lpthread
+-else
+-INCLUDE = -I../libtomcrypt/src/headers -ffunction-sections -fdata-sections
+-LIBS_O = -Wl,--gc-sections ../libtomcrypt/libtomcrypt.a -lpthread
+-endif
++INCLUDE = -DHAVE_MBEDTLS -ffunction-sections -fdata-sections
++LIBS_O = -Wl,--gc-sections -lmbedtls -lmbedcrypto -lpthread
+ LIBS_W = -Wl,--gc-sections
+ 
+ all: onvif_simple_server wsd_simple_server

@@ -76,12 +76,22 @@ if [ "$1" = "ec200-t31-camhi" ]; then
 	exit 0
 fi
 
+# T31 CamHi with Quectel EC800G-CN and usb0
+if [ "$1" = "ec800-t31-camhi" ]; then
+	set_gpio 61 0
+	modprobe usbserial vendor=0x2c7c product=0x904
+	modprobe rndis_host
+	sleep 10
+	exit 0
+fi
+
 # T31 CamHi with Fibocom L610-CN and usb0
 if [ "$1" = "l610-t31-camhi" ]; then
 	set_gpio 61 0
 	modprobe usbserial vendor=0x1782 product=0x4d11
 	modprobe rndis_host
 	sleep 10
+	echo "AT+GTRNDIS=1,2" >/dev/ttyUSB0
 	exit 0
 fi
 
