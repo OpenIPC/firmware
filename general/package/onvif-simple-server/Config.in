@@ -1,8 +1,6 @@
 config BR2_PACKAGE_ONVIF_SIMPLE_SERVER
 	bool "onvif-simple-server"
 	default n
-	#select BR2_PACKAGE_LIBTOMCRYPT
-	#depends on BR2_INSTALL_LIBTOMCRYPT
 	help
 	  onvif_simple_server is a C light implementation of an onvif
 	  server intended for use in resource-constrained devices
