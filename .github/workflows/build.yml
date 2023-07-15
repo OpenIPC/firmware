@@ -187,8 +187,6 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Setup ccache
         if: github.event_name != 'pull_request'
@@ -212,7 +210,6 @@ jobs:
           git clone https://github.com/openipc/br-cache
           ln -s ${GITHUB_WORKSPACE}/br-cache $(ls -d output/buildroot-*)/dl
           make BOARD=${{matrix.platform}}_${{matrix.release}} br-source
-          echo - Download time: $(date -d @${SECONDS} +%M:%S)
 
       - name: Build firmware
         run: |
