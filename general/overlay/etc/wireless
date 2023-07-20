@@ -35,7 +35,7 @@ fi
 if [ "$1" = "mt7601u-hi3516ev300-camhi" ]; then
 	devmem 0x100C0080 32 0x530
 	set_gpio 7 0
-	modprobe mt7601u
+	modprobe mt7601sta
 	exit 0
 fi
 
@@ -104,7 +104,7 @@ if [ "$1" = "l716-t31-camhi" ]; then
 	exit 0
 fi
 
-# T31 ATBM603X on SDIO bus mmc0
+# T31 ATBM603X mmc0
 if [ "$1" = "atbm603x-t31-mmc0" ]; then
 	# PB10 in wifi mmc1 is in the pull-down state by default, it needs to be set to a high-impedance state
 	devmem 0x10011128 32 0x400
@@ -119,12 +119,12 @@ if [ "$1" = "atbm603x-t31-mmc0" ]; then
 
 	cp /usr/share/atbm603x_conf/atbm_txpwer_dcxo_cfg.txt /tmp
 	cp /usr/share/atbm603x_conf/set_rate_power.txt /tmp
-	# note, let this run on the background because if the firmware fails to load, it'll stall the OS startup
+
 	modprobe atbm603x_wifi_sdi0
 	exit 0
 fi
 
-# T31 ATBM603X on SDIO bus mmc1
+# T31 ATBM603X mmc1
 if [ "$1" = "atbm603x-t31-mmc1" ]; then
 	# not sure what this does, but it's copied from the stock fw
 	devmem 0x10011110 32 0x6e094800
@@ -137,7 +137,7 @@ if [ "$1" = "atbm603x-t31-mmc1" ]; then
 
 	cp /usr/share/atbm603x_conf/atbm_txpwer_dcxo_cfg.txt /tmp
 	cp /usr/share/atbm603x_conf/set_rate_power.txt /tmp
-	# note, let this run on the background because if the firmware fails to load, it'll stall the OS startup
+
 	modprobe atbm603x_wifi_sdi1
 	exit 0
 fi

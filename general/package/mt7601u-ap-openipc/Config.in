@@ -1,8 +1,0 @@
-config BR2_PACKAGE_MT7601U_AP_OPENIPC
-	bool "mt7601u-ap-openipc"
-	depends on BR2_LINUX_KERNEL
-	help
-	  Wireless driver mt7601u with AP mode.
-
-comment "MT7601U_AP_OPENIPC needs a Linux kernel to be built"
-	depends on !BR2_LINUX_KERNEL
