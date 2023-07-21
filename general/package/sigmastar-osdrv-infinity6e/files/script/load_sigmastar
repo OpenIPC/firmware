@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | 2023.05.01
+# OpenIPC.org | 2023.07.01
 #
 
 PATH_MODULE=/lib/modules/4.9.84/sigmastar
@@ -8,9 +8,6 @@ PATH_FIRMWARE=/etc/sensors/venc_fw/chagall.bin
 
 # Sensor
 SENSOR=$(fw_printenv -n sensor)
-
-# Watchdog
-watchdog -t 10 /dev/watchdog
 
 insert_ko() {
   insmod ${PATH_MODULE}/mhal.ko
