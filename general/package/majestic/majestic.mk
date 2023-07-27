@@ -24,12 +24,6 @@ ifeq ($(MAJESTIC_RELEASE),ultimate)
 	endif
 endif
 
-ifeq ($(MAJESTIC_FAMILY),t31)
-	ifneq ($(OPENIPC_SOC_MODEL),t31)
-		MAJESTIC_FAMILY = t21
-	endif
-endif
-
 ifeq ($(MAJESTIC_RELEASE),lte)
 	MAJESTIC_RELEASE = fpv
 endif
