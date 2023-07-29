@@ -36,6 +36,8 @@ MAJESTIC_DEPENDENCIES = \
 	opus-openipc \
 	zlib
 
+MAJESTIC_STRIP_COMPONENTS = 0
+
 define MAJESTIC_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
 	$(INSTALL) -m 644 $(@D)/majestic-mini.yaml $(TARGET_DIR)/etc/majestic.yaml
