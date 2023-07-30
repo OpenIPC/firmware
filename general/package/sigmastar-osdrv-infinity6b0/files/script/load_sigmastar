@@ -4,7 +4,6 @@
 #
 
 PATH_MODULE=/lib/modules/4.9.84/sigmastar
-PATH_FIRMWARE=/etc/sensors/venc_fw/chagall.bin
 SENSOR=$(fw_printenv -n sensor)
 
 detect_sensor() {
@@ -45,12 +44,12 @@ insert_ko() {
   insmod ${PATH_MODULE}/mi_divp.ko
   insmod ${PATH_MODULE}/mi_vif.ko
   insmod ${PATH_MODULE}/mi_vpe.ko
-  insmod ${PATH_MODULE}/mi_venc.ko fw_path=${PATH_FIRMWARE}
+  insmod ${PATH_MODULE}/mi_venc.ko fw_path=/etc/firmware/chagall.bin
 
   major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
   mknod /dev/mi_poll c $major 0
 
-  echo isproot /etc/sensors/iqfile > /dev/ispmid
+  echo isproot /etc/firmware/iqfile > /dev/ispmid
   mdev -s
 }
 
