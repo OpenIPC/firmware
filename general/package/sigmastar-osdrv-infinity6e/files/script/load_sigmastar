@@ -7,9 +7,11 @@ PATH_MODULE=/lib/modules/4.9.84/sigmastar
 SENSOR=$(fw_printenv -n sensor)
 
 detect_sensor() {
-  insmod ${PATH_MODULE}/sensor_rx_mipi.ko chmap=1
-  SENSOR=$(majestic | awk '/Autodetect/ {print $NF}')
-  rmmod drv_ms_cus_RX_MIPI
+  devmem 0x1F2079A4 16 0x0111
+  devmem 0x1F207188 16 0x0001
+  devmem 0x1F2608FC 16 0x0003
+
+  SENSOR=$(ipcinfo -s)
   fw_setenv sensor ${SENSOR}
 }
 
