@@ -1,12 +1,10 @@
 #!/bin/sh
-device=$(fw_printenv -n wlandev)
+dev=$(fw_printenv -n wlandev)
+wlan=/etc/wireless
+netif=/etc/network/interfaces.d
 
-if [ "$1" = "start" ] && [ ! -z "$device" ]; then
-	if /etc/wireless "$device"; then
-		sed -i "s/^auto/#auto/g" /etc/network/interfaces.d/eth0
-		sed -i "s/^#auto/auto/g" /etc/network/interfaces.d/wlan0
-	else
-		sed -i "s/^#auto/auto/g" /etc/network/interfaces.d/eth0
-		sed -i "s/^auto/#auto/g" /etc/network/interfaces.d/wlan0
+if [ "$1" = "start" ] && [ ! -z "$dev" ]; then
+	if $wlan/usb "$dev" || $wlan/modem "$dev" || $wlan/sdio "$dev"; then
+		grep -q "static" $netif/eth0 || cp -f $wlan/interfaces/* $netif
 	fi
 fi

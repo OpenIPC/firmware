@@ -1,0 +1,72 @@
+#!/bin/sh
+
+set_gpio() {
+	echo $1 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio$1/direction
+	echo $2 > /sys/class/gpio/gpio$1/value
+	echo $1 > /sys/class/gpio/unexport
+	sleep 1
+}
+
+# MT7601U Generic
+if [ "$1" = "mt7601u-generic" ]; then
+	modprobe mt7601u
+	exit 0
+fi
+
+# RTL8188FU Generic
+if [ "$1" = "rtl8188fu-generic" ]; then
+	modprobe 8188fu
+	exit 0
+fi
+
+# RTL8733BU Generic
+if [ "$1" = "rtl8733bu-generic" ]; then
+	modprobe 8733bu
+	exit 0
+fi
+
+# HI3516EV200 CamHi
+if [ "$1" = "mt7601u-hi3516ev200-camhi" ]; then
+	set_gpio 9 0
+	modprobe mt7601u
+	exit 0
+fi
+
+# HI3516EV300 CamHi
+if [ "$1" = "mt7601u-hi3516ev300-camhi" ]; then
+	devmem 0x100C0080 32 0x530
+	set_gpio 7 0
+	modprobe mt7601sta
+	exit 0
+fi
+
+# SSC337DE Foscam
+if [ "$1" = "rtl8188fu-ssc337de-foscam" ]; then
+	set_gpio 15 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# T21 BJS
+if [ "$1" = "rtl8188fu-t21-bjs" ]; then
+	set_gpio 50 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# T21 Smartwares
+if [ "$1" = "rtl8188fu-t21-smartwares" ]; then
+	set_gpio 49 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# T31 CamHi
+if [ "$1" = "mt7601u-t31-camhi" ]; then
+	set_gpio 61 0
+	modprobe mac80211
+	exit 0
+fi
+
+exit 1
