@@ -16,7 +16,7 @@ detect_sensor() {
 set_sensor() {
   $(lsmod | grep -q ${SENSOR}) && rmmod drv_ms_cus_${SENSOR}_MIPI
 
-  case $SENSOR in
+  case ${SENSOR} in
     gc4653|imx335|sc2239|sc3335)
       insmod ${PATH_MODULE}/sensor_${SENSOR}_mipi.ko chmap=1
       ;;
