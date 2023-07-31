@@ -45,7 +45,7 @@ insert_ko() {
   major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
   mknod /dev/mi_poll c $major 0
 
-  echo isproot /etc/firmware/iqfile > /dev/ispmid
+  echo isproot /etc/firmware > /dev/ispmid
   mdev -s
 }
 
