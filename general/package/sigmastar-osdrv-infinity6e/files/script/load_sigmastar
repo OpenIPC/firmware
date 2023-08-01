@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | 2023.07.01
+# OpenIPC.org | 2023.08.01
 #
 
 PATH_MODULE=/lib/modules/4.9.84/sigmastar
@@ -10,14 +10,11 @@ detect_sensor() {
   devmem 0x1F2079A4 16 0x0111
   devmem 0x1F207188 16 0x0001
   devmem 0x1F2608FC 16 0x0003
-
   SENSOR=$(ipcinfo -s)
   fw_setenv sensor ${SENSOR}
 }
 
 set_sensor() {
-  $(lsmod | grep -q ${SENSOR}) && rmmod drv_ms_cus_${SENSOR}_MIPI
-
   case ${SENSOR} in
     imx274|imx335|imx347|imx415|sc8235)
       insmod ${PATH_MODULE}/sensor_${SENSOR}_mipi.ko chmap=1
@@ -46,9 +43,7 @@ insert_ko() {
 
   major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
   mknod /dev/mi_poll c $major 0
-
   echo isproot /etc/firmware > /dev/ispmid
-  mdev -s
 }
 
 if [ ! -e /dev/mi_poll ]; then
@@ -65,7 +60,7 @@ if [ -z ${SENSOR} ]; then
   exit 1
 else
   echo -e "\n\e[1;32mSensor is assigned - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
-  set_sensor
+  $(lsmod | grep -q ${SENSOR}) || set_sensor
 fi
 
 exit 0
