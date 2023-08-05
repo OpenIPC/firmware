@@ -12,7 +12,6 @@ SIGMASTAR_OSDRV_INFINITY6B0_LICENSE_FILES = LICENSE
 define SIGMASTAR_OSDRV_INFINITY6B0_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.84/sigmastar
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.84/sigmastar $(SIGMASTAR_OSDRV_INFINITY6B0_PKGDIR)/files/kmod/*
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.84/sigmastar $(SIGMASTAR_OSDRV_INFINITY6B0_PKGDIR)/files/sensors/kmod/*
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/firmware
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/firmware $(SIGMASTAR_OSDRV_INFINITY6B0_PKGDIR)/files/sensors/firmware/*
