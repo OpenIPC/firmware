@@ -3,7 +3,6 @@ export HOME=$(grep -e "^${USER:-root}:" /etc/passwd | cut -d ":" -f 6)
 export HOME=${HOME:-/root}
 export TZ=$(cat /etc/TZ)
 export SENSOR=$(fw_printenv -n sensor)
-export SOC=$(fw_printenv -n soc)
 
 echo_c() { echo -ne "\e[1;$1m$2\e[0m"; }
 
