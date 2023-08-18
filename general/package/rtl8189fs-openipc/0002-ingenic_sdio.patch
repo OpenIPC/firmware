@@ -1,0 +1,75 @@
+--- a/platform/platform_ingenic_sdio.c	1969-12-31 16:00:00.000000000 -0800
++++ b/platform/platform_ingenic_sdio.c	2023-08-17 23:00:32.781683075 -0700
+@@ -0,0 +1,59 @@
++#include <linux/mmc/host.h>
++#include <linux/fs.h>
++#include <linux/wlan_plat.h>
++#include <asm/uaccess.h>
++#include <linux/platform_device.h>
++#include <linux/regulator/consumer.h>
++#include <linux/gpio.h>
++#include <linux/wakelock.h>
++#include <linux/err.h>
++#include <linux/delay.h>
++#include <mach/jzmmc.h>
++#include <linux/bcm_pm_core.h>
++
++#include <gpio.h>
++#include <soc/gpio.h>
++
++#define GPIO_WIFI_WAKEUP     	GPIO_PC(17)
++#define GPIO_WIFI_RST_N			GPIO_PC(16)
++#define SDIO_WIFI_POWER         GPIO_PB(25)
++#define WLAN_SDIO_INDEX			1
++
++/* static int wl_pw_en = 0; */
++extern void rtc32k_enable(void);
++extern void rtc32k_disable(void);
++
++void wlan_pw_en_enable(void)
++{
++}
++
++void wlan_pw_en_disable(void)
++{
++}
++
++
++/*
++    On T31 devices, we call jzmmc_manual_detect() to force a re-scan SDIO card on the mmc bus
++*/
++int platform_wifi_power_on(void)
++{
++
++    /* gpio_request(SDIO_WIFI_POWER, "sdio_wifi_power_on");
++	gpio_direction_output(SDIO_WIFI_POWER, 1);
++	printk("wlan power on\n");
++	msleep(10); */
++
++	jzmmc_manual_detect(WLAN_SDIO_INDEX, 1);
++	printk("jzmmc manual detect complete\n");
++
++	return 0;
++}
++
++int platform_wifi_power_off(void)
++{
++    /* gpio_free(SDIO_WIFI_POWER);
++	gpio_direction_output(SDIO_WIFI_POWER, 0);
++	printk("wlan power off\n"); */
++	printk("wlan power off called\n");
++	return 0;
++}
+
+--- a/Makefile	2023-08-17 23:28:30.921779207 -0700
++++ b/Makefile	2023-08-17 23:28:10.009147387 -0700
+@@ -250,7 +250,8 @@
+ 
+ 
+ EXTRA_CFLAGS += -I$(src)/platform
+-_PLATFORM_FILES := platform/platform_ops.o
++#_PLATFORM_FILES := platform/platform_ops.o
++_PLATFORM_FILES := platform/platform_ingenic_sdio.o
+ 
+ 
+ EXTRA_CFLAGS += -I$(src)/hal/btc

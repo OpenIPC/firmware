@@ -8,3 +8,12 @@ config BR2_PACKAGE_RTL8189FS_OPENIPC
 
 comment "rtl8189fs needs a Linux kernel to be built"
 	depends on !BR2_LINUX_KERNEL
+
+if BR2_PACKAGE_RTL8189FS_OPENIPC
+
+config BR2_PACKAGE_RTL8189FS_OPENIPC_INGENIC
+        bool "rtl8189fs_openipc_ingenic"
+        default n
+        help
+          Certain Ingenic T31 devices require the driver to manually force a re-scan of the sdio bus after the GPIO is enabled for WLAN to function, select to enable support.
+endif

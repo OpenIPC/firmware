@@ -20,5 +20,9 @@ RTL8189FS_OPENIPC_MODULE_MAKE_OPTS = CONFIG_RTL8189FS=m \
 	KVER=$(LINUX_VERSION_PROBED) \
 	KSRC=$(LINUX_DIR)
 
+ifeq ($(BR2_PACKAGE_RTL8189FS_OPENIPC_INGENIC),y)
+RTL8189FS_OPENIPC_PATCHES += 0002-ingenic_sdio.patch
+endif
+
 $(eval $(kernel-module))
 $(eval $(generic-package))
