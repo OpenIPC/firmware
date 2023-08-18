@@ -14,16 +14,10 @@ MAJESTIC_FAMILY = $(OPENIPC_SOC_FAMILY)
 MAJESTIC_RELEASE = $(OPENIPC_FLAVOR)
 
 # we don't have Majestic ultimate for these platforms
-ifeq ($(MAJESTIC_RELEASE),ultimate)
-	ifeq ($(MAJESTIC_FAMILY),hi3516av100)
-		MAJESTIC_RELEASE = lite
-	else ifeq ($(MAJESTIC_FAMILY),hi3519v101)
-		MAJESTIC_RELEASE = lite	
-	else ifeq ($(MAJESTIC_FAMILY),infinity6b0)
-		MAJESTIC_RELEASE = lite
-	else ifeq ($(MAJESTIC_FAMILY),infinity6e)
-		MAJESTIC_RELEASE = lite
-	endif
+MAJESTIC_LIST = hi3516av100 hi3519v101 infinity6b0 infinity6e
+
+ifneq ($(filter $(MAJESTIC_LIST),$(MAJESTIC_FAMILY)),)
+	MAJESTIC_RELEASE = lite
 endif
 
 ifeq ($(MAJESTIC_RELEASE),lte)
