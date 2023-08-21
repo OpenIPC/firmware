@@ -8,7 +8,6 @@ set_gpio() {
 	sleep 1
 }
 
-
 set_mmc() {
 	mmc=/sys/devices/platform/jzmmc_v1.2.$1/present
 	if [ "$(cat $mmc)" = "N" ]; then
