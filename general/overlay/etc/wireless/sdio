@@ -22,7 +22,7 @@ if [ "$1" = "atbm603x-t31-mmc0" ]; then
 	# set wifi mmc1 clk drive capability to 8mA
 	devmem 0x10011134 32 0x20000
 
-	set_mmc 0
+        set_mmc 0
 
 	cp /usr/share/atbm603x_conf/atbm_txpwer_dcxo_cfg.txt /tmp
 	cp /usr/share/atbm603x_conf/set_rate_power.txt /tmp
@@ -47,36 +47,36 @@ fi
 
 # T31 Wyze V3 / AtomCam 2 ATBM603x
 if [ "$1" = "atbm603x-t31-wyze-v3" ]; then
-        set_gpio 57 1
+	set_gpio 57 1
 
 	set_mmc 1
 
-        cp /usr/share/atbm603x_conf/atbm_txpwer_dcxo_cfg.txt /tmp
-        cp /usr/share/atbm603x_conf/set_rate_power.txt /tmp
+	cp /usr/share/atbm603x_conf/atbm_txpwer_dcxo_cfg.txt /tmp
+	cp /usr/share/atbm603x_conf/set_rate_power.txt /tmp
 
-        modprobe atbm603x_wifi_sdi1 atbm_printk_mask=0
-        sleep 1
-        exit 0
+	modprobe atbm603x_wifi_sdi1 atbm_printk_mask=0
+	sleep 1
+	exit 0
 fi
 
 # T31 Wyze V3 RTL8189FTV
 if [ "$1" = "rtl8189ftv-t31-wyze-v3" ]; then
-        set_gpio 57 1
+	set_gpio 57 1
 
 	set_mmc 1
 
-        modprobe 8189fs rtw_power_mgnt=0 rtw_enusbss=0
-        sleep 1
-        exit 0
+	modprobe 8189fs rtw_power_mgnt=0 rtw_enusbss=0
+	sleep 1
+	exit 0
 fi
 
 # T31 Wyze DB3 RTL8189FTV
 if [ "$1" = "rtl8189ftv-t31-wyze-db3" ]; then
 	set_mmc 1
 
-        modprobe 8189fs rtw_power_mgnt=0 rtw_enusbss=0
-        sleep 1
-        exit 0
+	modprobe 8189fs rtw_power_mgnt=0 rtw_enusbss=0
+	sleep 1
+	exit 0
 fi
 
 exit 1
