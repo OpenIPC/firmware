@@ -14,7 +14,7 @@ MAJESTIC_FAMILY = $(OPENIPC_SOC_FAMILY)
 MAJESTIC_RELEASE = $(OPENIPC_FLAVOR)
 
 # we don't have Majestic ultimate for these platforms
-MAJESTIC_LIST = hi3516av100 hi3519v101 infinity6b0 infinity6e
+MAJESTIC_LIST = hi3516av100 hi3519v101
 
 ifneq ($(filter $(MAJESTIC_LIST),$(MAJESTIC_FAMILY)),)
 	MAJESTIC_RELEASE = lite
