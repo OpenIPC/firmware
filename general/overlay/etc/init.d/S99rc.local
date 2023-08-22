@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Start rc.local
+#
+
+
+start() {
+	printf "Starting rc.local"
+	/etc/rc.local
+}
+
+restart() {
+	printf "Restarting rc.local"
+	/etc/rc.local
+}
+
+case "$1" in
+	start)
+		"$1"
+		;;
+
+	restart|reload)
+		start
+		;;
+
+	*)
+		echo "Usage: $0 {start|restart|reload}"
+		exit 1
+		;;
+esac
+
+exit $?
