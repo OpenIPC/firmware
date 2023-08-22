@@ -1,4 +1,5 @@
 iface wlan0 inet dhcp
+    pre-up wlan_addr=$(fw_printenv -n wlanaddr); if [ -n "$wlan_addr" ]; then ip link set dev wlan0 address $wlan_addr; fi
     post-up wpa_passphrase "$(fw_printenv -n wlanssid || echo OpenIPC)" "$(fw_printenv -n wlanpass || echo OpenIPC12345)" > /tmp/wpa_supplicant.conf
     post-up sed -i '2i \\tscan_ssid=1' /tmp/wpa_supplicant.conf
     post-up wpa_supplicant -B -i wlan0 -D nl80211,wext -c /tmp/wpa_supplicant.conf
