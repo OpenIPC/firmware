@@ -79,4 +79,22 @@ if [ "$1" = "rtl8189ftv-t31-wyze-db3" ]; then
 	exit 0
 fi
 
+# T20 Wyze V2 RTL8189FTV
+if [ "$1" = "rtl8189ftv-t20-wyze-v2" ]; then
+	set_mmc 1
+
+	modprobe 8189fs rtw_power_mgnt=0 rtw_enusbss=0
+	sleep 1
+	exit 0
+fi
+
+# T20 Wyze PanV2 RTL8189ES
+if [ "$1" = "rtl8189ftv-t20-wyze-pan-v2" ]; then
+	set_mmc 1
+
+	modprobe 8189es rtw_power_mgnt=0 rtw_enusbss=0
+	sleep 1
+	exit 0
+fi
+
 exit 1
