@@ -22,7 +22,7 @@ if [ "$1" = "atbm603x-t31-mmc0" ]; then
 	# set wifi mmc1 clk drive capability to 8mA
 	devmem 0x10011134 32 0x20000
 
-        set_mmc 0
+	set_mmc 0
 
 	cp /usr/share/atbm603x_conf/atbm_txpwer_dcxo_cfg.txt /tmp
 	cp /usr/share/atbm603x_conf/set_rate_power.txt /tmp
@@ -88,8 +88,8 @@ if [ "$1" = "rtl8189ftv-t20-wyze-v2" ]; then
 	exit 0
 fi
 
-# T20 Wyze PanV2 RTL8189ES
-if [ "$1" = "rtl8189ftv-t20-wyze-pan-v2" ]; then
+# T20 Wyze PanV1 RTL8189ES
+if [ "$1" = "rtl8189ftv-t20-wyze-pan-v1" ]; then
 	set_mmc 1
 
 	modprobe 8189es rtw_power_mgnt=0 rtw_enusbss=0
