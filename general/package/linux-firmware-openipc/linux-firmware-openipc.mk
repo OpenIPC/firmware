@@ -16,6 +16,9 @@ define LINUX_FIRMWARE_OPENIPC_INSTALL_MEDIATEK
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/firmware/mediatek
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/firmware/mediatek $(LINUX_FIRMWARE_OPENIPC_PKGDIR)/files/mediatek/mt7601u.bin
 	ln -s mediatek/mt7601u.bin $(TARGET_DIR)/lib/firmware/mt7601u.bin
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/mediatek
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/mediatek $(LINUX_FIRMWARE_OPENIPC_PKGDIR)/files/mediatek/RT2870STA.dat
 endef
 endif
 
