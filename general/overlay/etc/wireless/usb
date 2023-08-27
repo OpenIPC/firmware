@@ -48,6 +48,13 @@ if [ "$1" = "rtl8188fu-ssc337de-foscam" ]; then
 	exit 0
 fi
 
+# T10 NVT
+if [ "$1" = "mt7601sta-t10-nvt" ]; then
+	modprobe cfg80211
+	modprobe mt7601sta
+	exit 0
+fi
+
 # T21 BJS
 if [ "$1" = "rtl8188fu-t21-bjs" ]; then
 	set_gpio 50 0
