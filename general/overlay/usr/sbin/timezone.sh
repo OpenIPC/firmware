@@ -1,8 +1,8 @@
 #!/bin/sh
 
-#Set the system timezone based on the u-boot environment variable
+# Set the system timezone based on the u-boot environment variable
 
-#Convert the timezone from lowercase, replace underscores with spaces for proper searching
+# Convert the timezone from lowercase, replace underscores with spaces for proper searching
 convert_timezone() {
     local converted=""
     IFS="/"
@@ -18,17 +18,24 @@ convert_timezone() {
     echo "$converted"
 }
 
-#Seek the timezone from the u-boot environment variable
+# Get the timezone from the u-boot environment variable
 timezone=$(fw_printenv -n timezone 2>/dev/null)
 if [ -z "$timezone" ]; then
     echo "Timezone env variable not found, using system default."
     exit 1
 fi
 
-#Set the system timezone file
 converted_timezone=$(convert_timezone "$timezone")
 echo "User defined timezone: $converted_timezone"
-echo $converted_timezone > /etc/timezone
+
+# Check if the values in /etc/timezone and /etc/TZ match the ones from fw_printenv
+current_timezone=$(cat /etc/timezone 2>/dev/null)
+current_tz_value=$(cat /etc/TZ 2>/dev/null)
+
+if [ "$converted_timezone" = "$current_timezone" ] && [ "$timezone" = "$current_tz_value" ]; then
+    echo "Timezone settings are already up to date."
+    exit 0
+fi
 
 # Search for the transformed timezone in the file
 matching_line=$(zcat /var/www/a/tz.js.gz | grep -i -F "$converted_timezone")
@@ -37,9 +44,15 @@ if [ -z "$matching_line" ]; then
     exit 1
 fi
 
-# Extract the value associated with the timezone, set the system TZ file
+# Extract the value associated with the timezone
 value=$(echo "$matching_line" | awk -F',' '{print $2}' | awk -F':' '{print $2}' | tr -d "'}")
+
+# Write the TZ file first
 echo $value > /etc/TZ
+
+# Then write the timezone file
+echo $converted_timezone > /etc/timezone
+
 export TZ=$value
 
 if tty -s; then
