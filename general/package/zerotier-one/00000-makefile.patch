@@ -1,5 +1,5 @@
---- a/make-linux.mk	2023-03-21 11:52:14.865595394 +0300
-+++ b/make-linux.mk	2023-03-21 12:00:11.781207402 +0300
+--- a/make-linux.mk	2023-08-26 02:03:03.000000000 +0300
++++ b/make-linux.mk	2023-08-28 14:20:07.436267795 +0300
 @@ -25,7 +25,7 @@
  # otherwise build into binary as done on Mac and Windows.
  ONE_OBJS+=osdep/PortMapper.o
@@ -26,14 +26,14 @@
 +	CFLAGS?=-Os
  	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 -	CXXFLAGS?=-O3 -fstack-protector
-+	CXXFLAGS?=-Os
++	CXXFLAGS?=-Os -latomic
  	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 -	LDFLAGS=-pie -Wl,-z,relro,-z,now
 +	LDFLAGS=
  	RUSTFLAGS=--release
  endif
  
-@@ -299,7 +299,7 @@
+@@ -310,7 +310,7 @@
  
  # Static builds, which are currently done for a number of Linux targets
  ifeq ($(ZT_STATIC),1)
@@ -42,7 +42,7 @@
  endif
  
  # For building an official semi-static binary on CentOS 7
-@@ -317,13 +317,13 @@
+@@ -328,13 +328,13 @@
  
  # ARM32 hell -- use conservative CFLAGS
  ifeq ($(ZT_ARCHITECTURE),3)
@@ -61,7 +61,7 @@
  		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
  	endif
  endif
-@@ -343,8 +343,8 @@
+@@ -354,8 +354,8 @@
  endif
  
  # Position Independence
@@ -70,9 +70,9 @@
 +override CFLAGS+=-flto
 +override CXXFLAGS+=-flto
  
- .PHONY: all
- all:	one
-@@ -368,7 +368,7 @@
+ # Non-executable stack
+ override ASFLAGS+=--noexecstack
+@@ -382,7 +382,7 @@
  $(ONE_OBJS): zeroidc
  
  libzerotiercore.a:	FORCE
