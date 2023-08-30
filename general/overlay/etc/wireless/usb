@@ -41,6 +41,13 @@ if [ "$1" = "mt7601u-hi3516ev300-camhi" ]; then
 	exit 0
 fi
 
+# HI3518EV200 LifeSmart
+if [ "$1" = "rtl8188fu-hi3518ev200-lifesmart" ]; then
+	set_gpio 54 1
+	modprobe 8188fu
+	exit 0
+fi
+
 # SSC337DE Foscam
 if [ "$1" = "rtl8188fu-ssc337de-foscam" ]; then
 	set_gpio 15 0
