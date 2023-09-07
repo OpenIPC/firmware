@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# OpenIPC.org | 2023.09.01
+#
+
+PATH_MODULE=/lib/modules/4.9.84/sigmastar
+PATH_SENSOR=${PATH_MODULE}/sensor
+SENSOR=$(fw_printenv -n sensor)
+
+detect_sensor() {
+  devmem 0x1F207188 16 0x0001
+  devmem 0x1F263200 16 0x000D
+  SENSOR=$(ipcinfo -s)
+  fw_setenv sensor ${SENSOR}
+}
+
+set_sensor() {
+  case ${SENSOR} in
+    imx307)
+      insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2 mclk=37.125M
+      ;;
+    *)
+      echo -e "\n\e[1;31mUNSUPPORTED sensor found - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
+      ;;
+  esac
+}
+
+insert_ko() {
+  insmod ${PATH_MODULE}/mhal.ko
+  insmod ${PATH_MODULE}/mi_common.ko
+  insmod ${PATH_MODULE}/mi_sys.ko logBufSize=256 default_config_path=/usr/bin
+  insmod ${PATH_MODULE}/mi_rgn.ko
+  insmod ${PATH_MODULE}/mi_ai.ko
+  insmod ${PATH_MODULE}/mi_ao.ko
+  insmod ${PATH_MODULE}/mi_sensor.ko
+  insmod ${PATH_MODULE}/mi_shadow.ko
+  insmod ${PATH_MODULE}/mi_divp.ko
+  insmod ${PATH_MODULE}/mi_vif.ko
+  insmod ${PATH_MODULE}/mi_vpe.ko
+  insmod ${PATH_MODULE}/mi_venc.ko
+}
+
+if [ ! -e /dev/mi_poll ]; then
+  insert_ko
+fi
+
+if [ -z ${SENSOR} ]; then
+  echo -e "\n\e[1;33mAutodetect sensor\e[0m\n" | logger -s -t OpenIPC
+  detect_sensor
+fi
+
+if [ -z ${SENSOR} ]; then
+  echo -e "\n\e[1;31mSensor parameter is MISSING\e[0m\n" | logger -s -t OpenIPC
+  exit 1
+else
+  echo -e "\n\e[1;32mSensor is assigned - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
+  $(lsmod | grep -q ${SENSOR}) || set_sensor
+fi
+
+exit 0
