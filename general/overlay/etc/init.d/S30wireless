@@ -1,5 +1,6 @@
 #!/bin/sh
 dev=$(fw_printenv -n wlandev)
+mac=$(fw_printenv -n wlanaddr)
 wlan=/etc/wireless
 netif=/etc/network/interfaces.d
 
@@ -7,4 +8,8 @@ if [ "$1" = "start" ] && [ ! -z "$dev" ]; then
 	if $wlan/usb "$dev" || $wlan/modem "$dev" || $wlan/sdio "$dev"; then
 		grep -q "static" $netif/eth0 || cp -f $wlan/interfaces/* $netif
 	fi
+fi
+
+if [ "$1" = "start" ] && [ ! -z "$mac" ]; then
+	ip link set dev wlan0 address "$mac"
 fi
