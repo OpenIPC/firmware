@@ -23,13 +23,13 @@ int main() {
 
 	val = 1 << (val >> 12);
 	if (val == 64) {
-		addr = 0x3FC6000;
+		addr = 0x3FE0000;
 		total = 0x4000000;
 	} else if (val == 128) {
-		addr = 0x7FC6000;
+		addr = 0x7FE0000;
 		total = 0x8000000;
 	} else if (val == 256) {
-		addr = 0xFFC6000;
+		addr = 0xFFE0000;
 		total = 0x10000000;
 	}
 
