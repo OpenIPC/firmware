@@ -45,6 +45,10 @@ set_fullname() {
 	show_fullname >/etc/hostname
 }
 
+show_wlan() {
+	grep -r '$1..=' /etc/wireless | cut -d '"' -f 4
+}
+
 # Source configuration files from /etc/profile.d
 for i in /etc/profile.d/*.sh; do
 	[ -r "$i" ] && . $i
