@@ -47,6 +47,14 @@ if [ "$1" = "rtl8188fu-hi3518ev200-lifesmart" ]; then
 	exit 0
 fi
 
+# HI3518EV300 Unknown1
+if [ "$1" = "rtl8188fu-hi3518ev300-unknown1" ]; then
+	set_gpio 57 0
+	modprobe mac80211
+	modprobe 8188fu
+	exit 0
+fi
+
 # SSC337DE Foscam
 if [ "$1" = "rtl8188fu-ssc337de-foscam" ]; then
 	set_gpio 15 0

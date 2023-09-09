@@ -1,0 +1,26 @@
+--- a/onvif_simple_server.c	2023-07-16 16:48:12.000000000 +0300
++++ b/onvif_simple_server.c	2023-09-09 22:42:57.126222514 +0300
+@@ -32,8 +32,8 @@
+ #include "utils.h"
+ #include "log.h"
+ 
+-#define DEFAULT_CONF_FILE "/etc/onvif_simple_server.conf"
+-#define DEFAULT_LOG_FILE "/var/log/onvif_simple_server.log"
++#define DEFAULT_CONF_FILE "/etc/onvif.conf"
++#define DEFAULT_LOG_FILE "/tmp/onvif.log"
+ 
+ service_context_t service_ctx;
+ 
+--- a/wsd_simple_server.c	2023-07-16 16:48:12.000000000 +0300
++++ b/wsd_simple_server.c	2023-09-09 22:55:59.594700185 +0300
+@@ -36,8 +36,8 @@
+ #define PORT 3702
+ #define TYPE "NetworkVideoTransmitter"
+ 
+-#define DEFAULT_LOG_FILE "/var/log/wsd_simple_server.log"
+-#define TEMPLATE_DIR "/etc/wsd_simple_server"
++#define DEFAULT_LOG_FILE "/tmp/wsd.log"
++#define TEMPLATE_DIR "/var/www/onvif/wsd_files"
+ 
+ #define UUID_LEN 36
+ #define RECV_BUFFER_LEN 4096
