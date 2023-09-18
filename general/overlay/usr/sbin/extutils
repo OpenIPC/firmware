@@ -9,6 +9,14 @@ else
 	ARC=''
 fi
 
+case "${ARCH}" in
+	armv7l)
+		YQARCH=arm
+		;;
+	*)
+		YQARCH=$ARCH;;
+esac
+
 case "${CMD}" in
 	cli)
 		yaml-cli -i /etc/majestic.yaml "$@"
@@ -26,6 +34,17 @@ case "${CMD}" in
 			echo "The ipctool installed as remote GitHub plugin"
 		fi
 		$IPCTOOL $@
+		;;
+
+	yq)
+		YQTOOL=/tmp/yq
+		if [ ! -x $YQTOOL ]; then
+			YQLATEST=$(curl -sIq https://github.com/mikefarah/yq/releases/latest | awk -F '/' '/^(L|l)ocation/ {print  substr($NF, 1, length($NF)-1)}')
+			curl -s -L -o $YQTOOL "https://github.com/mikefarah/yq/releases/download/${YQLATEST}/yq_linux_$YQARCH"
+			chmod +x $YQTOOL
+			echo "The yq installed as remote GitHub plugin"
+		fi
+		$YQTOOL $@
 		;;
 
 	check_mac)
