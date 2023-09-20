@@ -1,6 +1,7 @@
 auto wlan0
 iface wlan0 inet dhcp
-    post-up wpa_passphrase "$(fw_printenv -n wlanssid || echo OpenIPC)" "$(fw_printenv -n wlanpass || echo OpenIPC12345)" > /tmp/wpa_supplicant.conf
-    post-up sed -i '2i \\tscan_ssid=1' /tmp/wpa_supplicant.conf
-    post-up wpa_supplicant -B -i wlan0 -D nl80211,wext -c /tmp/wpa_supplicant.conf
+    udhcpc_opts -t 15
+    pre-up wpa_passphrase "$(fw_printenv -n wlanssid || echo OpenIPC)" "$(fw_printenv -n wlanpass || echo OpenIPC12345)" > /tmp/wpa_supplicant.conf
+    pre-up sed -i '2i \\tscan_ssid=1' /tmp/wpa_supplicant.conf
+    pre-up wpa_supplicant -D nl80211 -i wlan0 -c /tmp/wpa_supplicant.conf -B
     post-down killall -q wpa_supplicant
