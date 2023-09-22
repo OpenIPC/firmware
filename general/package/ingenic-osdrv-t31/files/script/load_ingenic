@@ -115,6 +115,11 @@ case ${SENSOR} in
 	ISP_PARAM="isp_clk=150000000"
 	SENSOR_PARAM=""
 	;;
+"os03b10")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=200000000"
+	SENSOR_PARAM=""
+	;;
 "sc200ai")
 	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
 	ISP_PARAM="isp_clk=100000000 isp_ch0_pre_dequeue_time=20 isp_ch0_pre_dequeue_interrupt_process=0 isp_memopt=1"
