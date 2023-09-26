@@ -8,7 +8,7 @@ AUTONIGHT_LICENSE = MIT
 AUTONIGHT_LICENSE_FILES = LICENSE
 
 define AUTONIGHT_EXTRACT_CMDS
-	cp -avr ../general/package/autonight/src/* $(@D)/
+	cp -avr $(AUTONIGHT_PKGDIR)/src/* $(@D)/
 endef
 
 AUTONIGHT_MAKE_OPTS = \
