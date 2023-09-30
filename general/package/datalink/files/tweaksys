@@ -68,7 +68,7 @@ EOF
 }
 
 case "$1" in
-  gk7205v200 | hi3516ev200)
+  gk7205v200 | gk7205v210 | hi3516ev200)
 	echo "Preparing system tweaks for ${chip}..."
 
 	# set custom config
@@ -113,6 +113,6 @@ case "$1" in
 	all_other
 	;;
 	*)
-	echo "Usage: $0 {gk7205v200|gk7205v300|hi3516ev200|hi3516ev300|t31l|t31n|t31x|t31zx}"
+	echo "Usage: $0 {gk7205v200|gk7205v210|gk7205v300|hi3516ev200|hi3516ev300|t31l|t31n|t31x|t31zx}"
 	exit 1
 esac
