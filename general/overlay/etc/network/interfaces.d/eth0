@@ -1,7 +1,2 @@
-auto eth0
 iface eth0 inet dhcp
     hwaddress ether $(fw_printenv -n ethaddr || echo 00:00:23:34:45:66)
-    #udhcpc_opts -O search -O ntpsrv -O hostname
-    #pre-up echo -e "nameserver 77.88.8.8\nnameserver 8.8.4.4\n" >/tmp/resolv.conf
-    #pre-up echo -e "server 0.time.openipc.org iburst\nserver 1.time.openipc.org iburst\nserver 2.time.openipc.org iburst\nserver 3.time.openipc.org iburst" >/tmp/ntp.conf
-    #up /usr/sbin/ntpd -N -q
