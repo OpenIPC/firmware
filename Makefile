@@ -4,7 +4,7 @@ MAX_ROOTFS_SIZE_16M := 8192
 MAX_KERNEL_SIZE_NAND := 4096
 MAX_ROOTFS_SIZE_NAND := 16384
 
-BR_VER = 2023.02.2
+BR_VER = 2023.02.5
 BR_MAKE = $(MAKE) -C $(TARGET)/buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
 BR_LINK = https://github.com/buildroot/buildroot/archive
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
