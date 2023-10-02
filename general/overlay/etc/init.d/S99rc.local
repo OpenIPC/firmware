@@ -5,12 +5,12 @@
 
 
 start() {
-	printf "Starting rc.local"
+	echo "Starting rc.local"
 	/etc/rc.local
 }
 
 restart() {
-	printf "Restarting rc.local"
+	echo "Restarting rc.local"
 	/etc/rc.local
 }
 
@@ -22,9 +22,11 @@ case "$1" in
 	restart|reload)
 		start
 		;;
-
+	stop)
+		# Intentionally left blank, no need to stop rc.local
+		;;
 	*)
-		echo "Usage: $0 {start|restart|reload}"
+		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1
 		;;
 esac
