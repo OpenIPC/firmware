@@ -1,0 +1,7 @@
+config BR2_PACKAGE_VENC_OPENIPC
+	bool "venc streamer"
+	select BR2_PACKAGE_DATALINK
+	help
+	  Yet another streamer for FPV projects.
+
+	  https://github.com/OpenIPC/silicon_research
