@@ -1,0 +1,7 @@
+config BR2_PACKAGE_VDEC_OPENIPC
+	bool "vdec decoder"
+	select BR2_PACKAGE_DATALINK
+	help
+	  Yet another video decoder for FPV projects.
+
+	  https://github.com/OpenIPC/silicon_research
