@@ -31,7 +31,8 @@ case "$1" in
 	else
 	  mavfwd -c 14 --master ${serial} --baudrate ${baud} --out 127.0.0.1:${port_tx} --in 127.0.0.1:${port_rx} &
 	fi
-	if [ ${fw} = "fpv" ]; then
+	echo "Firmware is ${fw}"
+  if [ ${fw} = "fpv" ] || [ ${fw} = "venc" ]; then
 		start_telemetry
 	fi
 	echo "Done."
