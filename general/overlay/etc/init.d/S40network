@@ -3,13 +3,12 @@ dev=$(fw_printenv -n wlandev)
 mac=$(fw_printenv -n wlanmac)
 
 set_wireless() {
+	file="-i /etc/wireless/interfaces/eth0"
 	path=/etc/wireless
-	if $path/usb "$dev" || $path/modem "$dev" || $path/sdio "$dev"; then
-		ifup wlan0
-	fi
 
-	if [ -n "$mac" ]; then
-		ip link set dev wlan0 address "$mac"
+	if $path/usb "$dev" || $path/modem "$dev" || $path/sdio "$dev"; then
+		[ -n "$mac" ] && ip link set dev wlan0 address "$mac"
+		ifup wlan0
 	fi
 }
 
@@ -17,7 +16,7 @@ case "$1" in
 	start)
 		echo "Starting network..."
 		ifup -a
-		[ -n "$dev" ] && set_wireless && file="-i /etc/wireless/interfaces/eth0"
+		[ -n "$dev" ] && set_wireless
 		ifup eth0 $file
 		;;
 
@@ -38,4 +37,4 @@ case "$1" in
 		exit 1
 esac
 
-exit $?
+exit 0
