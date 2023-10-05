@@ -91,11 +91,8 @@ jobs:
             release: venc
           - platform: gk7205v300
             release: venc
-
-          # Original SDK test
-          - platform: gk7205v200
-            release: original
-            custom: onlyci
+          - platform: ssc338q
+            release: initramfs
 
           # MVP
           - platform: fh8852v100
@@ -239,6 +236,11 @@ jobs:
             echo NANDFW=${NANDFW} >> ${GITHUB_ENV}
           fi
 
+          RAMFS=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-initramfs-${{matrix.release}}.tgz
+          if [ -e ${RAMFS} ]; then
+            echo RAMFS=${RAMFS} >> ${GITHUB_ENV}
+          fi
+
       - name: Upload firmware
         if: github.event_name != 'pull_request' && matrix.custom != 'onlyci'
         uses: softprops/action-gh-release@v1
@@ -247,6 +249,7 @@ jobs:
           files: |
             ${{env.NORFW}}
             ${{env.NANDFW}}
+            ${{env.RAMFS}}
 
       - name: Send binary
         if: github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NORFW
