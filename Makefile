@@ -1,9 +1,3 @@
-MAX_KERNEL_SIZE_NOR := 2048
-MAX_ROOTFS_SIZE_NOR := 5120
-MAX_ROOTFS_SIZE_16M := 8192
-MAX_KERNEL_SIZE_NAND := 4096
-MAX_ROOTFS_SIZE_NAND := 16384
-
 BR_VER = 2023.02.5
 BR_MAKE = $(MAKE) -C $(TARGET)/buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
 BR_LINK = https://github.com/buildroot/buildroot/archive
@@ -74,20 +68,30 @@ timer:
 
 repack:
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
-	@$(call CHECK_SIZE,uImage,$(MAX_KERNEL_SIZE_NOR))
 ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
-	@$(call CHECK_SIZE,rootfs.squashfs,$(MAX_ROOTFS_SIZE_NOR))
+	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,5120,nor)
 else
-	@$(call CHECK_SIZE,rootfs.squashfs,$(MAX_ROOTFS_SIZE_16M))
+	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,8192,nor)
 endif
-	@$(call REPACK_FIRMWARE,uImage,rootfs.squashfs,nor)
 endif
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
-	$(eval KERNEL_BIN = $(or $(BR2_LINUX_KERNEL_IMAGE_NAME),uImage))
-	@$(call CHECK_SIZE,$(KERNEL_BIN),$(MAX_KERNEL_SIZE_NAND))
-	@$(call CHECK_SIZE,rootfs.ubi,$(MAX_ROOTFS_SIZE_NAND))
-	@$(call REPACK_FIRMWARE,$(KERNEL_BIN),rootfs.ubi,nand)
+ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
+	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.ubi,16384,nand)
+else ifeq ($(BR2_OPENIPC_SOC_VENDOR),"sigmastar")
+	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
+else
+	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand)
 endif
+endif
+ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
+	@$(call PREPARE_REPACK,uImage,16384,,,initramfs)
+endif
+
+define PREPARE_REPACK
+	$(if $(1),$(call CHECK_SIZE,$(1),$(2)))
+	$(if $(3),$(call CHECK_SIZE,$(3),$(4)))
+	$(call REPACK_FIRMWARE,$(1),$(3),$(5))
+endef
 
 define CHECK_SIZE
 	$(eval FILE_SIZE = $(shell expr $(shell stat -c %s $(TARGET)/images/$(1) || echo 0) / 1024))
@@ -99,13 +103,13 @@ endef
 
 define REPACK_FIRMWARE
 	mkdir -p $(TARGET)/images/$(3)
-	cd $(TARGET)/images/$(3) && cp -f ../$(1) $(1).$(BR2_OPENIPC_SOC_MODEL)
-	cd $(TARGET)/images/$(3) && cp -f ../$(2) $(2).$(BR2_OPENIPC_SOC_MODEL)
-	cd $(TARGET)/images/$(3) && md5sum $(1).$(BR2_OPENIPC_SOC_MODEL) > $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum
-	cd $(TARGET)/images/$(3) && md5sum $(2).$(BR2_OPENIPC_SOC_MODEL) > $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum
+	$(if $(1),cd $(TARGET)/images/$(3) && cp -f ../$(1) $(1).$(BR2_OPENIPC_SOC_MODEL))
+	$(if $(2),cd $(TARGET)/images/$(3) && cp -f ../$(2) $(2).$(BR2_OPENIPC_SOC_MODEL))
+	$(if $(1),cd $(TARGET)/images/$(3) && md5sum $(1).$(BR2_OPENIPC_SOC_MODEL) > $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum)
+	$(if $(2),cd $(TARGET)/images/$(3) && md5sum $(2).$(BR2_OPENIPC_SOC_MODEL) > $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum)
+	$(if $(1),$(eval KERNEL = $(1).$(BR2_OPENIPC_SOC_MODEL) $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval KERNEL =))
+	$(if $(2),$(eval ROOTFS = $(2).$(BR2_OPENIPC_SOC_MODEL) $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval ROOTFS =))
 	$(eval ARCHIVE = ../openipc.$(BR2_OPENIPC_SOC_MODEL)-$(3)-$(BR2_OPENIPC_FLAVOR).tgz)
-	$(eval KERNEL = $(1).$(BR2_OPENIPC_SOC_MODEL) $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum)
-	$(eval ROOTFS = $(2).$(BR2_OPENIPC_SOC_MODEL) $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum)
 	cd $(TARGET)/images/$(3) && tar -czf $(ARCHIVE) $(KERNEL) $(ROOTFS)
 	rm -rf $(TARGET)/images/$(3)
 endef
