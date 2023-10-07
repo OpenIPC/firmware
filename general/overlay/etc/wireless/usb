@@ -91,4 +91,11 @@ if [ "$1" = "mt7601u-t31-camhi" ]; then
 	exit 0
 fi
 
+# T31 CamHi
+if [ "$1" = "rtl8188fu-t31-xfp301" ]; then
+	set_gpio 10 1
+	modprobe rtl8188fu
+	exit 0
+fi
+
 exit 1
