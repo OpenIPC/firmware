@@ -29,9 +29,9 @@ case "$1" in
 	if [ ${router} -eq 1 ] || [ ${fw} = "lte" ]; then
 	  /usr/bin/mavlink-routerd &
 	else
-	  mavfwd --master ${serial} --baudrate ${baud} --out 127.0.0.1:${port_tx} --in 127.0.0.1:${port_rx} &
+	  mavfwd --channels ${channels} --master ${serial} --baudrate ${baud} --out 127.0.0.1:${port_tx} --in 127.0.0.1:${port_rx} &
 	fi
-	if [ ${fw} = "fpv" ]; then
+	if [ ${fw} = "fpv" ] || [ ${fw} = "venc" ]; then
 		start_telemetry
 	fi
 	echo "Done."
