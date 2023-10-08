@@ -35,8 +35,7 @@ case "$1" in
 	  if [ ${telemetry} = "true" ]; then
 		/usr/bin/telemetry start
 	  fi
-	fi
-	if [ ${fw} = "fpv" ]; then
+	else
 	  echo "Starting wifibroadcast service..."
 	  /usr/bin/wifibroadcast start
 	fi

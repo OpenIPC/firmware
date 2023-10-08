@@ -3,28 +3,17 @@
 # Start venc encoder
 #
 
-. /etc/datalink.conf
-
 case "$1" in
   start)
     if ! [ -f /dev/ven ]; then
-	ln -s /dev/venc /dev/ven
+		ln -s /dev/venc /dev/ven
     fi
-
     echo "Starting venc encoder service..."
     venc -p 5600 -f 30 -r 7168 -n 1400 -c 265cbr -d frame -v 200_imx307F -s 720p &
-
-    if [ ${telemetry} = "true" ]; then
-      echo "Starting telemetry service..."
-      /usr/bin/telemetry start
-    fi
     ;;
   stop)
-    echo "Stopping venc encoder & telemetry services..."
+    echo "Stopping venc encoder services..."
     kill -9 $(pidof venc)
-    kill -9 $(pidof telemetry_rx)
-    kill -9 $(pidof telemetry_tx)
-    kill -9 $(pidof mavfwd)
     ;;
     *)
     echo "Usage: $0 {start|stop}"
