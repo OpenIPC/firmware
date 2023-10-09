@@ -6,11 +6,11 @@
 
 ifeq ($(LOCAL_DOWNLOAD),y)
 RTL8189FS_OPENIPC_SITE_METHOD = git
-RTL8189FS_OPENIPC_SITE = https://github.com/jwrdegoede/rtl8189es_linux
-RTL8189FS_OPENIPC_VERSION = $(shell git ls-remote $(RTL8189FS_OPENIPC_SITE) rtl8189fs | head -1 | cut -f1)
+RTL8189FS_OPENIPC_SITE = https://github.com/gtxaspec/rtl8189fs
+RTL8189FS_OPENIPC_VERSION = $(shell git ls-remote $(RTL8189FS_OPENIPC_SITE) master | head -1 | cut -f1)
 else
-RTL8189FS_OPENIPC_SITE = https://github.com/jwrdegoede/rtl8189es_linux/archive
-RTL8189FS_OPENIPC_SOURCE = rtl8189fs.tar.gz
+RTL8189FS_OPENIPC_SITE = https://github.com/gtxaspec/rtl8189fs/archive
+RTL8189FS_OPENIPC_SOURCE = master.tar.gz
 endif
 
 RTL8189FS_OPENIPC_LICENSE = GPL-2.0
