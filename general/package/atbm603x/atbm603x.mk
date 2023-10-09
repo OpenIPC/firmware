@@ -1,6 +1,6 @@
 ################################################################################
 #
-# AltoBeam atbm603x wifi driver
+# atbm603x
 #
 ################################################################################
 
@@ -14,12 +14,7 @@ ATBM603X_SOURCE = master.tar.gz
 endif
 
 ATBM603X_LICENSE = GPL-2.0
-
 ATBM603X_MODULE_MAKE_OPTS = \
-	CONFIG_ATBM601x=n \
-	CONFIG_ATBM602x=n \
-	CONFIG_ATBM603x=y \
-	KVER=$(LINUX_VERSION_PROBED) \
 	KSRC=$(LINUX_DIR)
 
 $(eval $(kernel-module))
