@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20230520
+# OpenIPC.org | v.20231008
 #
 
-scr_version=1.0.20
+scr_version=1.0.21
 
 args=" $@"
 
@@ -79,7 +79,7 @@ do_update_rootfs() {
 do_wipe_overlay() {
 	echo_c 33 "\nOverlayFS"
 	echo "Erase overlay partition"
-	[ $(get_flash_type mtd) = "nand" ] || jffs2="-j"
+	[ "$flash_type" = "nand" ] || jffs2="-j"
 	busybox flash_eraseall $jffs2 "$(get_device "rootfs_data")"
 }
 
@@ -87,7 +87,7 @@ download_firmware() {
 	echo_c 33 "\nFirmware"
 	[ "$branch_dev" = "1" ] && branch="dev" || branch="latest"
 	osr=$(get_system_build)
-	ftype=$(get_flash_type)
+	ftype="nor"
 	build="${soc}-${ftype}-${osr}"
 	[ -z "$url" ] && url="https://github.com/OpenIPC/firmware/releases/download/${branch}/openipc.${build}.tgz"
 	echo "Download from $url"
@@ -198,6 +198,7 @@ get_system_info() {
 	kernel_device=$(get_device "kernel")
 	kernel_version=$(get_kernel_version "$kernel_device")
 	system_version=$(get_system_version "")
+	flash_type=$(${IPCINFO} -F)
 }
 
 get_system_version() {
@@ -206,12 +207,6 @@ get_system_version() {
 
 get_system_build() {
 	grep "BUILD_OPTION" "/etc/os-release" | head -1 | cut -d= -f2
-}
-
-get_flash_type() {
-	local x=$(${IPCINFO} -F)
-	[ -z "$1" ] && [ "$x" = "nand" ] && $(fw_printenv bootcmd | grep -qv nand) && x=nor
-	echo "$x"
 }
 
 print_sysinfo() {
