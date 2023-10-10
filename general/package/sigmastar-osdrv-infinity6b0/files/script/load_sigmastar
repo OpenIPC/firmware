@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | 2023.09.01
+# OpenIPC.org | 2023.10.01
 #
 
 PATH_MODULE=/lib/modules/4.9.84/sigmastar
@@ -20,7 +20,7 @@ set_sensor() {
     gc4653|imx335|sc2239|sc3335|sc3338)
       insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1
       ;;
-    gc2053|sc2335)
+    gc2053|gc2083|sc2335)
       insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2
       ;;
     imx307)
