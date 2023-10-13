@@ -12,7 +12,7 @@ case "$1" in
     venc -p 5600 -f 30 -r 7168 -n 1400 -c 265cbr -d frame -v 200_imx307F -s 720p &
     ;;
   stop)
-    echo "Stopping venc encoder services..."
+    echo "Stopping venc encoder service..."
     kill -9 $(pidof venc)
     ;;
     *)
