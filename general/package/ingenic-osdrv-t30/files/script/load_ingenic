@@ -90,6 +90,6 @@ if [ ! -z "$(lsmod | grep "gpio")" ]; then
 	for GPIO in $(echo ${GPIOS})
 	do
 	  G=$(cli -g ${GPIO})
-	  [ ! -z "${G}" ] && echo ${G} > /proc/jz/claim/gpio
+	  [ ! -z "${G}" ] && echo ${G} > /proc/gpio_claim/gpio
 	done
 fi
