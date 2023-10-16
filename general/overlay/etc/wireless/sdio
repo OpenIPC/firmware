@@ -43,7 +43,7 @@ fi
 
 # T31 Wyze V3 / AtomCam 2 ATBM603x
 if [ "$1" = "atbm603x-t31-wyze-v3" ]; then
-	set_gpio 57 1
+	set_gpio 57 0;set_gpio 57 1
 	set_mmc 1
 
 	cp /usr/share/atbm603x_conf/atbm_txpwer_dcxo_cfg.txt /tmp
