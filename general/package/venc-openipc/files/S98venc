@@ -1,60 +1,21 @@
 #!/bin/sh
-
-DAEMON="venc"
-PIDFILE="/var/run/$DAEMON.pid"
-DAEMON_ARGS="-s"
-[ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
-load_venc() {
-	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
-	[ -f /etc/coredump.conf ] && . /etc/coredump.conf
-	if [ "$coredump_enabled" ]; then
-		[ "$(cli -g .watchdog.timeout)" -lt "30" ] && cli -s .watchdog.timeout 30
-		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" >/proc/sys/kernel/core_pattern
-	fi
-	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
-	ln -s /dev/venc /dev/ven
-	/usr/bin/./venc -p 5600 -f 30 -r 7168 -n 1400 -c 265cbr -d frame -v 200_imx307F -s 720p &
-	status=$?
-	if [ "$status" -eq 0 ]; then
-		echo "OK"
-	else
-		echo "FAIL"
-	fi
-	return "$status"
-}
-start() {
-	logger -s -p daemon.info -t $(ipcinfo -v) "Loading video system has started..."
-	export SENSOR=$(fw_printenv -n sensor)
-	load_venc
-}
-stop() {
-	printf 'Stopping %s: ' "$DAEMON"
-	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
-	start-stop-daemon -K -q -p "$PIDFILE"
-	status=$?
-	if [ "$status" -eq 0 ]; then
-		rm -f "$PIDFILE"
-		echo "OK"
-	else
-		echo "FAIL"
-	fi
-	return "$status"
-}
-
-restart() {
-	stop
-	sleep 1
-	reload
-}
-
-reload() {
-    load_venc
-}
+#
+# Start venc encoder
+#
 
 case "$1" in
-	start|stop|restart|reload)
-		"$1";;
-	*)
-		echo "Usage: $0 {start|stop|restart|reload}"
-		exit 1
+  start)
+    if ! [ -f /dev/ven ]; then
+		ln -s /dev/venc /dev/ven
+    fi
+    echo "Starting venc encoder service..."
+    venc -p 5600 -f 30 -r 7168 -n 1400 -c 265cbr -d frame -v 200_imx307F -s 720p &
+    ;;
+  stop)
+    echo "Stopping venc encoder service..."
+    kill -9 $(pidof venc)
+    ;;
+    *)
+    echo "Usage: $0 {start|stop}"
+    exit 1
 esac

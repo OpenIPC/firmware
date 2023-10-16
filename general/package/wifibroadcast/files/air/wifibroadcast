@@ -38,7 +38,7 @@ detect_wifi_card() {
   for card in ${devices}
 	do
 	  case "${card}" in
-	  "0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101")
+	  "0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
 		driver="realtek"
 		modprobe 88XXau rtw_tx_pwr_idx_override=${driver_txpower_override}
 	  ;;
@@ -135,7 +135,7 @@ case "$1" in
 	  fi
 
 	else
-      echo "Wifibroadcast service disabled in wfb.conf..."
+    	    echo "Wifibroadcast service disabled in wfb.conf..."
 	fi
     ;;
   stop)

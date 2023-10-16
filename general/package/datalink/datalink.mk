@@ -16,7 +16,7 @@ define DATALINK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
 	cp $(DATALINK_PKGDIR)/files/datalink.conf $(TARGET_DIR)/etc
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc               
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
 	cp $(DATALINK_PKGDIR)/files/$(DATALINK_FPATH)/telemetry.conf $(TARGET_DIR)/etc
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
@@ -24,6 +24,9 @@ define DATALINK_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	cp $(DATALINK_PKGDIR)/files/$(DATALINK_FPATH)/telemetry $(TARGET_DIR)/usr/bin
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/sbin
+	cp $(DATALINK_PKGDIR)/files/$(DATALINK_FPATH)/channels.sh $(TARGET_DIR)/usr/sbin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	cp $(DATALINK_PKGDIR)/files/tweaksys $(TARGET_DIR)/usr/bin

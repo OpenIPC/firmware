@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# Start vdec decoder
+#
+
+case "$1" in
+  start)
+    echo "Starting vdec decoder service..."
+    vdec -p 5600 -d frame -c h265 --bg-r 30 --bg-g 0 --bg-b 30 --osd &
+    ;;
+  stop)
+    echo "Stopping vdec decoder service..."
+    kill -9 $(pidof vdec)
+    ;;
+    *)
+    echo "Usage: $0 {start|stop}"
+    exit 1
+esac
