@@ -4,7 +4,13 @@
 #
 ################################################################################
 
-VENC_OPENIPC_SITE = https://github.com/OpenIPC/silicon_research/releases/download/latest/venc
+ifdef $(BR2_CONFIG_VENDOR, hisilicon)
+	VENDOR = hisi
+else
+	VENDOR = goke
+endif
+
+VENC_OPENIPC_SITE = https://github.com/OpenIPC/silicon_research/releases/download/latest/venc-$(VENDOR)
 
 VENC_OPENIPC_LICENSE = MIT
 
