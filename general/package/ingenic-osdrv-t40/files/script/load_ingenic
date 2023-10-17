@@ -85,7 +85,7 @@ fi
 
 lsmod | grep "tx_isp" >/dev/null
 if [ $? -ne 0 ]; then
-	modprobe tx-isp-${SOC} ${ISP_PARAM}
+	modprobe tx-isp-${SOC} ${ISP_PARAM} print_level=2
 	check_return "insmod isp drv"
 fi
 
