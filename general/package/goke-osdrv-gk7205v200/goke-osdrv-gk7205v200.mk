@@ -115,31 +115,7 @@ define GOKE_OSDRV_GK7205V200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/libsns_bt656.so
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_aacdec.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_aacenc.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_aacsbrdec.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_aacsbrenc.so
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_ae.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_awb_natura.so
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_awb.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_bcd.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_cipher.so
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_isp.so
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_ive.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_ivp.so
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_md.so
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_mpi.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_qr.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_tde.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_vqe_aec.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_vqe_agc.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_vqe_anr.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_vqe_eq.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_vqe_hpf.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_vqe_record.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_vqe_res.so
-	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_vqe_talkv2.so
-	##$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/libhi_vqe_wnr.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/*
 endef
 
 $(eval $(generic-package))
