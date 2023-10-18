@@ -18,9 +18,13 @@ else
 MAVLINK_ROUTER_LIBC = musl
 endif
 
+ifeq ($(BR2_ARM_EABIHF),y)
+MAVLINK_ROUTER_ABI = -hf
+endif
+
 MAVLINK_ROUTER_CONF_OPTS += \
 	--buildtype=release \
-	--cross-file $(MAVLINK_ROUTER_PKGDIR)/files/meson-cross-$(ARCH)-$(MAVLINK_ROUTER_LIBC)-openipc.ini
+	--cross-file $(MAVLINK_ROUTER_PKGDIR)/files/meson-cross-$(ARCH)-$(MAVLINK_ROUTER_LIBC)$(MAVLINK_ROUTER_ABI)-openipc.ini
 
 define MAVLINK_ROUTER_CONFIGURE_CMDS
 	$(TARGET_MAKE_ENV) meson setup $(MAVLINK_ROUTER_CONF_OPTS) $(@D) $(@D)/build
