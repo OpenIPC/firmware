@@ -17,7 +17,7 @@ else
 endif
 
 define VENC_OPENIPC_BUILD_CMDS
-	$(MAKE) CC=$(TARGET_CC) DRV=$(VENC_OPENIPC_OSDRV) TARGET=$(VENC_OPENIPC_TARGET) FILE=venc -C $(@D)
+	$(MAKE) CC=$(TARGET_CC) DRV=$(VENC_OPENIPC_OSDRV) $(VENC_OPENIPC_TARGET) -C $(@D)/venc
 endef
 
 define VENC_OPENIPC_INSTALL_TARGET_CMDS
@@ -25,7 +25,7 @@ define VENC_OPENIPC_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(VENC_OPENIPC_PKGDIR)/files/S98venc
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/output/venc
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/venc/venc
 endef
 
 $(eval $(generic-package))
