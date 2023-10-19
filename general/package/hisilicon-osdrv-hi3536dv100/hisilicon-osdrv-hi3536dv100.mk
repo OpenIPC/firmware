@@ -39,6 +39,7 @@ define HISILICON_OSDRV_HI3536DV100_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/hisilicon $(HISILICON_OSDRV_HI3536DV100_PKGDIR)/files/kmod/hi3536dv100_jpegd.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/hisilicon $(HISILICON_OSDRV_HI3536DV100_PKGDIR)/files/kmod/hi3536dv100_sys.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/hisilicon $(HISILICON_OSDRV_HI3536DV100_PKGDIR)/files/kmod/hi3536dv100_ai.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/hisilicon $(HISILICON_OSDRV_HI3536DV100_PKGDIR)/files/kmod/wdt.ko
 
 	# - Libraries
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
