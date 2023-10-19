@@ -124,9 +124,9 @@ start_wfb() {
   if [ ${use_hdmi} = "true" ]; then
       /root/vdec &
       if [ -z "${link_id}" ]; then
-        wfb_rx -c 127.0.0.1 -u 5000 -r ${stream} -K ${keydir}/gs.key ${wlan} >/dev/null &
+        wfb_rx -c 127.0.0.1 -u 5600 -r ${stream} -K ${keydir}/gs.key ${wlan} >/dev/null &
       else
-        wfb_rx -c 127.0.0.1 -u 5000 -p ${stream} -K ${keydir}/gs.key -i ${link_id} ${wlan} >/dev/null &
+        wfb_rx -c 127.0.0.1 -u 5600 -p ${stream} -K ${keydir}/gs.key -i ${link_id} ${wlan} >/dev/null &
       fi
   fi
 }
