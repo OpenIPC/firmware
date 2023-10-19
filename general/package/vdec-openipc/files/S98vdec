@@ -6,8 +6,8 @@
 case "$1" in
   start)
     echo "Killing watchdog..."
-    insmod /lib/wdt.ko
-    rmmod /lib/wdt.ko
+    insmod /lib/modules/4.9.37/hisilicon/wdt.ko
+    rmmod /lib/modules/4.9.37/hisilicon/wdt.ko
     echo "Starting vdec decoder service..."
     vdec -p 5600 -d frame -c h265 --bg-r 30 --bg-g 0 --bg-b 30 --osd &
     ;;
