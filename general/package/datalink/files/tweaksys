@@ -3,7 +3,11 @@
 chip=$(ipcinfo -c)
 family=$(ipcinfo -f)
 vendor=$(ipcinfo -v)
-sensor=$(ipcinfo -s)
+
+if ! [ ${chip} = "hi3536dv100" ]; then
+    sensor=$(ipcinfo -s)
+fi
+
 prefix=${family}
 
 hisi_goke() {
@@ -118,7 +122,12 @@ case "$1" in
 
 	all_other
 	;;
+  hi3536dv100)
+	echo "Preparing system tweaks for ${chip}..."
+	touch /etc/system.ok
+	echo "Preparing system done."
+	;;
 	*)
-	echo "Usage: $0 {gk7205v200|gk7205v210|gk7205v300|hi3516ev200|hi3516ev300|t31l|t31n|t31x|t31zx}"
+	echo "Usage: $0 {gk7205v200|gk7205v210|gk7205v300|hi3516ev200|hi3516ev300|t31l|t31n|t31x|t31zx|hi3536dv100}"
 	exit 1
 esac
