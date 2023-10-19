@@ -4,16 +4,20 @@
 #
 ################################################################################
 
-VDEC_OPENIPC_SITE = https://github.com/OpenIPC/silicon_research/releases/download/latest/vdec
-
+VDEC_OPENIPC_SITE = https://github.com/openipc/silicon_research/archive
+VDEC_OPENIPC_SOURCE = master.tar.gz
 VDEC_OPENIPC_LICENSE = MIT
 
-define VDEC_OPENIPC_INSTALL_TARGET_CMDS
-	curl -k -L -o $(@D)/vdec $(VDEC_OPENIPC_SITE)
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/vdec
+define VDEC_OPENIPC_BUILD_CMDS
+	$(MAKE) CC=$(TARGET_CC) DRV=$(HISILICON_OSDRV_HI3536DV100_PKGDIR)/files/lib -C $(@D)/vdec
+endef
 
+define VDEC_OPENIPC_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	cp $(VDEC_OPENIPC_PKGDIR)/files/S98vdec $(TARGET_DIR)/etc/init.d/S98vdec
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(VDEC_OPENIPC_PKGDIR)/files/S98vdec
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/vdec/vdec
 endef
 
 $(eval $(generic-package))
