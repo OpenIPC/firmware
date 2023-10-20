@@ -20,6 +20,9 @@ endef
 define MAVFWD_INSTALL_TARGET_CMDS
     $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
     $(INSTALL) -m 0755 -D $(@D)/mavfwd $(TARGET_DIR)/usr/bin/mavfwd
+
+    $(INSTALL) -m 755 -d $(TARGET_DIR)/usr/sbin
+    cp $(MAVFWD_PKGDIR)/files/channels.sh $(TARGET_DIR)/usr/sbin
 endef
 
 $(eval $(generic-package))

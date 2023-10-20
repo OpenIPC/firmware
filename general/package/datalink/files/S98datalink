@@ -43,6 +43,7 @@ case "$1" in
   stop)
     echo "Stopping all services..."
     kill -9 $(pidof wfb_tx)
+    kill -9 $(pidof wfb_rx)
     kill -9 $(pidof telemetry_rx)
     kill -9 $(pidof telemetry_tx)
     kill -9 $(pidof mavlink-routerd)
