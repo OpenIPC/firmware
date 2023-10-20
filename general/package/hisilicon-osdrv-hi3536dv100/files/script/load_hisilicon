@@ -21,7 +21,6 @@ MEM_MODE=0
 b_arg_demb=1
 VOU_LEN=22
 
-
 report_error() {
   echo "******* Error: There's something wrong, please check! *****"
   exit 1
@@ -65,7 +64,6 @@ insert_ko() {
   echo MEM_START=$MEM_START HVRMEM=$HVRMEM MEM_LEN=$MEM_LEN VOU_START=$VOU_START VOU_LEN=$VOU_LEN
 
   insmod hi_osal.ko mmz=anonymous,0,$mmz_start,$mmz_size:vou,0,$VOU_START,$VOU_LEN anony=1 || report_error
-
   insmod hi3536dv100_base.ko
   insmod hi3536dv100_sys.ko mem_total=$mem_total
   if [[ $? -ne 0 ]]; then
@@ -75,19 +73,16 @@ insert_ko() {
   insmod hi3536dv100_vdec.ko VBSource=0 u32ProtocolSwitch=0 StreamCompaMode=1 MiniBufMode=0
   insmod hi3536dv100_vfmw.ko 
   insmod hi3536dv100_jpegd.ko
-
   insmod hi3536dv100_tde.ko
   insmod hi3536dv100_region.ko
   insmod hi3536dv100_vgs.ko
 
   insmod hi3536dv100_vpss.ko vpss_vb_source=0 vpss_en_ratio=0
   insmod hi3536dv100_vou.ko bSaveBufMode=1
-  insmod hifb.ko video="hifb:vram0_size:7200,vram1_size:128" softcursor="off"
+  insmod hifb.ko video="hifb:vram0_size:8100,vram1_size:128" softcursor="off"
   insmod hi3536dv100_hdmi.ko
-
   insmod hi3536dv100_venc.ko
   insmod hi3536dv100_chnl.ko
-
   insmod hi3536dv100_jpege.ko
 
   insert_audio
@@ -100,26 +95,21 @@ remove_ko() {
   remove_wdt
 
   rmmod hi3536dv100_jpege
-
   rmmod hi3536dv100_chnl
   rmmod hi3536dv100_venc
-
   rmmod hi3536dv100_hdmi
   rmmod hifb
   rmmod hi3536dv100_vou
   rmmod hi3536dv100_vpss
-
   rmmod hi3536dv100_vgs
+
   rmmod hi3536dv100_region
   rmmod hi3536dv100_tde
-
   rmmod hi3536dv100_jpegd
   rmmod hi3536dv100_vfmw
   rmmod hi3536dv100_vdec
-
   rmmod hi3536dv100_sys
   rmmod hi3536dv100_base
-
   rmmod hi_osal
 }
 
