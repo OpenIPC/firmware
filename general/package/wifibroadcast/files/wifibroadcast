@@ -44,7 +44,9 @@ detect_wifi_card() {
 	  ;;
 	  "0cf3:9271" | "040d:3801")
 		driver="atheros"
-		set_mcs
+		if ! [ ${unit} = "gs" ]; then
+		    set_mcs
+		fi
 		modprobe mac80211
 		modprobe ath9k_htc
 	  ;;
@@ -97,8 +99,12 @@ load_interface() {
   # iw dev ${wlan} set txpower fixed $((${txpower} * 100))
 }
 
-start_wfb() {
-  wfb_tx -p ${stream} -u ${udp_port} -K ${keydir}/drone.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} -T ${fec_timeout} -i ${link_id} ${wlan} &
+start_drone_wfb() {
+  wfb_tx -p ${stream} -u ${udp_port} -K ${keydir}/${unit}.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} -T ${fec_timeout} -i ${link_id} ${wlan} > /dev/null &
+}
+
+start_gs_wfb() {
+  wfb_rx -c ${udp_addr} -u ${udp_port} -p ${stream} -K ${keydir}/${unit}.key -i ${link_id} ${wlan} > /dev/null &
 }
 
 case "$1" in
@@ -113,16 +119,16 @@ case "$1" in
 	  
 	  load_interface
 	  
-	  if ! cat ${keydir}/drone.key > /dev/null 2>&1; then
+	  if ! cat ${keydir}/${unit}.key > /dev/null 2>&1; then
 		echo "Generating drone & ground station keys..."
 		cd ${keydir} ; wfb_keygen
 	  else
-		echo "Drone key exist..."
+		echo ${unit} "key exist..."
 	  fi
 
 	  echo "Starting Wifibroadcast service..."
-	  
-	  start_wfb
+
+	  start_${unit}_wfb
 
 	  echo "Done."
 
@@ -141,6 +147,7 @@ case "$1" in
   stop)
     echo "Stopping all services..."
 	kill -9 $(pidof wfb_tx)
+	kill -9 $(pidof wfb_rx)
 	kill -9 $(pidof telemetry_rx)
 	kill -9 $(pidof telemetry_tx)
 	kill -9 $(pidof mavlink-routerd)
