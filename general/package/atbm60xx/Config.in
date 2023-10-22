@@ -1,0 +1,10 @@
+config BR2_PACKAGE_ATBM60XX
+	bool "atbm60xx"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Wireless driver atbm60xx.
+
+	  Allwinner atbm60xx WiFi driver
+
+comment "ATBM60xX needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
