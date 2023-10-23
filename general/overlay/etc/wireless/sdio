@@ -23,9 +23,9 @@ if [ "$1" = "atbm603x-t31-mmc0" ]; then
 	devmem 0x10011134 32 0x20000
 	set_mmc 0
 
-	cp /usr/share/atbm603x_conf/atbm_txpwer_dcxo_cfg.txt /tmp
-	cp /usr/share/atbm603x_conf/set_rate_power.txt /tmp
-	modprobe atbm603x_wifi_sdi0 atbm_printk_mask=0
+	cp /usr/share/atbm60xx_conf/atbm_txpwer_dcxo_cfg.txt /tmp
+	cp /usr/share/atbm60xx_conf/set_rate_power.txt /tmp
+	modprobe atbm603x_wifi_sdio atbm_printk_mask=0
 	exit 0
 fi
 
@@ -35,9 +35,9 @@ if [ "$1" = "atbm603x-t31-mmc1" ]; then
 	devmem 0x10011110 32 0x6e094800
 	set_mmc 1
 
-	cp /usr/share/atbm603x_conf/atbm_txpwer_dcxo_cfg.txt /tmp
-	cp /usr/share/atbm603x_conf/set_rate_power.txt /tmp
-	modprobe atbm603x_wifi_sdi1 atbm_printk_mask=0
+	cp /usr/share/atbm60xx_conf/atbm_txpwer_dcxo_cfg.txt /tmp
+	cp /usr/share/atbm60xx_conf/set_rate_power.txt /tmp
+	modprobe atbm603x_wifi_sdio atbm_printk_mask=0
 	exit 0
 fi
 
@@ -46,9 +46,9 @@ if [ "$1" = "atbm603x-t31-wyze-v3" ]; then
 	set_gpio 57 0;set_gpio 57 1
 	set_mmc 1
 
-	cp /usr/share/atbm603x_conf/atbm_txpwer_dcxo_cfg.txt /tmp
-	cp /usr/share/atbm603x_conf/set_rate_power.txt /tmp
-	modprobe atbm603x_wifi_sdi1 atbm_printk_mask=0
+	cp /usr/share/atbm60xx_conf/atbm_txpwer_dcxo_cfg.txt /tmp
+	cp /usr/share/atbm60xx_conf/set_rate_power.txt /tmp
+	modprobe atbm603x_wifi_sdio atbm_printk_mask=0
 	exit 0
 fi
 
