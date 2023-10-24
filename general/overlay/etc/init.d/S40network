@@ -3,12 +3,10 @@ dev=$(fw_printenv -n wlandev)
 mac=$(fw_printenv -n wlanmac)
 
 set_wireless() {
-	file="-i /etc/wireless/interfaces/eth0"
 	path=/etc/wireless
-
 	if $path/usb "$dev" || $path/modem "$dev" || $path/sdio "$dev"; then
 		[ -n "$mac" ] && ip link set dev wlan0 address "$mac"
-		ifup wlan0
+		ifup wlan0 && file="-i /etc/wireless/interfaces/eth0"
 	fi
 }
 
