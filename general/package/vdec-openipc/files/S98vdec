@@ -6,7 +6,7 @@
 case "$1" in
   start)
     echo "Starting vdec decoder service..."
-    vdec -p 5600 -d frame -c h264 --bg-r 30 --bg-g 0 --bg-b 30 --osd &
+    vdec -p 5600 -d frame -c h264 --bg-r 30 --bg-g 0 --bg-b 30 --mavlink-port 14750 --osd &
     ;;
   stop)
     echo "Stopping vdec decoder service..."
