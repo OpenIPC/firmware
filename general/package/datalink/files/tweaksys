@@ -37,6 +37,7 @@ sigmastar() {
 all_other() {
   # don't load f2fs module (disabled in kernel)
   sed -i "s!f2fs!#f2fs!g" /etc/modules
+  sed -i "s!console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
   if [ -f /usr/bin/mavlink-routerd ]; then
     # disable mavlink routerd autostart
     sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
@@ -101,8 +102,6 @@ case "$1" in
 	  fw_setenv osmem 40M
 	fi
 
-	sed -i "s!console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
-
 	# remove unneeded to reduce some memory
 	rm -f /etc/init.d/S60crond /etc/init.d/S49ntpd /etc/init.d/S02klogd
 
@@ -132,6 +131,11 @@ case "$1" in
 	;;
   hi3536dv100)
 	echo "Preparing system tweaks for ${chip}..."
+
+	if [ -f /usr/bin/mavlink-routerd ]; then
+		# disable mavlink routerd autostart
+		sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
+	fi
 
 	finish
 	;;
