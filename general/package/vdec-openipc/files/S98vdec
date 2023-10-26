@@ -2,15 +2,25 @@
 #
 # Start vdec decoder
 #
+. /etc/vdec.conf
+
+if [ ${osd} = "simple" ]; then
+    osd_variant="--osd"
+fi
 
 case "$1" in
   start)
     echo "Starting vdec decoder service..."
-    vdec -p 5600 -d frame -c h264 --bg-r 30 --bg-g 0 --bg-b 30 --mavlink-port 14750 --osd &
+    vdec -p ${port} -d ${format} -c ${codec} --bg-r ${bg_r} --bg-g ${bg_g} --bg-b ${bg_b} --mavlink-port ${mavlink_port} ${osd_variant} > /dev/null 2>&1 &
+    sleep 3
+    if [ ${osd} = "custom" ]; then
+	osd > /dev/null 2>&1 &
+    fi
     ;;
   stop)
     echo "Stopping vdec decoder service..."
     kill -9 $(pidof vdec)
+    kill -9 $(pidof osd)
     ;;
     *)
     echo "Usage: $0 {start|stop}"
