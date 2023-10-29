@@ -29,6 +29,7 @@ stop() {
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		rm -f "$PIDFILE"
+		ntpd -q -N -n -d
 		echo "OK"
 	else
 		echo "FAIL"
