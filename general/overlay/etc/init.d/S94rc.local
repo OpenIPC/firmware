@@ -3,7 +3,6 @@
 # Start rc.local
 #
 
-
 start() {
 	echo "Starting rc.local"
 	/etc/rc.local
@@ -14,16 +13,25 @@ restart() {
 	/etc/rc.local
 }
 
+stop() {
+	echo "Stopping rc.local"
+	# Check if rc.local.stop exists and if so, execute it
+	if [ -x /etc/rc.local.stop ]; then
+		/etc/rc.local.stop
+	else
+		echo "/etc/rc.local.stop not found or not executable."
+	fi
+}
+
 case "$1" in
 	start)
-		"$1"
-		;;
-
-	restart|reload)
 		start
 		;;
+	restart|reload)
+		restart
+		;;
 	stop)
-		# Intentionally left blank, no need to stop rc.local
+		stop
 		;;
 	*)
 		echo "Usage: $0 {start|stop|restart|reload}"
