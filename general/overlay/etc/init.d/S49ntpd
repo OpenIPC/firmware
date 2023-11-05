@@ -16,7 +16,6 @@ start() {
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" -- $NTPD_ARGS
 	status=$?
 	if [ "$status" -eq 0 ]; then
-		ntpd -q -N -n -d
 		echo "OK"
 	else
 		echo "FAIL"
