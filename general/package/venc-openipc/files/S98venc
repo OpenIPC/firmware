@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# Start venc encoder
+#
+
+case "$1" in
+  start)
+    echo "Starting venc encoder service..."
+    venc -p 5600 -f 30 -r 7168 -n 1400 -c 264cbr -d frame -v 200_imx307F -s 720p &
+    ;;
+  stop)
+    echo "Stopping venc encoder service..."
+    kill -9 $(pidof venc)
+    ;;
+    *)
+    echo "Usage: $0 {start|stop}"
+    exit 1
+esac

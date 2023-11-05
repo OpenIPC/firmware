@@ -1,12 +1,21 @@
 #!/bin/sh
 
 set_gpio() {
+	test -e /sys/class/gpio/gpio$1 && echo $1 > /sys/class/gpio/unexport
 	echo $1 > /sys/class/gpio/export
 	echo out > /sys/class/gpio/gpio$1/direction
 	echo $2 > /sys/class/gpio/gpio$1/value
-	echo $1 > /sys/class/gpio/unexport
 	sleep 1
 }
+
+# GK7205V200 Kafei with A7680C and usb0
+if [ "$1" = "a7680c-gk7205v200-kafei" ]; then
+	set_gpio 57 0
+	modprobe usbserial vendor=0x1e0e product=0x9011
+	modprobe rndis_host
+	sleep 15
+	exit 0
+fi
 
 # T31 CamHi with Quectel EC200S-CN, EC200T-EU and usb0
 if [ "$1" = "ec200-t31-camhi" ]; then

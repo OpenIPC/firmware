@@ -115,6 +115,16 @@ case ${SENSOR} in
 	ISP_PARAM="isp_clk=150000000"
 	SENSOR_PARAM=""
 	;;
+"jxk04")
+  AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+  ISP_PARAM="isp_clk=125000000 isp_ch0_pre_dequeue_time=14 isp_ch0_pre_dequeue_interrupt_process=0 isp_ch0_pre_dequeue_valid_lines=540 isp_memopt=1"
+  SENSOR_PARAM="shvflip=1"
+  ;;
+"os03b10")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=200000000"
+	SENSOR_PARAM=""
+	;;
 "sc200ai")
 	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
 	ISP_PARAM="isp_clk=100000000 isp_ch0_pre_dequeue_time=20 isp_ch0_pre_dequeue_interrupt_process=0 isp_memopt=1"
@@ -205,6 +215,6 @@ if [ ! -z "$(lsmod | grep "gpio")" ]; then
 	for GPIO in $(echo ${GPIOS})
 	do
 		G=$(cli -g ${GPIO})
-		[ ! -z "${G}" ] && echo ${G} > /proc/jz/claim/gpio
+		[ ! -z "${G}" ] && echo ${G} > /proc/gpio_claim/gpio
 	done
 fi

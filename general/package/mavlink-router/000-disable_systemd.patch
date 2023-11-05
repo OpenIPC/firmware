@@ -1,0 +1,38 @@
+--- a/meson.build	2023-09-21 19:30:58.958516678 +0300
++++ b/meson.build	2023-09-21 19:31:43.130627605 +0300
+@@ -28,11 +28,11 @@
+ dep_thread = dependency('threads')
+ 
+ # Optional dependencies
+-systemd_system_unit_dir = get_option('systemdsystemunitdir')
+-if systemd_system_unit_dir == 'auto'
+-		dep_systemd = dependency('systemd')
+-		systemd_system_unit_dir = dep_systemd.get_variable(pkgconfig: 'systemdsystemunitdir')
+-endif
++#systemd_system_unit_dir = get_option('systemdsystemunitdir')
++#if systemd_system_unit_dir == 'auto'
++#		dep_systemd = dependency('systemd')
++#		systemd_system_unit_dir = dep_systemd.get_variable(pkgconfig: 'systemdsystemunitdir')
++#endif
+ 
+ dep_gtest = dependency('gtest', main : true, required : false)
+ 
+@@ -128,12 +128,12 @@
+ src_inc = include_directories('src')
+ 
+ # Additonal data to be installed
+-configure_file(
+-        input: 'mavlink-router.service.in',
+-        output: 'mavlink-router.service',
+-        configuration: conf,
+-        install_dir: systemd_system_unit_dir,
+-)
++#configure_file(
++#        input: 'mavlink-router.service.in',
++#        output: 'mavlink-router.service',
++#        configuration: conf,
++#        install_dir: systemd_system_unit_dir,
++#)
+ 
+ subdir('src')
+ subdir('examples')

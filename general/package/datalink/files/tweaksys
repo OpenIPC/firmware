@@ -3,7 +3,11 @@
 chip=$(ipcinfo -c)
 family=$(ipcinfo -f)
 vendor=$(ipcinfo -v)
-sensor=$(ipcinfo -s)
+
+if ! [ ${chip} = "hi3536dv100" ]; then
+    sensor=$(ipcinfo -s)
+fi
+
 prefix=${family}
 
 hisi_goke() {
@@ -25,42 +29,55 @@ hisi_goke() {
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
 }
 
+sigmastar() {
+  sed -i "s!serial=/dev/ttyAMA0!serial=/dev/ttyS0!g" /etc/telemetry.conf
+  sed -i "s!Device = /dev/ttyAMA0!Device = /dev/ttyS0!g" /etc/mavlink.conf
+}
+
 all_other() {
   # don't load f2fs module (disabled in kernel)
   sed -i "s!f2fs!#f2fs!g" /etc/modules
-  # disable mavlink routerd autostart
-  sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
-  # majestic basic settings
-  cli -s .isp.slowShutter disabled
-  cli -s .isp.drc 350
-  # enable digital image stabilization 
-  # cli -s .isp.dis true
-  cli -s .image.contrast 50
-  cli -s .image.luminance 50
-  cli -s .video0.bitrate 4096
-  cli -s .video0.codec h264
-  cli -s .video0.rcMode cbr
-  cli -s .video0.gopSize 0.2
-  cli -s .hls.enabled false
-  cli -s .netip.enabled false
-  cli -s .jpeg.enabled false
-  # lowdelay support only imx307 sensor
-  if [ ${sensor} = "imx307" ]; then
-	  cli -s .video0.size 1280x720
-	  # cli -s .video0.fps 30
-	  cli -s .isp.lowDelay true
-	  # cli -s .video0.sliceUnits 4
+  sed -i "s!console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
+  if [ -f /usr/bin/mavlink-routerd ]; then
+    # disable mavlink routerd autostart
+    sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
   fi
+  if [ -f /usr/bin/majestic ]; then
+    # majestic basic settings
+    cli -s .isp.slowShutter disabled
+    cli -s .isp.drc 350
+    # enable digital image stabilization
+    # cli -s .isp.dis true
+    cli -s .image.contrast 50
+    cli -s .image.luminance 50
+    cli -s .video0.bitrate 4096
+    cli -s .video0.codec h264
+    cli -s .video0.rcMode cbr
+    cli -s .video0.gopSize 1
+    cli -s .hls.enabled false
+    cli -s .netip.enabled false
+    cli -s .jpeg.enabled false
+    # lowdelay support only imx307 sensor
+    if [ ${sensor} = "imx307" ]; then
+	    cli -s .video0.size 1280x720
+	    cli -s .video0.gopSize 0.2
+	    # cli -s .video0.fps 30
+	    cli -s .isp.lowDelay true
+	    # cli -s .video0.sliceUnits 4
+    fi
+    # outgoing rtp stream to udp
+    cli -s .outgoing.enabled true
+    cli -s .outgoing.server udp://127.0.0.1:5600
+  fi
+
 # tune socket buffer
 cat >> /etc/sysctl.conf << EOF
 net.core.rmem_default=524288
 net.core.rmem_max=2048000
 EOF
-# add outgoing rtp stream to udp
-cat >> /etc/majestic.yaml << EOF
-outgoing:
-  - udp://127.0.0.1:5600
-EOF
+}
+
+finish() {
   # complete tweaks
   touch /etc/system.ok
   echo "Preparing system done."
@@ -68,7 +85,7 @@ EOF
 }
 
 case "$1" in
-  gk7205v200 | hi3516ev200)
+  gk7205v200 | gk7205v210 | hi3516ev200)
 	echo "Preparing system tweaks for ${chip}..."
 
 	# set custom config
@@ -85,13 +102,12 @@ case "$1" in
 	  fw_setenv osmem 40M
 	fi
 
-	sed -i "s!console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
-
 	# remove unneeded to reduce some memory
 	rm -f /etc/init.d/S60crond /etc/init.d/S49ntpd /etc/init.d/S02klogd
 
 	hisi_goke
 	all_other
+	finish
 	;;
   gk7205v300 | hi3516ev300)
 	echo "Preparing system tweaks for ${chip}..."
@@ -106,13 +122,31 @@ case "$1" in
 
 	hisi_goke
 	all_other
+	finish
 	;;
   t31l | t31n | t31x | t31zx)
 	echo "Preparing system tweaks for ${chip}..."
 
 	all_other
 	;;
+  hi3536dv100)
+	echo "Preparing system tweaks for ${chip}..."
+
+	if [ -f /usr/bin/mavlink-routerd ]; then
+		# disable mavlink routerd autostart
+		sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
+	fi
+
+	finish
+	;;
+  ssc33x)
+	echo "Preparing system tweaks for ${chip}..."
+
+	sigmastar
+	all_other
+	finish
+	;;
 	*)
-	echo "Usage: $0 {gk7205v200|gk7205v300|hi3516ev200|hi3516ev300|t31l|t31n|t31x|t31zx}"
+	echo "Usage: $0 {gk7205v200|gk7205v210|gk7205v300|hi3516ev200|hi3516ev300|t31l|t31n|t31x|t31zx|hi3536dv100|ssc33x}"
 	exit 1
 esac

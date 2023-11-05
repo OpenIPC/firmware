@@ -101,6 +101,8 @@ case "$1" in
 			echo adding dns $i
 			echo "nameserver $i" >> $RESOLV_CONF
 		done
+
+		ntpd -q -N -n
 		;;
 esac
 

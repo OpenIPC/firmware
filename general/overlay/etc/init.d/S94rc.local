@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Start rc.local
+#
+
+start() {
+	echo "Starting rc.local"
+	/etc/rc.local
+}
+
+restart() {
+	echo "Restarting rc.local"
+	/etc/rc.local
+}
+
+stop() {
+	echo "Stopping rc.local"
+	# Check if rc.local.stop exists and if so, execute it
+	if [ -x /etc/rc.local.stop ]; then
+		/etc/rc.local.stop
+	else
+		echo "/etc/rc.local.stop not found or not executable."
+	fi
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	restart|reload)
+		restart
+		;;
+	stop)
+		stop
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+		;;
+esac
+
+exit $?

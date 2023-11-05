@@ -11,7 +11,6 @@ fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
 case "$1" in
   start)
 	if ! [ -f /etc/system.ok ]; then
-		killall majestic
 		tweaksys ${chip}
 	fi
 
@@ -44,6 +43,7 @@ case "$1" in
   stop)
     echo "Stopping all services..."
     kill -9 $(pidof wfb_tx)
+    kill -9 $(pidof wfb_rx)
     kill -9 $(pidof telemetry_rx)
     kill -9 $(pidof telemetry_tx)
     kill -9 $(pidof mavlink-routerd)

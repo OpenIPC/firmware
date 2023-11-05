@@ -52,6 +52,7 @@ jobs:
           - ssc335de
           - ssc337
           - ssc337de
+          - ssc30kd
           - ssc30kq
           - ssc338q
           - t31
@@ -72,21 +73,28 @@ jobs:
             release: fpv
           - platform: gk7205v200
             release: fpv
+          - platform: gk7205v210
+            release: fpv
           - platform: gk7205v300
             release: fpv
           - platform: hi3516ev200
             release: lte
           - platform: hi3516ev300
             release: lte
+          - platform: hi3536dv100
+            release: fpv
           - platform: gk7205v200
             release: lte
           - platform: gk7205v300
             release: lte
-
-          # Original SDK test
           - platform: gk7205v200
-            release: original
-            custom: onlyci
+            release: venc
+          - platform: gk7205v210
+            release: venc
+          - platform: gk7205v300
+            release: venc
+          - platform: ssc338q
+            release: fpv
 
           # MVP
           - platform: fh8852v100
@@ -102,6 +110,8 @@ jobs:
           - platform: rv1109
             release: lite
           - platform: rv1126
+            release: lite
+          - platform: ssc325
             release: lite
           - platform: t10
             release: lite
@@ -142,9 +152,6 @@ jobs:
             release: lite
             custom: onlyci
           - platform: s3l
-            release: lite
-            custom: onlyci
-          - platform: ssc325
             release: lite
             custom: onlyci
 

@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # Setting the TimeZone for all processes
+/usr/sbin/timezone.sh
 export TZ=$(cat /etc/TZ)
 
 # Set the firmware creation time as the base system time

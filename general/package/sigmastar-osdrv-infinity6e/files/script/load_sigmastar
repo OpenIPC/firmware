@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | 2023.08.01
+# OpenIPC.org | 2023.09.01
 #
 
 PATH_MODULE=/lib/modules/4.9.84/sigmastar
@@ -17,11 +17,11 @@ detect_sensor() {
 
 set_sensor() {
   case ${SENSOR} in
-    imx274|imx335|imx347|imx415|sc8235)
+    gc2053|imx274|imx335|imx347|imx415|sc8235)
       insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1
       ;;
     *)
-      echo -e "\n\e[1;31mUNSUPPORTED sensor found - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
+      echo -e "\n\e[1;31mUNSUPPORTED sensor - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
       ;;
   esac
 }
@@ -57,10 +57,10 @@ if [ -z ${SENSOR} ]; then
 fi
 
 if [ -z ${SENSOR} ]; then
-  echo -e "\n\e[1;31mSensor parameter is MISSING\e[0m\n" | logger -s -t OpenIPC
+  echo -e "\n\e[1;31mSensor parameter MISSING\e[0m\n" | logger -s -t OpenIPC
   exit 1
 else
-  echo -e "\n\e[1;32mSensor is assigned - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
+  echo -e "\n\e[1;32mSensor assigned - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
   $(lsmod | grep -q ${SENSOR}) || set_sensor
 fi
 
