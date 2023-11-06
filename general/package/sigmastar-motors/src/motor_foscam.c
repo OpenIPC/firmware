@@ -8,7 +8,10 @@
 #include <sys/ioctl.h>
 
 #define DEV_NAME "/dev/gpiochip0"
-#define STEP_TIME 2 * 1000
+#define STEP_TIME 250
+#define STEP_COUNT 4
+#define MAX_COUNT 10
+#define SEQ_COUNT 8
 
 static int motor_gpio[][4] = {
 	{01, 02, 12, 13},
@@ -17,12 +20,21 @@ static int motor_gpio[][4] = {
 
 static int sequence[][4] = {
 	{1, 0, 0, 0},
+	{1, 1, 0, 0},
 	{0, 1, 0, 0},
+	{0, 1, 1, 0},
 	{0, 0, 1, 0},
+	{0, 0, 1, 1},
 	{0, 0, 0, 1},
+	{1, 0, 0, 1},
+
+	{1, 0, 0, 1},
 	{0, 0, 0, 1},
+	{0, 0, 1, 1},
 	{0, 0, 1, 0},
+	{0, 1, 1, 0},
 	{0, 1, 0, 0},
+	{1, 1, 0, 0},
 	{1, 0, 0, 0},
 };
 
@@ -58,11 +70,13 @@ static int write_gpio(int pin, int val) {
 	return 0;
 }
 
-static int motor_control(int dir, int step) {
-	usleep(STEP_TIME);
-	for (int i = 0; i < 4; i++) {
-		if (write_gpio(motor_gpio[dir][i], sequence[step][i])) {
-			return 1;
+static int motor_control(int dir, int seq) {
+	for (int i = seq; i < seq + SEQ_COUNT; i++) {
+		for (int j = 0; j < 4; j++) {
+			if (write_gpio(motor_gpio[dir][j], sequence[i][j])) {
+				return 1;
+			}
+			usleep(STEP_TIME);
 		}
 	}
 
@@ -79,70 +93,49 @@ static int motor_check(int dir, int check) {
 	return 0;
 }
 
-static void usage(const char *name) {
-	printf("Usage: %s [options]\n"
-		"Options:\n"
-		"\t-x [count]\tHorizontal direction step (-10 | +10)\n"
-		"\t-y [count]\tVertical direction step (-10 | +10)\n", name);
+static int limit_value(int x, int in_min, int in_max) {
+    if (x < in_min) {
+        x = in_min;
+    }
+
+    if (x > in_max) {
+        x = in_max;
+    }
+
+    return x;
 }
 
 int main(int argc, char **argv) {
-	int cnt = 0;
-	int dir = 0;
-	int opt = 0;
+	if (argc != 3) {
+		printf("Usage: %s [x_step] [y_step]\n", argv[0]);
+		return -1;
+	}
 
-	while ((opt = getopt(argc, argv, "hx:y:")) != -1) {
-		switch (opt) {
-			case 'h':
-				usage(argv[0]);
-				return -1;
+	int x = limit_value(atoi(argv[1]), -MAX_COUNT, MAX_COUNT);
+	int y = limit_value(atoi(argv[2]), -MAX_COUNT, MAX_COUNT);
 
-			case 'x':
-				cnt = atoi(optarg);
-				break;
+	if (motor_check(0, 1) || motor_check(1, 1)) {
+		return -1;
+	}
 
-			case 'y':
-				dir = 1;
-				cnt = atoi(optarg);
-				break;
+	int x_max = (x < 0) ? -x : x;
+	int y_max = (y < 0) ? -y : y;
 
-			default:
-				return -1;
+	for (int i = 0; i < x_max * STEP_COUNT * 2; i++) {
+		if (motor_control(0, (x < 0) ? SEQ_COUNT : 0)) {
+			goto reset;
 		}
 	}
 
-	if (argc == 1 || argc != optind) {
-		usage(argv[0]);
-		return -1;
-	}
-
-	if (cnt > 10) {
-		cnt = 10;
-	}
-
-	if (cnt < -10) {
-		cnt = -10;
-	}
-
-	if (motor_check(dir, 1)) {
-		return -1;
-	}
-
-	int c1 = (cnt < 0) ? cnt * 10 : 0;
-	int c2 = (cnt < 0) ? 0 : cnt * 10;
-	int d1 = (cnt < 0) ? 4 : 0;
-	int d2 = (cnt < 0) ? 8 : 4;
-
-	for (int i = c1; i < c2; i++) {
-		for (int j = d1; j < d2; j++) {
-			if (motor_control(dir, j)) {
-				goto reset;
-			}
+	for (int i = 0; i < y_max * STEP_COUNT; i++) {
+		if (motor_control(1, (y < 0) ? 0 : SEQ_COUNT)) {
+			goto reset;
 		}
 	}
 
 reset:
-	motor_check(dir, 0);
+	motor_check(0, 0);
+	motor_check(1, 0);
 
 	return 0;
 }
