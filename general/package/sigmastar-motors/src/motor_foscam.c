@@ -26,14 +26,14 @@ static int sequence[][4] = {
 	{1, 0, 0, 0},
 };
 
-static void write_gpio(int pin, int value) {
+static int write_gpio(int pin, int value) {
 	struct gpiohandle_request rq;
 	struct gpiohandle_data data;
 
 	int fd = open(DEV_NAME, O_RDONLY);
 	if (fd < 0) {
 		printf("Unabled to open chip: %s\n", strerror(errno));
-		return;
+		return 1;
 	}
 
 	rq.lineoffsets[0] = pin;
@@ -42,7 +42,7 @@ static void write_gpio(int pin, int value) {
 
 	if (ioctl(fd, GPIO_GET_LINEHANDLE_IOCTL, &rq) < 0) {
 		printf("Unable to request gpio: %s\n", strerror(errno));
-		return;
+		return 1;
 	}
 
 	close(fd);
@@ -50,17 +50,23 @@ static void write_gpio(int pin, int value) {
 
 	if (ioctl(rq.fd, GPIOHANDLE_SET_LINE_VALUES_IOCTL, &data) < 0) {
 		printf("Unable to set value: %s\n", strerror(errno));
-		return;
+		return 1;
 	}
 
 	close(rq.fd);
+
+	return 0;
 }
 
-static void motor_control(int dir, int step) {
+static int motor_control(int dir, int step) {
 	usleep(STEP_TIME);
 	for (int i = 0; i < 4; i++) {
-		write_gpio(motor_gpio[dir][i], sequence[step][i]);
+		if (write_gpio(motor_gpio[dir][i], sequence[step][i])) {
+			return 1;
+		}
 	}
+
+	return 0;
 }
 
 static void motor_reset(int dir) {
@@ -121,7 +127,9 @@ int main(int argc, char **argv) {
 
 	for (int i = c1; i < c2; i++) {
 		for (int j = d1; j < d2; j++) {
-			motor_control(dir, j);
+			if (motor_control(dir, j)) {
+				return -1;
+			}
 		}
 	}
 
