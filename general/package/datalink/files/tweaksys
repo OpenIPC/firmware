@@ -35,6 +35,8 @@ sigmastar() {
 }
 
 all_other() {
+  # set boot delay
+  fw_setenv bootdelay 0
   # don't load f2fs module (disabled in kernel)
   sed -i "s!f2fs!#f2fs!g" /etc/modules
   sed -i "s!console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
