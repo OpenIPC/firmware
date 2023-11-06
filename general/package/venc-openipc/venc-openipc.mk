@@ -24,6 +24,9 @@ define VENC_OPENIPC_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(VENC_OPENIPC_PKGDIR)/files/S98venc
 
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(VENC_OPENIPC_PKGDIR)/files/venc.conf
+
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/venc/venc
 endef

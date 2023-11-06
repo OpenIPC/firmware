@@ -33,11 +33,11 @@ case "$1" in
 		fi
 	  fi
 	  if [ ${telemetry} = "true" ]; then
-		/usr/bin/telemetry start
+		telemetry start
 	  fi
 	else
 	  echo "Starting wifibroadcast service..."
-	  /usr/bin/wifibroadcast start
+	  wifibroadcast start
 	fi
 	;;
   stop)

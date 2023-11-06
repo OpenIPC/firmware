@@ -100,7 +100,7 @@ load_interface() {
 }
 
 start_drone_wfb() {
-  wfb_tx -p ${stream} -u ${udp_port} -K ${keydir}/${unit}.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} -T ${fec_timeout} -i ${link_id} ${wlan} > /dev/null &
+  wfb_tx -p ${stream} -u ${udp_port} -R ${rcv_buf} -K ${keydir}/${unit}.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} -T ${pool_timeout} -i ${link_id} -f ${frame_type} ${wlan} > /dev/null &
 }
 
 start_gs_wfb() {
@@ -137,7 +137,7 @@ case "$1" in
 			# UART2_RX mux
 			devmem 0x120c0010 32 0x1e04
 		fi
-		/usr/bin/telemetry start
+		telemetry start
 	  fi
 
 	else
