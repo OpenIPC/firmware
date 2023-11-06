@@ -3,6 +3,8 @@
 # Start venc encoder
 #
 
+. /etc/venc.conf
+
 case "$1" in
   start)
     echo "Starting venc encoder service..."
