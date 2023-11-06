@@ -6,7 +6,7 @@
 case "$1" in
   start)
     echo "Starting venc encoder service..."
-    venc -p 5600 -f 30 -r 7168 -n 1400 -c 264cbr -d frame -v 200_imx307F -s 720p &
+    venc -h ${host} -p ${port} -v ${version} -s ${size} -f ${fps} -c ${codec} -g ${gop} -m ${mode} -d ${data_format} -r ${rate} -n ${payload_size} ${extra} > /dev/null 2>&1 &
     ;;
   stop)
     echo "Stopping venc encoder service..."
