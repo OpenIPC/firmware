@@ -161,7 +161,7 @@ insert_isp_piris() {
 }
 
 insert_ko() {
-	if [ "$SENSOR" == "bt656" ]; then
+	if [ "$SENSOR" == "bt656" ] || [ "$SENSOR" == "jxf23_dc" ]; then
 		YUV_TYPE0=1
 	fi
 	modprobe open_sys_config chip=$CHIP_TYPE sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
