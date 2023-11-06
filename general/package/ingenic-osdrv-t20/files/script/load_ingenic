@@ -24,7 +24,7 @@ check_return() {
 
 lsmod | grep "sinfo" >/dev/null
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/sinfo.ko
+	modprobe sinfo.ko
 	check_return "insmod sinfo"
 fi
 
