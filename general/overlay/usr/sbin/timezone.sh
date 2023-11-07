@@ -26,7 +26,7 @@ if [ -z "$matching_line" ]; then
 fi
 
 # Extract the value associated with the timezone
-value=$(echo "$matching_line" | awk -F',' '{print $2}' | awk -F':' '{print $2}' | tr -d "'}")
+value=$(echo "$matching_line" | sed "s/^.*v:'\([^']*\)'.*$/\1/")
 
 # Write the TZ file first
 echo $value > /etc/TZ
