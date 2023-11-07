@@ -92,9 +92,9 @@ fi
 
 # SSC333 Tapo C110
 if [ "$1" = "ssw101b-ssc333-tapo-c110" ]; then
-        set_gpio 16 1
-        modprobe ssw101b_wifi_usb
-        exit 0
+	set_gpio 16 1
+	modprobe ssw101b_wifi_usb
+	exit 0
 fi
 
 # SSC337DE Foscam
