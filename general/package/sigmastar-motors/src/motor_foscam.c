@@ -94,15 +94,15 @@ static int motor_check(int dir, int check) {
 }
 
 static int limit_value(int x, int in_min, int in_max) {
-    if (x < in_min) {
-        x = in_min;
-    }
+	if (x < in_min) {
+		x = in_min;
+	}
 
-    if (x > in_max) {
-        x = in_max;
-    }
+	if (x > in_max) {
+		x = in_max;
+	}
 
-    return x;
+	return x;
 }
 
 int main(int argc, char **argv) {
