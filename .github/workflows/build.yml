@@ -48,14 +48,6 @@ jobs:
           - gk7205v300
           - gk7202v300
           - gk7605v100
-          - ssc333
-          - ssc335
-          - ssc335de
-          - ssc337
-          - ssc337de
-          - ssc30kd
-          - ssc30kq
-          - ssc338q
           - t20
           - t31
           - t40
@@ -65,6 +57,31 @@ jobs:
           - ultimate
 
         include:
+            # Sigmastar infinity6
+          - {"platform": "ssc325", "release": "lite"}
+          - {"platform": "ssc325de", "release": "lite"}
+
+            # Sigmastar infinity6b0
+          - {"platform": "ssc333", "release": "lite"}
+          - {"platform": "ssc333", "release": "ultimate"}
+          - {"platform": "ssc335", "release": "lite"}
+          - {"platform": "ssc335", "release": "ultimate"}
+          - {"platform": "ssc335de", "release": "lite"}
+          - {"platform": "ssc335de", "release": "ultimate"}
+          - {"platform": "ssc337", "release": "lite"}
+          - {"platform": "ssc337", "release": "ultimate"}
+          - {"platform": "ssc337de", "release": "lite"}
+          - {"platform": "ssc337de", "release": "ultimate"}
+
+            # Sigmastar infinity6e
+          - {"platform": "ssc30kd", "release": "lite"}
+          - {"platform": "ssc30kd", "release": "ultimate"}
+          - {"platform": "ssc30kq", "release": "lite"}
+          - {"platform": "ssc30kq", "release": "ultimate"}
+          - {"platform": "ssc338q", "release": "fpv"}
+          - {"platform": "ssc338q", "release": "lite"}
+          - {"platform": "ssc338q", "release": "ultimate"}
+
           - platform: hi3518ev200
             release: mini
           - platform: hi3516cv300
@@ -95,8 +112,6 @@ jobs:
             release: venc
           - platform: gk7205v300
             release: venc
-          - platform: ssc338q
-            release: fpv
 
           # MVP
           - platform: fh8852v100
@@ -112,10 +127,6 @@ jobs:
           - platform: rv1109
             release: lite
           - platform: rv1126
-            release: lite
-          - platform: ssc325
-            release: lite
-          - platform: ssc325de
             release: lite
           - platform: t10
             release: lite
