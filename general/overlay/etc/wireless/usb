@@ -97,6 +97,13 @@ if [ "$1" = "ssw101b-ssc333-tapo-c110" ]; then
 	exit 0
 fi
 
+# SSC337DE BroadbandService
+if [ "$1" = "rtl8188fu-ssc337de-broadband" ]; then
+	set_gpio 2 0
+	modprobe 8188fu
+	exit 0
+fi
+
 # SSC337DE Foscam
 if [ "$1" = "rtl8188fu-ssc337de-foscam" ]; then
 	set_gpio 15 0
@@ -104,8 +111,8 @@ if [ "$1" = "rtl8188fu-ssc337de-foscam" ]; then
 	exit 0
 fi
 
-# SSC337DE Vendor
-if [ "$1" = "aic8800-ssc337de-vendor" ]; then
+# SSC337DE BroadbandService
+if [ "$1" = "aic8800-ssc337de-broadband" ]; then
 	modprobe aic8800_fdrv
 	exit 0
 fi
