@@ -22,6 +22,9 @@ set_sensor() {
     imx307)
       insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2 mclk=37.125M
       ;;
+    sc2239)
+      insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2
+      ;;
     *)
       echo -e "\n\e[1;31mUNSUPPORTED sensor - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
       ;;
