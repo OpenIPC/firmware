@@ -34,6 +34,40 @@ sigmastar() {
   sed -i "s!Device = /dev/ttyAMA0!Device = /dev/ttyS0!g" /etc/mavlink.conf
 }
 
+majestic_generic() {
+  # majestic basic settings
+  cli -s .isp.slowShutter disabled
+  cli -s .isp.drc 350
+  # enable digital image stabilization
+  # cli -s .isp.dis true
+  cli -s .image.contrast 50
+  cli -s .image.luminance 50
+  cli -s .video0.bitrate 4096
+  cli -s .video0.codec h264
+  cli -s .video0.rcMode cbr
+  cli -s .video0.gopSize 1
+  cli -s .hls.enabled false
+  cli -s .netip.enabled false
+  cli -s .jpeg.enabled false
+  # lowdelay support only imx307 sensor
+  if [ ${sensor} = "imx307" ]; then
+    cli -s .video0.size 1280x720
+    cli -s .video0.gopSize 0.2
+    # cli -s .video0.fps 30
+    cli -s .isp.lowDelay true
+    # cli -s .video0.sliceUnits 4
+  fi
+}
+
+majestic_sigmastar() {
+  cli -s .isp.exposure 10
+  cli -s .isp.aGain 8
+  cli -s .isp.dGain 8
+  cli -s .video0.fps 90
+  cli -s .video0.rcMode cbr
+  cli -s .jpeg.enabled false
+}
+
 all_other() {
   # set boot delay
   fw_setenv bootdelay 0
@@ -45,27 +79,10 @@ all_other() {
     sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
   fi
   if [ -f /usr/bin/majestic ]; then
-    # majestic basic settings
-    cli -s .isp.slowShutter disabled
-    cli -s .isp.drc 350
-    # enable digital image stabilization
-    # cli -s .isp.dis true
-    cli -s .image.contrast 50
-    cli -s .image.luminance 50
-    cli -s .video0.bitrate 4096
-    cli -s .video0.codec h264
-    cli -s .video0.rcMode cbr
-    cli -s .video0.gopSize 1
-    cli -s .hls.enabled false
-    cli -s .netip.enabled false
-    cli -s .jpeg.enabled false
-    # lowdelay support only imx307 sensor
-    if [ ${sensor} = "imx307" ]; then
-	    cli -s .video0.size 1280x720
-	    cli -s .video0.gopSize 0.2
-	    # cli -s .video0.fps 30
-	    cli -s .isp.lowDelay true
-	    # cli -s .video0.sliceUnits 4
+    if [ ${vendor} = "sigmastar" ]; then
+      majestic_sigmastar
+    else
+      majestic_generic
     fi
     # outgoing rtp stream to udp
     cli -s .outgoing.enabled true
