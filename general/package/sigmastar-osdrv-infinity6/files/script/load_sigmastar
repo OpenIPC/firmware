@@ -15,12 +15,18 @@ detect_sensor() {
 }
 
 set_sensor() {
+  SOC=$(fw_printenv -n soc)
+  [ "$SOC" = "ssc325de" ] && IFACE=parl
+
   case ${SENSOR} in
-    gc2053|sc2239)
+    gc2053)
       insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2
       ;;
     imx307)
       insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1 lane_num=2 hdr_lane_num=2 mclk=37.125M
+      ;;
+    sc2239)
+      insmod ${PATH_SENSOR}/sensor_${SENSOR}_${IFACE:-mipi}.ko chmap=1
       ;;
     *)
       echo -e "\n\e[1;31mUNSUPPORTED sensor - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
