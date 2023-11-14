@@ -45,8 +45,8 @@ define MAVLINK_ROUTER_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
 	cp $(MAVLINK_ROUTER_PKGDIR)/files/mavlink_$(MAVLINK_ROUTER_UNIT).conf $(TARGET_DIR)/etc/mavlink.conf
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	cp $(MAVLINK_ROUTER_PKGDIR)/files/S97mavlink $(TARGET_DIR)/etc/init.d
+#	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
+#	cp $(MAVLINK_ROUTER_PKGDIR)/files/S97mavlink $(TARGET_DIR)/etc/init.d
 endef
 
 $(eval $(generic-package))

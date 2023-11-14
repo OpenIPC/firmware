@@ -11,7 +11,7 @@ fi
 case "$1" in
   start)
     echo "Starting vdec decoder service..."
-    vdec -p ${port} -d ${format} -c ${codec} -m ${mode} --bg-r ${bg_r} --bg-g ${bg_g} --bg-b ${bg_b} --mavlink-port ${mavlink_port} ${osd_variant} > /dev/null 2>&1 &
+    vdec -p ${port} -d ${format} -c ${codec} -m ${mode} --mavlink-port ${mavlink_port} ${osd_variant} ${extra} > /dev/null 2>&1 &
     sleep 3
     if [ ${osd} = "custom" ]; then
 	osd > /dev/null 2>&1 &

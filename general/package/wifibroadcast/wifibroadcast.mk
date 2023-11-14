@@ -33,6 +33,9 @@ define WIFIBROADCAST_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	cp $(WIFIBROADCAST_PKGDIR)/files/wifibroadcast $(TARGET_DIR)/usr/bin
 
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
+	cp $(WIFIBROADCAST_PKGDIR)/files/$(WIFIBROADCAST_UNIT).key $(TARGET_DIR)/etc/$(WIFIBROADCAST_UNIT).key
+
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	cp $(WIFIBROADCAST_PKGDIR)/files/setmcs $(TARGET_DIR)/usr/bin
 

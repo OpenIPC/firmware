@@ -8,6 +8,18 @@ if ! [ ${chip} = "hi3536dv100" ]; then
     sensor=$(ipcinfo -s)
 fi
 
+basic() {
+  # set boot delay
+  fw_setenv bootdelay 0
+  # don't load f2fs module (disabled in kernel)
+  sed -i "s!f2fs!#f2fs!g" /etc/modules
+  # freely uart for telemetry
+  sed -i "s!console::respawn:/sbin/getty -L console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
+
+  # tune socket buffer
+  echo "net.core.rmem_default=512000" >> /etc/sysctl.conf
+}
+
 prefix=${family}
 
 hisi_goke() {
@@ -27,6 +39,7 @@ hisi_goke() {
   # change fps 25 -> 30
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx307_i2c_2l_1080p.ini
   sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
+  sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx335_i2c_4M.ini
 }
 
 sigmastar() {
@@ -35,49 +48,42 @@ sigmastar() {
 }
 
 majestic_generic() {
-  # majestic basic settings
   cli -s .isp.slowShutter disabled
-  cli -s .isp.drc 350
   # enable digital image stabilization
   # cli -s .isp.dis true
   cli -s .image.contrast 50
   cli -s .image.luminance 50
-  cli -s .video0.bitrate 4096
+  cli -s .video0.size 1920x1080
+  cli -s .video0.fps 30
+  cli -s .video0.bitrate 5120
   cli -s .video0.codec h264
   cli -s .video0.rcMode cbr
-  cli -s .video0.gopSize 1
-  cli -s .hls.enabled false
-  cli -s .netip.enabled false
-  cli -s .jpeg.enabled false
+  cli -s .video0.gopSize 1.5
   # lowdelay support only imx307 sensor
   if [ ${sensor} = "imx307" ]; then
-    cli -s .video0.size 1280x720
-    cli -s .video0.gopSize 0.2
-    # cli -s .video0.fps 30
     cli -s .isp.lowDelay true
     # cli -s .video0.sliceUnits 4
   fi
+  if [ ${sensor} = "imx335" ]; then
+    cli -s .isp.drc 350
+    cli -s .isp.sensorConfig /etc/sensors/imx335_i2c_4M.ini
+  fi
+  cli -s .hls.enabled false
+  cli -s .netip.enabled false
+  cli -s .jpeg.enabled false
 }
 
 majestic_sigmastar() {
   cli -s .isp.exposure 10
   cli -s .isp.aGain 8
   cli -s .isp.dGain 8
+  cli -s .video0.size 1920x1080
   cli -s .video0.fps 90
   cli -s .video0.rcMode cbr
   cli -s .jpeg.enabled false
 }
 
-all_other() {
-  # set boot delay
-  fw_setenv bootdelay 0
-  # don't load f2fs module (disabled in kernel)
-  sed -i "s!f2fs!#f2fs!g" /etc/modules
-  sed -i "s!console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L  console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
-  if [ -f /usr/bin/mavlink-routerd ]; then
-    # disable mavlink routerd autostart
-    sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
-  fi
+streamer() {
   if [ -f /usr/bin/majestic ]; then
     if [ ${vendor} = "sigmastar" ]; then
       majestic_sigmastar
@@ -89,15 +95,16 @@ all_other() {
     cli -s .outgoing.server udp://127.0.0.1:5600
   fi
 
-# tune socket buffer
-cat >> /etc/sysctl.conf << EOF
-net.core.rmem_default=524288
-net.core.rmem_max=2048000
-EOF
+  if [ -f /usr/bin/venc ]; then
+    if [ ${sensor} = "imx335" ]; then
+      sed -i "s!version=200_imx307B!version=300_imx335B!g" /etc/venc.conf
+      sed -i "s!size=720p!size=1292x972!g" /etc/venc.conf
+    fi
+  fi
 }
 
 finish() {
-  # complete tweaks
+  # complete tweaks and add marker
   touch /etc/system.ok
   echo "Preparing system done."
   reboot
@@ -124,8 +131,9 @@ case "$1" in
 	# remove unneeded to reduce some memory
 	rm -f /etc/init.d/S60crond /etc/init.d/S49ntpd /etc/init.d/S02klogd
 
+	basic
 	hisi_goke
-	all_other
+	streamer
 	finish
 	;;
   gk7205v300 | hi3516ev300)
@@ -139,30 +147,29 @@ case "$1" in
 		cli -s .isp.sensorConfig /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
 	fi
 
+	basic
 	hisi_goke
-	all_other
+	streamer
 	finish
 	;;
   t31l | t31n | t31x | t31zx)
 	echo "Preparing system tweaks for ${chip}..."
 
-	all_other
+	basic
+	streamer
+	finish
 	;;
   hi3536dv100)
 	echo "Preparing system tweaks for ${chip}..."
-
-	if [ -f /usr/bin/mavlink-routerd ]; then
-		# disable mavlink routerd autostart
-		sed -i "s!/usr/bin/mavlink-routerd &!#/usr/bin/mavlink-routerd &!g" /etc/init.d/S97mavlink
-	fi
 
 	finish
 	;;
   ssc33x)
 	echo "Preparing system tweaks for ${chip}..."
 
+	basic
 	sigmastar
-	all_other
+	streamer
 	finish
 	;;
 	*)
