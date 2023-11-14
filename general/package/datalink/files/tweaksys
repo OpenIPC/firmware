@@ -98,7 +98,7 @@ streamer() {
   if [ -f /usr/bin/venc ]; then
     if [ ${sensor} = "imx335" ]; then
       sed -i "s!version=200_imx307B!version=300_imx335B!g" /etc/venc.conf
-      sed -i "s!size=1292x972!size=1292x972!g" /etc/venc.conf
+      sed -i "s!size=720p!size=1292x972!g" /etc/venc.conf
     fi
   fi
 }
