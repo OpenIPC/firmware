@@ -20,6 +20,12 @@ if [ "$1" = "rtl8188fu-generic" ]; then
 	exit 0
 fi
 
+# RTL8188EU Generic
+if [ "$1" = "rtl8188eu-generic" ]; then
+	modprobe 8188eu
+	exit 0
+fi
+
 # RTL8733BU Generic
 if [ "$1" = "rtl8733bu-generic" ]; then
 	modprobe 8733bu
