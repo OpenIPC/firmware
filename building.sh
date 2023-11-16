@@ -97,7 +97,7 @@ clone() {
 }
 
 fresh() {
-  BR_VER=2023.02.1
+  BR_VER=2023.02.7
 
   if [ -d "$SRC_CACHE_DIR" ]; then
     echo_c 36 "Found cache directory."
