@@ -57,7 +57,7 @@ You can make a financial contribution to the project at [Open Collective][contri
 Thank you.
 
 <p align="center">
-<a href="https://opencollective.com/openipc/contribute/backer-14335/checkout" target="_blank"><img src="https://opencollective.com/webpack/donate/button@2x.png?color=blue" width="375" alt="Open Collective donate button"></a>
+<a href="https://opencollective.com/openipc/contribute/backer-14335/checkout" target="_blank"><img src="https://openipc.org/files/donatetoopencollectivebutton.webp" alt="Open Collective donate button"></a>
 </p>
 
 [chat]: https://openipc.org/our-channels
