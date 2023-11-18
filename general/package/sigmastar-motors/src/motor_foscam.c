@@ -10,35 +10,20 @@
 #define DEV_NAME "/dev/gpiochip0"
 #define STEP_TIME 250
 #define STEP_COUNT 4
-#define MAX_COUNT 10
+#define MAX_COUNT 8
 #define SEQ_COUNT 8
 
-static int motor_gpio[][4] = {
-	{01, 02, 12, 13},
-	{62, 63, 64, 65},
+int gpio_x[] = {01, 02, 12, 13};
+int gpio_y[] = {62, 63, 64, 65};
+
+int sequence[][4] = {
+	{1, 0, 0, 0}, {1, 1, 0, 0}, {0, 1, 0, 0}, {0, 1, 1, 0},
+	{0, 0, 1, 0}, {0, 0, 1, 1}, {0, 0, 0, 1}, {1, 0, 0, 1},
+	{1, 0, 0, 1}, {0, 0, 0, 1}, {0, 0, 1, 1}, {0, 0, 1, 0},
+	{0, 1, 1, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}, {1, 0, 0, 0},
 };
 
-static int sequence[][4] = {
-	{1, 0, 0, 0},
-	{1, 1, 0, 0},
-	{0, 1, 0, 0},
-	{0, 1, 1, 0},
-	{0, 0, 1, 0},
-	{0, 0, 1, 1},
-	{0, 0, 0, 1},
-	{1, 0, 0, 1},
-
-	{1, 0, 0, 1},
-	{0, 0, 0, 1},
-	{0, 0, 1, 1},
-	{0, 0, 1, 0},
-	{0, 1, 1, 0},
-	{0, 1, 0, 0},
-	{1, 1, 0, 0},
-	{1, 0, 0, 0},
-};
-
-static int write_gpio(int pin, int val) {
+int write_gpio(int pin, int val) {
 	struct gpiohandle_request rq;
 	struct gpiohandle_data data;
 
@@ -70,10 +55,10 @@ static int write_gpio(int pin, int val) {
 	return 0;
 }
 
-static int motor_control(int dir, int seq) {
-	for (int i = seq; i < seq + SEQ_COUNT; i++) {
+int motor_control(int *gpio, int count) {
+	for (int i = count; i < count + SEQ_COUNT; i++) {
 		for (int j = 0; j < 4; j++) {
-			if (write_gpio(motor_gpio[dir][j], sequence[i][j])) {
+			if (write_gpio(gpio[j], sequence[i][j])) {
 				return 1;
 			}
 			usleep(STEP_TIME);
@@ -83,9 +68,9 @@ static int motor_control(int dir, int seq) {
 	return 0;
 }
 
-static int motor_check(int dir, int check) {
+int gpio_export(int *gpio) {
 	for (int i = 0; i < 4; i++) {
-		if (write_gpio(motor_gpio[dir][i], 0) && check) {
+		if (write_gpio(gpio[i], 0)) {
 			return 1;
 		}
 	}
@@ -93,28 +78,28 @@ static int motor_check(int dir, int check) {
 	return 0;
 }
 
-static int limit_value(int x, int in_min, int in_max) {
-	if (x < in_min) {
-		x = in_min;
+int limit_value(int x) {
+	if (x < -MAX_COUNT) {
+		x = -MAX_COUNT;
 	}
 
-	if (x > in_max) {
-		x = in_max;
+	if (x > MAX_COUNT) {
+		x = MAX_COUNT;
 	}
 
 	return x;
 }
 
 int main(int argc, char **argv) {
-	if (argc != 3) {
+	if (argc < 2 || argc > 3) {
 		printf("Usage: %s [x_step] [y_step]\n", argv[0]);
 		return -1;
 	}
 
-	int x = limit_value(atoi(argv[1]), -MAX_COUNT, MAX_COUNT);
-	int y = limit_value(atoi(argv[2]), -MAX_COUNT, MAX_COUNT);
+	int x = limit_value(argv[1] ? atoi(argv[1]) : 0);
+	int y = limit_value(argv[2] ? atoi(argv[2]) : 0);
 
-	if (motor_check(0, 1) || motor_check(1, 1)) {
+	if (gpio_export(gpio_x) || gpio_export(gpio_y)) {
 		return -1;
 	}
 
@@ -122,20 +107,20 @@ int main(int argc, char **argv) {
 	int y_max = (y < 0) ? -y : y;
 
 	for (int i = 0; i < x_max * STEP_COUNT * 2; i++) {
-		if (motor_control(0, (x < 0) ? SEQ_COUNT : 0)) {
+		if (motor_control(gpio_x, (x < 0) ? SEQ_COUNT : 0)) {
 			goto reset;
 		}
 	}
 
 	for (int i = 0; i < y_max * STEP_COUNT; i++) {
-		if (motor_control(1, (y < 0) ? 0 : SEQ_COUNT)) {
+		if (motor_control(gpio_y, (y < 0) ? 0 : SEQ_COUNT)) {
 			goto reset;
 		}
 	}
 
 reset:
-	motor_check(0, 0);
-	motor_check(1, 0);
+	gpio_export(gpio_x);
+	gpio_export(gpio_y);
 
 	return 0;
 }
