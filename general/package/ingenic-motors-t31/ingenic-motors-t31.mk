@@ -1,6 +1,6 @@
 ################################################################################
 #
-# AltoBeam INGENIC_MOTORS_T31 wifi driver
+# Ingenic Motors Driver
 #
 ################################################################################
 
@@ -11,6 +11,8 @@ define INGENIC_MOTORS_T31_EXTRACT_CMDS
 endef
 
 INGENIC_MOTORS_T31_MODULE_MAKE_OPTS = \
+	INSTALL_MOD_PATH=$(TARGET_DIR) \
+	INSTALL_MOD_DIR=ingenic \
 	KVER=$(LINUX_VERSION_PROBED) \
 	KSRC=$(LINUX_DIR)
 
