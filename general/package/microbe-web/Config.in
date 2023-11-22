@@ -1,5 +1,6 @@
 config BR2_PACKAGE_MICROBE_WEB
 	bool "microbe-web"
+	select BR2_PACKAGE_HASERL
 	help
 	  The simplest web interface constructor based on
 	  httpd and haserl.
