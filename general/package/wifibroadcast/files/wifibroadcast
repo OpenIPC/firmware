@@ -48,6 +48,7 @@ detect_wifi_card() {
 		    set_mcs
 		fi
 		modprobe mac80211
+		modprobe ath9k_hw txpower=${txpower}
 		modprobe ath9k_htc
 	  ;;
 	  esac
