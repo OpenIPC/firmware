@@ -4,6 +4,8 @@
 #
 ################################################################################
 
+export UIMAGE_NAME = Linux-$(LINUX_VERSION_PROBED)-$(OPENIPC_SOC_MODEL)
+
 ifneq ($(BR2_PACKAGE_WIRELESS_TOOLS),y)
 define LINUX_PATCHER_CONFIG_CFG80211
 	$(call KCONFIG_DISABLE_OPT,CONFIG_CFG80211)
