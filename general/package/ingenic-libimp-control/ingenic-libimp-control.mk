@@ -15,7 +15,7 @@ endef
 
 define INGENIC_LIBIMP_CONTROL_INSTALL_TARGET_CMDS
     $(INSTALL) -D -m 0755 $(@D)/libimp_control.so $(TARGET_DIR)/usr/lib
-    $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/sbin $(INGENIC_LIBIMP_CONTROL_PKGDIR)/src/imp-control.sh
+    $(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(INGENIC_LIBIMP_CONTROL_PKGDIR)/src/imp-control.sh
 
 endef
 
