@@ -8,9 +8,8 @@ PATH_SENSOR=${PATH_MODULE}/sensor
 SENSOR=$(fw_printenv -n sensor)
 
 detect_sensor() {
-  #devmem 0x1F2079A4 16 0x0111
-  #devmem 0x1F207188 16 0x0001
-  #devmem 0x1F2608FC 16 0x0003
+  devmem 0x1F2079A8 16 0x0001
+  devmem 0x1F207188 16 0x0000
   SENSOR=$(ipcinfo -s)
   fw_setenv sensor ${SENSOR}
 }
@@ -28,16 +27,15 @@ set_sensor() {
 
 insert_ko() {
   insmod ${PATH_MODULE}/mi_common.ko g_ModParamPath=${PATH_MODULE}/param.json config_json_path=/${PATH_MODULE}/config.json
+  insmod ${PATH_MODULE}/mi_sys.ko
+  insmod ${PATH_MODULE}/mi_vif.ko
+  insmod ${PATH_MODULE}/mi_sensor.ko
   insmod ${PATH_MODULE}/mi_isp.ko
   insmod ${PATH_MODULE}/mi_rgn.ko
-  insmod ${PATH_MODULE}/mi_sensor.ko
-  insmod ${PATH_MODULE}/mi_sys.ko
+  insmod ${PATH_MODULE}/mi_scl.ko
   insmod ${PATH_MODULE}/mi_vcodec.ko drv_codec40_common.fw_load_path=/etc/firmware/chagall.bin
   insmod ${PATH_MODULE}/mi_venc.ko
-  insmod ${PATH_MODULE}/mi_vif.ko
 
-  major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
-  mknod /dev/mi_poll c $major 0
   echo isproot /etc/firmware > /dev/ispmid
 }
 
