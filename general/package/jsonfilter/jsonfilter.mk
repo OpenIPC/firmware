@@ -14,10 +14,7 @@ JSONFILTER_SOURCE = master.tar.gz
 endif
 
 JSONFILTER_LICENSE = ISC, BSD-3-Clause
-
-JSONFILTER_DEPENDENCIES = \
-    $(if $(BR2_PACKAGE_JSON_C_OPENIPC),json-c-openipc) \
-    $(if $(BR2_PACKAGE_LIBUBOX),libubox)
+JSONFILTER_DEPENDENCIES = json-c libubox
 
 define JSONFILTER_INSTALL_TARGET_CMDS
     install -m 0755 -D $(@D)/jsonpath $(TARGET_DIR)/usr/bin/jsonfilter

@@ -25,11 +25,11 @@ ifeq ($(MAJESTIC_RELEASE),lte)
 endif
 
 MAJESTIC_DEPENDENCIES = \
-	json-c-openipc \
 	libevent-openipc \
 	libogg-openipc \
 	mbedtls-openipc \
 	opus-openipc \
+	json-c \
 	zlib
 
 MAJESTIC_STRIP_COMPONENTS = 0
