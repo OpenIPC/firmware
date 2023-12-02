@@ -34,6 +34,11 @@ case "${CMD}" in
 		fi
 		;;
 
+	system_fb)
+		if ! [ -f /etc/system.ok ]; then
+			[ -f /usr/share/openipc/customizer.sh ] && echo "Run customizer script..." && sh /usr/share/openipc/customizer.sh && touch /etc/system.ok || echo "Customizer script not present..."
+		fi
+		;;
 	*)
 		;;
 esac
