@@ -49,6 +49,10 @@ show_wlan() {
 	grep -r '$1..=' /etc/wireless | cut -d '"' -f 4 | sort | grep -e $(fw_printenv -n soc) -e generic
 }
 
+network() {
+	/etc/init.d/S40network "$1"
+}
+
 switch_debug() {
 	[ "$1" = "on" ] && action='+' report='enabled' || action='-' report='disabled'
 	mount | grep -q 'debugfs' || mount -t debugfs none /sys/kernel/debug
