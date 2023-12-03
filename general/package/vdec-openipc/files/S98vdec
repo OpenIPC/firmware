@@ -3,6 +3,10 @@
 # Start vdec decoder
 #
 . /etc/vdec.conf
+if [[ ! -e /etc/rec ]]; then
+    touch /etc/rec
+fi
+. /etc/rec
 
 if [ ${osd} = "simple" ]; then
     osd_variant="--osd"
@@ -11,7 +15,9 @@ fi
 case "$1" in
   start)
     echo "Starting vdec decoder service..."
-    vdec -p ${port} -d ${format} -c ${codec} -m ${mode} --mavlink-port ${mavlink_port} ${osd_variant} ${extra} > /dev/null 2>&1 &
+    vdec -p ${port} -d ${format} -c ${codec} -m ${mode} --mavlink-port ${mavlink_port} ${osd_variant} ${extra} -w /mnt/sda1/recorder/OpenIPC_DVR_${rec}.${codec} > /dev/null 2>&1 &
+    rec=$((rec+1))
+    echo "rec=$rec" > /etc/rec
     sleep 3
     if [ ${osd} = "custom" ]; then
 	osd > /dev/null 2>&1 &
