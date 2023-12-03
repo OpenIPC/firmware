@@ -1,8 +1,0 @@
-config BR2_PACKAGE_INGENIC_MOTORS_T31
-	bool "ingenic-motors-t31"
-	depends on BR2_LINUX_KERNEL
-	help
-	  Motor driver for Ingenic T31 using TCU2.2.
-
-comment "ingenic-motors-t31 needs a Linux kernel to be built"
-	depends on !BR2_LINUX_KERNEL
