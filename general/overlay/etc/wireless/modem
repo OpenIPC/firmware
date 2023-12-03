@@ -1,10 +1,7 @@
 #!/bin/sh
 
 set_gpio() {
-	test -e /sys/class/gpio/gpio$1 && echo $1 > /sys/class/gpio/unexport
-	echo $1 > /sys/class/gpio/export
-	echo out > /sys/class/gpio/gpio$1/direction
-	echo $2 > /sys/class/gpio/gpio$1/value
+	[ "$2" -eq 1 ] && gpio set $1 || gpio clear $1
 	sleep 1
 }
 
