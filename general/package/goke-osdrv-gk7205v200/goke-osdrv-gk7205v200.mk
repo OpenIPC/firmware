@@ -107,6 +107,7 @@ define GOKE_OSDRV_GK7205V200_INSTALL_TARGET_CMDS
 	## $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/libsns_sc2235.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/libsns_sc2239.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/libsns_sc223a.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/libsns_sc223a_4l.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/libsns_sc2335.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/libsns_sc3235.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/libsns_sc3335.so
