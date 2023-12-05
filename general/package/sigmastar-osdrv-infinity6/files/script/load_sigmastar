@@ -19,7 +19,7 @@ set_sensor() {
 	[ "$SOC" = "ssc325de" ] && IFACE=parl
 
 	case ${SENSOR} in
-		gc2053|imx307)
+		gc2053|imx307|sc2335)
 			insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		sc2239)
