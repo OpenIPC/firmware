@@ -78,7 +78,7 @@ if [ "$1" = "rtl8188fu-hi3518ev200-lifesmart" ]; then
 	exit 0
 fi
 
-# HI3518EV200 QVC-IPC-136W
+# HI3518EV200 Qtech QVC-IPC-136W
 if [ "$1" = "rtl8188eu-hi3518ev200-qvc-ipc-136w" ]; then
 	set_gpio 7 1
 	modprobe 8188eu
@@ -104,6 +104,13 @@ fi
 if [ "$1" = "ssw101b-ssc333-tapo-c110" ]; then
 	set_gpio 16 1
 	modprobe ssw101b_wifi_usb
+	exit 0
+fi
+
+# SSC335DE Uniview C1L-2WN-G
+if [ "$1" = "rtl8188fu-ssc335de-uniview-c1l-2wn-g" ]; then
+	set_gpio 1 0
+	modprobe 8188fu
 	exit 0
 fi
 
