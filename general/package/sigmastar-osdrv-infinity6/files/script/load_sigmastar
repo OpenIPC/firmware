@@ -15,14 +15,12 @@ detect_sensor() {
 }
 
 set_sensor() {
-	SOC=$(fw_printenv -n soc)
-	[ "$SOC" = "ssc325de" ] && IFACE=parl
-
 	case ${SENSOR} in
-		gc2053|imx307|sc2335)
+		gc2053|imx307)
 			insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
-		sc2239)
+		sc2239|sc2335)
+			[ "$(fw_printenv -n soc)" = "ssc325de" ] && IFACE=parl
 			insmod ${PATH_SENSOR}/sensor_${SENSOR}_${IFACE:-mipi}.ko chmap=1
 			;;
 		*)
