@@ -1,8 +1,5 @@
 config BR2_PACKAGE_QUIRC_OPENIPC
-	bool "quirc"
-	select BR2_PACKAGE_JPEG
-	select BR2_PACKAGE_LIBJPEG
+	bool "quirc-openipc"
 	help
 	  QR codes are a type of high-density matrix barcodes, and quirc is a library for extracting and decoding them from images.
-
 	  https://github.com/dlbeer/quirc
