@@ -1,0 +1,1444 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ISP_ITEM Author="Smart Camera ISP" Version="1.2" Name="Maruko">
+	<PAGE Name="Enable Control" Type="API" GroupIndex="-1" Action="R" AutoWrite="true">
+		<GROUP Name="BypassItem" Id="10243" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_BypassItem_DPC" Type="U32" M="1" N="1" Min="0" Max="1" Text="DynamicDP" GuiType="RadioButton_ByPass" Param="19" Info="" />
+			<ITEM Name="API_BypassItem_CR" Type="U32" M="1" N="1" Min="0" Max="1" Text="Crosstalk" GuiType="RadioButton_ByPass" Param="7" Info="" />
+			<ITEM Name="API_BypassItem_FCOLOR" Type="U32" M="1" N="1" Min="0" Max="1" Text="AntiFalseColor" GuiType="RadioButton_ByPass" Param="6" Info="" />
+			<ITEM Name="API_BypassItem_DM" Type="U32" M="1" N="1" Min="0" Max="1" Text="Demosaic" GuiType="RadioButton_ByPass" Param="30" Info="" />
+			<ITEM Name="API_BypassItem_OBC" Type="U32" M="1" N="1" Min="0" Max="1" Text="BlackLevel" GuiType="RadioButton_ByPass" Param="4" Info="" />
+			<ITEM Name="API_BypassItem_OBC_P1" Type="U32" M="1" N="1" Min="0" Max="1" Text="BlackLevel pipe 1" GuiType="RadioButton_ByPass" Param="5" Info="" />
+			<ITEM Name="API_BypassItem_NR_DESPIKE" Type="U32" M="1" N="1" Min="0" Max="1" Text="NRDeSpike" GuiType="RadioButton_ByPass" Param="8" Info="" />			
+			<ITEM Name="API_BypassItem_NR_Luma_Adv" Type="U32" M="1" N="1" Min="0" Max="1" Text="NRLuma_Adv" GuiType="RadioButton_ByPass" Param="44" Info="" />
+			<ITEM Name="API_BypassItem_NR_Chroma_Adv" Type="U32" M="1" N="1" Min="0" Max="1" Text="NRChroma_Adv" GuiType="RadioButton_ByPass" Param="29" Info="" />
+			<ITEM Name="API_BypassItem_NR_Chroma_Pre" Type="U32" M="1" N="1" Min="0" Max="1" Text="NRChroma_Pre" GuiType="RadioButton_ByPass" Param="49" Info="" />
+			<ITEM Name="API_BypassItem_NR_3D" Type="U32" M="1" N="1" Min="0" Max="1" Text="NR3D" GuiType="RadioButton_ByPass" Param="10" Info="" />
+			<ITEM Name="API_BypassItem_HDR" Type="U32" M="1" N="1" Min="0" Max="1" Text="HDR" GuiType="RadioButton_ByPass" Param="26" Info="" />
+			<ITEM Name="API_BypassItem_R2Y" Type="U32" M="1" N="1" Min="0" Max="1" Text="R2Y" GuiType="RadioButton_ByPass" Param="34" Info="" />
+			<ITEM Name="API_BypassItem_COLORTRANS" Type="U32" M="1" N="1" Min="0" Max="1" Text="ColorTrans" GuiType="RadioButton_ByPass" Param="25" Info="" />
+			<ITEM Name="API_BypassItem_CCM" Type="U32" M="1" N="1" Min="0" Max="1" Text="CCM" GuiType="RadioButton_ByPass" Param="2" Info="" />
+			<ITEM Name="API_BypassItem_HSV" Type="U32" M="1" N="1" Min="0" Max="1" Text="HSV" GuiType="RadioButton_ByPass" Param="20" Info="" />
+			<ITEM Name="API_BypassItem_GMA" Type="U32" M="1" N="1" Min="0" Max="1" Text="Gamma" GuiType="RadioButton_ByPass" Param="14" Info="" />
+			<ITEM Name="API_BypassItem_BRI" Type="U32" M="1" N="1" Min="0" Max="1" Text="Brightness" GuiType="RadioButton_ByPass" Param="11" Info="" />
+			<ITEM Name="API_BypassItem_LIG" Type="U32" M="1" N="1" Min="0" Max="1" Text="Lightness" GuiType="RadioButton_ByPass" Param="12" Info="" />
+			<ITEM Name="API_BypassItem_CTS" Type="U32" M="1" N="1" Min="0" Max="1" Text="Contrast" GuiType="RadioButton_ByPass" Param="13" Info="" />
+			<ITEM Name="API_BypassItem_CTG" Type="U32" M="1" N="1" Min="0" Max="1" Text="ColorToGray" GuiType="RadioButton_ByPass" Param="15" Info="" />
+			<ITEM Name="API_BypassItem_SHP" Type="U32" M="1" N="1" Min="0" Max="1" Text="Sharpness" GuiType="RadioButton_ByPass" Param="9" Info="" />
+			<ITEM Name="API_BypassItem_SHP_EX" Type="U32" M="1" N="1" Min="0" Max="1" Text="SharpnessEx" GuiType="RadioButton_ByPass" Param="42" Info="" />
+			<ITEM Name="API_BypassItem_SAT" Type="U32" M="1" N="1" Min="0" Max="1" Text="Saturation" GuiType="RadioButton_ByPass" Param="3" Info="" />
+			<ITEM Name="API_BypassItem_YUVGMA" Type="U32" M="1" N="1" Min="0" Max="1" Text="YUVGamma" GuiType="RadioButton_ByPass" Param="23" Info="" />
+			<ITEM Name="API_BypassItem_WDR" Type="U32" M="1" N="1" Min="0" Max="1" Text="WDR" GuiType="RadioButton_ByPass" Param="21" Info="" />
+			<ITEM Name="API_BypassItem_DEFOG" Type="U32" M="1" N="1" Min="0" Max="1" Text="DEFOG" GuiType="RadioButton_ByPass" Param="17" Info="" />
+			<ITEM Name="API_BypassItem_RGBIR" Type="U32" M="1" N="1" Min="0" Max="1" Text="RGBIR" GuiType="RadioButton_ByPass" Param="22" Info="" />
+			<ITEM Name="API_BypassItem_PFC" Type="U32" M="1" N="1" Min="0" Max="1" Text="PFC" GuiType="RadioButton_ByPass" Param="28" Info="" />
+			<ITEM Name="API_BypassItem_LSC" Type="U32" M="1" N="1" Min="0" Max="1" Text="LSC" GuiType="RadioButton_ByPass" Param="35" Info="" />
+			<ITEM Name="API_BypassItem_ALSC" Type="U32" M="1" N="1" Min="0" Max="1" Text="ALSC" GuiType="RadioButton_ByPass" Param="37" Info="" />
+			<ITEM Name="API_BypassItem_DARKSHADING" Type="U32" M="1" N="1" Min="0" Max="1" Text="DARKSHADING" GuiType="RadioButton_ByPass" Param="56" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="AE" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="AEState" Id="5126" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AEState" Type="U32" M="1" N="1" Min="0" Max="1" Text="AE State" GuiType="ComboBox" Param="Normal,Pause" Info="" />
+		</GROUP>
+		<GROUP Name="ExposureMode" Id="5124" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_ExposureMode" Type="U32" M="1" N="1" Min="0" Max="4" Text="Exposure Mode" GuiType="ComboBox" Param="Auto,AV_Mode,SV_Mode,TV_Mode,M_Mode" Info="AE Exposure Mode" />
+		</GROUP>
+		<GROUP Name="ManualExposure" Id="5125" ParamId="0,1,2,3" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_ManualExposure_FNx10" Type="U32" M="1" N="1" Min="10" Max="220" Text="FNx10" GuiType="NumScroll" Param="" Info="F-Number" />
+			<ITEM Name="API_ManualExposure_SENSOR_GAIN" Type="U32" M="1" N="1" Min="1024" Max="5242880" Text="SensorGain" GuiType="NumScroll" Param="" Info="Sensor Gain (1x=1024)" />
+			<ITEM Name="API_ManualExposure_ISP_GAIN" Type="U32" M="1" N="1" Min="1024" Max="262144" Text="ISPGain" GuiType="NumScroll" Param="" Info="ISP Gain (1x=1024)" />
+			<ITEM Name="API_ManualExposure_US" Type="U32" M="1" N="1" Min="1" Max="1000000" Text="US" GuiType="NumScroll" Param="" Info="Shutter (in US)" />
+		</GROUP>
+		<GROUP Name="AETarget" Id="5127" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AETarget_TARGET_POINTS_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="Target Points Num" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AETarget_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AETarget_TARGET_Y" Type="S32" M="16" N="1" Min="0" Max="2000" Text="Target Offset" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AETarget_TARGET_X" Type="S32" M="16" N="1" Min="-81920" Max="245760" Text="Target BV" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AEConverge" Id="5128" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AEConverge_CONV_THD_IN" Type="U32" M="1" N="1" Min="1" Max="100" Text="ConvThdIn" GuiType="NumScroll" Param="" Info="Luminance Y, 1~5" />
+			<ITEM Name="API_AEConverge_CONV_THD_OUT" Type="U32" M="1" N="1" Min="2" Max="100" Text="ConvThdOut" GuiType="NumScroll" Param="" Info="Luminance Y, 1~5" />
+			<ITEM Name="API_AEAttr_CONV_SPEED_X" Type="U32" M="4" N="1" Min="1" Max="2550" Text="ConvSpeedX" GuiType="DataGrid" Param="" Info="Luminance Y, 1~2550" />
+			<ITEM Name="API_AEAttr_CONV_SPEED_Y" Type="U32" M="4" N="1" Min="1" Max="1024" Text="ConvSpeedY" GuiType="DataGrid" Param="" Info="Ratio, 0~1024" />
+		</GROUP>
+		<GROUP Name="EVComp" Id="5123" ParamId="0,1" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_EVComp_EVCOMP" Type="S32" M="1" N="1" Min="-10" Max="10" Text="EVComp" GuiType="NumScroll" Param="" Info="EV value, -10~+10" />
+			<ITEM Name="API_EVComp_GRAD" Type="U32" M="1" N="1" Min="1" Max="10" Text="Grad" GuiType="NumScroll" Param="" Info="Gradation, 1~10" />
+		</GROUP>
+		<GROUP Name="AEPlainLongTbl" Id="5130" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AEPlainTbl_Long_EXPTBL" Type="U32" M="1" N="1" Min="1" Max="16" Text="NumOfLongExpoTblEntry" GuiType="NumScroll" Param="" Info="Number of Long Exposure Entry" />
+			<ITEM Name="API_AEPlainTbl_Long_EXPTBL_ENTRY" Type="U32" M="4" N="16" Min="0" Max="5242880" Text="LongExpoTblEntry" GuiType="DataGrid" Param="FN,US,TG,SG:Index(0~15/1)" Info="FNumber, Shutter, Total Gain, Sensor Gain" />
+		</GROUP>
+		<GROUP Name="ExposureLimit" Id="5129" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_ExposureLimit_MIN_SHUTTER" Type="U32" M="1" N="1" Min="1" Max="1000000" Text="MinShutter" GuiType="NumScroll" Param="" Info="Minimum Shutter" />
+			<ITEM Name="API_ExposureLimit_MAX_SHUTTER" Type="U32" M="1" N="1" Min="1" Max="1000000" Text="MaxShutter" GuiType="NumScroll" Param="" Info="Maximum Shutter" />
+			<ITEM Name="API_ExposureLimit_MIN_FNx10" Type="U32" M="1" N="1" Min="10" Max="220" Text="MinFNx10" GuiType="NumScroll" Param="" Info="Minimum FNx10" />
+			<ITEM Name="API_ExposureLimit_MAX_FNx10" Type="U32" M="1" N="1" Min="10" Max="220" Text="MaxFNx10" GuiType="NumScroll" Param="" Info="Maximum FNx10" />
+			<ITEM Name="API_ExposureLimit_MIN_SENSOR_GAIN" Type="U32" M="1" N="1" Min="1024" Max="5242880" Text="MinSensorGain" GuiType="NumScroll" Param="" Info="Minimum Sensor Gain, 1024(1x)" />
+			<ITEM Name="API_ExposureLimit_MIN_ISP_GAIN" Type="U32" M="1" N="1" Min="1024" Max="5242880" Text="MinISPGain" GuiType="NumScroll" Param="" Info="Minimum ISP Gain, 1024(1x)" />
+			<ITEM Name="API_ExposureLimit_MAX_SENSOR_GAIN" Type="U32" M="1" N="1" Min="1024" Max="5242880" Text="MaxSensorGain" GuiType="NumScroll" Param="" Info="Maximum Sensor Gain, HW Max" />
+			<ITEM Name="API_ExposureLimit_MAX_ISP_GAIN" Type="U32" M="1" N="1" Min="1024" Max="262144" Text="MaxISPGain" GuiType="NumScroll" Param="" Info="Maximum ISP Gain, 262144(256x)" />
+		</GROUP>
+		<GROUP Name="AEWinWeight" Id="5133" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AEWinWeight_WEIGHTING_ID" Type="U8" M="1" N="1" Min="0" Max="2" Text="Weighting PAGEle ID" GuiType="ComboBox" Param="Average,Center,Spot" Info="" />
+			<ITEM Name="API_AEWinWeight_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AEWinWeight_AVERAGE_TBL" Type="U8" M="32" N="32" Min="0" Max="255" Text="Average WindowWeighting" GuiType="DataGrid" Param="" Info="Metering Window Weighting, default:16x16" />
+			<ITEM Name="API_AEWinWeight_CENTER_TBL" Type="U8" M="32" N="32" Min="0" Max="255" Text="Center WindowWeighting" GuiType="DataGrid" Param="" Info="Metering Window Weighting, default:16x16" />
+			<ITEM Name="API_AEWinWeight_SPOT_TBL" Type="U8" M="32" N="32" Min="0" Max="255" Text="Spot WindowWeighting" GuiType="DataGrid" Param="" Info="Metering Window Weighting, default:16x16" />
+		</GROUP>
+		<GROUP Name="AELumaWeight" Id="5149" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AELumaWeight_Enable" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Luminance Weight Enable" />
+			<ITEM Name="API_AELumaWeight_WEI_LUMA_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="Luma Wgt Points Num" GuiType="NumScroll" Param="" Info="Length of Upper bound array" />
+			<ITEM Name="API_AELumaWeight_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AELumaWeight_WEI_LUMA_Y" Type="S32" M="16" N="1" Min="0" Max="256" Text="Luma Wgt" GuiType="DataGrid" Param="" Info="Luminance Weight, Range:(1 - 256), 1x = 256" />
+			<ITEM Name="API_AELumaWeight_WEI_LUMA_X" Type="S32" M="16" N="1" Min="0" Max="2550" Text="Wgt By Luma(x10)" GuiType="DataGrid" Param="" Info="Luminance Value" />
+			<ITEM Name="API_AELumaWeight_WEI_SATCNT_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="SatCnt Points Num" GuiType="NumScroll" Param="" Info="Length of Upper bound array" />
+			<ITEM Name="API_AELumaWeight_PAD2" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AELumaWeight_WEI_SATCNT_Y" Type="S32" M="16" N="1" Min="0" Max="256" Text="SatCnt Wgt" GuiType="DataGrid" Param="" Info="Saturate Count Weight, Range:(1 - 512), 1x = 256" />
+			<ITEM Name="API_AELumaWeight_WEI_SATCNT_X" Type="S32" M="16" N="1" Min="0" Max="256" Text="Wgt By SatCnt" GuiType="DataGrid" Param="" Info="Saturate Count Value" />
+			<ITEM Name="API_AELumaWeight_SATCNT_THR" Type="U16" M="1" N="1" Min="0" Max="2550" Text="SatCnt Threshold" GuiType="NumScroll" Param="" Info="Saturate Count by Lumimance" />
+			<ITEM Name="API_AELumaWeight_PAD3" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="FlickerEx" Id="5139" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_FlickerEx_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="FlickerEx Enable" />
+			<ITEM Name="API_FlickerEx_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="FlickerEx Auto/Manual Mode" />
+			<ITEM Name="API_FlickerEx_AMPSENSITIVITY" Type="U8" M="1" N="1" Min="1" Max="100" Text="AmpSensitivity" GuiType="NumScroll" Param="AmpSensitivity (1~100)" Info="" />
+			<ITEM Name="API_FlickerEx_SCORETHD" Type="U8" M="1" N="1" Min="1" Max="100" Text="ScoreThd" GuiType="NumScroll" Param="ScoreThd (1~100)" Info="" />
+			<ITEM Name="API_FlickerEx_REFRESHCYCLES" Type="U8" M="1" N="1" Min="1" Max="10" Text="RefreshCycles" GuiType="NumScroll" Param="" Info="RefreshCycles (1~10)" />
+			<ITEM Name="API_FlickerEx_VALIDTIMESTHD" Type="U8" M="1" N="1" Min="1" Max="10" Text="ValidTimesThd" GuiType="NumScroll" Param="ValidTimesThd (1~10)" Info="" />
+			<ITEM Name="API_FlickerEx_FLICKER_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Flicker" GuiType="ComboBox" Param="60Hz,50Hz" Info="Flicker Hz" />
+		</GROUP>
+		<GROUP Name="PowerLineFlicker" Id="5150" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_PowerLineFlicker_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="PowerLineFlicker Enable" />
+			<ITEM Name="API_PowerLineFlicker_RATIO" Type="U16" M="1" N="1" Min="0" Max="1024" Text="Ratio" GuiType="NumScroll" Param="" Info="PowerLineFlicker Ratio (0~1024)" />
+			<ITEM Name="API_PowerLineFlicker_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="ExposureStrategyEx" Id="5142" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_ExposureStrategyEx_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="StrategyEx Enable" />
+			<ITEM Name="API_ExposureStrategyEx_MODE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Mode" GuiType="ComboBox" Param="Count Mode,Target Mode" Info="" />
+			<ITEM Name="API_ExposureStrategyEx_PRIORITY" Type="U32" M="1" N="1" Min="0" Max="2" Text="Priority" GuiType="ComboBox" Param="BrightTTone,DarkTone,HDRAuto" Info="" />
+			<ITEM Name="API_ExposureStrategyEx_BT_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="BT_Num" GuiType="NumScroll" Param="" Info="Number of the points" />
+			<ITEM Name="API_ExposureStrategyEx_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_ExposureStrategyEx_BT_BV" Type="S32" M="16" N="1" Min="-81920" Max="245760" Text="BT_BV" GuiType="DataGrid" Param="" Info="BV value, X-axis of all BT LUTs" />
+			<ITEM Name="API_ExposureStrategyEx_BT_THDY" Type="U32" M="16" N="1" Min="0" Max="255" Text="BT_ThdY" GuiType="DataGrid" Param="" Info="Y threshold, Y-axis of the ThdY LUT" />
+			<ITEM Name="API_ExposureStrategyEx_BT_PERCENTx10" Type="U32" M="16" N="1" Min="0" Max="1000" Text="BT_Percentx10" GuiType="DataGrid" Param="" Info="Percent x10, Y-axis of Percent LUT" />
+			<ITEM Name="API_ExposureStrategyEx_BT_TARGETYx10" Type="U32" M="16" N="1" Min="0" Max="2550" Text="BT_TargetYx10" GuiType="DataGrid" Param="" Info="BTTargetY x10, Y-axis of BTTargetY LUT" />
+			<ITEM Name="API_ExposureStrategyEx_BT_MaxOffsetDown" Type="U32" M="16" N="1" Min="0" Max="2550" Text="BT_MaxOffsetDown" GuiType="DataGrid" Param="" Info="MaxOffsetDown, Y-axis of Offset LUT" />
+			<ITEM Name="API_ExposureStrategyEx_DT_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="DT_Num" GuiType="NumScroll" Param="" Info="Number of the points" />
+			<ITEM Name="API_ExposureStrategyEx_PAD2" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_ExposureStrategyEx_DT_BV" Type="S32" M="16" N="1" Min="-81920" Max="245760" Text="DT_BV" GuiType="DataGrid" Param="" Info="BV value, X-axis of all DT LUTs" />
+			<ITEM Name="API_ExposureStrategyEx_DT_THDY" Type="U32" M="16" N="1" Min="0" Max="255" Text="DT_ThdY" GuiType="DataGrid" Param="" Info="Y threshold, Y-axis of the ThdY LUT" />
+			<ITEM Name="API_ExposureStrategyEx_DT_PERCENTx10" Type="U32" M="16" N="1" Min="0" Max="1000" Text="DT_Percentx10" GuiType="DataGrid" Param="" Info="Percent x10, Y-axis of Percent LUT" />
+			<ITEM Name="API_ExposureStrategyEx_DT_TARGETYx10" Type="U32" M="16" N="1" Min="0" Max="2550" Text="DT_TargetYx10" GuiType="DataGrid" Param="" Info="DTTargetY x10, Y-axis of DTTargetY LUT" />
+			<ITEM Name="API_ExposureStrategyEx_DT_MaxOffsetUp" Type="U32" M="16" N="1" Min="0" Max="2550" Text="DT_MaxOffsetUp" GuiType="DataGrid" Param="" Info="MaxOffsetUp, Y-axis of Offset LUT" />
+		</GROUP>
+		<GROUP Name="ExposureStrategyExAdv" Id="5146" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_ExposureStrategyExAdv_HDR_STR_WEIGHT1" Type="S16" M="1" N="1" Min="0" Max="1024" Text="HDR_Strength_Weight1" GuiType="NumScroll" Param="HDR Strength Weight 1" Info="" />
+			<ITEM Name="API_ExposureStrategyExAdv_HDR_STR_WEIGHT2" Type="S16" M="1" N="1" Min="0" Max="1024" Text="HDR_Strength_Weight2" GuiType="NumScroll" Param="HDR Strength Weight 2" Info="" />
+		</GROUP>
+		<GROUP Name="AdaptiveGamma" Id="4150" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AdaptGamma_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="AdaptiveGamma Enable" />
+			<ITEM Name="API_AdaptGamma_BTGamma" Type="U16" M="256" N="1" Min="0" Max="1023" Text="BTGamma" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AdaptGamma_DTGamma" Type="U16" M="256" N="1" Min="0" Max="1023" Text="DTGamma" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="DebugLev" Id="12288" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_DebugLev_AE" Type="S32" M="1" N="1" Min="0" Max="65536" Text="AE Debug Level" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="AEHDR" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="AEHdrRatio" Id="5137" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AEHdrRatio_NUM" Type="U32" M="1" N="1" Min="1" Max="16" Text="AE Hdr Points Num" GuiType="NumScroll" Param="" Info="Length of Upper bound array" />
+			<ITEM Name="API_AEHdrRatio_Y" Type="S32" M="16" N="1" Min="1" Max="65535" Text="Hdr Ratio" GuiType="DataGrid" Param="" Info="Luminance Offset" />
+			<ITEM Name="API_AEHdrRatio_X" Type="S32" M="16" N="1" Min="-81920" Max="245760" Text="By Total Gain" GuiType="DataGrid" Param="" Info="BV value" />
+		</GROUP>
+		<GROUP Name="AEPlainShortTbl" Id="5131" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_AEPlainTbl_Short_EXPTBL" Type="U32" M="1" N="1" Min="1" Max="16" Text="NumOfShortExpoTblEntry" GuiType="NumScroll" Param="" Info="Number of Short Exposure Entry" />
+			<ITEM Name="API_AEPlainTbl_Short_EXPTBL_ENTRY" Type="U32" M="4" N="16" Min="0" Max="5242880" Text="ShortExpoTblEntry" GuiType="DataGrid" Param="FN,US,TG,SG:Index(0~15/1)" Info="FNumber, Shutter, Total Gain, Sensor Gain" />
+		</GROUP>
+		<GROUP Name="ManualShortExposure" Id="5138" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_ManualExposure_FNx10" Type="U32" M="1" N="1" Min="10" Max="220" Text="FNx10" GuiType="NumScroll" Param="" Info="F-Number" />
+			<ITEM Name="API_ManualExposure_SENSOR_GAIN" Type="U32" M="1" N="1" Min="1024" Max="5242880" Text="SensorGain" GuiType="NumScroll" Param="" Info="Sensor Gain (1x=1024)" />
+			<ITEM Name="API_ManualExposure_ISP_GAIN" Type="U32" M="1" N="1" Min="1024" Max="262144" Text="ISPGain" GuiType="NumScroll" Param="" Info="ISP Gain (1x=1024)" />
+			<ITEM Name="API_ManualExposure_US" Type="U32" M="1" N="1" Min="1" Max="1000000" Text="US" GuiType="NumScroll" Param="" Info="Shutter (in US)" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="AEInfo" Type="API" GroupIndex="-1" Action="R" AutoWrite="false">
+		<GROUP Name="AEInfo" Id="5122" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_AEInfo_IS_STABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="isStable" GuiType="TextBox_Num" Param="" Info="AE Stable" />
+			<ITEM Name="API_AEInfo_IS_REACH_BOUNDARY" Type="U32" M="1" N="1" Min="0" Max="1" Text="isReachBoundary" GuiType="TextBox_Num" Param="" Info="AE Bounded" />
+			<ITEM Name="API_AEInfo_CUR_EXP_FNX10_L" Type="U32" M="1" N="1" Min="10" Max="220" Text="FNumber" GuiType="TextBox_Num" Param="" Info="FNumber" />
+			<ITEM Name="API_AEInfo_CUR_EXP_AGAIN_L" Type="U32" M="1" N="1" Min="1024" Max="5242880" Text="SensorGain" GuiType="TextBox_Num" Param="" Info="Sensor Gain" />
+			<ITEM Name="API_AEInfo_CUR_EXP_DGAIN_L" Type="U32" M="1" N="1" Min="1024" Max="262144" Text="ISPGain" GuiType="TextBox_Num" Param="" Info="ISP Gain" />
+			<ITEM Name="API_AEInfo_CUR_EXP_US_L" Type="U32" M="1" N="1" Min="1" Max="1000000" Text="Shutter" GuiType="TextBox_Num" Param="" Info="Shutter(US)" />
+			<ITEM Name="API_AEInfo_CUR_EXP_FNX10_S" Type="U32" M="1" N="1" Min="10" Max="220" Text="FNumber_S" GuiType="TextBox_Num" Param="" Info="Short Exposure FNumber" />
+			<ITEM Name="API_AEInfo_CUR_EXP_AGAIN_S" Type="U32" M="1" N="1" Min="1024" Max="5242880" Text="SensorGain_S" GuiType="TextBox_Num" Param="" Info="Short Exposure Sensor Gain" />
+			<ITEM Name="API_AEInfo_CUR_EXP_DGAIN_S" Type="U32" M="1" N="1" Min="1024" Max="262144" Text="ISPGain_S" GuiType="TextBox_Num" Param="" Info="Short Exposure ISP Gain" />
+			<ITEM Name="API_AEInfo_CUR_EXP_US_S" Type="U32" M="1" N="1" Min="1" Max="1000000" Text="Shutter_S" GuiType="TextBox_Num" Param="" Info="Short Exposure Shutter(US)" />
+			<ITEM Name="API_AEInfo_WGHTY" Type="U32" M="1" N="1" Min="0" Max="2550" Text="WeightedY x10" GuiType="TextBox_Num" Param="" Info="Weighted Luminance Y" />
+			<ITEM Name="API_AEInfo_AVGY" Type="U32" M="1" N="1" Min="0" Max="2550" Text="AverageY x10" GuiType="TextBox_Num" Param="" Info="Averaged Luminance Y" />
+			<ITEM Name="API_AEInfo_HISTOGRAM" Type="U32" M="128" N="1" Min="0" Max="115200" Text="Histogram" GuiType="DataGrid" Param="" Info="128 bins Histogram" />
+			<ITEM Name="API_AEInfo_LV10" Type="U32" M="1" N="1" Min="0" Max="220" Text="LV x10" GuiType="TextBox_Num" Param="" Info="LV10" />
+			<ITEM Name="API_AEInfo_BV" Type="S32" M="1" N="1" Min="-1048576" Max="1048576" Text="BV" GuiType="TextBox_Num" Param="" Info="BV" />
+			<ITEM Name="API_AEInfo_SceneTarget" Type="U32" M="1" N="1" Min="0" Max="2550" Text="SceneTarget x10" GuiType="TextBox_Num" Param="" Info="SceneTarget" />
+		</GROUP>
+		<GROUP Name="AE_FlickerInfo" Id="5140" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_AE_FlickerInfo_IS_EFFECTIVE" Type="U32" M="1" N="1" Min="0" Max="1" Text="isEffective" GuiType="TextBox_Num" Param="" Info="AE Flicer Effective" />
+			<ITEM Name="API_AE_FlickerInfo_FLICKER_BANDING_TYPE" Type="U32" M="1" N="1" Min="0" Max="65535" Text="BandingType" GuiType="TextBox_Num" Param="" Info="AE Banding Type" />
+			<ITEM Name="API_AE_FlickerInfo_SCORE" Type="U16" M="1" N="1" Min="0" Max="100" Text="Score" GuiType="TextBox_Num" Param="" Info="Flikcer Score (0 ~ 100)" />
+			<ITEM Name="API_AE_FlickerInfo_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AE_StrategyExInfo" Id="5143" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_AE_StrategyExInfo_GMBlendRatio" Type="U16" M="1" N="1" Min="0" Max="1024" Text="GMBlendRatio" GuiType="TextBox_Num" Param="" Info="GMBlendRatio" />
+			<ITEM Name="API_AE_StrategyExInfo_UpperLimitTargetx10" Type="U16" M="1" N="1" Min="0" Max="2550" Text="UpperLimitTargetx10" GuiType="TextBox_Num" Param="" Info="UpperLimitTargetx10" />
+			<ITEM Name="API_AE_StrategyExInfo_LowerLimitTargetx10" Type="U16" M="1" N="1" Min="0" Max="2550" Text="LowerLimitTargetx10" GuiType="TextBox_Num" Param="" Info="LowerLimitTargetx10" />
+			<ITEM Name="API_AE_StrategyExInfo_BTCntPcntx10" Type="U16" M="1" N="1" Min="0" Max="1000" Text="BTCntPcntx10" GuiType="TextBox_Num" Param="" Info="BTCntPcntx10" />
+			<ITEM Name="API_AE_StrategyExInfo_DTCntPcntx10" Type="U16" M="1" N="1" Min="0" Max="1000" Text="DTCntPcntx10" GuiType="TextBox_Num" Param="" Info="DTCntPcntx10" />
+			<ITEM Name="API_AE_StrategyExInfo_BTYx10" Type="U16" M="1" N="1" Min="0" Max="2550" Text="BTYx10" GuiType="TextBox_Num" Param="" Info="BTYx10" />
+			<ITEM Name="API_AE_StrategyExInfo_DTYx10" Type="U16" M="1" N="1" Min="0" Max="2550" Text="DTYx10" GuiType="TextBox_Num" Param="" Info="DTYx10" />
+			<ITEM Name="API_AE_StrategyExInfo_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AE_PowerLineFlickerInfo" Id="5151" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_AE_PowerLineFlickerInfo_Direction" Type="S16" M="1" N="1" Min="-1" Max="1" Text="Direction" GuiType="TextBox_Num" Param="" Info="Direction" />
+			<ITEM Name="API_AE_PowerLineFlickerInfo_IsEffective" Type="U16" M="1" N="1" Min="0" Max="1" Text="IsEffective" GuiType="TextBox_Num" Param="" Info="IsEffective" />
+			<ITEM Name="API_AE_PowerLineFlickerInfo_PreShutter" Type="U16" M="1" N="1" Min="0" Max="1000000" Text="PreShutter" GuiType="TextBox_Num" Param="" Info="PreShutter" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="AWB" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="WBAttr" Id="6146" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_WBAttr_STATE" Type="U32" M="1" N="1" Min="0" Max="1" Text="AwbState" GuiType="ComboBox" Param="Normal,Pause" Info="AWB algorithm mode, 0:Normal, 1:Pause" />
+			<ITEM Name="API_WBAttr_MODE" Type="U32" M="1" N="1" Min="0" Max="2" Text="AwbMode" GuiType="ComboBox" Param="Auto,Manual,CT Manual" Info="AWB algorithm mode, 0:Auto, 1:Manual, 2:CT Manual" />
+			<ITEM Name="API_WBAttr_MWB_RGAIN" Type="U16" M="1" N="1" Min="0" Max="8191" Text="sManual.Rgain" GuiType="NumScroll" Param="" Info="Rgain of AWB manual mode, Range: (0 - 8191)" />
+			<ITEM Name="API_WBAttr_MWB_GRGAIN" Type="U16" M="1" N="1" Min="0" Max="8191" Text="sManual.GRgain" GuiType="NumScroll" Param="" Info="GRgain of AWB manual mode, Range: (0 - 8191)" />
+			<ITEM Name="API_WBAttr_MWB_GBGAIN" Type="U16" M="1" N="1" Min="0" Max="8191" Text="sManual.GBgain" GuiType="NumScroll" Param="" Info="GBgain of AWB manual mode, Range: (0 - 8191)" />
+			<ITEM Name="API_WBAttr_MWB_BGAIN" Type="U16" M="1" N="1" Min="0" Max="8191" Text="sManual.Bgain" GuiType="NumScroll" Param="" Info="Bgain of AWB manual mode, Range: (0 - 8191)" />
+			<ITEM Name="API_WBAttr_SPEED" Type="U8" M="1" N="1" Min="1" Max="100" Text="Speed" GuiType="NumScroll" Param="" Info="AWB converge speed, , Range:(1 - 100)" />
+			<ITEM Name="API_WBAttr_CONV_IN_THD" Type="U8" M="1" N="1" Min="0" Max="255" Text="ConvInThd" GuiType="NumScroll" Param="" Info="AWB converge threshold, Range:(0 - 255)" />
+			<ITEM Name="API_WBAttr_CONV_OUT_THD" Type="U8" M="1" N="1" Min="0" Max="255" Text="ConvOutThd" GuiType="NumScroll" Param="" Info="AWB converge threshold, Range:(0 - 255)" />
+			<ITEM Name="API_WBAttr_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WBAttr_ALGO_TYPE" Type="U32" M="1" N="1" Min="0" Max="4" Text="eAlgType" GuiType="ComboBox" Param="GrayWorld,Normal,Balance,Focus" Info="AWB Algo Type, 0:GrayWorld, 1:Normal, 2:Balance ,3:Focus" />
+			<ITEM Name="API_WBAttr_ADVANCE_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="eAdvType" GuiType="ComboBox" Param="Normal,Advance" Info="AWB Advance Type, 0:Normal, 1:Advance" />
+			<ITEM Name="API_WBAttr_RG_STRENGTH" Type="U8" M="1" N="1" Min="0" Max="255" Text="RGStrength" GuiType="NumScroll" Param="" Info="AWB adjust RG ratio, Range:(0 - 255)" />
+			<ITEM Name="API_WBAttr_BG_STRENGTH" Type="U8" M="1" N="1" Min="0" Max="255" Text="BGStrength" GuiType="NumScroll" Param="" Info="AWB adjust BG ratio, Range:(0 - 255)" />
+			<ITEM Name="API_WBAttr_MAX_RGain" Type="U16" M="1" N="1" Min="256" Max="8191" Text="MaxRgain" GuiType="NumScroll" Param="" Info="Max Rgain, Range:(1024 - 8191)" />
+			<ITEM Name="API_WBAttr_MIN_RGain" Type="U16" M="1" N="1" Min="256" Max="8191" Text="MinRgain" GuiType="NumScroll" Param="" Info="Min Rgain, Range:(1024 - 8191)" />
+			<ITEM Name="API_WBAttr_MAX_BGain" Type="U16" M="1" N="1" Min="256" Max="8191" Text="MaxBgain" GuiType="NumScroll" Param="" Info="Max Bgain, Range:(1024 - 8191)" />
+			<ITEM Name="API_WBAttr_MIN_BGain" Type="U16" M="1" N="1" Min="256" Max="8191" Text="MinBgain" GuiType="NumScroll" Param="" Info="Min Bgain, Range:(1024 - 8191)" />
+			<ITEM Name="API_WBAttr_LV_WEIGHT" Type="U16" M="10" N="18" Min="1" Max="255" Text="LvWeight" GuiType="DataGrid" Param="20000k,15000k,10000k,6500k,5000k,4000k,3000k,2300k,1500k,1000k:LV(0~17/1)" Info="RW, AWB Lv Ct Weight, Range:(1 - 255)" />
+			<ITEM Name="API_WBAttr_PREFER_RRATIO" Type="U16" M="10" N="18" Min="1" Max="255" Text="PreferRRatio" GuiType="DataGrid" Param="20000k,15000k,10000k,6500k,5000k,4000k,3000k,2300k,1500k,1000k:LV(0~17/1)" Info="RW, AWB prefer R gain, Range:(1 - 255)" />
+			<ITEM Name="API_WBAttr_PREFER_BRATIO" Type="U16" M="10" N="18" Min="1" Max="255" Text="PreferBRatio" GuiType="DataGrid" Param="20000k,15000k,10000k,6500k,5000k,4000k,3000k,2300k,1500k,1000k:LV(0~17/1)" Info="RW, AWB prefer B gain, Range:(1 - 255)" />
+			<ITEM Name="API_WBAttr_WPWEIGHT" Type="U16" M="10" N="1" Min="1" Max="400" Text="u2WpWeight" GuiType="DataGrid" Param="" Info="White Point Weight, Range:(1 - 400)" />
+			<ITEM Name="API_WBAttr_PAD3" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WBAttr_WEIGHT_WIN" Type="U32" M="9" N="9" Min="0" Max="16" Text="WeightWin" GuiType="DataGrid" Param="" Info="AWB Weighting Window, Range:(0 - 16)" />
+		</GROUP>
+		<GROUP Name="WBAttrEx" Id="6147" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_WBAttrEx_LT_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="ExtraLtEnable" GuiType="ComboBox" Param="Disable,Enable" Info="Enable user define light area" />
+			<ITEM Name="API_WBAttrEx_LT0_WRGAIN" Type="U16" M="1" N="1" Min="256" Max="4095" Text="sLtInfo[0].WRgain" GuiType="NumScroll" Param="" Info="Rgain of white point location, Range:(256 - 4095)" />
+			<ITEM Name="API_WBAttrEx_LT0_WBGAIN" Type="U16" M="1" N="1" Min="256" Max="4095" Text="sLtInfo[0].WBgain" GuiType="NumScroll" Param="" Info="Bgain of white point location, Range:(256 - 4095)" />
+			<ITEM Name="API_WBAttrEx_LT0_SIZE" Type="U8" M="1" N="1" Min="1" Max="32" Text="sLtInfo[0].AreaSize" GuiType="NumScroll" Param="" Info="Light area size of user define, Range:(1 - 32)" />
+			<ITEM Name="API_WBAttrEx_LT0_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WBAttrEx_LT0_EXCLUDE" Type="U32" M="1" N="1" Min="0" Max="1" Text="sLtInfo[0].bExclude" GuiType="ComboBox" Param="Include,Exclude" Info="Exculde or Include user light area, 0:Include, 1:Exclude" />
+			<ITEM Name="API_WBAttrEx_LT1_WRGAIN" Type="U16" M="1" N="1" Min="256" Max="4095" Text="sLtInfo[1].WRgain" GuiType="NumScroll" Param="" Info="Rgain of white point location, Range:(256 - 4095)" />
+			<ITEM Name="API_WBAttrEx_LT1_WBGAIN" Type="U16" M="1" N="1" Min="256" Max="4095" Text="sLtInfo[1].WBgain" GuiType="NumScroll" Param="" Info="Bgain of white point location, Range:(256 - 4095)" />
+			<ITEM Name="API_WBAttrEx_LT1_SIZE" Type="U8" M="1" N="1" Min="1" Max="32" Text="sLtInfo[1].AreaSize" GuiType="NumScroll" Param="" Info="Light area size of user define, Range:(1 - 32)" />
+			<ITEM Name="API_WBAttrEx_LT1_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WBAttrEx_LT1_EXCLUDE" Type="U32" M="1" N="1" Min="0" Max="1" Text="sLtInfo[1].bExclude" GuiType="ComboBox" Param="Include,Exclude" Info="Exculde or Include user light area, 0:Include, 1:Exclude" />
+			<ITEM Name="API_WBAttrEx_LT2_WRGAIN" Type="U16" M="1" N="1" Min="256" Max="4095" Text="sLtInfo[2].WRgain" GuiType="NumScroll" Param="" Info="Rgain of white point location, Range:(256 - 4095)" />
+			<ITEM Name="API_WBAttrEx_LT2_WBGAIN" Type="U16" M="1" N="1" Min="256" Max="4095" Text="sLtInfo[2].WBgain" GuiType="NumScroll" Param="" Info="Bgain of white point location, Range:(256 - 4095)" />
+			<ITEM Name="API_WBAttrEx_LT2_SIZE" Type="U8" M="1" N="1" Min="1" Max="255" Text="sLtInfo[2].AreaSize" GuiType="NumScroll" Param="" Info="Light area size of user define, Range:(1 - 32)" />
+			<ITEM Name="API_WBAttrEx_LT2_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WBAttrEx_LT2_EXCLUDE" Type="U32" M="1" N="1" Min="0" Max="1" Text="sLtInfo[2].bExclude" GuiType="ComboBox" Param="Include,Exclude" Info="Exculde or Include user light area, 0:Include, 1:Exclude" />
+			<ITEM Name="API_WBAttrEx_LT3_WRGAIN" Type="U16" M="1" N="1" Min="256" Max="4095" Text="sLtInfo[3].WRgain" GuiType="NumScroll" Param="" Info="Rgain of white point location, Range:(256 - 4095)" />
+			<ITEM Name="API_WBAttrEx_LT3_WBGAIN" Type="U16" M="1" N="1" Min="256" Max="4095" Text="sLtInfo[3].WBgain" GuiType="NumScroll" Param="" Info="Bgain of white point location, Range:(256 - 4095)" />
+			<ITEM Name="API_WBAttrEx_LT3_SIZE" Type="U8" M="1" N="1" Min="1" Max="32" Text="sLtInfo[3].AreaSize" GuiType="NumScroll" Param="" Info="Light area size of user define, Range:(1 - 32)" />
+			<ITEM Name="API_WBAttrEx_LT3_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WBAttrEx_LT3_EXCLUDE" Type="U32" M="1" N="1" Min="0" Max="1" Text="sLtInfo[3].bExclude" GuiType="ComboBox" Param="Include,Exclude" Info="Exculde or Include user light area, 0:Include, 1:Exclude" />
+		</GROUP>
+		<GROUP Name="AWBStatisFilter" Id="6156" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AWBStatisFilter_NodeNum" Type="U32" M="1" N="1" Min="0" Max="4" Text="NodeNum" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AWBStatisFilter_LutX_BV" Type="S32" M="4" N="1" Min="-81920" Max="245760" Text="LutX_BV" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AWBStatisFilter_LutY_HighThd" Type="S32" M="4" N="1" Min="0" Max="255" Text="LutY_HighThd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AWBStatisFilter_LutY_LowThd" Type="S32" M="4" N="1" Min="0" Max="255" Text="LutY_LowThd" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="WBMultiLSAttr" Id="6148" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AWBMultiLSAttr_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Enable multi light source color calibration" />
+			<ITEM Name="API_AWBMultiLSAttr_SENSITIVE" Type="U8" M="1" N="1" Min="1" Max="10" Text="Sensitive" GuiType="NumScroll" Param="" Info="Sensitive of multi light source judgement, Range:(1 - 10)" />
+			<ITEM Name="API_AWBMultiLSAttr_CALISTRENGTH" Type="U8" M="1" N="1" Min="0" Max="100" Text="CaliStrength" GuiType="NumScroll" Param="" Info="Multi light  source cali strength, Range:(0 - 100)" />
+			<ITEM Name="API_AWBMultiLSAttr_CcmForLow" Type="U16" M="3" N="3" Min="0" Max="8191" Text="CaliCcm_LowCT" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AWBMultiLSAttr_CcmForHigh" Type="U16" M="3" N="3" Min="0" Max="8191" Text="CaliCcm_HighCT" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AWBMultiLSAttr_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="CTMWB" Id="6150" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_CTMWB_CT" Type="U32" M="1" N="1" Min="1000" Max="20000" Text="ColorTemperature" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AWBStabilizer" Id="6153" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AWBStabilizerr_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AWBStabilizer_GlbGainThd" Type="U16" M="1" N="1" Min="0" Max="512" Text="GlbGainThd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AWBStabilizer_CountThd" Type="U16" M="1" N="1" Min="0" Max="100" Text="CountThd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AWBStabilizer_ForceTriGainThd" Type="U16" M="1" N="1" Min="0" Max="8191" Text="ForceTriGainThd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AWBStabilizer_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AWBSpecialCase" Id="6154" ParamId="0" Action="RW" AutoMode="1~27" InFile="true" FileMode="R">
+			<ITEM Name="API_AWBSpecialCase_CaseNum" Type="U32" M="1" N="1" Min="0" Max="4" Text="CaseNum" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group1_ZoneNum" Type="U8" M="1" N="4" Min="0" Max="8" Text="Group1.ZoneNum" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group1_PAD" Type="U8" M="1" N="4" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group1_CenterX" Type="U16" M="8" N="4" Min="0" Max="1024" Text="Group1.CenterX" GuiType="DataGrid" Param="ZONE(0~7/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group1_CenterY" Type="U16" M="8" N="4" Min="0" Max="1024" Text="Group1.CenterY" GuiType="DataGrid" Param="ZONE(0~7/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group1_Radius" Type="U8" M="8" N="4" Min="0" Max="20" Text="Group1.Radius" GuiType="DataGrid" Param="ZONE(0~7/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group1_CntLutNodeNum" Type="U8" M="1" N="4" Min="0" Max="4" Text="Group1.CntLut.NodeNum" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group1_PAD2" Type="U8" M="1" N="4" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group1_CntLutX" Type="S32" M="4" N="4" Min="0" Max="100" Text="Group1.CntLut.X" GuiType="DataGrid" Param="NODE(0~3/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group1_CntLutY" Type="S32" M="4" N="4" Min="0" Max="100" Text="Group1.CntLut.Y" GuiType="DataGrid" Param="NODE(0~3/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group2_ZoneNum" Type="U8" M="1" N="4" Min="0" Max="8" Text="Group2.ZoneNum" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group2_PAD" Type="U8" M="1" N="4" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group2_CenterX" Type="U16" M="8" N="4" Min="0" Max="1024" Text="Group2.CenterX" GuiType="DataGrid" Param="ZONE(0~7/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group2_CenterY" Type="U16" M="8" N="4" Min="0" Max="1024" Text="Group2.CenterY" GuiType="DataGrid" Param="ZONE(0~7/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group2_Radius" Type="U8" M="8" N="4" Min="0" Max="20" Text="Group2.Radius" GuiType="DataGrid" Param="ZONE(0~7/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group2_CntLutNodeNum" Type="U8" M="1" N="4" Min="0" Max="4" Text="Group2.CntLut.NodeNum" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group2_PAD2" Type="U8" M="1" N="4" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group2_CntLutX" Type="S32" M="4" N="4" Min="0" Max="100" Text="Group2.CntLut.X" GuiType="DataGrid" Param="NODE(0~3/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_Group2_CntLutY" Type="S32" M="4" N="4" Min="0" Max="100" Text="Group2.CntLut.Y" GuiType="DataGrid" Param="NODE(0~3/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_BvLut_NodeNum" Type="U8" M="1" N="4" Min="0" Max="4" Text="BvLut.NodeNum" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_BvLut_PAD" Type="U8" M="3" N="4" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AWBSpecialCase_BvLut_X" Type="S32" M="4" N="4" Min="-81920" Max="245760" Text="BvLut.X" GuiType="DataGrid" Param="NODE(0~3/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_BvLut_Y" Type="S32" M="4" N="4" Min="0" Max="1024" Text="BvLut.Y" GuiType="DataGrid" Param="NODE(0~3/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_eMode" Type="U32" M="1" N="4" Min="0" Max="2" Text="Mode" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="0:WeightCtrl, 1:Prefer CT, 2:Prefer RBgain" />
+			<ITEM Name="API_AWBSpecialCase_Weight" Type="U16" M="10" N="4" Min="0" Max="1024" Text="Weight" GuiType="DataGrid" Param="20000k,15000k,10000k,6500k,5000k,4000k,3000k,2300k,1500k,1000k:CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_PreferCT" Type="U32" M="1" N="4" Min="0" Max="20000" Text="PrefereCT" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_PreferRgain" Type="U16" M="1" N="4" Min="0" Max="8191" Text="PrefereRgain" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_PreferBgain" Type="U16" M="1" N="4" Min="0" Max="8191" Text="PrefereBgain" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+		</GROUP>
+		<GROUP Name="DebugLev" Id="12289" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_DebugLev_AWB" Type="S32" M="1" N="1" Min="0" Max="7" Text="AWB Debug Level" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="AWBInfo" Type="API" GroupIndex="-1" Action="R" AutoWrite="false">
+		<GROUP Name="AWBInfo" Id="6145" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_AWBInfo_IS_STABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="IsStable" GuiType="TextBox_Num" Param="" Info="AWB Stable" />
+			<ITEM Name="API_AWBInfo_RGAIN" Type="U16" M="1" N="1" Min="0" Max="16384" Text="WB_Rgain" GuiType="TextBox_Num" Param="" Info="AWB Rgain of current scene" />
+			<ITEM Name="API_AWBInfo_GRGAIN" Type="U16" M="1" N="1" Min="0" Max="16384" Text="WB_GRgain" GuiType="TextBox_Num" Param="" Info="AWB GRgain of current scene" />
+			<ITEM Name="API_AWBInfo_GBGAIN" Type="U16" M="1" N="1" Min="0" Max="16384" Text="WB_GBgain" GuiType="TextBox_Num" Param="" Info="AWB GBgain of current scene" />
+			<ITEM Name="API_AWBInfo_BGAIN" Type="U16" M="1" N="1" Min="0" Max="16384" Text="WB_Bgain" GuiType="TextBox_Num" Param="" Info="AWB Bgain of current scene" />
+			<ITEM Name="API_AWBInfo_CT" Type="U16" M="1" N="1" Min="0" Max="20000" Text="WB_CT" GuiType="TextBox_Num" Param="" Info="AWB CT of current scene" />
+			<ITEM Name="API_AWBInfo_WPInd" Type="U8" M="1" N="1" Min="0" Max="9" Text="WPInd" GuiType="TextBox_Num" Param="" Info="" />
+			<ITEM Name="API_AWBInfo_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AWBInfo_MultiLS_Detected" Type="U32" M="1" N="1" Min="0" Max="1" Text="MultiLS_Detected" GuiType="TextBox_Num" Param="" Info="" />
+			<ITEM Name="API_AWBInfo_FirstLSInd" Type="U8" M="1" N="1" Min="0" Max="9" Text="MultiLS_FirstLSInd" GuiType="TextBox_Num" Param="" Info="" />
+			<ITEM Name="API_AWBInfo_SecondLSInd" Type="U8" M="1" N="1" Min="0" Max="9" Text="MultiLS_SecondLSInd" GuiType="TextBox_Num" Param="" Info="" />
+			<ITEM Name="API_AWBInfo_PAD2" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AWBSpecialCaseInfo" Id="6155" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_AWBSpecialCaseInfo_Group1_Cnt" Type="U32" M="1" N="4" Min="0" Max="4294967295" Text="Group1.Cnt" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCaseInfo_Group1_CntRatio" Type="U32" M="1" N="4" Min="0" Max="100" Text="Group1.CntRatio" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCaseInfo_Group2_Cnt" Type="U32" M="1" N="4" Min="0" Max="4294967295" Text="Group2.Cnt" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCaseInfo_Group2_CntRatio" Type="U32" M="1" N="4" Min="0" Max="100" Text="Group2.CntRatio" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCaseInfo_BvRatio" Type="U32" M="1" N="4" Min="0" Max="100" Text="BvRatio" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCaseInfo_CaseRatio" Type="U32" M="1" N="4" Min="0" Max="100" Text="CaseRatio" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCaseInfo_CaseWeight" Type="U16" M="10" N="4" Min="0" Max="65535" Text="CaseWeight" GuiType="DataGrid" Param="20000k,15000k,10000k,6500k,5000k,4000k,3000k,2300k,1500k,1000k:CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCaseInfo_SpecialWeight" Type="U16" M="10" N="1" Min="0" Max="65535" Text="SpecialWeight" GuiType="DataGrid" Param="20000k,15000k,10000k,6500k,5000k,4000k,3000k,2300k,1500k,1000k:" Info="" />
+			<ITEM Name="API_AWBSpecialCaseInfo_SpecialRgain" Type="U16" M="1" N="4" Min="0" Max="8191" Text="SpecialRgain" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCaseInfo_SpecialBgain" Type="U16" M="1" N="4" Min="0" Max="8191" Text="SpecialBgain" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="AWBCTCali" Type="API" GroupIndex="-1" Action="RW" AutoWrite="false">
+		<GROUP Name="AWBCTCali" Id="11267" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_AWBCTCali_START_INDEX" Type="U16" M="1" N="1" Min="0" Max="9" Text="StartIdx" GuiType="NumScroll" Param="" Info="Light area start index, Range: [0, EndIdx]" />
+			<ITEM Name="API_AWBCTCali_END_INDEX" Type="U16" M="1" N="1" Min="0" Max="9" Text="EndIdx" GuiType="NumScroll" Param="" Info="Light area end index, Range: [StartIdx, 9]" />
+			<ITEM Name="API_AWBCTCali_PARAMS" Type="U16" M="4" N="10" Min="1" Max="1000" Text="CtParams" GuiType="DataGrid" Param="" Info="Color temperature of calibration paramters , Range: [1, 1000]" />
+		</GROUP>
+		<GROUP Name="AWBCurCTCali" Id="11270" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="R">
+		<ITEM Name="API_AWBCurCTCali_PARAMS" Type="U16" M="4" N="10" Min="1" Max="1000" Text="CurCtParams" GuiType="DataGrid" Param="" Info="Color temperature of calibration paramters , Range: [1, 1000]" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="AF" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="AFAttr" Id="7209" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AFAttr_State" Type="U32" M="1" N="1" Min="0" Max="1" Text="State" GuiType="ComboBox" Param="Normal,Pause" Info="" />
+			<ITEM Name="API_AFAttr_Mode" Type="U32" M="1" N="1" Min="0" Max="1" Text="Mode" GuiType="ComboBox" Param="Auto,Manual" Info="" />
+			<ITEM Name="API_AFAttr_ManualMotorPos" Type="U16" M="1" N="1" Min="0" Max="1023" Text="ManualMotorPos" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFAttr_PAD1" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AFAttr_Algo" Type="U32" M="1" N="1" Min="0" Max="1" Text="Algo" GuiType="ComboBox" Param="OneShot,Continuous" Info="" />
+		</GROUP>
+		<GROUP Name="AFMotor" Id="7210" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AFMotor_MinMotorPos" Type="U16" M="1" N="1" Min="0" Max="1023" Text="MinMotorPos" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFMotor_MaxMotorPos" Type="U16" M="1" N="1" Min="0" Max="1023" Text="MaxMotorPos" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFMotor_MinMotorStep" Type="U16" M="1" N="1" Min="0" Max="1023" Text="MinMotorStep" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFMotor_MaxMotorStep" Type="U16" M="1" N="1" Min="0" Max="1023" Text="MaxMotorStep" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AFAccWeight" Id="7211" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AFAccWeight_WinNumX" Type="U8" M="1" N="1" Min="1" Max="16" Text="WinNumX" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFAccWeight_WinNumY" Type="U8" M="1" N="1" Min="1" Max="16" Text="WinNumY" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFAccWeight_PAD1" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AFAccWeight_EqualWinWgtEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="EqualWinWgtEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AFAccWeight_WinWgt" Type="U8" M="16" N="16" Min="0" Max="255" Text="WinWgt" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AFAccWeight_IIRHBlendEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="IIRHBlendEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AFAccWeight_IIRHWgt_FirstBlendIIRL" Type="U8" M="1" N="1" Min="0" Max="255" Text="IIRHWgt_FirstBlendIIRL" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFAccWeight_IIRHWgt_SecondBlendSBLV" Type="U8" M="1" N="1" Min="0" Max="255" Text="IIRHWgt_SecondBlendSBLV" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFAccWeight_IIRHWgt_ThirdBlendSBLH" Type="U8" M="1" N="1" Min="0" Max="255" Text="IIRHWgt_ThirdBlendSBLH" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFAccWeight_PAD2" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AFOneShot" Id="7212" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AFOneShot_AccSel" Type="U32" M="1" N="1" Min="0" Max="3" Text="AccSel" GuiType="ComboBox" Param="IIRH,IIRL,SBLV,SBLH" Info="" />
+			<ITEM Name="API_AFOneShot_MotorStep" Type="U16" M="1" N="1" Min="0" Max="1023" Text="MotorStep" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFOneShot_PAD1" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AFContinuous_SceneChange" Id="7213" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AFContinuous_SceneChange_PreAfAccSel" Type="U32" M="1" N="1" Min="0" Max="3" Text="PreAfAccSel" GuiType="ComboBox" Param="IIRH,IIRL,SBLV,SBLH" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_PreAeAccDiffThOft" Type="U8" M="1" N="1" Min="0" Max="100" Text="PreAeAccDiffThOft" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_PreAeAccDiffThSlp" Type="U8" M="1" N="1" Min="0" Max="100" Text="PreAeAccDiffThSlp" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_PreAeAccCntThOft" Type="U8" M="1" N="1" Min="0" Max="100" Text="PreAeAccCntThOft" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_PrePreAeAccCntThSlp" Type="U8" M="1" N="1" Min="0" Max="100" Text="PreAeAccCntThSlp" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_PreAfAccDiffThOft" Type="U8" M="1" N="1" Min="0" Max="100" Text="PreAfAccDiffThOft" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_PreAfAccDiffThSlp" Type="U8" M="1" N="1" Min="0" Max="100" Text="PreAfAccDiffThSlp" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_PreAfAccCntThOft" Type="U8" M="1" N="1" Min="0" Max="100" Text="PreAfAccCntThOft" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_PreAfAccCntThSlp" Type="U8" M="1" N="1" Min="0" Max="100" Text="PreAfAccCntThSlp" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_FocusAfAccSel" Type="U32" M="1" N="1" Min="0" Max="3" Text="FocusAfAccSel" GuiType="ComboBox" Param="IIRH,IIRL,SBLV,SBLH" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_FocusAeAccDiffTh" Type="U8" M="1" N="1" Min="0" Max="100" Text="FocusAeAccDiffTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_FocusAeAccCntTh" Type="U8" M="1" N="1" Min="0" Max="100" Text="FocusAeAccCntTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_FocusAfAccDiffTh" Type="U8" M="1" N="1" Min="0" Max="100" Text="FocusAfAccDiffTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_FocusAfAccCntTh" Type="U8" M="1" N="1" Min="0" Max="100" Text="FocusAfAccCntTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_StableCntTh" Type="U8" M="1" N="1" Min="0" Max="255" Text="StableCntTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SceneChange_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AFContinuous_SearchStart" Id="7214" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AFContinuous_SearchStart_SearchMotorStep" Type="U16" M="1" N="1" Min="0" Max="1023" Text="SearchMotorStep" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SearchStart_SearchMotorDirByPosTh" Type="U16" M="1" N="1" Min="0" Max="1023" Text="SearchMotorDirByPosTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_SearchStart_SearchAccSel" Type="U32" M="1" N="1" Min="0" Max="3" Text="SearchAccSel" GuiType="ComboBox" Param="IIRH,IIRL,SBLV,SBLH" Info="" />
+		</GROUP>
+		<GROUP Name="AFContinuous_Search" Id="7215" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AFContinuous_Search_MinMaxAccRatioPeakThOft" Type="U8" M="1" N="1" Min="0" Max="100" Text="MinMaxAccRatioPeakThOft" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_Search_MinMaxAccRatioPeakThSlp" Type="U8" M="1" N="1" Min="0" Max="100" Text="MinMaxAccRatioPeakThSlp" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_Search_AccDecCntPeakTh" Type="U8" M="1" N="1" Min="0" Max="255" Text="AccDecCntPeakTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_Search_NowFakeMaxAccRatioPeakTh" Type="U8" M="1" N="1" Min="0" Max="100" Text="NowFakeMaxAccRatioPeakTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_Search_AccDecCntWrongDirTh" Type="U8" M="1" N="1" Min="0" Max="255" Text="AccDecCntWrongDirTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFContinuous_Search_NowFakeMaxAccRatioWrongDirTh" Type="U8" M="1" N="1" Min="0" Max="100" Text="NowFakeMaxAccRatioWrongDirTh" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="DebugLev" Id="12291" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_DebugLev_AF" Type="S32" M="1" N="1" Min="0" Max="65536" Text="AF Debug Level" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="AFHW" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="AFHWWin" Id="7170" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AFHWRoiMode_Mode" Type="U8" M="1" N="1" Min="0" Max="1" Text="Mode" GuiType="ComboBox" Param="Normal,Matrix" Info="" />
+			<ITEM Name="API_AFHWRoiMode_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AFHWRoiMode_VerticalBlockNumber" Type="U32" M="1" N="1" Min="0" Max="16" Text="VerticalBlockNumber" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFHWWin" Type="U32" M="4" N="16" Min="0" Max="1023" Text="Win" GuiType="DataGrid" Param="x_start,y_start,x_end,y_end:(0~15/1)" Info="" />
+		</GROUP>
+		<GROUP Name="AFHWFilterAttr" Id="7171" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AFHWFilterAttr_IIR1" Type="U16" M="5" N="1" Min="0" Max="16383" Text="IIR1" GuiType="DataGrid" Param="a0,a1,a2,b1,b2:(0~0/1)" Info="s9, s10, s9, s13, s13" />
+			<ITEM Name="API_AFHWFilterAttr_IIR1_Clip" Type="U16" M="4" N="1" Min="0" Max="1023" Text="IIR1_Clip" GuiType="DataGrid" Param="1st_low,1st_high,2nd_low,2nd_high:(0~0/1)" Info="" />
+			<ITEM Name="API_AFHWFilterAttr_IIR2" Type="U16" M="5" N="1" Min="0" Max="16383" Text="IIR2" GuiType="DataGrid" Param="a0,a1,a2,b1,b2:(0~0/1)" Info="s9, s10, s9, s13, s13" />
+			<ITEM Name="API_AFHWFilterAttr_IIR2_Clip" Type="U16" M="4" N="1" Min="0" Max="1023" Text="IIR2_Clip" GuiType="DataGrid" Param="1st_low,1st_high,2nd_low,2nd_high:(0~0/1)" Info="" />
+			<ITEM Name="API_AFHWFilterAttr_IIR1_E1_En" Type="U16" M="1" N="1" Min="0" Max="1" Text="IIR1_E1_En" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterAttr_IIR1_E1" Type="U16" M="5" N="1" Min="0" Max="16383" Text="IIR1_E1" GuiType="DataGrid" Param="a0,a1,a2,b1,b2:(0~0/1)" Info="s9, s10, s9, s13, s13" />
+			<ITEM Name="API_AFHWFilterAttr_IIR1_E2_En" Type="U16" M="1" N="1" Min="0" Max="1" Text="IIR1_E2_En" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterAttr_IIR1_E2" Type="U16" M="5" N="1" Min="0" Max="16383" Text="IIR1_E2" GuiType="DataGrid" Param="a0,a1,a2,b1,b2:(0~0/1)" Info="s9, s10, s9, s13, s13" />
+			<ITEM Name="API_AFHWFilterAttr_IIR2_E1_En" Type="U16" M="1" N="1" Min="0" Max="1" Text="IIR2_E1_En" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterAttr_IIR2_E1" Type="U16" M="5" N="1" Min="0" Max="16383" Text="IIR2_E1" GuiType="DataGrid" Param="a0,a1,a2,b1,b2:(0~0/1)" Info="s9, s10, s9, s13, s13" />
+			<ITEM Name="API_AFHWFilterAttr_IIR2_E2_En" Type="U16" M="1" N="1" Min="0" Max="1" Text="IIR2_E2_En" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterAttr_IIR2_E2" Type="U16" M="5" N="1" Min="0" Max="16383" Text="IIR2_E2" GuiType="DataGrid" Param="a0,a1,a2,b1,b2:(0~0/1)" Info="s9, s10, s9, s13, s13" />
+		</GROUP>
+		<GROUP Name="AFHWFilterSq" Id="7172" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AFHWFilterSq_SobelYSatEn" Type="U8" M="1" N="1" Min="0" Max="1" Text="SobelYSatEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_SobelYSatSrc" Type="U8" M="1" N="1" Min="0" Max="1" Text="SobelYSatSrc" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_SobelYThd" Type="U16" M="1" N="1" Min="0" Max="1023" Text="SobelYThd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_IIRSquareAccEn" Type="U8" M="1" N="1" Min="0" Max="1" Text="IIRSquareAccEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_SobelSquareAccEn" Type="U8" M="1" N="1" Min="0" Max="1" Text="SobelSquareAccEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_IIR1Thd" Type="U16" M="1" N="1" Min="0" Max="1023" Text="IIR1Thd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_IIR2Thd" Type="U16" M="1" N="1" Min="0" Max="1023" Text="IIR2Thd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_SobelHThd" Type="U16" M="1" N="1" Min="0" Max="1023" Text="SobelHThd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_SobelVThd" Type="U16" M="1" N="1" Min="0" Max="1023" Text="SobelVThd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_AFTbl1X" Type="U8" M="12" N="1" Min="0" Max="15" Text="AFTbl1X" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_AFTbl1Y" Type="U16" M="13" N="1" Min="0" Max="8191" Text="AFTbl1Y" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_AFTbl2X" Type="U8" M="12" N="1" Min="0" Max="15" Text="AFTbl2X" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AFHWFilterSq_AFTbl2Y" Type="U16" M="13" N="1" Min="0" Max="8191" Text="AFTbl2Y" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="BayerCompensation" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="DynamicDP" Id="4119" ParamId="0" Action="RW" AutoMode="2~10" InFile="true" FileMode="W">
+			<ITEM Name="API_DynamicDP_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="DynamicDP Enable" />
+			<ITEM Name="API_DynamicDP_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_DynamicDP_AUTO_HOTPIX_EN" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.HotPixEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_AUTO_HOTPIX_COMPSLPOE" Type="U16" M="1" N="16" Min="0" Max="255" Text="Auto.HotPixCompSlpoe" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_AUTO_PAD1" Type="U16" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_AUTO_DARKPIX_EN" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.DarkPixEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_AUTO_DARKPIX_COMPSLPOE" Type="U16" M="1" N="16" Min="0" Max="255" Text="Auto.DarkPixCompSlpoe" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_AUTO_DPCTH" Type="U16" M="1" N="16" Min="0" Max="255" Text="Auto.DPCTH" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_AUTO_BLEND_EN" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.BlendEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_AUTO_DIFF_LUT" Type="U16" M="6" N="16" Min="0" Max="1024" Text="Auto.DiffLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_AUTO_Y_LUT" Type="U16" M="6" N="16" Min="0" Max="1024" Text="Auto.YLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_MANUAL_HOTPIX_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.HotPixEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_MANUAL_HOTPIX_COMPSLPOE" Type="U16" M="1" N="1" Min="0" Max="255" Text="Manual.HotPixCompSlpoe" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_MANUAL_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_MANUAL_DARKPIX_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.DarkPixEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_MANUAL_DARKPIX_COMPSLPOE" Type="U16" M="1" N="1" Min="0" Max="255" Text="Manual.DarkPixCompSlpoe" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_MANUAL_DPCTH" Type="U16" M="1" N="1" Min="0" Max="255" Text="Manual.DPCTH" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_MANUAL_BLEND_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.BlendEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_MANUAL_DIFF_LUT" Type="U16" M="6" N="1" Min="0" Max="1024" Text="Manual.DiffLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_MANUAL_Y_LUT" Type="U16" M="6" N="1" Min="0" Max="1024" Text="Manual.YLut" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="DynamicDP_Cluster" Id="4139" ParamId="0" Action="RW" AutoMode="2~11" InFile="true" FileMode="W">
+			<ITEM Name="API_DynamicDP_Cluster_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="DynamicDP Enable" />
+			<ITEM Name="API_DynamicDP_Cluster_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_DynamicDP_Cluster_AUTO_EDGE_MODE" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.EdgeMode" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_AUTO_NEI_DELTA_TH" Type="U16" M="1" N="16" Min="0" Max="4095" Text="Auto.NeiDeltaTh" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_AUTO_NEI_SMOOTH" Type="U8" M="1" N="16" Min="0" Max="8" Text="Auto.NeiSmooth" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_AUTO_SORT_EN" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.SortEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_AUTO_SORT_RGGB_EN" Type="U32" M="4" N="16" Min="0" Max="1" Text="Auto.SortRGGBEn" GuiType="DataGrid" Param="R,Gr,Gb,B:(0~15/1)" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_AUTO_SORT_1x3_MODE_EN" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.Sort1x3ModeEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_AUTO_SORT_LUMTBL_L" Type="U16" M="6" N="16" Min="0" Max="4095" Text="Auto.SortLumTblL" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_AUTO_SORT_LUMTBL_D" Type="U16" M="6" N="16" Min="0" Max="4095" Text="Auto.SortLumTblD" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_AUTO_SORT_LUMTBL_S" Type="U16" M="6" N="16" Min="0" Max="4095" Text="Auto.SortLumTblS" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_MANUAL_EDGE_MODE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.EdgeMode" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_MANUAL_NEI_DELTA_TH" Type="U16" M="1" N="1" Min="0" Max="4095" Text="Manual.NeiDeltaTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_MANUAL_NEI_SMOOTH" Type="U8" M="1" N="1" Min="0" Max="8" Text="Manual.NeiSmooth" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_MANUAL_SORT_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.SortEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_MANUAL_SORT_RGGB_EN" Type="U32" M="4" N="1" Min="0" Max="1" Text="Manual.SortRGGBEn" GuiType="DataGrid" Param="R,Gr,Gb,B:(0~15/1)" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_MANUAL_SORT_1x3_MODE_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.Sort1x3ModeEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_MANUAL_SORT_LUMTBL_L" Type="U16" M="6" N="1" Min="0" Max="4095" Text="Manual.SortLumTblL" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_MANUAL_SORT_LUMTBL_D" Type="U16" M="6" N="1" Min="0" Max="4095" Text="Manual.SortLumTblD" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DynamicDP_Cluster_MANUAL_SORT_LUMTBL_S" Type="U16" M="6" N="1" Min="0" Max="4095" Text="Manual.SortLumTblS" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="Crosstalk" Id="4115" ParamId="0" Action="RW" AutoMode="2~6" InFile="true" FileMode="W">
+			<ITEM Name="API_Crosstalk_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Crosstalk Enable" />
+			<ITEM Name="API_Crosstalk_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Crosstalk_AUTO_Strength" Type="U8" M="1" N="16" Min="0" Max="31" Text="Auto.Strength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Crosstalk_AUTO_StrengthByY" Type="U8" M="15" N="16" Min="0" Max="127" Text="Auto.StrengthByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Crosstalk_AUTO_Threshold" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.Threshold" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Crosstalk_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Crosstalk_AUTO_Offset" Type="U16" M="1" N="16" Min="0" Max="4095" Text="Auto.Offset" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Crosstalk_MANUAL_Strength" Type="U8" M="1" N="1" Min="0" Max="31" Text="Manual.Strength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Crosstalk_MANUAL_StrengthByY" Type="U8" M="15" N="1" Min="0" Max="127" Text="Manual.StrengthByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Crosstalk_MANUAL_Threshold" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.Threshold" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Crosstalk_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Crosstalk_MANUAL_Offset" Type="U16" M="1" N="1" Min="0" Max="4095" Text="Manual.Offset" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AntiFalseColor" Id="4109" ParamId="0" Action="RW" AutoMode="2~6" InFile="true" FileMode="W">
+			<ITEM Name="API_AntiFalseColor_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="AntiFalseColor Enable" />
+			<ITEM Name="API_AntiFalseColor_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_AntiFalseColor_AUTO_DbgEn" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.DbgEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AntiFalseColor_AUTO_ColorSpaceSel" Type="U8" M="1" N="16" Min="0" Max="1" Text="Auto.ColorSpaceSel" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AntiFalseColor_AUTO_Preserve" Type="U8" M="1" N="16" Min="0" Max="7" Text="Auto.Preserve" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AntiFalseColor_AUTO_Strength" Type="U8" M="1" N="16" Min="0" Max="31" Text="Auto.Strength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AntiFalseColor_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_AntiFalseColor_MANUAL_DbgEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.DbgEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_AntiFalseColor_MANUAL_ColorSpaceSel" Type="U8" M="1" N="1" Min="0" Max="1" Text="Manual.ColorSpaceSel" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AntiFalseColor_MANUAL_Preserve" Type="U8" M="1" N="1" Min="0" Max="7" Text="Manual.Preserve" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AntiFalseColor_MANUAL_Strength" Type="U8" M="1" N="1" Min="0" Max="31" Text="Manual.Strength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AntiFalseColor_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="DeMosaic" Id="4124" ParamId="0" Action="RW" AutoMode="2~15" InFile="true" FileMode="W">
+			<ITEM Name="API_DM_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="DeMosaic Enable" />
+			<ITEM Name="API_DM_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_DM_AUTO_DbgMode" Type="U8" M="1" N="16" Min="0" Max="2" Text="Auto.DbgMode" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_IsoTh" Type="U8" M="1" N="16" Min="0" Max="127" Text="Auto.IsoTh" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_GradientTh" Type="U8" M="1" N="16" Min="32" Max="63" Text="Auto.GradientTh" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_SmoEn" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.SmoEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_SmoRange" Type="U8" M="1" N="16" Min="0" Max="7" Text="Auto.SmoRange" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_SmoStrength" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.SmoStrength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_PAD2" Type="U8" M="2" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_DtlEn" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.DtlEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_DtlBypassColorCheck" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.DtlBypassColorCheck" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_DtlColorRatio" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.DtlColorRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_DtlColorOft" Type="U8" M="1" N="16" Min="0" Max="63" Text="Auto.DtlColorOft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_DtlHScale" Type="U8" M="1" N="16" Min="0" Max="15" Text="Auto.DtlHScale" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_AUTO_DtlMScale" Type="U8" M="1" N="16" Min="0" Max="15" Text="Auto.DtlMScale" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_DbgMode" Type="U8" M="1" N="1" Min="0" Max="2" Text="Manual.DbgMode" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_IsoTh" Type="U8" M="1" N="1" Min="0" Max="127" Text="Manual.IsoTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_GradientTh" Type="U8" M="1" N="1" Min="32" Max="63" Text="Manual.GradientTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_SmoEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.SmoEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_SmoRange" Type="U8" M="1" N="1" Min="0" Max="7" Text="Manual.SmoRange" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_SmoStrength" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.SmoStrength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_PAD2" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_DtlEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.DtlEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_DtlBypassColorCheck" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.DtlBypassColorCheck" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_DtlColorRatio" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.DtlColorRatio" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_DtlColorOft" Type="U8" M="1" N="1" Min="0" Max="63" Text="Manual.DtlColorOft" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_DtlHScale" Type="U8" M="1" N="1" Min="0" Max="15" Text="Manual.DtlHScale" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DM_MANUAL_DtlMScale" Type="U8" M="1" N="1" Min="0" Max="15" Text="Manual.DtlMScale" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="OBC" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="BlackLevel" Id="4116" ParamId="0" Action="RW" AutoMode="2~5" InFile="true" FileMode="W">
+			<ITEM Name="API_BlackLevel_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="BlackLevel Enable" />
+			<ITEM Name="API_BlackLevel_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_BlackLevel_AUTO_VAL_R" Type="U16" M="1" N="16" Min="0" Max="65535" Text="Auto.Value.R" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_AUTO_VAL_GR" Type="U16" M="1" N="16" Min="0" Max="65535" Text="Auto.Value.GR" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_AUTO_VAL_GB" Type="U16" M="1" N="16" Min="0" Max="65535" Text="Auto.Value.GB" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_AUTO_VAL_B" Type="U16" M="1" N="16" Min="0" Max="65535" Text="Auto.Value.B" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_MANUAL_VAL_R" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Manual.Value.R" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_MANUAL_VAL_GR" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Manual.Value.GR" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_MANUAL_VAL_GB" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Manual.Value.GB" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_MANUAL_VAL_B" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Manual.Value.B" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="BlackLevel_P1" Id="4117" ParamId="0" Action="RW" AutoMode="2~5" InFile="true" FileMode="W">
+			<ITEM Name="API_BlackLevel_P1_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="BlackLevel Enable" />
+			<ITEM Name="API_BlackLevel_P1_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_BlackLevel_P1_AUTO_VAL_R" Type="U16" M="1" N="16" Min="0" Max="65535" Text="Auto.Value.R" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_P1_AUTO_VAL_GR" Type="U16" M="1" N="16" Min="0" Max="65535" Text="Auto.Value.GR" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_P1_AUTO_VAL_GB" Type="U16" M="1" N="16" Min="0" Max="65535" Text="Auto.Value.GB" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_P1_AUTO_VAL_B" Type="U16" M="1" N="16" Min="0" Max="65535" Text="Auto.Value.B" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_P1_MANUAL_VAL_R" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Manual.Value.R" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_P1_MANUAL_VAL_GR" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Manual.Value.GR" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_P1_MANUAL_VAL_GB" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Manual.Value.GB" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_BlackLevel_P1_MANUAL_VAL_B" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Manual.Value.B" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="BayerDenoise" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="NRDeSpike" Id="4111" ParamId="0" Action="RW" AutoMode="2~12" InFile="true" FileMode="W">
+			<ITEM Name="API_NRDeSpike_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="NRDeSpike Enable" />
+			<ITEM Name="API_NRDeSpike_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_NRDeSpike_AUTO_BLEND_RATIO" Type="U8" M="1" N="16" Min="0" Max="15" Text="Auto.BlendRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_AUTO_STRENGTH_CENTER_NEIGHBOR" Type="U8" M="1" N="16" Min="0" Max="5" Text="Auto.Strength.CenterNeighbor" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_AUTO_STRENGTH_MEAN_STD" Type="U8" M="1" N="16" Min="0" Max="5" Text="Auto.Strength.MeanStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_AUTO_STRENGTH_CORNER_CROSS" Type="U8" M="1" N="16" Min="0" Max="5" Text="Auto.Strength.CornerCross" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_AUTO_DIFF_GAIN_MEAN_STD" Type="U8" M="1" N="16" Min="0" Max="31" Text="Auto.DiffGain.MeanStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_AUTO_DIFF_GAIN_CENTER_NEIGHBOR" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.DiffGain.CenterNeighbor" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_AUTO_DIFF_THD_CORNER_CROSS" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.DiffThd.CornerCross" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_AUTO_BlendLut" Type="U16" M="5" N="16" Min="0" Max="2047" Text="Auto.BlendLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_AUTO_StrengthByY" Type="U8" M="15" N="16" Min="0" Max="64" Text="Auto.StrengthByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_BLEND_RATIO" Type="U8" M="1" N="1" Min="0" Max="15" Text="Manual.BlendRatio" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_STRENGTH_CENTER_NEIGHBOR" Type="U8" M="1" N="1" Min="0" Max="5" Text="Manual.Strength.CenterNeighbor" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_STRENGTH_MEAN_STD" Type="U8" M="1" N="1" Min="0" Max="5" Text="Manual.Strength.MeanStd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_STRENGTH_CORNER_CROSS" Type="U8" M="1" N="1" Min="0" Max="5" Text="Manual.Strength.CornerCross" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_DIFF_GAIN_MEAN_STD" Type="U8" M="1" N="1" Min="0" Max="31" Text="Manual.DiffGain.MeanStd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_GAIN_CENTER_NEIGHBOR" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.DiffGain.CenterNeighbor" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_THD_CORNER_CROSS" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.DiffThd.CornerCross" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_BlendLut" Type="U16" M="5" N="1" Min="0" Max="2047" Text="Manual.BlendLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_StrengthByY" Type="U8" M="15" N="1" Min="0" Max="64" Text="Manual.StrengthByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRDeSpike_MANUAL_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Denoise_YNR" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="NRLuma_Adv" Id="4141" ParamId="0" Action="RW" AutoMode="2~28" InFile="true" FileMode="W">
+			<ITEM Name="API_NRLuma_Adv_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="NRLuma_Adv Enable" />
+			<ITEM Name="API_NRLuma_Adv_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_HotPixCnt" Type="U8" M="1" N="16" Min="0" Max="7" Text="Auto.HotPixCnt" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_DarkPixCnt" Type="U8" M="1" N="16" Min="0" Max="7" Text="Auto.DarkPixCnt" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_HotPix" Type="U8" M="4" N="16" Min="0" Max="255" Text="Auto.HotPix" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_DarkPix" Type="U8" M="4" N="16" Min="0" Max="255" Text="Auto.DarkPix" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_DbgMode" Type="U8" M="1" N="16" Min="0" Max="2" Text="Auto.DbgMode" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_EdgeThByLuma" Type="U16" M="8" N="16" Min="0" Max="8191" Text="Auto.EdgeThByLuma" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_LumaSft" Type="U8" M="7" N="16" Min="0" Max="8" Text="Auto.LumaSft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_EdgeThByMot" Type="U8" M="16" N="16" Min="0" Max="255" Text="Auto.EdgeThByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_EdgeThByMot1" Type="U8" M="16" N="16" Min="0" Max="255" Text="Auto.EdgeThByMot1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF1_Str" Type="U8" M="1" N="16" Min="0" Max="127" Text="Auto.SF1_Str" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF2_Str" Type="U8" M="1" N="16" Min="0" Max="127" Text="Auto.SF2_Str" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF3_KerStr" Type="U8" M="1" N="16" Min="0" Max="9" Text="Auto.SF3_KerStr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF3_KerWei" Type="U8" M="16" N="16" Min="0" Max="63" Text="Auto.SF3_KerWei" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF3_StrByLuma" Type="U8" M="8" N="16" Min="0" Max="127" Text="Auto.SF3_StrByLuma" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF3_StrByMot" Type="U8" M="16" N="16" Min="0" Max="127" Text="Auto.SF3_StrByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF3_StrByHue" Type="U8" M="24" N="16" Min="0" Max="127" Text="Auto.SF3_StrByHue" GuiType="DataHSV" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF3_StrByHue_SatTh1" Type="U8" M="1" N="16" Min="0" Max="127" Text="Auto.SF3_StrByHue_SatTh1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF3_StrByHue_SatTh2" Type="U8" M="1" N="16" Min="0" Max="127" Text="Auto.SF3_StrByHue_SatTh2" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF3_StrByRadius_Sft" Type="U8" M="5" N="16" Min="0" Max="7" Text="Auto.SF3_StrByRadius_Sft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF3_StrByRadius" Type="U8" M="6" N="16" Min="0" Max="127" Text="Auto.SF3_StrByRadius" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF4_KerStr" Type="U8" M="1" N="16" Min="0" Max="9" Text="Auto.SF4_KerStr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF4_KerWei" Type="U8" M="16" N="16" Min="0" Max="63" Text="Auto.SF4_KerWei" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_SF4_StrByMot" Type="U8" M="16" N="16" Min="0" Max="6" Text="Auto.SF4_StrByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_Strength" Type="U16" M="2" N="16" Min="0" Max="256" Text="Auto.Strength" GuiType="DataGrid" Param="Strength1,Strength2:(0~15/1)" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_StrengthByMot" Type="U8" M="16" N="16" Min="0" Max="64" Text="Auto.StrengthByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_AUTO_StrengthByLuma" Type="U8" M="8" N="16" Min="0" Max="64" Text="Auto.StrengthByLuma" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_HotPixCnt" Type="U8" M="1" N="1" Min="0" Max="7" Text="Manual.HotPixCnt" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_DarkPixCnt" Type="U8" M="1" N="1" Min="0" Max="7" Text="Manual.DarkPixCnt" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_HotPix" Type="U8" M="4" N="1" Min="0" Max="255" Text="Manual.HotPix" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_DarkPix" Type="U8" M="4" N="1" Min="0" Max="255" Text="Manual.DarkPix" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_DbgMode" Type="U8" M="1" N="1" Min="0" Max="2" Text="Manual.DbgMode" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_EdgeThByLuma" Type="U16" M="8" N="1" Min="0" Max="8191" Text="Manual.EdgeThByLuma" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_LumaSft" Type="U8" M="7" N="1" Min="0" Max="8" Text="Manual.LumaSft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_EdgeThByMot" Type="U8" M="16" N="1" Min="0" Max="255" Text="Manual.EdgeThByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_EdgeThByMot1" Type="U8" M="16" N="1" Min="0" Max="255" Text="Manual.EdgeThByMot1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF1_Str" Type="U8" M="1" N="1" Min="0" Max="127" Text="Manual.SF1_Str" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF2_Str" Type="U8" M="1" N="1" Min="0" Max="127" Text="Manual.SF2_Str" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF3_KerStr" Type="U8" M="1" N="1" Min="0" Max="9" Text="Manual.SF3_KerStr" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF3_KerWei" Type="U8" M="16" N="1" Min="0" Max="63" Text="Manual.SF3_KerWei" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF3_StrByLuma" Type="U8" M="8" N="1" Min="0" Max="127" Text="Manual.SF3_StrByLuma" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF3_StrByMot" Type="U8" M="16" N="1" Min="0" Max="127" Text="Manual.SF3_StrByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF3_StrByHue" Type="U8" M="24" N="1" Min="0" Max="127" Text="Manual.SF3_StrByHue" GuiType="DataHSV" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF3_StrByHue_SatTh1" Type="U8" M="1" N="1" Min="0" Max="127" Text="Manual.SF3_StrByHue_SatTh1" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF3_StrByHue_SatTh2" Type="U8" M="1" N="1" Min="0" Max="127" Text="Manual.SF3_StrByHue_SatTh2" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF3_StrByRadius_Sft" Type="U8" M="5" N="1" Min="0" Max="7" Text="Manual.SF3_StrByRadius_Sft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF3_StrByRadius" Type="U8" M="6" N="1" Min="0" Max="127" Text="Manual.SF3_StrByRadius" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF4_KerStr" Type="U8" M="1" N="1" Min="0" Max="9" Text="Manual.SF4_KerStr" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF4_KerWei" Type="U8" M="16" N="1" Min="0" Max="63" Text="Manual.SF4_KerWei" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_SF4_StrByMot" Type="U8" M="16" N="1" Min="0" Max="6" Text="Manual.SF4_StrByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_Strength" Type="U16" M="2" N="1" Min="0" Max="256" Text="Manual.Strength" GuiType="DataGrid" Param="Strength1,Strength2:(0~15/1)" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_StrengthByMot" Type="U8" M="16" N="1" Min="0" Max="64" Text="Manual.StrengthByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRLuma_Adv_MANUAL_StrengthByLuma" Type="U8" M="8" N="1" Min="0" Max="64" Text="Manual.StrengthByLuma" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Denoise_CNR" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="NRChroma_Adv" Id="4142" ParamId="0" Action="RW" AutoMode="2~10" InFile="true" FileMode="W">
+			<ITEM Name="API_NRChroma_Adv_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="NRChroma_Adv Enable" />
+			<ITEM Name="API_NRChroma_Adv_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_NRChroma_Adv_AUTO_StrengthByY" Type="U8" M="8" N="16" Min="0" Max="255" Text="Auto.StrengthByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_AUTO_StrengthByYEdge" Type="U8" M="8" N="16" Min="0" Max="63" Text="Auto.StrengthByYEdge" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_AUTO_StrengthByCEdge" Type="U8" M="8" N="16" Min="0" Max="255" Text="Auto.StrengthByCEdge" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_AUTO_MaxStrength" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.MaxStrength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_AUTO_StrengthByMot" Type="U8" M="16" N="16" Min="0" Max="63" Text="Auto.StrengthByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_AUTO_MotionClip" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.MotionClip" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_AUTO_MotionColorReduce" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.MotionColorReduce" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_AUTO_MotionColorRecover" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.MotionColorRecover" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_AUTO_PreStrength" Type="U8" M="1" N="16" Min="0" Max="128" Text="Auto.PreStrength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_MANUAL_StrengthByY" Type="U8" M="8" N="1" Min="0" Max="255" Text="Manual.StrengthByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_MANUAL_StrengthByYEdge" Type="U8" M="8" N="1" Min="0" Max="63" Text="Manual.StrengthByYEdge" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_MANUAL_StrengthByCEdge" Type="U8" M="8" N="1" Min="0" Max="255" Text="Manual.StrengthByCEdge" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_MANUAL_MaxStrength" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.MaxStrength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_MANUAL_StrengthByMot" Type="U8" M="16" N="1" Min="0" Max="63" Text="Manual.StrengthByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_MANUAL_MotionClip" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.MotionClip" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_MANUAL_MotionColorReduce" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.MotionColorReduce" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_MANUAL_MotionColorRecover" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.MotionColorRecover" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_MANUAL_PreStrength" Type="U8" M="1" N="1" Min="0" Max="128" Text="Manual.PreStrength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Adv_MANUAL_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="NRChroma_Pre" Id="4151" ParamId="0" Action="RW" AutoMode="2~10" InFile="true" FileMode="W">
+			<ITEM Name="API_NRChroma_Pre_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="NRChroma_Adv Enable" />
+			<ITEM Name="API_NRChroma_Pre_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_NRChroma_Pre_AUTO_DbgEn" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.DbgEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_AUTO_Strength" Type="U16" M="1" N="16" Min="0" Max="256" Text="Auto.Strength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_AUTO_MotionEnhance" Type="U8" M="2" N="16" Min="0" Max="127" Text="Auto.MotionEnhance" GuiType="DataGrid" Param="Y,C:(0~15/1)" Info="" />
+			<ITEM Name="API_NRChroma_Pre_AUTO_MaskGenTh" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.MaskGenTh" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_AUTO_MeanFilterTh" Type="U16" M="2" N="16" Min="0" Max="1023" Text="Auto.MeanFilterTh" GuiType="DataGrid" Param="Y,C:(0~15/1)" Info="" />
+			<ITEM Name="API_NRChroma_Pre_AUTO_MedianFilterTh" Type="U16" M="2" N="16" Min="0" Max="1023" Text="Auto.MedianFilterTh" GuiType="DataGrid" Param="Y,C:(0~15/1)" Info="" />
+			<ITEM Name="API_NRChroma_Pre_AUTO_BlendTh" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.BlendTh" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_AUTO_BlendGap" Type="U8" M="1" N="16" Min="0" Max="15" Text="Auto.BlendGap" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_AUTO_PAD1" Type="U8" M="3" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_MANUAL_DbgEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.DbgEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_MANUAL_Strength" Type="U16" M="1" N="1" Min="0" Max="256" Text="Manual.Strength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_MANUAL_MotionEnhance" Type="U8" M="2" N="1" Min="0" Max="127" Text="Manual.MotionEnhance" GuiType="DataGrid" Param="Y,C:(0~15/1)" Info="" />
+			<ITEM Name="API_NRChroma_Pre_MANUAL_MaskGenTh" Type="U16" M="1" N="1" Min="0" Max="1023" Text="Manual.MaskGenTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_MANUAL_MeanFilterTh" Type="U16" M="2" N="1" Min="0" Max="1023" Text="Manual.MeanFilterTh" GuiType="DataGrid" Param="Y,C:(0~15/1)" Info="" />
+			<ITEM Name="API_NRChroma_Pre_MANUAL_MedianFilterTh" Type="U16" M="2" N="1" Min="0" Max="1023" Text="Manual.MedianFilterTh" GuiType="DataGrid" Param="Y,C:(0~15/1)" Info="" />
+			<ITEM Name="API_NRChroma_Pre_MANUAL_BlendTh" Type="U16" M="1" N="1" Min="0" Max="1023" Text="Manual.BlendTh" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_MANUAL_BlendGap" Type="U8" M="1" N="1" Min="0" Max="15" Text="Manual.BlendGap" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NRChroma_Pre_MANUAL_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Denoise_3DNR" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="NR3D" Id="4110" ParamId="0" Action="RW" AutoMode="2~13" InFile="true" FileMode="W">
+			<ITEM Name="API_NR3D_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="NR3D Enable" />
+			<ITEM Name="API_NR3D_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_NR3D_AUTO_TfStrY" Type="U8" M="1" N="16" Min="0" Max="127" Text="Auto.TF.StrY" GuiType="DataGrid" Param="" Info="64 is x1 gain" />
+			<ITEM Name="API_NR3D_AUTO_TfStrC" Type="U8" M="1" N="16" Min="0" Max="127" Text="Auto.TF.StrC" GuiType="DataGrid" Param="" Info="16 is x1 gain" />
+			<ITEM Name="API_NR3D_AUTO_MdThd" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.MD.Thd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_NR3D_AUTO_MdGain" Type="U16" M="1" N="16" Min="0" Max="10230" Text="Auto.MD.Gain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_AUTO_MotEdgeRefineStr" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.MotEdgeRefineStr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_AUTO_MdThdByY" Type="U8" M="12" N="16" Min="0" Max="255" Text="Auto.MD.ThdByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_AUTO_MdGainByY" Type="U8" M="12" N="16" Min="0" Max="255" Text="Auto.MD.GainByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_AUTO_M2SLut" Type="U8" M="16" N="16" Min="0" Max="255" Text="Auto.M2S.Lut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_AUTO_MotHistDelayByDiff" Type="U8" M="16" N="16" Min="0" Max="7" Text="Auto.MotHistDelayByDiff" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_AUTO_TfLut" Type="U16" M="16" N="16" Min="0" Max="4095" Text="Auto.TF.Lut" GuiType="DataGrid" Param="" Info="" />	
+			<ITEM Name="API_NR3D_AUTO_MotShpBlendLut" Type="U8" M="16" N="16" Min="0" Max="64" Text="Auto.MotShpBlendLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_MANUAL_TfStrY" Type="U8" M="1" N="1" Min="0" Max="127" Text="Manual.TF.StrY" GuiType="NumScroll" Param="" Info="64 is x1 gain" />
+			<ITEM Name="API_NR3D_MANUAL_TfStrC" Type="U8" M="1" N="1" Min="0" Max="127" Text="Manual.TF.StrC" GuiType="NumScroll" Param="" Info="16 is x1 gain" />
+			<ITEM Name="API_NR3D_MANUAL_MdThd" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.MD.Thd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NR3D_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_NR3D_MANUAL_MdGain" Type="U16" M="1" N="1" Min="0" Max="10230" Text="Manual.MD.Gain" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NR3D_MANUAL_MotEdgeRefineStr" Type="U16" M="1" N="1" Min="0" Max="1023" Text="Manual.MotEdgeRefineStr" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_NR3D_MANUAL_MdThdByY" Type="U8" M="12" N="1" Min="0" Max="255" Text="Manual.MD.ThdByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_MANUAL_MdGainByY" Type="U8" M="12" N="1" Min="0" Max="255" Text="Manual.MD.GainByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_MANUAL_M2SLut" Type="U8" M="16" N="1" Min="0" Max="255" Text="Manual.M2S.Lut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_MANUAL_MotHistDelayByDiff" Type="U8" M="16" N="1" Min="0" Max="7" Text="Manual.MotHistDelayByDiff" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_MANUAL_TfLut" Type="U16" M="16" N="1" Min="0" Max="4095" Text="Manual.TF.Lut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_MANUAL_MotShpBlendLut" Type="U8" M="16" N="1" Min="0" Max="64" Text="Manual.MotShpBlendLut" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="NR3D_EX" Id="4146" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_NR3D_EX_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="NR3D Enable" />
+			<ITEM Name="API_NR3D_EX_DbgEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="DbgEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_NR3D_EX_AREn" Type="U32" M="1" N="1" Min="0" Max="1" Text="AREn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_NR3D_EX_ARLumaTh" Type="U8" M="2" N="1" Min="0" Max="255" Text="ARLumaTh" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_NR3D_EX_ARMotTh" Type="U8" M="2" N="1" Min="0" Max="255" Text="ARMotTh" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="ColorCorrection" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="CCM" Id="4108" ParamId="0" Action="RW" AutoMode="3~6" InFile="true" FileMode="W">
+			<ITEM Name="API_CCM_RGBMATRIX_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="RGBMatrix Enable" />
+			<ITEM Name="API_CCM_RGBMATRIX_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_CCM_RGBMATRIX_ISO_ACT_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Auto.ISOActEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_CCM_RGBMATRIX_AUTO_CCT_THR" Type="U16" M="1" N="16" Min="0" Max="10000" Text="Auto.CCTthr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_CCM_RGBMATRIX_AUTO_CCM" Type="U16" M="12" N="16" Min="0" Max="8191" Text="Auto.CCM" GuiType="DataGrid" Param="CCM00,CCM01,CCM02,SUM0,CCM10,CCM11,CCM12,SUM1,CCM20,CCM21,CCM22,SUM2:ByCCT(0~15/1)" Info="" />
+			<ITEM Name="API_CCM_RGBMATRIX_AUTO_CCM_SAT" Type="U8" M="1" N="16" Min="0" Max="100" Text="Auto.SATURATIONbyISO" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_CCM_RGBMATRIX_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_CCM_RGBMATRIX_MANUAL_CCM" Type="U16" M="4" N="3" Min="0" Max="8191" Text="Manual.CCM" GuiType="DataGrid" Param="CCM0,CCM1,CCM2,SUM:CCM(0~2/1)" Info="" />
+			<ITEM Name="API_CCM_RGBMATRIX_MANUAL_CCM_SAT" Type="U8" M="1" N="1" Min="0" Max="100" Text="Manual.SATURATIONbyISO" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_CCM_RGBMATRIX_MANUAL_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="CCMInfo" Id="4140" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_CCMInfo_Coef00" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_00" GuiType="TextBox_Num" Param="" Info="CCM Coefficient of current scene" />
+			<ITEM Name="API_CCMInfo_Coef01" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_01" GuiType="TextBox_Num" Param="" Info="CCM Coefficient of current scene" />
+			<ITEM Name="API_CCMInfo_Coef02" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_02" GuiType="TextBox_Num" Param="" Info="CCM Coefficient of current scene" />
+			<ITEM Name="API_CCMInfo_Coef_R_Sum" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_R_SUM" GuiType="TextBox_Num" Param="" Info="CCM Sum of current scene" />
+			<ITEM Name="API_CCMInfo_Coef10" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_10" GuiType="TextBox_Num" Param="" Info="CCM Coefficient of current scene" />
+			<ITEM Name="API_CCMInfo_Coef11" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_11" GuiType="TextBox_Num" Param="" Info="CCM Coefficient of current scene" />
+			<ITEM Name="API_CCMInfo_Coef12" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_12" GuiType="TextBox_Num" Param="" Info="CCM Coefficient of current scene" />
+			<ITEM Name="API_CCMInfo_Coef_G_Sum" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_G_SUM" GuiType="TextBox_Num" Param="" Info="CCM Sum of current scene" />
+			<ITEM Name="API_CCMInfo_Coef20" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_20" GuiType="TextBox_Num" Param="" Info="CCM Coefficient of current scene" />
+			<ITEM Name="API_CCMInfo_Coef21" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_21" GuiType="TextBox_Num" Param="" Info="CCM Coefficient of current scene" />
+			<ITEM Name="API_CCMInfo_Coef22" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_22" GuiType="TextBox_Num" Param="" Info="CCM Coefficient of current scene" />
+			<ITEM Name="API_CCMInfo_Coef_B_Sum" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CCM_B_SUM" GuiType="TextBox_Num" Param="" Info="CCM Sum of current scene" />
+			<ITEM Name="API_CCMInfo_CT" Type="U16" M="1" N="1" Min="0" Max="20000" Text="CT" GuiType="TextBox_Num" Param="" Info="CCM CT of current scene" />
+			<ITEM Name="API_CCMInfo_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="HSV" Id="4120" ParamId="0" Action="RW" AutoMode="2~27" InFile="true" FileMode="W">
+			<ITEM Name="API_HSV_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="HSV Enable" />
+			<ITEM Name="API_HSV_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_HSV_AUTO_HueByHueLUT" Type="S16" M="36" N="16" Min="-127" Max="127" Text="Auto.HuebyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_HueBySatLUT" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.HuebySatLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_HueByYLUT" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.HuebyYLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_SatByHueLUT" Type="U16" M="36" N="16" Min="0" Max="255" Text="Auto.SatbyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_SatBySatLUT" Type="S16" M="9" N="16" Min="-511" Max="511" Text="Auto.SatbySatLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_SatByYLUT" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.SatbyYLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_SatBySYLUT" Type="S16" M="9" N="16" Min="-511" Max="511" Text="Auto.SatbySYLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_YByHueLUT" Type="S16" M="36" N="16" Min="-511" Max="511" Text="Auto.YbyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_YBySatLUT" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.YbySatLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_YByYLUT" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.YbyYLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_HueByHueLUT_ByIso" Type="S16" M="36" N="16" Min="-127" Max="127" Text="Auto.HuebyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_HueBySatLUT_ByIso" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.HuebySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_HueByYLUT_ByIso" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.HuebyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_SatByHueLUT_ByIso" Type="U16" M="36" N="16" Min="0" Max="255" Text="Auto.SatbyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_SatBySatLUT_ByIso" Type="S16" M="9" N="16" Min="-511" Max="511" Text="Auto.SatbySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_SatByYLUT_ByIso" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.SatbyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_SatBySYLUT_ByIso" Type="S16" M="9" N="16" Min="-511" Max="511" Text="Auto.SatbySYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_YByHueLUT_ByIso" Type="S16" M="36" N="16" Min="-511" Max="511" Text="Auto.YbyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_YBySatLUT_ByIso" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.YbySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_YByYLUT_ByIso" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.YbyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_VibranceEN" Type="U32" M="1" N="16" Min="0" Max="255" Text="Auto.VibranceEN" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_GrayProtectStrength" Type="U8" M="1" N="16" Min="0" Max="63" Text="Auto.GP.Strength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_GrayProtectTH" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.GP.TH" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_DebugMode" Type="U8" M="1" N="16" Min="0" Max="4" Text="Auto.DebugMode" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_PAD2" Type="U8" M="3" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_HueByHueLUT" Type="S16" M="36" N="1" Min="-127" Max="127" Text="Manual.HuebyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_HueBySatLUT" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.HuebySatLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_HueByYLUT" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.HuebyYLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_SatByHueLUT" Type="U16" M="36" N="1" Min="0" Max="255" Text="Manual.SatbyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_SatBySatLUT" Type="S16" M="9" N="1" Min="-511" Max="511" Text="Manual.SatbySatLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_SatByYLUT" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.SatbyYLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_SatBySYLUT" Type="S16" M="9" N="1" Min="-511" Max="511" Text="Manual.SatbySYLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_YByHueLUT" Type="S16" M="36" N="1" Min="-511" Max="511" Text="Manual.YbyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_YBySatLUT" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.YbySatLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_YByYLUT" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.YbyYLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_HueByHueLUT_ByIso" Type="S16" M="36" N="1" Min="-127" Max="127" Text="Manual.HuebyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_HueBySatLUT_ByIso" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.HuebySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_HueByYLUT_ByIso" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.HuebyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_SatByHueLUT_ByIso" Type="U16" M="36" N="1" Min="0" Max="255" Text="Manual.SatbyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_SatBySatLUT_ByIso" Type="S16" M="9" N="1" Min="-511" Max="511" Text="Manual.SatbySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_SatByYLUT_ByIso" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.SatbyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_SatBySYLUT_ByIso" Type="S16" M="9" N="1" Min="-511" Max="511" Text="Manual.SatbySYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_YByHueLUT_ByIso" Type="S16" M="36" N="1" Min="-511" Max="511" Text="Manual.YbyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_YBySatLUT_ByIso" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.YbySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_YByYLUT_ByIso" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.YbyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_VibranceEN" Type="U32" M="1" N="1" Min="0" Max="255" Text="Manual.VibranceEN" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_GrayProtectStrength" Type="U8" M="1" N="1" Min="0" Max="63" Text="Manual.GP.Strength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_GrayProtectTH" Type="U16" M="1" N="1" Min="0" Max="1023" Text="Manual.GP.TH" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_DebugMode" Type="U8" M="1" N="1" Min="0" Max="4" Text="Manual.DebugMode" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_PAD2" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Gamma" Type="RGBGAMMA" GroupIndex="-1" Action="RW" AutoWrite="false">
+		<GROUP Name="Gamma" Id="4104" ParamId="0" Action="RW" AutoMode="2~4" InFile="true" FileMode="W">
+			<ITEM Name="API_Gamma_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Gamma Enable" />
+			<ITEM Name="API_Gamma_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Gamma_AUTO_R" Type="U16" M="256" N="16" Min="0" Max="1023" Text="Auto.Gamma R" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Gamma_AUTO_G" Type="U16" M="256" N="16" Min="0" Max="1023" Text="Auto.Gamma G" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Gamma_AUTO_B" Type="U16" M="256" N="16" Min="0" Max="1023" Text="Auto.Gamma B" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Gamma_MANUAL_R" Type="U16" M="256" N="1" Min="0" Max="1023" Text="Manual.Gamma R" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Gamma_MANUAL_G" Type="U16" M="256" N="1" Min="0" Max="1023" Text="Manual.Gamma G" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Gamma_MANUAL_B" Type="U16" M="256" N="1" Min="0" Max="1023" Text="Manual.Gamma B" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="GammaStyle" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="Brightness" Id="4102" ParamId="0" Action="RW" AutoMode="2~2" InFile="true" FileMode="W">
+			<ITEM Name="API_Brightness_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Brightness Enable" />
+			<ITEM Name="API_Brightness_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Brightness_AUTO_LEVEL" Type="U32" M="1" N="16" Min="0" Max="100" Text="Auto.Level" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Brightness_MANUAL_LEVEL" Type="U32" M="1" N="1" Min="0" Max="100" Text="Manual.Level" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="Lightness" Id="4103" ParamId="0" Action="RW" AutoMode="2~2" InFile="true" FileMode="W">
+			<ITEM Name="API_Lightness_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Lightness Enable" />
+			<ITEM Name="API_Lightness_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Lightness_AUTO_LEVEL" Type="U32" M="1" N="16" Min="0" Max="100" Text="Auto.Level" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Lightness_MANUAL_LEVEL" Type="U32" M="1" N="1" Min="0" Max="100" Text="Manual.Level" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="Contrast" Id="4101" ParamId="0" Action="RW" AutoMode="2~2" InFile="true" FileMode="W">
+			<ITEM Name="API_Contrast_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Contrast Enable" />
+			<ITEM Name="API_Contrast_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Contrast_AUTO_LEVEL" Type="U32" M="1" N="16" Min="0" Max="100" Text="Auto.Level" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Contrast_MANUAL_LEVEL" Type="U32" M="1" N="1" Min="0" Max="100" Text="Manual.Level" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="ColorToGray" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="ColorToGray" Id="4100" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_ColorToGray_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="ColorToGray Enable" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Sharpness" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="Sharpness" Id="4114" ParamId="0" Action="RW" AutoMode="2~40" InFile="true" FileMode="W">
+			<ITEM Name="API_Sharpness_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Sharpness Enable" />
+			<ITEM Name="API_Sharpness_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Sharpness_AUTO_UDPreGain" Type="U8" M="3" N="16" Min="0" Max="127" Text="Auto.UDPreGain" GuiType="DataGrid" Param="H,M,ML:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DPreGain" Type="U8" M="3" N="16" Min="0" Max="127" Text="Auto.DPreGain" GuiType="DataGrid" Param="H,M,ML:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_UDPreCor" Type="U8" M="3" N="16" Min="0" Max="63" Text="Auto.UDPreCor" GuiType="DataGrid" Param="H,M,ML:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DPreCor" Type="U8" M="3" N="16" Min="0" Max="63" Text="Auto.DPreCor" GuiType="DataGrid" Param="H,M,ML:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_FilterSel" Type="U8" M="1" N="16" Min="0" Max="1" Text="Auto.FilterSel" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_StateByGain" Type="U8" M="2" N="16" Min="0" Max="31" Text="Auto.StateByGain" GuiType="DataGrid" Param="Filter0,Filter1:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_StateByOffset" Type="U8" M="2" N="16" Min="0" Max="255" Text="Auto.StateByOffset" GuiType="DataGrid" Param="Filter0,Filter1:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_StdvByY" Type="U8" M="9" N="16" Min="0" Max="255" Text="Auto.StdvByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_StdvByMot" Type="U8" M="16" N="16" Min="0" Max="63" Text="Auto.StdvByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_UDWeiByState" Type="U16" M="4" N="16" Min="0" Max="256" Text="Auto.UDWeiByState" GuiType="DataGrid" Param="Static[0],Static[1],Motion[0],Motion[1]:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DWeiByState" Type="U16" M="4" N="16" Min="0" Max="256" Text="Auto.DWeiByState" GuiType="DataGrid" Param="Static[0],Static[1],Motion[0],Motion[1]:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_UDWeiByMot" Type="U16" M="16" N="16" Min="0" Max="256" Text="Auto.UDWeiByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DWeiByMot" Type="U16" M="16" N="16" Min="0" Max="256" Text="Auto.DWeiByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_UDGainByStd" Type="U8" M="7" N="16" Min="0" Max="255" Text="Auto.UDGainByStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DGainByStd" Type="U8" M="7" N="16" Min="0" Max="255" Text="Auto.DGainByStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_UDEdgeKillLutUp" Type="U16" M="7" N="16" Min="0" Max="1023" Text="Auto.UDEdgeKillLutUp" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_UDEdgeKillLutDown" Type="U16" M="7" N="16" Min="0" Max="1023" Text="Auto.UDEdgeKillLutDown" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DEdgeKillLutUp" Type="U16" M="7" N="16" Min="0" Max="1023" Text="Auto.DEdgeKillLutUp" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DEdgeKillLutDown" Type="U16" M="7" N="16" Min="0" Max="1023" Text="Auto.DEdgeKillLutDown" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DRatioByState" Type="U16" M="9" N="16" Min="0" Max="256" Text="Auto.DRatioByState" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_EdgeGain" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.EdgeGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_GainByStd" Type="U8" M="7" N="16" Min="0" Max="255" Text="Auto.GainByStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_GainByStdSft" Type="U8" M="6" N="16" Min="0" Max="15" Text="Auto.GainByStdSft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_CorByY" Type="U8" M="9" N="16" Min="0" Max="255" Text="Auto.CorByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_SclByY" Type="U8" M="9" N="16" Min="0" Max="255" Text="Auto.SclByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_GainByMot" Type="U8" M="16" N="16" Min="0" Max="255" Text="Auto.GainByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DerRmNRCnt" Type="U8" M="2" N="16" Min="0" Max="6" Text="Auto.DerRmNRCnt" GuiType="DataGrid" Param="Min,Max:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DerOverShootGain" Type="U8" M="7" N="16" Min="0" Max="255" Text="Auto.DerOverShootGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DerUnderShootGain" Type="U8" M="7" N="16" Min="0" Max="255" Text="Auto.DerUnderShootGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DerGainByMot" Type="U8" M="16" N="16" Min="0" Max="255" Text="Auto.DerGainByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DerOverShootLimitByY" Type="U16" M="9" N="16" Min="0" Max="1023" Text="Auto.DerOverShootLimitByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DerUnderShootLimitByY" Type="U16" M="9" N="16" Min="0" Max="1023" Text="Auto.DerUnderShootLimitByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_StrengthByHue" Type="U8" M="24" N="16" Min="0" Max="255" Text="Auto.StrengthByHue" GuiType="DataHSV" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_StrengthBySat" Type="U8" M="2" N="16" Min="0" Max="127" Text="Auto.StrengthBySat" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_BranchStrength" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.BranchStrength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_BranchGainByStd" Type="U8" M="7" N="16" Min="0" Max="255" Text="Auto.BranchGainByStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_PAD2" Type="U8" M="2" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Sharpness_AUTO_DbgEn" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.DbgEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_UDPreGain" Type="U8" M="3" N="1" Min="0" Max="127" Text="Manual.UDPreGain" GuiType="DataGrid" Param="H,M,ML:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DPreGain" Type="U8" M="3" N="1" Min="0" Max="127" Text="Manual.DPreGain" GuiType="DataGrid" Param="H,M,ML:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_UDPreCor" Type="U8" M="3" N="1" Min="0" Max="63" Text="Manual.UDPreCor" GuiType="DataGrid" Param="H,M,ML:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DPreCor" Type="U8" M="3" N="1" Min="0" Max="63" Text="Manual.DPreCor" GuiType="DataGrid" Param="H,M,ML:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_FilterSel" Type="U8" M="1" N="1" Min="0" Max="1" Text="Manual.FilterSel" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_StateByGain" Type="U8" M="2" N="1" Min="0" Max="31" Text="Manual.StateByGain" GuiType="DataGrid" Param="Filter0,Filter1:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_StateByOffset" Type="U8" M="2" N="1" Min="0" Max="255" Text="Manual.StateByOffset" GuiType="DataGrid" Param="Filter0,Filter1:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_StdvByY" Type="U8" M="9" N="1" Min="0" Max="255" Text="Manual.StdvByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_StdvByMot" Type="U8" M="16" N="1" Min="0" Max="63" Text="Manual.StdvByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_UDWeiByState" Type="U16" M="4" N="1" Min="0" Max="256" Text="Manual.UDWeiByState" GuiType="DataGrid" Param="Static[0],Static[1],Motion[0],Motion[1]:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DWeiByState" Type="U16" M="4" N="1" Min="0" Max="256" Text="Manual.DWeiByState" GuiType="DataGrid" Param="Static[0],Static[1],Motion[0],Motion[1]:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_UDWeiByMot" Type="U16" M="16" N="1" Min="0" Max="256" Text="Manual.UDWeiByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DWeiByMot" Type="U16" M="16" N="1" Min="0" Max="256" Text="Manual.DWeiByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_UDGainByStd" Type="U8" M="7" N="1" Min="0" Max="255" Text="Manual.UDGainByStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DGainByStd" Type="U8" M="7" N="1" Min="0" Max="255" Text="Manual.DGainByStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_UDEdgeKillLutUp" Type="U16" M="7" N="1" Min="0" Max="1023" Text="Manual.UDEdgeKillLutUp" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_UDEdgeKillLutDown" Type="U16" M="7" N="1" Min="0" Max="1023" Text="Manual.UDEdgeKillLutDown" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DEdgeKillLutUp" Type="U16" M="7" N="1" Min="0" Max="1023" Text="Manual.DEdgeKillLutUp" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DEdgeKillLutDown" Type="U16" M="7" N="1" Min="0" Max="1023" Text="Manual.DEdgeKillLutDown" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DRatioByState" Type="U16" M="9" N="1" Min="0" Max="256" Text="Manual.DRatioByState" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_EdgeGain" Type="U16" M="1" N="1" Min="0" Max="1023" Text="Manual.EdgeGain" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_GainByStd" Type="U8" M="7" N="1" Min="0" Max="255" Text="Manual.GainByStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_GainByStdSft" Type="U8" M="6" N="1" Min="0" Max="15" Text="Manual.GainByStdSft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_CorByY" Type="U8" M="9" N="1" Min="0" Max="255" Text="Manual.CorByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_SclByY" Type="U8" M="9" N="1" Min="0" Max="255" Text="Manual.SclByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_GainByMot" Type="U8" M="16" N="1" Min="0" Max="255" Text="Manual.GainByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DerRmNRCnt" Type="U8" M="2" N="1" Min="0" Max="6" Text="Manual.DerRmNRCnt" GuiType="DataGrid" Param="Min,Max:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DerOverShootGain" Type="U8" M="7" N="1" Min="0" Max="255" Text="Manual.DerOverShootGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DerUnderShootGain" Type="U8" M="7" N="1" Min="0" Max="255" Text="Manual.DerUnderShootGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DerGainByMot" Type="U8" M="16" N="1" Min="0" Max="255" Text="Manual.DerGainByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DerOverShootLimitByY" Type="U16" M="9" N="1" Min="0" Max="1023" Text="Manual.DerOverShootLimitByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DerUnderShootLimitByY" Type="U16" M="9" N="1" Min="0" Max="1023" Text="Manual.DerUnderShootLimitByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_StrengthByHue" Type="U8" M="24" N="1" Min="0" Max="255" Text="Manual.StrengthByHue" GuiType="DataHSV" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_StrengthBySat" Type="U8" M="2" N="1" Min="0" Max="127" Text="Manual.StrengthBySat" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_BranchStrength" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.BranchStrength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_BranchGainByStd" Type="U8" M="7" N="1" Min="0" Max="255" Text="Manual.BranchGainByStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_PAD2" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Sharpness_MANUAL_DbgEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.DbgEn" GuiType="CheckBox" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="Sharpness_EX" Id="4145" ParamId="0" Action="RW" AutoMode="2~26" InFile="true" FileMode="W">
+			<ITEM Name="API_Sharpness_EX_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Sharpness_EX Enable" />
+			<ITEM Name="API_Sharpness_EX_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Sharpness_EX_AUTO_PreGain" Type="U8" M="2" N="16" Min="0" Max="127" Text="Auto.PreGain" GuiType="DataGrid" Param="H,M:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_PreCor" Type="U8" M="2" N="16" Min="0" Max="63" Text="Auto.PreCor" GuiType="DataGrid" Param="H,M:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_StateByGain" Type="U8" M="1" N="16" Min="0" Max="31" Text="Auto.StateByGain" GuiType="DataGrid" Param="Filter:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_StateByOffset" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.StateByOffset" GuiType="DataGrid" Param="Filter:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_StdvByY" Type="U8" M="9" N="16" Min="0" Max="255" Text="Auto.StdvByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_StdvByMot" Type="U8" M="16" N="16" Min="0" Max="63" Text="Auto.StdvByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_WeiByState" Type="U16" M="4" N="16" Min="0" Max="128" Text="Auto.WeiByState" GuiType="DataGrid" Param="Static[0],Static[1],Motion[0],Motion[1]:(0~15/1)" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_WeiByMot" Type="U16" M="16" N="16" Min="0" Max="256" Text="Auto.WeiByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_EdgeGain" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.EdgeGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_GainByStd" Type="U8" M="7" N="16" Min="0" Max="255" Text="Auto.GainByStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_GainByStdSft" Type="U8" M="6" N="16" Min="0" Max="15" Text="Auto.GainByStdSft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_CorByY" Type="U8" M="9" N="16" Min="0" Max="255" Text="Auto.CorByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_SclByY" Type="U8" M="9" N="16" Min="0" Max="255" Text="Auto.SclByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_GainByMot" Type="U8" M="16" N="16" Min="0" Max="255" Text="Auto.GainByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_DerOverShootGain" Type="U8" M="7" N="16" Min="0" Max="255" Text="Auto.DerOverShootGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_DerUnderShootGain" Type="U8" M="7" N="16" Min="0" Max="255" Text="Auto.DerUnderShootGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_DerGainByMot" Type="U8" M="16" N="16" Min="0" Max="255" Text="Auto.DerGainByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_PAD2" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_DerOverShootLimitByY" Type="U16" M="9" N="16" Min="0" Max="1023" Text="Auto.DerOverShootLimitByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_DerUnderShootLimitByY" Type="U16" M="9" N="16" Min="0" Max="1023" Text="Auto.DerUnderShootLimitByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_StrengthByHue" Type="U8" M="24" N="16" Min="0" Max="255" Text="Auto.StrengthByHue" GuiType="DataHSV" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_StrengthBySat" Type="U8" M="2" N="16" Min="0" Max="127" Text="Auto.StrengthBySat" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_PAD3" Type="U8" M="2" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_AUTO_DbgEn" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.DbgEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_PreGain" Type="U8" M="2" N="1" Min="0" Max="127" Text="Manual.PreGain" GuiType="DataGrid" Param="H,M:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_PreCor" Type="U8" M="2" N="1" Min="0" Max="63" Text="Manual.PreCor" GuiType="DataGrid" Param="H,M:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_StateByGain" Type="U8" M="1" N="1" Min="0" Max="31" Text="Manual.StateByGain" GuiType="NumScroll" Param="Filter:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_StateByOffset" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.StateByOffset" GuiType="NumScroll" Param="Filter:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_StdvByY" Type="U8" M="9" N="1" Min="0" Max="255" Text="Manual.StdvByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_StdvByMot" Type="U8" M="16" N="1" Min="0" Max="63" Text="Manual.StdvByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_WeiByState" Type="U16" M="4" N="1" Min="0" Max="128" Text="Manual.WeiByState" GuiType="DataGrid" Param="Static[0],Static[1],Motion[0],Motion[1]:(0~0/1)" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_WeiByMot" Type="U16" M="16" N="1" Min="0" Max="256" Text="Manual.WeiByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_EdgeGain" Type="U16" M="1" N="1" Min="0" Max="1023" Text="Manual.EdgeGain" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_GainByStd" Type="U8" M="7" N="1" Min="0" Max="255" Text="Manual.GainByStd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_GainByStdSft" Type="U8" M="6" N="1" Min="0" Max="15" Text="Manual.GainByStdSft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_CorByY" Type="U8" M="9" N="1" Min="0" Max="255" Text="Manual.CorByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_SclByY" Type="U8" M="9" N="1" Min="0" Max="255" Text="Manual.SclByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_GainByMot" Type="U8" M="16" N="1" Min="0" Max="255" Text="Manual.GainByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_DerOverShootGain" Type="U8" M="7" N="1" Min="0" Max="255" Text="Manual.DerOverShootGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_DerUnderShootGain" Type="U8" M="7" N="1" Min="0" Max="255" Text="Manual.DerUnderShootGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_DerGainByMot" Type="U8" M="16" N="1" Min="0" Max="255" Text="Manual.DerGainByMot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_PAD2" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_DerOverShootLimitByY" Type="U16" M="9" N="1" Min="0" Max="1023" Text="Manual.DerOverShootLimitByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_DerUnderShootLimitByY" Type="U16" M="9" N="1" Min="0" Max="1023" Text="Manual.DerUnderShootLimitByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_StrengthByHue" Type="U8" M="24" N="1" Min="0" Max="255" Text="Manual.StrengthByHue" GuiType="DataHSV" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_StrengthBySat" Type="U8" M="2" N="1" Min="0" Max="127" Text="Manual.StrengthBySat" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_PAD3" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_Sharpness_EX_MANUAL_DbgEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.DbgEn" GuiType="CheckBox" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Saturation" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="Saturation" Id="4106" ParamId="0" Action="RW" AutoMode="2~7" InFile="true" FileMode="W">
+			<ITEM Name="API_Saturation_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Saturation Enable" />
+			<ITEM Name="API_Saturation_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Saturation_AUTO_ALLSTR" Type="U8" M="1" N="16" Min="0" Max="127" Text="Auto.Sat.AllStr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Saturation_AUTO_BY_YSFTADV" Type="U8" M="5" N="16" Min="0" Max="8" Text="Auto.Sat.ByYsft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Saturation_AUTO_BY_YLUTADV" Type="U8" M="6" N="16" Min="0" Max="128" Text="Auto.Sat.ByYLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Saturation_AUTO_BY_SSFTADV" Type="U8" M="5" N="16" Min="0" Max="8" Text="Auto.Sat.BySsft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Saturation_AUTO_BY_SLUTADV" Type="U8" M="6" N="16" Min="0" Max="128" Text="Auto.Sat.BySLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Saturation_AUTO_SAT_CORING" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.Sat.Coring" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Saturation_MANUAL_ALLSTR" Type="U8" M="1" N="1" Min="0" Max="127" Text="Manual.Sat.AllStr" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Saturation_MANUAL_BY_YSFTADV" Type="U8" M="5" N="1" Min="0" Max="8" Text="Manual.Sat.ByYsft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Saturation_MANUAL_BY_YLUTADV" Type="U8" M="6" N="1" Min="0" Max="128" Text="Manual.Sat.ByYLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Saturation_MANUAL_BY_SSFTADV" Type="U8" M="5" N="1" Min="0" Max="8" Text="Manual.Sat.BySsft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Saturation_MANUAL_BY_SLUTADV" Type="U8" M="6" N="1" Min="0" Max="128" Text="Manual.Sat.BySLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Saturation_MANUAL_SAT_CORING" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.Sat.Coring" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="YUVGamma" Type="YUVGAMMA" GroupIndex="-1" Action="RW" AutoWrite="false">
+		<GROUP Name="YUVGamma" Id="4105" ParamId="0" Action="RW" AutoMode="2~4" InFile="true" FileMode="W">
+			<ITEM Name="API_YUVGamma_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="YUVGamma Enable" />
+			<ITEM Name="API_YUVGamma_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_YUVGamma_AUTO_Y" Type="U16" M="256" N="16" Min="0" Max="1023" Text="Auto.Gamma Y" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_YUVGamma_AUTO_U" Type="U16" M="128" N="16" Min="0" Max="511" Text="Auto.Gamma U" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_YUVGamma_AUTO_V" Type="U16" M="128" N="16" Min="0" Max="511" Text="Auto.Gamma V" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_YUVGamma_MANUAL_Y" Type="U16" M="256" N="1" Min="0" Max="1023" Text="Manual.Gamma Y" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_YUVGamma_MANUAL_U" Type="U16" M="128" N="1" Min="0" Max="511" Text="Manual.Gamma U" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_YUVGamma_MANUAL_V" Type="U16" M="128" N="1" Min="0" Max="511" Text="Manual.Gamma V" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="WDR" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="WDR" Id="4118" ParamId="0" Action="RW" AutoMode="2~12" InFile="true" FileMode="W">
+			<ITEM Name="API_WDR_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="WDR Enable" />
+			<ITEM Name="API_WDR_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_WDR_AUTO_GlobalDarkToneEnhance" Type="U8" M="1" N="16" Min="0" Max="15" Text="Auto.GlobalDarkToneEnhance" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_AUTO_WDRStrByY" Type="U8" M="33" N="16" Min="0" Max="255" Text="Auto.WDRStrByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_AUTO_Strength" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.Strength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_AUTO_DarkLimit" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.DarkLimit" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_AUTO_BrightLimit" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.BrightLimit" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_AUTO_DeSatSrcSel" Type="U8" M="1" N="16" Min="0" Max="2" Text="Auto.DeSatSrcSel" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_AUTO_PAD1" Type="U8" M="2" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WDR_AUTO_DeSatCrEn" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.DeSatCrEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_AUTO_DeSatCbLut" Type="U8" M="33" N="16" Min="0" Max="255" Text="Auto.DeSatCbLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_AUTO_DeSatCrLut" Type="U8" M="33" N="16" Min="0" Max="255" Text="Auto.DeSatCrLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_AUTO_PAD2" Type="U8" M="2" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_GlobalDarkToneEnhance" Type="U8" M="1" N="1" Min="0" Max="15" Text="Manual.GlobalDarkToneEnhance" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_WDRStrByY" Type="U8" M="33" N="1" Min="0" Max="255" Text="Manual.WDRStrByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_Strength" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.Strength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_DarkLimit" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.DarkLimit" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_BrightLimit" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.BrightLimit" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_DeSatSrcSel" Type="U8" M="1" N="1" Min="0" Max="2" Text="Manual.DeSatSrcSel" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_PAD1" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_DeSatCrEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.DeSatCrEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_DeSatCbLut" Type="U8" M="33" N="1" Min="0" Max="255" Text="Manual.DeSatCbLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_DeSatCrLut" Type="U8" M="33" N="1" Min="0" Max="255" Text="Manual.DeSatCrLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_MANUAL_PAD2" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="WDR_LTM" Id="4161" ParamId="0" Action="RW" AutoMode="2~9" InFile="true" FileMode="W">
+			<ITEM Name="API_WDR_LTM_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="WDR_LTM Enable" />
+			<ITEM Name="API_WDR_LTM_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_WDR_LTM_AUTO_LocalStrength" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.LocalStrength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_AUTO_LevelStrength" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.LevelStrength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_AUTO_CoarseBoxNum" Type="U8" M="1" N="16" Min="1" Max="4" Text="Auto.Coarse.BoxNum" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_AUTO_CoarseFltCoef" Type="U8" M="1" N="16" Min="0" Max="4" Text="Auto.Coarse.FltCoef" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_AUTO_CoarseToneMapStr" Type="U8" M="1" N="16" Min="1" Max="255" Text="Auto.Coarse.ToneMapStr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_AUTO_FineBoxNum" Type="U8" M="1" N="16" Min="1" Max="5" Text="Auto.Fine.BoxNum" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_AUTO_FineFltCoef" Type="U8" M="1" N="16" Min="0" Max="4" Text="Auto.Fine.FltCoef" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_AUTO_FineToneMapStr" Type="U8" M="1" N="16" Min="1" Max="255" Text="Auto.Fine.ToneMapStr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_MANUAL_LocalStrength" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.LocalStrength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_MANUAL_LevelStrength" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.LevelStrength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_MANUAL_CoarseBoxNum" Type="U8" M="1" N="1" Min="1" Max="4" Text="Manual.Coarse.BoxNum" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_MANUAL_CoarseFltCoef" Type="U8" M="1" N="1" Min="0" Max="4" Text="Manual.Coarse.FltCoef" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_MANUAL_CoarseToneMapStr" Type="U8" M="1" N="1" Min="1" Max="255" Text="Manual.Coarse.ToneMapStr" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_MANUAL_FineBoxNum" Type="U8" M="1" N="1" Min="1" Max="5" Text="Manual.Fine.BoxNum" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_MANUAL_FineFltCoef" Type="U8" M="1" N="1" Min="0" Max="4" Text="Manual.Fine.FltCoef" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_LTM_MANUAL_FineToneMapStr" Type="U8" M="1" N="1" Min="1" Max="255" Text="Manual.Fine.ToneMapStr" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="WDR_NR" Id="4158" ParamId="0" Action="RW" AutoMode="2~19" InFile="true" FileMode="W">
+			<ITEM Name="API_WDR_NR_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="WDR_NR Enable" />
+			<ITEM Name="API_WDR_NR_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_WDR_NR_AUTO_Strength" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.Strength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_NrThdScl" Type="U16" M="1" N="16" Min="0" Max="65535" Text="Auto.NrThdScl" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_NrGainScl" Type="U16" M="1" N="16" Min="0" Max="65535" Text="Auto.NrGainScl" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_Nr_Sft" Type="U8" M="12" N="16" Min="1" Max="15" Text="Auto.Nr_Sft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_NrR_Thd" Type="U16" M="13" N="16" Min="0" Max="4095" Text="Auto.NrR_Thd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_NrR_Gain" Type="U16" M="13" N="16" Min="0" Max="4095" Text="Auto.NrR_Gain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_NrG_Thd" Type="U16" M="13" N="16" Min="0" Max="4095" Text="Auto.NrG_Thd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_NrG_Gain" Type="U16" M="13" N="16" Min="0" Max="4095" Text="Auto.NrG_Gain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_NrB_Thd" Type="U16" M="13" N="16" Min="0" Max="4095" Text="Auto.NrB_Thd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_NrB_Gain" Type="U16" M="13" N="16" Min="0" Max="4095" Text="Auto.NrB_Gain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_NrStr_Mot" Type="U8" M="16" N="16" Min="0" Max="255" Text="Auto.NrStr_Mot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_NrNos_Mot" Type="U8" M="16" N="16" Min="0" Max="255" Text="Auto.NrNos_Mot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_VND_Sft" Type="U8" M="8" N="16" Min="1" Max="11" Text="Auto.VND_Sft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_VND_Thd" Type="U16" M="9" N="16" Min="0" Max="4095" Text="Auto.VND_Thd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_VND_Gain" Type="U16" M="9" N="16" Min="0" Max="4095" Text="Auto.VND_Gain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_PAD2" Type="U8" M="2" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_AUTO_VND_ByPass" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.VND_ByPass" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_Strength" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.Strength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_NrThdScl" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Manual.NrThdScl" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_NrGainScl" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Manual.NrGainScl" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_Nr_Sft" Type="U8" M="12" N="1" Min="1" Max="15" Text="Manual.Nr_Sft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_NrR_Thd" Type="U16" M="13" N="1" Min="0" Max="4095" Text="Manual.NrR_Thd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_NrR_Gain" Type="U16" M="13" N="1" Min="0" Max="4095" Text="Manual.NrR_Gain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_NrG_Thd" Type="U16" M="13" N="1" Min="0" Max="4095" Text="Manual.NrG_Thd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_NrG_Gain" Type="U16" M="13" N="1" Min="0" Max="4095" Text="Manual.NrG_Gain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_NrB_Thd" Type="U16" M="13" N="1" Min="0" Max="4095" Text="Manual.NrB_Thd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_NrB_Gain" Type="U16" M="13" N="1" Min="0" Max="4095" Text="Manual.NrB_Gain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_NrStr_Mot" Type="U8" M="16" N="1" Min="0" Max="255" Text="Manual.NrStr_Mot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_NrNos_Mot" Type="U8" M="16" N="1" Min="0" Max="255" Text="Manual.NrNos_Mot" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_VND_Sft" Type="U8" M="8" N="1" Min="1" Max="11" Text="Manual.VND_Sft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_VND_Thd" Type="U16" M="9" N="1" Min="0" Max="4095" Text="Manual.VND_Thd" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_VND_Gain" Type="U16" M="9" N="1" Min="0" Max="4095" Text="Manual.VND_Gain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_PAD2" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WDR_NR_MANUAL_VND_ByPass" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.VND_ByPass" GuiType="CheckBox" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="Defog" Id="4107" ParamId="0" Action="RW" AutoMode="2~2" InFile="true" FileMode="W">
+			<ITEM Name="API_Defog_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Defog Enable" />
+			<ITEM Name="API_Defog_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Defog_AUTO_Strength" Type="U8" M="1" N="16" Min="0" Max="100" Text="Auto.Strength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Defog_MANUAL_Strength" Type="U8" M="1" N="1" Min="0" Max="100" Text="Manual.Strength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Defog_MANUAL_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="WDRCurve" Type="WDRCurveFull" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="WDRCurveFull" Id="4149" ParamId="0" Action="RW" AutoMode="6~10" InFile="true" FileMode="W">
+			<ITEM Name="API_WDRCurveFull_ENABLE_GlobalTone" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable_GlobalTone" GuiType="CheckBox" Param="" Info="WDRCurveFull Enable" />
+			<ITEM Name="API_WDRCurveFull_ENABLE_Gamma" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable_Gamma" GuiType="CheckBox" Param="" Info="WDRCurveFull Enable" />
+			<ITEM Name="API_WDRCurveFull_ENABLE_DeGamma" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable_DeGamma" GuiType="CheckBox" Param="" Info="WDRCurveFull Enable" />
+			<ITEM Name="API_WDRCurveFull_OP_TYPE_GlobalTone" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType_GlobalTone" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_WDRCurveFull_OP_TYPE_Gamma" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType_Gamma" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_WDRCurveFull_OP_TYPE_DeGamma" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType_DeGamma" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_WDRCurveFull_AUTO_GlobalToneSft" Type="U8" M="31" N="16" Min="3" Max="15" Text="Auto.GlobalToneSft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDRCurveFull_AUTO_PAD1" Type="U8" M="1" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WDRCurveFull_AUTO_GlobalToneLut" Type="U16" M="32" N="16" Min="0" Max="4095" Text="Auto.GlobalToneLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDRCurveFull_AUTO_GammaLut" Type="U16" M="33" N="16" Min="0" Max="4095" Text="Auto.GammaLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDRCurveFull_AUTO_DeGammaLut" Type="U16" M="33" N="16" Min="0" Max="65535" Text="Auto.DeGammaLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDRCurveFull_MANUAL_GlobalToneSft" Type="U8" M="31" N="1" Min="3" Max="15" Text="Manual.GlobalToneSft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDRCurveFull_MANUAL_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_WDRCurveFull_MANUAL_GlobalToneLut" Type="U16" M="32" N="1" Min="0" Max="4095" Text="Manual.GlobalToneLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDRCurveFull_MANUAL_GammaLut" Type="U16" M="33" N="1" Min="0" Max="4095" Text="Manual.GammaLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_WDRCurveFull_MANUAL_DeGammaLut" Type="U16" M="33" N="1" Min="0" Max="65535" Text="Manual.DeGammaLut" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="HDR" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="HDR" Id="4126" ParamId="0" Action="RW" AutoMode="2~19" InFile="true" FileMode="W">
+			<ITEM Name="API_HDR_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="HDR Enable" />
+			<ITEM Name="API_HDR_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_HDR_AUTO_YwtTh1" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.YwtTh1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_YwtTh2" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.YwtTh2" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_NoiseLevel" Type="U16" M="16" N="16" Min="0" Max="16383" Text="Auto.NoiseLevel" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_YSrcStr" Type="U8" M="2" N="16" Min="0" Max="255" Text="Auto.YSrcStr" GuiType="DataGrid" Param="Index0,Index1:(0~0/1)" Info="" />
+			<ITEM Name="API_HDR_AUTO_NrStr" Type="U8" M="1" N="16" Min="0" Max="63" Text="Auto.NrStr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_NrPreStr" Type="U8" M="1" N="16" Min="0" Max="63" Text="Auto.NrPreStr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_NrYTh1" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.NrYTh1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_NrYTh2" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.NrYTh2" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_NrYGain" Type="U8" M="7" N="16" Min="0" Max="255" Text="Auto.NrYGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_NrYSft" Type="U8" M="6" N="16" Min="0" Max="7" Text="Auto.NrYSft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_NrKernelStr" Type="U8" M="1" N="16" Min="0" Max="7" Text="Auto.NrKernelStr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_NrKernelStrWei" Type="U8" M="32" N="16" Min="0" Max="31" Text="Auto.NrKernelStrWei" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_MotAdjSft1" Type="U8" M="6" N="16" Min="0" Max="7" Text="Auto.MotAdjSft1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_MoLuBlendSft" Type="U8" M="6" N="16" Min="0" Max="7" Text="Auto.MoLuBlendX" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_MotAdj1" Type="U16" M="7" N="16" Min="0" Max="256" Text="Auto.MotAdj1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_MotAdj2" Type="U16" M="7" N="16" Min="0" Max="256" Text="Auto.MotAdj2" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_MotAdj3" Type="U16" M="7" N="16" Min="0" Max="256" Text="Auto.MotAdj3" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_AUTO_MoLuBlendY" Type="U16" M="7" N="16" Min="0" Max="256" Text="Auto.MoLuBlendY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_YwtTh1" Type="U16" M="1" N="1" Min="0" Max="1023" Text="Manual.YwtTh1" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_YwtTh2" Type="U16" M="1" N="1" Min="0" Max="1023" Text="Manual.YwtTh2" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_NoiseLevel" Type="U16" M="16" N="1" Min="0" Max="16383" Text="Manual.NoiseLevel" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_YSrcStr" Type="U8" M="2" N="1" Min="0" Max="255" Text="Manual.YSrcStr" GuiType="DataGrid" Param="Index0,Index1:(0~0/1)" Info="" />
+			<ITEM Name="API_HDR_MANUAL_NrStr" Type="U8" M="1" N="1" Min="0" Max="63" Text="Manual.NrStr" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_NrPreStr" Type="U8" M="1" N="1" Min="0" Max="63" Text="Manual.NrPreStr" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_NrYTh1" Type="U16" M="1" N="1" Min="0" Max="1023" Text="Manual.NrYTh1" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_NrYTh2" Type="U16" M="1" N="1" Min="0" Max="1023" Text="Manual.NrYTh2" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_NrYGain" Type="U8" M="7" N="1" Min="0" Max="255" Text="Manual.NrYGain" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_NrYSft" Type="U8" M="6" N="1" Min="0" Max="7" Text="Manual.NrYSft" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_NrKernelStr" Type="U8" M="1" N="1" Min="0" Max="7" Text="Manual.NrKernelStr" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_NrKernelStrWei" Type="U8" M="32" N="1" Min="0" Max="31" Text="Manual.NrKernelStrWei" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_MotAdjSft1" Type="U8" M="6" N="1" Min="0" Max="7" Text="Manual.MotAdjSft1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_MoLuBlendSft" Type="U8" M="6" N="1" Min="0" Max="7" Text="Manual.MoLuBlendX" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_MotAdj1" Type="U16" M="7" N="1" Min="0" Max="256" Text="Manual.MotAdj1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_MotAdj2" Type="U16" M="7" N="1" Min="0" Max="256" Text="Manual.MotAdj2" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_MotAdj3" Type="U16" M="7" N="1" Min="0" Max="256" Text="Manual.MotAdj3" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_MoLuBlendY" Type="U16" M="7" N="1" Min="0" Max="256" Text="Manual.MoLuBlendY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HDR_MANUAL_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="HDR_EX" Id="4144" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_HDR_EX_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="HDR Enable" />
+			<ITEM Name="API_HDR_EX_DbgEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="DbgEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_HDR_EX_DynRatioEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="DynRatioEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_HDR_EX_NrEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="NrEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_HDR_EX_SensorExpRatio" Type="U16" M="1" N="1" Min="1024" Max="65535" Text="SensorExpRatio" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_EX_DynRatioSrcSel" Type="U8" M="1" N="1" Min="0" Max="1" Text="DynRatioSrcSel" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_EX_YSrcSel" Type="U8" M="1" N="1" Min="0" Max="1" Text="YSrcSel" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_EX_NoiseLevelSrcSel" Type="U8" M="1" N="1" Min="0" Max="3" Text="NoiseLevelSrcSel" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_EX_MotMaxVal" Type="U8" M="1" N="1" Min="0" Max="7" Text="MotMaxVal" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_HDR_EX_MotAdjSft2" Type="U8" M="6" N="1" Min="0" Max="7" Text="MotAdjSft2" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Colortrans" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="Colortrans" Id="4125" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_Colortrans_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Colortrans Enable" />
+			<ITEM Name="API_Colortrans_MANUAL_Y_OFST" Type="U16" M="1" N="1" Min="0" Max="2047" Text="Manual.Colortrans.Y.Ofst" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Colortrans_MANUAL_U_OFST" Type="U16" M="1" N="1" Min="0" Max="2047" Text="Manual.Colortrans.U.Ofst" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Colortrans_MANUAL_V_OFST" Type="U16" M="1" N="1" Min="0" Max="2047" Text="Manual.Colortrans.V.Ofst" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Colortrans_MANUAL_Matrix" Type="U16" M="9" N="1" Min="0" Max="1023" Text="Manual.Colortrans.Matrix" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="ColortransEX" Id="4162" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_ColortransEX_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="ColortransEX Enable" />
+			<ITEM Name="API_ColortransEX_MANUAL_TYPE" Type="U8" M="1" N="1" Min="0" Max="5" Text="Type" GuiType="ComboBox" Param="BT601_limit,BT601_full,BT709_limit,BT709_full,BT2020_limit,BT2020_full" Info="" />
+			<ITEM Name="API_ColortransEX_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="RGBIR" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="RGBIR" Id="4121" ParamId="0" Action="RW" AutoMode="2~7" InFile="true" FileMode="W">
+			<ITEM Name="API_RGBIR_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="RGBIR Enable" />
+			<ITEM Name="API_RGBIR_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_RGBIR_AUTO_IRPOS_TYPE" Type="U8" M="1" N="16" Min="0" Max="7" Text="Auto.IrPosType" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_RGBIR_AUTO_PAD1" Type="U8" M="3" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_RGBIR_AUTO_REMOVEL_EN" Type="U32" M="1" N="16" Min="0" Max="1" Text="Auto.RemovelEn" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_RGBIR_AUTO_RATIO_R" Type="U16" M="6" N="16" Min="0" Max="4096" Text="Auto.Ratio_R" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_RGBIR_AUTO_RATIO_G" Type="U16" M="6" N="16" Min="0" Max="4096" Text="Auto.Ratio_G" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_RGBIR_AUTO_RATIO_B" Type="U16" M="6" N="16" Min="0" Max="4096" Text="Auto.Ratio_B" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_RGBIR_MANUAL_IRPOS_TYPE" Type="U8" M="1" N="1" Min="0" Max="7" Text="Manual.IrPosType" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_RGBIR_MANUAL_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_RGBIR_MANUAL_REMOVEL_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Manual.RemovelEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_RGBIR_MANUAL_RATIO_R" Type="U16" M="6" N="1" Min="0" Max="4096" Text="Manual.Ratio_R" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_RGBIR_MANUAL_RATIO_G" Type="U16" M="6" N="1" Min="0" Max="4096" Text="Manual.Ratio_G" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_RGBIR_MANUAL_RATIO_B" Type="U16" M="6" N="1" Min="0" Max="4096" Text="Manual.Ratio_B" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="PFC" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="PFC" Id="4123" ParamId="0" Action="RW" AutoMode="2~8" InFile="true" FileMode="W">
+			<ITEM Name="API_PFC_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="PFC Enable" />
+			<ITEM Name="API_PFC_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_PFC_AUTO_Strength" Type="U8" M="1" N="16" Min="0" Max="255" Text="Auto.Strength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_AUTO_UStrength" Type="U8" M="1" N="16" Min="0" Max="63" Text="Auto.UStrength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_AUTO_VStrength" Type="U8" M="1" N="16" Min="0" Max="63" Text="Auto.VStrength" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_AUTO_StrengthByY" Type="U8" M="8" N="16" Min="0" Max="255" Text="Auto.StrengthByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_AUTO_FlatProtect" Type="U8" M="1" N="16" Min="0" Max="127" Text="Auto.FlatProtect" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_AUTO_SatByY" Type="U8" M="2" N="16" Min="0" Max="25" Text="Auto.SatByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_AUTO_StrengthByContrast" Type="U8" M="8" N="16" Min="0" Max="127" Text="Auto.StrengthByContrast" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_MANUAL_Strength" Type="U8" M="1" N="1" Min="0" Max="255" Text="Manual.Strength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_PFC_MANUAL_UStrength" Type="U8" M="1" N="1" Min="0" Max="63" Text="Manual.UStrength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_PFC_MANUAL_VStrength" Type="U8" M="1" N="1" Min="0" Max="63" Text="Manual.VStrength" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_PFC_MANUAL_StrengthByY" Type="U8" M="8" N="1" Min="0" Max="255" Text="Manual.StrengthByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_MANUAL_FlatProtect" Type="U8" M="1" N="1" Min="0" Max="127" Text="Manual.FlatProtect" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_PFC_MANUAL_SatByY" Type="U8" M="2" N="1" Min="0" Max="25" Text="Manual.SatByY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_MANUAL_StrengthByContrast" Type="U8" M="8" N="1" Min="0" Max="127" Text="Manual.StrengthByContrast" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_MANUAL_PAD1" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="PFC_EX" Id="4143" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_PFC_EX_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="PFC Enable" />
+			<ITEM Name="API_PFC_EX_DbgEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="DbgEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_PFC_EX_SatMaskSel" Type="U8" M="1" N="1" Min="0" Max="1" Text="SatMaskSel" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_PFC_EX_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_PFC_EX_SatAmpEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="SatAmpEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_PFC_EX_StrengthByHue" Type="U8" M="13" N="1" Min="0" Max="255" Text="StrengthByHue" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_PFC_EX_PAD2" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Shading" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="ALSC" Id="4136" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_ALSC_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Shading Enable" />
+			<ITEM Name="API_ALSC_GridX" Type="U8" M="1" N="1" Min="0" Max="27" Text="GridX" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_ALSC_GridY" Type="U8" M="1" N="1" Min="0" Max="17" Text="GridY" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_ALSC_CCTThr" Type="U16" M="1" N="3" Min="0" Max="20000" Text="CCTThr" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_ALSC_DeltaMode" Type="U8" M="1" N="1" Min="0" Max="15" Text="DeltaMode" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_ALSC_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_ALSC_DeltaModeAdvEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="DeltaModeAdvEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_ALSC_DeltaLutX" Type="U8" M="26" N="1" Min="0" Max="16" Text="DeltaLutX" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_ALSC_DeltaLutY" Type="U8" M="26" N="1" Min="0" Max="16" Text="DeltaLutY" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_ALSC_R_GAIN_PAGELE" Type="U16" M="459" N="3" Min="0" Max="4095" Text="R Gain Table" GuiType="DataShading" Param="27x17" Info="" />
+			<ITEM Name="API_ALSC_G_GAIN_PAGELE" Type="U16" M="459" N="3" Min="0" Max="4095" Text="G Gain Table" GuiType="DataShading" Param="27x17" Info="" />
+			<ITEM Name="API_ALSC_B_GAIN_PAGELE" Type="U16" M="459" N="3" Min="0" Max="4095" Text="B Gain Table" GuiType="DataShading" Param="27x17" Info="" />
+			<ITEM Name="API_ALSC_PAD2" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+ 		<GROUP Name="ALSC_CTRL" Id="4138" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_ALSC_CTRL_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_ALSC_CTRL_R_RATIO_BY_CCT" Type="U8" M="1" N="3" Min="0" Max="128" Text="R Ratio By CCT" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_ALSC_CTRL_G_RATIO_BY_CCT" Type="U8" M="1" N="3" Min="0" Max="128" Text="G Ratio By CCT" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_ALSC_CTRL_B_RATIO_BY_CCT" Type="U8" M="1" N="3" Min="0" Max="128" Text="B Ratio By CCT" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_ALSC_CTRL_PAD1" Type="U8" M="1" N="3" Min="0" Max="100" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_ALSC_CTRL_POINTS_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="Points Num" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_ALSC_CTRL_PAD2" Type="U16" M="1" N="1" Min="0" Max="100" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_ALSC_CTRL_RATIO" Type="S32" M="16" N="1" Min="0" Max="128" Text="Ratio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_ALSC_CTRL_BV" Type="S32" M="16" N="1" Min="-281920" Max="245760" Text="BV" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="LSC" Id="4129" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_LSC_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_LSC_CENTER_X" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CenterX" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_LSC_CENTER_Y" Type="U16" M="1" N="1" Min="0" Max="4095" Text="CenterY" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_LSC_RATE_X" Type="U16" M="1" N="1" Min="0" Max="2047" Text="RateX" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_LSC_RATE_Y" Type="U16" M="1" N="1" Min="0" Max="2047" Text="RateY" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_LSC_SHIFT" Type="U8" M="1" N="1" Min="0" Max="31" Text="Shift" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_LSC_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_LSC_R_GAIN_Table" Type="U16" M="32" N="3" Min="0" Max="1023" Text="R Gain Table" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_LSC_G_GAIN_Table" Type="U16" M="32" N="3" Min="0" Max="1023" Text="G Gain Table" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_LSC_B_GAIN_Table" Type="U16" M="32" N="3" Min="0" Max="1023" Text="B Gain Table" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_LSC_PAD2" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="LSC_CTRL" Id="4137" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_LSC_CTRL_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_LSC_CTRL_R_RATIO_BY_CCT" Type="U8" M="1" N="3" Min="0" Max="128" Text="R Ratio By CCT" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_LSC_CTRL_G_RATIO_BY_CCT" Type="U8" M="1" N="3" Min="0" Max="128" Text="G Ratio By CCT" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_LSC_CTRL_B_RATIO_BY_CCT" Type="U8" M="1" N="3" Min="0" Max="128" Text="B Ratio By CCT" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_LSC_CTRL_PAD1" Type="U8" M="1" N="3" Min="0" Max="100" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_LSC_CTRL_POINTS_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="Points Num" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_LSC_CTRL_PAD2" Type="U16" M="1" N="1" Min="0" Max="100" Text="" GuiType="" Param="" Info="" />
+			<ITEM Name="API_LSC_CTRL_RATIO" Type="S32" M="16" N="1" Min="0" Max="128" Text="Ratio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_LSC_CTRL_BV" Type="S32" M="16" N="1" Min="-281920" Max="245760" Text="BV" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="DARK_SHADING" Id="4160" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="API_DARK_SHADING_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DARK_SHADING_Radius" Type="U16" M="1" N="1" Min="0" Max="65535" Text="Radius" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DARK_SHADING_SmoothBoundary" Type="U8" M="1" N="1" Min="0" Max="16" Text="SmoothBoundary" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DARK_SHADING_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Dummy" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="Dummy" Id="4147" ParamId="0" Action="RW" AutoMode="3~7" InFile="false" FileMode="W">
+			<ITEM Name="API_Dummy_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Dummy Enable" />
+			<ITEM Name="API_Dummy_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Dummy_LogEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="LogEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_Dummy_AUTO_Dummy0" Type="S16" M="256" N="16" Min="-1" Max="1023" Text="Auto.Dummy0" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_AUTO_Dummy1" Type="S16" M="256" N="16" Min="-1" Max="255" Text="Auto.Dummy1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_AUTO_Dummy2" Type="S16" M="256" N="16" Min="-1" Max="255" Text="Auto.Dummy2" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_AUTO_Dummy3" Type="S16" M="1" N="16" Min="-1" Max="255" Text="Auto.Dummy3" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_AUTO_Dummy4" Type="S16" M="1" N="16" Min="-1" Max="255" Text="Auto.Dummy4" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_MANUAL_Dummy0" Type="S16" M="256" N="1" Min="-1" Max="1023" Text="Manual.Dummy0" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_MANUAL_Dummy1" Type="S16" M="256" N="1" Min="-1" Max="255" Text="Manual.Dummy1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_MANUAL_Dummy2" Type="S16" M="256" N="1" Min="-1" Max="255" Text="Manual.Dummy2" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_MANUAL_Dummy3" Type="S16" M="1" N="1" Min="-1" Max="255" Text="Manual.Dummy3" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Dummy_MANUAL_Dummy4" Type="S16" M="1" N="1" Min="-1" Max="255" Text="Manual.Dummy4" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="Dummy_EX" Id="4148" ParamId="0" Action="RW" AutoMode="0" InFile="false" FileMode="W">
+			<ITEM Name="API_Dummy_EX_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Dummy_EX Enable" />
+			<ITEM Name="API_Dummy_EX_LogEn" Type="U32" M="1" N="1" Min="0" Max="1" Text="LogEn" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_Dummy_EX_MANUAL_Dummy0" Type="S16" M="256" N="1" Min="-1" Max="255" Text="Dummy0" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_EX_MANUAL_Dummy1" Type="S16" M="256" N="1" Min="-1" Max="255" Text="Dummy1" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_EX_MANUAL_Dummy2" Type="S16" M="256" N="1" Min="-1" Max="255" Text="Dummy2" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Dummy_EX_MANUAL_Dummy3" Type="S16" M="1" N="1" Min="-1" Max="255" Text="Dummy3" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Dummy_EX_MANUAL_Dummy4" Type="S16" M="1" N="1" Min="-1" Max="255" Text="Dummy4" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Temperature" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="Temperature" Id="4152" ParamId="0" Action="RW" AutoMode="3~11" InFile="false" FileMode="W">
+			<ITEM Name="API_Temperature_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Dummy Enable" />
+			<ITEM Name="API_Temperature_TemperatureLut" Type="U8" M="16" N="1" Min="0" Max="255" Text="TemperatureLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
+			<ITEM Name="API_Temperature_AUTO_ObcOffset" Type="S16" M="1" N="16" Min="-32768" Max="32767" Text="Auto.ObcOffset" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_AUTO_DynamicDPRatio" Type="U8" M="1" N="16" Min="0" Max="100" Text="Auto.DynamicDPRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_AUTO_CrosstalkRatio" Type="U8" M="1" N="16" Min="0" Max="100" Text="Auto.CrosstalkRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_AUTO_NRDeSpikeRatio" Type="U8" M="1" N="16" Min="0" Max="100" Text="Auto.NRDeSpikeRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_AUTO_NR3DRatio" Type="U8" M="2" N="16" Min="0" Max="100" Text="Auto.NR3DRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_AUTO_NRLumaAdvRatio" Type="U8" M="1" N="16" Min="0" Max="100" Text="Auto.NRLumaAdvRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_AUTO_SharpnessRatio" Type="U8" M="2" N="16" Min="0" Max="100" Text="Auto.SharpnessRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_AUTO_SaturationRatio" Type="U8" M="1" N="16" Min="0" Max="100" Text="Auto.SaturationRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_AUTO_ColorToneRatio" Type="U8" M="3" N="16" Min="0" Max="100" Text="Auto.ColorToneRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_MANUAL_ObcOffset" Type="S16" M="1" N="1" Min="-32768" Max="32767" Text="Manual.ObcOffset" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Temperature_MANUAL_DynamicDPRatio" Type="U8" M="1" N="1" Min="0" Max="100" Text="Manual.DynamicDPRatio" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Temperature_MANUAL_CrosstalkRatio" Type="U8" M="1" N="1" Min="0" Max="100" Text="Manual.CrosstalkRatio" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Temperature_MANUAL_NRDeSpikeRatio" Type="U8" M="1" N="1" Min="0" Max="100" Text="Manual.NRDeSpikeRatio" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Temperature_MANUAL_NR3DRatio" Type="U8" M="2" N="1" Min="0" Max="100" Text="Manual.NR3DRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_MANUAL_NRLumaAdvRatio" Type="U8" M="1" N="1" Min="0" Max="100" Text="Manual.NRLumaAdvRatio" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Temperature_MANUAL_SharpnessRatio" Type="U8" M="2" N="1" Min="0" Max="100" Text="Auto.SharpnessRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_MANUAL_SaturationRatio" Type="U8" M="1" N="1" Min="0" Max="100" Text="Manual.SaturationRatio" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_Temperature_MANUAL_ColorToneRatio" Type="U8" M="3" N="1" Min="0" Max="100" Text="Manual.ColorToneRatio" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_Temperature_PAD1" Type="U8" M="2" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="TemperatureInfo" Id="4153" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_TemperatureInfo_Temperature" Type="U8" M="1" N="1" Min="0" Max="255" Text="Temperature" GuiType="TextBox_Num" Param="" Info="" />
+			<ITEM Name="API_TemperatureInfo_PAD1" Type="U8" M="3" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="Day/Night Mode" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="IQMode" Id="4130" ParamId="0" Action="RW" AutoMode="0" InFile="false" FileMode="W">
+			<ITEM Name="API_IQMode" Type="U32" M="1" N="1" Min="0" Max="1" Text="Mode" GuiType="ComboBox" Param="Day,Night" Info="IQ Mode: (Day, Night)" />
+		</GROUP>
+		<GROUP Name="DayNightDetection" Id="4154" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_DNDetection_enable" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="" />
+			<ITEM Name="API_DNDetection_D2N_BvThd" Type="S32" M="1" N="1" Min="-1048576" Max="1048576" Text="D2N_BvThd" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_DNDetection_N2D_VsbLtScoreThd" Type="U32" M="1" N="1" Min="0" Max="2000" Text="N2D_VsbLtScoreThd" GuiType="NumScroll" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="DayNightInfo" Id="4155" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_DayNightInfo_D2N" Type="U32" M="1" N="1" Min="0" Max="1" Text="D2N" GuiType="TextBox_Num" Param="" Info="Day to Night" />
+			<ITEM Name="API_DayNightInfo_N2D" Type="U32" M="1" N="1" Min="0" Max="1" Text="N2D" GuiType="TextBox_Num" Param="" Info="Night to Day" />
+			<ITEM Name="API_DayNightInfo_N2D_VsbLtScore" Type="U32" M="1" N="1" Min="0" Max="10000" Text="N2D_VsbLtScore" GuiType="TextBox_Num" Param="" Info="Visible Light Score" />
+		</GROUP>
+	</PAGE>
+	<PAGE Name="APIVer" Type="API" GroupIndex="-1" Action="RW" AutoWrite="true">
+		<GROUP Name="APIVer" Id="4097" ParamId="0,1" Action="RW" AutoMode="0" InFile="true" FileMode="W">
+			<ITEM Name="Vendor" Type="U32" M="1" N="1" Min="0" Max="2147483646" Text="Vendor" GuiType="NumScroll" Param="" Info="Vendor" />
+			<ITEM Name="Major" Type="U32" M="1" N="1" Min="0" Max="4095" Text="Major" GuiType="TextBox_Num" Param="" Info="Major" />
+			<ITEM Name="Minor" Type="U32" M="1" N="1" Min="0" Max="4095" Text="Minor" GuiType="TextBox_Num" Param="" Info="Minor" />
+		</GROUP>
+		<GROUP Name="AEVer" Id="5219" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_AE_VERINFO_ReleaseDate" Type="U32" M="1" N="1" Min="0" Max="2147483646" Text="ReleaseDate" GuiType="TextBox_Num" Param="" Info="ReleaseDate" />
+			<ITEM Name="API_AE_VERINFO_ReportID" Type="U32" M="1" N="1" Min="0" Max="2147483646" Text="ReportID" GuiType="TextBox_Num" Param="" Info="ReportID" />
+			<ITEM Name="API_AE_VERINFO_Major" Type="U8" M="1" N="1" Min="0" Max="255" Text="Major" GuiType="TextBox_Num" Param="" Info="Major" />
+			<ITEM Name="API_AE_VERINFO_Minor" Type="U8" M="1" N="1" Min="0" Max="255" Text="Minor" GuiType="TextBox_Num" Param="" Info="Minor" />
+			<ITEM Name="API_AE_VERINFO_TestVer" Type="U8" M="1" N="1" Min="0" Max="255" Text="TestVer" GuiType="TextBox_Num" Param="" Info="TestVer" />
+			<ITEM Name="API_AE_VERINFO_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AWBVer" Id="6243" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_AWB_VERINFO_ReleaseDate" Type="U32" M="1" N="1" Min="0" Max="2147483646" Text="ReleaseDate" GuiType="TextBox_Num" Param="" Info="ReleaseDate" />
+			<ITEM Name="API_AWB_VERINFO_ReportID" Type="U32" M="1" N="1" Min="0" Max="2147483646" Text="ReportID" GuiType="TextBox_Num" Param="" Info="ReportID" />
+			<ITEM Name="API_AWB_VERINFO_Major" Type="U8" M="1" N="1" Min="0" Max="255" Text="Major" GuiType="TextBox_Num" Param="" Info="Major" />
+			<ITEM Name="API_AWB_VERINFO_Minor" Type="U8" M="1" N="1" Min="0" Max="255" Text="Minor" GuiType="TextBox_Num" Param="" Info="Minor" />
+			<ITEM Name="API_AWB_VERINFO_TestVer" Type="U8" M="1" N="1" Min="0" Max="255" Text="TestVer" GuiType="TextBox_Num" Param="" Info="TestVer" />
+			<ITEM Name="API_AWB_VERINFO_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AFVer" Id="7267" ParamId="0" Action="R" AutoMode="0" InFile="false" FileMode="NULL">
+			<ITEM Name="API_AF_VERINFO_ReleaseDate" Type="U32" M="1" N="1" Min="0" Max="2147483646" Text="ReleaseDate" GuiType="TextBox_Num" Param="" Info="ReleaseDate" />
+			<ITEM Name="API_AF_VERINFO_ReportID" Type="U32" M="1" N="1" Min="0" Max="2147483646" Text="ReportID" GuiType="TextBox_Num" Param="" Info="ReportID" />
+			<ITEM Name="API_AF_VERINFO_Major" Type="U8" M="1" N="1" Min="0" Max="255" Text="Major" GuiType="TextBox_Num" Param="" Info="Major" />
+			<ITEM Name="API_AF_VERINFO_Minor" Type="U8" M="1" N="1" Min="0" Max="255" Text="Minor" GuiType="TextBox_Num" Param="" Info="Minor" />
+			<ITEM Name="API_AF_VERINFO_TestVer" Type="U8" M="1" N="1" Min="0" Max="255" Text="TestVer" GuiType="TextBox_Num" Param="" Info="TestVer" />
+			<ITEM Name="API_AF_VERINFO_PAD1" Type="U8" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
+		</GROUP>
+	</PAGE>
+</ISP_ITEM>
