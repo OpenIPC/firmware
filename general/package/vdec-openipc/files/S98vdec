@@ -7,7 +7,7 @@
 if [ ! -z ${records} ]; then
     for i in $(seq 1000 9000)
     do
-        [ ! -f ${records}/video_${i}.${codec} ] && start=$i && break
+        [ ! -f ${records}/video_${i}.${codec} ] && break
     done
     extra=$(echo ${extra} -w ${records}/video_${i}.${codec})
 fi
