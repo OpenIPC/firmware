@@ -3,7 +3,7 @@
 # Set Reset switch GPIO
 GPIO=
 
-[ -z $GPIO ] && echo "GPIO not set. Exiting" && echo "[resetd] GPIO undefined in /usr/sbin/resetd" > /dev/kmsg && exit
+[ -z $GPIO ] && echo "GPIO pin for resetd is not set" && echo "[resetd] GPIO undefined in /usr/sbin/resetd" > /dev/kmsg && exit
 
 # Counter for button press until reset
 count=0
