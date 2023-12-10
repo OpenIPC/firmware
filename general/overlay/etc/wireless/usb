@@ -100,6 +100,13 @@ if [ "$1" = "rtl8188fu-ssc325de-imou-c22ep-s2" ]; then
 	exit 0
 fi
 
+# SSC3333 Meari Speed 6S
+if [ "$1" = "rtl8188fu-ssc333-meari-speed-6s" ]; then
+	set_gpio 14 1
+	modprobe 8188fu
+	exit 0
+fi
+
 # SSC333 Tapo C110
 if [ "$1" = "ssw101b-ssc333-tapo-c110" ]; then
 	set_gpio 16 1
