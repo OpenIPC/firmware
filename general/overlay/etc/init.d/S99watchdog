@@ -1,0 +1,42 @@
+#!/bin/sh
+
+DAEMON="watchdog"
+
+WATCHDOG_ENABLED=false
+WATCHDOG_TIMEOUT=60
+WATCHDOG_ARGS="-T $WATCHDOG_TIMEOUT /dev/watchdog"
+
+start()
+{
+	[ "$(cli -g .watchdog.enabled)" = "false" ] && [ "$WATCHDOG_ENABLED" = "true" ] || { echo "Watchdog: Majestic Watchdog is enabled or standalone watchdog disabled"; exit 0; }
+
+	printf "Starting ${NAME}: "
+	start-stop-daemon -S -q -x "/sbin/${DAEMON}" -- ${WATCHDOG_ARGS}
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+
+stop()
+{
+	printf "Stopping ${NAME}: "
+	if start-stop-daemon -K -q -s KILL -n "${DAEMON}"; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+}
+
+case "$1" in
+	start|stop)
+		"$1"
+		;;
+
+	restart|reload)
+		stop
+		start
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}" >&2
+		exit 1
+		;;
+esac
