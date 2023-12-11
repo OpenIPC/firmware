@@ -12,7 +12,9 @@ define LINUX_PATCHER_CONFIG_CFG80211
 endef
 endif
 
-ifeq ($(BOARD),ssc338q_fpv)
+BOARD_LIST = ssc338q_fpv ssc30kq_fpv
+
+ifneq ($(filter $(BOARD),$(BOARD_LIST)),)
 define LINUX_PATCHER_CONFIG_ATHEROS
 	$(call KCONFIG_ENABLE_OPT,CONFIG_FW_LOADER)
 	$(call KCONFIG_ENABLE_OPT,CONFIG_WLAN)
