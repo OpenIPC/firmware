@@ -3,11 +3,9 @@
 # OpenIPC.org | v.20231202
 #
 
-scr_version=1.0.23
+scr_version=1.0.24
 
 args=" $@"
-
-set -e
 
 LOCK_FILE=/tmp/sysupgrade.lock
 IPCINFO=/tmp/ipcinfo
@@ -105,7 +103,8 @@ free_resources() {
 	# "load_$vendor" -r >/dev/null 2>&1 || true
 	#
 	echo_c 37 "\nStop services, sync files, free up memory"
-	for proc in majestic crond klogd ntpd rngd syslogd; do
+	killall -SIGUSR2 majestic
+	for proc in crond klogd ntpd rngd syslogd; do
 		echo -n "Killing $proc "
 		while [ -n "$(pidof $proc)" ]; do
 			killall $proc >/dev/null 2>&1 || true
