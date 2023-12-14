@@ -3,7 +3,7 @@
 # OpenIPC.org | v.20231202
 #
 
-scr_version=1.0.24
+scr_version=1.0.25
 
 args=" $@"
 
@@ -103,7 +103,12 @@ free_resources() {
 	# "load_$vendor" -r >/dev/null 2>&1 || true
 	#
 	echo_c 37 "\nStop services, sync files, free up memory"
-	killall -SIGUSR2 majestic
+
+	echo -n "Killing majestic ... "
+	time=$(grep TIME_STAMP /etc/os-release | cut -d= -f2)
+	[ "$time" -gt "1702544400" ] && killall -SIGUSR2 majestic || killall majestic
+	echo "OK"
+
 	for proc in crond klogd ntpd rngd syslogd; do
 		echo -n "Killing $proc "
 		while [ -n "$(pidof $proc)" ]; do
