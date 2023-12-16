@@ -21,9 +21,15 @@ case "${CMD}" in
 	ipctool)
 		IPCTOOL=/tmp/ipctool
 		if [ ! -x $IPCTOOL ]; then
-			curl -s -L -o $IPCTOOL https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool$ARC
-			chmod +x $IPCTOOL
-			echo "The ipctool installed as remote GitHub plugin"
+			curl -s -L -f -o $IPCTOOL https://github.com/OpenIPC/ipctool/releases/download/latest/ipctool$ARC
+			response=$?
+			if [[ "$response" -ne 0 ]]; then
+				echo "Unable to download ipctool. cUrl error code is $response."
+				exit $response
+			else
+				chmod +x $IPCTOOL
+				echo "The ipctool installed as remote GitHub plugin"
+			fi
 		fi
 		$IPCTOOL $@
 		;;
