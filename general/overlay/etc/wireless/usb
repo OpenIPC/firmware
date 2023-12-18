@@ -162,6 +162,13 @@ if [ "$1" = "rtl8188fu-t21-smartwares" ]; then
 	exit 0
 fi
 
+# T31 Aoni EP01J05
+if [ "$1" = "rtl8188fu-t31-aoni-ep01j05" ]; then
+	set_gpio 43 1
+	modprobe 8188fu
+	exit 0
+fi
+
 # T31 CamHi
 if [ "$1" = "mt7601u-t31-camhi" ]; then
 	set_gpio 61 0
