@@ -2,11 +2,12 @@
 
 DAEMON="watchdog"
 
-WATCHDOG_VENDOR=$(ipcinfo -v)
 WATCHDOG_ENABLED=false
 WATCHDOG_TIMEOUT=60
-WATCHDOG_ARGS="-T $WATCHDOG_TIMEOUT /dev/watchdog"
+
 SUPPORTED_VENDORS="ingenic"
+WATCHDOG_ARGS="-T $WATCHDOG_TIMEOUT /dev/watchdog"
+WATCHDOG_VENDOR=$(ipcinfo -v)
 
 vendor_supported() {
 	for vendor in $SUPPORTED_VENDORS; do
@@ -22,7 +23,7 @@ start()
 		start-stop-daemon -S -q -x "/sbin/${DAEMON}" -- ${WATCHDOG_ARGS}
 		[ $? = 0 ] && echo "OK" || echo "FAIL"
 	else
-		echo "Watchdog: Unsupported vendor or Majestic Watchdog is enabled/standalone watchdog disabled"
+		echo "Watchdog: System watchdog disabled, unsupported vendor or Majestic Watchdog enabled"
 		exit 0
 	fi
 }
