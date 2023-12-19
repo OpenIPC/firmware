@@ -74,8 +74,10 @@ majestic_generic() {
 }
 
 majestic_sigmastar() {
-	cli -s .isp.exposure 30
-	cli -s .isp.aGain 10
+	cli -s .isp.exposure 20
+	cli -s .isp.aGain 40
+	cli -s .image.sharpen 20
+	cli -s .image.denoise 1
 	cli -s .video0.size 1920x1080
 	cli -s .video0.fps 60
 	cli -s .video0.rcMode cbr
