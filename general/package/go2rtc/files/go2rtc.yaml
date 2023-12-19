@@ -8,13 +8,13 @@ log:
   webrtc: fatal
 
 rtsp:
-    listen: ":8553"
+  listen: ":8553"
 
 webrtc:
   candidates:
     - stun:8555
 
 streams:
- openipc_jpeg: http://username:password@127.0.0.1/image.jpg
- openipc_rtsp-1: rtsp://username:password@127.0.0.1/stream=0
- openipc_rtsp-2: rtsp://username:password@127.0.0.1/stream=1
+  openipc_jpeg: http://username:password@127.0.0.1/image.jpg
+  openipc_rtsp-1: rtsp://username:password@127.0.0.1/stream=0
+  openipc_rtsp-2: rtsp://username:password@127.0.0.1/stream=1

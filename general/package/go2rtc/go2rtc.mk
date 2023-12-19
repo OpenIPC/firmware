@@ -15,11 +15,23 @@ GO2RTC_DEPENDENCIES = host-go host-upx
 GO2RTC_GO_LDFLAGS = -s -w
 
 define GO2RTC_BUILD_CMDS
-	(cd $(@D); \
-	CGO_ENABLED=0 \
-	GOOS=linux \
-	GOARCH=mipsle \
-	go build -ldflags "$(GO2RTC_GO_LDFLAGS)")
+	GOARCH=$$( \
+		case $(BR2_ARCH) in \
+			x86) echo 386 ;; \
+			x86_64) echo amd64 ;; \
+			arm) echo arm ;; \
+			aarch64) echo arm64 ;; \
+			mips) echo mips ;; \
+			mipsel) echo mipsle ;; \
+			*) echo "Unsupported architecture: $(BR2_ARCH)" && exit 1 ;; \
+		esac \
+	); \
+	echo "Building for GOARCH: $$GOARCH"; \
+		(cd $(@D); \
+		CGO_ENABLED=0 \
+		GOOS=linux \
+		GOARCH=$$GOARCH \
+		go build -ldflags "$(GO2RTC_GO_LDFLAGS)")
 endef
 
 define GO2RTC_INSTALL_TARGET_CMDS
