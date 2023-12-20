@@ -52,7 +52,7 @@ toolname:
 	@general/scripts/show_toolchains.sh $(CONFIG)
 
 package:
-	@find general/package/* -maxdepth 0 -type d -printf "br-%f\n" | grep -v patches
+	@find general/package/* -maxdepth 0 -type d -printf "br-%f\n" | grep -v patch
 
 clean:
 	@rm -rf $(TARGET)/images $(TARGET)/target

@@ -4,14 +4,9 @@
 #
 ################################################################################
 
-ifeq ($(LOCAL_DOWNLOAD),y)
 AWS_PRODUCER_SITE_METHOD = git
 AWS_PRODUCER_SITE = https://github.com/awslabs/amazon-kinesis-video-streams-producer-c
 AWS_PRODUCER_VERSION = $(shell git ls-remote $(AWS_PRODUCER_SITE) HEAD | head -1 | cut -f1)
-else
-AWS_PRODUCER_SITE = https://github.com/awslabs/amazon-kinesis-video-streams-producer-c/archive
-AWS_PRODUCER_SOURCE = master.tar.gz
-endif
 
 AWS_PRODUCER_INSTALL_STAGING = YES
 AWS_PRODUCER_LICENSE = Apache-2.0
