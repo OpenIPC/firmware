@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20231202
+# OpenIPC.org | v.20231222
 #
 
-scr_version=1.0.25
+scr_version=1.0.26
 
 args=" $@"
 
@@ -98,21 +98,17 @@ download_firmware() {
 }
 
 free_resources() {
-	# echo_c 37 "\nStop services, unload modules"
-	# killall majestic crond klogd ntpd rngd syslogd >/dev/null 2>&1 || true
-	# "load_$vendor" -r >/dev/null 2>&1 || true
-	#
 	echo_c 37 "\nStop services, sync files, free up memory"
 
 	echo -n "Killing majestic ... "
 	time=$(grep TIME_STAMP /etc/os-release | cut -d= -f2)
-	[ "$time" -gt "1702544400" ] && killall -SIGUSR2 majestic || killall majestic
+	[ "$time" -gt "1702544400" ] && killall -q -SIGUSR2 majestic || killall -q majestic
 	echo "OK"
 
 	for proc in crond klogd ntpd rngd syslogd; do
 		echo -n "Killing $proc "
 		while [ -n "$(pidof $proc)" ]; do
-			killall $proc >/dev/null 2>&1 || true
+			killall -q $proc
 			sleep 0.1
 			echo -n "."
 		done
