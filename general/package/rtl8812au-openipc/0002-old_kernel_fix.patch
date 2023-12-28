@@ -1,0 +1,36 @@
+diff -Naur a/os_dep/linux/ioctl_cfg80211.c b/os_dep/linux/ioctl_cfg80211.c
+--- a/os_dep/linux/ioctl_cfg80211.c	2023-12-28 04:55:44.047232205 +0300
++++ b/os_dep/linux/ioctl_cfg80211.c	2023-12-28 04:58:01.223544721 +0300
+@@ -4921,6 +4921,7 @@
+       //RTW_INFO("%s dvobj null\n", __func__);
+     }
+     switch(pHalData->current_channel_bw){
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
+       case CHANNEL_WIDTH_5:
+ 	//RTW_INFO("%s width 5\n", __func__);
+ 	width = NL80211_CHAN_WIDTH_5;
+@@ -4931,6 +4932,7 @@
+ 	width = NL80211_CHAN_WIDTH_10;
+ 	center_freq = control_freq;
+ 	break;
++#endif
+       case CHANNEL_WIDTH_20:
+ 	//RTW_INFO("%s width 20\n", __func__);
+ 	width = NL80211_CHAN_WIDTH_20;
+diff -Naur a/os_dep/linux/wifi_regd.c b/os_dep/linux/wifi_regd.c
+--- a/os_dep/linux/wifi_regd.c	2023-11-08 03:19:52.064089100 +0300
++++ b/os_dep/linux/wifi_regd.c	2023-12-28 04:57:52.047523712 +0300
+@@ -334,11 +334,11 @@
+ 				if (ch)
+ 					ch->flags &= ~(IEEE80211_CHAN_DISABLED|IEEE80211_CHAN_NO_HT40PLUS|
+ 						IEEE80211_CHAN_NO_HT40MINUS|IEEE80211_CHAN_NO_80MHZ|
+-						IEEE80211_CHAN_NO_160MHZ);
++						IEEE80211_CHAN_NO_160MHZ |
+ #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 0))
+ 						IEEE80211_CHAN_NO_IBSS|IEEE80211_CHAN_PASSIVE_SCAN);
+ #else
+-						IEEE80211_CHAN_NO_IR;
++						IEEE80211_CHAN_NO_IR);
+ #endif
+ 						//ch->flags = IEEE80211_CHAN_DISABLED;
+ 			}
