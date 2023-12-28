@@ -1,19 +1,21 @@
---- a/Makefile	2023-11-08 03:23:56.619884059 +0300
-+++ b/Makefile	2023-11-08 03:51:10.864807292 +0300
-@@ -39,7 +39,7 @@
+--- a/Makefile	2023-12-28 12:04:57.820353449 +0300
++++ b/Makefile	2023-12-28 12:31:56.636201729 +0300
+@@ -39,8 +39,8 @@
  
  ########################## WIFI IC ############################
  CONFIG_RTL8812A = y
 -CONFIG_RTL8821A = y
+-CONFIG_RTL8814A = y
 +CONFIG_RTL8821A = n
- CONFIG_RTL8814A = n
++CONFIG_RTL8814A = n
  ######################### Interface ###########################
  CONFIG_USB_HCI = y
+ ########################## Features ###########################
 @@ -206,9 +206,9 @@
  EXTRA_CFLAGS += -DDBG=0
  endif
  
--ifeq ($(CONFIG_RTL8812A)_$(CONFIG_RTL8821A), y_y)
+-ifeq ($(CONFIG_RTL8812A)_$(CONFIG_RTL8821A)_$(CONFIG_RTL8814A), y_y_y)
 +ifeq ($(CONFIG_RTL8812A)_$(CONFIG_RTL8821A)_$(CONFIG_RTL8814A), y_n_n)
  
 -EXTRA_CFLAGS += -DDRV_NAME=\"rtl88xxau_wfb\"
