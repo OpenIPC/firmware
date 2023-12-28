@@ -1,18 +1,21 @@
 --- a/Makefile	2023-07-04 13:52:08.000000000 +0300
 +++ b/Makefile	2023-07-11 00:10:53.987288000 +0300
-@@ -2,13 +2,8 @@
- 
- OBJECTS_O = onvif_simple_server.o device_service.o media_service.o ptz_service.o utils.o log.o
- OBJECTS_W = wsd_simple_server.o utils.o log.o
+@@ -3,15 +3,9 @@
+ OBJECTS_O = onvif_simple_server.o device_service.o media_service.o ptz_service.o events_service.o fault.o conf.o utils.o log.o ezxml_wrapper.o ezxml/ezxml.o
+ OBJECTS_N = onvif_notify_server.o conf.o utils.o log.o ezxml_wrapper.o ezxml/ezxml.o
+ OBJECTS_W = wsd_simple_server.o utils.o log.o ezxml_wrapper.o ezxml/ezxml.o
 -ifdef HAVE_MBEDTLS
--INCLUDE = -DHAVE_MBEDTLS -I../mbedtls/include -ffunction-sections -fdata-sections
--LIBS_O = -Wl,--gc-sections ../mbedtls/library/libmbedcrypto.a -lpthread
+-INCLUDE = -DHAVE_MBEDTLS -I../mbedtls/include -ffunction-sections -fdata-sections -lrt
+-LIBS_O = -Wl,--gc-sections ../mbedtls/library/libmbedcrypto.a -lpthread -lrt
+-LIBS_N = -Wl,--gc-sections ../mbedtls/library/libmbedcrypto.a -lpthread -lrt
 -else
--INCLUDE = -I../libtomcrypt/src/headers -ffunction-sections -fdata-sections
--LIBS_O = -Wl,--gc-sections ../libtomcrypt/libtomcrypt.a -lpthread
+-INCLUDE = -I../libtomcrypt/src/headers -ffunction-sections -fdata-sections -lrt
+-LIBS_O = -Wl,--gc-sections ../libtomcrypt/libtomcrypt.a -lpthread -lrt
+-LIBS_N = -Wl,--gc-sections ../libtomcrypt/libtomcrypt.a -lpthread -lrt
 -endif
-+INCLUDE = -DHAVE_MBEDTLS -ffunction-sections -fdata-sections
-+LIBS_O = -Wl,--gc-sections -lmbedtls -lmbedcrypto -lpthread
++INCLUDE = -DHAVE_MBEDTLS -ffunction-sections -fdata-sections -lrt
++LIBS_O = -Wl,--gc-sections -lmbedtls -lmbedcrypto -lpthread -lrt
++LIBS_N = -Wl,--gc-sections -lmbedtls -lmbedcrypto -lpthread -lrt
  LIBS_W = -Wl,--gc-sections
  
- all: onvif_simple_server wsd_simple_server
+ all: onvif_simple_server onvif_notify_server wsd_simple_server
