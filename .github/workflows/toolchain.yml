@@ -56,7 +56,8 @@ jobs:
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
           echo ${URL}
           if ! wget --spider ${URL} 2> /dev/null; then
-            sed -i "s|EXTERNAL=y|EXTERNAL=n|g" ${CONFIG}
+            sed -i "/BR2_TOOLCHAIN_EXTERNAL.*/d" ${CONFIG}
+            echo BR2_PACKAGE_AWS_WEBRTC=y >> ${CONFIG}
             make BOARD=${CONFIG} br-sdk
             SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
             mv ${SDK} ${GCC}.tgz

@@ -6,23 +6,30 @@ set_wireless() {
 	path=/etc/wireless
 	if $path/usb "$dev" || $path/modem "$dev" || $path/sdio "$dev"; then
 		[ -n "$mac" ] && ip link set dev wlan0 address "$mac"
-		ifup wlan0 && file="-i /etc/wireless/interfaces/eth0"
+		ifup wlan0
+		ifconfig eth0 192.168.192.10
 	fi
 }
 
 case "$1" in
 	start)
 		echo "Starting network..."
-		ifup -a
-		[ -n "$dev" ] && set_wireless
-		ifup eth0 $file
+		ifup lo
+		if [ -n "$dev" ]; then
+			set_wireless
+		else
+			ifup eth0
+		fi
 		;;
 
 	stop)
 		echo "Stopping network..."
-		ifdown -a
-		[ -n "$dev" ] && ifdown wlan0
-		ifdown eth0
+		ifdown lo
+		if [ -n "$dev" ]; then
+			ifdown wlan0
+		else
+			ifdown eth0
+		fi
 		;;
 
 	restart|reload)

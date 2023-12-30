@@ -103,7 +103,7 @@ insert_sns() {
 
                 devmem 0x2003002c 32 0xc4001 # Sensor unreset, clk 24MHz, VI 99MHz
                 ;;
-        ar0130 | gc1034 | jxf22 | sc1135 | sc1145 | sc2035 | sc2135)
+        ar0130 | ar0237 | gc1034 | jxf22 | sc1135 | sc1145 | sc2035 | sc2135)
                 devmem 0x200f0040 32 0x2 # I2C0_SCL
                 devmem 0x200f0044 32 0x2 # I2C0_SDA
 

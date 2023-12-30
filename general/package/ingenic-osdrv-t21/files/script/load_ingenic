@@ -51,7 +51,7 @@ case ${SENSOR} in
 	ISP_PARAM="isp_clk=125000000"
 	SENSOR_PARAM="sensor_max_fps=25 data_interface=1"
 	;;
-"jxf23")
+"jxf23"|"ov2735b"|"sc2232h"|"sc2335")
 	ISP_PARAM="isp_clk=125000000"
 	SENSOR_PARAM="sensor_gpio_func=0"
 	;;
@@ -59,28 +59,12 @@ case ${SENSOR} in
 	ISP_PARAM="isp_clk=90000000"
 	SENSOR_PARAM="sensor_gpio_func=0"
 	;;
-"ov2735b")
-	ISP_PARAM="isp_clk=125000000"
-	SENSOR_PARAM="sensor_gpio_func=0"
-	;;
-"sc2232")
-	ISP_PARAM="isp_clk=90000000"
-	SENSOR_PARAM=""
-	;;
-"sc2232h")
-	ISP_PARAM="isp_clk=125000000"
-	SENSOR_PARAM="sensor_gpio_func=0"
-	;;
-"sc2300")
+"sc2232"|"sc2300")
 	ISP_PARAM="isp_clk=90000000"
 	SENSOR_PARAM=""
 	;;
 "sc2332")
 	ISP_PARAM=""
-	SENSOR_PARAM="sensor_gpio_func=0"
-	;;
-"sc2335")
-	ISP_PARAM="isp_clk=125000000"
 	SENSOR_PARAM="sensor_gpio_func=0"
 	;;
 *)
@@ -110,6 +94,6 @@ fi
 
 lsmod | grep "audio" >/dev/null
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/audio.ko
+	insmod ${KMOD_PATH/%\//}/audio.ko spk_gpio=-1
 	check_return "insmod audio"
 fi

@@ -1,0 +1,20 @@
+log:
+  level: info  # default level
+  api: trace
+  exec: debug
+  ngrok: info
+  rtsp: warn
+  streams: error
+  webrtc: fatal
+
+rtsp:
+  listen: ":8553"
+
+webrtc:
+  candidates:
+    - stun:8555
+
+streams:
+  openipc_jpeg: http://username:password@127.0.0.1/image.jpg
+  openipc_rtsp-1: rtsp://username:password@127.0.0.1/stream=0
+  openipc_rtsp-2: rtsp://username:password@127.0.0.1/stream=1

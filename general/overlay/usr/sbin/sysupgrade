@@ -1,13 +1,11 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20231202
+# OpenIPC.org | v.20231228
 #
 
-scr_version=1.0.23
+scr_version=1.0.27
 
 args=" $@"
-
-set -e
 
 LOCK_FILE=/tmp/sysupgrade.lock
 IPCINFO=/tmp/ipcinfo
@@ -100,15 +98,21 @@ download_firmware() {
 }
 
 free_resources() {
-	# echo_c 37 "\nStop services, unload modules"
-	# killall majestic crond klogd ntpd rngd syslogd >/dev/null 2>&1 || true
-	# "load_$vendor" -r >/dev/null 2>&1 || true
-	#
 	echo_c 37 "\nStop services, sync files, free up memory"
-	for proc in majestic crond klogd ntpd rngd syslogd; do
+
+	echo -n "Killing majestic ... "
+	time=$(grep TIME_STAMP /etc/os-release | cut -d= -f2)
+	if [ "$time" -gt "1702544400" ]; then
+		killall -q -SIGUSR2 majestic
+	else
+		killall -q majestic
+	fi
+	echo "OK"
+
+	for proc in crond klogd ntpd rngd syslogd; do
 		echo -n "Killing $proc "
 		while [ -n "$(pidof $proc)" ]; do
-			killall $proc >/dev/null 2>&1 || true
+			killall -q $proc
 			sleep 0.1
 			echo -n "."
 		done

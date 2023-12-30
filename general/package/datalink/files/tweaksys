@@ -74,11 +74,11 @@ majestic_generic() {
 }
 
 majestic_sigmastar() {
-	cli -s .isp.exposure 10
-	cli -s .isp.aGain 8
-	cli -s .isp.dGain 8
+	cli -s .isp.exposure 20
+	cli -s .isp.aGain 40
+	cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
 	cli -s .video0.size 1920x1080
-	cli -s .video0.fps 90
+	cli -s .video0.fps 60
 	cli -s .video0.rcMode cbr
 	cli -s .jpeg.enabled false
 }

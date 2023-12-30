@@ -22,46 +22,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - hi3516cv100
-          - hi3518cv100
-          - hi3518ev100
-          - hi3516av100
-          - hi3516dv100
-          - hi3516cv200
-          - hi3518ev200
-          - hi3519v101
-          - hi3516av200
-          - hi3516cv300
-          - hi3516ev100
-          - hi3516cv500
-          - hi3516dv300
-          - hi3516av300
-          - hi3516ev200
-          - hi3516ev300
-          - hi3518ev300
-          - hi3516dv200
-          - hi3536cv100
-          - hi3536dv100
-          - gk7205v200
-          - gk7205v210
-          - gk7205v300
-          - gk7202v300
-          - gk7605v100
-          - t20
-          - t31
-          - t40
-
-        release:
-          - lite
-          - ultimate
-
         include:
-            # Sigmastar infinity6
+          # Sigmastar [I6]
           - {"platform": "ssc325", "release": "lite"}
           - {"platform": "ssc325de", "release": "lite"}
 
-            # Sigmastar infinity6b0
+          # Sigmastar [I6B]
           - {"platform": "ssc333", "release": "lite"}
           - {"platform": "ssc333", "release": "ultimate"}
           - {"platform": "ssc335", "release": "lite"}
@@ -73,135 +39,128 @@ jobs:
           - {"platform": "ssc337de", "release": "lite"}
           - {"platform": "ssc337de", "release": "ultimate"}
 
-            # Sigmastar infinity6c
+          # Sigmastar [I6C]
           - {"platform": "ssc377", "release": "lite"}
 
-            # Sigmastar infinity6e
+          # Sigmastar [I6E]
           - {"platform": "ssc30kd", "release": "lite"}
           - {"platform": "ssc30kd", "release": "ultimate"}
+          - {"platform": "ssc30kq", "release": "fpv"}
           - {"platform": "ssc30kq", "release": "lite"}
           - {"platform": "ssc30kq", "release": "ultimate"}
           - {"platform": "ssc338q", "release": "fpv"}
           - {"platform": "ssc338q", "release": "lite"}
           - {"platform": "ssc338q", "release": "ultimate"}
 
-          - platform: hi3518ev200
-            release: mini
-          - platform: hi3516cv300
-            release: mini
-          - platform: hi3516ev200
-            release: fpv
-          - platform: hi3516ev300
-            release: fpv
-          - platform: gk7205v200
-            release: fpv
-          - platform: gk7205v210
-            release: fpv
-          - platform: gk7205v300
-            release: fpv
-          - platform: hi3516ev200
-            release: lte
-          - platform: hi3516ev300
-            release: lte
-          - platform: hi3536dv100
-            release: fpv
-          - platform: gk7205v200
-            release: lte
-          - platform: gk7205v300
-            release: lte
-          - platform: gk7205v200
-            release: venc
-          - platform: gk7205v210
-            release: venc
-          - platform: gk7205v300
-            release: venc
+          # Ingenic [T21]
+          - {"platform": "t10", "release": "lite"}
+          - {"platform": "t20", "release": "lite"}
+          - {"platform": "t20", "release": "ultimate"}
+          - {"platform": "t21", "release": "lite"}
+          - {"platform": "t21", "release": "ultimate"}
+          - {"platform": "t30", "release": "lite"}
 
-          # MVP
-          - platform: fh8852v100
-            release: lite
-          - platform: fh8852v200
-            release: lite
-          - platform: gm8136
-            release: lite
-          - platform: nt98562
-            release: lite
-          - platform: nt98566
-            release: lite
-          - platform: rv1109
-            release: lite
-          - platform: rv1126
-            release: lite
-          - platform: t10
-            release: lite
-          - platform: t21
-            release: lite
-          - platform: t30
-            release: lite
-          - platform: xm510
-            release: lite
-          - platform: xm530
-            release: lite
-          - platform: xm550
-            release: lite
+          # Ingenic [T31]
+          - {"platform": "t31", "release": "lite"}
+          - {"platform": "t31", "release": "ultimate"}
 
-          # TODO
-          - platform: ak3916ev300
-            release: lite
-            custom: onlyci
-          - platform: ak3918ev300
-            release: lite
-            custom: onlyci
-          - platform: dm36x
-            release: lite
-            custom: onlyci
-          - platform: gk7102
-            release: lite
-          - platform: gk7102s
-            release: lite
-          - platform: msc313e
-            release: lite
-            custom: onlyci
-          - platform: msc316dc
-            release: lite
-            custom: onlyci
-          - platform: msc316dm
-            release: lite
-            custom: onlyci
-          - platform: s3l
-            release: lite
-            custom: onlyci
+          # Ingenic [T40]
+          - {"platform": "t40", "release": "lite"}
+          - {"platform": "t40", "release": "ultimate"}
 
-        exclude:
-          - platform: hi3516cv100
-            release: ultimate
-          - platform: hi3518cv100
-            release: ultimate
-          - platform: hi3518ev100
-            release: ultimate
-          - platform: hi3516cv200
-            release: ultimate
-          - platform: hi3519v101
-            release: ultimate
-          - platform: hi3516ev100
-            release: ultimate
-          - platform: hi3516cv500
-            release: ultimate
-          - platform: hi3516dv300
-            release: ultimate
-          - platform: hi3516av300
-            release: ultimate
-          - platform: hi3516dv200
-            release: ultimate
-          - platform: hi3536cv100
-            release: ultimate
-          - platform: hi3536dv100
-            release: ultimate
-          - platform: gk7605v100
-            release: ultimate
-          - platform: gk7205v210
-            release: ultimate
-          - platform: gk7202v300
-            release: ultimate
+          # Hisilicon [HI3516AV100]
+          - {"platform": "hi3516av100", "release": "lite"}
+          - {"platform": "hi3516av100", "release": "ultimate"}
+          - {"platform": "hi3516dv100", "release": "lite"}
+          - {"platform": "hi3516dv100", "release": "ultimate"}
+
+          # Hisilicon [HI3516CV100]
+          - {"platform": "hi3516cv100", "release": "lite"}
+          - {"platform": "hi3518cv100", "release": "lite"}
+          - {"platform": "hi3518ev100", "release": "lite"}
+
+          # Hisilicon [HI3516CV200]
+          - {"platform": "hi3516cv200", "release": "lite"}
+          - {"platform": "hi3518ev200", "release": "mini"}
+          - {"platform": "hi3518ev200", "release": "lite"}
+          - {"platform": "hi3518ev200", "release": "ultimate"}
+
+          # Hisilicon [HI3516CV300]
+          - {"platform": "hi3516cv300", "release": "mini"}
+          - {"platform": "hi3516cv300", "release": "lite"}
+          - {"platform": "hi3516cv300", "release": "ultimate"}
+          - {"platform": "hi3516ev100", "release": "lite"}
+
+          # Hisilicon [HI3516CV500]
+          - {"platform": "hi3516av300", "release": "lite"}
+          - {"platform": "hi3516cv500", "release": "lite"}
+          - {"platform": "hi3516dv300", "release": "lite"}
+
+          # Hisilicon [HI3516EV200]
+          - {"platform": "hi3516dv200", "release": "lite"}
+          - {"platform": "hi3516ev200", "release": "lte"}
+          - {"platform": "hi3516ev200", "release": "fpv"}
+          - {"platform": "hi3516ev200", "release": "lite"}
+          - {"platform": "hi3516ev200", "release": "ultimate"}
+          - {"platform": "hi3516ev300", "release": "lte"}
+          - {"platform": "hi3516ev300", "release": "fpv"}
+          - {"platform": "hi3516ev300", "release": "lite"}
+          - {"platform": "hi3516ev300", "release": "ultimate"}
+          - {"platform": "hi3518ev300", "release": "lite"}
+          - {"platform": "hi3518ev300", "release": "ultimate"}
+
+          # Hisilicon [HI3519V101]
+          - {"platform": "hi3516av200", "release": "lite"}
+          - {"platform": "hi3516av200", "release": "ultimate"}
+          - {"platform": "hi3519v101", "release": "lite"}
+
+          # Hisilicon [HI3536CV100]
+          - {"platform": "hi3536cv100", "release": "lite"}
+
+          # Hisilicon [HI3536DV100]
+          - {"platform": "hi3536dv100", "release": "fpv"}
+          - {"platform": "hi3536dv100", "release": "lite"}
+
+          # Goke [GK710X]
+          - {"platform": "gk7102", "release": "lite"}
+          - {"platform": "gk7102s", "release": "lite"}
+
+          # Goke [GK7205V200]
+          - {"platform": "gk7202v300", "release": "lite"}
+          - {"platform": "gk7205v200", "release": "lte"}
+          - {"platform": "gk7205v200", "release": "fpv"}
+          - {"platform": "gk7205v200", "release": "venc"}
+          - {"platform": "gk7205v200", "release": "lite"}
+          - {"platform": "gk7205v200", "release": "ultimate"}
+          - {"platform": "gk7205v210", "release": "fpv"}
+          - {"platform": "gk7205v210", "release": "venc"}
+          - {"platform": "gk7205v210", "release": "lite"}
+          - {"platform": "gk7205v300", "release": "lte"}
+          - {"platform": "gk7205v300", "release": "fpv"}
+          - {"platform": "gk7205v300", "release": "venc"}
+          - {"platform": "gk7205v300", "release": "lite"}
+          - {"platform": "gk7205v300", "release": "ultimate"}
+          - {"platform": "gk7605v100", "release": "lite"}
+
+          # Fullhan
+          - {"platform": "fh8852v100", "release": "lite"}
+          - {"platform": "fh8852v200", "release": "lite"}
+
+          # Grainmedia
+          - {"platform": "gm8136", "release": "lite"}
+
+          # Novatek
+          - {"platform": "nt98562", "release": "lite"}
+          - {"platform": "nt98566", "release": "lite"}
+
+          # Rockchip
+          - {"platform": "rv1109", "release": "lite"}
+          - {"platform": "rv1126", "release": "lite"}
+
+          # Xiongmai
+          - {"platform": "xm510", "release": "lite"}
+          - {"platform": "xm530", "release": "lite"}
+          - {"platform": "xm550", "release": "lite"}
 
     steps:
       - name: Checkout source
@@ -255,7 +214,7 @@ jobs:
           fi
 
       - name: Upload firmware
-        if: github.event_name != 'pull_request' && matrix.custom != 'onlyci'
+        if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{env.TAG_NAME}}
@@ -264,7 +223,7 @@ jobs:
             ${{env.NANDFW}}
 
       - name: Send binary
-        if: github.event_name != 'pull_request' && matrix.custom != 'onlyci' && env.NORFW
+        if: github.event_name != 'pull_request' && env.NORFW
         run: |
           TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\nTime: ${TIME}\n\n"
           TG_ICON="\xE2\x9C\x85 GitHub Actions"

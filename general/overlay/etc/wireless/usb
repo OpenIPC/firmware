@@ -1,32 +1,29 @@
 #!/bin/sh
 
 set_gpio() {
-	test -e /sys/class/gpio/gpio$1 && echo $1 > /sys/class/gpio/unexport
-	echo $1 > /sys/class/gpio/export
-	echo out > /sys/class/gpio/gpio$1/direction
-	echo $2 > /sys/class/gpio/gpio$1/value
+	[ "$2" -eq 1 ] && gpio set $1 || gpio clear $1
 	sleep 1
 }
 
-# MT7601U Generic
+# Generic MT7601U
 if [ "$1" = "mt7601u-generic" ]; then
 	modprobe mt7601u
 	exit 0
 fi
 
-# RTL8188FU Generic
-if [ "$1" = "rtl8188fu-generic" ]; then
-	modprobe 8188fu
-	exit 0
-fi
-
-# RTL8188EU Generic
+# Generic RTL8188EU
 if [ "$1" = "rtl8188eu-generic" ]; then
 	modprobe 8188eu
 	exit 0
 fi
 
-# RTL8733BU Generic
+# Generic RTL8188FU
+if [ "$1" = "rtl8188fu-generic" ]; then
+	modprobe 8188fu
+	exit 0
+fi
+
+# Generic RTL8733BU
 if [ "$1" = "rtl8733bu-generic" ]; then
 	modprobe 8733bu
 	exit 0
@@ -81,7 +78,7 @@ if [ "$1" = "rtl8188fu-hi3518ev200-lifesmart" ]; then
 	exit 0
 fi
 
-# HI3518EV200 Rostelecom QVC-IPC-136W
+# HI3518EV200 Qtech QVC-IPC-136W
 if [ "$1" = "rtl8188eu-hi3518ev200-qvc-ipc-136w" ]; then
 	set_gpio 7 1
 	modprobe 8188eu
@@ -103,10 +100,30 @@ if [ "$1" = "rtl8188fu-ssc325de-imou-c22ep-s2" ]; then
 	exit 0
 fi
 
+# SSC3333 Meari Speed 6S
+if [ "$1" = "rtl8188fu-ssc333-meari-speed-6s" ]; then
+	set_gpio 14 1
+	modprobe 8188fu
+	exit 0
+fi
+
 # SSC333 Tapo C110
 if [ "$1" = "ssw101b-ssc333-tapo-c110" ]; then
 	set_gpio 16 1
 	modprobe ssw101b_wifi_usb
+	exit 0
+fi
+
+# SSC335DE Uniview C1L-2WN-G
+if [ "$1" = "rtl8188fu-ssc335de-uniview-c1l-2wn-g" ]; then
+	set_gpio 1 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC337DE BroadbandService
+if [ "$1" = "aic8800-ssc337de-broadband" ]; then
+	modprobe aic8800_fdrv
 	exit 0
 fi
 
@@ -121,12 +138,6 @@ fi
 if [ "$1" = "rtl8188fu-ssc337de-foscam" ]; then
 	set_gpio 15 0
 	modprobe 8188fu
-	exit 0
-fi
-
-# SSC337DE BroadbandService
-if [ "$1" = "aic8800-ssc337de-broadband" ]; then
-	modprobe aic8800_fdrv
 	exit 0
 fi
 
@@ -147,6 +158,13 @@ fi
 # T21 Smartwares
 if [ "$1" = "rtl8188fu-t21-smartwares" ]; then
 	set_gpio 49 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# T31 Aoni EP01J05
+if [ "$1" = "rtl8188fu-t31-aoni-ep01j05" ]; then
+	set_gpio 43 1
 	modprobe 8188fu
 	exit 0
 fi

@@ -1,0 +1,55 @@
+#!/bin/sh
+
+DAEMON="watchdog"
+
+WATCHDOG_ENABLED=false
+WATCHDOG_TIMEOUT=60
+
+SUPPORTED_VENDORS="ingenic"
+WATCHDOG_ARGS="-T $WATCHDOG_TIMEOUT /dev/watchdog"
+WATCHDOG_VENDOR=$(ipcinfo -v)
+
+vendor_supported() {
+	for vendor in $SUPPORTED_VENDORS; do
+		[ "$WATCHDOG_VENDOR" = "$vendor" ] && return 0
+	done
+	return 1
+}
+
+start()
+{
+	if vendor_supported && [ "$(cli -g .watchdog.enabled)" = "false" ] && [ "$WATCHDOG_ENABLED" = "true" ]; then
+		printf "Starting ${DAEMON}: "
+		start-stop-daemon -S -q -x "/sbin/${DAEMON}" -- ${WATCHDOG_ARGS}
+		[ $? = 0 ] && echo "OK" || echo "FAIL"
+	else
+		echo "Watchdog: System watchdog disabled, unsupported vendor or Majestic Watchdog enabled"
+		exit 0
+	fi
+}
+
+stop()
+{
+	printf "Stopping ${DAEMON}: "
+	if start-stop-daemon -K -q -s KILL -n "${DAEMON}"; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+}
+
+case "$1" in
+	start|stop)
+		"$1"
+		;;
+
+	restart|reload)
+		stop
+		start
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}" >&2
+		exit 1
+		;;
+esac

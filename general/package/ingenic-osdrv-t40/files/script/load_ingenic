@@ -97,7 +97,7 @@ fi
 
 lsmod | grep "audio" >/dev/null
 if [ $? -ne 0 ]; then
-	modprobe audio
+	modprobe audio spk_gpio=-1
 	check_return "insmod audio"
 fi
 
