@@ -49,6 +49,10 @@ show_wlan() {
 	grep -r '$1..=' /etc/wireless | cut -d '"' -f 4 | sort | grep -e $(fw_printenv -n soc) -e generic
 }
 
+show_gain() {
+	while sleep 1 ; do curl -s http://localhost/metrics | grep ^isp_again | cut -d' ' -f2; done
+}
+
 network() {
 	/etc/init.d/S40network "$1"
 }
