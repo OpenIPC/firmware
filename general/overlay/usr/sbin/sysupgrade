@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20231228
+# OpenIPC.org | v.20231230
 #
 
-scr_version=1.0.27
+scr_version=1.0.28
 
 args=" $@"
 
@@ -63,15 +63,16 @@ do_update_rootfs() {
 	[ ! -f "$x" ] && die "File ${x} not found"
 	local y=/tmp/rootfs
 	if mkdir -p "$y" && loop=$(losetup -f) && losetup "$loop" "$x" && mount "$loop" "$y"; then
+		rootfs_version=$(get_system_version "$y")
 		check_soc "$(head -1 ${y}/etc/hostname | cut -d- -f2)"
-		compare_versions "$system_version" "$(get_system_version "$y")" && exit_update=1
+		compare_versions "$system_version" "$rootfs_version" && exit_update=1
 		umount "$y" && rm -rf "$y" && losetup -d "$loop"
 		[ "1" = "$exit_update" ] && return 0
 	else
 		die "Unable to mount $y!"
 	fi
 	busybox flashcp -v "$x" "$(get_device "rootfs")"
-	echo_c 32 "RootFS updated to $(get_system_version "")"
+	echo_c 32 "RootFS updated to $rootfs_version"
 }
 
 do_wipe_overlay() {
