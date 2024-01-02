@@ -22,6 +22,8 @@ check_return() {
 	fi
 }
 
+SENSOR_EXT_PARAM=""
+
 lsmod | grep "sinfo" >/dev/null
 if [ $? -ne 0 ]; then
 	modprobe sinfo.ko
@@ -84,21 +86,20 @@ echo "SENSOR: ${SENSOR}"
 echo "SENSOR_PARAM: ${SENSOR_PARAM}"
 echo --------------------
 
-lsmod | grep "tx_isp" > /dev/null
-if [ $? -ne 0 ] ;then
-	insmod ${KMOD_PATH/%\//}/tx-isp-${SOC}.ko ${ISP_PARAM}
+lsmod | grep "tx_isp" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe tx-isp-${SOC} ${ISP_PARAM}
 	check_return "insmod isp drv"
 fi
 
-lsmod | grep ${SENSOR} > /dev/null
-if [ $? -ne 0 ] ;then
-	insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}.ko ${SENSOR_PARAM}
+lsmod | grep ${SENSOR} >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe sensor_${SENSOR}_${SOC} ${SENSOR_PARAM} ${SENSOR_EXT_PARAM}
 	check_return "insmod sensor drv"
 fi
 
 lsmod | grep "audio" >/dev/null
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/audio2.ko spk_gpio=-1
+	modprobe audio spk_gpio=-1
 	check_return "insmod audio"
 fi
-
