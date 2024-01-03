@@ -15,7 +15,7 @@ if [ "$1" = "atbm603x-generic" ]; then
 	set_mmc 1
 	cp -f /usr/share/atbm60xx_conf/atbm_txpwer_dcxo_cfg.txt /tmp
 	cp -f /usr/share/atbm60xx_conf/set_rate_power.txt /tmp
-	modprobe atbm603x_wifi_sdio
+	modprobe atbm603x_wifi_sdio atbm_printk_mask=0
 	exit 0
 fi
 
