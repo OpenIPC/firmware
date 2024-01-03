@@ -13,8 +13,10 @@
 #define MAX_COUNT 8
 #define SEQ_COUNT 8
 
-int gpio_x[] = {01, 02, 12, 13};
-int gpio_y[] = {62, 63, 64, 65};
+int device_x5[] = {01, 02, 12, 13, 62, 63, 64, 65};
+
+int gpio_x[4];
+int gpio_y[4];
 
 int sequence[][4] = {
 	{1, 0, 0, 0}, {1, 1, 0, 0}, {0, 1, 0, 0}, {0, 1, 1, 0},
@@ -99,20 +101,20 @@ int main(int argc, char **argv) {
 	int x = limit_value(argv[1] ? atoi(argv[1]) : 0);
 	int y = limit_value(argv[2] ? atoi(argv[2]) : 0);
 
+	memcpy(gpio_x, device_x5 + 0, sizeof(gpio_x));
+	memcpy(gpio_y, device_x5 + 4, sizeof(gpio_y));
+
 	if (gpio_export(gpio_x) || gpio_export(gpio_y)) {
 		return -1;
 	}
 
-	int x_max = (x < 0) ? -x : x;
-	int y_max = (y < 0) ? -y : y;
-
-	for (int i = 0; i < x_max * STEP_COUNT * 2; i++) {
+	for (int i = 0; i < abs(x) * STEP_COUNT * 2; i++) {
 		if (motor_control(gpio_x, (x < 0) ? SEQ_COUNT : 0)) {
 			goto reset;
 		}
 	}
 
-	for (int i = 0; i < y_max * STEP_COUNT; i++) {
+	for (int i = 0; i < abs(y) * STEP_COUNT; i++) {
 		if (motor_control(gpio_y, (y < 0) ? 0 : SEQ_COUNT)) {
 			goto reset;
 		}
