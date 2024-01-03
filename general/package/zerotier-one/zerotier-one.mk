@@ -26,7 +26,7 @@ endef
 define ZEROTIER_ONE_INSTALL_TARGET_CMDS
 	$(MAKE) -C $(@D) DESTDIR=$(TARGET_DIR) install
 
-	if grep -q "BR2_PACKAGE_MICROBE_WEB=y" $(BR2_CONFIG); then \
+	if grep -q "BR2_PACKAGE_WEBUI=y" $(BR2_CONFIG); then \
 		$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d ; \
 		cp $(ZEROTIER_ONE_PKGDIR)/files/S90zerotier $(TARGET_DIR)/etc/init.d ; \
 	fi

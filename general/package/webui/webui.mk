@@ -1,27 +1,27 @@
 ################################################################################
 #
-# microbe-web
+# webui
 #
 ################################################################################
 
 ifeq ($(LOCAL_DOWNLOAD),y)
-MICROBE_WEB_SITE_METHOD = git
-MICROBE_WEB_SITE = https://github.com/openipc/microbe-web
-MICROBE_WEB_VERSION = $(shell git ls-remote $(MICROBE_WEB_SITE) HEAD | head -1 | cut -f1)
+WEBUI_SITE_METHOD = git
+WEBUI_SITE = https://github.com/openipc/webui
+WEBUI_VERSION = $(shell git ls-remote $(WEBUI_SITE) HEAD | head -1 | cut -f1)
 else
-MICROBE_WEB_SITE = https://github.com/openipc/microbe-web/archive
-MICROBE_WEB_SOURCE = master.tar.gz
+WEBUI_SITE = https://github.com/openipc/webui/archive
+WEBUI_SOURCE = master.tar.gz
 endif
 
-MICROBE_WEB_LICENSE = MIT
-MICROBE_WEB_LICENSE_FILES = LICENSE
+WEBUI_LICENSE = MIT
+WEBUI_LICENSE_FILES = LICENSE
 
-define MICROBE_WEB_INSTALL_TARGET_CMDS
+define WEBUI_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
-	cp $(MICROBE_WEB_PKGDIR)/files/httpd.conf $(TARGET_DIR)/etc
+	cp $(WEBUI_PKGDIR)/files/httpd.conf $(TARGET_DIR)/etc
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	cp $(MICROBE_WEB_PKGDIR)/files/S50httpd $(TARGET_DIR)/etc/init.d
+	cp $(WEBUI_PKGDIR)/files/S50httpd $(TARGET_DIR)/etc/init.d
 	cp -rv $(@D)/files/etc/init.d/* $(TARGET_DIR)/etc/init.d
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr
