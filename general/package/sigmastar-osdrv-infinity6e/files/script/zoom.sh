@@ -1,16 +1,24 @@
 #!/bin/sh
 
 if [ -z "$1" ]; then
-	echo Usage: $0 [1-30]
+	echo Usage: $0 [start], [restart], [1-30,31,32,33]
 	exit 0
 fi
 
-zoom_start() {
-	stty -F /dev/ttyS2 9600 raw -echo -onlcr
-	sleep 0.3
-	printf '\x54\x65\x6D\x2E\x2E\x2E\x0D\x0A' > /dev/ttyS2
-	sleep 0.3
-	printf '\x81\x01\x04\x38\x03\xFF' > /dev/ttyS2
+function zoom_start {
+  stty -F /dev/ttyS2 9600 raw -echo -onlcr
+  sleep .5
+  printf '\x54\x65\x6D\x0D' >/dev/ttyS2
+  sleep .5
+  printf '\x81\x01\x04\x38\x03\xFF' >/dev/ttyS2
+}
+
+function zoom_restart {
+  printf '\x81\x01\x04\x00\x03\xFF' >/dev/ttyS2
+  sleep 17
+  printf '\x54\x65\x6D\x0D' >/dev/ttyS2
+  sleep 2
+  printf '\x81\x01\x04\x38\x03\xFF' >/dev/ttyS2
 }
 
 zoom_1() {
@@ -131,6 +139,45 @@ zoom_29() {
 
 zoom_30() {
 	printf '\x81\x01\x04\x47\x04\x00\x00\x00\xFF\x81\x01\x04\x48\x03\x0D\x0F\x00\xFF' > /dev/ttyS2
+}
+
+function zoom_31 {
+  if [ `yaml-cli -g .video0.size` == '1920x1080' ]  ; then 
+  cli -s .video0.crop 0x0x1920x1080 && killall -10 majestic
+
+  elif [ `yaml-cli -g .video0.size` == '3200x1800' ]  ; then 
+  cli -s .video0.crop 0x0x3200x1800 && killall -10 majestic
+
+  elif [ `yaml-cli -g .video0.size` == '3840x2160' ]  ; then 
+  cli -s .video0.crop 0x0x3840x2160 && killall -10 majestic
+
+  fi
+}
+
+function zoom_32 {
+  if [ `yaml-cli -g .video0.size` == '1920x1080' ]  ; then 
+  cli -s .video0.crop 320x180x1280x720 && killall -10 majestic
+
+  elif [ `yaml-cli -g .video0.size` == '3200x1800' ]  ; then 
+  cli -s .video0.crop 960x540x1280x720 && killall -10 majestic
+
+  elif [ `yaml-cli -g .video0.size` == '3840x2160' ]  ; then 
+  cli -s .video0.crop 1280x720x1280x720 && killall -10 majestic
+
+  fi
+}
+
+function zoom_33 {
+  if [ `yaml-cli -g .video0.size` == '1920x1080' ]  ; then 
+  cli -s .video0.crop 640x360x640x360 && killall -10 majestic
+
+  elif [ `yaml-cli -g .video0.size` == '3200x1800' ]  ; then 
+  cli -s .video0.crop 1280x720x640x360 && killall -10 majestic
+
+  elif [ `yaml-cli -g .video0.size` == '3840x2160' ]  ; then 
+  cli -s .video0.crop 1600x900x640x360 && killall -10 majestic
+
+  fi
 }
 
 zoom_$1
