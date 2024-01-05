@@ -20,7 +20,7 @@ set_sensor() {
 		gc2053|gc2083|gc4023|gc4653|imx307|imx335)
 			insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
-		jxf37|os02g10|sc2239|sc223a|sc2335|sc3335|sc3338)
+		jxf37|os02g10|sc200ai|sc2239|sc223a|sc2335|sc3335|sc3338)
 			insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		*)
