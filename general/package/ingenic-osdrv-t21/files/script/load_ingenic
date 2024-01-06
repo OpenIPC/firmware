@@ -1,7 +1,7 @@
 #!/bin/sh
 
 KMOD_PATH=/lib/modules/$(uname -r)/ingenic
-SOC=$(ipcinfo -c)
+SOC=$(ipcinfo -f)
 vendor=$(ipcinfo -v)
 
 if [ ! -f /usr/sbin/sensor_cli ]; then
@@ -22,14 +22,15 @@ check_return() {
 	fi
 }
 
-lsmod | grep "sinfo" >/dev/null
+lsmod | grep -q "sinfo"
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/sinfo.ko
-	check_return "insmod sinfo"
+	modprobe sinfo.ko
+	check_return "modprobe sinfo"
 fi
 
-if fw_printenv -n sensor >/dev/null; then
-	export SENSOR=$(fw_printenv -n sensor)
+SENSOR=$(fw_printenv -n sensor)
+if [ -n "$SENSOR" ]; then
+	export ${SENSOR}
 	log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
 else
 	echo 1 >/proc/jz/sinfo/info
@@ -47,31 +48,30 @@ else
 fi
 
 case ${SENSOR} in
-"gc2053")
-	ISP_PARAM="isp_clk=125000000"
-	SENSOR_PARAM="sensor_max_fps=25 data_interface=1"
-	;;
-"jxf23"|"ov2735b"|"sc2232h"|"sc2335")
-	ISP_PARAM="isp_clk=125000000"
-	SENSOR_PARAM="sensor_gpio_func=0"
-	;;
-"jxf37")
-	ISP_PARAM="isp_clk=90000000"
-	SENSOR_PARAM="sensor_gpio_func=0"
-	;;
-"sc2232"|"sc2300")
-	ISP_PARAM="isp_clk=90000000"
-	SENSOR_PARAM=""
-	;;
-"sc2332")
-	ISP_PARAM=""
-	SENSOR_PARAM="sensor_gpio_func=0"
-	;;
-*)
-	ISP_PARAM="isp_clk=90000000"
-	SENSOR_PARAM="sensor_gpio_func=0"
-	break
-	;;
+	"gc2053")
+		ISP_PARAM="isp_clk=125000000"
+		SENSOR_PARAM="sensor_max_fps=25 data_interface=1"
+		;;
+	"jxf23"|"ov2735b"|"sc2232h"|"sc2335")
+		ISP_PARAM="isp_clk=125000000"
+		SENSOR_PARAM="sensor_gpio_func=0"
+		;;
+	"jxf37")
+		ISP_PARAM="isp_clk=90000000"
+		SENSOR_PARAM="sensor_gpio_func=0"
+		;;
+	"sc2232"|"sc2300")
+		ISP_PARAM="isp_clk=90000000"
+		SENSOR_PARAM=""
+		;;
+	"sc2332")
+		ISP_PARAM=""
+		SENSOR_PARAM="sensor_gpio_func=0"
+		;;
+	*)
+		ISP_PARAM="isp_clk=90000000"
+		SENSOR_PARAM="sensor_gpio_func=0"
+		;;
 esac
 
 echo --------------------
@@ -80,20 +80,20 @@ echo "SENSOR: ${SENSOR}"
 echo "SENSOR_PARAM: ${SENSOR_PARAM}"
 echo --------------------
 
-lsmod | grep "tx_isp" >/dev/null
+lsmod | grep -q "tx_isp"
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/tx-isp-${SOC}.ko ${ISP_PARAM}
-	check_return "insmod isp drv"
+	modprobe tx-isp-${SOC} ${ISP_PARAM}
+	check_return "modprobe isp drv"
 fi
 
-lsmod | grep ${SENSOR} >/dev/null
+lsmod | grep -q ${SENSOR}
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/sensor_${SENSOR}_${SOC}.ko ${SENSOR_PARAM}
-	check_return "insmod sensor drv"
+	modprobe sensor_${SENSOR}_${SOC} ${SENSOR_PARAM}
+	check_return "modprobe sensor drv"
 fi
 
-lsmod | grep "audio" >/dev/null
+lsmod | grep -q "audio"
 if [ $? -ne 0 ]; then
-	insmod ${KMOD_PATH/%\//}/audio.ko spk_gpio=-1
-	check_return "insmod audio"
+	modprobe audio spk_gpio=-1
+	check_return "modprobe audio"
 fi
