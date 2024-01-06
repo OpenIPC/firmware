@@ -17,7 +17,18 @@ load_majestic() {
 		[ "$(cli -g .watchdog.timeout)" -lt "30" ] && cli -s .watchdog.timeout 30
 		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" >/proc/sys/kernel/core_pattern
 	fi
-	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
+
+	if [ "ingenic" = "$(ipcinfo -v)" ]; then
+		start-stop-daemon -b -m -S -q -p "$PIDFILE" -x /usr/bin/env -- \
+			LD_PRELOAD=/usr/lib/libimp_control.so /usr/bin/$DAEMON $DAEMON_ARGS
+		sleep 2
+		if [ -f "/tmp/imp.conf" ]; then
+			while read -r line; do imp-control.sh $line; done < /tmp/imp.conf
+		fi
+	else
+		start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
+	fi
+
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		echo "OK"
@@ -49,7 +60,7 @@ stop() {
 }
 
 restart() {
-	stop
+	stop || true
 	sleep 1
 	reload
 }
@@ -60,7 +71,8 @@ reload() {
 
 case "$1" in
 	start|stop|restart|reload)
-		"$1";;
+		"$1"
+		;;
 	*)
 		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1
