@@ -112,6 +112,7 @@ int main(int argc, char *argv[])
   
   //time checker
   long long time_check = millis();
+  long long time_check_ping = millis();
   uint16_t send_time = 50;
   struct timespec tw = {0,10};
   struct timespec tr;
@@ -221,10 +222,18 @@ int main(int argc, char *argv[])
               rxpkts_time = millis();
           }
         }
+        //send heartbeat every 1 sec
+        if( (long long)time_check_ping + 1000 < millis() ){
+            mavlink_msg_heartbeat_pack(255, 0, &msg, 1, 1, MAV_MODE_FLAG_MANUAL_INPUT_ENABLED, 0, 0);
+            len = mavlink_msg_to_send_buffer(buf, &msg);
+            bytes_sent = sendto(out_sock, buf, len, 0, (struct sockaddr *)&sin_out, sizeof(sin_out));
+            if (verbose) printf("HB Sent %d bytes\n", bytes_sent);
+            time_check_ping = millis();
+        }
         //send to udp
         if( (long long)time_check + send_time < millis() ){
             uint8_t btnidx = 0;
-            mavlink_msg_rc_channels_override_pack(255, 190, &msg, 0, 0,
+            mavlink_msg_rc_channels_override_pack(255, 0, &msg, 1, 1,
                     axes_to_ch(axes[0].x), //ch1
                     axes_to_ch(axes[0].y), //ch2
                     axes_to_ch(axes[1].x), //ch3
@@ -248,7 +257,7 @@ int main(int argc, char *argv[])
              );
             len = mavlink_msg_to_send_buffer(buf, &msg);
             bytes_sent = sendto(out_sock, buf, len, 0, (struct sockaddr *)&sin_out, sizeof(sin_out));
-            if (verbose) printf("Sent %d bytes\n", bytes_sent);
+            if (verbose) printf("RC Sent %d bytes\n", bytes_sent);
             time_check = millis();
         }
         if (verbose) fflush(stdout);
