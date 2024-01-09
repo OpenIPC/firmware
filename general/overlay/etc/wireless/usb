@@ -183,4 +183,11 @@ if [ "$1" = "mt7601u-t31-camhi" ]; then
 	exit 0
 fi
 
+# T31 Camhipro
+if [ "$1" = "rtl8733bu-t31-camhipro" ]; then
+	set_gpio 61 0
+	modprobe 8733bu
+	exit 0
+fi
+
 exit 1
