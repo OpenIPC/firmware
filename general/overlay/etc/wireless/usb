@@ -141,6 +141,13 @@ if [ "$1" = "rtl8188fu-ssc337de-foscam" ]; then
 	exit 0
 fi
 
+# SSC377 Dahua
+if [ "$1" = "ssv6x5x-ssc337-dahua" ]; then
+	set_gpio 10 1
+	modprobe ssv6x5x
+	exit 0
+fi
+
 # T10 NVT
 if [ "$1" = "mt7601sta-t10-nvt" ]; then
 	modprobe cfg80211
