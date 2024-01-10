@@ -14,6 +14,15 @@ if [ "$1" = "a7680c-gk7205v200-kafei" ]; then
 	exit 0
 fi
 
+# GK7205V200 Vixand with Quectel EC200N-CN and usb0
+if [ "$1" = "ec200-gk7205v200-vixand" ]; then
+	set_gpio 0 0
+	modprobe usbserial vendor=0x2c7c product=0x6002
+	modprobe rndis_host
+	sleep 10
+	exit 0
+fi
+
 # T31 CamHi with Quectel EC200S-CN, EC200T-EU and usb0
 if [ "$1" = "ec200-t31-camhi" ]; then
 	set_gpio 61 0
