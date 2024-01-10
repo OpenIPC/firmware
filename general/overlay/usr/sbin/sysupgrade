@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20231230
+# OpenIPC.org | 2024
 #
 
-scr_version=1.0.28
+scr_version=1.0.29
 
 args=" $@"
 
@@ -83,6 +83,8 @@ do_wipe_overlay() {
 }
 
 download_firmware() {
+	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
+
 	echo_c 33 "\nFirmware"
 	[ "$branch_dev" = "1" ] && branch="dev" || branch="latest"
 	osr=$(get_system_build)
