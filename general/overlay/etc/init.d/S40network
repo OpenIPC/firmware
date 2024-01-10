@@ -6,6 +6,7 @@ set_wireless() {
 	path=/etc/wireless
 	if $path/usb "$dev" || $path/modem "$dev" || $path/sdio "$dev"; then
 		[ -n "$mac" ] && ip link set dev wlan0 address "$mac"
+		ifup usb0
 		ifup wlan0
 		ifconfig eth0 192.168.192.10
 	fi
