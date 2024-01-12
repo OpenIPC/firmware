@@ -4,12 +4,13 @@ mac=$(fw_printenv -n wlanmac)
 
 set_wireless() {
 	path=/etc/wireless
-	if $path/usb "$dev" || $path/modem "$dev" || $path/sdio "$dev"; then
+	if $path/usb "$dev" || $path/sdio "$dev"; then
 		[ -n "$mac" ] && ip link set dev wlan0 address "$mac"
-		ifup usb0
 		ifup wlan0
-		ifconfig eth0 192.168.192.10
+	elif $path/modem "$dev"; then
+		ifup usb0
 	fi
+	ifconfig eth0 192.168.192.10
 }
 
 case "$1" in
@@ -27,7 +28,8 @@ case "$1" in
 		echo "Stopping network..."
 		ifdown lo
 		if [ -n "$dev" ]; then
-			ifdown wlan0
+			ifdown -f wlan0
+			ifdown -f usb0
 		else
 			ifdown eth0
 		fi
