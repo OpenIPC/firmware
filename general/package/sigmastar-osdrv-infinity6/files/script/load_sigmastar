@@ -8,8 +8,8 @@ PATH_SENSOR=${PATH_MODULE}/sensor
 SENSOR=$(fw_printenv -n sensor)
 
 detect_sensor() {
-	devmem 0x1F207188 16 0x0001
-	devmem 0x1F263200 16 0x000D
+	insmod ${PATH_SENSOR}/sensor_config.ko
+	echo srcfg 0 1 0 0 0 0 > /dev/srcfg
 	SENSOR=$(ipcinfo -s)
 	fw_setenv sensor ${SENSOR}
 }
