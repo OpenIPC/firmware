@@ -15,7 +15,7 @@ if [ "$1" = "a7680c-gk7205v200-kafei" ]; then
 fi
 
 # GK7205V200 Vixand with Quectel EC200N-CN and usb0
-if [ "$1" = "ec200-gk7205v200-vixand" ]; then
+if [ "$1" = "ec200n-gk7205v200-vixand" ]; then
 	set_gpio 0 0
 	modprobe usbserial vendor=0x2c7c product=0x6002
 	modprobe rndis_host
@@ -24,7 +24,7 @@ if [ "$1" = "ec200-gk7205v200-vixand" ]; then
 fi
 
 # T31 CamHi with Quectel EC200S-CN, EC200T-EU and usb0
-if [ "$1" = "ec200-t31-camhi" ]; then
+if [ "$1" = "ec200s-t31-camhi" ]; then
 	set_gpio 61 0
 	modprobe usbserial vendor=0x2c7c product=0x6026
 	modprobe rndis_host
@@ -33,7 +33,7 @@ if [ "$1" = "ec200-t31-camhi" ]; then
 fi
 
 # T31 CamHi with Quectel EC800G-CN and usb0
-if [ "$1" = "ec800-t31-camhi" ]; then
+if [ "$1" = "ec800g-t31-camhi" ]; then
 	set_gpio 61 0
 	modprobe usbserial vendor=0x2c7c product=0x904
 	modprobe rndis_host
