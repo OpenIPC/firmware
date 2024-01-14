@@ -1,6 +1,7 @@
 #!/bin/sh
 
 DAEMON="majestic"
+DAEMON_PATH="/usr/bin"
 PIDFILE="/var/run/$DAEMON.pid"
 
 DAEMON_ARGS="-s"
@@ -10,7 +11,7 @@ DAEMON_ARGS="-s"
 
 load_majestic() {
 	printf 'Starting %s: ' "$DAEMON"
-	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
+	[ -f $DAEMON_PATH/$DAEMON ] || echo -en "DISABLED, "
 	# shellcheck disable=SC2086 # we need the word splitting
 	[ -f /etc/coredump.conf ] && . /etc/coredump.conf
 	if [ "$coredump_enabled" ]; then
@@ -20,13 +21,9 @@ load_majestic() {
 
 	if [ "ingenic" = "$(ipcinfo -v)" ]; then
 		start-stop-daemon -b -m -S -q -p "$PIDFILE" -x /usr/bin/env -- \
-			LD_PRELOAD=/usr/lib/libimp_control.so /usr/bin/$DAEMON $DAEMON_ARGS
-		sleep 2
-		if [ -f "/tmp/imp.conf" ]; then
-			while read -r line; do imp-control.sh $line; done < /tmp/imp.conf
-		fi
+			LD_PRELOAD=/usr/lib/libimp_control.so $DAEMON_PATH/$DAEMON $DAEMON_ARGS
 	else
-		start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
+		start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON_PATH/$DAEMON" -- $DAEMON_ARGS
 	fi
 
 	status=$?
@@ -47,7 +44,7 @@ start() {
 
 stop() {
 	printf 'Stopping %s: ' "$DAEMON"
-	[ -f /usr/bin/$DAEMON ] || echo -en "DISABLED, "
+	[ -f $DAEMON_PATH/$DAEMON ] || echo -en "DISABLED, "
 	start-stop-daemon -K -q -p "$PIDFILE"
 	status=$?
 	if [ "$status" -eq 0 ]; then
