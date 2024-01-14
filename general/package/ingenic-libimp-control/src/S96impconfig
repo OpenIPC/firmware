@@ -1,0 +1,32 @@
+#!/bin/sh
+
+start() {
+	[ ! -f "/etc/imp.conf" ] && return
+
+	echo -n "Restoring IMP Configuration: "
+	while read -r line; do
+		imp-control.sh $line
+	done < /etc/imp.conf
+	echo "OK"
+}
+
+stop() {
+	:
+}
+
+restart() {
+	start
+}
+
+reload() {
+	start
+}
+
+case "$1" in
+	start|stop|restart|reload)
+		"$1"
+		;;
+	*)
+		echo "Usage: $0 {start|restart|reload}"
+		exit 1
+esac
