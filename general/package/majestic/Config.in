@@ -1,5 +1,6 @@
 config BR2_PACKAGE_MAJESTIC
 	bool "Majestic streamer"
+	select BR2_PACKAGE_INGENIC_LIBIMP_CONTROL if BR2_OPENIPC_SOC_VENDOR="ingenic"
 	default n
 	help
 	  Tiny but powerful IPC streaming software
