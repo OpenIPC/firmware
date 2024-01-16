@@ -18,12 +18,6 @@ LIBEVENT_OPENIPC_CONF_OPTS = \
 	-DEVENT__DISABLE_TESTS=ON \
 	-DCMAKE_BUILD_TYPE=Release
 
-define LIBEVENT_OPENIPC_PATCH_MMAH_H
-	sed -i 's/#define mmap64 mmap/void *mmap64 (void *, size_t, int, int, int, off_t);/' $(STAGING_DIR)/usr/include/sys/mman.h
-endef
-
-LIBEVENT_OPENIPC_PRE_BUILD_HOOKS += LIBEVENT_OPENIPC_PATCH_MMAH_H
-
 define LIBEVENT_OPENIPC_REMOVE_PYSCRIPT
 	rm $(TARGET_DIR)/usr/bin/event_rpcgen.py
 endef
