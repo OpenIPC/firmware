@@ -1,0 +1,41 @@
+--- a/buffer.c
++++ b/buffer.c
+@@ -63,6 +63,9 @@
+ #include <sys/stat.h>
+ #endif
+ 
++#if defined(BROKEN_MMAP)
++#include <sys/syscall.h>
++#endif
+ 
+ #include <errno.h>
+ #include <stdio.h>
+@@ -2977,6 +2980,12 @@
+ 	return result;
+ }
+ 
++#if defined(BROKEN_MMAP)
++static void *mmap_ev(void *start, size_t len, int prot, int flags, int fd, off_t off) {
++	return (void *)syscall(SYS_mmap2, start, len, prot, flags, fd, off >> 12);
++}
++#endif
++
+ /* TODO(niels): we may want to add to automagically convert to mmap, in
+  * case evbuffer_remove() or evbuffer_pullup() are being used.
+  */
+@@ -3080,11 +3089,15 @@
+ 			offset_leftover = offset % page_size;
+ 			offset_rounded = offset - offset_leftover;
+ 		}
++#if defined(BROKEN_MMAP)
++ 		mapped = mmap_ev(NULL, length + offset_leftover,
++#else
+ #if defined(EVENT__HAVE_MMAP64)
+ 		mapped = mmap64(NULL, length + offset_leftover,
+ #else
+ 		mapped = mmap(NULL, length + offset_leftover,
+ #endif
++#endif
+ 		    PROT_READ,
+ #ifdef MAP_NOCACHE
+ 		    MAP_NOCACHE | /* ??? */
