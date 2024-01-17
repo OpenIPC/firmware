@@ -19,7 +19,7 @@ load_majestic() {
 		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" >/proc/sys/kernel/core_pattern
 	fi
 
-	if [ "ingenic" = "$(ipcinfo -v)" ]; then
+	if [ "ingenic" = "$(ipcinfo -v)" ] && [ -f /etc/webui/imp.conf ]; then
 		start-stop-daemon -b -m -S -q -p "$PIDFILE" -x /usr/bin/env -- \
 			LD_PRELOAD=/usr/lib/libimp_control.so $DAEMON_PATH/$DAEMON $DAEMON_ARGS
 	else
