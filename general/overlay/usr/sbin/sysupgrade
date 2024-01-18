@@ -3,7 +3,7 @@
 # OpenIPC.org | 2024
 #
 
-scr_version=1.0.30
+scr_version=1.0.31
 
 args=" $@"
 
@@ -105,7 +105,7 @@ free_resources() {
 
 	echo -n "Killing majestic ... "
 	time=$(grep TIME_STAMP /etc/os-release | cut -d= -f2)
-	if [ "$time" -gt "1705414000" ]; then
+	if [ "$time" -gt "1706791500" ]; then
 		killall -q -SIGUSR2 majestic
 	else
 		killall -q majestic
