@@ -1,4 +1,5 @@
 config BR2_PACKAGE_INGENIC_PWM
 	bool "ingenic-pwm"
+	select BR2_PACKAGE_INGENIC_LIBIMP_CONTROL if BR2_OPENIPC_SOC_VENDOR="ingenic"
 	help
 	  Userspace program for controlling PWM channels on the Ingenic platform
