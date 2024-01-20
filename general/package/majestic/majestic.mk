@@ -6,15 +6,14 @@
 
 MAJESTIC_SITE = https://openipc.s3-eu-west-1.amazonaws.com
 MAJESTIC_SOURCE = majestic.$(MAJESTIC_FAMILY).$(MAJESTIC_RELEASE).master.tar.bz2
-
 MAJESTIC_LICENSE = PROPRIETARY
 MAJESTIC_LICENSE_FILES = LICENSE
 
 MAJESTIC_FAMILY = $(OPENIPC_SOC_FAMILY)
 MAJESTIC_RELEASE = $(OPENIPC_FLAVOR)
 
-# we don't have Majestic ultimate for these platforms
-MAJESTIC_LIST = hi3516av100 hi3519v101
+# filter Majestic ultimate for these platforms
+MAJESTIC_LIST = t20 t21 hi3516av100 hi3519v101
 
 ifneq ($(filter $(MAJESTIC_LIST),$(MAJESTIC_FAMILY)),)
 	MAJESTIC_RELEASE = lite
@@ -29,8 +28,7 @@ MAJESTIC_DEPENDENCIES = \
 	libogg-openipc \
 	mbedtls-openipc \
 	opus-openipc \
-	json-c \
-	zlib
+	json-c
 
 MAJESTIC_STRIP_COMPONENTS = 0
 
@@ -44,8 +42,6 @@ define MAJESTIC_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/majestic
-
-	rm -rf $(MAJESTIC_DL_DIR)
 endef
 
 $(eval $(generic-package))
