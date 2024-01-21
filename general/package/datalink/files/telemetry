@@ -7,24 +7,27 @@
 . /etc/telemetry.conf
 
 keydir="/etc"
-
 fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
 
 if [ ! -f /usr/bin/telemetry_rx -a ! -f /usr/bin/telemetry_tx ]; then
-	ln -s /usr/bin/wfb_rx /usr/bin/telemetry_rx ; chmod +x /usr/bin/telemetry_rx
-	ln -s /usr/bin/wfb_tx /usr/bin/telemetry_tx ; chmod +x /usr/bin/telemetry_tx
+	ln -s /usr/bin/wfb_rx /usr/bin/telemetry_rx; chmod +x /usr/bin/telemetry_rx
+	ln -s /usr/bin/wfb_tx /usr/bin/telemetry_tx; chmod +x /usr/bin/telemetry_tx
 fi
 
 start_drone_telemetry() {
 	if [ ${one_way} = "false" ]; then
 		telemetry_rx -p ${stream_rx} -u ${port_rx} -K ${keydir}/${unit}.key -i ${link_id} ${wlan} > /dev/null &
 	fi
-	telemetry_tx -p ${stream_tx} -u ${port_tx} -K ${keydir}/${unit}.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} -T ${pool_timeout} -i ${link_id} -f ${frame_type} ${wlan} > /dev/null &
+	telemetry_tx -p ${stream_tx} -u ${port_tx} -K ${keydir}/${unit}.key -B ${bandwidth} \
+		-M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} \
+		-T ${pool_timeout} -i ${link_id} -f ${frame_type} ${wlan} > /dev/null &
 }
 
 start_gs_telemetry() {
 	if [ ${one_way} = "false" ]; then
-		telemetry_tx -p ${stream_tx} -u ${port_tx} -K ${keydir}/${unit}.key -B ${bandwidth} -M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} -T ${pool_timeout} -i ${link_id} -f ${frame_type} ${wlan} > /dev/null &
+		telemetry_tx -p ${stream_tx} -u ${port_tx} -K ${keydir}/${unit}.key -B ${bandwidth} \
+			-M ${mcs_index} -S ${stbc} -L ${ldpc} -G ${guard_interval} -k ${fec_k} -n ${fec_n} \
+			-T ${pool_timeout} -i ${link_id} -f ${frame_type} ${wlan} > /dev/null &
 	fi
 	telemetry_rx -p ${stream_rx} -u ${port_rx} -K ${keydir}/${unit}.key -i ${link_id} ${wlan} > /dev/null &
 }
@@ -32,25 +35,28 @@ start_gs_telemetry() {
 case "$1" in
 	start)
 		echo "Loading MAVLink telemetry service..."
-
 		if [ ${router} -eq 1 ] || [ ${fw} = "lte" ]; then
 			mavlink-routerd -c /etc/mavlink.conf > /dev/null 2>&1 &
 		else
-			mavfwd --channels ${channels} --master ${serial} --baudrate ${baud} --out 127.0.0.1:${port_tx} --in 127.0.0.1:${port_rx} > /dev/null &
+			mavfwd --channels ${channels} --master ${serial} --baudrate ${baud} \
+				--out 127.0.0.1:${port_tx} --in 127.0.0.1:${port_rx} > /dev/null &
 		fi
 		if [ ${fw} = "fpv" ] || [ ${fw} = "venc" ]; then
 			start_${unit}_telemetry
 		fi
 		echo "Done."
 		;;
+
 	stop)
 		echo "Stopping telemetry services..."
-		kill -9 $(pidof telemetry_rx)
-		kill -9 $(pidof telemetry_tx)
-		kill -9 $(pidof mavlink-routerd)
-		kill -9 $(pidof mavfwd)
+		killall -q telemetry_rx
+		killall -q telemetry_tx
+		killall -q mavlink-routerd
+		killall -q mavfwd
 		;;
+
 	*)
 		echo "Usage: $0 {start|stop}"
 		exit 1
+		;;
 esac
