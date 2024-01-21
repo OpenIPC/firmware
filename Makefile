@@ -7,29 +7,17 @@ TARGET ?= $(PWD)/output
 CONFIG = $(error variable BOARD is not defined)
 TIMER := $(shell date +%s)
 
-ifeq ($(MAKECMDGOALS),all)
-ifeq ($(BOARD),)
+ifeq ($(or $(MAKECMDGOALS), $(BOARD)),)
 LIST := $(shell find ./br-ext-*/configs/*_defconfig | sort | \
 	sed -E "s/br-ext-chip-(.+).configs.(.+)_defconfig/'\2' '\1 \2'/")
-BOARD := $(or $(shell whiptail --title "Available boards" --menu "Please select a board:" 20 76 12 \
+BOARD := $(or $(shell whiptail --title "Available boards" --menu "Select a config:" 20 70 12 \
 	--notags $(LIST) 3>&1 1>&2 2>&3),$(CONFIG))
-endif
 endif
 
 ifneq ($(BOARD),)
 CONFIG := $(shell find br-ext-*/configs/*_defconfig | grep -m1 $(BOARD))
 include $(CONFIG)
 endif
-
-help:
-	@printf "BR-OpenIPC usage:\n \
-	- make list - show available device configurations\n \
-	- make deps - install build dependencies\n \
-	- make clean - remove defconfig and target folder\n \
-	- make package - list available packages\n \
-	- make distclean - remove buildroot and output folder\n \
-	- make br-linux - build linux kernel only\n \
-	- make all - build the device firmware\n\n"
 
 all: build repack timer
 
@@ -48,20 +36,29 @@ prepare:
 		wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE); \
 		mkdir -p $(TARGET); tar -xf $(BR_FILE) -C $(TARGET); fi
 
-toolname:
-	@general/scripts/show_toolchains.sh $(CONFIG)
+help:
+	@printf "BR-OpenIPC usage:\n \
+	- make list - show available device configurations\n \
+	- make deps - install build dependencies\n \
+	- make clean - remove defconfig and target folder\n \
+	- make package - list available packages\n \
+	- make distclean - remove buildroot and output folder\n \
+	- make br-linux - build linux kernel only\n\n"
+
+list:
+	@ls -1 br-ext-chip-*/configs
 
 package:
 	@find general/package/* -maxdepth 0 -type d -printf "br-%f\n" | grep -v patch
+
+toolname:
+	@general/scripts/show_toolchains.sh $(CONFIG)
 
 clean:
 	@rm -rf $(TARGET)/images $(TARGET)/target
 
 distclean:
 	@rm -rf $(BR_FILE) $(TARGET)
-
-list:
-	@ls -1 br-ext-chip-*/configs
 
 deps:
 	sudo apt-get install -y automake autotools-dev bc build-essential cpio \
