@@ -1,6 +1,7 @@
 #!/bin/sh
 dev=$(fw_printenv -n wlandev)
 mac=$(fw_printenv -n wlanmac)
+net=$(fw_printenv -n netaddr_fallback)
 
 set_wireless() {
 	path=/etc/wireless
@@ -10,7 +11,7 @@ set_wireless() {
 	elif $path/modem "$dev"; then
 		ifup usb0
 	fi
-	ifconfig eth0 192.168.192.10
+	ifconfig eth0 "${net:-192.168.2.10}"
 }
 
 case "$1" in
