@@ -43,11 +43,6 @@ detect_wifi_card() {
 				modprobe 88XXau rtw_tx_pwr_idx_override=${driver_txpower_override}
 				;;
 
-			"0bda:f72b")
-				driver="realtek"
-				modprobe 8733bu
-				;;
-
 			"0cf3:9271" | "040d:3801")
 				driver="atheros"
 				if ! [ ${unit} = "gs" ]; then
