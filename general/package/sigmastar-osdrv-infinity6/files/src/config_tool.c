@@ -1,15 +1,18 @@
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <src/tools.h>
 
 #define BOUNDS 0x80000000
 #define LENGTH 0x1A000
 #define ALIGN 0x1000
 #define CMDQ "E_MMAP_ID_CMDQ"
 #define SSTAR 0x1F2025A4
+
+bool mem_reg(uint32_t addr, uint32_t *data, int op);
 
 int main() {
 	char buf[128];

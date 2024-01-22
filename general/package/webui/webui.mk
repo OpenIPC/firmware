@@ -4,14 +4,8 @@
 #
 ################################################################################
 
-ifeq ($(LOCAL_DOWNLOAD),y)
-WEBUI_SITE_METHOD = git
-WEBUI_SITE = https://github.com/openipc/webui
-WEBUI_VERSION = $(shell git ls-remote $(WEBUI_SITE) HEAD | head -1 | cut -f1)
-else
-WEBUI_SITE = https://github.com/openipc/webui/archive
-WEBUI_SOURCE = master.tar.gz
-endif
+WEBUI_SITE = $(call github,openipc,webui,$(WEBUI_VERSION))
+WEBUI_VERSION = master
 
 WEBUI_LICENSE = MIT
 WEBUI_LICENSE_FILES = LICENSE

@@ -4,10 +4,8 @@
 #
 ################################################################################
 
-ONVIF_SIMPLE_SERVER_SITE_METHOD = git
-ONVIF_SIMPLE_SERVER_SITE = https://github.com/roleoroleo/onvif_simple_server
-#ONVIF_SIMPLE_SERVER_VERSION = de6d585a245e4873c49b113360f98907f2b4cf49
-ONVIF_SIMPLE_SERVER_VERSION = $(shell git ls-remote $(ONVIF_SIMPLE_SERVER_SITE) HEAD | head -1 | awk '{ print $$1 }')
+ONVIF_SIMPLE_SERVER_SITE = $(call github,roleoroleo,onvif_simple_server,$(ONVIF_SIMPLE_SERVER_VERSION))
+ONVIF_SIMPLE_SERVER_VERSION = master
 
 ONVIF_SIMPLE_SERVER_DEPENDENCIES = mbedtls
 ONVIF_SIMPLE_SERVER_LICENSE = MIT

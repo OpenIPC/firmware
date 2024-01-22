@@ -4,14 +4,8 @@
 #
 ################################################################################
 
-ifeq ($(LOCAL_DOWNLOAD),y)
-CAPJPEG_SITE_METHOD = git
-CAPJPEG_SITE = https://github.com/openipc/capjpeg
-CAPJPEG_VERSION = $(shell git ls-remote $(CAPJPEG_SITE) HEAD | head -1 | cut -f1)
-else
-CAPJPEG_SITE = https://github.com/openipc/capjpeg/archive
-CAPJPEG_SOURCE = main.tar.gz
-endif
+CAPJPEG_SITE = $(call github,openipc,capjpeg,$(CAPJPEG_VERSION))
+CAPJPEG_VERSION = master
 
 CAPJPEG_LICENSE = MIT
 CAPJPEG_LICENSE_FILES = LICENSE
