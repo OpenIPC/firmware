@@ -1,17 +1,11 @@
 ################################################################################
 #
-# gdbserver-lite | updated 2021.05.10
+# gdbserver-lite
 #
 ################################################################################
 
-ifeq ($(LOCAL_DOWNLOAD),y)
-GDBSERVER_LITE_SITE_METHOD = git
-GDBSERVER_LITE_SITE = https://github.com/bet4it/gdbserver
-GDBSERVER_LITE_VERSION = $(shell git ls-remote $(GDBSERVER_LITE_SITE) HEAD | head -1 | cut -f1)
-else
-GDBSERVER_LITE_SITE = https://github.com/bet4it/gdbserver/archive
-GDBSERVER_LITE_SOURCE = master.tar.gz
-endif
+GDBSERVER_LITE_SITE = $(call github,bet4it,gdbserver,$(GDBSERVER_LITE_VERSION))
+GDBSERVER_LITE_VERSION = master
 
 GDBSERVER_LITE_LICENSE = GNU General Public License v3.0
 GDBSERVER_LITE_LICENSE_FILES = LICENSE

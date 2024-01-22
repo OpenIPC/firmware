@@ -13,8 +13,7 @@ SIGMASTAR_OSDRV_INFINITY6_DEPENDENCIES = ipctool
 
 define SIGMASTAR_OSDRV_INFINITY6_BUILD_CMDS
 	cp -rf $(SIGMASTAR_OSDRV_INFINITY6_PKGDIR)/files/src $(@D)
-	$(TARGET_CC) $(@D)/src/config_tool.c -o $(@D)/config_tool -s \
-		-I$(BUILD_DIR)/ipctool -L$(BUILD_DIR)/ipctool -lipchw
+	$(TARGET_CC) $(@D)/src/config_tool.c -o $(@D)/config_tool -lipchw -s
 endef
 
 define SIGMASTAR_OSDRV_INFINITY6_INSTALL_TARGET_CMDS

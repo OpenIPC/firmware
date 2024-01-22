@@ -4,9 +4,8 @@
 #
 ################################################################################
 
-LIBSRTP_OPENIPC_SITE_METHOD = git
-LIBSRTP_OPENIPC_SITE = https://github.com/cisco/libsrtp
-LIBSRTP_OPENIPC_VERSION = $(shell git ls-remote $(LIBSRTP_OPENIPC_SITE) HEAD | head -1 | cut -f1)
+LIBSRTP_OPENIPC_SITE = $(call github,cisco,libsrtp,$(LIBSRTP_OPENIPC_VERSION))
+LIBSRTP_OPENIPC_VERSION = master
 
 LIBSRTP_OPENIPC_INSTALL_STAGING = YES
 LIBSRTP_OPENIPC_SUPPORTS_IN_SOURCE_BUILD = NO

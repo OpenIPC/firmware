@@ -4,14 +4,8 @@
 #
 ################################################################################
 
-ifeq ($(LOCAL_DOWNLOAD),y)
-INGENIC_DIAG_TOOLS_SITE_METHOD = git
-INGENIC_DIAG_TOOLS_SITE = https://github.com/gtxaspec/jz-diag-tools
-INGENIC_DIAG_TOOLS_VERSION = $(shell git ls-remote $(INGENIC_DIAG_TOOLS_SITE) HEAD | head -1 | cut -f1)
-else
-INGENIC_DIAG_TOOLS_SITE = https://github.com/gtxaspec/jz-diag-tools/archive
-INGENIC_DIAG_TOOLS_SOURCE = main.tar.gz
-endif
+INGENIC_DIAG_TOOLS_SITE = $(call github,gtxaspec,jz-diag-tools,$(INGENIC_DIAG_TOOLS_VERSION))
+INGENIC_DIAG_TOOLS_VERSION = master
 
 define INGENIC_DIAG_TOOLS_BUILD_CMDS
     $(MAKE) CROSS_COMPILE=$(TARGET_CROSS) -C $(@D)

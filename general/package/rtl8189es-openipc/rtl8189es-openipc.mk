@@ -4,14 +4,8 @@
 #
 ################################################################################
 
-ifeq ($(LOCAL_DOWNLOAD),y)
-RTL8189ES_OPENIPC_SITE_METHOD = git
-RTL8189ES_OPENIPC_SITE = https://github.com/jwrdegoede/rtl8189es_linux
-RTL8189ES_OPENIPC_VERSION = $(shell git ls-remote $(RTL8189ES_OPENIPC_SITE) master | head -1 | cut -f1)
-else
-RTL8189ES_OPENIPC_SITE = https://github.com/jwrdegoede/rtl8189es_linux/archive
-RTL8189ES_OPENIPC_SOURCE = master.tar.gz
-endif
+RTL8189ES_OPENIPC_SITE = $(call github,jwrdegoede,rtl8189es_linux,$(RTL8189ES_OPENIPC_VERSION))
+RTL8189ES_OPENIPC_VERSION = master
 
 RTL8189ES_OPENIPC_LICENSE = GPL-2.0
 RTL8189ES_OPENIPC_LICENSE_FILES = COPYING
