@@ -103,14 +103,14 @@ define CHECK_SIZE
 endef
 
 define REPACK_FIRMWARE
-	mkdir -p $(TARGET)/images/$(3)
-	$(if $(1),cd $(TARGET)/images/$(3) && cp -f ../$(1) $(1).$(BR2_OPENIPC_SOC_MODEL))
-	$(if $(2),cd $(TARGET)/images/$(3) && cp -f ../$(2) $(2).$(BR2_OPENIPC_SOC_MODEL))
-	$(if $(1),cd $(TARGET)/images/$(3) && md5sum $(1).$(BR2_OPENIPC_SOC_MODEL) > $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum)
-	$(if $(2),cd $(TARGET)/images/$(3) && md5sum $(2).$(BR2_OPENIPC_SOC_MODEL) > $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum)
+	cd $(TARGET)/images && mv -f rootfs.tar rootfs.$(BR2_OPENIPC_SOC_MODEL).tar
+	$(if $(1),cd $(TARGET)/images && mv -f $(1) $(1).$(BR2_OPENIPC_SOC_MODEL))
+	$(if $(2),cd $(TARGET)/images && mv -f $(2) $(2).$(BR2_OPENIPC_SOC_MODEL))
+	$(if $(1),cd $(TARGET)/images && md5sum $(1).$(BR2_OPENIPC_SOC_MODEL) > $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum)
+	$(if $(2),cd $(TARGET)/images && md5sum $(2).$(BR2_OPENIPC_SOC_MODEL) > $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum)
 	$(if $(1),$(eval KERNEL = $(1).$(BR2_OPENIPC_SOC_MODEL) $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval KERNEL =))
 	$(if $(2),$(eval ROOTFS = $(2).$(BR2_OPENIPC_SOC_MODEL) $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval ROOTFS =))
-	$(eval ARCHIVE = ../openipc.$(BR2_OPENIPC_SOC_MODEL)-$(3)-$(BR2_OPENIPC_FLAVOR).tgz)
-	cd $(TARGET)/images/$(3) && tar -czf $(ARCHIVE) $(KERNEL) $(ROOTFS)
-	rm -rf $(TARGET)/images/$(3)
+	$(eval ARCHIVE = openipc.$(BR2_OPENIPC_SOC_MODEL)-$(3)-$(BR2_OPENIPC_FLAVOR).tgz)
+	cd $(TARGET)/images && tar -czf $(ARCHIVE) $(KERNEL) $(ROOTFS)
+	rm -f $(TARGET)/images/*.md5sum
 endef
