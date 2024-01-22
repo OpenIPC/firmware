@@ -113,7 +113,6 @@ finish() {
 case "$1" in
 	gk7205v200 | gk7205v210 | hi3516ev200)
 		echo "Preparing system tweaks for ${chip}..."
-
 		# set custom config
 		if [ ${chip} = "gk7205v200" ] && [ ${sensor} = "imx307" ]; then
 			echo "switch to custom sensor config"
@@ -136,6 +135,7 @@ case "$1" in
 		streamer
 		finish
 		;;
+
 	gk7205v300 | hi3516ev300)
 		echo "Preparing system tweaks for ${chip}..."
 
@@ -152,27 +152,29 @@ case "$1" in
 		streamer
 		finish
 		;;
+
 	t31l | t31n | t31x | t31zx)
 		echo "Preparing system tweaks for ${chip}..."
-
 		basic
 		streamer
 		finish
 		;;
+
 	hi3536dv100)
 		echo "Preparing system tweaks for ${chip}..."
-
 		finish
 		;;
+
 	ssc33x)
 		echo "Preparing system tweaks for ${chip}..."
-
 		basic
 		sigmastar
 		streamer
 		finish
 		;;
+
 	*)
 		echo "Usage: $0 {gk7205v200|gk7205v210|gk7205v300|hi3516ev200|hi3516ev300|t31l|t31n|t31x|t31zx|hi3536dv100|ssc33x}"
 		exit 1
+		;;
 esac
