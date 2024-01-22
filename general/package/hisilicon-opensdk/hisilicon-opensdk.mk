@@ -4,14 +4,8 @@
 #
 ################################################################################
 
-ifeq ($(LOCAL_DOWNLOAD),y)
-HISILICON_OPENSDK_SITE_METHOD = git
-HISILICON_OPENSDK_SITE = https://github.com/openipc/openhisilicon
-HISILICON_OPENSDK_VERSION = $(shell git ls-remote $(HISILICON_OPENSDK_SITE) HEAD | head -1 | cut -f1)
-else
-HISILICON_OPENSDK_SITE = https://github.com/openipc/openhisilicon/archive
-HISILICON_OPENSDK_SOURCE = master.tar.gz
-endif
+HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
+HISILICON_OPENSDK_VERSION = master
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE

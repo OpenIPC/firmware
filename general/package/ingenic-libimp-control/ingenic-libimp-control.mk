@@ -4,14 +4,8 @@
 #
 ################################################################################
 
-ifeq ($(LOCAL_DOWNLOAD),y)
-INGENIC_LIBIMP_CONTROL_SITE_METHOD = git
-INGENIC_LIBIMP_CONTROL_SITE = https://github.com/gtxaspec/libimp_control
-INGENIC_LIBIMP_CONTROL_VERSION = $(shell git ls-remote $(INGENIC_LIBIMP_CONTROL_SITE) HEAD | head -1 | cut -f1)
-else
-INGENIC_LIBIMP_CONTROL_SITE = https://github.com/gtxaspec/libimp_control/archive
-INGENIC_LIBIMP_CONTROL_SOURCE = master.tar.gz
-endif
+INGENIC_LIBIMP_CONTROL_SITE = $(call github,gtxaspec,libimp_control,$(INGENIC_LIBIMP_CONTROL_VERSION))
+INGENIC_LIBIMP_CONTROL_VERSION = master
 
 define INGENIC_LIBIMP_CONTROL_BUILD_CMDS
 	$(MAKE) CONFIG_SOC=$(OPENIPC_SOC_MODEL) CROSS_COMPILE=$(TARGET_CROSS) -C $(@D)

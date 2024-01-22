@@ -1,17 +1,11 @@
 ################################################################################
 #
-# jsonfilter | updated 2022.09.27
+# jsonfilter
 #
 ################################################################################
 
-ifeq ($(LOCAL_DOWNLOAD),y)
-JSONFILTER_SITE_METHOD = git
-JSONFILTER_SITE = https://github.com/openwrt/jsonpath
-JSONFILTER_VERSION = $(shell git ls-remote $(JSONFILTER_SITE) HEAD | head -1 | cut -f1)
-else
-JSONFILTER_SITE = https://github.com/openwrt/jsonpath/archive
-JSONFILTER_SOURCE = master.tar.gz
-endif
+JSONFILTER_SITE = $(call github,openwrt,jsonpath,$(JSONFILTER_VERSION))
+JSONFILTER_VERSION = master
 
 JSONFILTER_LICENSE = ISC, BSD-3-Clause
 JSONFILTER_DEPENDENCIES = json-c libubox

@@ -4,9 +4,8 @@
 #
 ################################################################################
 
-MT7601U_OPENIPC_SITE_METHOD = git
-MT7601U_OPENIPC_SITE = https://github.com/openipc/mt7601u
-MT7601U_OPENIPC_VERSION = $(shell git ls-remote $(MT7601U_OPENIPC_SITE) HEAD | head -1 | cut -f1)
+MT7601U_OPENIPC_SITE = $(call github,openipc,mt7601u,$(MT7601U_OPENIPC_VERSION))
+MT7601U_OPENIPC_VERSION = master
 MT7601U_OPENIPC_LICENSE = GPL-2.0
 
 MT7601U_OPENIPC_MODULE_MAKE_OPTS = \
