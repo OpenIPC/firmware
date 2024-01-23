@@ -4,9 +4,8 @@
 #
 #############################################################
 
-LIBREM_OPENIPC_VERSION = 2.0.1
-LIBREM_OPENIPC_SOURCE = v$(LIBREM_OPENIPC_VERSION).tar.gz
-LIBREM_OPENIPC_SITE = https://github.com/baresip/rem/archive
+LIBREM_OPENIPC_SITE = $(call github,baresip,rem,$(LIBREM_OPENIPC_VERSION))
+LIBREM_OPENIPC_VERSION = v2.0.1
 
 LIBREM_OPENIPC_INSTALL_STAGING = YES
 LIBREM_OPENIPC_DEPENDENCIES = libre-openipc

@@ -4,8 +4,9 @@
 #
 ################################################################################
 
-VENC_OPENIPC_SITE = https://github.com/openipc/silicon_research/archive
-VENC_OPENIPC_SOURCE = master.tar.gz
+VENC_OPENIPC_SITE = $(call github,openipc,silicon_research,$(VENC_OPENIPC_VERSION))
+VENC_OPENIPC_VERSION = master
+
 VENC_OPENIPC_LICENSE = MIT
 
 ifeq ($(OPENIPC_SOC_VENDOR),hisilicon)
