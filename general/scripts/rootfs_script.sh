@@ -15,7 +15,7 @@ fi
 
 if grep -q "USES_MUSL" ${BR2_CONFIG}; then
   LIST=${BR2_EXTERNAL}/scripts/excludes/${OPENIPC_SOC_MODEL}_${OPENIPC_FLAVOR}.list
-  test -e ${LIST} && xargs -a ${LIST} -I % rm -rf ${TARGET_DIR}/%
+  test -e ${LIST} && xargs -a ${LIST} -I % rm -f ${TARGET_DIR}%
 
   ln -sf libc.so ${TARGET_DIR}/lib/ld-uClibc.so.0
   ln -sf ../../lib/libc.so ${TARGET_DIR}/usr/bin/ldd
