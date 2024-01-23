@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-MAJESTIC_PLUGINS_SITE = https://github.com/openipc/majestic-plugins/archive
-MAJESTIC_PLUGINS_SOURCE = master.tar.gz
+MAJESTIC_PLUGINS_SITE = $(call github,openipc,majestic-plugins,$(MAJESTIC_PLUGINS_VERSION))
+MAJESTIC_PLUGINS_VERSION = master
 
 MAJESTIC_PLUGINS_PATH = $(BASE_DIR)/../majestic-plugins
 

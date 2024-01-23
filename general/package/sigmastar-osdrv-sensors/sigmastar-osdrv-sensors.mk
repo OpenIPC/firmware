@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-SIGMASTAR_OSDRV_SENSORS_SITE = https://github.com/openipc/sensors/archive
-SIGMASTAR_OSDRV_SENSORS_SOURCE = master.tar.gz
+SIGMASTAR_OSDRV_SENSORS_SITE = $(call github,openipc,sensors,$(SIGMASTAR_OSDRV_SENSORS_VERSION))
+SIGMASTAR_OSDRV_SENSORS_VERSION = master
 
 SIGMASTAR_OSDRV_SENSORS_LICENSE = MIT
 SIGMASTAR_OSDRV_SENSORS_LICENSE_FILES = LICENSE
