@@ -4,8 +4,9 @@
 #
 ################################################################################
 
-VDEC_OPENIPC_SITE = https://github.com/openipc/silicon_research/archive
-VDEC_OPENIPC_SOURCE = master.tar.gz
+VDEC_OPENIPC_SITE = $(call github,openipc,silicon_research,$(VDEC_OPENIPC_VERSION))
+VDEC_OPENIPC_VERSION = master
+
 VDEC_OPENIPC_LICENSE = MIT
 
 define VDEC_OPENIPC_BUILD_CMDS
