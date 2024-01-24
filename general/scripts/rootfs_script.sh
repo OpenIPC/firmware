@@ -1,5 +1,4 @@
 #!/bin/bash
-
 DATE=$(date +%y.%m.%d)
 FILE=${TARGET_DIR}/usr/lib/os-release
 

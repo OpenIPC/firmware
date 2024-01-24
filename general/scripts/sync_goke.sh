@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+#!/bin/bash
 INDIR=br-ext-chip-hisilicon/board/hi3516ev200/kernel
 OUTDIR=br-ext-chip-goke/board/gk7205v200/kernel
 
