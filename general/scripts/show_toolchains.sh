@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+#!/bin/bash
 shopt -s nullglob
 
 toolchain_by_config() {

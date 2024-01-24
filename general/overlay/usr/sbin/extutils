@@ -1,5 +1,4 @@
 #!/bin/sh
-
 CMD=$(echo $0 | cut -d / -f 4)
 ARCH=$(uname -m)
 
@@ -45,6 +44,7 @@ case "${CMD}" in
 			[ -f /usr/share/openipc/customizer.sh ] && echo "Run customizer script..." && sh /usr/share/openipc/customizer.sh && touch /etc/system.ok || echo "Customizer script not present..."
 		fi
 		;;
+
 	*)
 		;;
 esac
