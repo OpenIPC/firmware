@@ -3,7 +3,7 @@
 # OpenIPC.org | 2024
 #
 
-scr_version=1.0.32
+scr_version=1.0.33
 
 args=" $@"
 
@@ -107,10 +107,10 @@ free_resources() {
 	time=$(grep TIME_STAMP /etc/os-release | cut -d= -f2)
 	if [ "$time" -gt "1705705200" ]; then
 		killall -q -SIGUSR1 majestic
-		sleep 2
 	else
 		killall -q majestic
 	fi
+	sleep 1
 	echo "OK"
 
 	for proc in crond klogd ntpd rngd syslogd; do

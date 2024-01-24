@@ -1,14 +1,13 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 if [ ! $# -eq 2 ]; then
-  echo "Usage: $0 <hi3516dv200.generic.config> <gk7605v100.generic.config>"
+	echo "Usage: $0 <hi3516dv200.generic.config> <gk7605v100.generic.config>"
 fi
 
 INPUT=$1
 OUTPUT=$2
 
 cp $INPUT $OUTPUT
-
 sed -i 's/HISI_BVT/GOKE/g' $OUTPUT
 sed -i 's/Hisilicon BVT/Goke/g' $OUTPUT
 sed -i 's/HISILICON/GOKE/g' $OUTPUT

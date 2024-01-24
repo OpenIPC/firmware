@@ -55,7 +55,7 @@ toolname:
 	@general/scripts/show_toolchains.sh $(CONFIG)
 
 clean:
-	@rm -rf $(TARGET)/images $(TARGET)/target
+	@rm -rf $(TARGET)/build $(TARGET)/images $(TARGET)/per-package $(TARGET)/target
 
 distclean:
 	@rm -rf $(BR_FILE) $(TARGET)
