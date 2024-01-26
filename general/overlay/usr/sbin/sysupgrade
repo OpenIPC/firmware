@@ -3,7 +3,7 @@
 # OpenIPC.org | 2024
 #
 
-scr_version=1.0.33
+scr_version=1.0.34
 
 args=" $@"
 
@@ -102,18 +102,7 @@ download_firmware() {
 
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
-
-	echo -n "Killing majestic ... "
-	time=$(grep TIME_STAMP /etc/os-release | cut -d= -f2)
-	if [ "$time" -gt "1705705200" ]; then
-		killall -q -SIGUSR1 majestic
-	else
-		killall -q majestic
-	fi
-	sleep 1
-	echo "OK"
-
-	for proc in crond klogd ntpd rngd syslogd; do
+	for proc in crond klogd majestic ntpd rngd syslogd; do
 		echo -n "Killing $proc "
 		while [ -n "$(pidof $proc)" ]; do
 			killall -q $proc
