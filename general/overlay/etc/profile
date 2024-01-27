@@ -46,7 +46,7 @@ set_fullname() {
 }
 
 show_gain() {
-	while sleep 1; do wget -q -O - http://127.0.0.1/metrics | grep ^isp_again; done
+	while sleep 1; do wget -q -O - http://127.0.0.1/metrics/isp | grep ^isp_again; done
 }
 
 show_wlan() {
