@@ -1,10 +1,9 @@
 ################################################################################
 #
-# majestic-fonts | updated 2021.12.04
+# majestic-fonts
 #
 ################################################################################
 
-#MAJESTIC_FONTS_VERSION = current
 MAJESTIC_FONTS_LICENSE = MIT
 MAJESTIC_FONTS_LICENSE_FILES = LICENSE
 
