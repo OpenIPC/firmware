@@ -72,7 +72,7 @@ ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
 ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
 	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,5120,nor)
 else
-	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,8192,nor)
+	@$(call PREPARE_REPACK,uImage,3072,rootfs.squashfs,8192,nor)
 endif
 endif
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
