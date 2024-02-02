@@ -51,16 +51,16 @@ jobs:
           echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
 
           CONFIG=$(find br-ext-chip-* -name ${{matrix.platform}}_lite_defconfig)
-          GCC=$(make BOARD=${CONFIG} toolname)
-          echo GCC=${GCC} >> ${GITHUB_ENV}
-          URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}.tgz
+          GCC=$(make BOARD=${CONFIG} toolname).tgz
+          URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}
           echo ${URL}
           if ! wget --spider ${URL} 2> /dev/null; then
             sed -i "/BR2_TOOLCHAIN_EXTERNAL.*/d" ${CONFIG}
             echo BR2_PACKAGE_AWS_WEBRTC=y >> ${CONFIG}
             make BOARD=${CONFIG} br-sdk
             SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
-            mv ${SDK} ${GCC}.tgz
+            mv ${SDK} ${GCC}
+            echo GCC=${GCC} >> ${GITHUB_ENV}
           fi
 
       - name: Upload toolchain
@@ -68,4 +68,4 @@ jobs:
         with:
           tag: ${{env.TAG_NAME}}
           allowUpdates: true
-          artifacts: ${{env.GCC}}.tgz
+          artifacts: ${{env.GCC}}
