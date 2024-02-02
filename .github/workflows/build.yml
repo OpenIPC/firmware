@@ -215,10 +215,10 @@ jobs:
 
       - name: Upload firmware
         if: github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v1
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{env.TAG_NAME}}
-          files: |
+          tag: ${{env.TAG_NAME}}
+          artifacts: |
             ${{env.NORFW}}
             ${{env.NANDFW}}
 
