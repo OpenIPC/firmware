@@ -8,8 +8,6 @@ DAEMON_ARGS="-s"
 
 load_majestic() {
 	printf 'Starting %s: ' "$DAEMON"
-	[ -f $DAEMON_PATH/$DAEMON ] || echo -en "DISABLED, "
-
 	[ -f /etc/coredump.conf ] && . /etc/coredump.conf
 	if [ "$coredump_enabled" ]; then
 		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" >/proc/sys/kernel/core_pattern
@@ -33,7 +31,6 @@ start() {
 
 stop() {
 	printf 'Stopping %s: ' "$DAEMON"
-	[ -f $DAEMON_PATH/$DAEMON ] || echo -en "DISABLED, "
 	start-stop-daemon -K -q -p "$PIDFILE"
 	status=$?
 	if [ "$status" -eq 0 ]; then
