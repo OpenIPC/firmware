@@ -1,31 +1,21 @@
 #!/bin/sh
 
 DAEMON="majestic"
-DAEMON_PATH="/usr/bin"
 PIDFILE="/var/run/$DAEMON.pid"
-
 DAEMON_ARGS="-s"
 
-# shellcheck source=/dev/null
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
 
 load_majestic() {
 	printf 'Starting %s: ' "$DAEMON"
 	[ -f $DAEMON_PATH/$DAEMON ] || echo -en "DISABLED, "
-	# shellcheck disable=SC2086 # we need the word splitting
+
 	[ -f /etc/coredump.conf ] && . /etc/coredump.conf
 	if [ "$coredump_enabled" ]; then
-		[ "$(cli -g .watchdog.timeout)" -lt "30" ] && cli -s .watchdog.timeout 30
 		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" >/proc/sys/kernel/core_pattern
 	fi
 
-	if [ "ingenic" = "$(ipcinfo -v)" ] && [ -f /etc/webui/imp.conf ]; then
-		start-stop-daemon -b -m -S -q -p "$PIDFILE" -x /usr/bin/env -- \
-			LD_PRELOAD=/usr/lib/libimp_control.so $DAEMON_PATH/$DAEMON $DAEMON_ARGS
-	else
-		start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON_PATH/$DAEMON" -- $DAEMON_ARGS
-	fi
-
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		echo "OK"
@@ -35,7 +25,6 @@ load_majestic() {
 	return "$status"
 }
 
-# The daemon does not create a pidfile, and use "-m" to instruct start-stop-daemon to create one.
 start() {
 	logger -s -p daemon.info -t $(ipcinfo -v) "Loading video system has started..."
 	export SENSOR=$(fw_printenv -n sensor)
@@ -56,21 +45,18 @@ stop() {
 	return "$status"
 }
 
-restart() {
-	stop || true
-	sleep 1
-	reload
-}
-
-reload() {
-	load_majestic
-}
-
 case "$1" in
-	start|stop|restart|reload)
+	start|stop)
 		"$1"
 		;;
+
+	restart)
+		stop
+		load_majestic
+		;;
+
 	*)
-		echo "Usage: $0 {start|stop|restart|reload}"
+		echo "Usage: $0 {start|stop|restart}"
 		exit 1
+		;;
 esac
