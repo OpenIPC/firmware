@@ -12,11 +12,10 @@ WEBUI_LICENSE_FILES = LICENSE
 
 define WEBUI_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
-	cp $(WEBUI_PKGDIR)/files/httpd.conf $(TARGET_DIR)/etc
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(WEBUI_PKGDIR)/files/etc/*
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	cp $(WEBUI_PKGDIR)/files/S50httpd $(TARGET_DIR)/etc/init.d
-	cp -rv $(@D)/files/etc/init.d/* $(TARGET_DIR)/etc/init.d
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(WEBUI_PKGDIR)/files/init.d/*
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr
 	cp -rv $(@D)/files/usr/sbin $(TARGET_DIR)/usr
