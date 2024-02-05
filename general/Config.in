@@ -10,6 +10,10 @@ config BR2_OPENIPC_SOC_FAMILY
 	string "SoC family"
 	default "hi3516ev200"
 
+config BR2_OPENIPC_SNS_MODEL
+        string "Sensor model"
+        default ""
+
 config BR2_OPENIPC_FLAVOR
 	string "OpenIPC flavor"
 	default "lite"
