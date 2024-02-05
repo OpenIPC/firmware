@@ -190,4 +190,11 @@ if [ "$1" = "rtl8733bu-t31-camhipro" ]; then
 	exit 0
 fi
 
+# T31 ZTE K540
+if [ "$1" = "atbm603x-t31-zte-k540" ]; then
+        set_gpio 51 0
+        modprobe atbm603x_wifi_usb
+        exit 0
+fi
+
 exit 1
