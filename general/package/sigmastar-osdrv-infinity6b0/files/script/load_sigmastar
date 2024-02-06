@@ -16,7 +16,7 @@ detect_sensor() {
 
 set_sensor() {
 	case ${SENSOR} in
-		gc2053|gc2083|gc4023|gc4653|imx307|imx335|jxf37|os02g10)
+		gc2053|gc2083|gc4023|gc4653|imx307|imx335|jxf37|jxq03|os02g10)
 			insmod ${PATH_SENSOR}/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		sc200ai|sc401ai|sc2239|sc223a|sc2335|sc3335|sc3338)
