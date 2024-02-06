@@ -3,7 +3,7 @@
 # OpenIPC.org | 2024
 #
 
-scr_version=1.0.35
+scr_version=1.0.36
 
 args=" $@"
 
@@ -102,7 +102,13 @@ download_firmware() {
 
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
-	for proc in majestic crond klogd ntpd rngd syslogd; do
+	if [ "$vendor" = "sigmastar" ]; then
+		killall -3 majestic
+	else
+		majestic=majestic
+	fi
+
+	for proc in $majestic crond klogd ntpd rngd syslogd; do
 		echo -n "Killing $proc "
 		while [ -n "$(pidof $proc)" ]; do
 			killall -q $proc
