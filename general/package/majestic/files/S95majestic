@@ -4,33 +4,33 @@ DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
 DAEMON_ARGS="-s"
 
-[ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
-
-load_majestic() {
-	printf 'Starting %s: ' "$DAEMON"
+debug_majestic() {
 	[ -f /etc/coredump.conf ] && . /etc/coredump.conf
 	if [ "$coredump_enabled" ]; then
-		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" >/proc/sys/kernel/core_pattern
+		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" > /proc/sys/kernel/core_pattern
 	fi
+}
 
-	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
+load_majestic() {
+	printf "Starting $DAEMON: "
+	start-stop-daemon -S -m -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		echo "OK"
 	else
 		echo "FAIL"
 	fi
-	return "$status"
 }
 
 start() {
 	logger -s -p daemon.info -t $(ipcinfo -v) "Loading video system has started..."
 	export SENSOR=$(fw_printenv -n sensor)
+	debug_majestic
 	load_majestic
 }
 
 stop() {
-	printf 'Stopping %s: ' "$DAEMON"
+	printf "Stopping $DAEMON: "
 	start-stop-daemon -K -q -p "$PIDFILE"
 	status=$?
 	if [ "$status" -eq 0 ]; then
@@ -39,7 +39,6 @@ stop() {
 	else
 		echo "FAIL"
 	fi
-	return "$status"
 }
 
 case "$1" in
@@ -49,6 +48,7 @@ case "$1" in
 
 	restart)
 		stop
+		sleep 3
 		load_majestic
 		;;
 
