@@ -64,8 +64,7 @@ jobs:
           fi
 
       - name: Upload toolchain
-        uses: ncipollo/release-action@v1
+        uses: softprops/action-gh-release@v1
         with:
-          tag: ${{env.TAG_NAME}}
-          allowUpdates: true
-          artifacts: ${{env.GCC}}
+          tag_name: ${{env.TAG_NAME}}
+          files: ${{env.GCC}}
