@@ -3,7 +3,7 @@
 # OpenIPC.org | 2024
 #
 
-scr_version=1.0.36
+scr_version=1.0.37
 
 args=" $@"
 
@@ -103,22 +103,17 @@ download_firmware() {
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
 	if [ "$vendor" = "sigmastar" ]; then
-		killall -3 majestic
+		killall -q -3 majestic
 	else
-		majestic=majestic
+		kill_process majestic
 	fi
 
-	for proc in $majestic crond klogd ntpd rngd syslogd; do
-		echo -n "Killing $proc "
-		while [ -n "$(pidof $proc)" ]; do
-			killall -q $proc
-			sleep 0.1
-			echo -n "."
-		done
-		echo ". OK"
+	for proc in crond klogd ntpd rngd syslogd; do
+		kill_process $proc
 	done
+
 	sync
-	echo 3 >/proc/sys/vm/drop_caches
+	echo 3 > /proc/sys/vm/drop_caches
 
 	echo_c 34 "\nUptime:"
 	uptime
@@ -128,6 +123,16 @@ free_resources() {
 
 	echo_c 34 "\nProcesses:"
 	ps | grep -v '\['
+}
+
+kill_process() {
+	echo -n "Killing $1 "
+	while [ -n "$(pidof $1)" ]; do
+		killall -q $1
+		sleep 0.1
+		echo -n "."
+	done
+	echo ". OK"
 }
 
 sync_time() {
