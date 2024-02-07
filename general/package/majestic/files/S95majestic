@@ -13,7 +13,7 @@ debug_majestic() {
 
 load_majestic() {
 	printf "Starting $DAEMON: "
-	start-stop-daemon -S -m -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
+	start-stop-daemon -b -S -m -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		echo "OK"
