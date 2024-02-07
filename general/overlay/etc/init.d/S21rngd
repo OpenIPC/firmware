@@ -9,15 +9,13 @@ PID_FILE="/var/run/${NAME}.pid"
 # Read configuration variable file if it is present
 [ -r "${CFG_FILE}" ] && . "${CFG_FILE}"
 
-start()
-{
+start() {
 	printf "Starting ${NAME}: "
 	start-stop-daemon -S -q -x "${DAEMON}" -- ${DAEMON_ARGS}
 	[ $? = 0 ] && echo "OK" || echo "FAIL"
 }
 
-stop()
-{
+stop() {
 	printf "Stopping ${NAME}: "
 	# This daemon does not exit properly with the default TERM signal unless
 	# it's forced to work by something reading /dev/random. Killing it and
