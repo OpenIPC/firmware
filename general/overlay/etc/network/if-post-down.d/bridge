@@ -26,5 +26,5 @@ esac
 brctl delbr $IFACE
 
 for i in $INTERFACES; do
-  ip link set $i down
+	ip link set $i down
 done
