@@ -30,34 +30,52 @@ differ() {
 	diff -rN "/rom$1" "$1"
 }
 
-majestic_changes() {
-	diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml
+network() {
+	/etc/init.d/S40network "$1"
 }
 
 set_fullname() {
-	show_fullname >/etc/hostname
+	show_fullname > /etc/hostname
+}
+
+show_config() {
+	diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml
 }
 
 show_fullname() {
 	echo "openipc-$(ipcinfo --chip-name)-$(ipcinfo --short-sensor)"
 }
 
-show_modules() {
-	echo; cat /proc/modules | cut -f1 -d " " | while read module; do echo "Module: $module"; \
-	if [ -d "/sys/module/$module/parameters" ]; then ls /sys/module/$module/parameters/ | while read parameter; \
-	do echo -n "Parameter: $parameter --> "; cat /sys/module/$module/parameters/$parameter; done; fi; echo; done
+show_help() {
+	echo $(grep 'show.*()' /etc/profile | grep -v profile | cut -d '(' -f1)
 }
 
 show_gain() {
 	while sleep 1; do wget -T1 -q -O - http://127.0.0.1/metrics/isp | grep ^isp_again; done
 }
 
-show_wlan() {
-	grep -r '$1..=' /etc/wireless | cut -d '"' -f4 | sort | grep -e $(fw_printenv -n soc) -e generic
+show_gpio() {
+	mount -t debugfs none /sys/kernel/debug
+	cat /sys/kernel/debug/gpio
+	umount /sys/kernel/debug
 }
 
-network() {
-	/etc/init.d/S40network "$1"
+show_modules() {
+	cat /proc/modules | cut -f1 -d " " | while read module; do
+		echo "Module: $module"
+		link=/sys/module/$module/parameters
+		if [ -d "$link" ]; then
+			ls $link | while read parameter; do
+				val=$(cat $link/$parameter)
+				echo "  $parameter --> ${val:-none}"
+			done
+		fi
+		echo
+	done
+}
+
+show_wlan() {
+	grep -r '$1..=' /etc/wireless | cut -d '"' -f4 | sort | grep -e $(fw_printenv -n soc) -e generic
 }
 
 # Source configuration files from /etc/profile.d
