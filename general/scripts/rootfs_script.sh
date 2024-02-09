@@ -13,9 +13,11 @@ if ! grep -q "USES_GLIBC" ${BR2_CONFIG} && ! grep -qP ${CONF} ${BR2_CONFIG}; the
 fi
 
 if grep -q "USES_MUSL" ${BR2_CONFIG}; then
-	LIST=${BR2_EXTERNAL}/scripts/excludes/${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}.list
-	test -e ${LIST} && xargs -a ${LIST} -I % rm -f ${TARGET_DIR}%
-
 	ln -sf libc.so ${TARGET_DIR}/lib/ld-uClibc.so.0
 	ln -sf ../../lib/libc.so ${TARGET_DIR}/usr/bin/ldd
+fi
+
+LIST="${BR2_EXTERNAL_GENERAL_PATH}/scripts/excludes/${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}.list"
+if [ -f ${LIST} ]; then
+        xargs -a ${LIST} -I % rm -f ${TARGET_DIR}%
 fi
