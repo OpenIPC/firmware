@@ -1,4 +1,5 @@
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/tmp"
+export EDITOR="/bin/vi"
 export HOME=$(grep -e "^${USER:-root}:" /etc/passwd | cut -d ":" -f 6)
 export HOME=${HOME:-/root}
 export TZ=$(cat /etc/TZ)
@@ -19,12 +20,6 @@ if [ "$PS1" ]; then
 		export PS1='\u@\h:\w\$ '
 	fi
 fi
-
-export EDITOR='/bin/vi'
-
-[ -x /usr/bin/arp ] || arp() {
-	cat /proc/net/arp
-}
 
 differ() {
 	diff -rN "/rom$1" "$1"
@@ -81,4 +76,5 @@ show_wlan() {
 # Source configuration files from /etc/profile.d
 for i in /etc/profile.d/*.sh; do
 	[ -r "$i" ] && . $i
-done; unset i
+done
+unset i
