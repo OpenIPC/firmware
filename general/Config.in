@@ -22,4 +22,8 @@ config BR2_OPENIPC_FLASH_SIZE
 	string "OpenIPC flash size"
 	default "8"
 
+config BR2_OPENIPC_MAJESTIC
+	string "OpenIPC Majestic"
+	default ""
+
 source "$BR2_EXTERNAL_GENERAL_PATH/package/Config.in"
