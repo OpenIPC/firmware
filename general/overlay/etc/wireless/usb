@@ -17,6 +17,13 @@ if [ "$1" = "rtl8188eu-generic" ]; then
 	exit 0
 fi
 
+# RTL8188EUS Lenovo Snowman 1080p
+if [ "$1" = "rtl8188eus-lenovo" ]; then
+	devmem 0x200f006c 32 0
+	modprobe 8188eu
+	exit 0
+fi
+
 # Generic RTL8188FU
 if [ "$1" = "rtl8188fu-generic" ]; then
 	modprobe 8188fu
