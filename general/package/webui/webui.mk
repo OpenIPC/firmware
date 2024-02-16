@@ -15,7 +15,7 @@ define WEBUI_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(WEBUI_PKGDIR)/files/etc/*
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(WEBUI_PKGDIR)/files/init.d/*
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(WEBUI_PKGDIR)/files/etc/init.d/*
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr
 	cp -rv $(@D)/files/usr/sbin $(TARGET_DIR)/usr
