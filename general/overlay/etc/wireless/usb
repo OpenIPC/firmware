@@ -204,4 +204,11 @@ if [ "$1" = "atbm603x-t31-zte-k540" ]; then
 	exit 0
 fi
 
+# SSC333 Babysense See HD IP206
+if [ "$1" = "rtl8188fu-babysense-see-hd-ip206" ]; then
+	set_gpio 14 1
+	modprobe 8188fu
+	exit 0
+fi
+
 exit 1
