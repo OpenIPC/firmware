@@ -64,7 +64,7 @@ jobs:
           fi
 
       - name: Upload toolchain
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@master
         with:
           tag_name: ${{env.TAG_NAME}}
           files: ${{env.GCC}}

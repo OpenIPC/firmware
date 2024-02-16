@@ -215,7 +215,7 @@ jobs:
 
       - name: Upload firmware
         if: github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@master
         with:
           tag_name: ${{env.TAG_NAME}}
           files: |
