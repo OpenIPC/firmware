@@ -3,7 +3,7 @@
 # OpenIPC.org | 2024
 #
 
-scr_version=1.0.37
+scr_version=1.0.38
 
 args=" $@"
 
@@ -51,7 +51,7 @@ do_update_kernel() {
 		esac
 		compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 	fi
-	busybox flashcp -v "$x" "$kernel_device"
+	set_progress flashcp -v "$x" "$kernel_device"
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
 }
 
@@ -71,7 +71,7 @@ do_update_rootfs() {
 	else
 		die "Unable to mount $y!"
 	fi
-	busybox flashcp -v "$x" "$(get_device "rootfs")"
+	set_progress flashcp -v "$x" "$(get_device "rootfs")"
 	echo_c 32 "RootFS updated to $rootfs_version"
 }
 
@@ -79,12 +79,11 @@ do_wipe_overlay() {
 	echo_c 33 "\nOverlayFS"
 	echo "Erase overlay partition"
 	[ "$flash_type" = "nand" ] || jffs2="-j"
-	busybox flash_eraseall $jffs2 "$(get_device "rootfs_data")"
+	set_progress flash_eraseall $jffs2 "$(get_device "rootfs_data")"
 }
 
 download_firmware() {
 	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
-
 	echo_c 33 "\nFirmware"
 	[ "$branch_dev" = "1" ] && branch="dev" || branch="latest"
 	osr=$(get_system_build)
@@ -104,23 +103,20 @@ free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
 	if [ "$vendor" = "sigmastar" ]; then
 		killall -q -3 majestic
+		sleep 1
 	else
 		kill_process majestic
 	fi
-
 	for proc in crond klogd ntpd rngd syslogd; do
 		kill_process $proc
 	done
-
 	sync
 	echo 3 > /proc/sys/vm/drop_caches
 
 	echo_c 34 "\nUptime:"
 	uptime
-
 	echo_c 34 "\nMemory:"
-	free
-
+	free -h
 	echo_c 34 "\nProcesses:"
 	ps | grep -v '\['
 }
@@ -133,6 +129,14 @@ kill_process() {
 		echo -n "."
 	done
 	echo ". OK"
+}
+
+set_progress() {
+	if [ "1" = "$silent_update" ]; then
+		busybox $@ | awk '{print NR, $1}'
+	else
+		busybox $@
+	fi
 }
 
 sync_time() {
@@ -321,6 +325,11 @@ for i in "$@"; do
 			update_rootfs=1
 			rootfs_file="${i#*=}"
 			[ "$rootfs_file" != ${rootfs_file#/mnt/mmc} ] && skip_unmount=1
+			shift
+			;;
+
+		-s)
+			silent_update=1
 			shift
 			;;
 
