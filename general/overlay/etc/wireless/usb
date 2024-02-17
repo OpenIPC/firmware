@@ -5,6 +5,12 @@ set_gpio() {
 	sleep 1
 }
 
+# Generic ATBM603x
+if [ "$1" = "atbm603x-wifi-usb" ]; then
+	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
 # Generic MT7601U
 if [ "$1" = "mt7601u-generic" ]; then
 	modprobe mt7601u
