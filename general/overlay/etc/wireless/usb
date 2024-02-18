@@ -6,7 +6,7 @@ set_gpio() {
 }
 
 # Generic ATBM603x
-if [ "$1" = "atbm603x-wifi-usb" ]; then
+if [ "$1" = "atbm603x-generic" ]; then
 	modprobe atbm603x_wifi_usb
 	exit 0
 fi
