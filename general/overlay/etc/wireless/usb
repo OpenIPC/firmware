@@ -5,6 +5,12 @@ set_gpio() {
 	sleep 1
 }
 
+# Generic ATBM603x USB
+if [ "$1" = "atbm603x-generic-usb" ]; then
+	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
 # Generic MT7601U
 if [ "$1" = "mt7601u-generic" ]; then
 	modprobe mt7601u
@@ -13,13 +19,6 @@ fi
 
 # Generic RTL8188EU
 if [ "$1" = "rtl8188eu-generic" ]; then
-	modprobe 8188eu
-	exit 0
-fi
-
-# RTL8188EUS Lenovo Snowman 1080p
-if [ "$1" = "rtl8188eus-hi3518ev200-lenovo" ]; then
-	devmem 0x200f006c 32 0
 	modprobe 8188eu
 	exit 0
 fi
@@ -82,6 +81,13 @@ fi
 if [ "$1" = "rtl8188fu-hi3518ev200-lifesmart" ]; then
 	set_gpio 54 1
 	modprobe 8188fu
+	exit 0
+fi
+
+# HI3518EV200 Lenovo Snowman 1080p
+if [ "$1" = "rtl8188eus-hi3518ev200-lenovo" ]; then
+	devmem 0x200f006c 32 0
+	modprobe 8188eu
 	exit 0
 fi
 
