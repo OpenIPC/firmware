@@ -12,7 +12,7 @@ set_wireless() {
 	elif $path/modem "$dev"; then
 		ifup usb0
 	fi
-	[ -e /sys/class/net/eth0 ] && ifconfig eth0 "${net:-192.168.2.10}"
+	[ -e /sys/class/net/eth0 ] && ifup eth0
 }
 
 case "$1" in
