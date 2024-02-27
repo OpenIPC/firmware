@@ -217,4 +217,12 @@ if [ "$1" = "rtl8188fu-babysense-see-hd-ip206" ]; then
 	exit 0
 fi
 
+# GK7205V300 + RTL8751BU
+if [ "$1" = "gk7205v300-335af-rtl8751bu" ]; then
+        gpio clear 7
+        devmem 0x100C0080 32 0x00000530
+        modprobe 8733bu
+        exit 0
+fi
+
 exit 1

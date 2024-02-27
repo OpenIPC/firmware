@@ -6,6 +6,7 @@ net=$(fw_printenv -n netaddr_fallback)
 set_wireless() {
 	path=/etc/wireless
 	if $path/usb "$dev" || $path/sdio "$dev"; then
+		sleep 1
 		[ -n "$mac" ] && ip link set dev wlan0 address "$mac"
 		ifup wlan0
 	elif $path/modem "$dev"; then
