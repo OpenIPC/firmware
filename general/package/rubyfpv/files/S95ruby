@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# Start ruby
+#
+
+chip=$(ipcinfo -c)
+fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
+
+case "$1" in
+  start)
+	if ! [ -f /etc/system.ok ]; then
+		tweaksys ${chip}
+	fi
+
+	echo "Starting Ruby..."
+
+	/usr/sbin/ruby_start
+	;;
+  stop)
+	echo "Stopping Ruby..."
+	/usr/sbin/stop_vehicle
+	;;
+    *)
+    echo "Usage: $0 {start|stop}"
+    exit 1
+esac
