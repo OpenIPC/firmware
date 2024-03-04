@@ -9,7 +9,7 @@ define RUBYFPV_BUILD_CMDS
 	(cd $(@D); $(TARGET_CC) -s ruby_start.c -o ruby_logger)
 	(cd $(@D); $(TARGET_CC) -s ruby_start.c -o ruby_timeinit)
 	(cd $(@D); $(TARGET_CC) -s ruby_start.c -o ruby_rt_vehicle)
-	(cd $(@D); $(TARGET_CC) -s ruby_start.c -o ruby_tx_telementry)
+	(cd $(@D); $(TARGET_CC) -s ruby_start.c -o ruby_tx_telemetry)
 	(cd $(@D); $(TARGET_CC) -s ruby_start.c -o ruby_rx_rc)
 	(cd $(@D); $(TARGET_CC) -s ruby_start.c -o ruby_rx_commands)
 	(cd $(@D); $(TARGET_CC) -s ruby_start.c -o ruby_vehicle)
