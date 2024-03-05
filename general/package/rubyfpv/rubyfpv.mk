@@ -30,7 +30,7 @@ define RUBYFPV_INSTALL_TARGET_CMDS
 	install -m 0755 -D $(@D)/ruby_vehicle $(TARGET_DIR)/usr/sbin/ruby_vehicle
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/sbin
-	cp $(RUBYFPV_PKGDIR)/files/stop_vehicle.sh $(TARGET_DIR)/usr/sbin 
+	cp $(RUBYFPV_PKGDIR)/files/ruby_stop.sh $(TARGET_DIR)/usr/sbin 
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	cp $(RUBYFPV_PKGDIR)/files/tweaksys $(TARGET_DIR)/usr/bin
