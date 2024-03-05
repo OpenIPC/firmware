@@ -17,7 +17,7 @@ endef
 
 define RUBYFPV_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	cp $(RUBYFPV_PKGDIR)/files/S95ruby $(TARGET_DIR)/etc/init.d
+	cp $(RUBYFPV_PKGDIR)/files/S99ruby $(TARGET_DIR)/etc/init.d
 
 	install -m 0755 -D $(@D)/ruby_start $(TARGET_DIR)/usr/sbin/ruby_start
 	install -m 0755 -D $(@D)/ruby_initradio $(TARGET_DIR)/usr/sbin/ruby_initradio
