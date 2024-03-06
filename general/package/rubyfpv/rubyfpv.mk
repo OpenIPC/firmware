@@ -23,6 +23,7 @@ define RUBYFPV_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/root/ruby
  
 	cp $(RUBYFPV_PKGDIR)/files/S99ruby $(TARGET_DIR)/etc/init.d
+	chmod 755 $(TARGET_DIR)/etc/init.d/S99Ruby
 
 	install -m 0755 -D $(@D)/ruby_start $(TARGET_DIR)/usr/sbin/ruby_start
 	install -m 0755 -D $(@D)/ruby_initradio $(TARGET_DIR)/usr/sbin/ruby_initradio
@@ -34,7 +35,8 @@ define RUBYFPV_INSTALL_TARGET_CMDS
 	install -m 0755 -D $(@D)/ruby_rx_commands $(TARGET_DIR)/usr/sbin/ruby_rx_commands
 	install -m 0755 -D $(@D)/ruby_vehicle $(TARGET_DIR)/usr/sbin/ruby_vehicle
 
-	cp $(RUBYFPV_PKGDIR)/files/ruby_stop.sh $(TARGET_DIR)/usr/sbin 
+	cp $(RUBYFPV_PKGDIR)/files/ruby_stop.sh $(TARGET_DIR)/usr/sbin
+	chmod 755 $(TARGET_DIR)/usr/sbin/ruby_stop.sh
 	cp $(RUBYFPV_PKGDIR)/files/tweaksys $(TARGET_DIR)/usr/bin
 	cp -r $(RUBYFPV_PKGDIR)/files/licences $(TARGET_DIR)/root/ruby/
 endef
