@@ -2,12 +2,9 @@ config BR2_PACKAGE_ATBM60XX
 	bool "atbm60xx"
 	depends on BR2_LINUX_KERNEL
 	help
-	Wireless driver atbm60xx.
-
-	ALTOBEAM atbm60xx WiFi driver
+	  Wireless driver atbm60xx
 
 if BR2_PACKAGE_ATBM60XX
-
 choice
 	prompt "ATBM60XX Model"
 	help
@@ -28,7 +25,6 @@ config BR2_PACKAGE_ATBM60XX_MODEL_6041
 endchoice
 
 if BR2_PACKAGE_ATBM60XX_MODEL_601X || BR2_PACKAGE_ATBM60XX_MODEL_602X || BR2_PACKAGE_ATBM60XX_MODEL_603X || BR2_PACKAGE_ATBM60XX_MODEL_6041
-
 choice
 	prompt "Interface type for selected ATBM60XX model"
 	help
@@ -43,8 +39,4 @@ config BR2_PACKAGE_ATBM60XX_INTERFACE_SDIO
 endchoice
 
 endif
-
 endif
-
-comment "ATBM60XX needs a Linux kernel to be built"
-	depends on !BR2_LINUX_KERNEL
