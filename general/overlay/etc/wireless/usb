@@ -5,12 +5,6 @@ set_gpio() {
 	sleep 1
 }
 
-# Generic ATBM603x USB
-if [ "$1" = "atbm603x-generic-usb" ]; then
-	modprobe atbm603x_wifi_usb
-	exit 0
-fi
-
 # Generic MT7601U
 if [ "$1" = "mt7601u-generic" ]; then
 	modprobe mt7601u
@@ -32,6 +26,12 @@ fi
 # Generic RTL8733BU
 if [ "$1" = "rtl8733bu-generic" ]; then
 	modprobe 8733bu
+	exit 0
+fi
+
+# Generic ATBM603x
+if [ "$1" = "atbm603x-generic-usb" ]; then
+	modprobe atbm603x_wifi_usb
 	exit 0
 fi
 
@@ -113,7 +113,14 @@ if [ "$1" = "rtl8188fu-ssc325de-imou-c22ep-s2" ]; then
 	exit 0
 fi
 
-# SSC3333 Meari Speed 6S
+# SSC333 Babysense See HD IP206
+if [ "$1" = "rtl8188fu-babysense-see-hd-ip206" ]; then
+	set_gpio 14 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC333 Meari Speed 6S
 if [ "$1" = "rtl8188fu-ssc333-meari-speed-6s" ]; then
 	set_gpio 14 1
 	modprobe 8188fu
@@ -207,13 +214,6 @@ fi
 if [ "$1" = "atbm603x-t31-zte-k540" ]; then
 	set_gpio 51 0
 	modprobe atbm603x_wifi_usb
-	exit 0
-fi
-
-# SSC333 Babysense See HD IP206
-if [ "$1" = "rtl8188fu-babysense-see-hd-ip206" ]; then
-	set_gpio 14 1
-	modprobe 8188fu
 	exit 0
 fi
 

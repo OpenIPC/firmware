@@ -3,8 +3,3 @@ config BR2_PACKAGE_ATBM6441
 	depends on BR2_LINUX_KERNEL
 	help
 	  Wireless driver atbm6441
-
-	  altobeam hare atbm6441 WiFi driver
-
-comment "ATBM6441 needs a Linux kernel to be built"
-	depends on !BR2_LINUX_KERNEL
