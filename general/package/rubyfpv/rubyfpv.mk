@@ -1,6 +1,7 @@
 
 define RUBYFPV_EXTRACT_CMDS
 	cp -avr $(RUBYFPV_PKGDIR)/src/* $(@D)/
+	cp -avr $(RUBYFPV_PKGDIR)/files/* $(@D)/
 endef
 
 define RUBYFPV_BUILD_CMDS
@@ -17,7 +18,12 @@ endef
 
 define RUBYFPV_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
-	cp $(RUBYFPV_PKGDIR)/files/S95ruby $(TARGET_DIR)/etc/init.d
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/sbin
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/root/ruby
+ 
+	cp $(RUBYFPV_PKGDIR)/files/S99ruby $(TARGET_DIR)/etc/init.d
+	chmod 755 $(TARGET_DIR)/etc/init.d/S99ruby
 
 	install -m 0755 -D $(@D)/ruby_start $(TARGET_DIR)/usr/sbin/ruby_start
 	install -m 0755 -D $(@D)/ruby_initradio $(TARGET_DIR)/usr/sbin/ruby_initradio
@@ -29,11 +35,10 @@ define RUBYFPV_INSTALL_TARGET_CMDS
 	install -m 0755 -D $(@D)/ruby_rx_commands $(TARGET_DIR)/usr/sbin/ruby_rx_commands
 	install -m 0755 -D $(@D)/ruby_vehicle $(TARGET_DIR)/usr/sbin/ruby_vehicle
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/sbin
-	cp $(RUBYFPV_PKGDIR)/files/stop_vehicle.sh $(TARGET_DIR)/usr/sbin 
-
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
+	cp $(RUBYFPV_PKGDIR)/files/ruby_stop.sh $(TARGET_DIR)/usr/sbin
+	chmod 755 $(TARGET_DIR)/usr/sbin/ruby_stop.sh
 	cp $(RUBYFPV_PKGDIR)/files/tweaksys $(TARGET_DIR)/usr/bin
+	cp -r $(RUBYFPV_PKGDIR)/files/licences $(TARGET_DIR)/root/ruby/
 endef
 
 $(eval $(generic-package))

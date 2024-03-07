@@ -18,7 +18,7 @@ case "$1" in
 	;;
   stop)
 	echo "Stopping Ruby..."
-	/usr/sbin/stop_vehicle
+	/usr/sbin/ruby_stop.sh
 	;;
     *)
     echo "Usage: $0 {start|stop}"
