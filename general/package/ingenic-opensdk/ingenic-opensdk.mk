@@ -5,7 +5,7 @@
 ################################################################################
 
 INGENIC_OPENSDK_SITE = $(call github,openipc,openingenic,$(INGENIC_OPENSDK_VERSION))
-INGENIC_OPENSDK_VERSION = master
+INGENIC_OPENSDK_VERSION = HEAD
 
 INGENIC_OPENSDK_LICENSE = GPL-3.0
 INGENIC_OPENSDK_LICENSE_FILES = LICENSE

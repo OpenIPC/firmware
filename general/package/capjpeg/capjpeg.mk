@@ -5,7 +5,7 @@
 ################################################################################
 
 CAPJPEG_SITE = $(call github,openipc,capjpeg,$(CAPJPEG_VERSION))
-CAPJPEG_VERSION = master
+CAPJPEG_VERSION = HEAD
 
 CAPJPEG_LICENSE = MIT
 CAPJPEG_LICENSE_FILES = LICENSE

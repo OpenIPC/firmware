@@ -5,7 +5,7 @@
 ################################################################################
 
 MICROSNANDER_SITE = $(call github,openipc,microsnander,$(MICROSNANDER_VERSION))
-MICROSNANDER_VERSION = master
+MICROSNANDER_VERSION = HEAD
 
 MICROSNANDER_LICENSE = MIT
 MICROSNANDER_LICENSE_FILES = LICENSE

@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-GO2RTC_VERSION = master
+GO2RTC_VERSION = HEAD
 GO2RTC_SITE = $(call github,AlexxIT,go2rtc,$(GO2RTC_VERSION))
 GO2RTC_LICENSE = MIT
 GO2RTC_LICENSE_FILES = LICENSE

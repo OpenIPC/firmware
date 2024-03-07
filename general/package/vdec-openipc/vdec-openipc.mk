@@ -5,7 +5,7 @@
 ################################################################################
 
 VDEC_OPENIPC_SITE = $(call github,openipc,silicon_research,$(VDEC_OPENIPC_VERSION))
-VDEC_OPENIPC_VERSION = master
+VDEC_OPENIPC_VERSION = HEAD
 
 VDEC_OPENIPC_LICENSE = MIT
 

@@ -5,7 +5,7 @@
 ################################################################################
 
 RTL8812AU_OPENIPC_SITE = $(call github,svpcom,rtl8812au,$(RTL8812AU_OPENIPC_VERSION))
-RTL8812AU_OPENIPC_VERSION = master
+RTL8812AU_OPENIPC_VERSION = HEAD
 
 RTL8812AU_OPENIPC_LICENSE = GPL-2.0
 RTL8812AU_OPENIPC_LICENSE_FILES = COPYING

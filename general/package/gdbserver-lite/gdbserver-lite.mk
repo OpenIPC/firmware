@@ -5,7 +5,7 @@
 ################################################################################
 
 GDBSERVER_LITE_SITE = $(call github,bet4it,gdbserver,$(GDBSERVER_LITE_VERSION))
-GDBSERVER_LITE_VERSION = master
+GDBSERVER_LITE_VERSION = HEAD
 
 GDBSERVER_LITE_LICENSE = GNU General Public License v3.0
 GDBSERVER_LITE_LICENSE_FILES = LICENSE

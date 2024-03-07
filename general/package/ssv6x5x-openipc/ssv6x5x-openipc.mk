@@ -5,7 +5,7 @@
 ################################################################################
 
 SSV6X5X_OPENIPC_SITE = $(call github,openipc,ssv6x5x,$(SSV6X5X_OPENIPC_VERSION))
-SSV6X5X_OPENIPC_VERSION = master
+SSV6X5X_OPENIPC_VERSION = HEAD
 
 SSV6X5X_OPENIPC_LICENSE = GPL-2.0
 SSV6X5X_OPENIPC_LICENSE_FILES = COPYING

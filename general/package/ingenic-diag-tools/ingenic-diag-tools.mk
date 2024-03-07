@@ -5,7 +5,7 @@
 ################################################################################
 
 INGENIC_DIAG_TOOLS_SITE = $(call github,gtxaspec,jz-diag-tools,$(INGENIC_DIAG_TOOLS_VERSION))
-INGENIC_DIAG_TOOLS_VERSION = master
+INGENIC_DIAG_TOOLS_VERSION = HEAD
 
 define INGENIC_DIAG_TOOLS_BUILD_CMDS
     $(MAKE) CROSS_COMPILE=$(TARGET_CROSS) -C $(@D)

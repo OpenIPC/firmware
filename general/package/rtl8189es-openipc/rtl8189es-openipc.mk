@@ -5,7 +5,7 @@
 ################################################################################
 
 RTL8189ES_OPENIPC_SITE = $(call github,jwrdegoede,rtl8189es_linux,$(RTL8189ES_OPENIPC_VERSION))
-RTL8189ES_OPENIPC_VERSION = master
+RTL8189ES_OPENIPC_VERSION = HEAD
 
 RTL8189ES_OPENIPC_LICENSE = GPL-2.0
 RTL8189ES_OPENIPC_LICENSE_FILES = COPYING
