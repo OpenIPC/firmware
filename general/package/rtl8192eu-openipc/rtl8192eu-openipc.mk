@@ -5,7 +5,7 @@
 ################################################################################
 
 RTL8192EU_OPENIPC_SITE = $(call github,mange,rtl8192eu-linux-driver,$(RTL8192EU_OPENIPC_VERSION))
-RTL8192EU_OPENIPC_VERSION = master
+RTL8192EU_OPENIPC_VERSION = HEAD
 
 RTL8192EU_OPENIPC_LICENSE = GPL-2.0
 RTL8192EU_OPENIPC_LICENSE_FILES = COPYING

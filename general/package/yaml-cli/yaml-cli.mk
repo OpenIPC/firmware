@@ -5,7 +5,7 @@
 ################################################################################
 
 YAML_CLI_SITE = $(call github,openipc,yaml-cli,$(YAML_CLI_VERSION))
-YAML_CLI_VERSION = master
+YAML_CLI_VERSION = HEAD
 
 YAML_CLI_LICENSE = MIT
 YAML_CLI_LICENSE_FILES = LICENSE

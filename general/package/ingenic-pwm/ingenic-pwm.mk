@@ -5,7 +5,7 @@
 ################################################################################
 
 INGENIC_PWM_SITE = $(call github,gtxaspec,ingenic-pwm,$(INGENIC_PWM_VERSION))
-INGENIC_PWM_VERSION = master
+INGENIC_PWM_VERSION = HEAD
 
 define INGENIC_PWM_BUILD_CMDS
     $(MAKE) CROSS_COMPILE=$(TARGET_CROSS) -C $(@D)
