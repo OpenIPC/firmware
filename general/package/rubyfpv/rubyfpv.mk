@@ -23,7 +23,7 @@ define RUBYFPV_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/root/ruby
  
 	cp $(RUBYFPV_PKGDIR)/files/S99ruby $(TARGET_DIR)/etc/init.d
-	chmod 755 $(TARGET_DIR)/etc/init.d/S99Ruby
+	chmod 755 $(TARGET_DIR)/etc/init.d/S99ruby
 
 	install -m 0755 -D $(@D)/ruby_start $(TARGET_DIR)/usr/sbin/ruby_start
 	install -m 0755 -D $(@D)/ruby_initradio $(TARGET_DIR)/usr/sbin/ruby_initradio
