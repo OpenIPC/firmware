@@ -5,7 +5,7 @@
 ################################################################################
 
 VENC_OPENIPC_SITE = $(call github,openipc,silicon_research,$(VENC_OPENIPC_VERSION))
-VENC_OPENIPC_VERSION = master
+VENC_OPENIPC_VERSION = HEAD
 
 VENC_OPENIPC_LICENSE = MIT
 

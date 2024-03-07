@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-INGENIC_AUDIODAEMON_VERSION = master
+INGENIC_AUDIODAEMON_VERSION = HEAD
 INGENIC_AUDIODAEMON_SITE = $(call github,gtxaspec,ingenic_audiodaemon,$(INGENIC_AUDIODAEMON_VERSION))
 INGENIC_AUDIODAEMON_LICENSE = GPL-2.0
 INGENIC_AUDIODAEMON_LICENSE_FILES = COPYING

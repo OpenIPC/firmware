@@ -5,7 +5,7 @@
 ################################################################################
 
 MOTORS_SITE = $(call github,openipc,motors,$(MOTORS_VERSION))
-MOTORS_VERSION = master
+MOTORS_VERSION = HEAD
 
 MOTORS_LICENSE = MIT
 MOTORS_LICENSE_FILES = LICENSE

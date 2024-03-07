@@ -5,7 +5,7 @@
 ################################################################################
 
 MAJESTIC_PLUGINS_SITE = $(call github,openipc,majestic-plugins,$(MAJESTIC_PLUGINS_VERSION))
-MAJESTIC_PLUGINS_VERSION = master
+MAJESTIC_PLUGINS_VERSION = HEAD
 
 define MAJESTIC_PLUGINS_BUILD_CMDS
 	$(MAKE) CC=$(TARGET_CC) TARGET=$(OPENIPC_SOC_VENDOR) -C $(@D) -B

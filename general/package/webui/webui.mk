@@ -5,7 +5,7 @@
 ################################################################################
 
 WEBUI_SITE = $(call github,openipc,webui,$(WEBUI_VERSION))
-WEBUI_VERSION = master
+WEBUI_VERSION = HEAD
 
 WEBUI_LICENSE = MIT
 WEBUI_LICENSE_FILES = LICENSE

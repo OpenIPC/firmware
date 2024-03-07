@@ -5,7 +5,7 @@
 ################################################################################
 
 JSONFILTER_SITE = $(call github,openwrt,jsonpath,$(JSONFILTER_VERSION))
-JSONFILTER_VERSION = master
+JSONFILTER_VERSION = HEAD
 
 JSONFILTER_LICENSE = ISC, BSD-3-Clause
 JSONFILTER_DEPENDENCIES = json-c libubox
