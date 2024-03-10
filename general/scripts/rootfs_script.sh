@@ -19,5 +19,5 @@ fi
 
 LIST="${BR2_EXTERNAL_GENERAL_PATH}/scripts/excludes/${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}.list"
 if [ -f ${LIST} ]; then
-        xargs -a ${LIST} -I % rm -f ${TARGET_DIR}%
+	xargs -a ${LIST} -I % rm -f ${TARGET_DIR}%
 fi
