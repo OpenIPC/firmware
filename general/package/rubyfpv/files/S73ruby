@@ -1,31 +1,26 @@
 #!/bin/sh
-#
-# Start ruby
-#
-
-chip=$(ipcinfo -c)
+hw=$(ipcinfo -c)
 fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
-echo "Chip: " > /tmp/ruby_boot.log
-echo ${chip} >> /tmp/ruby_boot.log
-echo "Firmware: " >> /tmp/ruby_boot.log
-echo ${fw} >> /tmp/ruby_boot.log
+
+echo "Chipset = ${hw}" | logger -s -t RubyFPV
+echo "Firmware = ${fw}" | logger -s -t RubyFPV
 
 case "$1" in
-  start)
-	if ! [ -f /etc/system.ok ]; then
-		tweaksys ${chip}
-	fi
+	start)
+		if ! [ -f /etc/system.ok ]; then
+			tweaksys ${hw}
+		fi
+		echo "Starting Ruby..." | logger -s -t RubyFPV
+		ruby_start
+		;;
 
-	echo "Starting Ruby..."
-	echo "Starting Ruby..." >> /tmp/ruby_boot.log
-	/usr/sbin/ruby_start
-	;;
-  stop)
-	echo "Stopping Ruby..."
-	echo "Stopping Ruby..." >> /tmp/ruby_boot.log
-	/usr/sbin/ruby_stop.sh
-	;;
-    *)
-    echo "Usage: $0 {start|stop}"
-    exit 1
+	stop)
+		echo "Stopping Ruby..." | logger -s -t RubyFPV
+		ruby_stop
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
 esac
