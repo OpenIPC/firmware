@@ -10,6 +10,7 @@ toolchain_by_config() {
 		VENDOR=$(echo $CF | cut -d - -f 4 | cut -d / -f 1 | sed -r 's/\<./\U&/g')
 		KVER=$(echo $BR2_VER | cut -d \" -f 2 | awk -F . '{printf "%s_%s", $1, $2}')
 		GCC_VER=$(sed -rn "s/^BR2_GCC_VERSION_([0-9]*)_X=y/\1/p" $CF)
+
 		ARCH=$(sed -rn "s/^BR2_(arm[a-z0-9_]+)=y/\1/p" $CF)
 		if [ -z "$ARCH" ]; then
 			ARCH=$(sed -rn "s/^BR2_(cortex_[a-z0-9_]+)=y/\1/p" $CF)
@@ -34,35 +35,40 @@ toolchain_by_config() {
 		fi
 
 		LIBC=$(sed -rn "s/^BR2_TOOLCHAIN_BUILDROOT_LIBC=\"(.*)\"/\1/p" $CF)
-
 		SOC=$(echo $CF | cut -d _ -f 3)
+
 		case $FMT in
 			list)
 				echo $ARCH $GCC_VER $LIBC $KVER $VENDOR $CF
 				;;
+
 			uniq)
 				echo $ARCH $GCC_VER $LIBC $KVER
 				;;
+
 			*)
 				if [ -n "$2" ]; then
 					BR_DIR=buildroot-$2
 					GCC_VER=$(sed -rn \
 						"s/^\s+default\s+\"([0-9.]+)\"\s+if BR2_GCC_VERSION_${GCC_VER}_X/\1/p" \
-							$BR_DIR/package/gcc/Config.in.host)
+						$BR_DIR/package/gcc/Config.in.host)
 					case $LIBC in
 						musl)
 							VER=$(sed -rn "s/^MUSL_VERSION\s*=\s*([0-9.]+)/\1/p" \
 								$BR_DIR/package/musl/musl.mk)
 							;;
+
 						uclibc)
 							VER=$(sed -rn "s/^UCLIBC_VERSION\s*=\s*([0-9.]+)/\1/p" \
 								$BR_DIR/package/uclibc/uclibc.mk)
 							;;
+
 						glibc)
 							VER=$(sed -rn "s/^GLIBC_VERSION\s*=\s*([0-9.]+).*/\1/p" \
-							$BR_DIR/package/glibc/glibc.mk	| tail -1)
+								$BR_DIR/package/glibc/glibc.mk | tail -1)
 							;;
-						esac
+					esac
+
 					HASH=$(echo $VER | sha1sum | cut -c 1-8)
 					echo ${ARCH}-gcc${GCC_VER}-${LIBC}-${KVER}-${HASH}
 				else

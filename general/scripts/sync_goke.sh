@@ -4,10 +4,18 @@ OUTDIR=br-ext-chip-goke/board/gk7205v200/kernel
 
 function map_soc() {
 	case $1 in
-		hi3516ev200) NEW_SOC=gk7205v200 ;;
-		hi3516dv200) NEW_SOC=gk7605v100 ;;
-		hi3516ev300) NEW_SOC=gk7205v300 ;;
-		hi3518ev300) NEW_SOC=gk7202v300 ;;
+		hi3516ev200)
+			NEW_SOC=gk7205v200
+			;;
+		hi3516dv200)
+			NEW_SOC=gk7605v100
+			;;
+		hi3516ev300)
+			NEW_SOC=gk7205v300
+			;;
+		hi3518ev300)
+			NEW_SOC=gk7202v300
+			;;
 	esac
 }
 
