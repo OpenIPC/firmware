@@ -1,7 +1,5 @@
-kill -9 `pidof ruby_start`
-kill -9 `pidof ruby_vehicle`
-kill -9 `pidof ruby_rx_rc`
-kill -9 `pidof ruby_rx_commands`
-kill -9 `pidof ruby_tx_telemetry`
-kill -9 `pidof ruby_rt_vehicle`
-kill -9 `pidof ruby_logger`
+pidof ruby_start | xargs kill -9 2>/dev/null
+pidof ruby_rx_commands | xargs kill -9 2>/dev/null
+pidof ruby_tx_telemetry | xargs kill -9 2>/dev/null
+pidof ruby_rt_vehicle | xargs kill -9 2>/dev/null
+pidof ruby_logger | xargs kill -9 2>/dev/null
