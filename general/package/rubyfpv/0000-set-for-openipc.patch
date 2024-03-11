@@ -1,0 +1,33 @@
+diff --git a/Makefile b/Makefile
+index bc8ee5f..645c566 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,4 +1,4 @@
+-_LDFLAGS := $(LDFLAGS) -lrt -lpcap -lpthread -lwiringPi -Wl,--gc-sections
++_LDFLAGS := $(LDFLAGS) -lrt -lpcap -lpthread -Wl,--gc-sections
+ _CFLAGS := $(CFLAGS) -Wall -Wno-stringop-truncation -Wno-format-truncation -O2 -fdata-sections -ffunction-sections
+ _CPPFLAGS := -Wall -Wno-stringop-truncation -Wno-format-truncation -O2 -fdata-sections -ffunction-sections
+ 
+diff --git a/code/base/config_hw.h b/code/base/config_hw.h
+index efe9793..e978704 100644
+--- a/code/base/config_hw.h
++++ b/code/base/config_hw.h
+@@ -2,9 +2,9 @@
+ 
+ // Select the platform to build for
+ 
+-//#define HW_PLATFORM_OPENIPC_CAMERA 1
++#define HW_PLATFORM_OPENIPC_CAMERA 1
+ //#define HW_PLATFORM_LINUX_GENERIC 1
+-#define HW_PLATFORM_RASPBERRY 1
++//#define HW_PLATFORM_RASPBERRY 1
+ 
+ 
+ // Configuration customisations for individual platforms 
+@@ -15,4 +15,4 @@
+ #define HW_CAPABILITY_I2C 1
+ #define HW_CAPABILITY_IONICE 1
+ 
+-#endif
+\ No newline at end of file
++#endif
