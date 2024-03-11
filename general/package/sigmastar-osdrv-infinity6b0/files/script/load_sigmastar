@@ -9,7 +9,10 @@ SENSOR=$(fw_printenv -n sensor)
 
 detect_sensor() {
 	insmod ${PATH_SENSOR}/sensor_config.ko
-	echo srcfg 0 1 0 0 0 0 > /dev/srcfg
+	if [ -e /dev/srcfg ]; then
+		echo srcfg 0 1 0 0 0 0 > /dev/srcfg
+		rmmod sensor_config
+	fi
 	SENSOR=$(ipcinfo -s)
 	fw_setenv sensor ${SENSOR}
 }
@@ -42,12 +45,12 @@ insert_ko() {
 	insmod ${PATH_MODULE}/mi_vpe.ko
 	insmod ${PATH_MODULE}/mi_venc.ko fw_path=/etc/firmware/chagall.bin
 
-	major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
-	mknod /dev/mi_poll c $major 0
+	MAJOR=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
+	mknod /dev/mi_poll c ${MAJOR} 0
 	echo isproot /etc/firmware > /dev/ispmid
 }
 
-if [ ! -e /dev/mi_poll ]; then
+if [ ! -e /sys/module/mhal ]; then
 	insert_ko
 fi
 
@@ -61,7 +64,10 @@ if [ -z ${SENSOR} ]; then
 	exit 1
 else
 	echo -e "\n\e[1;32mSensor assigned - ${SENSOR}\e[0m\n" | logger -s -t OpenIPC
-	$(lsmod | grep -q ${SENSOR}) || set_sensor
+	if [ -e /sys/module/sensor* ]; then
+		rmmod $(ls -d /sys/module/sensor* | cut -d/ -f4)
+	fi
+	set_sensor
 fi
 
 exit 0
