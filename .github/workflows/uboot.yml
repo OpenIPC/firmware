@@ -1,0 +1,42 @@
+name: uboot
+on:
+  workflow_dispatch:
+
+jobs:
+  toolchain:
+    name: Uboot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Prepare
+        run: |
+          sudo apt-get update
+          sudo apt-get install gcc-arm-linux-gnueabi
+
+      - name: u-boot-sigmastar
+        run: |
+          git clone https://github.com/openipc/u-boot-sigmastar.git --depth 1
+          cd u-boot-sigmastar
+          bash build.sh
+
+      - name: Upload
+        uses: softprops/action-gh-release@master
+        with:
+          tag_name: latest
+          files: |
+            u-boot-sigmastar/output/u-boot-ssc30kd-nor.bin
+            u-boot-sigmastar/output/u-boot-ssc30kq-nor.bin
+            u-boot-sigmastar/output/u-boot-ssc325-nor.bin
+            u-boot-sigmastar/output/u-boot-ssc325de-nand.bin
+            u-boot-sigmastar/output/u-boot-ssc333-nor.bin
+            u-boot-sigmastar/output/u-boot-ssc335de-nor.bin
+            u-boot-sigmastar/output/u-boot-ssc335-nor.bin
+            u-boot-sigmastar/output/u-boot-ssc337de-nor.bin
+            u-boot-sigmastar/output/u-boot-ssc337de-nand.bin
+            u-boot-sigmastar/output/u-boot-ssc337-nor.bin
+            u-boot-sigmastar/output/u-boot-ssc338q-nand.bin
+            u-boot-sigmastar/output/u-boot-ssc338q-nor.bin
+            u-boot-sigmastar/output/u-boot-ssc338q-ram.bin
+            u-boot-sigmastar/output/u-boot-ssc377-nor.bin
