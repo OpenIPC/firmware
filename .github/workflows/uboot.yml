@@ -25,7 +25,7 @@ jobs:
           bash build.sh
 
       - name: Upload
-        uses: softprops/action-gh-release@master
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           files: |
