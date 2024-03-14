@@ -10,7 +10,13 @@ jobs:
       - name: Prepare
         run: |
           sudo apt-get update
-          sudo apt-get install gcc-arm-linux-gnueabi
+          sudo apt-get install gcc-arm-linux-gnueabi gcc-mipsel-linux-gnu u-boot-tools lzop
+
+      - name: Ingenic
+        run: |
+          git clone https://github.com/openipc/u-boot-ingenic.git --depth 1
+          cd u-boot-ingenic
+          bash build.sh
 
       - name: Sigmastar
         run: |
@@ -23,6 +29,23 @@ jobs:
         with:
           tag_name: latest
           files: |
+            u-boot-ingenic/output/u-boot-t10-nor.bin
+            u-boot-ingenic/output/u-boot-t10l-nor.bin
+            u-boot-ingenic/output/u-boot-t20-nor.bin
+            u-boot-ingenic/output/u-boot-t20l-nor.bin
+            u-boot-ingenic/output/u-boot-t20x-nor.bin
+            u-boot-ingenic/output/u-boot-t21n-nor.bin
+            u-boot-ingenic/output/u-boot-t30a-nor.bin
+            u-boot-ingenic/output/u-boot-t30a1-nor.bin
+            u-boot-ingenic/output/u-boot-t30l-nor.bin
+            u-boot-ingenic/output/u-boot-t30n-nor.bin
+            u-boot-ingenic/output/u-boot-t30x-nor.bin
+            u-boot-ingenic/output/u-boot-t31a-nor.bin
+            u-boot-ingenic/output/u-boot-t31al-nor.bin
+            u-boot-ingenic/output/u-boot-t31l-nor.bin
+            u-boot-ingenic/output/u-boot-t31lc-nor.bin
+            u-boot-ingenic/output/u-boot-t31n-nor.bin
+            u-boot-ingenic/output/u-boot-t31x-nor.bin
             u-boot-sigmastar/output/u-boot-ssc30kd-nor.bin
             u-boot-sigmastar/output/u-boot-ssc30kq-nor.bin
             u-boot-sigmastar/output/u-boot-ssc325-nor.bin
