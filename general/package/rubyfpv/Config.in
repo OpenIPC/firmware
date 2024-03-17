@@ -1,7 +1,8 @@
 config BR2_PACKAGE_RUBYFPV
 	bool "rubyfpv"
-	select BR2_PACKAGE_LIBPCAP
-	select BR2_PACKAGE_IW
+        select BR2_PACKAGE_IW
+	default n
 	help
-	  Ruby package.
+	  Ruby package
+
 	  https://rubyfpv.com
