@@ -166,27 +166,28 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
+      - name: Prepare ccache
+        run: |
+          echo CACHE_DATE=$(date +%m) >> ${GITHUB_ENV}
+
       - name: Setup ccache
         if: github.event_name != 'pull_request'
         uses: actions/cache@v4
         with:
           path: /tmp/ccache
-          key: ${{matrix.platform}}_${{matrix.release}}
+          key: ${{matrix.platform}}_${{matrix.release}}-${{env.CACHE_DATE}}
 
       - name: Restore ccache
         if: github.event_name == 'pull_request'
         uses: actions/cache/restore@v4
         with:
           path: /tmp/ccache
-          key: ${{matrix.platform}}_${{matrix.release}}
+          key: ${{matrix.platform}}_${{matrix.release}}-${{env.CACHE_DATE}}
 
       - name: Download files
         run: |
           echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
           echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
-          make prepare
-          git clone https://github.com/openipc/br-cache
-          ln -s ${GITHUB_WORKSPACE}/br-cache $(ls -d output/buildroot-*)/dl
           make BOARD=${{matrix.platform}}_${{matrix.release}} br-source
 
       - name: Build firmware
