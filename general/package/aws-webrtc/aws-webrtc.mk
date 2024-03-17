@@ -5,7 +5,7 @@
 ################################################################################
 
 AWS_WEBRTC_SITE = $(call github,OpenIPC,webrtc-c,$(AWS_WEBRTC_VERSION))
-AWS_WEBRTC_VERSION = develop
+AWS_WEBRTC_VERSION = master
 
 AWS_WEBRTC_INSTALL_STAGING = YES
 AWS_WEBRTC_LICENSE = Apache-2.0

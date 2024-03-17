@@ -13,33 +13,62 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - ak3918ev300
-          - dm36x
-          - fh8852v100
-          - fh8852v200
-          - gk7102
-          - gm8136
-          - hi3516cv100
-          - hi3516cv200
-          - hi3516cv300
-          - hi3516cv500
-          - hi3516ev200
-          - hi3519v101
-          - hi3536cv100
-          - msc313e
-          - msc316dc
-          - msc316dm
-          - nt98562
-          - rv1126
-          - s3l
-          - ssc335
-          - ssc338q
-          - ssc377
-          - t31
-          - t40
-          - xm510
-          - xm530
+        include:
+          # Sigmastar [I6B]
+          - {"platform": "ssc335"}
+
+          # Sigmastar [I6C]
+          - {"platform": "ssc377"}
+
+          # Sigmastar [I6E]
+          - {"platform": "ssc338q"}
+
+          # Hisilicon [HI3516CV100]
+          - {"platform": "hi3516cv100"}
+
+          # Hisilicon [HI3516CV200]
+          - {"platform": "hi3516cv200"}
+
+          # Hisilicon [HI3516CV300]
+          - {"platform": "hi3516cv300"}
+
+          # Hisilicon [HI3516CV500]
+          - {"platform": "hi3516cv500"}
+
+          # Hisilicon [HI3516EV200]
+          - {"platform": "hi3516ev200"}
+
+          # Hisilicon [HI3519V101]
+          - {"platform": "hi3519v101"}
+
+          # Hisilicon [HI3536CV100]
+          - {"platform": "hi3536cv100"}
+
+          # Ingenic [T31]
+          - {"platform": "t31"}
+
+          # Ingenic [T40]
+          - {"platform": "t40"}
+
+          # Goke [GK710X]
+          - {"platform": "gk7102"}
+
+          # Fullhan
+          - {"platform": "fh8852v100"}
+          - {"platform": "fh8852v200"}
+
+          # Grainmedia
+          - {"platform": "gm8136"}
+
+          # Novatek
+          - {"platform": "nt98562"}
+
+          # Rockchip
+          - {"platform": "rv1126"}
+
+          # Xiongmai
+          - {"platform": "xm510"}
+          - {"platform": "xm530"}
 
     steps:
       - name: Checkout source

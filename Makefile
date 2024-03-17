@@ -1,4 +1,4 @@
-BR_VER = 2023.02.7
+BR_VER = 2024.02
 BR_MAKE = $(MAKE) -C $(TARGET)/buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
 BR_LINK = https://github.com/buildroot/buildroot/archive
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
@@ -17,6 +17,11 @@ endif
 ifneq ($(BOARD),)
 CONFIG := $(shell find br-ext-*/configs/*_defconfig | grep -m1 $(BOARD))
 include $(CONFIG)
+endif
+
+SUPPORTED_VENDOR = "ingenic" "sigmastar"
+ifeq ($(filter $(BR2_OPENIPC_SOC_VENDOR),$(SUPPORTED_VENDOR)),)
+BR_VER = 2023.02.7
 endif
 
 all: build repack timer
