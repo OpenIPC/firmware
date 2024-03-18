@@ -5,11 +5,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <linux/gpio.h>
+#include <sys/file.h>
 #include <sys/ioctl.h>
 
 #define DEV_NAME "/dev/gpiochip0"
-#define STEP_TIME 250
-#define STEP_COUNT 4
+#define STEP_TIME 500
+#define STEP_COUNT 10
 #define MAX_COUNT 8
 #define SEQ_COUNT 8
 
@@ -63,6 +64,7 @@ int motor_control(int *gpio, int count) {
 			if (write_gpio(gpio[j], sequence[i][j])) {
 				return 1;
 			}
+
 			usleep(STEP_TIME);
 		}
 	}
@@ -93,6 +95,12 @@ int limit_value(int x) {
 }
 
 int main(int argc, char **argv) {
+	int pid = open("/var/run/motor.pid", O_RDWR | O_CREAT, 0644);
+	if (flock(pid, LOCK_EX | LOCK_NB)) {
+		printf("Control in progress\n");
+		return -1;
+	}
+
 	if (argc < 2 || argc > 3) {
 		printf("Usage: %s [x_step] [y_step]\n", argv[0]);
 		return -1;
