@@ -9,9 +9,8 @@
 #include <sys/ioctl.h>
 
 #define DEV_NAME "/dev/gpiochip0"
-#define STEP_TIME 500
-#define STEP_COUNT 10
-#define MAX_COUNT 8
+#define STEP_TIME 1000
+#define STEP_COUNT 20
 #define SEQ_COUNT 8
 
 int device_x5[] = {01, 02, 12, 13, 62, 63, 64, 65};
@@ -82,18 +81,6 @@ int gpio_export(int *gpio) {
 	return 0;
 }
 
-int limit_value(int x) {
-	if (x < -MAX_COUNT) {
-		x = -MAX_COUNT;
-	}
-
-	if (x > MAX_COUNT) {
-		x = MAX_COUNT;
-	}
-
-	return x;
-}
-
 int main(int argc, char **argv) {
 	int pid = open("/var/run/motor.pid", O_RDWR | O_CREAT, 0644);
 	if (flock(pid, LOCK_EX | LOCK_NB)) {
@@ -106,8 +93,8 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	int x = limit_value(argv[1] ? atoi(argv[1]) : 0);
-	int y = limit_value(argv[2] ? atoi(argv[2]) : 0);
+	int x = argv[1] ? atoi(argv[1]) : 0;
+	int y = argv[2] ? atoi(argv[2]) : 0;
 
 	memcpy(gpio_x, device_x5 + 0, sizeof(gpio_x));
 	memcpy(gpio_y, device_x5 + 4, sizeof(gpio_y));
@@ -116,15 +103,24 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	for (int i = 0; i < abs(x) * STEP_COUNT * 2; i++) {
-		if (motor_control(gpio_x, (x < 0) ? SEQ_COUNT : 0)) {
-			goto reset;
-		}
-	}
+	int count_x = abs(x) ? STEP_COUNT : 0;
+	int count_y = abs(y) ? STEP_COUNT : 0;
 
-	for (int i = 0; i < abs(y) * STEP_COUNT; i++) {
-		if (motor_control(gpio_y, (y < 0) ? 0 : SEQ_COUNT)) {
-			goto reset;
+	while (count_x || count_y) {
+		if (count_x) {
+			if (motor_control(gpio_x, (x < 0) ? SEQ_COUNT : 0)) {
+				goto reset;
+			}
+
+			count_x--;
+		}
+
+		if (count_y) {
+			if (motor_control(gpio_y, (y < 0) ? 0 : SEQ_COUNT)) {
+				goto reset;
+			}
+
+			count_y--;
 		}
 	}
 
