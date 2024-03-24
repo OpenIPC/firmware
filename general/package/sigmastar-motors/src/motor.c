@@ -86,21 +86,21 @@ static int gpio_export(int *gpio) {
 	return 0;
 }
 
-static void print_list(int size) {
+static void print_list(void) {
 	char buffer[1024];
 
 	int len = 0;
-	for (int i = 0; i < size; i++) {
-		len += snprintf(buffer + len, sizeof(buffer), "%s\n", list[i].name);
+	for (int i = 0; i < sizeof(list) / sizeof(config); i++) {
+		len += snprintf(buffer + len,
+			sizeof(buffer) - len, "%s\n", list[i].name);
 	}
 
 	printf("%s", buffer);
 }
 
 int main(int argc, char **argv) {
-	int size = sizeof(list) / sizeof(config);
 	if (argc > 1 && strstr(argv[1], "list")) {
-		print_list(size);
+		print_list();
 		return -1;
 	} else if (argc < 3 || argc > 4) {
 		printf("Usage: %s [device] [x_step] [y_step]\n", argv[0]);
