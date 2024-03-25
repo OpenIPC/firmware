@@ -19,11 +19,6 @@ CONFIG := $(shell find br-ext-*/configs/*_defconfig | grep -m1 $(BOARD))
 include $(CONFIG)
 endif
 
-SUPPORTED_VENDOR = "ingenic" "sigmastar"
-ifeq ($(filter $(BR2_OPENIPC_SOC_VENDOR),$(SUPPORTED_VENDOR)),)
-BR_VER = 2023.02.7
-endif
-
 all: build repack timer
 
 build: defconfig
