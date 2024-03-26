@@ -7,7 +7,7 @@ on:
     branches:
       - master
   schedule:
-  - cron: '0 1 * * *'
+    - cron: '0 1 * * *'
   workflow_dispatch:
 
 env:
@@ -168,9 +168,10 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Prepare ccache
+      - name: Prepare firmware
         run: |
           echo CACHE_DATE=$(date +%m) >> ${GITHUB_ENV}
+          make BOARD=${{matrix.platform}}_${{matrix.release}} br-source
 
       - name: Setup ccache
         if: github.event_name != 'pull_request'
@@ -185,12 +186,6 @@ jobs:
         with:
           path: /tmp/ccache
           key: ${{matrix.platform}}_${{matrix.release}}-${{env.CACHE_DATE}}
-
-      - name: Download files
-        run: |
-          echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
-          echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
-          make BOARD=${{matrix.platform}}_${{matrix.release}} br-source
 
       - name: Build firmware
         run: |
@@ -231,7 +226,7 @@ jobs:
           TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\nTime: ${TIME}\n\n"
           TG_ICON="\xE2\x9C\x85 GitHub Actions"
           TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
-          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
+          HTTP=$(curl ${TG_OPTIONS} https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
           echo Telegram response: ${HTTP}
 
       - name: Send error
@@ -241,5 +236,5 @@ jobs:
           TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\n\n"
           TG_ICON="\xE2\x9A\xA0 GitHub Actions"
           TG_HEADER=$(echo -e ${TG_WARN}${TG_MSG}${TG_ICON})
-          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendMessage -F chat_id=${TG_CHANNEL} -F text="${TG_HEADER}")
+          HTTP=$(curl ${TG_OPTIONS} https://api.telegram.org/bot${TG_TOKEN}/sendMessage -F chat_id=${TG_CHANNEL} -F text="${TG_HEADER}")
           echo Telegram response: ${HTTP}
