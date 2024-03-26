@@ -46,13 +46,15 @@ show_help() {
 }
 
 show_gain() {
-	while sleep 1; do wget -T1 -q -O - http://127.0.0.1/metrics/isp | grep ^isp_again; done
+	while sleep 1; do wget -T1 -q -O - localhost/metrics/isp | grep ^isp_again; done
 }
 
 show_gpio() {
-	mount -t debugfs none /sys/kernel/debug
-	cat /sys/kernel/debug/gpio
-	umount /sys/kernel/debug
+	if [ -e /sys/kernel/debug ]; then
+		mount -t debugfs none /sys/kernel/debug
+		cat /sys/kernel/debug/gpio
+		umount /sys/kernel/debug
+	fi
 }
 
 show_modules() {
