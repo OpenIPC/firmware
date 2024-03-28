@@ -3,7 +3,7 @@
 # OpenIPC.org | 2024
 #
 
-scr_version=1.0.39
+scr_version=1.0.40
 
 args=" $@"
 
@@ -102,33 +102,23 @@ download_firmware() {
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
 	if [ "$vendor" = "sigmastar" ] || [ "$vendor" = "ingenic" ]; then
-		killall -q -3 majestic
-		sleep 1
+		/etc/init.d/S95majestic pause
 	else
-		kill_process majestic
+		/etc/init.d/S95majestic stop
 	fi
-	for proc in crond klogd ntpd rngd syslogd; do
-		kill_process $proc
-	done
+	/etc/init.d/S60crond stop
+	/etc/init.d/S49ntpd stop
+	/etc/init.d/S02klogd stop
+	/etc/init.d/S01syslogd stop
+
 	sync
 	echo 3 > /proc/sys/vm/drop_caches
-
 	echo_c 34 "\nUptime:"
 	uptime
 	echo_c 34 "\nMemory:"
 	free -h
 	echo_c 34 "\nProcesses:"
 	ps | grep -v '\['
-}
-
-kill_process() {
-	echo -n "Killing $1 "
-	while [ -n "$(pidof $1)" ]; do
-		killall -q $1
-		sleep 0.1
-		echo -n "."
-	done
-	echo ". OK"
 }
 
 set_progress() {
