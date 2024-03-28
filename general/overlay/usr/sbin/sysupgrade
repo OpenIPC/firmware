@@ -102,14 +102,15 @@ download_firmware() {
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
 	if [ "$vendor" = "sigmastar" ] || [ "$vendor" = "ingenic" ]; then
-		/etc/init.d/S95majestic pause
+		killall -q -3 majestic
 	else
-		/etc/init.d/S95majestic stop
+		killall -q majestic
 	fi
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
 	/etc/init.d/S02klogd stop
 	/etc/init.d/S01syslogd stop
+	sleep 1
 
 	sync
 	echo 3 > /proc/sys/vm/drop_caches
