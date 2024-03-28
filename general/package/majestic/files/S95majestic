@@ -41,20 +41,8 @@ stop() {
 	fi
 }
 
-pause() {
-	printf "Pausing $DAEMON: "
-	start-stop-daemon -K -s QUIT -q -p "$PIDFILE"
-	status=$?
-	if [ "$status" -eq 0 ]; then
-		rm -f "$PIDFILE"
-		echo "OK"
-	else
-		echo "FAIL"
-	fi
-}
-
 case "$1" in
-	start|stop|pause)
+	start|stop)
 		"$1"
 		;;
 
