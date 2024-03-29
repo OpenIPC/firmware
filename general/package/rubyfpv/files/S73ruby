@@ -17,7 +17,7 @@ case "$1" in
 	fi
 
 	echo "Starting Ruby..." >> /tmp/ruby_boot.log
-	/usr/sbin/ruby_start&
+	/usr/sbin/ruby_start &
 	;;
   stop)
 	echo "Stopping Ruby..." >> /tmp/ruby_boot.log
