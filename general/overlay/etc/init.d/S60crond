@@ -2,7 +2,6 @@
 
 DAEMON="crond"
 PIDFILE="/var/run/$DAEMON.pid"
-
 CROND_ARGS="-f -c /etc/crontabs"
 
 # shellcheck source=/dev/null
