@@ -2,7 +2,7 @@
 
 DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
-DAEMON_ARGS="-s"
+MAJESTIC_ARGS="-s"
 
 debug_majestic() {
 	[ -f /etc/coredump.conf ] && . /etc/coredump.conf
@@ -13,9 +13,8 @@ debug_majestic() {
 
 load_majestic() {
 	printf "Starting $DAEMON: "
-	start-stop-daemon -b -S -m -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $DAEMON_ARGS
-	status=$?
-	if [ "$status" -eq 0 ]; then
+	start-stop-daemon -b -S -m -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $MAJESTIC_ARGS
+	if [ $? = 0 ]; then
 		echo "OK"
 	else
 		echo "FAIL"
@@ -23,7 +22,7 @@ load_majestic() {
 }
 
 start() {
-	logger -s -p daemon.info -t $(ipcinfo -v) "Loading video system has started..."
+	logger -s -p daemon.info -t $(ipcinfo -v) "Loading video system..."
 	export SENSOR=$(fw_printenv -n sensor)
 	debug_majestic
 	load_majestic
@@ -32,8 +31,7 @@ start() {
 stop() {
 	printf "Stopping $DAEMON: "
 	start-stop-daemon -K -q -p "$PIDFILE"
-	status=$?
-	if [ "$status" -eq 0 ]; then
+	if [ $? = 0 ]; then
 		rm -f "$PIDFILE"
 		echo "OK"
 	else
