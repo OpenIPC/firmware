@@ -108,6 +108,7 @@ free_resources() {
 	fi
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
+	/etc/init.d/S21rngd stop
 	/etc/init.d/S02klogd stop
 	/etc/init.d/S01syslogd stop
 	sleep 1
