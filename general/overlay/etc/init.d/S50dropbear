@@ -1,14 +1,10 @@
 #!/bin/sh
-#
-# Starts dropbear sshd.
-#
 
-# Allow a few customizations from a config file
-test -r /etc/default/dropbear && . /etc/default/dropbear
+DAEMON="dropbear"
+PIDFILE="/var/run/$DAEMON.pid"
+DROPBEAR_ARGS="-R -B -k -p 22 -K 300"
 
 start() {
-	DROPBEAR_ARGS="$DROPBEAR_ARGS -R -B -k -p 22 -K 300"
-
 	# If /etc/dropbear is a symlink to /var/run/dropbear, and
 	#   - the filesystem is RO (i.e. we can not rm the symlink),
 	#     create the directory pointed to by the symlink.
@@ -24,17 +20,25 @@ start() {
 		fi
 	fi
 
-	printf "Starting dropbear sshd: "
+	printf "Starting $DAEMON: "
 	umask 077
 
-	start-stop-daemon -S -q -p /var/run/dropbear.pid --exec /usr/sbin/dropbear -- $DROPBEAR_ARGS
-	[ $? = 0 ] && echo "OK" || echo "FAIL"
+	start-stop-daemon -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" -- $DROPBEAR_ARGS
+	if [ $? = 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
 }
 
 stop() {
-	printf "Stopping dropbear sshd: "
-	start-stop-daemon -K -q -p /var/run/dropbear.pid
-	[ $? = 0 ] && echo "OK" || echo "FAIL"
+	printf "Stopping $DAEMON: "
+	start-stop-daemon -K -q -p "$PIDFILE"
+	if [ $? = 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
 }
 
 case "$1" in
@@ -44,6 +48,7 @@ case "$1" in
 
 	restart|reload)
 		stop
+		sleep 1
 		start
 		;;
 
@@ -52,5 +57,3 @@ case "$1" in
 		exit 1
 		;;
 esac
-
-exit $?

@@ -2,7 +2,7 @@
 
 case "$1" in
 	start)
-		echo "Loading kernel modules..."
+		echo "Loading modules..."
 
 		# load modules from /etc/modules
 		[ -r /etc/modules ] || exit 0
