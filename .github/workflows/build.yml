@@ -172,6 +172,7 @@ jobs:
 
       - name: Prepare firmware
         run: |
+          echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
           echo CACHE_DATE=$(date +%m) >> ${GITHUB_ENV}
           make BOARD=${{matrix.platform}}_${{matrix.release}} br-source
 
