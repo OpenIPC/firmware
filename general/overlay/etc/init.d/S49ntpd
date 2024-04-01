@@ -2,38 +2,27 @@
 
 DAEMON="ntpd"
 PIDFILE="/var/run/$DAEMON.pid"
-
 NTPD_ARGS="-n"
 
-# shellcheck source=/dev/null
-[ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
-
-# BusyBox' ntpd does not create a pidfile, so pass "-n" in the command line
-# and use "-m" to instruct start-stop-daemon to create one.
 start() {
-	printf 'Starting %s: ' "$DAEMON"
-	# shellcheck disable=SC2086 # we need the word splitting
+	printf "Starting $DAEMON: "
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" -- $NTPD_ARGS
-	status=$?
-	if [ "$status" -eq 0 ]; then
+	if [ $? = 0 ]; then
 		echo "OK"
 	else
 		echo "FAIL"
 	fi
-	return "$status"
 }
 
 stop() {
-	printf 'Stopping %s: ' "$DAEMON"
+	printf "Stopping $DAEMON: "
 	start-stop-daemon -K -q -p "$PIDFILE"
-	status=$?
-	if [ "$status" -eq 0 ]; then
+	if [ $? = 0 ]; then
 		rm -f "$PIDFILE"
 		echo "OK"
 	else
 		echo "FAIL"
 	fi
-	return "$status"
 }
 
 case "$1" in
@@ -41,7 +30,7 @@ case "$1" in
 		"$1"
 		;;
 
-	reload)
+	restart|reload)
 		stop
 		sleep 1
 		start

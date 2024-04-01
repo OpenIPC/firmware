@@ -2,9 +2,7 @@
 
 case "$1" in
 	start)
-		printf "Loading modules:"
-		# load modules for detected devices
-		# find /sys/ -name modalias -print0 | xargs -0 sort -u -z | xargs -0 modprobe -abq
+		echo "Loading modules..."
 
 		# load modules from /etc/modules
 		[ -r /etc/modules ] || exit 0

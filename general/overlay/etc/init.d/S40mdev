@@ -6,11 +6,4 @@ case "$1" in
 		echo /sbin/mdev > /proc/sys/kernel/hotplug
 		/sbin/mdev -s
 		;;
-
-	*)
-		echo "Usage: $0 {start}"
-		exit 1
-		;;
 esac
-
-exit $?

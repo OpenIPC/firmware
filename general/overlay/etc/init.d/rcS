@@ -7,8 +7,7 @@ export TZ=$(cat /etc/TZ)
 # Set the firmware creation time as the base system time
 /bin/date -s @$(stat -t /etc/os-release | cut -d" " -f12)
 
-# Start all init scripts in /etc/init.d
-# executing them in numerical order.
+# Start all init scripts in /etc/init.d executing them in numerical order.
 for i in /etc/init.d/S??*; do
 	# Ignore dangling symlinks (if any).
 	[ ! -f "$i" ] && continue
@@ -19,7 +18,7 @@ for i in /etc/init.d/S??*; do
 			(
 				trap - INT QUIT TSTP
 				set start
-				$i
+				. $i
 			)
 			;;
 
