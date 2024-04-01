@@ -1,27 +1,23 @@
 #!/bin/sh
 
-NAME="rngd"
-DAEMON="/usr/sbin/${NAME}"
-DAEMON_ARGS="-r /dev/urandom"
-CFG_FILE="/etc/default/${NAME}"
-PID_FILE="/var/run/${NAME}.pid"
-
-# Read configuration variable file if it is present
-[ -r "${CFG_FILE}" ] && . "${CFG_FILE}"
+DAEMON="rngd"
+PIDFILE="/var/run/$DAEMON.pid"
+RNGD_ARGS="-r /dev/urandom"
 
 start() {
-	printf "Starting ${NAME}: "
-	start-stop-daemon -S -q -x "${DAEMON}" -- ${DAEMON_ARGS}
-	[ $? = 0 ] && echo "OK" || echo "FAIL"
+	printf "Starting $DAEMON: "
+	start-stop-daemon -S -q -x "/usr/sbin/$DAEMON" -- $RNGD_ARGS
+	if [ $? = 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
 }
 
 stop() {
-	printf "Stopping ${NAME}: "
-	# This daemon does not exit properly with the default TERM signal unless
-	# it's forced to work by something reading /dev/random. Killing it and
-	# removing its PID file is more straightforward.
-	if start-stop-daemon -K -q -s KILL -p "${PID_FILE}" -n "${NAME}"; then
-		rm -f "${PID_FILE}"
+	printf "Stopping $DAEMON: "
+	start-stop-daemon -K -q -n "$DAEMON"
+	if [ $? = 0 ]; then
 		echo "OK"
 	else
 		echo "FAIL"
@@ -35,11 +31,12 @@ case "$1" in
 
 	restart|reload)
 		stop
+		sleep 1
 		start
 		;;
 
 	*)
-		echo "Usage: $0 {start|stop|restart|reload}" >&2
+		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1
 		;;
 esac
