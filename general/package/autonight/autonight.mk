@@ -4,22 +4,18 @@
 #
 ################################################################################
 
+AUTONIGHT_SITE_METHOD = local
+AUTONIGHT_SITE = $(AUTONIGHT_PKGDIR)/src
+
 AUTONIGHT_LICENSE = MIT
 AUTONIGHT_LICENSE_FILES = LICENSE
 
-define AUTONIGHT_EXTRACT_CMDS
-	cp -avr $(AUTONIGHT_PKGDIR)/src/* $(@D)/
-endef
-
-AUTONIGHT_MAKE_OPTS = \
-	CC="$(TARGET_CC)"
-
 define AUTONIGHT_BUILD_CMDS
-	$(MAKE) $(AUTONIGHT_MAKE_OPTS) -C $(@D)
+	$(TARGET_CC) $(@D)/autonight.c -o $(@D)/autonight -s
 endef
 
 define AUTONIGHT_INSTALL_TARGET_CMDS
-	install -m 0755 -D $(@D)/autonight $(TARGET_DIR)/usr/bin/autonight
+	$(INSTALL) -m 0755 -t $(TARGET_DIR)/usr/bin $(@D)/autonight
 endef
 
 $(eval $(generic-package))
