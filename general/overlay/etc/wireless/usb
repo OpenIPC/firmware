@@ -106,6 +106,13 @@ if [ "$1" = "rtl8188fu-hi3518ev300-unknown1" ]; then
 	exit 0
 fi
 
+# HI3518EV300 t5810hct-m02
+if [ "$1" = "rtl8188fu-hi3518ev300-t5810hct-m02" ]; then
+	set_gpio 40 1
+	modprobe 8188fu
+	exit 0
+fi
+
 # SSC325DE IMOU C22EP-S2
 if [ "$1" = "rtl8188fu-ssc325de-imou-c22ep-s2" ]; then
 	set_gpio 62 1
