@@ -5,7 +5,7 @@
 ################################################################################
 
 AWS_PRODUCER_SITE = $(call github,awslabs,amazon-kinesis-video-streams-producer-c,$(AWS_PRODUCER_VERSION))
-AWS_PRODUCER_VERSION = HEAD
+AWS_PRODUCER_VERSION = 3e519b7670e39031375d227f983ad2cde888078e
 
 AWS_PRODUCER_INSTALL_STAGING = YES
 AWS_PRODUCER_LICENSE = Apache-2.0

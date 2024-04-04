@@ -6,13 +6,12 @@ on:
   push:
     branches:
       - master
+  schedule:
+    - cron: '0 1 * * *'
   workflow_dispatch:
 
 env:
   TAG_NAME: latest
-  TG_TOKEN: ${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}
-  TG_CHANNEL: ${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
-  TG_OPTIONS: -s -o /dev/null -w %{http_code}
 
 jobs:
   buildroot:
@@ -46,9 +45,11 @@ jobs:
           - {"platform": "ssc30kd", "release": "lite"}
           - {"platform": "ssc30kd", "release": "ultimate"}
           - {"platform": "ssc30kq", "release": "fpv"}
+          - {"platform": "ssc30kq", "release": "rubyfpv"}
           - {"platform": "ssc30kq", "release": "lite"}
           - {"platform": "ssc30kq", "release": "ultimate"}
           - {"platform": "ssc338q", "release": "fpv"}
+          - {"platform": "ssc338q", "release": "rubyfpv"}
           - {"platform": "ssc338q", "release": "lite"}
           - {"platform": "ssc338q", "release": "ultimate"}
 
@@ -129,14 +130,17 @@ jobs:
           - {"platform": "gk7202v300", "release": "lite"}
           - {"platform": "gk7205v200", "release": "lte"}
           - {"platform": "gk7205v200", "release": "fpv"}
+          - {"platform": "gk7205v200", "release": "rubyfpv"}
           - {"platform": "gk7205v200", "release": "venc"}
           - {"platform": "gk7205v200", "release": "lite"}
           - {"platform": "gk7205v200", "release": "ultimate"}
           - {"platform": "gk7205v210", "release": "fpv"}
+          - {"platform": "gk7205v210", "release": "rubyfpv"}
           - {"platform": "gk7205v210", "release": "venc"}
           - {"platform": "gk7205v210", "release": "lite"}
           - {"platform": "gk7205v300", "release": "lte"}
           - {"platform": "gk7205v300", "release": "fpv"}
+          - {"platform": "gk7205v300", "release": "rubyfpv"}
           - {"platform": "gk7205v300", "release": "venc"}
           - {"platform": "gk7205v300", "release": "lite"}
           - {"platform": "gk7205v300", "release": "ultimate"}
@@ -166,9 +170,11 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Prepare ccache
+      - name: Prepare firmware
         run: |
+          echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
           echo CACHE_DATE=$(date +%m) >> ${GITHUB_ENV}
+          make BOARD=${{matrix.platform}}_${{matrix.release}} br-source
 
       - name: Setup ccache
         if: github.event_name != 'pull_request'
@@ -183,12 +189,6 @@ jobs:
         with:
           path: /tmp/ccache
           key: ${{matrix.platform}}_${{matrix.release}}-${{env.CACHE_DATE}}
-
-      - name: Download files
-        run: |
-          echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts
-          echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts
-          make BOARD=${{matrix.platform}}_${{matrix.release}} br-source
 
       - name: Build firmware
         run: |
@@ -229,15 +229,7 @@ jobs:
           TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\nTime: ${TIME}\n\n"
           TG_ICON="\xE2\x9C\x85 GitHub Actions"
           TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
-          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
-          echo Telegram response: ${HTTP}
-
-      - name: Send error
-        if: github.event_name != 'pull_request' && failure()
-        run: |
-          TG_WARN="Error: ${{matrix.platform}}_${{matrix.release}}\n"
-          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\n\n"
-          TG_ICON="\xE2\x9A\xA0 GitHub Actions"
-          TG_HEADER=$(echo -e ${TG_WARN}${TG_MSG}${TG_ICON})
-          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendMessage -F chat_id=${TG_CHANNEL} -F text="${TG_HEADER}")
+          TG_TOKEN=${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}
+          TG_CHANNEL=${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
+          HTTP=$(curl -s -o /dev/null -w %{http_code} https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
           echo Telegram response: ${HTTP}

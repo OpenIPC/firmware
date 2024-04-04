@@ -106,6 +106,13 @@ if [ "$1" = "rtl8188fu-hi3518ev300-unknown1" ]; then
 	exit 0
 fi
 
+# HI3518EV300 t5810hct-m02
+if [ "$1" = "rtl8188fu-hi3518ev300-t5810hct-m02" ]; then
+	set_gpio 40 1
+	modprobe 8188fu
+	exit 0
+fi
+
 # SSC325DE IMOU C22EP-S2
 if [ "$1" = "rtl8188fu-ssc325de-imou-c22ep-s2" ]; then
 	set_gpio 62 1
@@ -214,6 +221,13 @@ fi
 if [ "$1" = "rtl8733bu-t31-camhipro" ]; then
 	set_gpio 61 0
 	modprobe 8733bu
+	exit 0
+fi
+
+# T31 IFlytek
+if [ "$1" = "ssv6155-t31-iflytek" ]; then
+	set_gpio 10 1
+	modprobe ssv6155
 	exit 0
 fi
 

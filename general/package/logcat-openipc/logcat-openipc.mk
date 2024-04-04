@@ -4,12 +4,15 @@
 #
 ################################################################################
 
-LOGCAT_OPENIPC_SITE = $(call github,gtxaspec,linux_logcat,$(LOGCAT_OPENIPC_VERSION))
-LOGCAT_OPENIPC_VERSION = HEAD
+LOGCAT_OPENIPC_SITE_METHOD = local
+LOGCAT_OPENIPC_SITE = $(LOGCAT_OPENIPC_PKGDIR)/src
 
-LOGCAT_OPENIPC_LICENSE = GPL-2.0
-LOGCAT_OPENIPC_LICENSE_FILES = COPYING
+define LOGCAT_OPENIPC_BUILD_CMDS
+	$(TARGET_CC) $(@D)/logcat.c -o $(@D)/logcat -s
+endef
 
-LOGCAT_OPENIPC_INSTALL_STAGING = YES
+define LOGCAT_OPENIPC_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/logcat
+endef
 
-$(eval $(cmake-package))
+$(eval $(generic-package))

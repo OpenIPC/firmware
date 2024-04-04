@@ -12,7 +12,7 @@ echo_c() {
 if [ "$PS1" ]; then
 	[ -f /etc/os-release ] && . /etc/os-release
 	[ -f /etc/openipc_banner ] && echo_c 34 "$(cat /etc/openipc_banner)"
-	echo_c 32 "$(printf "%56s" "${GITHUB_VERSION}")"
+	echo_c 32 "$(printf "%51s" "${GITHUB_VERSION}")"
 	[ -f /etc/openipc_donors ] && echo_c 37 "\n\n$(cat /etc/openipc_donors)\n\n"
 	if [ "$(id -u)" -eq 0 ]; then
 		export PS1='\u@\h:\w\# '
@@ -46,13 +46,15 @@ show_help() {
 }
 
 show_gain() {
-	while sleep 1; do wget -T1 -q -O - http://127.0.0.1/metrics/isp | grep ^isp_again; done
+	while sleep 1; do wget -T1 -q -O - localhost/metrics/isp | grep ^isp_again; done
 }
 
 show_gpio() {
-	mount -t debugfs none /sys/kernel/debug
-	cat /sys/kernel/debug/gpio
-	umount /sys/kernel/debug
+	if [ -e /sys/kernel/debug ]; then
+		mount -t debugfs none /sys/kernel/debug
+		cat /sys/kernel/debug/gpio
+		umount /sys/kernel/debug
+	fi
 }
 
 show_modules() {

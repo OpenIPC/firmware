@@ -13,19 +13,24 @@
 #define STEP_COUNT 20
 #define SEQ_COUNT 8
 
-int device_x5[] = {01, 02, 12, 13, 62, 63, 64, 65};
+typedef struct {
+	const char *name;
+	int gpio_x[4];
+	int gpio_y[4];
+} config;
 
-int gpio_x[4];
-int gpio_y[4];
-
-int sequence[][4] = {
-	{1, 0, 0, 0}, {1, 1, 0, 0}, {0, 1, 0, 0}, {0, 1, 1, 0},
-	{0, 0, 1, 0}, {0, 0, 1, 1}, {0, 0, 0, 1}, {1, 0, 0, 1},
-	{1, 0, 0, 1}, {0, 0, 0, 1}, {0, 0, 1, 1}, {0, 0, 1, 0},
-	{0, 1, 1, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}, {1, 0, 0, 0},
+static config list[] = {
+	{ "rtl8188fu-ssc337de-foscam", { 01, 02, 12, 13 }, { 62, 63, 64, 65 }, },
 };
 
-int write_gpio(int pin, int val) {
+static int sequence[][4] = {
+	{ 1, 0, 0, 0 }, { 1, 1, 0, 0 }, { 0, 1, 0, 0 }, { 0, 1, 1, 0 },
+	{ 0, 0, 1, 0 }, { 0, 0, 1, 1 }, { 0, 0, 0, 1 }, { 1, 0, 0, 1 },
+	{ 1, 0, 0, 1 }, { 0, 0, 0, 1 }, { 0, 0, 1, 1 }, { 0, 0, 1, 0 },
+	{ 0, 1, 1, 0 }, { 0, 1, 0, 0 }, { 1, 1, 0, 0 }, { 1, 0, 0, 0 },
+};
+
+static int write_gpio(int pin, int val) {
 	struct gpiohandle_request rq;
 	struct gpiohandle_data data;
 
@@ -57,7 +62,7 @@ int write_gpio(int pin, int val) {
 	return 0;
 }
 
-int motor_control(int *gpio, int count) {
+static int motor_control(int *gpio, int count) {
 	for (int i = count; i < count + SEQ_COUNT; i++) {
 		for (int j = 0; j < 4; j++) {
 			if (write_gpio(gpio[j], sequence[i][j])) {
@@ -71,7 +76,7 @@ int motor_control(int *gpio, int count) {
 	return 0;
 }
 
-int gpio_export(int *gpio) {
+static int gpio_export(int *gpio) {
 	for (int i = 0; i < 4; i++) {
 		if (write_gpio(gpio[i], 0)) {
 			return 1;
@@ -81,25 +86,52 @@ int gpio_export(int *gpio) {
 	return 0;
 }
 
+static void print_list(void) {
+	char buffer[1024];
+
+	int len = 0;
+	for (int i = 0; i < sizeof(list) / sizeof(config); i++) {
+		len += snprintf(buffer + len,
+			sizeof(buffer) - len, "%s\n", list[i].name);
+	}
+
+	printf("%s", buffer);
+}
+
 int main(int argc, char **argv) {
+	if (argc > 1 && strstr(argv[1], "list")) {
+		print_list();
+		return -1;
+	} else if (argc < 3 || argc > 4) {
+		printf("Usage: %s [device] [x_step] [y_step]\n", argv[0]);
+		return -1;
+	}
+
+	int dev = -1;
+	for (int i = 0; i < sizeof(list) / sizeof(config); i++) {
+		if (strstr(argv[1], list[i].name)) {
+			dev = i;
+			break;
+		}
+	}
+
+	if (dev < 0) {
+		printf("Device not supported\n");
+		return -1;
+	}
+
 	int pid = open("/var/run/motor.pid", O_RDWR | O_CREAT, 0644);
 	if (flock(pid, LOCK_EX | LOCK_NB)) {
 		printf("Control in progress\n");
+		close(pid);
 		return -1;
 	}
 
-	if (argc < 2 || argc > 3) {
-		printf("Usage: %s [x_step] [y_step]\n", argv[0]);
-		return -1;
-	}
+	int x = argv[2] ? atoi(argv[2]) : 0;
+	int y = argv[3] ? atoi(argv[3]) : 0;
 
-	int x = argv[1] ? atoi(argv[1]) : 0;
-	int y = argv[2] ? atoi(argv[2]) : 0;
-
-	memcpy(gpio_x, device_x5 + 0, sizeof(gpio_x));
-	memcpy(gpio_y, device_x5 + 4, sizeof(gpio_y));
-
-	if (gpio_export(gpio_x) || gpio_export(gpio_y)) {
+	if (gpio_export(list[dev].gpio_x) || gpio_export(list[dev].gpio_y)) {
+		close(pid);
 		return -1;
 	}
 
@@ -108,7 +140,7 @@ int main(int argc, char **argv) {
 
 	while (count_x || count_y) {
 		if (count_x) {
-			if (motor_control(gpio_x, (x < 0) ? SEQ_COUNT : 0)) {
+			if (motor_control(list[dev].gpio_x, (x < 0) ? SEQ_COUNT : 0)) {
 				goto reset;
 			}
 
@@ -116,7 +148,7 @@ int main(int argc, char **argv) {
 		}
 
 		if (count_y) {
-			if (motor_control(gpio_y, (y < 0) ? 0 : SEQ_COUNT)) {
+			if (motor_control(list[dev].gpio_y, (y < 0) ? 0 : SEQ_COUNT)) {
 				goto reset;
 			}
 
@@ -125,8 +157,9 @@ int main(int argc, char **argv) {
 	}
 
 reset:
-	gpio_export(gpio_x);
-	gpio_export(gpio_y);
+	gpio_export(list[dev].gpio_x);
+	gpio_export(list[dev].gpio_y);
+	close(pid);
 
 	return 0;
 }

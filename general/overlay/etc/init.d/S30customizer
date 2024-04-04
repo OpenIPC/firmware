@@ -2,11 +2,16 @@
 
 case "$1" in
 	start)
-		system_fb
-		;;
+		if [ ! -e /etc/system.ok ] && [ -e /usr/share/openipc/customizer.sh ]; then
+			echo "Run customizer script..."
+			sh /usr/share/openipc/customizer.sh
+			touch /etc/system.ok
+		fi
 
-	*)
-		echo "Usage: $0 {start}"
-		exit 1
+		if [ ! -e /etc/network.ok ] && [ -e /usr/share/openipc/wireless.sh ]; then
+			echo "Run wireless script..."
+			sh /usr/share/openipc/wireless.sh
+			touch /etc/network.ok
+		fi
 		;;
 esac

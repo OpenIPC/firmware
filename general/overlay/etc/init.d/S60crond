@@ -2,40 +2,27 @@
 
 DAEMON="crond"
 PIDFILE="/var/run/$DAEMON.pid"
-
 CROND_ARGS="-f -c /etc/crontabs"
 
-# shellcheck source=/dev/null
-[ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
-
-# The mini-snmpd does not create a pidfile, so pass "-n" in the command line
-# and use "-m" to instruct start-stop-daemon to create one.
 start() {
-	printf 'Starting %s: ' "$DAEMON"
-	[ -f /usr/sbin/$DAEMON ] || echo -en "DISABLED, "
-	# shellcheck disable=SC2086 # we need the word splitting
+	printf "Starting $DAEMON: "
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" -- $CROND_ARGS
-	status=$?
-	if [ "$status" -eq 0 ]; then
+	if [ $? = 0 ]; then
 		echo "OK"
 	else
 		echo "FAIL"
 	fi
-	return "$status"
 }
 
 stop() {
-	printf 'Stopping %s: ' "$DAEMON"
-	[ -f /usr/sbin/$DAEMON ] || echo -en "DISABLED, "
+	printf "Stopping $DAEMON: "
 	start-stop-daemon -K -q -p "$PIDFILE"
-	status=$?
-	if [ "$status" -eq 0 ]; then
+	if [ $? = 0 ]; then
 		rm -f "$PIDFILE"
 		echo "OK"
 	else
 		echo "FAIL"
 	fi
-	return "$status"
 }
 
 case "$1" in
