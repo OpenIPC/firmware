@@ -47,7 +47,7 @@ case "$1" in
 		;;
 
 	stop)
-		echo "Stopping all services..."
+		echo "Stopping FPV datalink services..."
 		killall -q wfb_tx
 		killall -q wfb_rx
 		killall -q telemetry_rx
