@@ -6,7 +6,7 @@ MAJESTIC_ARGS="-s"
 
 debug() {
 	ulimit -c unlimited
-	echo "/root/core.%e.%h.%t" > /proc/sys/kernel/core_pattern
+	echo "/tmp/core.%e.%h.%t" > /proc/sys/kernel/core_pattern
 }
 
 start() {
