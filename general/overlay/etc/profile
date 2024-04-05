@@ -29,6 +29,10 @@ network() {
 	/etc/init.d/S40network "$1"
 }
 
+streamer() {
+	/etc/init.d/S95majestic "$1"
+}
+
 set_fullname() {
 	show_fullname > /etc/hostname
 }
