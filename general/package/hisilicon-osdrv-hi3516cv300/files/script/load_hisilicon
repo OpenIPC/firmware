@@ -275,7 +275,7 @@ insert_sns()
 			# This was added by ZigFisher
 			bus_type="i2c";
 			pinmux_mode="i2c_dc";
-			sensor_clk_freq=24000000;
+			sensor_clk_freq=24000000;               # 2024.04.02 received feedback that at a speed of 27000000 the JXF22 sensor works better and more stable
 			intf_mode="default";
 			if [ ${chipid} = "hi3516ev100" ]; then
 				viu_frequency=83300000;               # 83.3M, viu clock frequency
