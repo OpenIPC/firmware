@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-ANTMEDIA_GSTREAMER_WEBRTC_SITE = git@github.com:Omlet-Ltd/AntMedia-Gstreamer-Webrtc.git
+ANTMEDIA_GSTREAMER_WEBRTC_SITE = https://github.com/Omlet-Ltd/AntMedia-Gstreamer-Webrtc.git
 ANTMEDIA_GSTREAMER_WEBRTC_SITE_METHOD = git
 ANTMEDIA_GSTREAMER_WEBRTC_VERSION = aeef10e66587fc8fb13e14c8198f8e3ea8c8346c
 ANTMEDIA_GSTREAMER_WEBRTC_GIT_SUBMODULES = YES
