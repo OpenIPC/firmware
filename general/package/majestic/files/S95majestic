@@ -4,14 +4,13 @@ DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
 MAJESTIC_ARGS="-s"
 
-debug_majestic() {
-	[ -f /etc/coredump.conf ] && . /etc/coredump.conf
-	if [ "$coredump_enabled" ]; then
-		ulimit -c unlimited && echo "|/usr/sbin/sendcoredump.sh" > /proc/sys/kernel/core_pattern
-	fi
+debug() {
+	ulimit -c unlimited
+	echo "/root/core.%e.%h.%t" > /proc/sys/kernel/core_pattern
 }
 
-load_majestic() {
+start() {
+	export SENSOR=$(fw_printenv -n sensor)
 	printf "Starting $DAEMON: "
 	start-stop-daemon -b -S -m -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $MAJESTIC_ARGS
 	if [ $? = 0 ]; then
@@ -19,13 +18,6 @@ load_majestic() {
 	else
 		echo "FAIL"
 	fi
-}
-
-start() {
-	logger -s -p daemon.info -t $(ipcinfo -v) "Loading video system..."
-	export SENSOR=$(fw_printenv -n sensor)
-	debug_majestic
-	load_majestic
 }
 
 stop() {
@@ -40,18 +32,18 @@ stop() {
 }
 
 case "$1" in
-	start|stop)
+	start|stop|debug)
 		"$1"
 		;;
 
 	restart)
 		stop
 		sleep 3
-		load_majestic
+		start
 		;;
 
 	*)
-		echo "Usage: $0 {start|stop|restart}"
+		echo "Usage: $0 {start|stop|debug|restart}"
 		exit 1
 		;;
 esac
