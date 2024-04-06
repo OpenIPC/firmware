@@ -101,11 +101,7 @@ download_firmware() {
 
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
-	if [ "$vendor" = "sigmastar" ] || [ "$vendor" = "ingenic" ]; then
-		killall -q -3 majestic
-	else
-		killall -q majestic
-	fi
+	killall -q -3 majestic
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
 	/etc/init.d/S21rngd stop
