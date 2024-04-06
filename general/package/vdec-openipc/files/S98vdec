@@ -13,13 +13,13 @@ if [ ! -z ${records} ]; then
 fi
 
 if [ ${osd} = "simple" ]; then
-    osd_variant="--osd"
+    osd_variant="--osd "${osd_elements}
 fi
 
 case "$1" in
   start)
     echo "Starting vdec decoder service..."
-    vdec -p ${port} -d ${format} -c ${codec} -m ${mode} --mavlink-port ${mavlink_port} ${osd_variant} ${extra} ${osd_elements} > /dev/null 2>&1 &
+    vdec -p ${port} -d ${format} -c ${codec} -m ${mode} --mavlink-port ${mavlink_port} ${osd_variant} ${extra} > /dev/null 2>&1 &
     sleep 3
     if [ ${osd} = "custom" ]; then
 	osd > /dev/null 2>&1 &
