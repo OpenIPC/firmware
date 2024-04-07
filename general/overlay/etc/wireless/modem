@@ -5,6 +5,13 @@ set_gpio() {
 	sleep 1
 }
 
+# Generic RNDIS
+if [ "$1" = "rndis-generic" ]; then
+	modprobe rndis_host
+	sleep 10
+	exit 0
+fi
+
 # GK7205V200 Kafei with A7680C and usb0
 if [ "$1" = "a7680c-gk7205v200-kafei" ]; then
 	set_gpio 57 0
