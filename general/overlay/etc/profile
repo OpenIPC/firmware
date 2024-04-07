@@ -79,6 +79,10 @@ show_wlan() {
 	grep -r '$1..=' /etc/wireless | cut -d '"' -f4 | sort | grep -e $(fw_printenv -n soc) -e generic
 }
 
+legacy_webui() {
+	curl -s -L https://github.com/openipc/webui/raw/master/files/usr/sbin/updatewebui.sh -o /tmp/webui.sh && sh /tmp/webui.sh
+}
+
 # Source configuration files from /etc/profile.d
 for i in /etc/profile.d/*.sh; do
 	[ -r "$i" ] && . $i
