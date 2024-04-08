@@ -4,7 +4,7 @@ skip=$(fw_printenv -n fpv)
 fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
 
 if [ -e /etc/datalink.conf ]; then
-	source /etc/datalink.conf
+	. /etc/datalink.conf
 fi
 
 case "$1" in
@@ -32,9 +32,9 @@ case "$1" in
 			if [ "$use_zt" = "true" ]; then
 				echo "Starting ZeroTier-One daemon..."
 				/usr/sbin/zerotier-one -d &
-				if [ ! -f /var/lib/zerotier-one/networks.d/$zt_netid.conf ]; then
+				if [ ! -f "/var/lib/zerotier-one/networks.d/$zt_netid.conf" ]; then
 					sleep 8
-					zerotier-cli join $zt_netid &> /dev/null
+					zerotier-cli join "$zt_netid" > /dev/null
 					echo "Don't forget authorize in the my.zerotier.com!"
 				fi
 			fi
