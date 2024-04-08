@@ -5,61 +5,49 @@
 # Busybox applets: awk cat echo insmod ip modprobe sha1sum sleep tr tunctl udhcpc uptime
 #
 
-
-vtund_enable="1"
-vtund_server=$1
-vtund_server=${vtund_server:=vtun.localhost}
+vtund_enable="true"
+vtund_server=${1:-vtun.localhost}
 vtund_port="5000"
 vtund_iface="tunnel"
-vtund_salt=""
 device_name="IPC-VTUND"
-kernel_module=""
 working_dir="/tmp"
 
-
 identity() {
-  identity_src=$(ip r | awk '/default/ {print $5}' | head -n 1)
-  identity_mac=$(cat /sys/class/net/${identity_src}/address | tr 'a-z' 'A-Z')
-  identity_pas=$(echo ${vtund_salt}${identity_mac} | sha1sum | awk '{print $1}')
-  identity_tid=$(echo ${identity_mac} | tr -d ':')
-  identity_cfg=${working_dir}/vtund.conf
+	identity_src=$(ip r | awk '/default/ {print $5}' | head -n 1)
+	identity_mac=$(cat /sys/class/net/"$identity_src"/address | tr 'a-z' 'A-Z')
+	identity_pas=$(echo "$identity_mac" | sha1sum | awk '{print $1}')
+	identity_tid=$(echo "$identity_mac" | tr -d ':')
+	identity_cfg=$working_dir/vtund.conf
 }
-
 
 interface() {
-  [ -L /sys/class/net/${vtund_iface} ] || (modprobe tun; tunctl -t ${vtund_iface}) >/dev/null 2>&1
-  [ -f ${working_dir}/udhcpc-${vtund_iface}.pid ] && kill -9 $(cat ${working_dir}/udhcpc-${vtund_iface}.pid) >/dev/null 2>&1
+	[ -L /sys/class/net/$vtund_iface ] || (modprobe tun; tunctl -t $vtund_iface) >/dev/null 2>&1
+	[ -f $working_dir/udhcpc-$vtund_iface.pid ] && kill -9 "$(cat $working_dir/udhcpc-$vtund_iface.pid)" >/dev/null 2>&1
 }
-
 
 config() {
-  ( echo "#"
-    echo "options {"
-    echo "  port ${vtund_port};"
-    echo "  ifconfig /sbin/ifconfig;"
-    echo "}"
-    echo "${identity_tid} {"
-    echo "  password ${identity_pas};"
-    echo "  device ${vtund_iface};"
-    echo "  stat no;"
-    echo "  persist yes;"
-    echo "  keepalive 10:5;"
-    echo "  timeout 10;"
-    echo "  up {"
-    echo "    ifconfig \"${vtund_iface} hw ether ${identity_mac} mtu 1500 -multicast up\";"
-    echo "    program \"udhcpc -T 1 -t 5 -R -b -O staticroutes -S -s tapip -p ${working_dir}/udhcpc-${vtund_iface}.pid -i ${vtund_iface} -x hostname:${device_name}-${identity_tid}\";"
-    echo "  };"
-    echo "  down {"
-    echo "    ifconfig \"${vtund_iface} down\";"
-    echo "  };"
-    echo "}"
-  ) >${identity_cfg}
+	( echo "options {"
+		echo "	port $vtund_port;"
+		echo "	ifconfig /sbin/ifconfig;"
+		echo "}"
+		echo "$identity_tid {"
+		echo "	password $identity_pas;"
+		echo "	device $vtund_iface;"
+		echo "	stat no;"
+		echo "	persist yes;"
+		echo "	keepalive 10:5;"
+		echo "	timeout 10;"
+		echo "	up {"
+		echo "		ifconfig \"$vtund_iface hw ether $identity_mac mtu 1500 -multicast up\";"
+		echo "		program \"udhcpc -T 1 -t 5 -R -b -O staticroutes -S -s tapip -p $working_dir/udhcpc-$vtund_iface.pid -i $vtund_iface -x hostname:$device_name-$identity_tid\";"
+		echo "	};"
+		echo "	down {"
+		echo "		ifconfig \"$vtund_iface down\";"
+		echo "	};"
+		echo "}"
+		) >$identity_cfg
 }
 
-
-if [ ${vtund_enable} = 1 ]; then
-  (while true ; do sleep 10; identity; interface; config; vtund -n -f ${identity_cfg} ${identity_tid} ${vtund_server} >/dev/null 2>&1; done) &
+if [ "$vtund_enable" = "true" ]; then
+	(while true; do identity; interface; config; vtund -n -f "$identity_cfg" "$identity_tid" "$vtund_server" >/dev/null 2>&1; done) &
 fi
-
-
-exit 0
