@@ -4,11 +4,11 @@ vendor=$(ipcinfo -v)
 keydir=/etc
 
 if [ -e /etc/datalink.conf ]; then
-	source /etc/datalink.conf
+	. /etc/datalink.conf
 fi
 
 if [ -e /etc/wfb.conf ]; then
-	source /etc/wfb.conf
+	. /etc/wfb.conf
 fi
 
 set_mcs() {
@@ -19,12 +19,12 @@ set_mcs() {
 	fi
 
 	if [ -z "$mcs" ]; then
-		setmcs $mcs_index
+		setmcs "$mcs_index"
 	fi
 
 	if [ "$mcs_index" -eq 1 ] || [ "$mcs_index" -eq 3 ]; then
 		if [ ! "$mcs_index" -eq "$mcs" ]; then
-			setmcs $mcs_index
+			setmcs "$mcs_index"
 			sleep 3
 		fi
 	fi
@@ -40,7 +40,7 @@ detect_wifi_card() {
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
 				driver="realtek"
-				modprobe 88XXau rtw_tx_pwr_idx_override=$driver_txpower_override
+				modprobe 88XXau rtw_tx_pwr_idx_override="$driver_txpower_override"
 				;;
 
 			"0cf3:9271" | "040d:3801")
@@ -49,7 +49,7 @@ detect_wifi_card() {
 					set_mcs
 				fi
 				modprobe mac80211
-				modprobe ath9k_hw txpower=$txpower
+				modprobe ath9k_hw txpower="$txpower"
 				modprobe ath9k_htc
 				;;
 		esac
@@ -59,13 +59,13 @@ detect_wifi_card() {
 		echo "No usb wifi card detected. Check wifi stick connection, usb power or possible bad soldering."
 		exit 1
 	else
-		echo "Detected:" $driver
+		echo "Detected: $driver"
 	fi
 
 	echo "Awaiting interface $wlan in system..."
 
 	local n=0
-	while ! $(ifconfig -a | grep -q $wlan); do
+	while ! ifconfig -a | grep -q "$wlan"; do
 		if [ "$n" -ge 5 ]; then
 			echo "No interface $wlan. Check wifi stick connection, usb power or possible bad soldering."
 			exit 1
@@ -82,19 +82,19 @@ load_modules() {
 
 load_interface() {
 	if [ "$driver" = "realtek" ]; then
-		ifconfig $wlan up
-		iwconfig $wlan mode monitor
+		ifconfig "$wlan" up
+		iwconfig "$wlan" mode monitor
 	elif [ "$driver" = "atheros" ]; then
-		iwconfig $wlan mode monitor
-		ifconfig $wlan up
+		iwconfig "$wlan" mode monitor
+		ifconfig "$wlan" up
 	fi
 
-	iw reg set $region
+	iw reg set "$region"
 
-	if [ ! -z "$frequency" ]; then
-		iwconfig $wlan freq $frequency
+	if [ -n "$frequency" ]; then
+		iwconfig "$wlan" freq "$frequency"
 	else
-		iwconfig $wlan channel $channel
+		iwconfig "$wlan" channel "$channel"
 	fi
 
 	# dirty fix crash if txpower set. setting txpower disabled because patched driver always set txpower level 58
@@ -102,13 +102,13 @@ load_interface() {
 }
 
 start_drone_wfb() {
-	wfb_tx -p $stream -u $udp_port -R $rcv_buf -K $keydir/$unit.key -B $bandwidth \
-		-M $mcs_index -S $stbc -L $ldpc -G $guard_interval -k $fec_k -n $fec_n \
-		-T $pool_timeout -i $link_id -f $frame_type $wlan > /dev/null &
+	wfb_tx -p "$stream" -u "$udp_port" -R "$rcv_buf" -K "$keydir/$unit.key" -B "$bandwidth" \
+		-M "$mcs_index" -S "$stbc" -L "$ldpc" -G "$guard_interval" -k "$fec_k" -n "$fec_n" \
+		-T "$pool_timeout" -i "$link_id" -f "$frame_type" "$wlan" > /dev/null &
 }
 
 start_gs_wfb() {
-	wfb_rx -c $udp_addr -u $udp_port -p $stream -K $keydir/$unit.key -i $link_id $wlan > /dev/null &
+	wfb_rx -c "$udp_addr" -u "$udp_port" -p "$stream" -K "$keydir/$unit.key" -i "$link_id" "$wlan" > /dev/null &
 }
 
 case "$1" in
@@ -122,13 +122,13 @@ case "$1" in
 
 			if ! cat "$keydir/$unit.key" > /dev/null 2>&1; then
 				echo "Generating drone & ground station keys..."
-				cd $keydir; wfb_keygen
+				cd $keydir && wfb_keygen
 			else
-				echo $unit "key exist..."
+				echo "$unit key exist..."
 			fi
 
 			echo "Starting Wifibroadcast service..."
-			start_${unit}_wfb
+			start_"$unit"_wfb
 			echo "Done."
 
 			if [ "$telemetry" = "true" ]; then
