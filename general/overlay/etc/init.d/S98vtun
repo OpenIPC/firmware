@@ -1,3 +1,4 @@
 #!/bin/sh
 
+
 [ ! -z "$(fw_printenv -n vtund)" ] && tunnel "$(fw_printenv -n vtund)" || exit 1;
