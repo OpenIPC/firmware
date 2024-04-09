@@ -10,7 +10,6 @@ debug() {
 }
 
 start() {
-	export SENSOR=$(fw_printenv -n sensor)
 	printf "Starting $DAEMON: "
 	start-stop-daemon -b -S -m -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $MAJESTIC_ARGS
 	if [ $? = 0 ]; then
