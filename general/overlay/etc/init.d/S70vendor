@@ -1,15 +1,8 @@
 #!/bin/sh
-vendor=$(ipcinfo -v)
-
-log_vendor() {
-	logger -s -p daemon.info -t ${vendor} "$1"
-}
 
 case "$1" in
 	start)
-		[ "${vendor}" = "goke" ] || [ "${vendor}" = "hisilicon" ] && status=$(check_mac)
-		[ -n "${status}" ] && log_vendor "${status}"
-		echo -e "\nLoading vendor modules..."
-		load_${vendor} -i
+		echo "Loading vendor modules..."
+		load_"$(ipcinfo -v)" -i
 		;;
 esac

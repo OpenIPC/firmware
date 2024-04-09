@@ -1,6 +1,6 @@
 #!/bin/sh
-
-# Setting the TimeZone for all processes
+export SENSOR=$(fw_printenv -n sensor)
+export UPGRADE=$(fw_printenv -n upgrade)
 export TZ=$(cat /etc/TZ)
 
 # Set the firmware creation time as the base system time

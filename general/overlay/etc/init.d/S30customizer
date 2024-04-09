@@ -13,5 +13,7 @@ case "$1" in
 			sh /usr/share/openipc/wireless.sh
 			touch /etc/network.ok
 		fi
+
+		check_mac
 		;;
 esac
