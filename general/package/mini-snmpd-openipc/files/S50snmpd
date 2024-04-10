@@ -2,7 +2,7 @@
 
 DAEMON="mini_snmpd"
 PIDFILE="/var/run/$DAEMON.pid"
-SNMPD_ARGS="-n -4 -c openipc -i eth0 -D OpenIPC -C https://openipc.org -L Internet -l notice"
+SNMPD_ARGS="-n -4 -c openipc -D OpenIPC -C https://openipc.org -L Internet"
 
 start() {
 	printf "Starting $DAEMON: "
