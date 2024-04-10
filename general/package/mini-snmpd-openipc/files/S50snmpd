@@ -6,7 +6,7 @@ SNMPD_ARGS="-n -4 -c openipc -D OpenIPC -C https://openipc.org -L Internet"
 
 start() {
 	printf "Starting $DAEMON: "
-	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" -- $SNMPD_ARGS
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $SNMPD_ARGS
 	if [ $? = 0 ]; then
 		echo "OK"
 	else
