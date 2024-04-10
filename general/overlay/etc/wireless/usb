@@ -29,6 +29,12 @@ if [ "$1" = "rtl8733bu-generic" ]; then
 	exit 0
 fi
 
+# Generic RTL8812AU
+if [ "$1" = "rtl8812au-generic" ]; then
+	modprobe 88XXau
+	exit 0
+fi
+
 # Generic ATBM603x
 if [ "$1" = "atbm603x-generic-usb" ]; then
 	modprobe atbm603x_wifi_usb
