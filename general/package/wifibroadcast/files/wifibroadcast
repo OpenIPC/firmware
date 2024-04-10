@@ -32,6 +32,7 @@ set_mcs() {
 
 # "0bda:8813" -> (8814) -> 8814au
 # "0846:9052" -> (8811) -> 8821au
+# "0bda:a81a" ->           88x2eu
 
 detect_wifi_card() {
 	echo "Detecting wifi card vendor..."
@@ -41,6 +42,11 @@ detect_wifi_card() {
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
 				driver="realtek"
 				modprobe 88XXau rtw_tx_pwr_idx_override="$driver_txpower_override"
+				;;
+
+			"0bda:a81a")
+				driver="realtek_8812eu"
+				modprobe 8812eu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
 
 			"0cf3:9271" | "040d:3801")
@@ -84,6 +90,10 @@ load_interface() {
 	if [ "$driver" = "realtek" ]; then
 		ifconfig "$wlan" up
 		iwconfig "$wlan" mode monitor
+	elif [ ${driver} = "realtek_8812eu" ]; then
+		ifconfig ${wlan} up
+		iwconfig ${wlan} mode monitor
+		iw dev ${wlan} set txpower fixed $(expr ${driver_txpower_override} * 50)
 	elif [ "$driver" = "atheros" ]; then
 		iwconfig "$wlan" mode monitor
 		ifconfig "$wlan" up
