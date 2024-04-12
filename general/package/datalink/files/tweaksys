@@ -11,9 +11,6 @@ basic() {
 	# set boot delay
 	fw_setenv bootdelay 0
 
-	# don't load f2fs module (disabled in kernel)
-	sed -i "s!f2fs!#f2fs!g" /etc/modules
-
 	# free uart for telemetry
 	sed -i "s!console::respawn:/sbin/getty -L console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
 
@@ -51,8 +48,8 @@ sigmastar() {
 }
 
 majestic_generic() {
-	# enable digital image stabilization
-	# cli -s .isp.dis true
+	# digital image stabilization
+	#cli -s .isp.dis true
 
 	cli -s .isp.slowShutter disabled
 	cli -s .image.contrast 50
@@ -67,7 +64,7 @@ majestic_generic() {
 	# lowdelay support only imx307 sensor
 	if [ "$sensor" = "imx307" ]; then
 		cli -s .isp.lowDelay true
-		# cli -s .video0.sliceUnits 4
+		#cli -s .video0.sliceUnits 4
 	fi
 
 	if [ "$sensor" = "imx335" ]; then
@@ -98,7 +95,7 @@ streamer() {
 			majestic_generic
 		fi
 
-		# outgoing rtp stream to udp
+		# outgoing rtp stream
 		cli -s .outgoing.enabled true
 		cli -s .outgoing.server udp://127.0.0.1:5600
 	fi
@@ -112,10 +109,10 @@ streamer() {
 }
 
 finish() {
-	# complete tweaks and add marker
+	# complete tweaks and add flag
+	fw_setenv wlandev
 	touch /etc/system.ok
-	echo "Restart system to apply fpv changes..."
-	reboot
+	echo "Manually restart the system to apply changes."
 }
 
 case "$1" in
@@ -125,7 +122,7 @@ case "$1" in
 		# set custom config
 		if [ "$chip" = "gk7205v200" ] && [ "$sensor" = "imx307" ]; then
 			echo "switch to custom sensor config"
-			# cli -s .isp.sensorConfig /etc/sensors/60fps/720p_imx307_i2c_2l.ini
+			#cli -s .isp.sensorConfig /etc/sensors/60fps/720p_imx307_i2c_2l.ini
 		fi
 
 		# fix osmem in bootargs
@@ -136,7 +133,7 @@ case "$1" in
 			fw_setenv osmem 40M
 		fi
 
-		# remove unneeded to reduce some memory
+		# remove unneeded scripts
 		rm -f /etc/init.d/S60crond /etc/init.d/S49ntpd /etc/init.d/S02klogd
 
 		basic

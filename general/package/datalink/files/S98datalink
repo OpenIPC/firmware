@@ -10,9 +10,9 @@ case "$1" in
 	start)
 		if [ "$(fw_printenv -n fpv)" = "false" ]; then
 			if grep -q "#console" /etc/inittab; then
-				echo "Restart system to restore console..."
 				sed -i "s/#console/console/g" /etc/inittab
 				rm -f /etc/system.ok
+				echo "Restart system to restore console..."
 				reboot
 			fi
 			exit 0
