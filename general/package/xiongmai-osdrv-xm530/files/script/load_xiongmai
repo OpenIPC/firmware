@@ -2,7 +2,7 @@
 chipid=$(ipcinfo --chip-name)
 [ "${chipid}" = "xm550" ] && MEM_ALL=128 || MEM_ALL=64
 
-MODULE=/lib/modules/3.10.103/xiongmai
+MODULE=/lib/modules/3.10.103+/xiongmai
 MEM_START=0x800
 MEM_SAMALL_LIN=0x1
 
