@@ -16,7 +16,7 @@ case "$1" in
 			exit 0
 		fi
 
-		if ! [ -f /etc/system.ok ]; then
+		if [ ! -f /etc/system.ok ]; then
 			tweaksys "$chip"
 		fi
 
