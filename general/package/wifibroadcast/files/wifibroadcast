@@ -97,8 +97,8 @@ load_interface() {
 		iwconfig "$wlan" channel "$channel"
 	fi
 
-	# dirty fix crash if txpower set. setting txpower disabled because patched driver always set txpower level 58
-	# iw dev $wlan set txpower fixed $(($txpower * 100))
+	# Set txpower
+	#iw dev $wlan set txpower fixed $(($txpower * 100))
 }
 
 start_drone_wfb() {
