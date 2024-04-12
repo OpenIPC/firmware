@@ -29,13 +29,10 @@ case "$1" in
 	stop)
 		echo "Stopping network..."
 		ifdown lo
-		if [ -n "$dev" ]; then
-			ifdown -f wlan0
-			ifdown -f usb0
-			ifdown -f eth1
-		else
-			ifdown eth0
-		fi
+		ifdown -f wlan0
+		ifdown -f usb0
+		ifdown -f eth1
+		ifdown -f eth0
 		;;
 
 	restart)
