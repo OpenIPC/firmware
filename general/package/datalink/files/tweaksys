@@ -114,7 +114,8 @@ streamer() {
 finish() {
 	# complete tweaks and add marker
 	touch /etc/system.ok
-	echo "Manually restart the system to apply changes."
+	echo "Restart system to apply fpv changes..."
+	reboot
 }
 
 case "$1" in
