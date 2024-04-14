@@ -14,7 +14,7 @@ fi
 
 # Huawei E3372H and eth1
 if [ "$1" = "rndis-e3372h" ]; then
-	usb_modeswitch -v 0x12d1 -p 0x1f01 -c /usr/share/usb_modeswitch/12d1:1f0
+	usb_modeswitch -v 0x12d1 -p 0x1f01 -c /usr/share/usb_modeswitch/12d1:1f01
 	modprobe rndis_host
 	sleep 5
 	exit 0
