@@ -110,7 +110,6 @@ streamer() {
 
 finish() {
 	# complete tweaks and add flag
-	fw_setenv wlandev
 	touch /etc/system.ok
 	echo "Restart system to apply fpv changes..."
 	reboot
