@@ -135,6 +135,9 @@ case "$1" in
 				if [ "$chip" = "gk7205v200" ]; then
 					# UART2_RX mux
 					devmem 0x120c0010 32 0x1e04
+				elif [ "$chip" = "ssc33x" ]; then
+					# UART2
+					devmem 0x1F207890 16 0x8
 				fi
 				telemetry start
 			fi
