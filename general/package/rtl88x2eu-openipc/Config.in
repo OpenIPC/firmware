@@ -1,0 +1,16 @@
+config BR2_PACKAGE_RTL88X2EU_OPENIPC
+	bool "rtl88x2eu-openipc"
+	depends on BR2_LINUX_KERNEL
+	help
+	  A standalone driver for the RTL88X2EU Dual Band
+	  USB Wi-Fi adapter.
+
+	  Make sure your target kernel has the CONFIG_WIRELESS_EXT
+	  config option enabled.
+
+	  Note: this package needs a firmware loading mechanism to
+	  load the binary blob for the chip to work.
+
+
+comment "rtl88x2eu needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
