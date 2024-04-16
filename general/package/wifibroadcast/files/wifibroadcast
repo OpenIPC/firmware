@@ -35,7 +35,6 @@ set_mcs() {
 # "0bda:a81a" ->           88x2eu
 
 detect_wifi_card() {
-	echo "Detecting wifi card vendor..."
 	devices=$(lsusb | cut -d ' ' -f6 | sort | uniq)
 	for card in $devices; do
 		case "$card" in
@@ -62,18 +61,16 @@ detect_wifi_card() {
 	done
 
 	if [ -z "$driver" ]; then
-		echo "No usb wifi card detected. Check wifi stick connection, usb power or possible bad soldering."
+		echo "Wireless module not detected, check the usb connection."
 		exit 1
 	else
 		echo "Detected: $driver"
 	fi
 
-	echo "Awaiting interface $wlan in system..."
-
 	local n=0
 	while ! ifconfig -a | grep -q "$wlan"; do
 		if [ "$n" -ge 5 ]; then
-			echo "No interface $wlan. Check wifi stick connection, usb power or possible bad soldering."
+			echo "No interface for $wlan, check the usb connection."
 			exit 1
 		fi
 		sleep 0.5
@@ -126,20 +123,15 @@ case "$1" in
 		if [ "$daemon" -eq 1 ]; then
 			echo "Loading modules and wifi card driver..."
 			load_modules
-
-			echo "Preparing interface wlan..."
 			load_interface
 
 			if ! cat "$keydir/$unit.key" > /dev/null 2>&1; then
 				echo "Generating drone & ground station keys..."
 				cd $keydir && wfb_keygen
-			else
-				echo "$unit key exist..."
 			fi
 
 			echo "Starting Wifibroadcast service..."
 			start_"$unit"_wfb
-			echo "Done."
 
 			if [ "$telemetry" = "true" ]; then
 				if [ "$chip" = "gk7205v200" ]; then
@@ -152,7 +144,7 @@ case "$1" in
 				telemetry start
 			fi
 		else
-			echo "Wifibroadcast service disabled in wfb.conf..."
+			echo "Wifibroadcast service disabled in wfb.conf."
 		fi
 		;;
 
