@@ -1,6 +1,5 @@
 #!/bin/sh
 chip=$(ipcinfo -c)
-skip=$(fw_printenv -n fpv)
 fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
 
 if [ -e /etc/datalink.conf ]; then
@@ -9,14 +8,7 @@ fi
 
 case "$1" in
 	start)
-		if [ "$skip" = "true" ]; then
-			sed -i "s/console/#console/g" /etc/inittab
-		elif [ "$skip" = "false" ]; then
-			sed -i "s/#console/console/g" /etc/inittab
-			exit 0
-		fi
-
-		if ! [ -f /etc/system.ok ]; then
+		if [ ! -f /etc/system.ok ]; then
 			tweaksys "$chip"
 		fi
 
@@ -24,18 +16,15 @@ case "$1" in
 		if [ "$fw" = "lte" ]; then
 			if [ "$usb_modem" = "true" ]; then
 				echo "Starting lte modem configuration..."
-				echo "ToDo: Running usb_modeswitch or other shit here..."
 			fi
 
-			# for the future
-			#cli -s .outgoing.url1 udp://$gs_ipaddr:$gs_port
 			if [ "$use_zt" = "true" ]; then
 				echo "Starting ZeroTier-One daemon..."
 				/usr/sbin/zerotier-one -d &
 				if [ ! -f "/var/lib/zerotier-one/networks.d/$zt_netid.conf" ]; then
 					sleep 8
 					zerotier-cli join "$zt_netid" > /dev/null
-					echo "Don't forget authorize in the my.zerotier.com!"
+					echo "Don't forget to authorize my.zerotier.com!"
 				fi
 			fi
 

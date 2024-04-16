@@ -24,6 +24,6 @@ case "$1" in
 
 	renew|bound)
 		ip a add "$ip/$subnet" dev "$interface"
-		[ -n "$staticroutes" ] && set_routes "$staticroutes"
+		[ -n "$staticroutes" ] && set_routes $staticroutes
 		;;
 esac
