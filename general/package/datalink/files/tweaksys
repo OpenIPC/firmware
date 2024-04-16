@@ -43,8 +43,8 @@ hisi_goke() {
 }
 
 sigmastar() {
-	sed -i "s!serial=/dev/ttyAMA0!serial=/dev/ttyS0!g" /etc/telemetry.conf
-	sed -i "s!Device = /dev/ttyAMA0!Device = /dev/ttyS0!g" /etc/mavlink.conf
+	sed -i "s!serial=/dev/ttyAMA0!serial=/dev/ttyS2!g" /etc/telemetry.conf
+	sed -i "s!Device = /dev/ttyAMA0!Device = /dev/ttyS2!g" /etc/mavlink.conf
 }
 
 majestic_generic() {
