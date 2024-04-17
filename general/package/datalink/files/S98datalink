@@ -8,6 +8,10 @@ fi
 
 case "$1" in
 	start)
+		if [ -n "$(fw_printenv -n wlandev)" ]; then
+			exit 0
+		fi
+
 		if [ ! -f /etc/system.ok ]; then
 			tweaksys "$chip"
 		fi
