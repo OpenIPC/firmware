@@ -18,9 +18,8 @@ basic() {
 	echo "net.core.rmem_default=512000" >> /etc/sysctl.conf
 }
 
-prefix=${family}
-
 hisi_goke() {
+	prefix=${family}
 	if [ "$vendor" = "hisilicon" ]; then
 		prefix="open"
 	fi
@@ -42,60 +41,36 @@ hisi_goke() {
 	sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx335_i2c_4M.ini
 }
 
-sigmastar() {
-	sed -i "s!serial=/dev/ttyAMA0!serial=/dev/ttyS2!g" /etc/telemetry.conf
-	sed -i "s!Device = /dev/ttyAMA0!Device = /dev/ttyS2!g" /etc/mavlink.conf
-}
-
-majestic_generic() {
-	# digital image stabilization
-	#cli -s .isp.dis true
-
-	cli -s .isp.slowShutter disabled
-	cli -s .image.contrast 50
-	cli -s .image.luminance 50
-	cli -s .video0.size 1920x1080
-	cli -s .video0.fps 30
-	cli -s .video0.bitrate 5120
-	cli -s .video0.codec h264
-	cli -s .video0.rcMode cbr
-	cli -s .video0.gopSize 1.5
-
-	# lowdelay support only imx307 sensor
-	if [ "$sensor" = "imx307" ]; then
-		cli -s .isp.lowDelay true
-		#cli -s .video0.sliceUnits 4
-	fi
-
-	if [ "$sensor" = "imx335" ]; then
-		cli -s .isp.drc 350
-		cli -s .isp.sensorConfig /etc/sensors/imx335_i2c_4M.ini
-	fi
-
-	cli -s .hls.enabled false
-	cli -s .netip.enabled false
-	cli -s .jpeg.enabled false
-}
-
-majestic_sigmastar() {
-	cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
-	cli -s .isp.exposure 10
-	cli -s .video0.codec h265
-	cli -s .video0.size 1920x1080
-	cli -s .video0.fps 60
-	cli -s .video0.rcMode cbr
-	cli -s .jpeg.enabled false
-}
-
 streamer() {
 	if [ -f /usr/bin/majestic ]; then
-		if [ "$vendor" = "sigmastar" ]; then
-			majestic_sigmastar
-		else
-			majestic_generic
+		# digital image stabilization
+		#cli -s .isp.dis true
+
+		cli -s .isp.slowShutter disabled
+		cli -s .image.contrast 50
+		cli -s .image.luminance 50
+		cli -s .video0.size 1920x1080
+		cli -s .video0.fps 30
+		cli -s .video0.bitrate 5120
+		cli -s .video0.codec h264
+		cli -s .video0.rcMode cbr
+		cli -s .video0.gopSize 1.5
+
+		# lowdelay support only imx307 sensor
+		if [ "$sensor" = "imx307" ]; then
+			cli -s .isp.lowDelay true
+			#cli -s .video0.sliceUnits 4
 		fi
 
-		# outgoing rtp stream
+		if [ "$sensor" = "imx335" ]; then
+			cli -s .isp.drc 350
+			cli -s .isp.sensorConfig /etc/sensors/imx335_i2c_4M.ini
+		fi
+
+		cli -s .hls.enabled false
+		cli -s .netip.enabled false
+		cli -s .jpeg.enabled false
+
 		cli -s .outgoing.enabled true
 		cli -s .outgoing.server udp://127.0.0.1:5600
 	fi
@@ -113,6 +88,23 @@ finish() {
 	touch /etc/system.ok
 	echo "Restart system to apply fpv changes..."
 	reboot
+}
+
+sigmastar() {
+	sed -i "s|serial=/dev/ttyAMA0|serial=/dev/ttyS2|g" /etc/telemetry.conf
+	sed -i "s|Device = /dev/ttyAMA0|Device = /dev/ttyS2|g" /etc/mavlink.conf
+
+	cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
+	cli -s .isp.exposure 5
+	cli -s .video0.codec h265
+	cli -s .video0.size 1920x1080
+	cli -s .video0.fps 60
+	cli -s .video0.rcMode cbr
+	cli -s .jpeg.enabled false
+	cli -s .outgoing.enabled true
+	cli -s .outgoing.server udp://127.0.0.1:5600
+
+	touch /etc/system.ok
 }
 
 case "$1" in
@@ -174,8 +166,6 @@ case "$1" in
 	ssc33x)
 		echo "Preparing system tweaks for $chip..."
 		sigmastar
-		streamer
-		finish
 		;;
 
 	*)
