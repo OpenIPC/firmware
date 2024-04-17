@@ -13,7 +13,7 @@ fi
 
 set_mcs() {
 	if [ "$vendor" = "ingenic" ]; then
-		mcs=$(ls -l /lib/firmware | grep "htc_9271" | awk {'print $11'} | cut -d "." -f3)
+		mcs=$(ls -l /lib/firmware | grep "htc_9271" | awk { 'print $11' } | cut -d "." -f3)
 	else
 		mcs=$(ls -l /lib/firmware/ath9k_htc | grep "htc_9271-1.4.0.fw" | cut -d "." -f6)
 	fi
@@ -29,10 +29,6 @@ set_mcs() {
 		fi
 	fi
 }
-
-# "0bda:8813" -> (8814) -> 8814au
-# "0846:9052" -> (8811) -> 8821au
-# "0bda:a81a" ->           88x2eu
 
 detect_wifi_card() {
 	devices=$(lsusb | cut -d ' ' -f6 | sort | uniq)
@@ -74,7 +70,7 @@ detect_wifi_card() {
 			exit 1
 		fi
 		sleep 0.5
-		n=$(expr $n + 1)
+		n=$((n + 1))
 	done
 }
 
@@ -87,10 +83,10 @@ load_interface() {
 	if [ "$driver" = "realtek" ]; then
 		ifconfig "$wlan" up
 		iwconfig "$wlan" mode monitor
-	elif [ ${driver} = "realtek_8812eu" ]; then
-		ifconfig ${wlan} up
-		iwconfig ${wlan} mode monitor
-		iw dev ${wlan} set txpower fixed $(expr ${driver_txpower_override} * 50)
+	elif [ "$driver" = "realtek_8812eu" ]; then
+		ifconfig "$wlan" up
+		iwconfig "$wlan" mode monitor
+		iw dev "$wlan" set txpower fixed $((driver_txpower_override * 50))
 	elif [ "$driver" = "atheros" ]; then
 		iwconfig "$wlan" mode monitor
 		ifconfig "$wlan" up
@@ -131,7 +127,7 @@ case "$1" in
 			fi
 
 			echo "Starting Wifibroadcast service..."
-			start_"$unit"_wfb
+			start_${unit}_wfb
 
 			if [ "$telemetry" = "true" ]; then
 				if [ "$chip" = "gk7205v200" ]; then
