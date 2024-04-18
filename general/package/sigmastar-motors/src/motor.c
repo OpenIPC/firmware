@@ -20,7 +20,7 @@ typedef struct {
 } config;
 
 static config list[] = {
-	{ "rtl8188fu-ssc337de-foscam", { 01, 02, 12, 13 }, { 62, 63, 64, 65 }, },
+	{ "ssc337de-foscam", { 01, 02, 12, 13 }, { 62, 63, 64, 65 }, },
 };
 
 static int sequence[][4] = {
@@ -86,23 +86,8 @@ static int gpio_export(int *gpio) {
 	return 0;
 }
 
-static void print_list(void) {
-	char buffer[1024];
-
-	int len = 0;
-	for (int i = 0; i < sizeof(list) / sizeof(config); i++) {
-		len += snprintf(buffer + len,
-			sizeof(buffer) - len, "%s\n", list[i].name);
-	}
-
-	printf("%s", buffer);
-}
-
 int main(int argc, char **argv) {
-	if (argc > 1 && strstr(argv[1], "list")) {
-		print_list();
-		return -1;
-	} else if (argc < 3 || argc > 4) {
+	if (argc < 3 || argc > 4) {
 		printf("Usage: %s [device] [x_step] [y_step]\n", argv[0]);
 		return -1;
 	}
