@@ -21,6 +21,7 @@ echo_c() {
 die() {
 	echo_c 31 "$1 Aborting."
 	reboot_system
+	exit 1
 }
 
 check_soc() {
