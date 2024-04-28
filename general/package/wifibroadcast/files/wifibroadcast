@@ -35,7 +35,7 @@ detect_wifi_card() {
 	for card in $devices; do
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
-				driver="realtek"
+				driver="realtek_88XXau"
 				modprobe 88XXau rtw_tx_pwr_idx_override="$driver_txpower_override"
 				;;
 
@@ -44,9 +44,14 @@ detect_wifi_card() {
 				modprobe 8812eu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
 
+			"0bda:f72b")
+				driver="realtek_8733bu"
+				modprobe 8733bu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+				;;
+
 			"0cf3:9271" | "040d:3801")
 				driver="atheros"
-				if ! [ "$unit" = "gs" ]; then
+				if [ "$unit" != "gs" ]; then
 					set_mcs
 				fi
 				modprobe mac80211
@@ -80,28 +85,18 @@ load_modules() {
 }
 
 load_interface() {
-	if [ "$driver" = "realtek" ]; then
-		ifconfig "$wlan" up
-		iwconfig "$wlan" mode monitor
-	elif [ "$driver" = "realtek_8812eu" ]; then
-		ifconfig "$wlan" up
-		iwconfig "$wlan" mode monitor
+	ifconfig "$wlan" up
+	iwconfig "$wlan" mode monitor
+	if [ "$driver" = "realtek_8812eu" ] || [ "$driver" = "realtek_8733bu" ]; then
 		iw dev "$wlan" set txpower fixed $((driver_txpower_override * 50))
-	elif [ "$driver" = "atheros" ]; then
-		iwconfig "$wlan" mode monitor
-		ifconfig "$wlan" up
 	fi
 
 	iw reg set "$region"
-
 	if [ -n "$frequency" ]; then
 		iwconfig "$wlan" freq "$frequency"
 	else
 		iwconfig "$wlan" channel "$channel"
 	fi
-
-	# Set txpower
-	#iw dev $wlan set txpower fixed $(($txpower * 100))
 }
 
 start_drone_wfb() {
