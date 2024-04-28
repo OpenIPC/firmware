@@ -35,17 +35,17 @@ detect_wifi_card() {
 	for card in $devices; do
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
-				driver="realtek_88XXau"
+				driver="88XXau"
 				modprobe 88XXau rtw_tx_pwr_idx_override="$driver_txpower_override"
 				;;
 
 			"0bda:a81a")
-				driver="realtek_8812eu"
+				driver="8812eu"
 				modprobe 8812eu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
 
 			"0bda:f72b")
-				driver="realtek_8733bu"
+				driver="8733bu"
 				modprobe 8733bu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
 
@@ -87,11 +87,13 @@ load_modules() {
 load_interface() {
 	ifconfig "$wlan" up
 	iwconfig "$wlan" mode monitor
-	if [ "$driver" = "realtek_8812eu" ] || [ "$driver" = "realtek_8733bu" ]; then
+
+	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
 		iw dev "$wlan" set txpower fixed $((driver_txpower_override * 50))
 	fi
 
 	iw reg set "$region"
+
 	if [ -n "$frequency" ]; then
 		iwconfig "$wlan" freq "$frequency"
 	else
@@ -112,7 +114,7 @@ start_gs_wfb() {
 case "$1" in
 	start)
 		if [ "$daemon" -eq 1 ]; then
-			echo "Loading modules and wifi card driver..."
+			echo "Loading modules and wireless driver..."
 			load_modules
 			load_interface
 
@@ -121,15 +123,12 @@ case "$1" in
 				cd $keydir && wfb_keygen
 			fi
 
-			echo "Starting Wifibroadcast service..."
 			start_${unit}_wfb
 
 			if [ "$telemetry" = "true" ]; then
 				if [ "$chip" = "gk7205v200" ]; then
-					# UART2_RX mux
 					devmem 0x120c0010 32 0x1e04
 				elif [ "$chip" = "ssc33x" ]; then
-					# UART2
 					devmem 0x1F207890 16 0x8
 				fi
 				telemetry start
@@ -140,7 +139,7 @@ case "$1" in
 		;;
 
 	stop)
-		echo "Stopping Wifibroadcast services..."
+		echo "Stopping wifibroadcast service..."
 		killall -q wfb_tx
 		killall -q wfb_rx
 		killall -q telemetry_rx

@@ -16,7 +16,7 @@ case "$1" in
 			tweaksys "$chip"
 		fi
 
-		echo "Starting FPV datalink..."
+		echo "Starting fpv datalink..."
 		if [ "$fw" = "lte" ]; then
 			if [ "$usb_modem" = "true" ]; then
 				echo "Starting lte modem configuration..."
@@ -42,7 +42,7 @@ case "$1" in
 		;;
 
 	stop)
-		echo "Stopping FPV datalink services..."
+		echo "Stopping fpv datalink service..."
 		killall -q wfb_tx
 		killall -q wfb_rx
 		killall -q telemetry_rx
