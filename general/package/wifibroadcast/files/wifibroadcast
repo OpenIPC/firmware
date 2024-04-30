@@ -50,7 +50,7 @@ detect_wifi_card() {
 				;;
 
 			"0cf3:9271" | "040d:3801")
-				driver="atheros"
+				driver="ar9271"
 				if [ "$unit" != "gs" ]; then
 					set_mcs
 				fi
@@ -85,8 +85,13 @@ load_modules() {
 }
 
 load_interface() {
-	ifconfig "$wlan" up
-	iwconfig "$wlan" mode monitor
+	if [ "$driver" = "ar9271" ]; then
+		iwconfig "$wlan" mode monitor
+		ifconfig "$wlan" up
+	else
+		ifconfig "$wlan" up
+		iwconfig "$wlan" mode monitor
+	fi
 
 	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
 		iw dev "$wlan" set txpower fixed $((driver_txpower_override * 50))
