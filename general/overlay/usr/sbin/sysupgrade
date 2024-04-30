@@ -21,6 +21,7 @@ echo_c() {
 die() {
 	echo_c 31 "$1 Aborting."
 	reboot_system
+	exit 1
 }
 
 check_soc() {
@@ -101,11 +102,8 @@ download_firmware() {
 
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
-	if [ "$vendor" = "sigmastar" ] || [ "$vendor" = "ingenic" ]; then
-		killall -q -3 majestic
-	else
-		killall -q majestic
-	fi
+	killall -q -3 majestic
+  sleep 1
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
 	/etc/init.d/S21rngd stop

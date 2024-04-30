@@ -10,6 +10,7 @@ set_wireless() {
 		ifup wlan0
 	elif $path/modem "$dev"; then
 		ifup usb0
+		ifup eth1
 	fi
 	[ -e /sys/class/net/eth0 ] && ifconfig eth0 "${net:-192.168.2.10}"
 }
@@ -28,12 +29,10 @@ case "$1" in
 	stop)
 		echo "Stopping network..."
 		ifdown lo
-		if [ -n "$dev" ]; then
-			ifdown -f wlan0
-			ifdown -f usb0
-		else
-			ifdown eth0
-		fi
+		ifdown -f wlan0
+		ifdown -f usb0
+		ifdown -f eth1
+		ifdown -f eth0
 		;;
 
 	restart)

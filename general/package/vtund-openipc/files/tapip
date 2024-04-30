@@ -5,31 +5,25 @@
 # Simple script for get IP and Routes via UDHCPC on VTUNd tun/tap interfaces
 #
 
-
 set_routes() {
-  local max=128
-  local type
-  while [ -n "$1" -a -n "$2" -a $max -gt 0 ]; do
-    [ ${1##*/} -eq 32 ] && type=host || type=net
-    echo "udhcpc: adding route for $type $1 via $2"
-    route add -$type "$1" gw "$2" dev "$interface"
-    max=$(($max-1))
-    shift 2
-  done
+	local max=128
+	local type
+	while [ -n "$1" ] && [ -n "$2" ] && [ "$max" -gt 0 ]; do
+		[ "${1##*/}" -eq 32 ] && type=host || type=net
+		echo "udhcpc: adding route for $type $1 via $2"
+		route add -$type "$1" gw "$2" dev "$interface"
+		max=$(($max-1))
+		shift 2
+	done
 }
 
-
 case "$1" in
+	deconfig)
+		ip a flush dev "$interface"
+		;;
 
-  deconfig)
-    ip a flush dev $interface
-    ;;
-
-  renew|bound)
-    ip a add $ip/$subnet dev $interface
-    [ -n "$staticroutes" ] && set_routes $staticroutes
-    ;;
-
+	renew|bound)
+		ip a add "$ip/$subnet" dev "$interface"
+		[ -n "$staticroutes" ] && set_routes $staticroutes
+		;;
 esac
-
-exit 0

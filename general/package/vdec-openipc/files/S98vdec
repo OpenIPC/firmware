@@ -13,7 +13,7 @@ if [ ! -z ${records} ]; then
 fi
 
 if [ ${osd} = "simple" ]; then
-    osd_variant="--osd"
+    osd_variant="--osd "${osd_elements}
 fi
 
 case "$1" in

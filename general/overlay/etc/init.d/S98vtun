@@ -1,0 +1,10 @@
+#!/bin/sh
+vtun=$(fw_printenv -n vtun)
+
+case "$1" in
+	start)
+		if [ -n "$vtun" ]; then
+			tunnel "$vtun"
+		fi
+		;;
+esac

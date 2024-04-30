@@ -9,9 +9,14 @@ SIGMASTAR_OSDRV_INFINITY6E_SITE =
 SIGMASTAR_OSDRV_INFINITY6E_LICENSE = MIT
 SIGMASTAR_OSDRV_INFINITY6E_LICENSE_FILES = LICENSE
 
+SIGMASTAR_OSDRV_INFINITY6E_DEPENDENCIES = sigmastar-osdrv-sensors
+
 define SIGMASTAR_OSDRV_INFINITY6E_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.84/sigmastar
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.84/sigmastar $(SIGMASTAR_OSDRV_INFINITY6E_PKGDIR)/files/kmod/*
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.84/sigmastar/sensor
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.84/sigmastar/sensor $(SIGMASTAR_OSDRV_INFINITY6E_PKGDIR)/files/sensor/kmod/*
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/firmware
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/firmware $(SIGMASTAR_OSDRV_INFINITY6E_PKGDIR)/files/sensor/firmware/*

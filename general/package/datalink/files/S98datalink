@@ -1,43 +1,38 @@
 #!/bin/sh
-#
-# Start fpv datalink
-#
-. /etc/datalink.conf
 chip=$(ipcinfo -c)
-skip=$(fw_printenv -n fpv)
 fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
+
+if [ -e /etc/datalink.conf ]; then
+	. /etc/datalink.conf
+fi
 
 case "$1" in
 	start)
-		if [ ${skip} = "true" ]; then
-			sed -i "s/console/#console/g" /etc/inittab
-		elif [ ${skip} = "false" ]; then
-			sed -i "s/#console/console/g" /etc/inittab
+		if [ -n "$(fw_printenv -n wlandev)" ]; then
 			exit 0
 		fi
 
-		if ! [ -f /etc/system.ok ]; then
-			tweaksys ${chip}
+		if [ ! -f /etc/system.ok ]; then
+			tweaksys "$chip"
 		fi
 
-		echo "Starting FPV datalink..."
-		if [ ${fw} = "lte" ]; then
-			if [ ${usb_modem} = "true" ]; then
+		echo "Starting fpv datalink..."
+		if [ "$fw" = "lte" ]; then
+			if [ "$usb_modem" = "true" ]; then
 				echo "Starting lte modem configuration..."
-				echo "ToDo: Running usb_modeswitch or other shit here..."
 			fi
-			# for the future
-			#cli -s .outgoing.url1 udp://${gs_ipaddr}:${gs_port}
-			if [ ${use_zt} = "true" ]; then
+
+			if [ "$use_zt" = "true" ]; then
 				echo "Starting ZeroTier-One daemon..."
 				/usr/sbin/zerotier-one -d &
-				if [ ! -f /var/lib/zerotier-one/networks.d/${zt_netid}.conf ]; then
+				if [ ! -f "/var/lib/zerotier-one/networks.d/$zt_netid.conf" ]; then
 					sleep 8
-					zerotier-cli join ${zt_netid} &> /dev/null
-					echo "Don't forget authorize in the my.zerotier.com!"
+					zerotier-cli join "$zt_netid" > /dev/null
+					echo "Don't forget to authorize my.zerotier.com!"
 				fi
 			fi
-			if [ ${telemetry} = "true" ]; then
+
+			if [ "$telemetry" = "true" ]; then
 				telemetry start
 			fi
 		else
@@ -47,7 +42,7 @@ case "$1" in
 		;;
 
 	stop)
-		echo "Stopping all services..."
+		echo "Stopping fpv datalink service..."
 		killall -q wfb_tx
 		killall -q wfb_rx
 		killall -q telemetry_rx

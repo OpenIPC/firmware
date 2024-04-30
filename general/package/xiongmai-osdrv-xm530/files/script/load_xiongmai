@@ -1,46 +1,35 @@
 #!/bin/sh
-# Useage: ./loadxm530 [ -r|-i|-a ]
-#         -r : rmmod all modules
-#         -i : insmod all modules
-#    default : rmmod all moules and then insmod them
-#
-
 chipid=$(ipcinfo --chip-name)
+[ "${chipid}" = "xm550" ] && MEM_ALL=128 || MEM_ALL=64
 
-[ "${chipid}" == "xm550" ] && MEM_ALL=128 || MEM_ALL=64
-
+MODULE=/lib/modules/3.10.103+/xiongmai
 MEM_START=0x800
 MEM_SAMALL_LIN=0x1
 
-MEM_OS=`cat /proc/cmdline  | awk '{print $1}' | sed -e 's/mem=//' -e 's/M//'`
-MEM_LEN=`echo "$MEM_ALL $MEM_OS"|awk '{printf("0x%03x00000",$1-$2)}'`
-MEM_START=`echo "$MEM_START $MEM_SAMALL_LIN $MEM_OS"|awk '{printf("0x%03x00000",$1+$2*$3)}'`
-echo MEM_START=$MEM_START  MEM_LEN=$MEM_LEN
-
+MEM_OS=$(cat /proc/cmdline | awk '{print $1}' | sed -e 's/mem=//' -e 's/M//')
+MEM_LEN=$(echo "$MEM_ALL $MEM_OS"|awk '{printf("0x%03x00000",$1-$2)}')
+MEM_START=$(echo "$MEM_START $MEM_SAMALL_LIN $MEM_OS"|awk '{printf("0x%03x00000",$1+$2*$3)}')
+echo MEM_START="$MEM_START" MEM_LEN="$MEM_LEN"
 VI_BUFF=2
 
-report_error()
-{
+report_error() {
 	echo "******* Error: There's something wrong, please check! *****"
-		exit 1
+	exit 1
 }
 
-insert_audio()
-{
+insert_audio() {
 	echo "insert audio"
 	insmod xm_i2s.ko
 	insmod acodec.ko
 }
 
-insert_h265()
-{
-        echo "insert h265"
-        insmod mve_rsrc.ko
-        insmod mve_base.ko
+insert_h265() {
+	echo "insert h265"
+	insmod mve_rsrc.ko
+	insmod mve_base.ko
 }
 
-insert_vo()
-{
+insert_vo() {
 	regs 20000000 1
 	regs 20000010 12042d02
 	regs 20000044 0x2777
@@ -52,50 +41,45 @@ insert_vo()
 	insmod xm530_vdec.ko
 }
 
-remove_audio()
-{
+remove_audio() {
 	echo "remove audio"
 	rmmod -w acodec
 	rmmod -w xm_i2s
 }
 
-insert_sns()
-{
-    #Sensor clock 27MHz
-		#regs 0x2000002c 1;
-		#regs 0x2000000c 0x10110010;
-		#regs 0x20000010 0x901F0010;
-		#regs 0x20000014 0x01120000;
-		#regs 0x2000002c 0;
-		#sleep 0.1;
-		insmod xm_i2c.ko;
+insert_sns() {
+	#Sensor clock 27MHz
+	#regs 0x2000002c 1;
+	#regs 0x2000000c 0x10110010;
+	#regs 0x20000010 0x901F0010;
+	#regs 0x20000014 0x01120000;
+	#regs 0x2000002c 0;
+	#sleep 0.1;
+	insmod xm_i2c.ko;
 }
 
-remove_sns()
-{
+remove_sns() {
 	rmmod -w xm_i2c &> /dev/null
 	rmmod -w ssp_sony &> /dev/null
 }
 
-insert_ko()
-{
-# driver load
-		insert_sns > /dev/null
-		insmod mmz.ko mmz_start=$MEM_START mmz_size=$MEM_LEN
-		insmod xm530_vi.ko buffer=$VI_BUFF
-		insmod xm530_isp.ko
-		insmod xm530_rgn.ko
-		insmod xm530_h264.ko
-		insmod xm_rtc.ko
-		insmod xm_wdt.ko
-		insmod log.ko
-		insert_audio
-		insert_h265
-		#insert_vo
+insert_ko() {
+	# driver load
+	insert_sns > /dev/null
+	insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN"
+	insmod xm530_vi.ko buffer=$VI_BUFF
+	insmod xm530_isp.ko
+	insmod xm530_rgn.ko
+	insmod xm530_h264.ko
+	insmod xm_rtc.ko
+	insmod xm_wdt.ko
+	insmod log.ko
+	insert_audio
+	insert_h265
+	#insert_vo
 }
 
-remove_ko()
-{
+remove_ko() {
 	remove_audio
 	rmmod -w xm_wdt
 	rmmod -w xm_rtc
@@ -104,58 +88,53 @@ remove_ko()
 	rmmod -w xm530_isp
 	rmmod -w xm530_vi
 	rmmod -w mmz
-
 	remove_sns
 }
 
 make_symlink() {
-if [ ! -f /usr/lib/libsns.so ]; then
-	SNS_TYPE=$(ipcinfo --short-sensor)
-	logger -s -p daemon.info -t xiongmai "You sensor is $SNS_TYPE and symlink to libsns.so not found"
-	case $SNS_TYPE in
-	imx335|sc335e)
-		logger -s -p daemon.info -t xiongmai "Create new symlink to libsns_X50_XM530.so"
-		ln -sf /usr/lib/sensors/libsns_X50_XM530.so /usr/lib/libsns.so
-		;;
-	*)
-		logger -s -p daemon.info -t xiongmai "Create new symlink to libsns_X123_XM530.so"
-		ln -sf /usr/lib/sensors/libsns_X123_XM530.so /usr/lib/libsns.so
-		;;
-	esac
-fi
+	if [ ! -f /usr/lib/libsns.so ]; then
+		SNS_TYPE=$(ipcinfo --short-sensor)
+		logger -s -p daemon.info -t xiongmai "You sensor is $SNS_TYPE and symlink to libsns.so not found"
+
+		case $SNS_TYPE in
+			imx335|sc335e)
+				logger -s -p daemon.info -t xiongmai "Create new symlink to libsns_X50_XM530.so"
+				ln -sf /usr/lib/sensors/libsns_X50_XM530.so /usr/lib/libsns.so
+				;;
+			*)
+				logger -s -p daemon.info -t xiongmai "Create new symlink to libsns_X123_XM530.so"
+				ln -sf /usr/lib/sensors/libsns_X123_XM530.so /usr/lib/libsns.so
+				;;
+		esac
+	fi
 }
 
-load_usage()
-{
-	echo "Usage:  ./loadxm530 [-option]"
-		echo "options:"
-		echo "    -i                       insert modules"
-		echo "    -r                       remove modules"
-		echo "    -h                       help information"
-		echo -e "for example: ./loadxm530 -i\n"
+load_usage() {
+	echo "Usage: $0 [-option]"
+	echo "options:"
+	echo "    -i                  insert modules"
+	echo "    -r                  remove modules"
+	echo "    -h                  help information"
+	echo -e "for example: ./loadxm530 -i\n"
 }
 
 # load module.
-if [ "$1" = "-i" ]
-then
-cd /lib/modules/3.10.103\+/xiongmai
-insert_ko
-make_symlink
+if [ "$1" = "-i" ]; then
+	cd $MODULE
+	insert_ko
+	make_symlink
 fi
 
-if [ "$1" = "-r" ]
-then
-remove_ko
+if [ "$1" = "-r" ]; then
+	remove_ko
 fi
 
-if [ "$1" = "-h" ]
-then
-load_usage
-exit
+if [ "$1" = "-h" ]; then
+	load_usage
+	exit
 fi
 
-if [ $# -eq 0 ] || [ "$1" = "-a" ]
-then
-remove_ko
-insert_ko
+if [ $# -eq 0 ] || [ "$1" = "-a" ]; then
+	remove_ko
+	insert_ko
 fi

@@ -1,9 +1,9 @@
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/tmp"
 export EDITOR="/bin/vi"
-export HOME=$(grep -e "^${USER:-root}:" /etc/passwd | cut -d ":" -f 6)
-export HOME=${HOME:-/root}
-export TZ=$(cat /etc/TZ)
+export HOME="/root"
 export SENSOR=$(fw_printenv -n sensor)
+export UPGRADE=$(fw_printenv -n upgrade)
+export TZ=$(cat /etc/TZ)
 
 echo_c() {
 	echo -ne "\e[1;$1m$2\e[0m"
@@ -11,8 +11,8 @@ echo_c() {
 
 if [ "$PS1" ]; then
 	[ -f /etc/os-release ] && . /etc/os-release
-	[ -f /etc/openipc_banner ] && echo_c 34 "$(cat /etc/openipc_banner)"
-	echo_c 32 "$(printf "%51s" "${GITHUB_VERSION}")"
+	[ -f /etc/openipc_banner ] && echo_c 34 "\n$(cat /etc/openipc_banner)"
+	echo_c 32 "$(printf %51s "$GITHUB_VERSION")"
 	[ -f /etc/openipc_donors ] && echo_c 37 "\n\n$(cat /etc/openipc_donors)\n\n"
 	if [ "$(id -u)" -eq 0 ]; then
 		export PS1='\u@\h:\w\# '
@@ -29,6 +29,10 @@ network() {
 	/etc/init.d/S40network "$1"
 }
 
+streamer() {
+	/etc/init.d/S95majestic "$1"
+}
+
 set_fullname() {
 	show_fullname > /etc/hostname
 }
@@ -42,7 +46,7 @@ show_fullname() {
 }
 
 show_help() {
-	echo $(grep 'show.*()' /etc/profile | grep -v profile | cut -d '(' -f1)
+	grep 'show.*()' /etc/profile | grep -v profile | cut -d '(' -f1
 }
 
 show_gain() {
@@ -62,8 +66,8 @@ show_modules() {
 		echo "Module: $module"
 		link=/sys/module/$module/parameters
 		if [ -d "$link" ]; then
-			ls $link | while read parameter; do
-				val=$(cat $link/$parameter)
+			ls "$link" | while read parameter; do
+				val=$(cat "$link/$parameter")
 				echo "  $parameter --> ${val:-none}"
 			done
 		fi
@@ -72,11 +76,15 @@ show_modules() {
 }
 
 show_wlan() {
-	grep -r '$1..=' /etc/wireless | cut -d '"' -f4 | sort | grep -e $(fw_printenv -n soc) -e generic
+	grep -r '$1..=' /etc/wireless | cut -d '"' -f4 | sort | grep -e "$(fw_printenv -n soc)" -e generic
+}
+
+legacy_webui() {
+	curl -s -L https://github.com/openipc/webui/raw/master/files/usr/sbin/updatewebui.sh -o /tmp/webui.sh && sh /tmp/webui.sh
 }
 
 # Source configuration files from /etc/profile.d
 for i in /etc/profile.d/*.sh; do
-	[ -r "$i" ] && . $i
+	[ -r "$i" ] && . "$i"
 done
 unset i
