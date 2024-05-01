@@ -3,12 +3,11 @@
 # OpenIPC.org | 2024
 #
 
-PATH_MODULE=/lib/modules/4.9.84/sigmastar
-PATH_SENSOR=$PATH_MODULE/sensor
+MODULE=/lib/modules/4.9.84/sigmastar
 SENSOR=$(fw_printenv -n sensor)
 
 detect_sensor() {
-	insmod $PATH_SENSOR/sensor_config.ko
+	insmod $MODULE/sensor_config.ko
 	if [ -e /dev/srcfg ]; then
 		echo srcfg 0 1 0 0 0 0 > /dev/srcfg
 		rmmod sensor_config
@@ -20,10 +19,10 @@ detect_sensor() {
 set_sensor() {
 	case $SENSOR in
 		gc2053|gc2083|gc4023|gc4653|imx307|imx335|jxf37|jxq03|os02g10)
-			insmod $PATH_SENSOR/sensor_${SENSOR}_mipi.ko chmap=1
+			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		sc200ai|sc401ai|sc2239|sc223a|sc2335|sc2336|sc3335|sc3338)
-			insmod $PATH_SENSOR/sensor_${SENSOR}_mipi.ko chmap=1
+			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		*)
 			echo -e "\n\e[1;31mUNSUPPORTED sensor - $SENSOR\e[0m\n" | logger -s -t OpenIPC
@@ -32,18 +31,18 @@ set_sensor() {
 }
 
 insert_ko() {
-	insmod $PATH_MODULE/mhal.ko
-	insmod $PATH_MODULE/mi_common.ko
-	insmod $PATH_MODULE/mi_sys.ko cmdQBufSize=256 logBufSize=256
-	insmod $PATH_MODULE/mi_rgn.ko
-	insmod $PATH_MODULE/mi_ai.ko
-	insmod $PATH_MODULE/mi_ao.ko
-	insmod $PATH_MODULE/mi_sensor.ko
-	insmod $PATH_MODULE/mi_shadow.ko
-	insmod $PATH_MODULE/mi_divp.ko
-	insmod $PATH_MODULE/mi_vif.ko
-	insmod $PATH_MODULE/mi_vpe.ko
-	insmod $PATH_MODULE/mi_venc.ko fw_path=/etc/firmware/chagall.bin
+	insmod $MODULE/mhal.ko
+	insmod $MODULE/mi_common.ko
+	insmod $MODULE/mi_sys.ko cmdQBufSize=256 logBufSize=256
+	insmod $MODULE/mi_rgn.ko
+	insmod $MODULE/mi_ai.ko
+	insmod $MODULE/mi_ao.ko
+	insmod $MODULE/mi_sensor.ko
+	insmod $MODULE/mi_shadow.ko
+	insmod $MODULE/mi_divp.ko
+	insmod $MODULE/mi_vif.ko
+	insmod $MODULE/mi_vpe.ko
+	insmod $MODULE/mi_venc.ko fw_path=/etc/firmware/chagall.bin
 
 	MAJOR=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
 	mknod /dev/mi_poll c "$MAJOR" 0
@@ -64,9 +63,9 @@ if [ -z "$SENSOR" ]; then
 	exit 1
 else
 	echo -e "\n\e[1;32mSensor assigned - $SENSOR\e[0m\n" | logger -s -t OpenIPC
-	SENSOR_MODULE=$(ls /sys/module | grep $SENSOR)
-	if [ -n "$SENSOR_MODULE" ]; then
-		rmmod $SENSOR_MODULE
+	DRIVER=$(ls /sys/module | grep $SENSOR)
+	if [ -n "$DRIVER" ]; then
+		rmmod $DRIVER
 	fi
 	set_sensor
 fi

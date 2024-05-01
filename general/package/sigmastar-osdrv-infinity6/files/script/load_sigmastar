@@ -3,12 +3,11 @@
 # OpenIPC.org | 2024
 #
 
-PATH_MODULE=/lib/modules/4.9.84/sigmastar
-PATH_SENSOR=$PATH_MODULE/sensor
+MODULE=/lib/modules/4.9.84/sigmastar
 SENSOR=$(fw_printenv -n sensor)
 
 detect_sensor() {
-	insmod $PATH_SENSOR/sensor_config.ko
+	insmod $MODULE/sensor_config.ko
 	if [ -e /dev/srcfg ]; then
 		echo srcfg 0 1 0 0 0 0 > /dev/srcfg
 		rmmod sensor_config
@@ -20,11 +19,11 @@ detect_sensor() {
 set_sensor() {
 	case $SENSOR in
 		gc2053|imx307)
-			insmod $PATH_SENSOR/sensor_${SENSOR}_mipi.ko chmap=1
+			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		sc2239|sc2335)
 			[ "$(fw_printenv -n soc)" = "ssc325de" ] && IFACE=parl
-			insmod $PATH_SENSOR/sensor_${SENSOR}_${IFACE:-mipi}.ko chmap=1
+			insmod $MODULE/sensor_${SENSOR}_${IFACE:-mipi}.ko chmap=1
 			;;
 		*)
 			echo -e "\n\e[1;31mUNSUPPORTED sensor - $SENSOR\e[0m\n" | logger -s -t OpenIPC
@@ -33,18 +32,18 @@ set_sensor() {
 }
 
 insert_ko() {
-	insmod $PATH_MODULE/mhal.ko
-	insmod $PATH_MODULE/mi_common.ko
-	insmod $PATH_MODULE/mi_sys.ko logBufSize=256 default_config_path=/usr/bin
-	insmod $PATH_MODULE/mi_rgn.ko
-	insmod $PATH_MODULE/mi_ai.ko
-	insmod $PATH_MODULE/mi_ao.ko
-	insmod $PATH_MODULE/mi_sensor.ko
-	insmod $PATH_MODULE/mi_shadow.ko
-	insmod $PATH_MODULE/mi_divp.ko
-	insmod $PATH_MODULE/mi_vif.ko
-	insmod $PATH_MODULE/mi_vpe.ko
-	insmod $PATH_MODULE/mi_venc.ko
+	insmod $MODULE/mhal.ko
+	insmod $MODULE/mi_common.ko
+	insmod $MODULE/mi_sys.ko logBufSize=256 default_config_path=/usr/bin
+	insmod $MODULE/mi_rgn.ko
+	insmod $MODULE/mi_ai.ko
+	insmod $MODULE/mi_ao.ko
+	insmod $MODULE/mi_sensor.ko
+	insmod $MODULE/mi_shadow.ko
+	insmod $MODULE/mi_divp.ko
+	insmod $MODULE/mi_vif.ko
+	insmod $MODULE/mi_vpe.ko
+	insmod $MODULE/mi_venc.ko
 }
 
 if [ ! -e /sys/module/mhal ]; then
@@ -61,9 +60,9 @@ if [ -z "$SENSOR" ]; then
 	exit 1
 else
 	echo -e "\n\e[1;32mSensor assigned - $SENSOR\e[0m\n" | logger -s -t OpenIPC
-	SENSOR_MODULE=$(ls /sys/module | grep $SENSOR)
-	if [ -n "$SENSOR_MODULE" ]; then
-		rmmod $SENSOR_MODULE
+	DRIVER=$(ls /sys/module | grep $SENSOR)
+	if [ -n "$DRIVER" ]; then
+		rmmod $DRIVER
 	fi
 	set_sensor
 fi
