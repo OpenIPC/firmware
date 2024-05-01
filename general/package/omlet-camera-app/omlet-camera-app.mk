@@ -22,7 +22,7 @@ OMLET_CAMERA_APP_MAKE_OPTS += VERBOSE=1
 OMLET_CAMERA_APP_DEPENDENCIES = \
 	libglib2 \
         gst1-plugins-good \
-        gst1-plugins-bad \
+        gst1-plugins-bad-openipc \
         json-glib\
         paho-mqtt-c
 
