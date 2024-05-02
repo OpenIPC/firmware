@@ -1,17 +1,19 @@
 ################################################################################
 #
-# logcat-openipc
+# logcat
 #
 ################################################################################
 
-LOGCAT_OPENIPC_SITE_METHOD = local
-LOGCAT_OPENIPC_SITE = $(LOGCAT_OPENIPC_PKGDIR)/src
+LOGCAT_SITE_METHOD = local
+LOGCAT_SITE = $(LOGCAT_PKGDIR)/src
+LOGCAT_LICENSE = MIT
+LOGCAT_LICENSE_FILES = LICENSE
 
-define LOGCAT_OPENIPC_BUILD_CMDS
+define LOGCAT_BUILD_CMDS
 	$(TARGET_CC) $(@D)/logcat.c -o $(@D)/logcat -s
 endef
 
-define LOGCAT_OPENIPC_INSTALL_TARGET_CMDS
+define LOGCAT_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/logcat
 endef
 
