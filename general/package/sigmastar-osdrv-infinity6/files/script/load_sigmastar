@@ -46,7 +46,7 @@ insert_ko() {
 	insmod $MODULE/mi_venc.ko
 }
 
-if [ ! -e /sys/module/mhal ]; then
+if [ ! -e /sys/module/mi_common ]; then
 	insert_ko
 fi
 
