@@ -48,7 +48,7 @@ insert_ko() {
 	echo isproot /etc/firmware > /dev/ispmid
 }
 
-if [ ! -e /sys/module/mhal ]; then
+if [ ! -e /sys/module/mi_common ]; then
 	insert_ko
 fi
 
