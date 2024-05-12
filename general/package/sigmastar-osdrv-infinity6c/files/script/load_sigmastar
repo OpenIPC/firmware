@@ -18,7 +18,7 @@ detect_sensor() {
 
 set_sensor() {
 	case $SENSOR in
-		sc401ai|sc501ai)
+		imx335|imx415|sc401ai|sc501ai)
 			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		*)
