@@ -61,13 +61,15 @@ fi
 if [ -z "$SENSOR" ]; then
 	echo -e "\n\e[1;31mSensor parameter MISSING\e[0m\n" | logger -s -t OpenIPC
 	exit 1
-else
-	echo -e "\n\e[1;32mSensor assigned - $SENSOR\e[0m\n" | logger -s -t OpenIPC
-	DRIVER=$(ls /sys/module | grep $SENSOR)
-	if [ -n "$DRIVER" ]; then
-		rmmod $DRIVER
-	fi
-	set_sensor
 fi
+
+DRIVER=$(ls /sys/module | grep $SENSOR)
+if [ -n "$DRIVER" ]; then
+	rmmod $DRIVER
+fi
+
+echo -e "\n\e[1;32mSensor assigned - $SENSOR\e[0m\n" | logger -s -t OpenIPC
+set_sensor
+export $SENSOR
 
 exit 0
