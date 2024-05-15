@@ -1,4 +1,5 @@
 #!/bin/sh
+export SENSOR=$(fw_printenv -n sensor)
 
 DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
