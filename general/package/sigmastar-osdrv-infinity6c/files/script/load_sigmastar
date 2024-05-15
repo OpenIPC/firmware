@@ -18,7 +18,7 @@ detect_sensor() {
 
 set_sensor() {
 	case $SENSOR in
-		imx335|imx415|sc401ai|sc501ai)
+		imx335|imx415|sc401ai|sc501ai|sc850sl)
 			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		*)
@@ -62,6 +62,5 @@ fi
 
 echo -e "\n\e[1;32mSensor assigned - $SENSOR\e[0m\n" | logger -s -t OpenIPC
 set_sensor
-export $SENSOR
 
 exit 0
