@@ -55,6 +55,13 @@ if [ "$1" = "rtl8733bu-gk7205v200-camhi" ]; then
 	exit 0
 fi
 
+# GK7205V300 CamHi
+if [ "$1" = "rtl8733bu-gk7205v300-camhi" ]; then
+	set_gpio 7 0
+	modprobe 8733bu
+	exit 0
+fi
+
 # GK7205V200 Kafei
 if [ "$1" = "8188fu-gk7205v200-kafei" ]; then
 	set_gpio 57 0
