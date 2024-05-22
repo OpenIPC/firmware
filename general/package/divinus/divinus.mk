@@ -16,7 +16,7 @@ else
 endif
 
 define DIVINUS_BUILD_CMDS
-	$(MAKE) CC=$(TARGET_CC) OPT=$(DIVINUS_OPTIONS) -C $(@D)
+	$(MAKE) CC=$(TARGET_CC) OPT=$(DIVINUS_OPTIONS) -C $(@D)/src
 endef
 
 define DIVINUS_INSTALL_TARGET_CMDS
