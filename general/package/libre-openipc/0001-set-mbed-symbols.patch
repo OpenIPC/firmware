@@ -1,0 +1,65 @@
+diff --git a/cmake/re-config.cmake b/cmake/re-config.cmake
+index 426a79d..ddbeb1a 100644
+--- a/cmake/re-config.cmake
++++ b/cmake/re-config.cmake
+@@ -235,6 +235,10 @@ if(USE_OPENSSL)
+   list(APPEND RE_LIBS OpenSSL::SSL OpenSSL::Crypto)
+ endif()
+ 
++if(USE_MBEDTLS)
++  list(APPEND RE_LIBS mbedtls)
++endif()
++
+ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+   list(APPEND RE_LIBS
+     "-framework SystemConfiguration" "-framework CoreFoundation"
+diff --git a/src/md5/wrap.c b/src/md5/wrap.c
+index 6b8168b..e29bb96 100644
+--- a/src/md5/wrap.c
++++ b/src/md5/wrap.c
+@@ -60,12 +60,7 @@ void md5(const uint8_t *d, size_t n, uint8_t *md)
+ 	CryptDestroyHash(hash);
+ 	CryptReleaseContext(context, 0);
+ #elif defined (MBEDTLS_MD_C)
+-	int err;
+-
+-	err = mbedtls_md5(d, n, md);
+-	if (err)
+-		DEBUG_WARNING("mbedtls_md5: %s\n",
+-			      mbedtls_high_level_strerr(err));
++	mbedtls_md5(d, n, md);
+ #else
+ #error missing MD5 backend
+ #endif
+diff --git a/src/sha/wrap.c b/src/sha/wrap.c
+index 59ec123..f2a7ea2 100644
+--- a/src/sha/wrap.c
++++ b/src/sha/wrap.c
+@@ -61,12 +61,7 @@ void sha1(const uint8_t *d, size_t n, uint8_t *md)
+ #elif defined (WIN32)
+ 	compute_hash(CALG_SHA1, d, n, md, SHA1_DIGEST_SIZE);
+ #elif defined (MBEDTLS_MD_C)
+-	int err;
+-
+-	err = mbedtls_sha1(d, n, md);
+-	if (err)
+-		DEBUG_WARNING("mbedtls_sha1: %s\n",
+-			      mbedtls_high_level_strerr(err));
++	mbedtls_sha1(d, n, md);
+ #else
+ 	(void)d;
+ 	(void)n;
+@@ -92,12 +87,7 @@ void sha256(const uint8_t *d, size_t n, uint8_t *md)
+ #elif defined (WIN32)
+ 	compute_hash(CALG_SHA_256, d, n, md, SHA256_DIGEST_SIZE);
+ #elif defined (MBEDTLS_MD_C)
+-	int err;
+-
+-	err = mbedtls_sha256(d, n, md, 0);
+-	if (err)
+-		DEBUG_WARNING("mbedtls_sha256: %s\n",
+-			      mbedtls_high_level_strerr(err));
++	mbedtls_sha256(d, n, md, 0);
+ #else
+ 	(void)d;
+ 	(void)n;
