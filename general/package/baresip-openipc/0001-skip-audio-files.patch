@@ -1,0 +1,15 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b3960973..3e3dd9e6 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -384,10 +384,3 @@ install(TARGETS baresip
+     NAMELINK_ONLY
+     COMPONENT Development
+ )
+-
+-file(GLOB SHARE_FILES "${PROJECT_SOURCE_DIR}/share/*")
+-
+-install(FILES ${SHARE_FILES}
+-  DESTINATION ${CMAKE_INSTALL_DATADIR}/baresip
+-  COMPONENT Applications
+-)
