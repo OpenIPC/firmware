@@ -89,6 +89,12 @@ insert_sns() {
 		insmod ssp_pana.ko
 		;;
 	imx104 | imx123 | imx138_spi | imx222 | imx225 | imx322 | imx323)
+		devmem 0x200f0000 32 0x1 # pinmux GPIO1_0 [SHUTTER_TRIG]
+		devmem 0x200f007c 32 0x1 # pinmux GPIO1_7 [FLASH_TRIG]
+		devmem 0x200f00b8 32 0 # pinmux [GPIO5_1] USB_PWREN
+		devmem 0x200f0138 32 0 # pinmux [GPIO0_6] SVB_PWM TEMPER_DQ
+		devmem 0x200f00c0 32 0 # GPIO5_3 for Beward DS06
+		devmem 0x200f013c 32 0x1 #pinmux SYS_RSTN_OUT [GPIO0_7] TEMPER_DQ
 		devmem 0x200f000c 32 0x1 #pinmux SPI0
 		devmem 0x200f0010 32 0x1 #pinmux SPI0
 		devmem 0x200f0014 32 0x1 #pinmux SPI0
@@ -325,7 +331,7 @@ insert_ko() {
 	insmod hi3518_rc.ko
 	insmod hi3518_region.ko
 
-	# insmod hi3518_vda.ko
+	insmod hi3518_vda.ko
 	insmod hi3518_ive.ko
 
 	insmod hi_i2c.ko
@@ -356,7 +362,7 @@ remove_ko() {
 	#rmmod -w gpioi2c
 
 	rmmod -w hi3518_ive
-	# rmmod -w hi3518_vda
+	rmmod -w hi3518_vda
 
 	rmmod -w hi3518_region
 	rmmod -w hi3518_rc
