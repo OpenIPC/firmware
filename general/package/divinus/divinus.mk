@@ -21,7 +21,7 @@ endef
 
 define DIVINUS_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/divinus.ini
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/divinus.yaml
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/divinus
