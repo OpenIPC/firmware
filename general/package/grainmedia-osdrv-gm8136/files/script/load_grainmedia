@@ -36,8 +36,8 @@ else
 	fi
 fi
 
-if [ "$1" != "" ]; then
-    video_frontend=$1
+if [ "$2" != "" ]; then
+    video_frontend=$2
 else
     video_frontend=${SENSOR}
 fi
