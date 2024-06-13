@@ -10,9 +10,9 @@ DIVINUS_LICENSE = MIT
 DIVINUS_LICENSE_FILES = LICENSE
 
 ifeq ($(BR2_TOOLCHAIN_USES_GLIBC),y)
-	DIVINUS_OPTIONS = "-s -Os -lm"
+	DIVINUS_OPTIONS = "-rdynamic -s -Os -lm"
 else
-	DIVINUS_OPTIONS = "-s -Os"
+	DIVINUS_OPTIONS = "-rdynamic -s -Os"
 endif
 
 define DIVINUS_BUILD_CMDS
