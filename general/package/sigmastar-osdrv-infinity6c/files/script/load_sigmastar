@@ -18,7 +18,7 @@ detect_sensor() {
 
 set_sensor() {
 	case $SENSOR in
-		imx335|imx415|sc401ai|sc501ai|sc850sl)
+		imx335|imx415|sc401ai|sc501ai|sc830ai)
 			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		*)
@@ -37,6 +37,7 @@ insert_ko() {
 	insmod $MODULE/mi_scl.ko
 	insmod $MODULE/mi_vcodec.ko drv_codec40_common.fw_load_path=/etc/firmware/chagall.bin
 	insmod $MODULE/mi_venc.ko
+	insmod $MODULE/mi_shadow.ko
 
 	echo isproot /etc/firmware > /dev/ispmid
 }
