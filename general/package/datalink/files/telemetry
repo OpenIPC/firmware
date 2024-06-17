@@ -39,7 +39,7 @@ case "$1" in
 		if [ "$router" -eq 1 ] || [ "$fw" = "lte" ]; then
 			mavlink-routerd -c /etc/mavlink.conf > /dev/null 2>&1 &
 		else
-			mavfwd --channels "$channels" --master "$serial" --baudrate "$baud" -a "$aggregate" \
+			mavfwd --channels "$channels" --master "$serial" --baudrate "$baud" -p 100 -t -a "$aggregate" \
 				--out 127.0.0.1:$port_tx --in 127.0.0.1:$port_rx > /dev/null &
 		fi
 		if [ "$fw" = "fpv" ] || [ "$fw" = "venc" ]; then
