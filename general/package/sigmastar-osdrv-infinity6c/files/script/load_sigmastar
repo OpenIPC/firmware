@@ -35,6 +35,8 @@ insert_ko() {
 	insmod $MODULE/mi_isp.ko
 	insmod $MODULE/mi_rgn.ko
 	insmod $MODULE/mi_scl.ko
+	insmod $MODULE/mi_ao.ko
+	insmod $MODULE/mi_ai.ko
 	insmod $MODULE/mi_vcodec.ko drv_codec40_common.fw_load_path=/etc/firmware/chagall.bin
 	insmod $MODULE/mi_venc.ko
 	insmod $MODULE/mi_shadow.ko
