@@ -237,10 +237,17 @@ if [ "$1" = "rtl8733bu-t31-camhipro" ]; then
 	exit 0
 fi
 
-# T31 IFlytek
+# T31 iFlytek
 if [ "$1" = "ssv6155-t31-iflytek" ]; then
 	set_gpio 10 1
 	modprobe ssv6155
+	exit 0
+fi
+
+# T31 iFlytek XFP301-M
+if [ "$1" = "rtl8188fu-t31-iflytek-xfp301m" ]; then
+	set_gpio 10 1
+	modprobe 8188fu
 	exit 0
 fi
 
