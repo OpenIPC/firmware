@@ -6,7 +6,7 @@ video_system=NTSC
 
 # temporary hax, we need to know resolution before inserting sensor...
 resolution=$(fw_printenv -n resolution)
-resolution=${resolution:=1080p}
+resolution=${resolution:=720p}
 
 # Support video_front_end: ov2710, ov2715, ov9712, ov9715, ov9714, ov5653
 # Support video_front_end: mt9m034, ar0130, ar0140, ar0330, ar0331
@@ -36,8 +36,8 @@ else
 	fi
 fi
 
-if [ "$2" != "" ]; then
-    video_frontend=$2
+if [[ "$1" != "" ]] && [[ "$1" != "-i" ]]; then
+    video_frontend=$1
 else
     video_frontend=${SENSOR}
 fi
@@ -50,18 +50,26 @@ pwr_freq=1
 fps=25
 fi
 
+rm -f /etc/sensors/gmlib.cfg
+ln -s /etc/sensors/gmlib_${resolution}.cfg /etc/sensors/gmlib.cfg
+
 cd /lib/modules/3.3.0/grainmedia
 
 insmod frammap.ko || exit 1
 cat /proc/frammap/ddr_info
 
-insmod log.ko mode=0 log_ksize=256 config_path=${config_path}/gmlib_${resolution}.cfg
+insmod log.ko mode=0 log_ksize=64 config_path=${config_path}/gmlib_${resolution}.cfg
 insmod ms.ko
 insmod em.ko
 insmod gm2d.ko
 #insmod flcd200-common.ko
 #insmod flcd200-pip.ko output_type=0 fb0_fb1_share=1 # CVBS display
-insmod sar_adc.ko run_mode=4                        #run_mode=4 is for CVBS out
+
+# check if /dev/sar_adc_drv exists, if not, load sar_adc module
+if ! test -e /dev/sar_adc_drv ; then
+    insmod sar_adc.ko run_mode=4                        #run_mode=4 is for CVBS out
+fi
+
 insmod fe_common.ko
 insmod adda308.ko input_mode=0 single_end=1
 insmod ft3dnr200.ko src_yc_swap=1 dst_yc_swap=1 ref_yc_swap=1 config_path=${config_path}
@@ -233,6 +241,17 @@ echo 0 >/proc/videograph/dataout/dbglevel
 echo 0 >/proc/videograph/vpd/dbglevel
 echo 0 >/proc/videograph/gmlib/dbglevel
 
+echo DefaultCfg 2 > /proc/videograph/h264e/param
+echo IPOffset -1 > /proc/videograph/h264e/param
+echo 13 20 > /proc/videograph/favce_rc/dbg
+echo DeltaQPWeight 4 >  /proc/videograph/h264e/param
+echo 43 3 > /proc/videograph/h264e/dbg
+echo 3 > /proc/sys/vm/drop_caches
+echo 4 0 > /proc/vcap300/vcap0/presmooth/ch   #second code stream sharpness drop
+echo 0 1 > /proc/vcap300/vcap0/presmooth/param 
+echo 1 4 > /proc/vcap300/vcap0/presmooth/param 
+echo 2 4 > /proc/vcap300/vcap0/presmooth/param 
+
 echo =========================================================================
 echo "  Video Front End: $video_frontend"
 echo "  Chip Version: $chipver"
@@ -243,6 +262,10 @@ devmem 0x9a100034 32 0x061f0606
 devmem 0x9a1000c4 32 0x08000f08
 devmem 0x9a1000c8 32 0x061f0606
 devmem 0x9a100030 32 0xDF000f04
+
+devmem 0x90c00044 32 0x00000007
+devmem 0x90c000b4 32 0xFFD374F0 #close SD card and mjpeg
+devmem 0x90b00010 32 0x14040000 #close audio
 
 #devmem 0x96105440 32 0x01500000
 #devmem 0x96105438 32 0x01500000
