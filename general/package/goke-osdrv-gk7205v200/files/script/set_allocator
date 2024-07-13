@@ -12,6 +12,7 @@ get_env() {
   mtdparts=$(echo ${bootargs} | awk -F '=' '$1=="mtdparts"{print $2}' RS=' ')
   osmem=$(fw_printenv -n osmem)
   totalmem=$(fw_printenv -n totalmem)
+  extras=$(fw_printenv -n extras)
 }
 
 calc_mmz() {
@@ -30,7 +31,7 @@ if [[ "$1" == 'gk' ]]; then
   echo "Allocator selected as gk..."
   get_env
   mem=${osmem:=32M}
-  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=gk"
+  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=gk ${extras}"
   echo ${newbootargs}
   fw_setenv bootargs ${newbootargs}
   #
@@ -39,7 +40,7 @@ elif [[ "$1" == 'cma'  ]]; then
   get_env
   calc_mmz
   mem=${totalmem:=64M}
-  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=cma mmz=${mmz}"
+  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=cma mmz=${mmz} ${extras}"
   fw_setenv bootargs ${newbootargs}
   echo ${newbootargs}
 else
