@@ -258,4 +258,12 @@ if [ "$1" = "atbm603x-t31-zte-k540" ]; then
 	exit 0
 fi
 
+# IVG G6S (GK7205V300+Sony IMX335) with IPC-38x38-WIFI-IF V1.02 - ATBM603x 
+if [ "$1" = "IPC-38x38-WIFI-atbm603x-usb" ]; then
+  devmem 0x100C0080 32 0x530
+  set_gpio 7 0
+	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
 exit 1
