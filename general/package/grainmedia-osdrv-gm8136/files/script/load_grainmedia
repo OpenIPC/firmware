@@ -207,6 +207,19 @@ case "$video_frontend" in
         insmod fisp_imx136.ko sensor_w=1920 sensor_h=1080 fps=25
     fi
     ;;
+"soih61")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_soih61.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_soih61.ko sensor_w=1280 sensor_h=720 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_soih61.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_soih61.ko sensor_w=1280 sensor_h=720 fps=25
+    fi
+    ;;
 *)
     echo "Invalid argument for video frontend: $video_frontend"
     exit
