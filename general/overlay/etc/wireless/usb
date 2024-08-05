@@ -155,6 +155,13 @@ if [ "$1" = "rtl8188fu-ssc325de-imou-c22ep-s2" ]; then
 	exit 0
 fi
 
+# SSC335DE IMOU C22E-S2 V2
+if [ "$1" = "rtl8188fu-ssc335de-imou-c22e-s2-v2" ]; then
+	set_gpio 14 0
+	modprobe 8188fu
+	exit 0
+fi
+
 # SSC333 Babysense See HD IP206
 if [ "$1" = "rtl8188fu-babysense-see-hd-ip206" ]; then
 	set_gpio 14 1
