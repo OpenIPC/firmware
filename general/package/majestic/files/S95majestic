@@ -5,12 +5,10 @@ DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
 MAJESTIC_ARGS="-s"
 
-debug() {
-	ulimit -c unlimited
-	echo "/tmp/core.%e.%h.%t" > /proc/sys/kernel/core_pattern
-}
-
 start() {
+	ulimit -c unlimited
+	echo "/tmp/majestic.core" > /proc/sys/kernel/core_pattern
+
 	printf "Starting $DAEMON: "
 	start-stop-daemon -b -S -m -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $MAJESTIC_ARGS
 	if [ $? = 0 ]; then
@@ -32,7 +30,7 @@ stop() {
 }
 
 case "$1" in
-	start|stop|debug)
+	start|stop)
 		"$1"
 		;;
 
