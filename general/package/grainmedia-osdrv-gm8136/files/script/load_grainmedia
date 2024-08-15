@@ -8,8 +8,8 @@ video_system=NTSC
 resolution=$(fw_printenv -n resolution)
 resolution=${resolution:=720p}
 
-# Support video_front_end: ov2710, ov2715, ov9712, ov9715, ov9714, ov5653
-# Support video_front_end: mt9m034, ar0130, ar0140, ar0330, ar0331
+# Support video_front_end: ov2710, ov2715, ov9712, ov9715, ov9714, ov9732, ov5653
+# Support video_front_end: mt9m034, ar0130, ar0140, ar0330, ar0331, ps5230
 # Support video_front_end: imx222, imx238, imx236, imx238
 
 chipver=$(head -1 /proc/pmu/chipver)
@@ -115,6 +115,34 @@ case "$video_frontend" in
         insmod fisp_algorithm.ko pwr_freq=1
         insmod fisp_ov9715.ko sensor_w=1280 sensor_h=720 fps=25 mirror=1 flip=1
     fi
+    ;;
+"ov9732")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov9732.cfg
+        insmod fisp_algorithm.ko pwr_freq=0            
+        insmod fisp_ov9732.ko sensor_w=1280 sensor_h=720 fps=30 mirror=1 flip=1 interface=0
+
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov9732.cfg
+        insmod fisp_algorithm.ko pwr_freq=1            
+        insmod fisp_ov9732.ko sensor_w=1280 sensor_h=720 fps=25 mirror=1 flip=1 interface=0
+    fi        
+    ;;
+"ps5230")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ps5230.cfg
+        insmod fisp_algorithm.ko pwr_freq=0            
+        insmod fisp_ps5230.ko sensor_w=1920 sensor_h=1080 fps=25 mirror=1 flip=1 interface=0
+        
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ps5230.cfg
+        insmod fisp_algorithm.ko pwr_freq=1            
+        insmod fisp_ps5230.ko sensor_w=1280 sensor_h=720 fps=25 mirror=1 flip=1 interface=0
+    fi        
     ;;
 "ar0330")
     codec_max_width=1920
