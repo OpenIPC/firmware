@@ -25,7 +25,7 @@ define RUBYFPV_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/sbin $(RUBYFPV_PKGDIR)/files/version_ruby_base.txt
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(RUBYFPV_PKGDIR)/files/tweaksys
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(DATALINK_PKGDIR)/files/tweaksys
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/root/ruby/licenses
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/root/ruby/licenses $(@D)/licenses/*

@@ -15,33 +15,37 @@ set_wireless() {
 	[ -e /sys/class/net/eth0 ] && ifconfig eth0 "${net:-192.168.2.10}"
 }
 
+start() {
+	echo "Starting network..."
+	ifup lo
+	if [ -n "$dev" ]; then
+		set_wireless
+	else
+		ifup eth0
+	fi
+}
+
+stop() {
+	echo "Stopping network..."
+	ifdown lo
+	ifdown -f wlan0
+	ifdown -f usb0
+	ifdown -f eth1
+	ifdown -f eth0
+}
+
 case "$1" in
-	start)
-		echo "Starting network..."
-		ifup lo
-		if [ -n "$dev" ]; then
-			set_wireless
-		else
-			ifup eth0
-		fi
+	start|stop)
+		$1
 		;;
 
-	stop)
-		echo "Stopping network..."
-		ifdown lo
-		ifdown -f wlan0
-		ifdown -f usb0
-		ifdown -f eth1
-		ifdown -f eth0
-		;;
-
-	restart)
-		"$0" stop
-		"$0" start
+	restart|reload)
+		stop
+		start
 		;;
 
 	*)
-		echo "Usage: $0 {start|stop|restart}"
+		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1
 		;;
 esac

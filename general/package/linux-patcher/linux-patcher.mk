@@ -20,15 +20,8 @@ define LINUX_PATCHER_CONFIG_ATHEROS
 endef
 endif
 
-# ifeq ($(OPENIPC_VARIANT),rubyfpv)
-# define LINUX_PATCHER_CONFIG_TIMERS
-#	$(call KCONFIG_ENABLE_OPT,CONFIG_HZ_1000)
-# endef
-# endif
-
 define LINUX_PATCHER_LINUX_CONFIG_FIXUPS
 	$(LINUX_PATCHER_CONFIG_ATHEROS)
-#	$(LINUX_PATCHER_CONFIG_TIMERS)
 endef
 
 $(eval $(generic-package))

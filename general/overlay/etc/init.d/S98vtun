@@ -1,10 +1,18 @@
 #!/bin/sh
-vtun=$(fw_printenv -n vtun)
 
 case "$1" in
 	start)
+		vtun=$(fw_printenv -n vtun)
 		if [ -n "$vtun" ]; then
 			tunnel "$vtun"
 		fi
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
 		;;
 esac
