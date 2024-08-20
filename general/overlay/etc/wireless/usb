@@ -105,6 +105,13 @@ if [ "$1" = "rtl8188fu-hi3518ev200-lifesmart" ]; then
 	exit 0
 fi
 
+# HI3518EV200 Switcam HS303 (V1)
+if [ "$1" = "rtl8188fu-switcam-hs303" ]; then
+	set_gpio 3 1
+	modprobe 8188fu
+	exit 0
+fi
+
 # HI3518EV200 Lenovo Snowman 1080p
 if [ "$1" = "rtl8188eus-hi3518ev200-lenovo" ]; then
 	devmem 0x200f006c 32 0
@@ -115,6 +122,13 @@ fi
 # HI3518EV200 Qtech QVC-IPC-136W
 if [ "$1" = "rtl8188eu-hi3518ev200-qvc-ipc-136w" ]; then
 	set_gpio 7 1
+	modprobe 8188eu
+	exit 0
+fi
+
+# HI3518EV200 Switcam HS303 V2
+if [ "$1" = "rtl8188eus-switcam-hs303v2" ]; then
+	set_gpio 54 1
 	modprobe 8188eu
 	exit 0
 fi
@@ -137,6 +151,13 @@ fi
 # SSC325DE IMOU C22EP-S2
 if [ "$1" = "rtl8188fu-ssc325de-imou-c22ep-s2" ]; then
 	set_gpio 62 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC335DE IMOU C22E-S2 V2
+if [ "$1" = "rtl8188fu-ssc335de-imou-c22e-s2-v2" ]; then
+	set_gpio 14 0
 	modprobe 8188fu
 	exit 0
 fi
