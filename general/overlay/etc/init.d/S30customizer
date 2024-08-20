@@ -2,7 +2,10 @@
 
 case "$1" in
 	start)
-		date -s @$(grep TIME_STAMP /etc/os-release | cut -d= -f2)
+		time=$(grep TIME_STAMP /etc/os-release | cut -d= -f2)
+		if [ $time -gt $(date +%s) ]; then
+			date -s @$time
+		fi
 
 		if [ ! -e /etc/custom.ok ] && [ -e /usr/share/openipc/customizer.sh ]; then
 			echo "Run customizer script..."
