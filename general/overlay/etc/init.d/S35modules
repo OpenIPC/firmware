@@ -2,9 +2,7 @@
 
 case "$1" in
 	start)
-		echo "Loading modules..."
-
-		# load modules from /etc/modules
+		echo "Loading kernel modules..."
 		[ -r /etc/modules ] || exit 0
 		while read module args; do
 			case "$module" in
@@ -12,9 +10,15 @@ case "$1" in
 					continue
 					;;
 			esac
-
-			# attempt to load modules
-			modprobe ${module} ${args} > /dev/null
+			modprobe "$module" "$args" > /dev/null
 		done < /etc/modules
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
 		;;
 esac

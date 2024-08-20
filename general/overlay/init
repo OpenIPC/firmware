@@ -2,13 +2,13 @@
 
 on_exit() {
 	mountpoint -q /proc && umount /proc
-	exec /sbin/init $*
+	exec /sbin/init "$*"
 }
 
-trap on_exit 0
+trap on_exit EXIT
 
-mount -t proc proc /proc || exit
-grep -q overlay /proc/filesystems || exit
+mount -t proc proc /proc || exit 1
+grep -q overlay /proc/filesystems || exit 1
 
 if ! grep -q 'root=.*nfs\|mmcblk\|ram' /proc/cmdline; then
 	if grep -q ubifs /proc/cmdline; then
@@ -16,34 +16,30 @@ if ! grep -q 'root=.*nfs\|mmcblk\|ram' /proc/cmdline; then
 	else
 		mtdblkdev=$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd | sed 's/mtd/mtdblock/')
 		mtdchrdev=$(grep 'rootfs_data' /proc/mtd | cut -d: -f1)
-		mount -t jffs2 /dev/${mtdblkdev} /overlay
-
-		if [ $? -ne 0 ] || { dmesg | grep "jffs2.*: Magic bitmask.*not found" >/dev/null 2>&1; }; then
-			echo "jffs2 health check error, format required!"
-			flash_eraseall -j /dev/${mtdchrdev}
-			echo "Done! Remounting..."
-			mount -t jffs2 /dev/${mtdblkdev} /overlay || mount -t tmpfs tmpfs /overlay || exit
-			if ! cat /proc/mounts | grep ${mtdblkdev}; then
-				echo "--------------------------------"
-				echo "Crash - your flash in the trash!"
-				echo "--------------------------------"
+		if ! mount -t jffs2 /dev/$mtdblkdev /overlay || dmesg | grep -q "jffs2.*: Magic bitmask.*not found"; then
+			echo "Formatting flash..."
+			grep -q 'nand' /proc/cmdline || jffs2="-j"
+			flash_eraseall $jffs2 /dev/$mtdchrdev
+			if ! mount -t jffs2 /dev/$mtdblkdev /overlay && ! mount -t tmpfs tmpfs /overlay; then
+				echo "Cannot mount overlay."
+				exit 1
 			fi
 		fi
 	fi
 
 	if grep -q overlayfs /proc/filesystems; then
-		mount -t overlayfs overlayfs -o lowerdir=/,upperdir=/overlay,ro /mnt || {
+		if ! mount -t overlayfs overlayfs -o lowerdir=/,upperdir=/overlay,ro /mnt; then
 			umount /overlay
-			exit
-		}
+			exit 1
+		fi
 	else
 		overlay_rootdir=/overlay/root
 		overlay_workdir=/overlay/work
-		mkdir -p ${overlay_rootdir} ${overlay_workdir}
-		mount -t overlay overlay -o lowerdir=/,upperdir=${overlay_rootdir},workdir=${overlay_workdir} /mnt || {
+		mkdir -p $overlay_rootdir $overlay_workdir
+		if ! mount -t overlay overlay -o lowerdir=/,upperdir=$overlay_rootdir,workdir=$overlay_workdir /mnt; then
 			umount /overlay
-			exit
-		}
+			exit 1
+		fi
 	fi
 
 	pivot_root /mnt /mnt/rom

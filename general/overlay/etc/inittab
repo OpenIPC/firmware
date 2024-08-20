@@ -29,7 +29,7 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 ::sysinit:/etc/init.d/rcS
 
 # Put a getty on the serial port
-console::respawn:/sbin/getty -L console 0 vt100 # GENERIC_SERIAL
+console::respawn:/sbin/getty -L console 0 vt100
 
 # Stuff to do before rebooting
 ::shutdown:/etc/init.d/rcK

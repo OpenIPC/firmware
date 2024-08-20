@@ -1,22 +1,22 @@
 #!/bin/sh
-#
-# Start MAVlink Router
-#
 
 case "$1" in
-  start)
-    if grep -q telemetry=true /etc/datalink.conf; then
-      echo "Starting mavlink router daemon..."
-      /usr/bin/mavlink-routerd &
-    else
-      echo "Telemetry service disabled in datalink.conf..."
-    fi
-    ;;
-  stop)
-    echo "Stopping mavlink router daemon..."
-    kill -9 $(pidof mavlink-routerd)
-    ;;
-    *)
-    echo "Usage: $0 {start|stop}"
-    exit 1
+	start)
+		if grep -q telemetry=true /etc/datalink.conf; then
+			echo "Starting mavlink router daemon..."
+			mavlink-routerd &
+		else
+			echo "Telemetry service disabled in datalink.conf..."
+		fi
+		;;
+
+	stop)
+		echo "Stopping mavlink router daemon..."
+		killall -q mavlink-routerd
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
 esac

@@ -2,12 +2,12 @@
 
 DAEMON="mini_snmpd"
 PIDFILE="/var/run/$DAEMON.pid"
-SNMPD_ARGS="-n -4 -c openipc -D OpenIPC -C https://openipc.org -L Internet"
+DAEMON_ARGS="-n -4 -c openipc -D OpenIPC -C https://openipc.org -L Internet"
 
 start() {
-	printf "Starting $DAEMON: "
-	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $SNMPD_ARGS
-	if [ $? = 0 ]; then
+	echo -n "Starting $DAEMON: "
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
+	if [ $? -eq 0 ]; then
 		echo "OK"
 	else
 		echo "FAIL"
@@ -15,9 +15,10 @@ start() {
 }
 
 stop() {
-	printf "Stopping $DAEMON: "
+	echo -n "Stopping $DAEMON: "
 	start-stop-daemon -K -q -p "$PIDFILE"
-	if [ $? = 0 ]; then
+	if [ $? -eq 0 ]; then
+		rm -f "$PIDFILE"
 		echo "OK"
 	else
 		echo "FAIL"
@@ -26,7 +27,7 @@ stop() {
 
 case "$1" in
 	start|stop)
-		"$1"
+		$1
 		;;
 
 	restart|reload)

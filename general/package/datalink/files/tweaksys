@@ -12,7 +12,7 @@ basic() {
 	fw_setenv bootdelay 0
 
 	# free uart for telemetry
-	sed -i "s!console::respawn:/sbin/getty -L console 0 vt100 # GENERIC_SERIAL!#console::respawn:/sbin/getty -L console 0 vt100 # GENERIC_SERIAL!g" /etc/inittab
+	sed -i "s!console::respawn:/sbin/getty -L console 0 vt100!#console::respawn:/sbin/getty -L console 0 vt100!g" /etc/inittab
 
 	# tune socket buffer
 	echo "net.core.rmem_default=512000" >> /etc/sysctl.conf
@@ -43,9 +43,6 @@ hisi_goke() {
 
 streamer() {
 	if [ -f /usr/bin/majestic ]; then
-		# digital image stabilization
-		#cli -s .isp.dis true
-
 		cli -s .isp.slowShutter disabled
 		cli -s .image.contrast 50
 		cli -s .image.luminance 50
@@ -70,7 +67,6 @@ streamer() {
 		cli -s .hls.enabled false
 		cli -s .netip.enabled false
 		cli -s .jpeg.enabled false
-
 		cli -s .outgoing.enabled true
 		cli -s .outgoing.server udp://127.0.0.1:5600
 	fi
@@ -97,7 +93,7 @@ sigmastar() {
 	cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
 	cli -s .isp.exposure 5
 	cli -s .video0.codec h265
-  cli -s .video0.size 1920x1080
+	cli -s .video0.size 1920x1080
 	cli -s .video0.fps 60
 	cli -s .video0.rcMode cbr
 	cli -s .jpeg.enabled false
