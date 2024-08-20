@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-WIFIBROADCAST_VERSION = 23.08
+WIFIBROADCAST_VERSION = 24.08
 WIFIBROADCAST_SITE = $(call github,svpcom,wfb-ng,wfb-ng-$(WIFIBROADCAST_VERSION))
 WIFIBROADCAST_LICENSE = GPL-2.0
 
@@ -25,6 +25,7 @@ endef
 
 define WIFIBROADCAST_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 0755 -D $(@D)/wfb_tx $(TARGET_DIR)/usr/bin
+	$(INSTALL) -m 0755 -D $(@D)/wfb_tx_cmd $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 0755 -D $(@D)/wfb_rx $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 0755 -D $(@D)/wfb_keygen $(TARGET_DIR)/usr/bin
 
