@@ -1,17 +1,16 @@
 #!/bin/sh
-export SENSOR=$(fw_printenv -n sensor)
 
 DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
-MAJESTIC_ARGS="-s"
+DAEMON_ARGS="-s"
 
 start() {
 	ulimit -c unlimited
-	echo "/tmp/majestic.core" > /proc/sys/kernel/core_pattern
+	echo "/tmp/core.majestic" > /proc/sys/kernel/core_pattern
 
-	printf "Starting $DAEMON: "
-	start-stop-daemon -b -S -m -q -p "$PIDFILE" -x "/usr/bin/$DAEMON" -- $MAJESTIC_ARGS
-	if [ $? = 0 ]; then
+	echo -n "Starting $DAEMON: "
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
+	if [ $? -eq 0 ]; then
 		echo "OK"
 	else
 		echo "FAIL"
@@ -19,9 +18,9 @@ start() {
 }
 
 stop() {
-	printf "Stopping $DAEMON: "
+	echo -n "Stopping $DAEMON: "
 	start-stop-daemon -K -q -p "$PIDFILE"
-	if [ $? = 0 ]; then
+	if [ $? -eq 0 ]; then
 		rm -f "$PIDFILE"
 		echo "OK"
 	else
@@ -31,17 +30,17 @@ stop() {
 
 case "$1" in
 	start|stop)
-		"$1"
+		$1
 		;;
 
-	restart)
+	restart|reload)
 		stop
 		sleep 3
 		start
 		;;
 
 	*)
-		echo "Usage: $0 {start|stop|debug|restart}"
+		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1
 		;;
 esac

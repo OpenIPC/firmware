@@ -3,6 +3,15 @@
 case "$1" in
 	start)
 		echo "Loading vendor modules..."
-		load_"$(ipcinfo -v)" -i
+		vendor=$(ipcinfo -v)
+		load_"$vendor" -i
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
 		;;
 esac

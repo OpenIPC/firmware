@@ -3,7 +3,7 @@
 # OpenIPC.org | 2024
 #
 
-scr_version=1.0.40
+scr_version=1.0.41
 
 args=" $@"
 
@@ -106,7 +106,6 @@ free_resources() {
   sleep 1
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
-	/etc/init.d/S21rngd stop
 	/etc/init.d/S02klogd stop
 	/etc/init.d/S01syslogd stop
 	sleep 1

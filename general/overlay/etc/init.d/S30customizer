@@ -16,4 +16,12 @@ case "$1" in
 
 		check_mac
 		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
+		;;
 esac

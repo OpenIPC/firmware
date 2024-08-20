@@ -10,7 +10,7 @@ stop() {
 
 case "$1" in
 	start|stop)
-		"$1"
+		$1
 		;;
 
 	*)

@@ -4,6 +4,14 @@ case "$1" in
 	start)
 		echo "Starting mdev..."
 		echo /sbin/mdev > /proc/sys/kernel/hotplug
-		/sbin/mdev -s
+		mdev -s
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
 		;;
 esac

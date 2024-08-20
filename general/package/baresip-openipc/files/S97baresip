@@ -2,45 +2,40 @@
 
 DAEMON="baresip"
 PIDFILE="/var/run/$DAEMON.pid"
-
 DAEMON_ARGS="-f /etc/baresip"
 
 start() {
-	printf 'Starting %s: ' "$DAEMON"
+	echo -n "Starting $DAEMON: "
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
-	status=$?
-	if [ "$status" -eq 0 ]; then
+	if [ $? -eq 0 ]; then
 		echo "OK"
 	else
 		echo "FAIL"
 	fi
-	return "$status"
 }
 
 stop() {
-	printf 'Stopping %s: ' "$DAEMON"
+	echo -n "Stopping $DAEMON: "
 	start-stop-daemon -K -q -p "$PIDFILE"
-	status=$?
-	if [ "$status" -eq 0 ]; then
+	if [ $? -eq 0 ]; then
 		rm -f "$PIDFILE"
 		echo "OK"
 	else
 		echo "FAIL"
 	fi
-	return "$status"
-}
-
-restart() {
-	stop
-	sleep 1
-	start
 }
 
 case "$1" in
-	start|stop|restart)
-		"$1";;
-	reload)
-		restart;;
+	start|stop)
+		$1
+		;;
+	
+	restart|reload)
+		stop
+		sleep 1
+		start
+		;;
+
 	*)
 		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1

@@ -2,29 +2,13 @@
 
 DAEMON="dropbear"
 PIDFILE="/var/run/$DAEMON.pid"
-DROPBEAR_ARGS="-R -B -k -p 22 -K 300"
+DAEMON_ARGS="-R -B -k -p 22 -K 300"
 
 start() {
-	# If /etc/dropbear is a symlink to /var/run/dropbear, and
-	#   - the filesystem is RO (i.e. we can not rm the symlink),
-	#     create the directory pointed to by the symlink.
-	#   - the filesystem is RW (i.e. we can rm the symlink),
-	#     replace the symlink with an actual directory
-	if [ -L /etc/dropbear -a "$(readlink /etc/dropbear)" = "/var/run/dropbear" ]; then
-		if rm -f /etc/dropbear >/dev/null 2>&1; then
-			mkdir -p /etc/dropbear
-		else
-			echo "No persistent location to store SSH host keys. New keys will be"
-			echo "generated at each boot. Are you sure this is what you want to do?"
-			mkdir -p "$(readlink /etc/dropbear)"
-		fi
-	fi
-
-	printf "Starting $DAEMON: "
+	echo -n "Starting $DAEMON: "
 	umask 077
-
-	start-stop-daemon -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" -- $DROPBEAR_ARGS
-	if [ $? = 0 ]; then
+	start-stop-daemon -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
+	if [ $? -eq 0 ]; then
 		echo "OK"
 	else
 		echo "FAIL"
@@ -32,9 +16,10 @@ start() {
 }
 
 stop() {
-	printf "Stopping $DAEMON: "
+	echo -n "Stopping $DAEMON: "
 	start-stop-daemon -K -q -p "$PIDFILE"
-	if [ $? = 0 ]; then
+	if [ $? -eq 0 ]; then
+		rm -f "$PIDFILE"
 		echo "OK"
 	else
 		echo "FAIL"
@@ -43,7 +28,7 @@ stop() {
 
 case "$1" in
 	start|stop)
-		"$1"
+		$1
 		;;
 
 	restart|reload)
