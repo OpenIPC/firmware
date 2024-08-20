@@ -7,7 +7,7 @@ for i in /etc/init.d/S??*; do
 	[ ! -f "$i" ] && continue
 	case "$i" in
 		*)
-			$i start
+			$i start | logger -s
 			;;
 	esac
 done
