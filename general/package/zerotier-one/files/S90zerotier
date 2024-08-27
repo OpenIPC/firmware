@@ -1,18 +1,17 @@
 #!/bin/sh
 
-config_file=/etc/webui/zerotier.conf
-if [ -e "$config_file" ]; then
-	. $config_file
+if [ -e /etc/zerotier.conf ]; then
+	. /etc/zerotier.conf
 fi
 
 case "$1" in
 	start)
-		if [ "$zerotier_enabled" = "true" ]; then
+		if [ "$enabled" = "true" ]; then
 			echo "Starting zerotier-one daemon..."
 			modprobe tun
 			zerotier-one -d
 		else
-			echo "Zerotier-One service is disabled in ${config_file}."
+			echo "Zerotier-One service is disabled in /etc/zerotier.conf."
 			exit 1
 		fi
 		;;
