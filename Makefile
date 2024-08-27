@@ -62,7 +62,7 @@ distclean:
 
 deps:
 	sudo apt-get install -y automake autotools-dev bc build-essential cpio \
-		curl file fzf git libncurses-dev libtool lzop make rsync unzip wget
+		curl file fzf git libncurses-dev libtool lzop make rsync unzip wget libssl-dev
 
 timer:
 	@echo - Build time: $(shell date -d @$(shell expr $(shell date +%s) - $(TIMER)) -u +%M:%S)
