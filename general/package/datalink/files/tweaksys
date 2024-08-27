@@ -113,6 +113,9 @@ case "$1" in
 			#cli -s .isp.sensorConfig /etc/sensors/60fps/720p_imx307_i2c_2l.ini
 		fi
 
+		# force set totalmem size
+		fw_setenv totalmem 64M
+
 		# fix osmem in bootargs
 		bootargs=$(fw_printenv -n bootargs)
 		if echo "$bootargs" | grep -q "32M"; then
@@ -132,6 +135,9 @@ case "$1" in
 
 	gk7205v300 | hi3516ev300)
 		echo "Preparing system tweaks for $chip..."
+
+		# force set totalmem size
+		fw_setenv totalmem 128M
 
 		# increase osmem
 		mem=$(fw_printenv -n osmem) && [ "$mem" = "32M" ] && fw_setenv osmem 64M && set_allocator cma || echo "Memory allocated for the system:" "$mem"
