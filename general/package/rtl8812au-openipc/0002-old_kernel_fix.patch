@@ -1,7 +1,7 @@
 diff -Naur a/os_dep/linux/ioctl_cfg80211.c b/os_dep/linux/ioctl_cfg80211.c
---- a/os_dep/linux/ioctl_cfg80211.c	2023-12-28 04:55:44.047232205 +0300
-+++ b/os_dep/linux/ioctl_cfg80211.c	2023-12-28 04:58:01.223544721 +0300
-@@ -4921,6 +4921,7 @@
+--- a/os_dep/linux/ioctl_cfg80211.c	2024-08-27 14:35:02.331289685 +0300
++++ b/os_dep/linux/ioctl_cfg80211.c	2024-08-27 14:37:53.039690680 +0300
+@@ -4937,6 +4937,7 @@
        //RTW_INFO("%s dvobj null\n", __func__);
      }
      switch(pHalData->current_channel_bw){
@@ -9,7 +9,7 @@ diff -Naur a/os_dep/linux/ioctl_cfg80211.c b/os_dep/linux/ioctl_cfg80211.c
        case CHANNEL_WIDTH_5:
  	//RTW_INFO("%s width 5\n", __func__);
  	width = NL80211_CHAN_WIDTH_5;
-@@ -4931,6 +4932,7 @@
+@@ -4947,6 +4948,7 @@
  	width = NL80211_CHAN_WIDTH_10;
  	center_freq = control_freq;
  	break;
@@ -18,8 +18,8 @@ diff -Naur a/os_dep/linux/ioctl_cfg80211.c b/os_dep/linux/ioctl_cfg80211.c
  	//RTW_INFO("%s width 20\n", __func__);
  	width = NL80211_CHAN_WIDTH_20;
 diff -Naur a/os_dep/linux/wifi_regd.c b/os_dep/linux/wifi_regd.c
---- a/os_dep/linux/wifi_regd.c	2023-11-08 03:19:52.064089100 +0300
-+++ b/os_dep/linux/wifi_regd.c	2023-12-28 04:57:52.047523712 +0300
+--- a/os_dep/linux/wifi_regd.c	2024-08-27 14:35:13.051313467 +0300
++++ b/os_dep/linux/wifi_regd.c	2024-08-27 14:38:18.297753594 +0300
 @@ -334,11 +334,11 @@
  				if (ch)
  					ch->flags &= ~(IEEE80211_CHAN_DISABLED|IEEE80211_CHAN_NO_HT40PLUS|
