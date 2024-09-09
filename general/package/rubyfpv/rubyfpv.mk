@@ -29,6 +29,8 @@ define RUBYFPV_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/root/ruby/licenses
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/root/ruby/licenses $(@D)/licenses/*
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/firmware/ath9k_htc
+	cp $(RUBYFPV_PKGDIR)/files/htc_9271.fw.3 $(TARGET_DIR)/lib/firmware/ath9k_htc 
 endef
 
 $(eval $(generic-package))
