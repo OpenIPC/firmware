@@ -17,6 +17,7 @@ if ! grep -q 'root=.*nfs\|mmcblk\|ram' /proc/cmdline; then
 		mtdblkdev=$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd | sed 's/mtd/mtdblock/')
 		mtdchrdev=$(grep 'rootfs_data' /proc/mtd | cut -d: -f1)
 		if ! mount -t jffs2 /dev/$mtdblkdev /overlay || dmesg | grep -q "jffs2.*: Magic bitmask.*not found"; then
+			mountpoint -q /overlay && umount /overlay
 			echo "Formatting flash..."
 			grep -q 'nand' /proc/cmdline || jffs2="-j"
 			flash_eraseall $jffs2 /dev/$mtdchrdev
