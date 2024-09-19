@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-ZEROTIER_ONE_VERSION = 1.14.0
+ZEROTIER_ONE_VERSION = 1.14.1
 ZEROTIER_ONE_SITE = $(call github,zerotier,ZeroTierOne,$(ZEROTIER_ONE_VERSION))
 
 ZEROTIER_ONE_LICENSE = BUSL-1.1

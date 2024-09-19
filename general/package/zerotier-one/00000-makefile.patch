@@ -1,5 +1,5 @@
---- a/make-linux.mk	2024-05-07 15:30:36.796169232 +0300
-+++ b/make-linux.mk	2024-05-07 15:30:18.156127097 +0300
+--- a/make-linux.mk	2024-09-19 15:35:10.221093737 +0300
++++ b/make-linux.mk	2024-09-19 16:33:05.452310051 +0300
 @@ -26,7 +26,7 @@
  # otherwise build into binary as done on Mac and Windows.
  ONE_OBJS+=osdep/PortMapper.o
@@ -28,7 +28,7 @@
 -	CXXFLAGS?=-O3 -fstack-protector
 +	CXXFLAGS?=-Os -latomic
  	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
--	LDFLAGS=-pie -Wl,-z,relro,-z,now
+-	LDFLAGS?=-pie -Wl,-z,relro,-z,now
 +	LDFLAGS=
  	ZT_CARGO_FLAGS=--release
  endif
@@ -42,7 +42,7 @@
  endif
  
  # For building an official semi-static binary on CentOS 7
-@@ -334,13 +334,14 @@
+@@ -334,13 +334,13 @@
  
  # ARM32 hell -- use conservative CFLAGS
  ifeq ($(ZT_ARCHITECTURE),3)
@@ -53,7 +53,6 @@
 +		override CFLAGS+=-mfloat-abi=hard -mfpu=vfp -marm -mno-unaligned-access
 +		override CXXFLAGS+=-mfloat-abi=hard -mfpu=vfp -marm -fexceptions -mno-unaligned-access
  		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
-+
  	else
 -		override CFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
 -		override CXXFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -fexceptions -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
@@ -62,7 +61,7 @@
  		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
  	endif
  endif
-@@ -360,8 +361,8 @@
+@@ -360,11 +360,11 @@
  endif
  
  # Position Independence
@@ -72,8 +71,12 @@
 +override CXXFLAGS+=-flto
  
  # Non-executable stack
- override ASFLAGS+=--noexecstack
-@@ -388,7 +389,7 @@
+-override LDFLAGS+=-Wl,-z,noexecstack
++override ASFLAGS+=--noexecstack
+ 
+ .PHONY: all
+ all:	one
+@@ -388,7 +388,7 @@
  $(ONE_OBJS): zeroidc smeeclient
  
  libzerotiercore.a:	FORCE
