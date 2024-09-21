@@ -1,6 +1,6 @@
 RUBYFPV_SITE_METHOD = git
 RUBYFPV_SITE = https://github.com/PetruSoroaga/RubyFPV
-RUBYFPV_VERSION = cfa96e53747c795f0cf07b866580e5e2fede05ff
+RUBYFPV_VERSION = 948b08a07703f3716850a93aa3b39e19ba08aec3
 
 RUBYFPV_DEPENDENCIES += libpcap iw
 
@@ -29,6 +29,8 @@ define RUBYFPV_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/root/ruby/licenses
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/root/ruby/licenses $(@D)/licenses/*
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/firmware/ath9k_htc
+	cp $(RUBYFPV_PKGDIR)/files/htc_9271.fw.3 $(TARGET_DIR)/lib/firmware/ath9k_htc 
 endef
 
 $(eval $(generic-package))
