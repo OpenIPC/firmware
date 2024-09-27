@@ -48,6 +48,14 @@ if [ "$1" = "mt7601u-gk7205v200-camhi" ]; then
 	exit 0
 fi
 
+# GK7205V300 CamHi
+if [ "$1" = "mt7601u-gk7205v300-camhi" ]; then
+	devmem 0x100C0080 32 0x530
+	set_gpio 7 0
+	modprobe mt7601u
+	exit 0
+fi
+
 # GK7205V200 CamHi
 if [ "$1" = "rtl8733bu-gk7205v200-camhi" ]; then
 	set_gpio 9 0
