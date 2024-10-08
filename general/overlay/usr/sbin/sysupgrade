@@ -3,7 +3,7 @@
 # OpenIPC.org | 2024
 #
 
-scr_version=1.0.41
+scr_version=1.0.42
 
 args=" $@"
 
@@ -93,8 +93,8 @@ download_firmware() {
 	[ -z "$url" ] && url=$(fw_printenv -n upgrade || echo "https://github.com/OpenIPC/firmware/releases/download/${branch}/openipc.${build}.tgz")
 	echo "Download from $url"
 	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
-	[ "$(curl -o /dev/null -s -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
-	curl --connect-timeout 30 -s -m 120 -L "$url" ${progress} -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+	[ "$(curl -o /dev/null -s -k -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
+	curl --connect-timeout 30 -s -k -m 120 -L "$url" ${progress} -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 	fi
