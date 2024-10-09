@@ -116,6 +116,18 @@ start_gs_wfb() {
 	wfb_rx -c "$udp_addr" -u "$udp_port" -p "$stream" -K "$keydir/$unit.key" -i "$link_id" "$wlan" > /dev/null &
 }
 
+start_tunnel_wfb() {
+	if [ ! -e /usr/bin/tunnel_rx ] || [ ! -e /usr/bin/tunnel_tx ]; then
+		ln -fs /usr/bin/wfb_rx /usr/bin/tunnel_rx
+		ln -fs /usr/bin/wfb_tx /usr/bin/tunnel_tx
+	fi
+
+	tunnel_rx -p 160 -u 5800 -K "$keydir/$unit.key" -i "$link_id" "$wlan" > /dev/null &
+	tunnel_tx -p 32 -u 5801 -K "$keydir/$unit.key" -M "$mcs_index" -S "$stbc" -L "$ldpc" \
+		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" > /dev/null &
+	wfb_tun -a 10.5.0.10/24 > /dev/null &
+}
+
 case "$1" in
 	start)
 		if [ "$daemon" -eq 1 ]; then
@@ -132,14 +144,18 @@ case "$1" in
 
 			if [ "$telemetry" = "true" ]; then
 				if [ "$chip" = "gk7205v200" ]; then
-					devmem 0x120c0010 32 0x1e04
+					devmem 0x120C0010 32 0x1E04
 				elif [ "$chip" = "ssc33x" ]; then
 					devmem 0x1F207890 16 0x8
 				fi
 				telemetry start
 			fi
+
+			if [ "$tunnel" = "true" ]; then
+				start_tunnel_wfb
+			fi
 		else
-			echo "Wifibroadcast service disabled in wfb.conf."
+			echo "Wifibroadcast service disabled in wfb.conf"
 		fi
 		;;
 
@@ -147,10 +163,16 @@ case "$1" in
 		echo "Stopping wifibroadcast service..."
 		killall -q wfb_tx
 		killall -q wfb_rx
-		killall -q telemetry_rx
-		killall -q telemetry_tx
-		killall -q mavlink-routerd
-		killall -q mavfwd
+
+		if [ "$telemetry" = "true" ]; then
+			telemetry stop
+		fi
+
+		if [ "$tunnel" = "true" ]; then
+			killall -q tunnel_rx
+			killall -q tunnel_tx
+			killall -q wfb_tun
+		fi
 		;;
 
 	*)
