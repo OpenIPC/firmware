@@ -4,11 +4,13 @@ wfb_key=/etc/drone.key
 
 if [ -e /etc/wfb.conf ]; then
 	. /etc/wfb.conf
+else
+	echo "Configuration file not found"
+	exit 1
 fi
 
 load_modules() {
-	devices=$(lsusb | cut -d ' ' -f6 | sort | uniq)
-	for card in $devices; do
+	for card in $(lsusb | awk '{print $6}' | sort | uniq); do
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
 				driver="88XXau"
@@ -28,20 +30,11 @@ load_modules() {
 	done
 
 	if [ -z "$driver" ]; then
-		echo "Wireless module not detected, check the usb connection."
+		echo "Wireless module not detected, check the usb connection"
 		exit 1
 	else
 		echo "Detected driver: $driver"
 	fi
-
-	while ! ifconfig -a | grep -q "$wlan"; do
-		if [ "$n" -ge 5 ]; then
-			echo "No interface for $wlan, check the usb connection."
-			exit 1
-		fi
-		sleep 0.5
-		n=$((n + 1))
-	done
 }
 
 load_interface() {
@@ -63,14 +56,9 @@ start_wfb() {
 }
 
 start_tunnel() {
-	if [ ! -e /usr/bin/tunnel_rx ] || [ ! -e /usr/bin/tunnel_tx ]; then
-		ln -fs /usr/bin/wfb_rx /usr/bin/tunnel_rx
-		ln -fs /usr/bin/wfb_tx /usr/bin/tunnel_tx
-	fi
-
 	echo "Starting wfb_tun"
-	tunnel_rx -p 160 -u 5800 -K "$wfb_key" -i "$link_id" "$wlan" &> /dev/null &
-	tunnel_tx -p 32 -u 5801 -K "$wfb_key" -M "$mcs_index" -S "$stbc" -L "$ldpc" \
+	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$link_id" "$wlan" &> /dev/null &
+	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$mcs_index" -S "$stbc" -L "$ldpc" \
 		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" &> /dev/null &
 	wfb_tun -a 10.5.0.10/24 > /dev/null &
 }
@@ -82,9 +70,15 @@ start_telemetry() {
 		devmem 0x1F207890 16 0x8
 	fi
 
-	echo "Starting mavfwd"
-	mavfwd --channels "$channels" --master "$serial" --baudrate "$baud" -p 100 -t -a "$aggregate" \
-		--out 10.5.0.1:14550 --in 0.0.0.0:14551 > /dev/null &
+	if [ "$router" -eq 2 ]; then
+		echo "Starting msposd"
+		msposd --master "$serial" --baudrate "$baud" --channels "$channels" \
+			-osd -r "$fps" --ahi 0 --out 10.5.0.1:"$port_tx" > /dev/null &
+	else
+		echo "Starting mavfwd"
+		mavfwd --master "$serial" --baudrate "$baud" --channels "$channels" -p 100 -t \
+			-a 15 --in 0.0.0.0:"$port_rx" --out 10.5.0.1:"$port_tx" > /dev/null &
+	fi
 }
 
 case "$1" in
@@ -103,11 +97,10 @@ case "$1" in
 		;;
 
 	stop)
-		killall -q wfb_tx
 		killall -q wfb_rx
+		killall -q wfb_tx
 		killall -q wfb_tun
-		killall -q tunnel_rx
-		killall -q tunnel_tx
+		killall -q msposd
 		killall -q mavfwd
 		;;
 
