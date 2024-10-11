@@ -1,0 +1,18 @@
+#!/bin/sh
+
+case "$1" in
+	start)
+		echo "Starting wifibroadcast..."
+		wifibroadcast start
+		;;
+
+	stop)
+		echo "Stopping wifibroadcast..."
+		wifibroadcast stop
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac
