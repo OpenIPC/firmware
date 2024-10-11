@@ -15,7 +15,7 @@ sigmastar() {
 	cli -s .video0.rcMode cbr
 	cli -s .jpeg.enabled false
 	cli -s .outgoing.enabled true
-	cli -s .outgoing.server udp://127.0.0.1:5600
+	cli -s .outgoing.server udp://0.0.0.0:5600
 }
 
 case "$1" in
