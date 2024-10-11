@@ -56,4 +56,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: images
+          make_latest: false
           files: images/*.bin
