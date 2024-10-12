@@ -16,14 +16,14 @@ endef
 
 define WIFIBROADCAST_NG_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
-	$(INSTALL) -m 644 -D $(WIFIBROADCAST_NG_PKGDIR)/files/drone.key $(TARGET_DIR)/etc
-	$(INSTALL) -m 644 -D $(WIFIBROADCAST_NG_PKGDIR)/files/wfb.conf $(TARGET_DIR)/etc
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(WIFIBROADCAST_NG_PKGDIR)/files/drone.key
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(WIFIBROADCAST_NG_PKGDIR)/files/wfb.conf
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
-	$(INSTALL) -m 755 -D $(@D)/wfb_rx $(TARGET_DIR)/usr/bin
-	$(INSTALL) -m 755 -D $(@D)/wfb_tx $(TARGET_DIR)/usr/bin
-	$(INSTALL) -m 755 -D $(@D)/wfb_tun $(TARGET_DIR)/usr/bin
-	$(INSTALL) -m 755 -D $(WIFIBROADCAST_NG_PKGDIR)/files/wifibroadcast $(TARGET_DIR)/usr/bin
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/wfb_rx
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/wfb_tx
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/wfb_tun
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(WIFIBROADCAST_NG_PKGDIR)/files/wifibroadcast
 endef
 
 $(eval $(generic-package))
