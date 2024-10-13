@@ -22,7 +22,7 @@ else
 endif
 
 define MSPOSD_BUILD_CMDS
-	$(MAKE) CC=$(TARGET_CC) DRV=$(MSPOSD_OSDRV)/files/lib $(MSPOSD_FAMILY) -C $(@D)
+	$(MAKE) CC=$(TARGET_CC) DRV=$(MSPOSD_OSDRV)/files/lib $(MSPOSD_FAMILY) OUTPUT=$(@D) -C $(@D)
 endef
 
 define MSPOSD_INSTALL_TARGET_CMDS
