@@ -25,7 +25,6 @@ hisi_goke() {
 	fi
 
 	# remove unneeded modules
-	sed -i "s!insmod ${prefix}_rgn.ko!#insmod ${prefix}_rgn.ko!g" "/usr/bin/load_${vendor}"
 	sed -i "s!insmod ${prefix}_jpege.ko!#insmod ${prefix}_jpege.ko!g" "/usr/bin/load_${vendor}"
 	sed -i "s!insmod ${prefix}_ive.ko save_power=0!#insmod ${prefix}_ive.ko save_power=0!g" "/usr/bin/load_${vendor}"
 	sed -i "s!insmod ${prefix}_aio.ko!#insmod ${prefix}_aio.ko!g" "/usr/bin/load_${vendor}"
