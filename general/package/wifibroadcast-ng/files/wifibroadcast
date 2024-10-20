@@ -1,0 +1,111 @@
+#!/bin/sh
+wfb_soc=$(ipcinfo -c)
+wfb_key=/etc/drone.key
+
+if [ -e /etc/wfb.conf ]; then
+	. /etc/wfb.conf
+else
+	echo "Configuration file not found"
+	exit 1
+fi
+
+load_modules() {
+	for card in $(lsusb | awk '{print $6}' | sort | uniq); do
+		case "$card" in
+			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
+				driver="88XXau"
+				modprobe 88XXau rtw_tx_pwr_idx_override="$driver_txpower_override"
+				;;
+
+			"0bda:a81a")
+				driver="8812eu"
+				modprobe 8812eu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+				;;
+
+			"0bda:f72b")
+				driver="8733bu"
+				modprobe 8733bu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+				;;
+		esac
+	done
+
+	if [ -z "$driver" ]; then
+		echo "Wireless module not detected, check the usb connection"
+		exit 1
+	else
+		echo "Detected driver: $driver"
+	fi
+}
+
+load_interface() {
+	ifconfig "$wlan" up
+	iwconfig "$wlan" mode monitor
+
+	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
+		iw dev "$wlan" set txpower fixed $((driver_txpower_override * 50))
+	fi
+
+	iw reg set "$region"
+	iwconfig "$wlan" channel "$channel"
+}
+
+start_wfb() {
+	echo "Starting wfb_tx"
+	wfb_tx -p "$stream" -R "$rcv_buf" -K "$wfb_key" -B "$bandwidth" -M "$mcs_index" -C 8000 \
+		-S "$stbc" -L "$ldpc" -k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" &> /dev/null &
+}
+
+start_tunnel() {
+	echo "Starting wfb_tun"
+	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$link_id" "$wlan" &> /dev/null &
+	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$mcs_index" -S "$stbc" -L "$ldpc" \
+		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" &> /dev/null &
+	wfb_tun -a 10.5.0.10/24 > /dev/null &
+}
+
+start_telemetry() {
+	if [ "$wfb_soc" = "gk7205v200" ]; then
+		devmem 0x120C0010 32 0x1E04
+	elif [ "$wfb_soc" = "ssc33x" ]; then
+		devmem 0x1F207890 16 0x8
+	fi
+
+	if [ "$router" -eq 2 ]; then
+		echo "Starting msposd"
+		msposd --master "$serial" --baudrate "$baud" --channels "$channels" \
+			-osd -r "$fps" --ahi 0 --out 10.5.0.1:"$port_tx" > /dev/null &
+	else
+		echo "Starting mavfwd"
+		mavfwd --master "$serial" --baudrate "$baud" --channels "$channels" -p 100 -t \
+			-a 15 --in 0.0.0.0:"$port_rx" --out 10.5.0.1:"$port_tx" > /dev/null &
+	fi
+}
+
+case "$1" in
+	start)
+		if [ ! -e /etc/system.ok ]; then
+			echo "Preparing system tweaks for $wfb_soc..."
+			tweaksys "$wfb_soc"
+		fi
+
+		load_modules
+		load_interface
+
+		start_wfb
+		start_tunnel
+		start_telemetry
+		;;
+
+	stop)
+		killall -q wfb_rx
+		killall -q wfb_tx
+		killall -q wfb_tun
+		killall -q msposd
+		killall -q mavfwd
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac

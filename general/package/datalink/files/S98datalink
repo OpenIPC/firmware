@@ -6,6 +6,29 @@ if [ -e /etc/datalink.conf ]; then
 	. /etc/datalink.conf
 fi
 
+start_lte() {
+	echo "Starting fpv datalink..."
+	if [ "$usb_modem" = "true" ]; then
+		echo "Starting lte modem configuration..."
+	fi
+
+	if [ "$use_zt" = "true" ]; then
+		echo "Starting ZeroTier-One daemon..."
+		zerotier-one -d &
+		if [ ! -f "/var/lib/zerotier-one/networks.d/$zt_netid.conf" ]; then
+			sleep 8
+			zerotier-cli join "$zt_netid" > /dev/null
+			echo "Don't forget to authorize my.zerotier.com!"
+		fi
+	fi
+
+	if [ "$telemetry" = "true" ]; then
+		telemetry start
+	fi
+
+	exit 0
+}
+
 case "$1" in
 	start)
 		if [ -n "$(fw_printenv -n wlandev)" ]; then
@@ -16,39 +39,17 @@ case "$1" in
 			tweaksys "$chip"
 		fi
 
-		echo "Starting fpv datalink..."
 		if [ "$fw" = "lte" ]; then
-			if [ "$usb_modem" = "true" ]; then
-				echo "Starting lte modem configuration..."
-			fi
-
-			if [ "$use_zt" = "true" ]; then
-				echo "Starting ZeroTier-One daemon..."
-				/usr/sbin/zerotier-one -d &
-				if [ ! -f "/var/lib/zerotier-one/networks.d/$zt_netid.conf" ]; then
-					sleep 8
-					zerotier-cli join "$zt_netid" > /dev/null
-					echo "Don't forget to authorize my.zerotier.com!"
-				fi
-			fi
-
-			if [ "$telemetry" = "true" ]; then
-				telemetry start
-			fi
-		else
-			echo "Starting wifibroadcast service..."
-			wifibroadcast start
+			start_lte
 		fi
+	
+		echo "Starting wifibroadcast service..."
+		wifibroadcast start
 		;;
 
 	stop)
-		echo "Stopping fpv datalink service..."
-		killall -q wfb_tx
-		killall -q wfb_rx
-		killall -q telemetry_rx
-		killall -q telemetry_tx
-		killall -q mavlink-routerd
-		killall -q mavfwd
+		echo "Stopping wifibroadcast service..."
+		wifibroadcast stop
 		;;
 
 	*)

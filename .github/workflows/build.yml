@@ -4,7 +4,7 @@ on:
     branches:
       - master
   schedule:
-    - cron: '30 23 * * *'
+    - cron: '30 22 * * *'
   workflow_dispatch:
 
 env:
@@ -37,6 +37,7 @@ jobs:
 
           # Sigmastar [I6C]
           - {"platform": "ssc377", "release": "lite"}
+          - {"platform": "ssc377d", "release": "lite"}
           - {"platform": "ssc377de", "release": "lite"}
           - {"platform": "ssc378de", "release": "lite"}
 

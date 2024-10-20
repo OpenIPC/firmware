@@ -25,7 +25,6 @@ hisi_goke() {
 	fi
 
 	# remove unneeded modules
-	sed -i "s!insmod ${prefix}_rgn.ko!#insmod ${prefix}_rgn.ko!g" "/usr/bin/load_${vendor}"
 	sed -i "s!insmod ${prefix}_jpege.ko!#insmod ${prefix}_jpege.ko!g" "/usr/bin/load_${vendor}"
 	sed -i "s!insmod ${prefix}_ive.ko save_power=0!#insmod ${prefix}_ive.ko save_power=0!g" "/usr/bin/load_${vendor}"
 	sed -i "s!insmod ${prefix}_aio.ko!#insmod ${prefix}_aio.ko!g" "/usr/bin/load_${vendor}"
@@ -87,6 +86,7 @@ finish() {
 }
 
 sigmastar() {
+	sed -i "s|tunnel=false|tunnel=true|g" /etc/datalink.conf
 	sed -i "s|serial=/dev/ttyAMA0|serial=/dev/ttyS2|g" /etc/telemetry.conf
 	sed -i "s|Device = /dev/ttyAMA0|Device = /dev/ttyS2|g" /etc/mavlink.conf
 

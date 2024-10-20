@@ -10,9 +10,9 @@ if [ -e /etc/telemetry.conf ]; then
 	. /etc/telemetry.conf
 fi
 
-if [ ! -f /usr/bin/telemetry_rx ] && [ ! -f /usr/bin/telemetry_tx ]; then
-	ln -s /usr/bin/wfb_rx /usr/bin/telemetry_rx
-	ln -s /usr/bin/wfb_tx /usr/bin/telemetry_tx
+if [ ! -e /usr/bin/telemetry_rx ] || [ ! -e /usr/bin/telemetry_tx ]; then
+	ln -fs /usr/bin/wfb_rx /usr/bin/telemetry_rx
+	ln -fs /usr/bin/wfb_tx /usr/bin/telemetry_tx
 fi
 
 start_drone_telemetry() {
@@ -39,9 +39,15 @@ case "$1" in
 		if [ "$router" -eq 1 ] || [ "$fw" = "lte" ]; then
 			mavlink-routerd -c /etc/mavlink.conf > /dev/null 2>&1 &
 		else
-			mavfwd --channels "$channels" --master "$serial" --baudrate "$baud" -p 100 -t -a "$aggregate" \
-				--out 127.0.0.1:$port_tx --in 127.0.0.1:$port_rx > /dev/null &
+			if [ "$router" -eq 2  ]; then
+				msposd --master "$serial" --baudrate "$baud" --channels "$channels" \
+					--out 127.0.0.1:14555 -osd -r "$fps" --ahi "$ahi" > /dev/null &
+			else
+				mavfwd --channels "$channels" --master "$serial" --baudrate "$baud" -p 100 -t -a "$aggregate" \
+					--out 127.0.0.1:$port_tx --in 127.0.0.1:$port_rx > /dev/null &
+			fi
 		fi
+	
 		if [ "$fw" = "fpv" ] || [ "$fw" = "venc" ]; then
 			start_${unit}_telemetry
 		fi
@@ -53,6 +59,7 @@ case "$1" in
 		killall -q telemetry_tx
 		killall -q mavlink-routerd
 		killall -q mavfwd
+		killall -q msposd
 		;;
 
 	*)
