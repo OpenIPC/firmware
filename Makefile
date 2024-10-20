@@ -1,10 +1,10 @@
-BR_VER = 2024.02.1
+BR_VER = 2024.02.6
 BR_MAKE = $(MAKE) -C $(TARGET)/buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
 BR_LINK = https://github.com/buildroot/buildroot/archive
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
 TARGET ?= $(PWD)/output
 
-CONFIG = $(error variable BOARD is not defined)
+CONFIG = $(error variable BOARD not defined)
 TIMER := $(shell date +%s)
 
 ifeq ($(or $(MAKECMDGOALS), $(BOARD)),)
@@ -28,8 +28,9 @@ br-%: defconfig
 	@$(BR_MAKE) $(subst br-,,$@)
 
 defconfig: prepare
-	@echo --- $(or $(CONFIG),$(error variable BOARD is not found))
-	@$(BR_MAKE) BR2_DEFCONFIG=$(PWD)/$(CONFIG) defconfig
+	@echo --- $(or $(CONFIG),$(error variable BOARD not found))
+	@cat $(CONFIG) $(PWD)/general/openipc.fragment > $(TARGET)/openipc_defconfig
+	@$(BR_MAKE) BR2_DEFCONFIG=$(TARGET)/openipc_defconfig defconfig
 
 prepare:
 	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
@@ -49,10 +50,10 @@ list:
 	@ls -1 br-ext-chip-*/configs
 
 package:
-	@find general/package/* -maxdepth 0 -type d -printf "br-%f\n" | grep -v patch
+	@find $(PWD)/general/package/* -maxdepth 0 -type d -printf "br-%f\n" | grep -v patch
 
 toolname:
-	@general/scripts/show_toolchains.sh $(CONFIG)
+	@$(PWD)/general/scripts/show_toolchains.sh $(CONFIG)
 
 clean:
 	@rm -rf $(TARGET)/build $(TARGET)/images $(TARGET)/per-package $(TARGET)/target
