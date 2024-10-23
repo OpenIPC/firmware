@@ -29,6 +29,12 @@ if [ "$1" = "rtl8733bu-generic" ]; then
 	exit 0
 fi
 
+# Generic RTL8811CU
+if [ "$1" = "rtl8811cu-generic" ]; then
+	modprobe 8821cu
+	exit 0
+fi
+
 # Generic RTL8812AU
 if [ "$1" = "rtl8812au-generic" ]; then
 	modprobe 88XXau rtw_ht_enable=0 rtw_led_enable=0
