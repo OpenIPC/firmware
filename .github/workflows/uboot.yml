@@ -10,7 +10,7 @@ jobs:
       - name: Prepare
         run: |
           sudo apt-get update
-          sudo apt-get install gcc-arm-linux-gnueabi gcc-mipsel-linux-gnu u-boot-tools lzop
+          sudo apt-get install gcc-arm-linux-gnueabi gcc-mipsel-linux-gnu u-boot-tools lzop gnutls-dev lzma-alone
 
       - name: Allwinner
         run: |
@@ -35,6 +35,5 @@ jobs:
         with:
           tag_name: latest
           files: |
-            u-boot-ingenic/output/*-nor.bin
-            u-boot-sigmastar/output/*-nor.bin
-            u-boot-sigmastar/output/*-nand.bin
+            u-boot-*/output/*-nor.bin
+            u-boot-*/output/*-nand.bin
