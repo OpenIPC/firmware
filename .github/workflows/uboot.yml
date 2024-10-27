@@ -12,15 +12,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install gcc-arm-linux-gnueabi gcc-mipsel-linux-gnu u-boot-tools lzop
 
+      - name: Allwinner
+        run: |
+          git clone https://github.com/openipc/u-boot-allwinner --depth 1
+          cd u-boot-allwinner
+          bash build.sh
+
       - name: Ingenic
         run: |
-          git clone https://github.com/openipc/u-boot-ingenic.git --depth 1
+          git clone https://github.com/openipc/u-boot-ingenic --depth 1
           cd u-boot-ingenic
           bash build.sh
 
       - name: Sigmastar
         run: |
-          git clone https://github.com/openipc/u-boot-sigmastar.git --depth 1
+          git clone https://github.com/openipc/u-boot-sigmastar --depth 1
           cd u-boot-sigmastar
           bash build.sh
 
