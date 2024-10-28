@@ -26,6 +26,12 @@ if [ "$1" = "rtl8189fs-generic" ]; then
 	exit 0
 fi
 
+# Generic XR829
+if [ "$1" = "xr829-generic" ]; then
+	modprobe xradio_wlan
+	exit 0
+fi
+
 # T20 Wyze PanV1
 if [ "$1" = "rtl8189es-t20-wyze-pan-v1" ]; then
 	set_mmc 1
