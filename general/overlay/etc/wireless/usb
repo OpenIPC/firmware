@@ -78,6 +78,7 @@ fi
 
 # GK7205V300 CamHi
 if [ "$1" = "rtl8733bu-gk7205v300-camhi" ]; then
+	devmem 0x100c0080 32 0x0
 	set_gpio 7 0
 	modprobe 8733bu
 	exit 0
@@ -88,6 +89,14 @@ if [ "$1" = "atbm603x-gk7205v300-xm-g6s" ]; then
   devmem 0x100C0080 32 0x530
   set_gpio 7 0
 	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
+# GK7205V300 Vase
+if [ "$1" = "rtl8811cu-gk7205v300-vase" ]; then
+	devmem 0x100c0080 32 0x0
+	set_gpio 7 1
+	modprobe 8821cu
 	exit 0
 fi
 
