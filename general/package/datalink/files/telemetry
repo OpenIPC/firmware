@@ -16,12 +16,14 @@ if [ ! -e /usr/bin/telemetry_rx ] || [ ! -e /usr/bin/telemetry_tx ]; then
 fi
 
 start_drone_telemetry() {
-	if [ "$one_way" = "false" ]; then
-		telemetry_rx -p "$stream_rx" -u "$port_rx" -K "$keydir/$unit.key" -i "$link_id" "$wlan" > /dev/null &
+	if [ "$router" -lt 2  ]; then
+		if [ "$one_way" = "false" ]; then
+			telemetry_rx -p "$stream_rx" -u "$port_rx" -K "$keydir/$unit.key" -i "$link_id" "$wlan" > /dev/null &
+		fi
+		telemetry_tx -p "$stream_tx" -u "$port_tx" -K "$keydir/$unit.key" -B "$bandwidth" \
+			-M "$mcs_index" -S "$stbc" -L "$ldpc" -G "$guard_interval" -k "$fec_k" -n "$fec_n" \
+			-T "$pool_timeout" -i "$link_id" -f "$frame_type" "$wlan" > /dev/null &
 	fi
-	telemetry_tx -p "$stream_tx" -u "$port_tx" -K "$keydir/$unit.key" -B "$bandwidth" \
-		-M "$mcs_index" -S "$stbc" -L "$ldpc" -G "$guard_interval" -k "$fec_k" -n "$fec_n" \
-		-T "$pool_timeout" -i "$link_id" -f "$frame_type" "$wlan" > /dev/null &
 }
 
 start_gs_telemetry() {
