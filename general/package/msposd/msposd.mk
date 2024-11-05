@@ -5,7 +5,7 @@
 ################################################################################
 
 MSPOSD_SITE = $(call github,openipc,msposd,$(MSPOSD_VERSION))
-MSPOSD_VERSION = HEAD
+MSPOSD_VERSION = 2298981b32dce8cc92b5198703117cd515c30fca
 
 ifeq ($(OPENIPC_SOC_FAMILY),gk7205v200)
 	MSPOSD_FAMILY = goke
