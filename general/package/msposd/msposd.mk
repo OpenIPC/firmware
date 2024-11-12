@@ -5,7 +5,7 @@
 ################################################################################
 
 MSPOSD_SITE = $(call github,openipc,msposd,$(MSPOSD_VERSION))
-MSPOSD_VERSION = 2298981b32dce8cc92b5198703117cd515c30fca
+MSPOSD_VERSION = HEAD
 
 ifeq ($(OPENIPC_SOC_FAMILY),gk7205v200)
 	MSPOSD_FAMILY = goke
@@ -22,7 +22,7 @@ else
 endif
 
 define MSPOSD_BUILD_CMDS
-	$(MAKE) CC=$(TARGET_CC) DRV=$(MSPOSD_OSDRV)/files/lib $(MSPOSD_FAMILY) OUTPUT=$(@D) -C $(@D)
+	$(MAKE) CC=$(TARGET_CC) TOOLCHAIN=$(STAGING_DIR) DRV=$(MSPOSD_OSDRV)files/lib $(MSPOSD_FAMILY) OUTPUT=$(@D)/msposd -C $(@D)
 endef
 
 define MSPOSD_INSTALL_TARGET_CMDS
