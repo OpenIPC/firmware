@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 
 env:
-  TAG_NAME: latest
+  TAG_NAME: toolchain
 
 jobs:
   toolchain:
@@ -25,9 +25,6 @@ jobs:
 
           # Ingenic [T31]
           - {"platform": "t31"}
-
-          # Ingenic [T31] with GLIBC
-          - {"platform": "t31glibc"}
 
           # Ingenic [T40]
           - {"platform": "t40"}
@@ -84,11 +81,9 @@ jobs:
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}
           echo ${URL}
           if ! wget -q --spider ${URL}; then
-            sed -i "/BR2_TOOLCHAIN_EXTERNAL.*/d" ${CONFIG}
             echo BR2_PACKAGE_HOST_GDB=y >> ${CONFIG}
             echo BR2_PACKAGE_AWS_WEBRTC=y >> ${CONFIG}
-            make BOARD=${CONFIG} br-source
-            make BOARD=${CONFIG} br-sdk
+            make BOARD=${CONFIG} toolchain
             SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
             mv ${SDK} ${GCC}
             echo GCC=${GCC} >> ${GITHUB_ENV}
@@ -98,4 +93,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{env.TAG_NAME}}
+          make_latest: false
           files: ${{env.GCC}}
