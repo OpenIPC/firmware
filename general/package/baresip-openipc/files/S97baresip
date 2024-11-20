@@ -6,6 +6,7 @@ DAEMON_ARGS="-f /etc/baresip"
 
 start() {
 	echo -n "Starting $DAEMON: "
+	sleep 5
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
 	if [ $? -eq 0 ]; then
 		echo "OK"
