@@ -2,6 +2,7 @@ BR_VER = 2024.02.6
 BR_MAKE = $(MAKE) -C $(TARGET)/buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
 BR_LINK = https://github.com/buildroot/buildroot/archive
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
+BR_CONF = $(TARGET)/openipc_defconfig
 TARGET ?= $(PWD)/output
 
 CONFIG = $(error variable BOARD not defined)
@@ -29,8 +30,8 @@ br-%: defconfig
 
 defconfig: prepare
 	@echo --- $(or $(CONFIG),$(error variable BOARD not found))
-	@cat $(CONFIG) $(PWD)/general/openipc.fragment > $(TARGET)/openipc_defconfig
-	@$(BR_MAKE) BR2_DEFCONFIG=$(TARGET)/openipc_defconfig defconfig
+	@cat $(CONFIG) $(PWD)/general/openipc.fragment > $(BR_CONF)
+	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
 
 prepare:
 	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
@@ -53,7 +54,7 @@ package:
 	@find $(PWD)/general/package/* -maxdepth 0 -type d -printf "br-%f\n" | grep -v patch
 
 toolname:
-	@$(PWD)/general/scripts/show_toolchains.sh $(CONFIG)
+	@echo br-sdk-$(BR2_OPENIPC_SOC_VENDOR)-$(BR2_OPENIPC_SOC_FAMILY)
 
 clean:
 	@rm -rf $(TARGET)/build $(TARGET)/images $(TARGET)/per-package $(TARGET)/target
@@ -67,6 +68,13 @@ deps:
 
 timer:
 	@echo - Build time: $(shell date -d @$(shell expr $(shell date +%s) - $(TIMER)) -u +%M:%S)
+
+toolchain: defconfig
+ifeq ($(BR2_TOOLCHAIN_EXTERNAL),y)
+	@$(MAKE) -f $(PWD)/general/toolchain.mk BR_CONF=$(BR_CONF) CONFIG=$(PWD)/$(CONFIG)
+	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
+endif
+	@$(BR_MAKE) sdk
 
 repack:
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
