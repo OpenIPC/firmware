@@ -21,9 +21,9 @@ jobs:
             create() {
               uboot=u-boot-$1-nor.bin
               firmware=openipc.$2-nor-$3.tgz
-              release=image/openipc-$1-nor-$3.bin
+              release=target/openipc-$1-nor-$3.bin
 
-              mkdir -p image output
+              mkdir -p output target
               if ! wget -nv $link/$uboot -O output/$1.bin; then
                 echo -e "Download failed: $link/$uboot\n"
                 return 0
@@ -59,4 +59,4 @@ jobs:
         with:
           tag_name: ${{env.TAG_NAME}}
           make_latest: false
-          files: image/*.bin
+          files: target/*.bin
