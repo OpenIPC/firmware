@@ -72,8 +72,6 @@ jobs:
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}
           echo ${URL}
           if ! wget -q --spider ${URL}; then
-            echo BR2_PACKAGE_HOST_GDB=y >> ${CONFIG}
-            echo BR2_PACKAGE_AWS_WEBRTC=y >> ${CONFIG}
             make BOARD=${CONFIG} toolchain
             SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
             mv ${SDK} ${GCC}
