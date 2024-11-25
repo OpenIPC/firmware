@@ -206,6 +206,13 @@ if [ "$1" = "ssw101b-ssc333-tapo-c110" ]; then
 	exit 0
 fi
 
+# SSC333 Tapo C110 v2.6
+if [ "$1" = "atbm6012b-ssc333-tapo-c110" ]; then
+	set_gpio 16 1
+	modprobe atbm6012b_wifi_usb
+	exit 0
+fi
+
 # SSC335DE Uniview C1L-2WN-G
 if [ "$1" = "rtl8188fu-ssc335de-uniview-c1l-2wn-g" ]; then
 	set_gpio 1 0
