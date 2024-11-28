@@ -1,0 +1,39 @@
+config BR2_PACKAGE_ATBM_WIFI
+	bool "atbm_wifi"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Wireless driver atbm-wifi
+
+if BR2_PACKAGE_ATBM_WIFI
+choice
+	prompt "ATBM_WIFI Model"
+	help
+	Select the ATBM_WIFI model
+
+config BR2_PACKAGE_ATBM_WIFI_MODEL_6012B
+	bool "ATBM6012b"
+
+config BR2_PACKAGE_ATBM_WIFI_MODEL_603X
+	bool "ATBM603x"
+
+config BR2_PACKAGE_ATBM_WIFI_MODEL_6132
+	bool "ATBM6132"
+
+endchoice
+
+if BR2_PACKAGE_ATBM_WIFI_MODEL_6012B || BR2_PACKAGE_ATBM_WIFI_MODEL_603X || BR2_PACKAGE_ATBM_WIFI_MODEL_6132
+choice
+	prompt "Interface type for selected ATBM-WIFI model"
+	help
+	Select the interface type for the selected ATBM-WIFI model
+
+config BR2_PACKAGE_ATBM_WIFI_INTERFACE_USB
+	bool "USB"
+
+config BR2_PACKAGE_ATBM_WIFI_INTERFACE_SDIO
+	bool "SDIO"
+
+endchoice
+
+endif
+endif
