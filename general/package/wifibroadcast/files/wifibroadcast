@@ -44,7 +44,7 @@ detect_wifi_card() {
 				modprobe 8812eu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
 
-			"0bda:f72b")
+			"0bda:f72b" | "0bda:b733")
 				driver="8733bu"
 				modprobe 8733bu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
