@@ -1,0 +1,57 @@
+diff --git a/apps/tcp_tunnel_device/src/tcp_tunnel_main.c b/apps/tcp_tunnel_device/src/tcp_tunnel_main.c
+index cbc6b8a..0eb63d7 100644
+--- a/apps/tcp_tunnel_device/src/tcp_tunnel_main.c
++++ b/apps/tcp_tunnel_device/src/tcp_tunnel_main.c
+@@ -41,8 +41,8 @@
+ #define NEWLINE "\r\n"
+ #else
+ #include <sys/stat.h>
+-#define HOMEDIR_ENV_VARIABLE "HOME"
+-#define HOMEDIR_NABTO_FOLDER ".nabto"
++#define HOMEDIR_ENV_VARIABLE "/etc"
++#define HOMEDIR_NABTO_FOLDER "nabto"
+ #define NEWLINE "\n"
+ #endif
+ 
+@@ -416,7 +416,7 @@ bool handle_main(struct args* args, struct tcp_tunnel* tunnel)
+         return true;
+     }
+ 
+-    const char* homeEnv = getenv(HOMEDIR_ENV_VARIABLE);
++    const char* homeEnv = HOMEDIR_ENV_VARIABLE;
+     if (args->homeDir != NULL) {
+         // perfect just using the homeDir
+         make_directory(args->homeDir);
+diff --git a/src/modules/libevent/CMakeLists.txt b/src/modules/libevent/CMakeLists.txt
+index 8818d06..aed9682 100644
+--- a/src/modules/libevent/CMakeLists.txt
++++ b/src/modules/libevent/CMakeLists.txt
+@@ -11,5 +11,5 @@ set(src
+ 
+ add_library(nm_libevent ${src})
+ 
+-target_link_libraries(nm_libevent nm_communication_buffer 3rdparty_libevent)
++target_link_libraries(nm_libevent nm_communication_buffer event event_pthreads mbedcrypto)
+ #target_link_libraries(nm_libevent ${LIBEVENT_STATIC_LIBRARIES})
+diff --git a/src/modules/mbedtls/CMakeLists.txt b/src/modules/mbedtls/CMakeLists.txt
+index 6855154..e4e31c7 100644
+--- a/src/modules/mbedtls/CMakeLists.txt
++++ b/src/modules/mbedtls/CMakeLists.txt
+@@ -25,13 +25,13 @@ set(dtls_srv_src
+ )
+ 
+ add_library( nm_mbedtls_srv STATIC ${dtls_srv_src})
+-target_link_libraries(nm_mbedtls_srv 3rdparty_mbedtls nn np_platform)
++target_link_libraries(nm_mbedtls_srv mbedtls nn np_platform)
+ 
+ add_library( nm_mbedtls_cli STATIC ${dtls_cli_src})
+ add_library( nm_mbedtls_random STATIC ${mbedtls_random_src})
+ add_library( nm_mbedtls_spake2 STATIC ${mbedtls_spake2_src})
+ 
+ 
+-target_link_libraries(nm_mbedtls_cli 3rdparty_mbedtls nn np_platform)
+-target_link_libraries(nm_mbedtls_random 3rdparty_mbedtls np_platform)
+-target_link_libraries(nm_mbedtls_spake2 3rdparty_mbedtls np_platform)
++target_link_libraries(nm_mbedtls_cli mbedtls mbedx509 nn np_platform)
++target_link_libraries(nm_mbedtls_random mbedtls np_platform)
++target_link_libraries(nm_mbedtls_spake2 mbedtls np_platform)
