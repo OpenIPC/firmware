@@ -3,3 +3,8 @@ config BR2_PACKAGE_LINUX_PATCHER
 	default y if BR2_LINUX_KERNEL
 	help
 	  Linux patcher for OpenIPC
+
+config BR2_PACKAGE_LINUX_PATCHER_ATHEROS
+	bool "linux patcher atheros"
+	help
+	  Atheros wireless driver
