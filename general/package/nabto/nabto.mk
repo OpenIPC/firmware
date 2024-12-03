@@ -22,10 +22,9 @@ NABTO_CONF_OPTS += \
 	-DBUILD_SHARED_LIBS=OFF \
 	-DDEVICE_BUILD_EXAMPLES=OFF
 
-define NABTO_REMOVE_EXTRA
-	rm -f $(TARGET_DIR)/usr/lib/libnabto_device.so
+define NABTO_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/apps/tcp_tunnel_device/tcp_tunnel_device
 endef
-
-NABTO_POST_INSTALL_TARGET_HOOKS += NABTO_REMOVE_EXTRA
 
 $(eval $(cmake-package))
