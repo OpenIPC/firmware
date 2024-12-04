@@ -1,0 +1,114 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c56795e..66f53dc 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -191,13 +191,16 @@ else()
+     add_subdirectory(src/modules/mbedtls)
+ endif()
+ 
+-add_subdirectory(3rdparty/mbedtls)
++if (DEVICE_BUILD_3RDPARTY)
++    add_subdirectory(3rdparty/mbedtls)
++    add_subdirectory(3rdparty/libevent)
++endif()
++
+ add_subdirectory(3rdparty/cjson)
+ add_subdirectory(3rdparty/gopt)
+ add_subdirectory(3rdparty/tinycbor)
+ add_subdirectory(3rdparty/nlohmann-json)
+ add_subdirectory(3rdparty/cxxopts)
+-add_subdirectory(3rdparty/libevent)
+ 
+ set(NN_BUILD_TESTS OFF CACHE BOOL "enable nn tests")
+ add_subdirectory(nabto-common/components/nn)
+diff --git a/apps/common/CMakeLists.txt b/apps/common/CMakeLists.txt
+index a621054..08bd2c0 100644
+--- a/apps/common/CMakeLists.txt
++++ b/apps/common/CMakeLists.txt
+@@ -9,4 +9,4 @@ set(src
+   )
+ 
+ add_library(apps_common ${src})
+-target_link_libraries(apps_common nabto_device_static 3rdparty_cjson 3rdparty_mbedtls nn)
++target_link_libraries(apps_common nabto_device_static 3rdparty_cjson mbedtls nn)
+diff --git a/apps/tcp_tunnel_device/src/tcp_tunnel_main.c b/apps/tcp_tunnel_device/src/tcp_tunnel_main.c
+index cbc6b8a..0eb63d7 100644
+--- a/apps/tcp_tunnel_device/src/tcp_tunnel_main.c
++++ b/apps/tcp_tunnel_device/src/tcp_tunnel_main.c
+@@ -41,8 +41,8 @@
+ #define NEWLINE "\r\n"
+ #else
+ #include <sys/stat.h>
+-#define HOMEDIR_ENV_VARIABLE "HOME"
+-#define HOMEDIR_NABTO_FOLDER ".nabto"
++#define HOMEDIR_ENV_VARIABLE "/etc"
++#define HOMEDIR_NABTO_FOLDER "nabto"
+ #define NEWLINE "\n"
+ #endif
+ 
+@@ -416,7 +416,7 @@ bool handle_main(struct args* args, struct tcp_tunnel* tunnel)
+         return true;
+     }
+ 
+-    const char* homeEnv = getenv(HOMEDIR_ENV_VARIABLE);
++    const char* homeEnv = HOMEDIR_ENV_VARIABLE;
+     if (args->homeDir != NULL) {
+         // perfect just using the homeDir
+         make_directory(args->homeDir);
+diff --git a/src/core/CMakeLists.txt b/src/core/CMakeLists.txt
+index 60b89b3..b67bb86 100644
+--- a/src/core/CMakeLists.txt
++++ b/src/core/CMakeLists.txt
+@@ -12,5 +12,5 @@ add_dependencies(nc_core GENERATE_VERSION)
+ 
+ target_link_libraries( nc_core np_platform nabto_stream nabto_stun_client coap 3rdparty_tinycbor nn)
+ if (NABTO_DEVICE_MBEDTLS)
+-  target_link_libraries(nc_core 3rdparty_mbedtls)
++  target_link_libraries(nc_core mbedtls)
+ endif()
+diff --git a/src/modules/libevent/CMakeLists.txt b/src/modules/libevent/CMakeLists.txt
+index 8818d06..48b3066 100644
+--- a/src/modules/libevent/CMakeLists.txt
++++ b/src/modules/libevent/CMakeLists.txt
+@@ -11,5 +11,5 @@ set(src
+ 
+ add_library(nm_libevent ${src})
+ 
+-target_link_libraries(nm_libevent nm_communication_buffer 3rdparty_libevent)
++target_link_libraries(nm_libevent nm_communication_buffer event_extra event_pthreads mbedcrypto)
+ #target_link_libraries(nm_libevent ${LIBEVENT_STATIC_LIBRARIES})
+diff --git a/src/modules/mbedtls/CMakeLists.txt b/src/modules/mbedtls/CMakeLists.txt
+index 6855154..e4e31c7 100644
+--- a/src/modules/mbedtls/CMakeLists.txt
++++ b/src/modules/mbedtls/CMakeLists.txt
+@@ -25,13 +25,13 @@ set(dtls_srv_src
+ )
+ 
+ add_library( nm_mbedtls_srv STATIC ${dtls_srv_src})
+-target_link_libraries(nm_mbedtls_srv 3rdparty_mbedtls nn np_platform)
++target_link_libraries(nm_mbedtls_srv mbedtls nn np_platform)
+ 
+ add_library( nm_mbedtls_cli STATIC ${dtls_cli_src})
+ add_library( nm_mbedtls_random STATIC ${mbedtls_random_src})
+ add_library( nm_mbedtls_spake2 STATIC ${mbedtls_spake2_src})
+ 
+ 
+-target_link_libraries(nm_mbedtls_cli 3rdparty_mbedtls nn np_platform)
+-target_link_libraries(nm_mbedtls_random 3rdparty_mbedtls np_platform)
+-target_link_libraries(nm_mbedtls_spake2 3rdparty_mbedtls np_platform)
++target_link_libraries(nm_mbedtls_cli mbedtls mbedx509 nn np_platform)
++target_link_libraries(nm_mbedtls_random mbedtls np_platform)
++target_link_libraries(nm_mbedtls_spake2 mbedtls np_platform)
+diff --git a/src/nabto_device_libevent/CMakeLists.txt b/src/nabto_device_libevent/CMakeLists.txt
+index 448788d..a37ade3 100644
+--- a/src/nabto_device_libevent/CMakeLists.txt
++++ b/src/nabto_device_libevent/CMakeLists.txt
+@@ -37,7 +37,7 @@ if (NABTO_DEVICE_MBEDTLS)
+     nm_mbedtls_srv
+     nm_mbedtls_random
+     nm_mbedtls_spake2
+-    3rdparty_mbedtls
++    mbedtls
+   )
+ endif()
+ 

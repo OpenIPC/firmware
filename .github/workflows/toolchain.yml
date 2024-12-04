@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 
 env:
-  TAG_NAME: latest
+  TAG_NAME: toolchain
 
 jobs:
   toolchain:
@@ -14,47 +14,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Sigmastar [I6B]
+          # Sigmastar
+          - {"platform": "ssc325"}
           - {"platform": "ssc335"}
-
-          # Sigmastar [I6C]
           - {"platform": "ssc377"}
-
-          # Sigmastar [I6E]
           - {"platform": "ssc338q"}
 
-          # Ingenic [T31]
+          # Hisilicon
+          - {"platform": "hi3516av100"}
+          - {"platform": "hi3516cv100"}
+          - {"platform": "hi3516cv200"}
+          - {"platform": "hi3516cv300"}
+          - {"platform": "hi3516cv500"}
+          - {"platform": "hi3516ev200"}
+          - {"platform": "hi3519v101"}
+          - {"platform": "hi3536cv100"}
+          - {"platform": "hi3536dv100"}
+
+          # Goke
+          - {"platform": "gk7102"}
+          - {"platform": "gk7205v200"}
+
+          # Ingenic
+          - {"platform": "t20"}
+          - {"platform": "t21"}
           - {"platform": "t31"}
-
-          # Ingenic [T31] with GLIBC
-          - {"platform": "t31glibc"}
-
-          # Ingenic [T40]
           - {"platform": "t40"}
 
-          # Hisilicon [HI3516CV100]
-          - {"platform": "hi3516cv100"}
-
-          # Hisilicon [HI3516CV200]
-          - {"platform": "hi3516cv200"}
-
-          # Hisilicon [HI3516CV300]
-          - {"platform": "hi3516cv300"}
-
-          # Hisilicon [HI3516CV500]
-          - {"platform": "hi3516cv500"}
-
-          # Hisilicon [HI3516EV200]
-          - {"platform": "hi3516ev200"}
-
-          # Hisilicon [HI3519V101]
-          - {"platform": "hi3519v101"}
-
-          # Hisilicon [HI3536CV100]
-          - {"platform": "hi3536cv100"}
-
-          # Goke [GK710X]
-          - {"platform": "gk7102"}
+          # Allwinner
+          - {"platform": "v851s"}
 
           # Fullhan
           - {"platform": "fh8852v100"}
@@ -84,11 +72,7 @@ jobs:
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}
           echo ${URL}
           if ! wget -q --spider ${URL}; then
-            sed -i "/BR2_TOOLCHAIN_EXTERNAL.*/d" ${CONFIG}
-            echo BR2_PACKAGE_HOST_GDB=y >> ${CONFIG}
-            echo BR2_PACKAGE_AWS_WEBRTC=y >> ${CONFIG}
-            make BOARD=${CONFIG} br-source
-            make BOARD=${CONFIG} br-sdk
+            make BOARD=${CONFIG} toolchain
             SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
             mv ${SDK} ${GCC}
             echo GCC=${GCC} >> ${GITHUB_ENV}
@@ -98,4 +82,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{env.TAG_NAME}}
+          make_latest: false
           files: ${{env.GCC}}

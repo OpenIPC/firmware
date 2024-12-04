@@ -1,10 +1,11 @@
-BR_VER = 2024.02.1
+BR_VER = 2024.02.6
 BR_MAKE = $(MAKE) -C $(TARGET)/buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
 BR_LINK = https://github.com/buildroot/buildroot/archive
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
+BR_CONF = $(TARGET)/openipc_defconfig
 TARGET ?= $(PWD)/output
 
-CONFIG = $(error variable BOARD is not defined)
+CONFIG = $(error variable BOARD not defined)
 TIMER := $(shell date +%s)
 
 ifeq ($(or $(MAKECMDGOALS), $(BOARD)),)
@@ -28,8 +29,9 @@ br-%: defconfig
 	@$(BR_MAKE) $(subst br-,,$@)
 
 defconfig: prepare
-	@echo --- $(or $(CONFIG),$(error variable BOARD is not found))
-	@$(BR_MAKE) BR2_DEFCONFIG=$(PWD)/$(CONFIG) defconfig
+	@echo --- $(or $(CONFIG),$(error variable BOARD not found))
+	@cat $(CONFIG) $(PWD)/general/openipc.fragment > $(BR_CONF)
+	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
 
 prepare:
 	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
@@ -49,10 +51,10 @@ list:
 	@ls -1 br-ext-chip-*/configs
 
 package:
-	@find general/package/* -maxdepth 0 -type d -printf "br-%f\n" | grep -v patch
+	@find $(PWD)/general/package/* -maxdepth 0 -type d -printf "br-%f\n" | grep -v patch
 
 toolname:
-	@general/scripts/show_toolchains.sh $(CONFIG)
+	@echo toolchain.$(BR2_OPENIPC_SOC_VENDOR)-$(BR2_OPENIPC_SOC_FAMILY)
 
 clean:
 	@rm -rf $(TARGET)/build $(TARGET)/images $(TARGET)/per-package $(TARGET)/target
@@ -66,6 +68,13 @@ deps:
 
 timer:
 	@echo - Build time: $(shell date -d @$(shell expr $(shell date +%s) - $(TIMER)) -u +%M:%S)
+
+toolchain: defconfig
+ifeq ($(BR2_TOOLCHAIN_EXTERNAL),y)
+	@$(MAKE) -f $(PWD)/general/toolchain.mk BR_CONF=$(BR_CONF) CONFIG=$(PWD)/$(CONFIG)
+	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
+endif
+	@$(BR_MAKE) sdk
 
 repack:
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)

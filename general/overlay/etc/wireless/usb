@@ -29,6 +29,12 @@ if [ "$1" = "rtl8733bu-generic" ]; then
 	exit 0
 fi
 
+# Generic RTL8811CU
+if [ "$1" = "rtl8811cu-generic" ]; then
+	modprobe 8821cu
+	exit 0
+fi
+
 # Generic RTL8812AU
 if [ "$1" = "rtl8812au-generic" ]; then
 	modprobe 88XXau rtw_ht_enable=0 rtw_led_enable=0
@@ -72,6 +78,7 @@ fi
 
 # GK7205V300 CamHi
 if [ "$1" = "rtl8733bu-gk7205v300-camhi" ]; then
+	devmem 0x100c0080 32 0x0
 	set_gpio 7 0
 	modprobe 8733bu
 	exit 0
@@ -82,6 +89,14 @@ if [ "$1" = "atbm603x-gk7205v300-xm-g6s" ]; then
   devmem 0x100C0080 32 0x530
   set_gpio 7 0
 	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
+# GK7205V300 Vase
+if [ "$1" = "rtl8811cu-gk7205v300-vase" ]; then
+	devmem 0x100c0080 32 0x0
+	set_gpio 7 1
+	modprobe 8821cu
 	exit 0
 fi
 
@@ -188,6 +203,13 @@ fi
 if [ "$1" = "ssw101b-ssc333-tapo-c110" ]; then
 	set_gpio 16 1
 	modprobe ssw101b_wifi_usb
+	exit 0
+fi
+
+# SSC333 Tapo C110 v2.6
+if [ "$1" = "atbm6012b-ssc333-tapo-c110" ]; then
+	set_gpio 16 1
+	modprobe atbm6012b_wifi_usb
 	exit 0
 fi
 
