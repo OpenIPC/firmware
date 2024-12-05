@@ -99,11 +99,11 @@ jobs:
           ls -lh ${GITHUB_WORKSPACE}/output/images/
 
           # 打包 output/images 下所有文件为 tgz
-          TAR_FILE=${GITHUB_WORKSPACE}/output/images/longcat-openipc.${{matrix.platform}}-${{matrix.release}}.tgz
-          tar -czvf ${TAR_FILE} -C ${GITHUB_WORKSPACE}/output/images .
+         # TAR_FILE=${GITHUB_WORKSPACE}/output/images/longcat-openipc.${{matrix.platform}}-${{matrix.release}}.tgz
+         # tar -czvf ${TAR_FILE} -C ${GITHUB_WORKSPACE}/output/images .
 
           # 设置打包后的路径
-          echo TAR_FILE=${TAR_FILE} >> ${GITHUB_ENV}
+        #  echo TAR_FILE=${TAR_FILE} >> ${GITHUB_ENV}
 
 
 
@@ -121,7 +121,7 @@ jobs:
             ${{env.NANDFW}}  # 上传 NAND 固件
             ${{env.UIMAGE}}  # 上传 UIMAGE 内核
             ${{env.ROOTFS}}  # 上传 ROOTFS
-            ${{env.TAR_FILE}}  # 上传 TAR_FILE
+     #       ${{env.TAR_FILE}}  # 上传 TAR_FILE
             
       # 步骤 8: 发送 Telegram 通知
       - name: Send binary
