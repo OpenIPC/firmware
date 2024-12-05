@@ -93,6 +93,8 @@ jobs:
           fi
 
       # 步骤6  列出 output/images 目录的内容
+      - name: ls tar
+        run: |
           echo "Listing output/images contents:"
           ls -lh ${GITHUB_WORKSPACE}/output/images/
 
