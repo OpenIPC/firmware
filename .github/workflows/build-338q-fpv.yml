@@ -81,8 +81,34 @@ jobs:
           if [ -e ${NANDFW} ]; then
             echo NANDFW=${NANDFW} >> ${GITHUB_ENV}  # 如果存在，设置 NANDFW 变量
           fi
+          
+          UIMAGE=${GITHUB_WORKSPACE}/output/images/uImage
+          if [ -e ${UIMAGE} ]; then
+            echo UIMAGE=${UIMAGE} >> ${GITHUB_ENV}  # 如果存在，设置 UIMAGE 变量
+          fi
+          
+          ROOTFS=${GITHUB_WORKSPACE}/output/images/rootfs.squashfs
+          if [ -e ${ROOTFS} ]; then
+            echo ROOTFS=${ROOTFS} >> ${GITHUB_ENV}  # 如果存在，设置 ROOTFS 变量
+          fi
 
-      # 步骤 6: 上传固件
+      # 步骤6  列出 output/images 目录的内容
+          echo "Listing output/images contents:"
+          ls -lh ${GITHUB_WORKSPACE}/output/images/
+
+          # 打包 output/images 下所有文件为 tgz
+          TAR_FILE=${GITHUB_WORKSPACE}/output/images/longcat-openipc.${{matrix.platform}}-${{matrix.release}}.tgz
+          tar -czvf ${TAR_FILE} -C ${GITHUB_WORKSPACE}/output/images .
+
+          # 设置打包后的路径
+          echo TAR_FILE=${TAR_FILE} >> ${GITHUB_ENV}
+
+
+
+
+
+
+      # 步骤 7: 上传固件
       - name: Upload firmware
         if: github.event_name != 'pull_request'  # 仅在 push 事件时上传
         uses: softprops/action-gh-release@v2  # 使用 GitHub Actions 的 release 上传插件
@@ -91,8 +117,11 @@ jobs:
           files: |
             ${{env.NORFW}}  # 上传 NOR 固件
             ${{env.NANDFW}}  # 上传 NAND 固件
-
-      # 步骤 7: 发送 Telegram 通知
+            ${{env.UIMAGE}}  # 上传 UIMAGE 内核
+            ${{env.ROOTFS}}  # 上传 ROOTFS
+            ${{env.TAR_FILE}}  # 上传 TAR_FILE
+            
+      # 步骤 8: 发送 Telegram 通知
       - name: Send binary
         if: github.event_name != 'pull_request' && env.NORFW  # 仅在 push 且存在 NORFW 文件时发送通知
         run: |
@@ -102,7 +131,7 @@ jobs:
           HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})  # 发送到 Telegram
           echo Telegram response: ${HTTP}  # 输出 Telegram 响应信息
 
-      # 步骤 8: 发送错误通知
+      # 步骤 9: 发送错误通知
       - name: Send error
         if: github.event_name != 'pull_request' && failure()  # 仅在构建失败时发送错误通知
         run: |
