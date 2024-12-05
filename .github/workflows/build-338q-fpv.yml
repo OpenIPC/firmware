@@ -82,12 +82,12 @@ jobs:
             echo NANDFW=${NANDFW} >> ${GITHUB_ENV}  # 如果存在，设置 NANDFW 变量
           fi
           
-          UIMAGE=${GITHUB_WORKSPACE}/output/images/uImage
+          UIMAGE=${GITHUB_WORKSPACE}/output/images/uImage.ssc338
           if [ -e ${UIMAGE} ]; then
             echo UIMAGE=${UIMAGE} >> ${GITHUB_ENV}  # 如果存在，设置 UIMAGE 变量
           fi
           
-          ROOTFS=${GITHUB_WORKSPACE}/output/images/rootfs.squashfs
+          ROOTFS=${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.ssc338q
           if [ -e ${ROOTFS} ]; then
             echo ROOTFS=${ROOTFS} >> ${GITHUB_ENV}  # 如果存在，设置 ROOTFS 变量
           fi
@@ -97,13 +97,17 @@ jobs:
         run: |
           echo "Listing output/images contents:"
           ls -lh ${GITHUB_WORKSPACE}/output/images/
-
-          # 打包 output/images 下所有文件为 tgz
-         # TAR_FILE=${GITHUB_WORKSPACE}/output/images/longcat-openipc.${{matrix.platform}}-${{matrix.release}}.tgz
-         # tar -czvf ${TAR_FILE} -C ${GITHUB_WORKSPACE}/output/images .
-
+          # 定义 TAR 文件路径
+          TAR_FILE=${GITHUB_WORKSPACE}/output/images/longcat-openipc.${{matrix.platform}}-${{matrix.release}}.tgz
+          # 创建临时目录并复制所有文件
+          TEMP_DIR=$(mktemp -d)
+          cp -r ${GITHUB_WORKSPACE}/output/images/* ${TEMP_DIR}
+          # 在临时目录中执行打包
+          tar -czvf ${TAR_FILE} -C ${TEMP_DIR} .
+          # 清理临时目录
+          rm -rf ${TEMP_DIR}
           # 设置打包后的路径
-        #  echo TAR_FILE=${TAR_FILE} >> ${GITHUB_ENV}
+          echo TAR_FILE=${TAR_FILE} >> ${GITHUB_ENV}
 
 
 
@@ -121,7 +125,7 @@ jobs:
             ${{env.NANDFW}}  # 上传 NAND 固件
             ${{env.UIMAGE}}  # 上传 UIMAGE 内核
             ${{env.ROOTFS}}  # 上传 ROOTFS
-     #       ${{env.TAR_FILE}}  # 上传 TAR_FILE
+            ${{env.TAR_FILE}}  # 上传 TAR_FILE
             
       # 步骤 8: 发送 Telegram 通知
       - name: Send binary
