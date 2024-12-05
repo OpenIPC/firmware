@@ -1,0 +1,114 @@
+name: build-338q-fpv
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+env:
+  TAG_NAME: latest  # 固件版本标签，默认为 'latest'
+  TG_TOKEN: ${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}  # Telegram Bot Token，从 GitHub Secrets 中获取
+  TG_CHANNEL: ${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}  # Telegram Channel，从 GitHub Secrets 中获取
+  TG_OPTIONS: -s -o /dev/null -w %{http_code}  # Telegram 发送消息的 curl 参数
+
+jobs:
+  buildroot:
+    name: Firmware  # 构建固件的任务
+    runs-on: ubuntu-latest  # 使用最新的 Ubuntu 环境
+
+    strategy:
+      fail-fast: false  # 设置为 false，允许多平台并行构建失败时不中断其他构建
+      matrix:
+        include:
+          - {"platform": "ssc338q", "release": "fpv"}  # 仅编译 ssc338q 平台的 fpv 固件
+
+    steps:
+      # 步骤 1: 检出代码
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # 步骤 2: 设置 ccache（用于加速编译）
+      - name: Setup ccache
+        if: github.event_name != 'pull_request'  # 非 pull_request 事件时启用缓存
+        uses: actions/cache@v4
+        with:
+          path: /tmp/ccache  # 设置 ccache 存放路径
+          key: ${{matrix.platform}}_${{matrix.release}}  # 缓存的键值，使用平台和版本区分
+
+      # 步骤 3: 恢复 ccache（在 PR 事件时使用缓存）
+      - name: Restore ccache
+        if: github.event_name == 'pull_request'  # 只有在 pull_request 事件时才恢复缓存
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/ccache  # 缓存路径
+          key: ${{matrix.platform}}_${{matrix.release}}  # 缓存的键值
+
+      # 步骤 4: 下载和准备依赖文件
+      - name: Download files
+        run: |
+          echo "8.8.8.8 invisible-mirror.net" | sudo tee -a /etc/hosts  # 添加 DNS 配置
+          echo "8.8.8.8 distfiles.dereferenced.org" | sudo tee -a /etc/hosts  # 添加 DNS 配置
+          make prepare  # 准备构建所需的文件
+          git clone https://github.com/openipc/br-cache  # 克隆 br-cache 仓库
+          ln -s ${GITHUB_WORKSPACE}/br-cache $(ls -d output/buildroot-*)/dl  # 创建软链接
+          make BOARD=${{matrix.platform}}_${{matrix.release}} br-source  # 获取构建源文件
+
+      # 步骤 5: 编译固件
+      - name: Build firmware
+        run: |
+          export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})  # 获取当前 Git 提交的短 hash
+          export GIT_BRANCH=${GITHUB_REF_NAME}  # 获取当前分支名称
+          echo GIT_HASH=${GIT_HASH} >> ${GITHUB_ENV}  # 将 Git hash 写入环境变量
+          echo GIT_BRANCH=${GIT_BRANCH} >> ${GITHUB_ENV}  # 将 Git 分支写入环境变量
+
+          mkdir -p /tmp/ccache  # 创建 ccache 缓存目录
+          ln -s /tmp/ccache ${HOME}/.ccache  # 将缓存目录链接到用户的 ccache 配置目录
+          make BOARD=${{matrix.platform}}_${{matrix.release}} all  # 编译固件
+
+          TIME=$(date -d @${SECONDS} +%M:%S)  # 计算编译时间
+          echo TIME=${TIME} >> ${GITHUB_ENV}  # 将编译时间写入环境变量
+
+          # 设置固件路径
+          NORFW=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-nor-${{matrix.release}}.tgz
+          if [ -e ${NORFW} ]; then
+            echo NORFW=${NORFW} >> ${GITHUB_ENV}  # 如果存在，设置 NORFW 变量
+          fi
+
+          NANDFW=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-nand-${{matrix.release}}.tgz
+          if [ -e ${NANDFW} ]; then
+            echo NANDFW=${NANDFW} >> ${GITHUB_ENV}  # 如果存在，设置 NANDFW 变量
+          fi
+
+      # 步骤 6: 上传固件
+      - name: Upload firmware
+        if: github.event_name != 'pull_request'  # 仅在 push 事件时上传
+        uses: softprops/action-gh-release@v2  # 使用 GitHub Actions 的 release 上传插件
+        with:
+          tag_name: ${{env.TAG_NAME}}  # 使用定义的 TAG_NAME（默认为 latest）
+          files: |
+            ${{env.NORFW}}  # 上传 NOR 固件
+            ${{env.NANDFW}}  # 上传 NAND 固件
+
+      # 步骤 7: 发送 Telegram 通知
+      - name: Send binary
+        if: github.event_name != 'pull_request' && env.NORFW  # 仅在 push 且存在 NORFW 文件时发送通知
+        run: |
+          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\nTime: ${TIME}\n\n"  # 设置 Telegram 消息内容
+          TG_ICON="\xE2\x9C\x85 GitHub Actions"  # 设置消息图标
+          TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})  # 拼接消息内容和图标
+          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})  # 发送到 Telegram
+          echo Telegram response: ${HTTP}  # 输出 Telegram 响应信息
+
+      # 步骤 8: 发送错误通知
+      - name: Send error
+        if: github.event_name != 'pull_request' && failure()  # 仅在构建失败时发送错误通知
+        run: |
+          TG_WARN="Error: ${{matrix.platform}}_${{matrix.release}}\n"  # 错误提示
+          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\n\n"  # 错误消息内容
+          TG_ICON="\xE2\x9A\xA0 GitHub Actions"  # 错误消息图标
+          TG_HEADER=$(echo -e ${TG_WARN}${TG_MSG}${TG_ICON})  # 拼接错误消息
+          HTTP=$(curl ${TG_OPTIONS} -H "Content-Type: multipart/form-data" -X POST https://api.telegram.org/bot${TG_TOKEN}/sendMessage -F chat_id=${TG_CHANNEL} -F text="${TG_HEADER}")  # 发送到 Telegram
+          echo Telegram response: ${HTTP}  # 输出 Telegram 响应信息
