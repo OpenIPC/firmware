@@ -110,13 +110,30 @@ jobs:
           echo TAR_FILE=${TAR_FILE} >> ${GITHUB_ENV}
 
 
+      # 步骤：安装 rclone、下载配置并上传文件
+      - name: Build, configure rclone and upload to cloud storage
+        run: |
+          # 安装 rclone
+          curl https://rclone.org/install.sh | sudo bash  # 安装 rclone
 
+          # 下载 rclone 配置文件
+          mkdir -p ~/.config/rclone  # 创建配置目录
+          curl -o ~/.config/rclone/rclone.conf http://1alist.iboom.top:5244/d/189/rclone/rclone.conf  # 下载配置文件
+    env:
+          RCLONE_REMOTE: ali  # 使用 GitHub Secrets 中的 rclone 远程配置名称
+          RCLONE_PATH: "189/ssc338q-fpv"  # 目标网盘路径
+
+
+          # 上传固件文件到指定网盘路径
+          rclone copy ${GITHUB_WORKSPACE}/output/images/openipc.ssc338q-nor-fpv.tgz ${RCLONE_REMOTE}:${RCLONE_PATH}/  # 上传 NOR 固件
+          rclone copy ${GITHUB_WORKSPACE}/output/images/openipc.ssc338q-nand-fpv.tgz ${RCLONE_REMOTE}:${RCLONE_PATH}/  # 上传 NAND 固件
+          
 
 
 
       # 步骤 7: 上传固件
       - name: Upload firmware
-        if: github.event_name != 'pull_request'  # 仅在 push 事件时上传
+     #   if: github.event_name != 'pull_request'  # 仅在 push 事件时上传
         uses: softprops/action-gh-release@v2  # 使用 GitHub Actions 的 release 上传插件
         with:
           tag_name: ${{env.TAG_NAME}}  # 使用定义的 TAG_NAME（默认为 latest）
