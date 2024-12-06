@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  TAG_NAME: latest  # 固件版本标签，默认为 'latest'
+  TAG_NAME: openipc-ssc338q-fpv  # 固件版本标签，默认为 'latest'
   TG_TOKEN: ${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}  # Telegram Bot Token，从 GitHub Secrets 中获取
   TG_CHANNEL: ${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}  # Telegram Channel，从 GitHub Secrets 中获取
   TG_OPTIONS: -s -o /dev/null -w %{http_code}  # Telegram 发送消息的 curl 参数
