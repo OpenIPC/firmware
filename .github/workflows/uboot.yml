@@ -6,28 +6,38 @@ jobs:
   toolchain:
     name: Uboot
     runs-on: ubuntu-latest
+
     steps:
       - name: Prepare
         run: |
           sudo apt-get update
           sudo apt-get install gcc-arm-linux-gnueabi gcc-mipsel-linux-gnu u-boot-tools lzop gnutls-dev lzma-alone
 
-      - name: Allwinner
+      - name: Clone and Modify Sigmastar U-Boot
+        run: |
+          # 克隆仓库
+          git clone https://github.com/openipc/u-boot-sigmastar --depth 1
+          cd u-boot-sigmastar
+
+          # 修改 sstar-common.h 的内容
+          sed -i 's|#define CONFIG_BOOTARGS "console=ttyS0,115200 panic=20 root=/dev/mtdblock3 init=/init mtdparts=NOR_FLASH:256k(boot),64k(env),2048k(kernel),\\\\${rootmtd}(rootfs),-(rootfs_data) LX_MEM=\\\\${memlx} mma_heap=mma_heap_name0,miu=0,sz=\\\\${memsz} cma=2M"|#define CONFIG_BOOTARGS "console=ttyS0,115200 panic=20 root=/dev/mtdblock3 init=/init mtdparts=NOR_FLASH:256k(boot),64k(env),3072k(kernel),9600k(rootfs),-(rootfs_data) LX_MEM=\\\\${memlx} mma_heap=mma_heap_name0,miu=0,sz=\\\\${memsz} cma=2M"|g' include/configs/sstar-common.h
+
+          # 打印修改后的内容进行验证
+          grep "CONFIG_BOOTARGS" include/configs/sstar-common.h
+
+          # 运行构建脚本
+          bash build.sh
+
+      - name: Clone and Build Allwinner U-Boot
         run: |
           git clone https://github.com/openipc/u-boot-allwinner --depth 1
           cd u-boot-allwinner
           bash build.sh
 
-      - name: Ingenic
+      - name: Clone and Build Ingenic U-Boot
         run: |
           git clone https://github.com/openipc/u-boot-ingenic --depth 1
           cd u-boot-ingenic
-          bash build.sh
-
-      - name: Sigmastar
-        run: |
-          git clone https://github.com/openipc/u-boot-sigmastar --depth 1
-          cd u-boot-sigmastar
           bash build.sh
 
       - name: Upload
