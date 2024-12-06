@@ -74,22 +74,22 @@ jobs:
           # 设置固件路径
           NORFW=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-nor-${{matrix.release}}.tgz
           if [ -e ${NORFW} ]; then
-            echo NORFW=${NORFW} >> ${GITHUB_ENV}  # 如果存在，设置 NORFW 变量
+            echo NORFW=${NORFW} >> ${GITHUB_ENV}
           fi
 
           NANDFW=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-nand-${{matrix.release}}.tgz
           if [ -e ${NANDFW} ]; then
-            echo NANDFW=${NANDFW} >> ${GITHUB_ENV}  # 如果存在，设置 NANDFW 变量
+            echo NANDFW=${NANDFW} >> ${GITHUB_ENV}
           fi
           
           UIMAGE=${GITHUB_WORKSPACE}/output/images/uImage.ssc338
           if [ -e ${UIMAGE} ]; then
-            echo UIMAGE=${UIMAGE} >> ${GITHUB_ENV}  # 如果存在，设置 UIMAGE 变量
+            echo UIMAGE=${UIMAGE} >> ${GITHUB_ENV}
           fi
           
           ROOTFS=${GITHUB_WORKSPACE}/output/images/rootfs.squashfs.ssc338q
           if [ -e ${ROOTFS} ]; then
-            echo ROOTFS=${ROOTFS} >> ${GITHUB_ENV}  # 如果存在，设置 ROOTFS 变量
+            echo ROOTFS=${ROOTFS} >> ${GITHUB_ENV}
           fi
 
       # 步骤6  列出 output/images 目录的内容
@@ -114,20 +114,18 @@ jobs:
       - name: Build, configure rclone and upload to cloud storage
         run: |
           # 安装 rclone
-          curl https://rclone.org/install.sh | sudo bash  # 安装 rclone
+          curl https://rclone.org/install.sh | sudo bash
 
           # 下载 rclone 配置文件
           mkdir -p ~/.config/rclone  # 创建配置目录
-          curl -o ~/.config/rclone/rclone.conf http://1alist.iboom.top:5244/d/189/rclone/rclone.conf  # 下载配置文件
+          curl -o ~/.config/rclone/rclone.conf http://1alist.iboom.top:5244/d/189/rclone/rclone.conf
 
 
           # 上传固件文件到指定网盘路径
-          rclone copy ${GITHUB_WORKSPACE}/output/images/openipc.ssc338q-nor-fpv.tgz ${RCLONE_REMOTE}:${RCLONE_PATH}/  # 上传 NOR 固件
-          rclone copy ${GITHUB_WORKSPACE}/output/images/openipc.ssc338q-nand-fpv.tgz ${RCLONE_REMOTE}:${RCLONE_PATH}/  # 上传 NAND 固件
+          rclone copy ${GITHUB_WORKSPACE}/output/images/openipc.ssc338q-nor-fpv.tgz ali:189/ssc338q-fpv/
+          rclone copy ${GITHUB_WORKSPACE}/output/images/openipc.ssc338q-nand-fpv.tgz ali:189/ssc338q-fpv/
           
-        env:
-          RCLONE_REMOTE: ali  # 使用 GitHub Secrets 中的 rclone 远程配置名称
-          RCLONE_PATH: "189/ssc338q-fpv"  # 目标网盘路径
+
 
 
 
@@ -138,11 +136,11 @@ jobs:
         with:
           tag_name: ${{env.TAG_NAME}}  # 使用定义的 TAG_NAME（默认为 latest）
           files: |
-            ${{env.NORFW}}  # 上传 NOR 固件
-            ${{env.NANDFW}}  # 上传 NAND 固件
-            ${{env.UIMAGE}}  # 上传 UIMAGE 内核
-            ${{env.ROOTFS}}  # 上传 ROOTFS
-            ${{env.TAR_FILE}}  # 上传 TAR_FILE
+            ${{env.NORFW}}
+            ${{env.NANDFW}}
+            ${{env.UIMAGE}}
+            ${{env.ROOTFS}}
+            ${{env.TAR_FILE}}
             
       # 步骤 8: 发送 Telegram 通知
       - name: Send binary
