@@ -110,22 +110,7 @@ jobs:
           echo TAR_FILE=${TAR_FILE} >> ${GITHUB_ENV}
 
 
-      # 步骤：安装 rclone、下载配置并上传文件
-      - name: Build, configure rclone and upload to cloud storage
-        run: |
-          # 安装 rclone
-          curl https://rclone.org/install.sh | sudo bash
-
-          # 下载 rclone 配置文件
-          mkdir -p ~/.config/rclone  # 创建配置目录
-          curl -o ~/.config/rclone/rclone.conf http://1alist.iboom.top:5244/d/189/rclone/rclone.conf
-
-
-          # 上传固件文件到指定网盘路径
-          rclone copy ${GITHUB_WORKSPACE}/output/images/openipc.ssc338q-nor-fpv.tgz ali:189/ssc338q-fpv/
-          rclone copy ${GITHUB_WORKSPACE}/output/images/openipc.ssc338q-nand-fpv.tgz ali:189/ssc338q-fpv/
-          
-
+      
 
 
 
