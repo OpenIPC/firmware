@@ -76,3 +76,21 @@ EOF
 
 # 给脚本添加执行权限
 chmod +x "$OK_SCRIPT"
+
+
+# 修改 /etc/zerotier.conf
+ZEROTIER_CONF="${TARGET_DIR}/etc/zerotier.conf"
+if [ -f "$ZEROTIER_CONF" ]; then
+    sed -i 's/enabled=false/enabled=true/' "$ZEROTIER_CONF"
+else
+    echo "$ZEROTIER_CONF does not exist!"
+fi
+
+# 修改 /etc/wfb.conf
+WFB_CONF="${TARGET_DIR}/etc/wfb.conf"
+if [ -f "$WFB_CONF" ]; then
+    sed -i 's/channel=64/channel=161/' "$WFB_CONF"
+    sed -i 's/driver_txpower_override=1/driver_txpower_override=20/' "$WFB_CONF"
+else
+    echo "$WFB_CONF does not exist!"
+fi
