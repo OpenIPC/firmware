@@ -116,7 +116,7 @@ jobs:
 
       # 步骤 7: 上传固件
       - name: Upload firmware
-     #   if: github.event_name != 'pull_request'  # 仅在 push 事件时上传
+        if: github.event_name != 'pull_request'  # 仅在 push 事件时上传
         uses: softprops/action-gh-release@v2  # 使用 GitHub Actions 的 release 上传插件
         with:
           tag_name: ${{env.TAG_NAME}}  # 使用定义的 TAG_NAME（默认为 latest）
