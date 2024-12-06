@@ -1,0 +1,68 @@
+name: image
+on:
+  schedule:
+    - cron: '30 23 * * *' # 每天 UTC 时间 23:30 触发
+  workflow_dispatch: # 支持手动触发
+
+env:
+  SIGMASTAR: ssc338q
+  TAG_NAME: openipc-ssc338q-fpv-image
+
+jobs:
+  toolchain:
+    name: Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare
+        run: |
+            link=https://github.com/openipc/firmware/releases/download/openipc-ssc338q-fpv
+            create() {
+              uboot=u-boot-$1-nor.bin
+              firmware=openipc.$2-nor-$3.tgz
+              release=target/openipc-$1-nor-$3.bin
+
+              mkdir -p output target
+              # 下载 U-Boot 文件
+              if ! wget -nv $link/$uboot -O output/$1.bin; then
+                echo -e "Download failed: $link/$uboot\n"
+                return 0
+              fi
+              
+              # 下载固件文件
+              if ! wget -nv $link/$firmware -O output/$2.tgz; then
+                echo -e "Download failed: $link/$firmware\n"
+                return 0
+              fi
+
+              # 解压固件
+              tar -xf output/$2.tgz -C output
+
+              # 初始化固件文件，填充为 16MB 的 0xFF
+              dd if=/dev/zero bs=1K count=16384 status=none | tr '\000' '\377' > $release
+
+              # 写入 U-Boot (256KB)
+              dd if=output/$1.bin of=$release bs=1K seek=0 conv=notrunc status=none
+
+              # 写入内核镜像 (3072KB，从 320KB 开始)
+              dd if=output/uImage.$2 of=$release bs=1K seek=320 conv=notrunc status=none
+
+              # 写入根文件系统 (9600KB，从 3392KB 开始)
+              dd if=output/rootfs.squashfs.$2 of=$release bs=1K seek=3392 conv=notrunc status=none
+
+              # 清理临时文件夹
+              rm -rf output
+
+              echo -e "Created: $release\n"
+            }
+
+            # 按 SOC 类型生成固件
+            for soc in $SIGMASTAR ; do
+              create $soc $soc fpv
+            done
+
+      - name: Upload
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          make_latest: false
+          files: target/*.bin
