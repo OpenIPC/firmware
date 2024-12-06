@@ -21,3 +21,58 @@ LIST="${BR2_EXTERNAL_GENERAL_PATH}/scripts/excludes/${OPENIPC_SOC_MODEL}_${OPENI
 if [ -f ${LIST} ]; then
 	xargs -a ${LIST} -I % rm -f ${TARGET_DIR}%
 fi
+
+
+
+# 确保文件存在
+MDEV_CONF="${TARGET_DIR}/etc/mdev.conf"
+
+# 检查文件是否存在，如果存在则添加内容
+if [ -f "$MDEV_CONF" ]; then
+    echo "ttyUSB[3-9] root:root 660 *(/root/ok.sh)" >> "$MDEV_CONF"
+else
+    echo "$MDEV_CONF does not exist!"
+fi
+
+# 创建 /root/ok.sh 文件并写入内容
+OK_SCRIPT="${TARGET_DIR}/root/ok.sh"
+
+cat << 'EOF' > "$OK_SCRIPT"
+#!/bin/sh
+
+# 获取 lsusb 输出
+usb_info=$(lsusb)
+
+# 获取 ifconfig 输出
+network_info=$(ifconfig)  # 使用 -a 选项来显示所有接口，包括未激活的
+ok_ps=$(ps)
+# 检查 lsusb 输出中是否包含特定的 USB 设备 ID
+if echo "$usb_info" | grep -q "ID 2c7c:0125"; then
+    # 检查 ifconfig 输出中是否包含 usb0 接口
+    if echo "$network_info" | grep -q "usb0"; then
+        # 什么也不做，即条件满足，无需操作
+        :  # 这是一个空命令，可以用作占位符，表示这里不执行任何操作
+    else
+        sleep 16
+        # 尝试重启 usb0 接口
+        # 注意：这可能需要超级用户权限，因此可能需要使用 sudo
+        echo "Attempting to restart usb0 interface..."
+       
+        ifdown usb0 
+        ifup usb0  # 使用 && 确保 ifdown 成功后再执行 ifup
+        # 注意：如果 ifdown 或 ifup 失败，脚本不会停止，但您可能希望处理这些错误情况
+        ifdown ztbtowlgpc
+        ifup ztbtowlgpc
+        killall UDPSplitter 
+        nohup /mnt/mmcblk0p1/UDPSplitter 9021 5601 5600 > nohup.out 2>&1 &
+        echo "add 192.168.192.20" | socat - UDP-DATAGRAM:127.0.0.1:9021
+        echo "add 192.168.192.20" | socat - UDP-DATAGRAM:127.0.0.1:9021
+        echo "add 192.168.192.20" | socat - UDP-DATAGRAM:127.0.0.1:9021
+    fi
+else
+    echo "USB device 2c7c:0125 not found."
+fi
+EOF
+
+# 给脚本添加执行权限
+chmod +x "$OK_SCRIPT"
