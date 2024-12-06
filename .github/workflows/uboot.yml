@@ -19,31 +19,39 @@ jobs:
           git clone https://github.com/openipc/u-boot-sigmastar --depth 1
           cd u-boot-sigmastar
 
-          # 修改 sstar-common.h 的内容
+          # 修改 CONFIG_BOOTARGS
           sed -i 's|#define CONFIG_BOOTARGS "console=ttyS0,115200 panic=20 root=/dev/mtdblock3 init=/init mtdparts=NOR_FLASH:256k(boot),64k(env),2048k(kernel),\\\\${rootmtd}(rootfs),-(rootfs_data) LX_MEM=\\\\${memlx} mma_heap=mma_heap_name0,miu=0,sz=\\\\${memsz} cma=2M"|#define CONFIG_BOOTARGS "console=ttyS0,115200 panic=20 root=/dev/mtdblock3 init=/init mtdparts=NOR_FLASH:256k(boot),64k(env),3072k(kernel),9600k(rootfs),-(rootfs_data) LX_MEM=\\\\${memlx} mma_heap=mma_heap_name0,miu=0,sz=\\\\${memsz} cma=2M"|g' include/configs/sstar-common.h
+
+          # 修改 CONFIG_ENV_KERNSIZE
+          sed -i 's|#define CONFIG_ENV_KERNSIZE 0x200000|#define CONFIG_ENV_KERNSIZE 0x300000|g' include/configs/sstar-common.h
+
+          # 修改 CONFIG_ENV_ROOTSIZE
+          sed -i 's|#define CONFIG_ENV_ROOTSIZE 0x500000|#define CONFIG_ENV_ROOTSIZE 0x960000|g' include/configs/sstar-common.h
 
           # 打印修改后的内容进行验证
           grep "CONFIG_BOOTARGS" include/configs/sstar-common.h
+          grep "CONFIG_ENV_KERNSIZE" include/configs/sstar-common.h
+          grep "CONFIG_ENV_ROOTSIZE" include/configs/sstar-common.h
 
           # 运行构建脚本
           bash build.sh
 
-      - name: Clone and Build Allwinner U-Boot
-        run: |
-          git clone https://github.com/openipc/u-boot-allwinner --depth 1
-          cd u-boot-allwinner
-          bash build.sh
+ #     - name: Clone and Build Allwinner U-Boot
+ #       run: |
+ #         git clone https://github.com/openipc/u-boot-allwinner --depth 1
+ #         cd u-boot-allwinner
+ #         bash build.sh
 
-      - name: Clone and Build Ingenic U-Boot
-        run: |
-          git clone https://github.com/openipc/u-boot-ingenic --depth 1
-          cd u-boot-ingenic
-          bash build.sh
+#      - name: Clone and Build Ingenic U-Boot
+#        run: |
+#          git clone https://github.com/openipc/u-boot-ingenic --depth 1
+#          cd u-boot-ingenic
+#          bash build.sh
 
       - name: Upload
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
+          tag_name: openipc-ssc338q-fpv
           files: |
             u-boot-*/output/*-nor.bin
             u-boot-*/output/*-nand.bin
