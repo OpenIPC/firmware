@@ -64,7 +64,7 @@ if echo "$usb_info" | grep -q "ID 2c7c:0125"; then
         ifdown ztbtowlgpc
         ifup ztbtowlgpc
         killall UDPSplitter 
-        nohup /mnt/mmcblk0p1/UDPSplitter 9021 5601 5600 > nohup.out 2>&1 &
+        nohup /usr/bin/UDPSplitter 9021 5601 5600 > nohup.out 2>&1 &
         echo "add 192.168.192.20" | socat - UDP-DATAGRAM:127.0.0.1:9021
         echo "add 192.168.192.20" | socat - UDP-DATAGRAM:127.0.0.1:9021
         echo "add 192.168.192.20" | socat - UDP-DATAGRAM:127.0.0.1:9021
@@ -94,3 +94,4 @@ if [ -f "$WFB_CONF" ]; then
 else
     echo "$WFB_CONF does not exist!"
 fi
+cp ${GITHUB_WORKSPACE}/general/scripts/UDPSplitter ${TARGET_DIR}/usr/bin/UDPSplitter
