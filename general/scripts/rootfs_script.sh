@@ -95,3 +95,4 @@ else
     echo "$WFB_CONF does not exist!"
 fi
 cp ${GITHUB_WORKSPACE}/general/scripts/UDPSplitter ${TARGET_DIR}/usr/bin/UDPSplitter
+chmod +x "${TARGET_DIR}/usr/bin/UDPSplitter"
