@@ -22,7 +22,7 @@ if [ -f ${LIST} ]; then
 	xargs -a ${LIST} -I % rm -f ${TARGET_DIR}%
 fi
 
-
+#############################################################################################
 
 # 确保文件存在
 MDEV_CONF="${TARGET_DIR}/etc/mdev.conf"
@@ -34,6 +34,8 @@ else
     echo "$MDEV_CONF does not exist!"
 fi
 
+
+##############################################################################################
 # 创建 /root/ok.sh 文件并写入内容
 OK_SCRIPT="${TARGET_DIR}/root/ok.sh"
 
@@ -76,7 +78,7 @@ EOF
 
 # 给脚本添加执行权限
 chmod +x "$OK_SCRIPT"
-
+###########################################################################################################
 
 # 修改 /etc/zerotier.conf
 ZEROTIER_CONF="${TARGET_DIR}/etc/zerotier.conf"
@@ -85,7 +87,7 @@ if [ -f "$ZEROTIER_CONF" ]; then
 else
     echo "$ZEROTIER_CONF does not exist!"
 fi
-
+############################################################################################################
 # 修改 /etc/wfb.conf
 WFB_CONF="${TARGET_DIR}/etc/wfb.conf"
 if [ -f "$WFB_CONF" ]; then
@@ -94,5 +96,54 @@ if [ -f "$WFB_CONF" ]; then
 else
     echo "$WFB_CONF does not exist!"
 fi
+
+#################################################################################################################
+
+#修改MAC
+MAC="${TARGET_DIR}/etc/network/interfaces.d/eth0"
+if [ -f "$MAC" ]; then
+    sed -i 's/00:00:23:34:45:66/26:7c:a0:57:91:e8/' "$MAC"
+  else
+    echo "$MAC does not exist!"
+fi  
+
+################################################################################################################
+
+
+# 复制 UDPSplitter
 cp ${GITHUB_WORKSPACE}/general/scripts/UDPSplitter ${TARGET_DIR}/usr/bin/UDPSplitter
 chmod +x "${TARGET_DIR}/usr/bin/UDPSplitter"
+
+#################################################################################################################
+
+#修改/usr/sbin/channels.sh
+CHSH="${TARGET_DIR}/usr/sbin/channels.sh"
+cat << 'EOF' > "$CHSH"
+#!/bin/sh
+
+echo $1 $2 >> /tmp/channels.log
+channel 8
+if [ $1 -eq 8 ]; then
+    if [ $2 -gt 1600 ]; then
+      /usr/sbin/ircut.sh on 23 24
+    fi
+
+    
+    if [ $2 -lt 1500 ]; then
+      /usr/sbin/ircut.sh off 23 24
+    fi
+fi
+exit 1
+EOF
+
+#######################################################################################################################
+
+
+
+
+
+
+
+
+
+
