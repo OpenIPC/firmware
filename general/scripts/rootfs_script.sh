@@ -138,8 +138,15 @@ EOF
 
 #######################################################################################################################
 
+# 复制 mosquitto配置
+cp -rf "${GITHUB_WORKSPACE}/general/longcat-openipc/mosquitto/" "${TARGET_DIR}/etc/mosquitto"
+cp "${GITHUB_WORKSPACE}/general/longcat-openipc/mqtt_pub.sh" "${TARGET_DIR}/usr/sbin/"
+chmod +x "${TARGET_DIR}/usr/sbin/mqtt_pub.sh"
+cp "${GITHUB_WORKSPACE}/general/longcat-openipc/mqtt_sub.sh" "${TARGET_DIR}/usr/sbin/"
+chmod +x "${TARGET_DIR}/usr/sbin/mqtt_sub.sh"
+cp "${GITHUB_WORKSPACE}/general/longcat-openipc/passwd"  "${TARGET_DIR}/etc/mosquitto/"
 
-
+#######################################################################################################################
 
 
 
