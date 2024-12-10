@@ -164,6 +164,88 @@ EOF
 
 #######################################################################################################################
 
+#修改majestic.yaml
+cat << EOF | tee "${TARGET_DIR}/etc/majestic.yaml"
+system:
+  webAdmin: enabled
+  buffer: 1024
+image:
+  mirror: false
+  flip: false
+  rotate: 0
+  contrast: auto
+  hue: 50
+  saturation: 50
+  luminance: auto
+osd:
+  enabled: true
+  template: "%Y-%m-%d %H:%M:%S"
+  posX: 16
+  posY: 16
+nightMode:
+  enabled: true
+  colorToGray: true
+  irSensorPinInvert: true
+  irCutSingleInvert: false
+  irCutPin1: 23
+  irCutPin2: 24
+  irSensorPin: 60
+  dncDelay: 6
+records:
+  enabled: false
+  path: /mnt/mmcblk0p1/%F/%H.mp4
+  maxUsage: 95
+video0:
+  enabled: true
+  size: 1920x1080
+  fps: 60
+  rcMode: cbr
+  codec: h265
+  bitrate: 4096
+  gopSize: 1.5
+video1:
+  enabled: false
+jpeg:
+  enabled: true
+mjpeg:
+  size: 640x360
+  fps: 5
+  bitrate: 1024
+audio:
+  enabled: true
+  volume: auto
+  srate: 8000
+  speakerPinInvert: false
+  outputEnabled: true
+  speakerPin: 39
+  outputVolume: 100
+  codec: opus
+rtsp:
+  enabled: true
+  port: 554
+hls:
+  enabled: false
+youtube:
+  enabled: false
+motionDetect:
+  enabled: false
+  visualize: false
+  debug: false
+ipeye:
+  enabled: false
+watchdog:
+  enabled: true
+  timeout: 300
+isp:
+  exposure: 20
+  aGain: 40
+  sensorConfig: /etc/sensors/imx415_fpv.bin
+outgoing:
+  enabled: true
+  server: udp://127.0.0.1:5600
+  naluSize: 1200
+EOF
+
 
 
 
