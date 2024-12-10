@@ -256,5 +256,3 @@ int main(int argc, char *argv[])
     } while (errsv == 11 || errsv == 38); //while not err
   } //while true
 }
-
-}
