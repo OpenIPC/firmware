@@ -147,7 +147,19 @@ chmod +x "${TARGET_DIR}/usr/sbin/mqtt_sub.sh"
 cp "${GITHUB_WORKSPACE}/general/longcat-openipc/passwd"  "${TARGET_DIR}/etc/mosquitto/"
 
 #######################################################################################################################
+#修改时间
+echo "Asia/Shanghai" | tee "${TARGET_DIR}/etc/timezone"
+echo "CST-8" | tee "${TARGET_DIR}/etc/TZ"
 
+cat << EOF | tee "${TARGET_DIR}/etc/ntp.conf"
+server ntp.aliyun.com iburst
+server time1.aliyun.com iburst
+server time2.aliyun.com iburst
+server time3.aliyun.com iburst
+EOF
+
+
+#######################################################################################################################
 
 
 
