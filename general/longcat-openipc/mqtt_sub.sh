@@ -20,4 +20,23 @@ mosquitto_sub -h "$host" \
     echo "收到触发消息，执行脚本！"
     /usr/sbin/channels.sh 8 2000 # 在此处替换为实际要执行的脚本
   fi
+  
+  if [[ "$message" == "1080" ]]; then
+    echo "收到触发消息，执行脚本！"
+    /root/1080.sh  # 在此处替换为实际要执行的脚本
+  fi  
+
+  if [[ "$message" == "3k" ]]; then
+    echo "收到触发消息，执行脚本！"
+    /root/3K.sh  # 在此处替换为实际要执行的脚本
+  fi  
+  if [[ "$message" == "720" ]]; then
+    echo "收到触发消息，执行脚本！"
+    /root/720.sh  # 在此处替换为实际要执行的脚本
+  fi
+  if [[ "$message" == "4k" ]]; then
+    echo "收到触发消息，执行脚本！"
+    /root/4K.sh  # 在此处替换为实际要执行的脚本
+  fi
+
 done
