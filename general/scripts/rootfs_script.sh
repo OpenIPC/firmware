@@ -144,8 +144,11 @@ cp "${GITHUB_WORKSPACE}/general/longcat-openipc/mqtt_pub.sh" "${TARGET_DIR}/usr/
 chmod +x "${TARGET_DIR}/usr/sbin/mqtt_pub.sh"
 cp "${GITHUB_WORKSPACE}/general/longcat-openipc/mqtt_sub.sh" "${TARGET_DIR}/usr/sbin/"
 chmod +x "${TARGET_DIR}/usr/sbin/mqtt_sub.sh"
-cp "${GITHUB_WORKSPACE}/general/longcat-openipc/passwd"  "${TARGET_DIR}/etc/mosquitto/"
+# cp "${GITHUB_WORKSPACE}/general/longcat-openipc/passwd"  "${TARGET_DIR}/etc/mosquitto/"
 
+cp "${GITHUB_WORKSPACE}/general/longcat-openipc/"{1080.sh,1080b.sh,1080c.sh,3K.sh,4K.sh,720.sh,720b.sh,720c.sh,720d.sh,kill.sh} "${TARGET_DIR}/root/"
+# 给/root所有脚本执行权限
+find "${TARGET_DIR}/root" -name "*.sh" -exec chmod +x {} \;
 #######################################################################################################################
 #修改时间
 echo "Asia/Shanghai" | tee "${TARGET_DIR}/etc/timezone"
@@ -160,8 +163,6 @@ EOF
 
 
 #######################################################################################################################
-
-
 
 
 
