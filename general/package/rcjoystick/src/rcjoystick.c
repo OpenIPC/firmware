@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <linux/joystick.h>
 #include <sys/socket.h>
+#include "string.h"
 #include <errno.h>
 #include <sys/time.h>
 #include <netinet/in.h>
