@@ -6,6 +6,14 @@ finish() {
 	reboot
 }
 
+goke() {
+	cli -s .isp.slowShutter disabled
+	cli -s .video0.codec h265
+	cli -s .video0.size 1920x1080
+	cli -s .video0.fps 30
+	cli -s .video0.rcMode cbr
+}
+
 sigmastar() {
 	cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
 	cli -s .isp.exposure 5
@@ -13,14 +21,24 @@ sigmastar() {
 	cli -s .video0.size 1920x1080
 	cli -s .video0.fps 90
 	cli -s .video0.rcMode cbr
+}
+
+common() {
 	cli -s .jpeg.enabled false
 	cli -s .outgoing.enabled true
 	cli -s .outgoing.server udp://0.0.0.0:5600
 }
 
 case "$1" in
+	gk7205v300)
+		goke
+		common
+		finish
+		;;
+
 	ssc33x)
 		sigmastar
+		common
 		finish
 		;;
 
