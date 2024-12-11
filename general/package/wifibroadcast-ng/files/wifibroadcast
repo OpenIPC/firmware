@@ -1,9 +1,10 @@
 #!/bin/sh
 wfb_soc=$(ipcinfo -c)
 wfb_key=/etc/drone.key
+wfb_cfg=/etc/wfb.conf
 
-if [ -e /etc/wfb.conf ]; then
-	. /etc/wfb.conf
+if [ -e "$wfb_cfg" ]; then
+	. "$wfb_cfg"
 else
 	echo "Configuration file not found"
 	exit 1
@@ -14,7 +15,7 @@ load_modules() {
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
 				driver="88XXau"
-				modprobe 88XXau rtw_tx_pwr_idx_override="$driver_txpower_override"
+				modprobe 88XXau rtw_tx_pwr_idx_override="$txpower"
 				;;
 
 			"0bda:a81a")
@@ -22,7 +23,7 @@ load_modules() {
 				modprobe 8812eu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
 
-			"0bda:f72b")
+			"0bda:f72b" | "0bda:b733")
 				driver="8733bu"
 				modprobe 8733bu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
@@ -42,7 +43,7 @@ load_interface() {
 	iwconfig "$wlan" mode monitor
 
 	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
-		iw dev "$wlan" set txpower fixed $((driver_txpower_override * 50))
+		iw dev "$wlan" set txpower fixed $((txpower * 50))
 	fi
 
 	iw reg set "$region"
@@ -70,14 +71,14 @@ start_telemetry() {
 		devmem 0x1F207890 16 0x8
 	fi
 
-	if [ "$router" -eq 2 ]; then
-		echo "Starting msposd"
+	if [ "$router" = "msposd" ]; then
+		echo "Starting $router"
 		msposd --master "$serial" --baudrate "$baud" --channels "$channels" \
-			-osd -r "$fps" --ahi 0 --out 10.5.0.1:"$port_tx" > /dev/null &
-	else
-		echo "Starting mavfwd"
-		mavfwd --master "$serial" --baudrate "$baud" --channels "$channels" -p 100 -t \
-			-a 15 --in 0.0.0.0:"$port_rx" --out 10.5.0.1:"$port_tx" > /dev/null &
+			-osd -r 20 --ahi 0 --out 10.5.0.1:"$port_tx" > /dev/null &
+	elif [ "$router" = "mavfwd" ]; then
+		echo "Starting $router"
+		mavfwd --master "$serial" --baudrate "$baud" --channels "$channels" -p 100 \
+			-t -a 15 --in 0.0.0.0:"$port_rx" --out 10.5.0.1:"$port_tx" > /dev/null &
 	fi
 }
 
