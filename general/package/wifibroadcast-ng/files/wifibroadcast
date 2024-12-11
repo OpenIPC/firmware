@@ -40,14 +40,13 @@ load_modules() {
 
 load_interface() {
 	ifconfig "$wlan" up
-	iwconfig "$wlan" mode monitor
+	iw "$wlan" set type monitor
+	iw "$wlan" set channel "$channel"
+	iw reg set "$region"
 
 	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
-		iw dev "$wlan" set txpower fixed $((txpower * 50))
+		iw "$wlan" set txpower fixed $((txpower * 50))
 	fi
-
-	iw reg set "$region"
-	iwconfig "$wlan" channel "$channel"
 }
 
 start_wfb() {
