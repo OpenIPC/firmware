@@ -100,12 +100,12 @@ fi
 #################################################################################################################
 
 #修改MAC
-MAC="${TARGET_DIR}/etc/network/interfaces.d/eth0"
-if [ -f "$MAC" ]; then
-    sed -i 's/00:00:23:34:45:66/26:7c:a0:57:91:e8/' "$MAC"
-  else
-    echo "$MAC does not exist!"
-fi  
+
+cat << EOF | tee "${TARGET_DIR}/etc/network/interfaces.d/eth0"
+iface eth0 inet dhcp
+    hwaddress ether $(fw_printenv -n ethaddr || echo 26:7c:a0:57:91:e8)
+EOF
+
 
 ################################################################################################################
 
