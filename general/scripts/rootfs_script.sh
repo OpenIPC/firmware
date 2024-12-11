@@ -122,7 +122,7 @@ cat << 'EOF' > "$CHSH"
 #!/bin/sh
 
 echo $1 $2 >> /tmp/channels.log
-channel 8
+# channel 8
 if [ $1 -eq 8 ]; then
     if [ $2 -gt 1600 ]; then
       /usr/sbin/ircut.sh on 23 24
