@@ -3,29 +3,50 @@ wfb_soc=$(ipcinfo -c)
 wfb_key=/etc/drone.key
 wfb_cfg=/etc/wfb.conf
 
+# Default broadcast
+wlan=wlan0
+txpower=1
+region=00
+channel=161
+bandwidth=20
+mcs_index=1
+stream=0
+stbc=0
+ldpc=0
+fec_k=8
+fec_n=12
+link_id=7669206
+
+# Default telemetry
+router=msposd
+serial=/dev/ttyS2
+baud=115200
+mav_chn=8
+osd_fps=20
+port_rx=14551
+port_tx=14555
+
+# Custom configuration
 if [ -e "$wfb_cfg" ]; then
 	. "$wfb_cfg"
-else
-	echo "Configuration file not found"
-	exit 1
 fi
 
 load_modules() {
 	for card in $(lsusb | awk '{print $6}' | sort | uniq); do
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
-				driver="88XXau"
-				modprobe 88XXau rtw_tx_pwr_idx_override="$txpower"
+				driver=88XXau
+				modprobe "$driver" rtw_tx_pwr_idx_override="$txpower"
 				;;
 
 			"0bda:a81a")
-				driver="8812eu"
-				modprobe 8812eu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+				driver=8812eu
+				modprobe "$driver" rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
 
 			"0bda:f72b" | "0bda:b733")
-				driver="8733bu"
-				modprobe 8733bu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+				driver=8733bu
+				modprobe "$driver" rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
 		esac
 	done
@@ -41,17 +62,30 @@ load_modules() {
 load_interface() {
 	ifconfig "$wlan" up
 	iw "$wlan" set type monitor
-	iw "$wlan" set channel "$channel"
-	iw reg set "$region"
 
 	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
 		iw "$wlan" set txpower fixed $((txpower * 50))
 	fi
+
+	case "$bandwidth" in
+		"20")
+			iw_mode=HT20
+			;;
+		"40")
+			iw_mode=HT40+
+			;;
+		"80")
+			iw_mode=80MHz
+			;;
+	esac
+
+	iw "$wlan" set channel "$channel" "$iw_mode"
+	iw reg set "$region"
 }
 
 start_wfb() {
 	echo "Starting wfb_tx"
-	wfb_tx -p "$stream" -R "$rcv_buf" -K "$wfb_key" -B "$bandwidth" -M "$mcs_index" -C 8000 \
+	wfb_tx -K "$wfb_key" -M "$mcs_index" -p "$stream" -B "$bandwidth" -C 8000 \
 		-S "$stbc" -L "$ldpc" -k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" &> /dev/null &
 }
 
@@ -72,12 +106,12 @@ start_telemetry() {
 
 	if [ "$router" = "msposd" ]; then
 		echo "Starting $router"
-		msposd --master "$serial" --baudrate "$baud" --channels "$channels" \
-			-osd -r 20 --ahi 0 --out 10.5.0.1:"$port_tx" > /dev/null &
+		msposd --master "$serial" --baudrate "$baud" -osd --ahi 0 -r "$osd_fps" \
+			--channels "$mav_chn" --out 10.5.0.1:"$port_tx" > /dev/null &
 	elif [ "$router" = "mavfwd" ]; then
 		echo "Starting $router"
-		mavfwd --master "$serial" --baudrate "$baud" --channels "$channels" -p 100 \
-			-t -a 15 --in 0.0.0.0:"$port_rx" --out 10.5.0.1:"$port_tx" > /dev/null &
+		mavfwd --master "$serial" --baudrate "$baud" -p 100 -a 15 -t \
+			--channels "$mav_chn" --in 0.0.0.0:"$port_rx" --out 10.5.0.1:"$port_tx" > /dev/null &
 	fi
 }
 
@@ -86,6 +120,7 @@ case "$1" in
 		if [ ! -e /etc/system.ok ]; then
 			echo "Preparing system tweaks for $wfb_soc..."
 			tweaksys "$wfb_soc"
+			exit 0
 		fi
 
 		load_modules
