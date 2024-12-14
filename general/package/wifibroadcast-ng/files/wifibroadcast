@@ -71,15 +71,12 @@ load_interface() {
 
 	case "$bandwidth" in
 		"20")
-			#iw_mode=HT20
 			iw_mode="$bandwidth_iw_mode_20"
 			;;
 		"40")
-			#iw_mode=HT40+
 			iw_mode="$bandwidth_iw_mode_40"
 			;;
 		"80")
-			#iw_mode=80MHz
 			iw_mode="$bandwidth_iw_mode_80"
 			;;
 	esac
