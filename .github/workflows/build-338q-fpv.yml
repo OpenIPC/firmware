@@ -57,6 +57,12 @@ jobs:
           make prepare  # 准备构建所需的文件
           git clone https://github.com/openipc/br-cache  # 克隆 br-cache 仓库
           ln -s ${GITHUB_WORKSPACE}/br-cache $(ls -d output/buildroot-*)/dl  # 创建软链接
+
+          #修改源码
+          sed -i 's|MSPOSD_SITE = $(call github,openipc,msposd,$(MSPOSD_VERSION))|MSPOSD_SITE = https://github.com/longcat99/msposd.git|' ${GITHUB_WORKSPACE}/general/package/msposd/msposd.mk
+
+
+          
           make BOARD=${{matrix.platform}}_${{matrix.release}} br-source  # 获取构建源文件
 
       # 步骤 5: 编译固件
