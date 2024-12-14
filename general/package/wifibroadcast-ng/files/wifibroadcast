@@ -10,12 +10,16 @@ region=00
 channel=161
 bandwidth=20
 mcs_index=1
+telemetry_mcs_index=1
 stream=0
 stbc=0
 ldpc=0
 fec_k=8
 fec_n=12
 link_id=7669206
+bandwidth_iw_mode_20=HT20
+bandwidth_iw_mode_40=HT40+
+bandwidth_iw_mode_80=80Mhz
 
 # Default telemetry
 router=msposd
@@ -60,27 +64,33 @@ load_modules() {
 }
 
 load_interface() {
+	iw dev "$wlan" set monitor none
+	iwconfig "$wlan" mode monitor
 	ifconfig "$wlan" up
-	iw "$wlan" set type monitor
-
-	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
-		iw "$wlan" set txpower fixed $((txpower * 50))
-	fi
+	#iw "$wlan" set type monitor
 
 	case "$bandwidth" in
 		"20")
-			iw_mode=HT20
+			#iw_mode=HT20
+			iw_mode="$bandwidth_iw_mode_20"
 			;;
 		"40")
-			iw_mode=HT40+
+			#iw_mode=HT40+
+			iw_mode="$bandwidth_iw_mode_40"
 			;;
 		"80")
-			iw_mode=80MHz
+			#iw_mode=80MHz
+			iw_mode="$bandwidth_iw_mode_80"
 			;;
 	esac
 
 	iw "$wlan" set channel "$channel" "$iw_mode"
 	iw reg set "$region"
+
+	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
+		iw "$wlan" set txpower fixed $((txpower * 50))
+	fi
+
 }
 
 start_wfb() {
@@ -92,7 +102,7 @@ start_wfb() {
 start_tunnel() {
 	echo "Starting wfb_tun"
 	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$link_id" "$wlan" &> /dev/null &
-	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$mcs_index" -S "$stbc" -L "$ldpc" \
+	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$telemetry_mcs_index" -S "$stbc" -L "$ldpc" \
 		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" &> /dev/null &
 	wfb_tun -a 10.5.0.10/24 > /dev/null &
 }
