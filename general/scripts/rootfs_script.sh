@@ -249,8 +249,8 @@ EOF
 #######################################################################################################################
 #  msposd加入日期 fps 和摄像头温度 
 sed -i '/--out 127.0.0.1:$(($port_tx + 1)) -osd -r "$fps" --ahi "$ahi" > \/dev\/null &/a echo "&L20 &F30 CPU:&C &B temp:&T &t " >/tmp/MSPOSD.msg' "${TARGET_DIR}/usr/bin/telemetry"
-cp "${TARGET_DIR}/usr/share/fonts/font_btfl.png" "/usr/share/fonts/font.png "
-cp "${TARGET_DIR}/usr/share/fonts/font_btfl_hd.png"   "/usr/share/fonts/font_hd.png" 
+cp "${TARGET_DIR}/usr/share/fonts/font_btfl.png" "${TARGET_DIR}/usr/share/fonts/font.png "
+cp "${TARGET_DIR}/usr/share/fonts/font_btfl_hd.png"   "${TARGET_DIR}/usr/share/fonts/font_hd.png" 
 #######################################################################################################################
 
 
