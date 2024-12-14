@@ -178,7 +178,7 @@ image:
   saturation: 50
   luminance: auto
 osd:
-  enabled: true
+  enabled: false
   template: "%Y-%m-%d %H:%M:%S"
   posX: 16
   posY: 16
@@ -246,6 +246,10 @@ outgoing:
   naluSize: 1200
 EOF
 
+#######################################################################################################################
+#  msposd加入日期 fps 和摄像头温度 
+sed -i '/--out 127.0.0.1:$(($port_tx + 1)) -osd -r "$fps" --ahi "$ahi" > \/dev\/null &/a echo "&L20 &F30 CPU:&C &B temp:&T &t " >/tmp/MSPOSD.msg' "${TARGET_DIR}/usr/bin/telemetry"
 
+#######################################################################################################################
 
 
