@@ -59,8 +59,9 @@ jobs:
           ln -s ${GITHUB_WORKSPACE}/br-cache $(ls -d output/buildroot-*)/dl  # 创建软链接
 
           #修改源码
+          rm -rf ${GITHUB_WORKSPACE}/br-cache/msposd
           sed -i 's|MSPOSD_SITE = $(call github,openipc,msposd,$(MSPOSD_VERSION))|MSPOSD_SITE = https://github.com/longcat99/msposd.git|' ${GITHUB_WORKSPACE}/general/package/msposd/msposd.mk
-
+          
 
           
           make BOARD=${{matrix.platform}}_${{matrix.release}} br-source  # 获取构建源文件
