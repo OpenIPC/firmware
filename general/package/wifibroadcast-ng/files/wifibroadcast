@@ -1,36 +1,47 @@
 #!/bin/sh
 wfb_soc=$(ipcinfo -c)
 wfb_key=/etc/drone.key
-wfb_cfg=/etc/wfb.conf
+wfb_cfg=/etc/wfb.yaml
 
-# Default broadcast
-wlan=wlan0
-txpower=1
-region=00
-channel=161
-mode=HT20
-index=1
-stream=0
-stbc=0
-ldpc=0
-fec_k=8
-fec_n=12
-link_id=7669206
+wfb_yaml() {
+	if [ -e "$wfb_cfg" ]; then
+		if [ "$1" = "b" ]; then
+			config=broadcast
+		elif [ "$1" = "t" ]; then
+			config=telemetry
+		elif [ "$1" = "w" ]; then
+			config=wireless
+		fi
+		value=$(yaml-cli -i "$wfb_cfg" -g ."$config"."$2")
+	fi
 
-# Default telemetry
-tun_idx=1
-router=msposd
-serial=/dev/ttyS2
-baud=115200
-mav_chn=8
-osd_fps=20
-port_rx=14551
-port_tx=14555
+	eval "$2"="${value:-$3}"
+}
 
-# Custom configuration
-if [ -e "$wfb_cfg" ]; then
-	. "$wfb_cfg"
-fi
+load_config() {
+	wfb_yaml w wlan wlan0
+	wfb_yaml w txpower 1
+	wfb_yaml w region 00
+	wfb_yaml w channel 161
+	wfb_yaml w mode HT20
+
+	wfb_yaml b index 1
+	wfb_yaml b stream 0
+	wfb_yaml b stbc 0
+	wfb_yaml b ldpc 0
+	wfb_yaml b fec_k 8
+	wfb_yaml b fec_n 12
+	wfb_yaml b link_id 7669206
+
+	wfb_yaml t router msposd
+	wfb_yaml t serial /dev/ttyS2
+	wfb_yaml t baud 115200
+	wfb_yaml t mav_chn 8
+	wfb_yaml t osd_fps 20
+	wfb_yaml t tun_index 1
+	wfb_yaml t port_rx 14551
+	wfb_yaml t port_tx 14555
+}
 
 load_modules() {
 	for card in $(lsusb | awk '{print $6}' | sort | uniq); do
@@ -96,7 +107,7 @@ start_wfb() {
 start_tunnel() {
 	echo "- Starting wfb_tun"
 	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$link_id" "$wlan" &> /dev/null &
-	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$tun_idx" -S "$stbc" -L "$ldpc" \
+	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$tun_index" -S "$stbc" -L "$ldpc" \
 		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" &> /dev/null &
 	wfb_tun -a 10.5.0.10/24 > /dev/null &
 }
@@ -127,6 +138,7 @@ case "$1" in
 			exit 0
 		fi
 
+		load_config
 		load_modules
 		load_interface
 
@@ -136,7 +148,6 @@ case "$1" in
 		;;
 
 	stop)
-		ifconfig "$wlan" down
 		killall -q wfb_rx
 		killall -q wfb_tx
 		killall -q wfb_tun
