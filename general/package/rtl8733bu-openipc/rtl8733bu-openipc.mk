@@ -5,7 +5,7 @@
 ################################################################################
 
 RTL8733BU_OPENIPC_SITE = $(call github,openipc,realtek-wlan,$(RTL8733BU_OPENIPC_VERSION))
-ifeq ($(OPENIPC_VARIANT),fpv)
+ifneq ($(findstring fpv,$(OPENIPC_VARIANT)),)
 	RTL8733BU_OPENIPC_VERSION = rtl8733bu_fpv
 else
 	RTL8733BU_OPENIPC_VERSION = rtl8733bu
