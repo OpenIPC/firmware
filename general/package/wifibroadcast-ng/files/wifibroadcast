@@ -8,20 +8,17 @@ wlan=wlan0
 txpower=1
 region=00
 channel=161
-bandwidth=20
-mcs_index=1
-telemetry_mcs_index=1
+mode=HT20
+index=1
 stream=0
 stbc=0
 ldpc=0
 fec_k=8
 fec_n=12
 link_id=7669206
-bandwidth_iw_mode_20=HT20
-bandwidth_iw_mode_40=HT40+
-bandwidth_iw_mode_80=80Mhz
 
 # Default telemetry
+tun_idx=1
 router=msposd
 serial=/dev/ttyS2
 baud=115200
@@ -56,50 +53,50 @@ load_modules() {
 	done
 
 	if [ -z "$driver" ]; then
-		echo "Wireless module not detected, check the usb connection"
+		echo "- Wireless module not detected!"
 		exit 1
 	else
-		echo "Detected driver: $driver"
+		echo "- Detected driver: $driver"
+	fi
+
+	if ! ifconfig "$wlan" up; then
+		echo "- Wireless driver not found!"
+		exit 1
 	fi
 }
 
 load_interface() {
-	iw dev "$wlan" set monitor none
-	iwconfig "$wlan" mode monitor
-	ifconfig "$wlan" up
-	#iw "$wlan" set type monitor
-
-	case "$bandwidth" in
-		"20")
-			iw_mode="$bandwidth_iw_mode_20"
-			;;
-		"40")
-			iw_mode="$bandwidth_iw_mode_40"
-			;;
-		"80")
-			iw_mode="$bandwidth_iw_mode_80"
-			;;
-	esac
-
-	iw "$wlan" set channel "$channel" "$iw_mode"
+	iw "$wlan" set monitor none
+	iw "$wlan" set channel "$channel" "$mode"
 	iw reg set "$region"
 
 	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
 		iw "$wlan" set txpower fixed $((txpower * 50))
 	fi
 
+	case "$mode" in
+		"HT20")
+			bandwidth=20
+			;;
+		"HT40+" | "HT40-")
+			bandwidth=40
+			;;
+		"80Mhz")
+			bandwidth=80
+			;;
+	esac
 }
 
 start_wfb() {
-	echo "Starting wfb_tx"
-	wfb_tx -K "$wfb_key" -M "$mcs_index" -p "$stream" -B "$bandwidth" -C 8000 \
+	echo "- Starting wfb_tx"
+	wfb_tx -K "$wfb_key" -M "$index" -p "$stream" -B "$bandwidth" -C 8000 \
 		-S "$stbc" -L "$ldpc" -k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" &> /dev/null &
 }
 
 start_tunnel() {
-	echo "Starting wfb_tun"
+	echo "- Starting wfb_tun"
 	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$link_id" "$wlan" &> /dev/null &
-	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$telemetry_mcs_index" -S "$stbc" -L "$ldpc" \
+	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$tun_idx" -S "$stbc" -L "$ldpc" \
 		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" &> /dev/null &
 	wfb_tun -a 10.5.0.10/24 > /dev/null &
 }
@@ -112,11 +109,11 @@ start_telemetry() {
 	fi
 
 	if [ "$router" = "msposd" ]; then
-		echo "Starting $router"
+		echo "- Starting $router"
 		msposd --master "$serial" --baudrate "$baud" -osd --ahi 0 -r "$osd_fps" \
 			--channels "$mav_chn" --out 10.5.0.1:"$port_tx" > /dev/null &
 	elif [ "$router" = "mavfwd" ]; then
-		echo "Starting $router"
+		echo "- Starting $router"
 		mavfwd --master "$serial" --baudrate "$baud" -p 100 -a 15 -t \
 			--channels "$mav_chn" --in 0.0.0.0:"$port_rx" --out 10.5.0.1:"$port_tx" > /dev/null &
 	fi
@@ -125,7 +122,7 @@ start_telemetry() {
 case "$1" in
 	start)
 		if [ ! -e /etc/system.ok ]; then
-			echo "Preparing system tweaks for $wfb_soc..."
+			echo "- Preparing system tweaks for $wfb_soc..."
 			tweaksys "$wfb_soc"
 			exit 0
 		fi
@@ -139,6 +136,7 @@ case "$1" in
 		;;
 
 	stop)
+		ifconfig "$wlan" down
 		killall -q wfb_rx
 		killall -q wfb_tx
 		killall -q wfb_tun
