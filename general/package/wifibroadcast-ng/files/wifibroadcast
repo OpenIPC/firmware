@@ -1,10 +1,9 @@
 #!/bin/sh
 wfb_soc=$(ipcinfo -c)
 wfb_key=/etc/drone.key
-wfb_cfg=/etc/wfb.yaml
 
 wfb_yaml() {
-	if [ -e "$wfb_cfg" ]; then
+	if [ -e /etc/wfb.yaml ]; then
 		if [ "$1" = "b" ]; then
 			config=broadcast
 		elif [ "$1" = "t" ]; then
@@ -12,7 +11,7 @@ wfb_yaml() {
 		elif [ "$1" = "w" ]; then
 			config=wireless
 		fi
-		value=$(yaml-cli -i "$wfb_cfg" -g ."$config"."$2")
+		value=$(wfb-cli -g ."$config"."$2")
 	fi
 
 	eval "$2"="${value:-$3}"
