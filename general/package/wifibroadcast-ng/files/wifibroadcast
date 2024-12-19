@@ -1,6 +1,7 @@
 #!/bin/sh
 wfb_soc=$(ipcinfo -c)
 wfb_key=/etc/drone.key
+wfb_dev=wlan0
 
 wfb_yaml() {
 	if [ -e /etc/wfb.yaml ]; then
@@ -11,33 +12,27 @@ wfb_yaml() {
 		elif [ "$1" = "w" ]; then
 			config=wireless
 		fi
-		value=$(wfb-cli -g ."$config"."$2")
+		value=$(wfb-cli -g ".$config.$2")
 	fi
 
-	eval "$2"="${value:-$3}"
+	eval "$1_$2=${value:-$3}"
 }
 
 load_config() {
-	wfb_yaml w wlan wlan0
 	wfb_yaml w txpower 1
 	wfb_yaml w region 00
 	wfb_yaml w channel 161
 	wfb_yaml w mode HT20
 
 	wfb_yaml b index 1
-	wfb_yaml b stream 0
-	wfb_yaml b stbc 0
-	wfb_yaml b ldpc 0
 	wfb_yaml b fec_k 8
 	wfb_yaml b fec_n 12
 	wfb_yaml b link_id 7669206
 
+	wfb_yaml t index 1
 	wfb_yaml t router msposd
 	wfb_yaml t serial /dev/ttyS2
-	wfb_yaml t baud 115200
-	wfb_yaml t mav_chn 8
 	wfb_yaml t osd_fps 20
-	wfb_yaml t tun_index 1
 	wfb_yaml t port_rx 14551
 	wfb_yaml t port_tx 14555
 }
@@ -47,7 +42,7 @@ load_modules() {
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
 				driver=88XXau
-				modprobe "$driver" rtw_tx_pwr_idx_override="$txpower"
+				modprobe "$driver" rtw_tx_pwr_idx_override="$w_txpower"
 				;;
 
 			"0bda:a81a")
@@ -69,22 +64,22 @@ load_modules() {
 		echo "- Detected driver: $driver"
 	fi
 
-	if ! ifconfig "$wlan" up; then
+	if ! ifconfig "$wfb_dev" up; then
 		echo "- Wireless driver not found!"
 		exit 1
 	fi
 }
 
 load_interface() {
-	iw "$wlan" set monitor none
-	iw "$wlan" set channel "$channel" "$mode"
-	iw reg set "$region"
+	iw "$wfb_dev" set monitor none
+	iw "$wfb_dev" set channel "$w_channel" "$w_mode"
+	iw reg set "$w_region"
 
 	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
-		iw "$wlan" set txpower fixed $((txpower * 50))
+		iw "$wfb_dev" set txpower fixed $((txpower * 50))
 	fi
 
-	case "$mode" in
+	case "$w_mode" in
 		"HT20")
 			bandwidth=20
 			;;
@@ -99,15 +94,15 @@ load_interface() {
 
 start_wfb() {
 	echo "- Starting wfb_tx"
-	wfb_tx -K "$wfb_key" -M "$index" -p "$stream" -B "$bandwidth" -C 8000 \
-		-S "$stbc" -L "$ldpc" -k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" &> /dev/null &
+	wfb_tx -K "$wfb_key" -M "$b_index" -B "$bandwidth" -C 8000 \
+		-k "$b_fec_k" -n "$b_fec_n" -i "$b_link_id" "$wfb_dev" &> /dev/null &
 }
 
 start_tunnel() {
 	echo "- Starting wfb_tun"
-	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$link_id" "$wlan" &> /dev/null &
-	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$tun_index" -S "$stbc" -L "$ldpc" \
-		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" &> /dev/null &
+	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$b_link_id" "$wfb_dev" &> /dev/null &
+	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$t_index" \
+		-k "$b_fec_k" -n "$b_fec_n" -i "$b_link_id" "$wfb_dev" &> /dev/null &
 	wfb_tun -a 10.5.0.10/24 > /dev/null &
 }
 
@@ -118,23 +113,37 @@ start_telemetry() {
 		devmem 0x1F207890 16 0x8
 	fi
 
-	if [ "$router" = "msposd" ]; then
-		echo "- Starting $router"
-		msposd --master "$serial" --baudrate "$baud" -osd --ahi 0 -r "$osd_fps" \
-			--channels "$mav_chn" --out 10.5.0.1:"$port_tx" > /dev/null &
-	elif [ "$router" = "mavfwd" ]; then
-		echo "- Starting $router"
-		mavfwd --master "$serial" --baudrate "$baud" -p 100 -a 15 -t \
-			--channels "$mav_chn" --in 0.0.0.0:"$port_rx" --out 10.5.0.1:"$port_tx" > /dev/null &
+	if [ "$t_router" = "msposd" ]; then
+		echo "- Starting $t_router"
+		msposd --baudrate 115200 ---channels 8 -osd --ahi 0 -r "$t_osd_fps" \
+			--master "$t_serial" --out 10.5.0.1:"$t_port_tx" > /dev/null &
+	elif [ "$t_router" = "mavfwd" ]; then
+		echo "- Starting $t_router"
+		mavfwd --baudrate 115200 ---channels 8 -p 100 -a 15 -t \
+			--master "$t_serial" --in 0.0.0.0:"$t_port_rx" --out 10.5.0.1:"$t_port_tx" > /dev/null &
 	fi
+}
+
+majestic_sigmastar() {
+	cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
+	cli -s .isp.exposure 5
+	cli -s .video0.codec h265
+	cli -s .video0.size 1920x1080
+	cli -s .video0.fps 90
+	cli -s .video0.rcMode cbr
+	cli -s .jpeg.enabled false
+	cli -s .outgoing.enabled true
+	cli -s .outgoing.server udp://0.0.0.0:5600
 }
 
 case "$1" in
 	start)
 		if [ ! -e /etc/system.ok ]; then
-			echo "- Preparing system tweaks for $wfb_soc..."
-			tweaksys "$wfb_soc"
-			exit 0
+			if [ "$wfb_soc" = "ssc33x" ]; then
+				majestic_sigmastar
+			fi
+
+			touch /etc/system.ok
 		fi
 
 		load_config
