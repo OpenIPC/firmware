@@ -63,7 +63,7 @@ jobs:
           sed -i 's|MSPOSD_SITE = $(call github,openipc,msposd,$(MSPOSD_VERSION))|MSPOSD_SITE = https://github.com/longcat99/msposd/archive/refs/heads|' ${GITHUB_WORKSPACE}/general/package/msposd/msposd.mk
           sed -i 's|MSPOSD_VERSION = HEAD|MSPOSD_SOURCE = main.tar.gz|' ${GITHUB_WORKSPACE}/general/package/msposd/msposd.mk
           rm -rf ${GITHUB_WORKSPACE}/br-cache/zerotier-one
-          sed -i 's|ZEROTIER_ONE_VERSION = 1.14.1|ZEROTIER_ONE_VERSION = 1.14.2' ${GITHUB_WORKSPACE}/general/package/zerotier-one/zerotier-one.mk
+          sed -i 's|ZEROTIER_ONE_VERSION = 1.14.1|ZEROTIER_ONE_VERSION = 1.14.2|' ${GITHUB_WORKSPACE}/general/package/zerotier-one/zerotier-one.mk
           
           make BOARD=${{matrix.platform}}_${{matrix.release}} br-source  # 获取构建源文件
 
