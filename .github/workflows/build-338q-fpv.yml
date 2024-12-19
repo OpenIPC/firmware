@@ -138,6 +138,13 @@ jobs:
             ${{env.ROOTFS}}
             ${{env.TAR_FILE}}
             
+       # 上传固件到github        
+      - name: Upload firmware github
+        uses: actions/upload-artifact@v4
+        with:
+          name: openipc-ssc338q-fpv
+          path: ${GITHUB_WORKSPACE}/output/images/         
+            
       # 步骤 8: 发送 Telegram 通知
       - name: Send binary
         if: github.event_name != 'pull_request' && env.NORFW  # 仅在 push 且存在 NORFW 文件时发送通知
