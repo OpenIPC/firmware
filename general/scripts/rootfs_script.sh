@@ -252,5 +252,9 @@ sed -i '/--out 127.0.0.1:$(($port_tx + 1)) -osd -r "$fps" --ahi "$ahi" > \/dev\/
 cp "${TARGET_DIR}/usr/share/fonts/font_btfl.png" "${TARGET_DIR}/usr/share/fonts/font.png "
 cp "${TARGET_DIR}/usr/share/fonts/font_btfl_hd.png"   "${TARGET_DIR}/usr/share/fonts/font_hd.png" 
 #######################################################################################################################
+# 修改telemetry脚本 启动mavlink路由器
+sed -i '/--out 127.0.0.1:$(($port_tx + 1)) -osd -r "$fps" --ahi "$ahi" > \/dev\/null &/a\
+\t\t\t\t\tmavlink-routerd -c /etc/mavlink.conf > /dev/null 2>&1 &' ${TARGET_DIR}/usr/bin/telemetry
 
 
+########################################################################################################################
