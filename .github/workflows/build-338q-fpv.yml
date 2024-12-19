@@ -143,7 +143,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openipc-ssc338q-fpv
-          path: ${GITHUB_WORKSPACE}/output/images/         
+          path: "${{ github.workspace }}/output/images/"         
             
       # 步骤 8: 发送 Telegram 通知
       - name: Send binary
