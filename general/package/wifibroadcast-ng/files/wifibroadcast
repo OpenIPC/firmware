@@ -42,7 +42,7 @@ load_modules() {
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
 				driver=88XXau
-				modprobe "$driver" rtw_tx_pwr_idx_override="$w_txpower"
+				modprobe "$driver"
 				;;
 
 			"0bda:a81a")
@@ -75,8 +75,10 @@ load_interface() {
 	iw "$wfb_dev" set channel "$w_channel" "$w_mode"
 	iw reg set "$w_region"
 
-	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
-		iw "$wfb_dev" set txpower fixed $((txpower * 50))
+	if [ "$driver" = "88XXau" ]; then
+		iw "$wfb_dev" set txpower fixed $((w_txpower * -100))
+	else
+		iw "$wfb_dev" set txpower fixed $((w_txpower * 50))
 	fi
 
 	case "$w_mode" in
