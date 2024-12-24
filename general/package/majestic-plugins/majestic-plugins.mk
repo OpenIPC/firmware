@@ -4,8 +4,11 @@
 #
 ################################################################################
 
-MAJESTIC_PLUGINS_SITE = $(call github,openipc,majestic-plugins,$(MAJESTIC_PLUGINS_VERSION))
+MAJESTIC_PLUGINS_SITE_METHOD = git
+MAJESTIC_PLUGINS_SITE = https://github.com/openipc/majestic-plugins
 MAJESTIC_PLUGINS_VERSION = HEAD
+
+MAJESTIC_PLUGINS_GIT_SUBMODULES = YES
 
 define MAJESTIC_PLUGINS_BUILD_CMDS
 	$(MAKE) CC=$(TARGET_CC) TARGET=$(OPENIPC_SOC_VENDOR) -C $(@D) -B
