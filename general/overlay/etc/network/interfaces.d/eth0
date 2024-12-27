@@ -1,2 +1,5 @@
-iface eth0 inet dhcp
-    hwaddress ether $(fw_printenv -n ethaddr || echo 00:00:23:34:45:66)
+auto eth0
+    iface eth0 inet static
+    address 192.168.144.200
+    netmask 255.255.255.0
+    gateway 192.168.1.1

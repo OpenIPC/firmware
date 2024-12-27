@@ -1,0 +1,123 @@
+#!/bin/sh
+
+DAEMON="MajesticConfigWriter"
+PIDFILE="/var/run/$DAEMON.pid"
+CONFIG_FILE="/etc/majestic.yaml"
+NEW_CONFIG="system:
+  webPort: 80
+  httpsPort: 443
+  logLevel: debug
+isp:
+  antiFlicker: disabled
+  slowShutter: disabled
+  drc: 350
+  sensorConfig: /etc/sensors/imx335_i2c_4M.ini
+image:
+  mirror: false
+  flip: false
+  rotate: 0
+  contrast: 50
+  hue: 50
+  saturation: 50
+  luminance: 50
+video0:
+  enabled: true
+  codec: h264
+  fps: 30
+  bitrate: 5120
+  rcMode: cbr
+  gopSize: 1.5
+  size: 1920x1080
+video1:
+  enabled: false
+  codec: h264
+  size: 704x576
+  fps: 15
+jpeg:
+  enabled: false
+  qfactor: 50
+  fps: 5
+osd:
+  enabled: false
+  font: \"/usr/share/fonts/truetype/UbuntuMono-Regular.ttf\"
+  template: \"%d.%m.%Y %H:%M:%S\"
+  posX: 16
+  posY: 16
+audio:
+  enabled: false
+  volume: 30
+  srate: 8000
+  codec: opus
+  outputEnabled: false
+  outputVolume: 30
+rtsp:
+  enabled: true
+  port: 554
+nightMode:
+  colorToGray: true
+  irCutSingleInvert: false
+  lightMonitor: false
+  lightSensorInvert: false
+motionDetect:
+  enabled: false
+  visualize: false
+  debug: false
+records:
+  enabled: false
+  path: \"/mnt/mmcblk0p1/%F\"
+  split: 20
+  maxUsage: 95
+outgoing:
+  enabled: true
+  server: udp://192.168.144.222:8000
+watchdog:
+  enabled: true
+  timeout: 300
+hls:
+  enabled: false
+netip:
+  enabled: false"
+
+start() {
+    echo -n "Starting $DAEMON: "
+    start-stop-daemon -b -m -S -q -p "$PIDFILE" -x /bin/sh -- -c "echo '$NEW_CONFIG' > $CONFIG_FILE"
+    if [ $? -eq 0 ]; then
+        echo "OK"
+    else
+        echo "FAIL"
+    fi
+}
+
+stop() {
+    echo -n "Stopping $DAEMON: "
+    start-stop-daemon -K -q -p "$PIDFILE"
+    if [ $? -eq 0 ]; then
+        rm -f "$PIDFILE"
+        echo "OK"
+    else
+        echo "FAIL"
+    fi
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart|reload)
+        restart
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|reload}"
+        exit 1
+        ;;
+esac
+
