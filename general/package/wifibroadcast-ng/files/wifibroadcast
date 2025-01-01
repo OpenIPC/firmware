@@ -117,11 +117,11 @@ start_telemetry() {
 
 	if [ "$t_router" = "msposd" ]; then
 		echo "- Starting $t_router"
-		msposd --baudrate 115200 ---channels 8 -osd --ahi 0 -r "$t_osd_fps" \
+		msposd --baudrate 115200 --channels 8 -osd --ahi 0 -r "$t_osd_fps" \
 			--master "$t_serial" --out 10.5.0.1:"$t_port_tx" > /dev/null &
 	elif [ "$t_router" = "mavfwd" ]; then
 		echo "- Starting $t_router"
-		mavfwd --baudrate 115200 ---channels 8 -p 100 -a 15 -t \
+		mavfwd --baudrate 115200 --channels 8 -p 100 -a 15 -t \
 			--master "$t_serial" --in 0.0.0.0:"$t_port_rx" --out 10.5.0.1:"$t_port_tx" > /dev/null &
 	fi
 }
