@@ -1,28 +1,51 @@
 #!/bin/sh
-
 DAEMON="Telemetry_Transfer"
+
 PIDFILE="/var/run/$DAEMON.pid"
-COMMAND="socat UDP-RECV:2002 STDOUT | mcom -s 420000 /dev/ttyAMA0 | socat - udp-sendto:192.168.144.222:2001"
+LOG_DIR="/var/log/$DAEMON"
+STDOUT_LOG="$LOG_DIR/stdout.log"
+STDERR_LOG="$LOG_DIR/stderr.log"
+
+COMMAND="socat UDP-RECV:2002 STDOUT | mcom -s 420000 /dev/ttyAMA0 2>>STDERR_LOG | socat - udp-sendto:192.168.144.201:5601 2>>STDERR_LOG "
+
+# Ensure the log directory exists
+[ ! -d "$LOG_DIR" ] && mkdir -p "$LOG_DIR"
 
 start() {
     echo -n "Starting $DAEMON: "
-    start-stop-daemon -b -m -S -q -p "$PIDFILE" -x /bin/sh -- -c "$COMMAND"
+
+    start-stop-daemon -b -m -S -q -p "$PIDFILE" -x /bin/sh -- -c "$COMMAND" \
+    >> "$STDOUT_LOG" 2>> "$STDERR_LOG"
+
     if [ $? -eq 0 ]; then
         echo "OK"
     else
         echo "FAIL"
     fi
+
+    # Schedule the restart of S95telemetry after 30 seconds
+    (sleep 30 && /etc/init.d/S95telemetry restart) &
 }
 
 stop() {
     echo -n "Stopping $DAEMON: "
-    start-stop-daemon -K -q -p "$PIDFILE"
-    if [ $? -eq 0 ]; then
+
+    # Kill the process using the PID file
+    if start-stop-daemon -K -q -p "$PIDFILE"; then
         rm -f "$PIDFILE"
         echo "OK"
     else
         echo "FAIL"
     fi
+
+    # Kill any remaining processes by checking COMMAND
+    for pattern in "UDP-RECV:2002" "mcom -s 420000" "udp-sendto:192.168.144.201:5601"; do
+        pids=$(ps | grep "$pattern" | grep -v grep | awk '{print $1}')
+        for pid in $pids; do
+            kill "$pid" 2>/dev/null
+            echo "Killed process $pid with pattern $pattern"
+        done
+    done
 }
 
 restart() {
@@ -31,22 +54,19 @@ restart() {
     start
 }
 
-
 case "$1" in
     start)
         start
         ;;
-
     stop)
         stop
         ;;
-
     restart|reload)
         restart
         ;;
-
     *)
         echo "Usage: $0 {start|stop|restart|reload}"
         exit 1
         ;;
 esac
+
