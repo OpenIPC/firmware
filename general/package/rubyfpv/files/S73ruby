@@ -6,24 +6,27 @@
 chip=$(ipcinfo -c)
 fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
 echo "Chip: " > /tmp/ruby_boot.log
-echo ${chip} >> /tmp/ruby_boot.log
+echo "$chip" >> /tmp/ruby_boot.log
 echo "Firmware: " >> /tmp/ruby_boot.log
-echo ${fw} >> /tmp/ruby_boot.log
+echo "$fw" >> /tmp/ruby_boot.log
 
 case "$1" in
-  start)
-	if ! [ -f /etc/system.ok ]; then
-		tweaksys ${chip}
-	fi
+	start)
+		if [ ! -f /etc/system.ok ]; then
+			tweaksys "$chip"
+			exit 0
+		fi
+		echo "Starting Ruby..." >> /tmp/ruby_boot.log
+		/usr/sbin/ruby_start &
+		;;
 
-	echo "Starting Ruby..." >> /tmp/ruby_boot.log
-	/usr/sbin/ruby_start &
-	;;
-  stop)
-	echo "Stopping Ruby..." >> /tmp/ruby_boot.log
-	/usr/sbin/ruby_stop.sh
-	;;
-    *)
-    echo "Usage: $0 {start|stop}"
-    exit 1
+	stop)
+		echo "Stopping Ruby..." >> /tmp/ruby_boot.log
+		/usr/sbin/ruby_stop.sh
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
 esac
