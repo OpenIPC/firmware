@@ -3,7 +3,7 @@
 # OpenIPC.org | 2024
 #
 
-scr_version=1.0.42
+scr_version=1.0.43
 
 args=" $@"
 
@@ -229,7 +229,7 @@ Where:
       --force_md5      Do not validate MD5 hash.
       --force_soc      Do not validate processor.
       --force_ver      Do not validate release version.
-      --force_all      Do not validate anything.
+  -f, --force_all      Do not validate anything.
   -n, --wipe_overlay   Wipe overlay partition.
   -x, --no_reboot      Do not reboot after updating.
   -z, --no_update      Do not update self.
@@ -252,7 +252,7 @@ reboot_system() {
 
 for i in "$@"; do
 	case $i in
-		--force_all)
+		-f | --force_all)
 			skip_md5=1
 			skip_soc=1
 			skip_ver=1
