@@ -173,7 +173,7 @@ insert_ko() {
 	modprobe open_sys
 	#	modprobe open_tde
 	modprobe open_rgn
-	modprobe open_vgs
+	modprobe open_vgs max_vgs_job=20 max_vgs_node=20 max_vgs_task=20
 	modprobe open_vi
 	insert_isp
 	modprobe open_vpss
@@ -182,7 +182,7 @@ insert_ko() {
 	modprobe open_chnl
 	modprobe open_vedu
 	modprobe open_rc
-	modprobe open_venc
+	modprobe open_venc VencMaxChnNum=3
 	modprobe open_h264e
 	modprobe open_h265e
 	modprobe open_jpege
