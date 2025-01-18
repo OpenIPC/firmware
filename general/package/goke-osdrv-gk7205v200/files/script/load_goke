@@ -170,7 +170,7 @@ insert_ko() {
 	insmod gk7205v200_sys.ko
 	# insmod gk7205v200_tde.ko
 	insmod gk7205v200_rgn.ko
-	insmod gk7205v200_vgs.ko
+	insmod gk7205v200_vgs.ko max_vgs_job=20 max_vgs_node=20 max_vgs_task=20
 	insmod gk7205v200_vi.ko
 	insert_isp
 	insmod gk7205v200_vpss.ko
