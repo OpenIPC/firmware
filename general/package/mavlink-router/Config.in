@@ -1,6 +1,5 @@
 config BR2_PACKAGE_MAVLINK_ROUTER
 	bool "mavlink-router"
-	select BR2_PACKAGE_DATALINK
 	help
 	  MAVLink Router is an application to distribute MAVLink messages between multiple endpoints (connections). It distributes packets to a single port or multiple endpoints depending on the target address. Connections can be made via UART, UDP or TCP.
 

@@ -5,9 +5,6 @@ PIDFILE="/var/run/$DAEMON.pid"
 DAEMON_ARGS="-s"
 
 start() {
-	ulimit -c unlimited
-	echo "/tmp/core.majestic" > /proc/sys/kernel/core_pattern
-
 	echo -n "Starting $DAEMON: "
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
 	if [ $? -eq 0 ]; then

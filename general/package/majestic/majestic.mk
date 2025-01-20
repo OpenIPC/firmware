@@ -19,11 +19,6 @@ MAJESTIC_DEPENDENCIES += \
 	opus-openipc \
 	json-c
 
-MAJESTIC_FILTER = hi3516ev200 gk7205v200 infinity6b0 infinity6e t31
-ifneq ($(filter $(MAJESTIC_FILTER),$(MAJESTIC_FAMILY)),)
-	MAJESTIC_DEPENDENCIES += majestic-plugins
-endif
-
 define MAJESTIC_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/majestic.yaml
