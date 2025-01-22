@@ -40,17 +40,13 @@ jobs:
           - {"platform": "ssc377d", "release": "lite"}
           - {"platform": "ssc377de", "release": "lite"}
           - {"platform": "ssc378de", "release": "lite"}
+          - {"platform": "ssc378qe", "release": "lite"}
 
           # Sigmastar [I6E]
           - {"platform": "ssc30kd", "release": "lite"}
           - {"platform": "ssc30kd", "release": "ultimate"}
-          - {"platform": "ssc30kq", "release": "fpv"}
-          - {"platform": "ssc30kq", "release": "rubyfpv"}
           - {"platform": "ssc30kq", "release": "lite"}
           - {"platform": "ssc30kq", "release": "ultimate"}
-          - {"platform": "ssc338q", "release": "fpv"}
-          - {"platform": "ssc338q", "release": "fpvdev"}
-          - {"platform": "ssc338q", "release": "rubyfpv"}
           - {"platform": "ssc338q", "release": "lite"}
           - {"platform": "ssc338q", "release": "ultimate"}
 
@@ -101,11 +97,9 @@ jobs:
           # Hisilicon [HI3516EV200]
           - {"platform": "hi3516dv200", "release": "lite"}
           - {"platform": "hi3516ev200", "release": "lte"}
-          - {"platform": "hi3516ev200", "release": "fpv"}
           - {"platform": "hi3516ev200", "release": "lite"}
           - {"platform": "hi3516ev200", "release": "ultimate"}
           - {"platform": "hi3516ev300", "release": "lte"}
-          - {"platform": "hi3516ev300", "release": "fpv"}
           - {"platform": "hi3516ev300", "release": "lite"}
           - {"platform": "hi3516ev300", "release": "ultimate"}
           - {"platform": "hi3518ev300", "release": "lite"}
@@ -120,7 +114,6 @@ jobs:
           - {"platform": "hi3536cv100", "release": "lite"}
 
           # Hisilicon [HI3536DV100]
-          - {"platform": "hi3536dv100", "release": "fpv"}
           - {"platform": "hi3536dv100", "release": "lite"}
 
           # Goke [GK710X]
@@ -130,18 +123,12 @@ jobs:
           # Goke [GK7205V200]
           - {"platform": "gk7202v300", "release": "lite"}
           - {"platform": "gk7205v200", "release": "lte"}
-          - {"platform": "gk7205v200", "release": "fpv"}
-          - {"platform": "gk7205v200", "release": "rubyfpv"}
           - {"platform": "gk7205v200", "release": "venc"}
           - {"platform": "gk7205v200", "release": "lite"}
           - {"platform": "gk7205v200", "release": "ultimate"}
-          - {"platform": "gk7205v210", "release": "fpv"}
-          - {"platform": "gk7205v210", "release": "rubyfpv"}
           - {"platform": "gk7205v210", "release": "venc"}
           - {"platform": "gk7205v210", "release": "lite"}
           - {"platform": "gk7205v300", "release": "lte"}
-          - {"platform": "gk7205v300", "release": "fpv"}
-          - {"platform": "gk7205v300", "release": "rubyfpv"}
           - {"platform": "gk7205v300", "release": "venc"}
           - {"platform": "gk7205v300", "release": "lite"}
           - {"platform": "gk7205v300", "release": "ultimate"}
@@ -170,6 +157,22 @@ jobs:
           - {"platform": "xm510", "release": "lite"}
           - {"platform": "xm530", "release": "lite"}
           - {"platform": "xm550", "release": "lite"}
+
+          # FPV
+          - {"platform": "hi3516ev200", "release": "fpv"}
+          - {"platform": "hi3516ev300", "release": "fpv"}
+          - {"platform": "hi3536dv100", "release": "fpv"}
+          - {"platform": "gk7205v200", "release": "fpv"}
+          - {"platform": "gk7205v210", "release": "fpv"}
+          - {"platform": "gk7205v300", "release": "fpv"}
+          - {"platform": "ssc30kq", "release": "fpv"}
+          - {"platform": "ssc338q", "release": "fpv"}
+          - {"platform": "ssc378qe", "release": "fpv"}
+          - {"platform": "gk7205v200", "release": "rubyfpv"}
+          - {"platform": "gk7205v210", "release": "rubyfpv"}
+          - {"platform": "gk7205v300", "release": "rubyfpv"}
+          - {"platform": "ssc30kq", "release": "rubyfpv"}
+          - {"platform": "ssc338q", "release": "rubyfpv"}
 
     steps:
       - name: Checkout source
