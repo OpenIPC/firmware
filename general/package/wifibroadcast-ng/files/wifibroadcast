@@ -134,18 +134,9 @@ majestic_sigmastar() {
 	cli -s .video0.rcMode cbr
 	cli -s .outgoing.enabled true
 	cli -s .outgoing.server udp://0.0.0.0:5600
-	killall -1 majestic
 }
 
 start() {
-	if [ ! -e /etc/system.ok ]; then
-		if [ "$wfb_soc" = "ssc33x" ]; then
-			majestic_sigmastar
-		fi
-
-		touch /etc/system.ok
-	fi
-
 	load_config
 	load_modules
 	load_interface
@@ -153,6 +144,15 @@ start() {
 	start_broadcast
 	start_tunnel
 	start_telemetry
+
+	if [ ! -e /etc/system.ok ]; then
+		if [ "$wfb_soc" = "ssc33x" ]; then
+			majestic_sigmastar
+		fi
+
+		touch /etc/system.ok
+		killall -1 majestic
+	fi
 }
 
 stop() {
