@@ -94,7 +94,7 @@ load_interface() {
 	esac
 }
 
-start_wfb() {
+start_broadcast() {
 	echo "- Starting wfb_tx"
 	wfb_tx -K "$wfb_key" -M "$b_index" -B "$bandwidth" -C 8000 \
 		-k "$b_fec_k" -n "$b_fec_n" -i "$b_link_id" "$wfb_dev" &> /dev/null &
@@ -130,43 +130,51 @@ majestic_sigmastar() {
 	cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
 	cli -s .isp.exposure 5
 	cli -s .video0.codec h265
-	cli -s .video0.size 1920x1080
 	cli -s .video0.fps 90
 	cli -s .video0.rcMode cbr
-	cli -s .jpeg.enabled false
 	cli -s .outgoing.enabled true
 	cli -s .outgoing.server udp://0.0.0.0:5600
+	killall -1 majestic
+}
+
+start() {
+	if [ ! -e /etc/system.ok ]; then
+		if [ "$wfb_soc" = "ssc33x" ]; then
+			majestic_sigmastar
+		fi
+
+		touch /etc/system.ok
+	fi
+
+	load_config
+	load_modules
+	load_interface
+
+	start_broadcast
+	start_tunnel
+	start_telemetry
+}
+
+stop() {
+	killall -q wfb_rx
+	killall -q wfb_tx
+	killall -q wfb_tun
+	killall -q msposd
+	killall -q mavfwd
 }
 
 case "$1" in
-	start)
-		if [ ! -e /etc/system.ok ]; then
-			if [ "$wfb_soc" = "ssc33x" ]; then
-				majestic_sigmastar
-			fi
-
-			touch /etc/system.ok
-		fi
-
-		load_config
-		load_modules
-		load_interface
-
-		start_wfb
-		start_tunnel
-		start_telemetry
+	start|stop)
+		$1
 		;;
 
-	stop)
-		killall -q wfb_rx
-		killall -q wfb_tx
-		killall -q wfb_tun
-		killall -q msposd
-		killall -q mavfwd
+	restart|reload)
+		stop
+		start
 		;;
 
 	*)
-		echo "Usage: $0 {start|stop}"
+		echo "Usage: $0 {start|stop|restart|reload}"
 		exit 1
 		;;
 esac
