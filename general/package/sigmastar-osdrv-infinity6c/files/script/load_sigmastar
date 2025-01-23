@@ -28,20 +28,7 @@ set_sensor() {
 }
 
 insert_ko() {
-	insmod $MODULE/mi_common.ko g_ModParamPath=$MODULE/param.json config_json_path=$MODULE/config.json
-	insmod $MODULE/mi_sys.ko
-	insmod $MODULE/mi_vif.ko
-	insmod $MODULE/mi_sensor.ko
-	insmod $MODULE/mi_isp.ko
-	insmod $MODULE/mi_rgn.ko
-	insmod $MODULE/mi_scl.ko
-	insmod $MODULE/mi_aio.ko
-	insmod $MODULE/mi_ai.ko
-	insmod $MODULE/mi_ao.ko
-	insmod $MODULE/mi_vcodec.ko drv_codec40_common.fw_load_path=/etc/firmware/chagall.bin
-	insmod $MODULE/mi_venc.ko
-	insmod $MODULE/mi_shadow.ko
-
+	insmod $MODULE/mi.ko drv_codec40_common.fw_load_path=/etc/firmware/chagall.bin
 	echo isproot /etc/firmware > /dev/ispmid
 }
 
