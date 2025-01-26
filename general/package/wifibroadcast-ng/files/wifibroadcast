@@ -4,37 +4,16 @@ wfb_key=/etc/drone.key
 wfb_dev=wlan0
 
 wfb_yaml() {
-	if [ -e /etc/wfb.yaml ]; then
-		if [ "$1" = "b" ]; then
-			config=broadcast
-		elif [ "$1" = "t" ]; then
-			config=telemetry
-		elif [ "$1" = "w" ]; then
-			config=wireless
-		fi
-		value=$(wfb-cli -g ".$config.$2")
+	if [ -e "$1" ]; then
+		while IFS=": " read -r key value; do
+			[ -n "$value" ] && export "$key=$value"
+		done < "$1"
 	fi
-
-	eval "$1_$2=${value:-$3}"
 }
 
 load_config() {
-	wfb_yaml w txpower 1
-	wfb_yaml w region 00
-	wfb_yaml w channel 161
-	wfb_yaml w mode HT20
-
-	wfb_yaml b index 1
-	wfb_yaml b fec_k 8
-	wfb_yaml b fec_n 12
-	wfb_yaml b link_id 7669206
-
-	wfb_yaml t index 1
-	wfb_yaml t router msposd
-	wfb_yaml t serial /dev/ttyS2
-	wfb_yaml t osd_fps 20
-	wfb_yaml t port_rx 14551
-	wfb_yaml t port_tx 14555
+	wfb_yaml /rom/etc/wfb.yaml
+	wfb_yaml /etc/wfb.yaml
 }
 
 load_modules() {
@@ -72,65 +51,62 @@ load_modules() {
 
 load_interface() {
 	iw "$wfb_dev" set monitor none
-	iw "$wfb_dev" set channel "$w_channel" "$w_mode"
-	iw reg set "$w_region"
+	iw "$wfb_dev" set channel "$channel" "$mode"
+	iw reg set "$region"
 
 	if [ "$driver" = "88XXau" ]; then
-		iw "$wfb_dev" set txpower fixed $((w_txpower * -100))
+		iw "$wfb_dev" set txpower fixed $((txpower * -100))
 	else
-		iw "$wfb_dev" set txpower fixed $((w_txpower * 50))
+		iw "$wfb_dev" set txpower fixed $((txpower * 50))
 	fi
 
-	case "$w_mode" in
+	case "$mode" in
 		"HT20")
 			bandwidth=20
 			;;
 		"HT40+" | "HT40-")
 			bandwidth=40
 			;;
-		"80Mhz")
-			bandwidth=80
-			;;
 	esac
 }
 
 start_broadcast() {
 	echo "- Starting wfb_tx"
-	wfb_tx -K "$wfb_key" -M "$b_index" -B "$bandwidth" -C 8000 \
-		-k "$b_fec_k" -n "$b_fec_n" -i "$b_link_id" "$wfb_dev" &> /dev/null &
+	wfb_tx -K "$wfb_key" -M "$wfb_index" -B "$bandwidth" -C 8000 \
+		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wfb_dev" &> /dev/null &
 }
 
 start_tunnel() {
 	echo "- Starting wfb_tun"
-	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$b_link_id" "$wfb_dev" &> /dev/null &
-	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$t_index" \
-		-k "$b_fec_k" -n "$b_fec_n" -i "$b_link_id" "$wfb_dev" &> /dev/null &
+	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$link_id" "$wfb_dev" &> /dev/null &
+	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$tun_index" \
+		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wfb_dev" &> /dev/null &
 	wfb_tun -a 10.5.0.10/24 > /dev/null &
 }
 
 start_telemetry() {
-	if [ "$wfb_soc" = "gk7205v200" ]; then
-		devmem 0x120C0010 32 0x1E04
-	elif [ "$wfb_soc" = "ssc33x" ]; then
+	if [ "$wfb_soc" = "ssc33x" ]; then
 		devmem 0x1F207890 16 0x8
 	fi
 
-	if [ "$t_router" = "msposd" ]; then
-		echo "- Starting $t_router"
-		msposd --baudrate 115200 --channels 8 -osd --ahi 0 -r "$t_osd_fps" \
-			--master "$t_serial" --out 10.5.0.1:"$t_port_tx" > /dev/null &
-	elif [ "$t_router" = "mavfwd" ]; then
-		echo "- Starting $t_router"
+	if [ "$router" = "msposd" ]; then
+		echo "- Starting $router"
+		msposd --baudrate 115200 --channels 8 -osd --ahi 0 -r "$osd_fps" \
+			--master "$serial" --out 10.5.0.1:14551 > /dev/null &
+	elif [ "$router" = "mavfwd" ]; then
+		echo "- Starting $router"
 		mavfwd --baudrate 115200 --channels 8 -p 100 -a 15 -t \
-			--master "$t_serial" --in 0.0.0.0:"$t_port_rx" --out 10.5.0.1:"$t_port_tx" > /dev/null &
+			--master "$serial" --in 0.0.0.0:14550 --out 10.5.0.1:14551 > /dev/null &
 	fi
 }
 
 majestic_sigmastar() {
-	cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
+	if [ "$(ipcinfo -s)" = "imx415" ]; then
+		cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
+	fi
 	cli -s .isp.exposure 5
 	cli -s .video0.codec h265
-	cli -s .video0.fps 90
+	cli -s .video0.fps 60
 	cli -s .video0.rcMode cbr
 	cli -s .outgoing.enabled true
 	cli -s .outgoing.server udp://0.0.0.0:5600
