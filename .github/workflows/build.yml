@@ -120,12 +120,9 @@ jobs:
 
           # Goke [GK7205V200]
           - {"platform": "gk7202v300", "release": "lite"}
-          - {"platform": "gk7205v200", "release": "venc"}
           - {"platform": "gk7205v200", "release": "lite"}
           - {"platform": "gk7205v200", "release": "ultimate"}
-          - {"platform": "gk7205v210", "release": "venc"}
           - {"platform": "gk7205v210", "release": "lite"}
-          - {"platform": "gk7205v300", "release": "venc"}
           - {"platform": "gk7205v300", "release": "lite"}
           - {"platform": "gk7205v300", "release": "ultimate"}
           - {"platform": "gk7605v100", "release": "lite"}
@@ -155,10 +152,6 @@ jobs:
           - {"platform": "xm550", "release": "lite"}
 
           # FPV
-          - {"platform": "hi3516ev200", "release": "lte"}
-          - {"platform": "hi3516ev300", "release": "lte"}
-          - {"platform": "gk7205v200", "release": "lte"}
-          - {"platform": "gk7205v300", "release": "lte"}
           - {"platform": "hi3516ev200", "release": "fpv"}
           - {"platform": "hi3516ev300", "release": "fpv"}
           - {"platform": "hi3536dv100", "release": "fpv"}
@@ -168,11 +161,18 @@ jobs:
           - {"platform": "ssc30kq", "release": "fpv"}
           - {"platform": "ssc338q", "release": "fpv"}
           - {"platform": "ssc378qe", "release": "fpv"}
+          - {"platform": "hi3516ev200", "release": "lte"}
+          - {"platform": "hi3516ev300", "release": "lte"}
+          - {"platform": "gk7205v200", "release": "lte"}
+          - {"platform": "gk7205v300", "release": "lte"}
           - {"platform": "gk7205v200", "release": "rubyfpv"}
           - {"platform": "gk7205v210", "release": "rubyfpv"}
           - {"platform": "gk7205v300", "release": "rubyfpv"}
           - {"platform": "ssc30kq", "release": "rubyfpv"}
           - {"platform": "ssc338q", "release": "rubyfpv"}
+          - {"platform": "gk7205v200", "release": "venc"}
+          - {"platform": "gk7205v210", "release": "venc"}
+          - {"platform": "gk7205v300", "release": "venc"}
 
     steps:
       - name: Checkout source
