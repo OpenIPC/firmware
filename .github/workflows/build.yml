@@ -188,15 +188,12 @@ jobs:
           TIME=$(date -d @${SECONDS} +%M:%S)
           echo TIME=${TIME} >> ${GITHUB_ENV}
 
-          PLATFORM=$(echo ${{matrix.platform}} | cut -d_ -f1)
-          RELEASE=$(echo ${{matrix.platform}} | cut -d_ -f2)
-
-          NORFW=${GITHUB_WORKSPACE}/output/images/openipc.${PLATFORM}-nor-${RELEASE}.tgz
+          NORFW=$(find output/images -name openipc*nor*)
           if [ -e ${NORFW} ]; then
             echo NORFW=${NORFW} >> ${GITHUB_ENV}
           fi
 
-          NANDFW=${GITHUB_WORKSPACE}/output/images/openipc.${PLATFORM}-nand-${RELEASE}.tgz
+          NANDFW=$(find output/images -name openipc*nand*)
           if [ -e ${NANDFW} ]; then
             echo NANDFW=${NANDFW} >> ${GITHUB_ENV}
           fi
