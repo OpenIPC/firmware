@@ -165,14 +165,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/ccache
-          key: ${{matrix.platform}}_${{matrix.release}}-${{env.CACHE_DATE}}
+          key: ${{matrix.platform}}-${{env.CACHE_DATE}}
 
       - name: Restore ccache
         if: github.event_name == 'pull_request'
         uses: actions/cache/restore@v4
         with:
           path: /tmp/ccache
-          key: ${{matrix.platform}}_${{matrix.release}}-${{env.CACHE_DATE}}
+          key: ${{matrix.platform}}-${{env.CACHE_DATE}}
 
       - name: Build firmware
         run: |
@@ -183,17 +183,20 @@ jobs:
 
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.ccache
-          make BOARD=${{matrix.platform}}_${{matrix.release}}
+
+          PLATFORM=${{matrix.platform}}
+          RELEASE=$(echo ${PLATFORM} | cut -d_ -f2)
+          make BOARD=${PLATFORM}
 
           TIME=$(date -d @${SECONDS} +%M:%S)
           echo TIME=${TIME} >> ${GITHUB_ENV}
 
-          NORFW=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-nor-${{matrix.release}}.tgz
+          NORFW=${GITHUB_WORKSPACE}/output/images/openipc.${PLATFORM}-nor-${RELEASE}.tgz
           if [ -e ${NORFW} ]; then
             echo NORFW=${NORFW} >> ${GITHUB_ENV}
           fi
 
-          NANDFW=${GITHUB_WORKSPACE}/output/images/openipc.${{matrix.platform}}-nand-${{matrix.release}}.tgz
+          NANDFW=${GITHUB_WORKSPACE}/output/images/openipc.${PLATFORM}-nand-${RELEASE}.tgz
           if [ -e ${NANDFW} ]; then
             echo NANDFW=${NANDFW} >> ${GITHUB_ENV}
           fi
