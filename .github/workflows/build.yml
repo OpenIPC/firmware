@@ -183,13 +183,13 @@ jobs:
 
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.ccache
-
-          PLATFORM=${{matrix.platform}}
-          RELEASE=$(echo ${PLATFORM} | cut -d_ -f2)
-          make BOARD=${PLATFORM}
+          make BOARD=${{matrix.platform}}
 
           TIME=$(date -d @${SECONDS} +%M:%S)
           echo TIME=${TIME} >> ${GITHUB_ENV}
+
+          PLATFORM=$(echo ${{matrix.platform}} | cut -d_ -f1)
+          RELEASE=$(echo ${{matrix.platform}} | cut -d_ -f2)
 
           NORFW=${GITHUB_WORKSPACE}/output/images/openipc.${PLATFORM}-nor-${RELEASE}.tgz
           if [ -e ${NORFW} ]; then
