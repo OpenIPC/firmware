@@ -26,7 +26,7 @@ build: defconfig
 	@$(BR_MAKE) all -j$(shell nproc)
 
 br-%: defconfig
-	@$(BR_MAKE) $(subst br-,,$@)
+	@$(BR_MAKE) $(subst br-,,$@) -j$(shell nproc)
 
 defconfig: prepare
 	@echo --- $(or $(CONFIG),$(error variable BOARD not found))
