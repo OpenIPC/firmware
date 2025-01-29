@@ -14,6 +14,10 @@ wfb_yaml() {
 load_config() {
 	wfb_yaml /rom/etc/wfb.yaml
 	wfb_yaml /etc/wfb.yaml
+
+	if [ ! -e "$wfb_key" ]; then
+		wfb_key=/rom/etc/drone.key
+	fi
 }
 
 load_modules() {
@@ -91,8 +95,9 @@ start_telemetry() {
 
 	if [ "$router" = "msposd" ]; then
 		echo "- Starting $router"
-		msposd --baudrate 115200 --channels 8 -osd --ahi 0 -r "$osd_fps" \
-			--master "$serial" --out 10.5.0.1:14551 > /dev/null &
+		size=$(curl -s localhost/api/v1/config.json | jsonfilter -e "@.video0.size")
+		msposd --baudrate 115200 --channels 8 --ahi 0 -osd -r "$osd_fps" \
+			--master "$serial" --out 10.5.0.1:14551 --size "${size:-1280x720}" > /dev/null &
 	elif [ "$router" = "mavfwd" ]; then
 		echo "- Starting $router"
 		mavfwd --baudrate 115200 --channels 8 -p 100 -a 15 -t \
