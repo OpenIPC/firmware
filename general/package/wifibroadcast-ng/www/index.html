@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      color: #333;
+      text-align: center;
+    }
+    header {
+      background-color: #2c3e50;
+      color: white;
+      padding: 10px 0;
+    }
+    h3 {
+      font-size: 1.5rem;
+      margin-top: 1rem;
+      color: #34495e;
+    }
+    .container {
+      padding: 20px;
+    }
+    .form-section {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      max-width: 40%;
+      padding: 20px;
+      margin: 20px auto;
+    }
+    .form-section label {
+      display: inline-block;
+      font-weight: bold;
+      margin: 10px 0 5px;
+      width: 150px;
+      vertical-align: top;
+    }
+    .form-section input, select {
+      width: 120px;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      display: inline-block;
+      box-sizing: border-box;
+    }
+    .form-section button {
+      background-color: #3498db;
+      color: white;
+      padding: 10px 60px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .form-section button:hover {
+      background-color: #2980b9;
+    }
+    #camera-preview {
+      max-width: 60%;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .row {
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Preview</h1>
+</header>
+
+<div class="container">
+  <section>
+    <img id="camera-preview" src="/mjpeg" alt="Stream" />
+  </section>
+
+  <section class="form-section">
+    <h3>Video</h3>
+    <form id="majestic-form">
+      <div class="row">
+        <label for="video0_fps">FPS:</label>
+        <select id="video0_fps" name="majestic.video0.fps">
+          <option value="30">30</option>
+          <option value="60">60</option>
+          <option value="90">90</option>
+          <option value="120">120</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="video0_codec">Codec:</label>
+        <select id="video0_codec" name="majestic.video0.codec">
+          <option value="h264">H264</option>
+          <option value="h265">H265</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="video0_bitrate">Bitrate:</label>
+        <select id="video0_bitrate" name="majestic.video0.bitrate">
+          <option value="1024">1024</option>
+          <option value="2048">2048</option>
+          <option value="3072">3072</option>
+          <option value="4096">4096</option>
+          <option value="5120">5120</option>
+          <option value="6144">6144</option>
+          <option value="7168">7168</option>
+          <option value="8192">8192</option>
+        </select>
+      </div>
+    </form>
+    <button id="apply-majestic-button">Apply</button>
+  </section>
+
+  <section class="form-section">
+    <h3>Wireless</h3>
+    <form id="wfb-form">
+      <div class="row">
+        <label for="txpower">TX Power:</label>
+        <input type="number" id="txpower" name="wfb.wireless.txpower" />
+      </div>
+      <div class="row">
+        <label for="channel">Channel:</label>
+        <input type="number" id="channel" name="wfb.wireless.channel" />
+      </div>
+      <div class="row">
+        <label for="mode">Mode:</label>
+        <select id="mode" name="wfb.wireless.mode">
+          <option value="HT20">HT20</option>
+          <option value="HT40-">HT40-</option>
+          <option value="HT40+">HT40+</option>
+        </select>
+      </div>
+
+      <h3>Broadcast</h3>
+      <div class="row">
+        <label for="wfb_index">WFB Index:</label>
+        <select id="wfb_index" name="wfb.broadcast.wfb_index">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="tun_index">TUN Index:</label>
+        <select id="tun_index" name="wfb.broadcast.tun_index">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="fec_k">FEC K:</label>
+        <input type="number" id="fec_k" name="wfb.broadcast.fec_k" />
+      </div>
+      <div class="row">
+        <label for="fec_n">FEC N:</label>
+        <input type="number" id="fec_n" name="wfb.broadcast.fec_n" />
+      </div>
+      <div class="row">
+        <label for="link_id">Link ID:</label>
+        <input type="number" id="link_id" name="wfb.broadcast.link_id" />
+      </div>
+
+      <h3>Telemetry</h3>
+      <div class="row">
+        <label for="router">Router:</label>
+        <select id="router" name="wfb.telemetry.router">
+          <option value="msposd">msposd</option>
+          <option value="mavfwd">mavfwd</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="serial">Serial:</label>
+        <select id="serial" name="wfb.telemetry.serial">
+          <option value="/dev/ttyS0">/dev/ttyS0</option>
+          <option value="/dev/ttyS2">/dev/ttyS2</option>
+        </select>
+      </div>
+    </form>
+    <button id="apply-wfb-button">Apply</button>
+  </section>
+
+  <section class="form-section">
+    <h3>Configuration</h3>
+    <button id="reset-button">Reset</button>
+  </section>
+</div>
+
+<script src="js-yaml.min.js"></script>
+<script>
+  let configData = { majestic: {}, wfb: {} };
+
+  async function loadYAML(url, setter) {
+    const response = await fetch(url);
+    const text = await response.text();
+    setter(jsyaml.load(text));
+  }
+
+  async function uploadYAML(data, location) {
+    const yamlData = jsyaml.dump(data);
+    await fetch('/upload', {
+      method: 'POST',
+      headers: { 'File-Location': location },
+      body: yamlData
+    });
+  }
+
+  async function runCommand(command) {
+    await fetch('/command', {
+      method: 'POST',
+      headers: { 'Run-Command': command }
+    });
+  }
+
+  function populateFormFields() {
+    const populate = (data, formPrefix) => {
+      Object.keys(data).forEach((section) => {
+        Object.keys(data[section]).forEach((key) => {
+          const field = document.querySelector(`[name="${formPrefix}.${section}.${key}"]`);
+          if (field) {
+            field.value = data[section][key];
+          }
+        });
+      });
+    };
+
+    if (configData.majestic) {
+      populate(configData.majestic, 'majestic');
+    }
+    if (configData.wfb) {
+      populate(configData.wfb, 'wfb');
+    }
+  }
+
+  function updateData() {
+    const update = (data, formPrefix) => {
+      Object.keys(data).forEach((section) => {
+        Object.keys(data[section]).forEach((key) => {
+          const field = document.querySelector(`[name="${formPrefix}.${section}.${key}"]`);
+          if (field) {
+            data[section][key] = field.value;
+          }
+        });
+      });
+    };
+
+    update(configData.majestic, 'majestic');
+    update(configData.wfb, 'wfb');
+  }
+
+  document.getElementById('apply-majestic-button').addEventListener('click', () => {
+    if (configData.majestic) {
+      updateData();
+      uploadYAML(configData.majestic, '/etc/majestic.yaml');
+      runCommand('killall -1 majestic');
+      setTimeout(() => location.reload(), 1000);
+    }
+  });
+
+  document.getElementById('apply-wfb-button').addEventListener('click', () => {
+    if (configData.wfb) {
+      updateData();
+      uploadYAML(configData.wfb, '/etc/wfb.yaml');
+      runCommand('wifibroadcast restart');
+      setTimeout(() => location.reload(), 1000);
+    }
+  });
+
+  document.getElementById('reset-button').addEventListener('click', () => {
+    runCommand('wifibroadcast reset');
+    setTimeout(() => location.reload(), 1000);
+  });
+
+  loadYAML('/etc/majestic.yaml', (data) => {
+    configData.majestic = data;
+    populateFormFields();
+  });
+
+  loadYAML('/etc/wfb.yaml', (data) => {
+    configData.wfb = data;
+    populateFormFields();
+  });
+</script>
+
+</body>
+</html>
