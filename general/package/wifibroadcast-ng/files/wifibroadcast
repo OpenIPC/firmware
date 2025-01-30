@@ -56,7 +56,7 @@ load_modules() {
 load_interface() {
 	iw "$wfb_dev" set monitor none
 	iw "$wfb_dev" set channel "$channel" "$mode"
-	iw reg set "$region"
+	iw reg set 00
 
 	if [ "$driver" = "88XXau" ]; then
 		iw "$wfb_dev" set txpower fixed $((txpower * -100))
@@ -154,8 +154,14 @@ case "$1" in
 		start
 		;;
 
+	reset)
+		cp -f /rom/etc/majestic.yaml /etc/majestic.yaml
+		cp -f /rom/etc/wfb.yaml /etc/wfb.yaml
+		rm -f /etc/system.ok
+		;;
+
 	*)
-		echo "Usage: $0 {start|stop|restart|reload}"
+		echo "Usage: $0 {start|stop|restart|reload|reset}"
 		exit 1
 		;;
 esac
