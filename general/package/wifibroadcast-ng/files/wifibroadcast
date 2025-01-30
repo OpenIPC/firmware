@@ -6,7 +6,8 @@ wfb_dev=wlan0
 wfb_yaml() {
 	if [ -e "$1" ]; then
 		while IFS=": " read -r key value; do
-			[ -n "$value" ] && export "$key=$value"
+			value=$(eval echo $value)
+			export "$key=$value"
 		done < "$1"
 	fi
 }
@@ -17,6 +18,16 @@ load_config() {
 
 	if [ ! -e "$wfb_key" ]; then
 		wfb_key=/rom/etc/drone.key
+	fi
+
+	if [ ! -e /etc/system.ok ]; then
+		if [ "$wfb_soc" = "ssc33x" ]; then
+			majestic_sigmastar
+		fi
+
+		touch /etc/system.ok
+		sleep 1
+		killall -1 majestic
 	fi
 }
 
@@ -125,15 +136,6 @@ start() {
 	start_broadcast
 	start_tunnel
 	start_telemetry
-
-	if [ ! -e /etc/system.ok ]; then
-		if [ "$wfb_soc" = "ssc33x" ]; then
-			majestic_sigmastar
-		fi
-
-		touch /etc/system.ok
-		killall -1 majestic
-	fi
 }
 
 stop() {
