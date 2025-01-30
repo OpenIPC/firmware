@@ -4,6 +4,7 @@
 #
 ################################################################################
 
+LINUX_PATCHER_DEPENDENCIES = linux
 export UIMAGE_NAME = Linux-$(LINUX_VERSION_PROBED)-$(OPENIPC_SOC_MODEL)
 
 # Exclude buildroot yylloc patches
