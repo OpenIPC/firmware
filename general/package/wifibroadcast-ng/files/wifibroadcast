@@ -4,7 +4,7 @@ wfb_dev=wlan0
 
 wfb_yaml() {
 	if [ -e "$1" ]; then
-		while IFS=": " read -r key value; do
+		while IFS=: read -r key value; do
 			value=$(eval echo $value)
 			export "$key=$value"
 		done < "$1"
@@ -59,9 +59,9 @@ load_interface() {
 	iw reg set 00
 
 	if [ "$driver" = "88XXau" ]; then
-		iw "$wfb_dev" set txpower fixed $((txpower * -100))
+		iw "$wfb_dev" set txpower fixed "$((txpower * -100))"
 	else
-		iw "$wfb_dev" set txpower fixed $((txpower * 50))
+		iw "$wfb_dev" set txpower fixed "$((txpower * 50))"
 	fi
 
 	case "$mode" in
@@ -135,11 +135,9 @@ start() {
 }
 
 stop() {
-	killall -q wfb_rx
-	killall -q wfb_tx
-	killall -q wfb_tun
-	killall -q msposd
-	killall -q mavfwd
+	for process in wfb_rx wfb_tx wfb_tun msposd mavfwd; do
+		killall -q "$process"
+	done
 }
 
 case "$1" in
