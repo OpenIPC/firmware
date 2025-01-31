@@ -16,7 +16,7 @@
     header {
       background-color: #252526;
       color: white;
-      padding: 20px 0;
+      padding: 15px 0;
     }
     h3 {
       font-size: 1.5rem;
@@ -29,7 +29,7 @@
     .form-section {
       background-color: #2d2d2d;
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 2px 10px #00000080;
       max-width: 40%;
       padding: 20px;
       margin: 20px auto;
@@ -55,6 +55,7 @@
     }
     .form-section button {
       background-color: #0d6efd80;
+	  box-shadow: 0 2px 10px #00000040;
       color: white;
       padding: 10px 60px;
       border: none;
@@ -65,10 +66,12 @@
     .form-section button:hover {
       background-color: #0b5ed7;
     }
-    #camera-preview {
-      max-width: 60%;
+    #preview {
+      width: 100%;
+      max-width: 1200px;
+      aspect-ratio: 16/9;
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 2px 10px #00000080;
     }
     .row {
       margin-bottom: 15px;
@@ -78,12 +81,12 @@
 <body>
 
 <header>
-  <img src="logo.svg" width="10%">
+  <img src="logo.svg" width="220px">
 </header>
 
 <div class="container">
   <section>
-    <video poster="/mjpeg" style="background:url(stream.svg); background-size:cover; width:100%; max-width:1200px;"></video>
+    <video id="preview" poster="/mjpeg" style="background:url(stream.svg); background-size:cover;"></video>
   </section>
 
   <section class="form-section">
@@ -127,11 +130,37 @@
     <form id="wfb-form">
       <div class="row">
         <label for="txpower">TX Power:</label>
-        <input type="number" id="txpower" name="wfb.wireless.txpower" />
+        <input type="number" id="txpower" name="wfb.wireless.txpower">
       </div>
       <div class="row">
         <label for="channel">Channel:</label>
-        <input type="number" id="channel" name="wfb.wireless.channel" />
+        <select id="channel" name="wfb.wireless.channel">
+          <option value="36">36</option>
+          <option value="40">40</option>
+          <option value="44">44</option>
+          <option value="48">48</option>
+          <option value="52">52</option>
+          <option value="56">56</option>
+          <option value="60">60</option>
+          <option value="64">64</option>
+          <option value="100">100</option>
+          <option value="104">104</option>
+          <option value="108">108</option>
+          <option value="112">112</option>
+          <option value="116">116</option>
+          <option value="120">120</option>
+          <option value="124">124</option>
+          <option value="128">128</option>
+          <option value="132">132</option>
+          <option value="136">136</option>
+          <option value="140">140</option>
+          <option value="144">144</option>
+          <option value="149">149</option>
+          <option value="153">153</option>
+          <option value="157">157</option>
+          <option value="161">161</option>
+          <option value="165">165</option>
+        </select>
       </div>
       <div class="row">
         <label for="mode">Mode:</label>
@@ -168,18 +197,6 @@
           <option value="7">7</option>
           <option value="8">8</option>
         </select>
-      </div>
-      <div class="row">
-        <label for="fec_k">FEC K:</label>
-        <input type="number" id="fec_k" name="wfb.broadcast.fec_k" />
-      </div>
-      <div class="row">
-        <label for="fec_n">FEC N:</label>
-        <input type="number" id="fec_n" name="wfb.broadcast.fec_n" />
-      </div>
-      <div class="row">
-        <label for="link_id">Link ID:</label>
-        <input type="number" id="link_id" name="wfb.broadcast.link_id" />
       </div>
 
       <h3>Telemetry</h3>
