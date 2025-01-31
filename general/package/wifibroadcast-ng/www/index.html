@@ -78,12 +78,12 @@
 <body>
 
 <header>
-  <img src="logo.svg" width="20%">
+  <img src="logo.svg" width="10%">
 </header>
 
 <div class="container">
   <section>
-    <img id="camera-preview" src="/mjpeg" alt="Stream" />
+    <video poster="/mjpeg" style="background:url(stream.svg); background-size:cover; width:100%; max-width:1200px;"></video>
   </section>
 
   <section class="form-section">
@@ -233,73 +233,58 @@
     });
   }
 
-  function populateFormFields() {
-    const populate = (data, formPrefix) => {
-      Object.keys(data).forEach((section) => {
-        Object.keys(data[section]).forEach((key) => {
-          const field = document.querySelector(`[name="${formPrefix}.${section}.${key}"]`);
-          if (field) {
+  function syncForm(data, formPrefix, mode) {
+    Object.keys(data).forEach((section) => {
+      Object.keys(data[section]).forEach((key) => {
+        const field = document.querySelector(`[name="${formPrefix}.${section}.${key}"]`);
+        if (field) {
+          if (mode === "setup") {
             field.value = data[section][key];
-          }
-        });
-      });
-    };
-
-    if (configData.majestic) {
-      populate(configData.majestic, 'majestic');
-    }
-    if (configData.wfb) {
-      populate(configData.wfb, 'wfb');
-    }
-  }
-
-  function updateData() {
-    const update = (data, formPrefix) => {
-      Object.keys(data).forEach((section) => {
-        Object.keys(data[section]).forEach((key) => {
-          const field = document.querySelector(`[name="${formPrefix}.${section}.${key}"]`);
-          if (field) {
+          } else if (mode === "update") {
             data[section][key] = field.value;
           }
-        });
+        }
       });
-    };
-
-    update(configData.majestic, 'majestic');
-    update(configData.wfb, 'wfb');
+    });
   }
 
-  document.getElementById('apply-majestic-button').addEventListener('click', () => {
+  function executeDelay(button, command) {
+    button.disabled = true;
+    runCommand(command);
+    setTimeout(() => {
+      button.disabled = false;
+      location.reload();
+    }, 1000);
+  }
+
+  document.getElementById('apply-majestic-button').addEventListener('click', function() {
     if (configData.majestic) {
-      updateData();
+      syncForm(configData.majestic, 'majestic', "update");
       uploadYAML(configData.majestic, '/etc/majestic.yaml');
-      runCommand('killall -1 majestic');
-      setTimeout(() => location.reload(), 1000);
+      executeDelay(this, 'killall -1 majestic');
     }
   });
 
-  document.getElementById('apply-wfb-button').addEventListener('click', () => {
+  document.getElementById('apply-wfb-button').addEventListener('click', function() {
     if (configData.wfb) {
-      updateData();
+      syncForm(configData.wfb, 'wfb', "update");
       uploadYAML(configData.wfb, '/etc/wfb.yaml');
-      runCommand('wifibroadcast restart');
-      setTimeout(() => location.reload(), 1000);
+      executeDelay(this, 'wifibroadcast restart');
     }
   });
 
-  document.getElementById('reset-button').addEventListener('click', () => {
-    runCommand('wifibroadcast reset');
-    setTimeout(() => location.reload(), 1000);
+  document.getElementById('reset-button').addEventListener('click', function() {
+    executeDelay(this, 'wifibroadcast reset');
   });
 
   loadYAML('/etc/majestic.yaml', (data) => {
     configData.majestic = data;
-    populateFormFields();
+    syncForm(configData.majestic, 'majestic', "setup");
   });
 
   loadYAML('/etc/wfb.yaml', (data) => {
     configData.wfb = data;
-    populateFormFields();
+    syncForm(configData.wfb, 'wfb', "setup");
   });
 </script>
 
