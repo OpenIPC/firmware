@@ -44,9 +44,9 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	const char *key = "/etc/drone.key";
-	if ((fp = fopen(key, "w")) == NULL) {
-		printf("Unable to save: %s\n", key);
+	const char *drone = "/etc/drone.key";
+	if ((fp = fopen(drone, "w")) == NULL) {
+		printf("Unable to save: %s\n", drone);
 		return 1;
 	}
 
@@ -54,7 +54,19 @@ int main(int argc, char **argv) {
 	fwrite(gs_publickey, crypto_box_PUBLICKEYBYTES, 1, fp);
 	fclose(fp);
 
-	printf("Drone keypair saved: %s\n", key);
+	printf("Drone keypair saved: %s\n", drone);
+
+	const char *station = "/tmp/gs.key";
+	if ((fp = fopen(station, "w")) == NULL) {
+		printf("Unable to save: %s\n", station);
+		return 1;
+	}
+
+	fwrite(gs_secretkey, crypto_box_SECRETKEYBYTES, 1, fp);
+	fwrite(drone_publickey, crypto_box_PUBLICKEYBYTES, 1, fp);
+	fclose(fp);
+
+	printf("Station keypair saved: %s\n", station);
 
 	return 0;
 }
