@@ -17,12 +17,11 @@
 
 #include <fcntl.h>
 #include <sodium.h>
+#include <string.h>
 
 int main(int argc, char **argv) {
-	unsigned char drone_publickey[crypto_box_PUBLICKEYBYTES];
-	unsigned char drone_secretkey[crypto_box_SECRETKEYBYTES];
-	unsigned char gs_publickey[crypto_box_PUBLICKEYBYTES];
-	unsigned char gs_secretkey[crypto_box_SECRETKEYBYTES];
+	unsigned char publickey[crypto_box_PUBLICKEYBYTES];
+	unsigned char secretkey[crypto_box_SECRETKEYBYTES];
 	FILE *fp;
 
 	if (argc != 2) {
@@ -35,38 +34,26 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	const char *seed = argv[1];
+	char seed[32];
+	strncpy(seed, argv[1], sizeof(seed));
 	printf("Using passphrase: %s\n", seed);
 
-	if (crypto_box_seed_keypair(drone_publickey, drone_secretkey, seed) != 0 ||
-			crypto_box_seed_keypair(gs_publickey, gs_secretkey, seed) != 0) {
-		printf("Unable to generate keys\n");
+	if (crypto_box_seed_keypair(publickey, secretkey, seed) != 0) {
+		printf("Unable to generate key\n");
 		return 1;
 	}
 
-	const char *drone = "/etc/drone.key";
-	if ((fp = fopen(drone, "w")) == NULL) {
-		printf("Unable to save: %s\n", drone);
+	const char *key = "/etc/drone.key";
+	if ((fp = fopen(key, "w")) == NULL) {
+		printf("Unable to save: %s\n", key);
 		return 1;
 	}
 
-	fwrite(drone_secretkey, crypto_box_SECRETKEYBYTES, 1, fp);
-	fwrite(gs_publickey, crypto_box_PUBLICKEYBYTES, 1, fp);
+	fwrite(secretkey, crypto_box_SECRETKEYBYTES, 1, fp);
+	fwrite(publickey, crypto_box_PUBLICKEYBYTES, 1, fp);
 	fclose(fp);
 
-	printf("Drone keypair saved: %s\n", drone);
-
-	const char *station = "/tmp/gs.key";
-	if ((fp = fopen(station, "w")) == NULL) {
-		printf("Unable to save: %s\n", station);
-		return 1;
-	}
-
-	fwrite(gs_secretkey, crypto_box_SECRETKEYBYTES, 1, fp);
-	fwrite(drone_publickey, crypto_box_PUBLICKEYBYTES, 1, fp);
-	fclose(fp);
-
-	printf("Station keypair saved: %s\n", station);
+	printf("Key saved: %s\n", key);
 
 	return 0;
 }
