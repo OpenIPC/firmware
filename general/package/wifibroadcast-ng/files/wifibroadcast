@@ -5,7 +5,8 @@ wfb_dev=wlan0
 wfb_yaml() {
 	if [ -e "$1" ]; then
 		while IFS=: read -r key value; do
-			value=$(eval echo $value)
+			key=$(eval echo "$key")
+			value=$(eval echo "$value")
 			export "$key=$value"
 		done < "$1"
 	fi
@@ -129,6 +130,7 @@ start() {
 		killall -1 majestic
 	fi
 
+	stop
 	start_broadcast
 	start_tunnel
 	start_telemetry
@@ -136,18 +138,16 @@ start() {
 
 stop() {
 	for process in wfb_rx wfb_tx wfb_tun msposd mavfwd; do
-		killall -q "$process"
+		if [ -n "$(pidof $process)" ]; then
+			echo "- Stopping $process"
+			killall -q "$process"
+		fi
 	done
 }
 
 case "$1" in
 	start|stop)
 		$1
-		;;
-
-	restart|reload)
-		stop
-		start
 		;;
 
 	reset)
@@ -157,7 +157,7 @@ case "$1" in
 		;;
 
 	*)
-		echo "Usage: $0 {start|stop|restart|reload|reset}"
+		echo "Usage: $0 {start|stop|reset}"
 		exit 1
 		;;
 esac

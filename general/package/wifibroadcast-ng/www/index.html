@@ -286,7 +286,7 @@
     if (configData.wfb) {
       syncForm(configData.wfb, 'wfb', "update");
       uploadYAML(configData.wfb, '/etc/wfb.yaml');
-      executeDelay(this, 'wifibroadcast restart');
+      executeDelay(this, 'wifibroadcast start');
     }
   });
 
