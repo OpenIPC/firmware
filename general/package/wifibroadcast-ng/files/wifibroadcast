@@ -15,14 +15,11 @@ wfb_yaml() {
 load_config() {
 	wfb_yaml /rom/etc/wfb.yaml
 	wfb_yaml /etc/wfb.yaml
-
-	if [ ! -e "$wfb_key" ]; then
-		wfb_key=/rom/etc/drone.key
-	fi
+	[ ! -e "$wfb_key" ] && wfb_key=/rom/etc/drone.key
 }
 
 load_modules() {
-	for card in $(lsusb | awk '{print $6}' | sort | uniq); do
+	for card in $(lsusb | awk '{print $6}' | uniq); do
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
 				driver=88XXau
@@ -59,20 +56,9 @@ load_interface() {
 	iw "$wfb_dev" set channel "$channel" "$mode"
 	iw reg set 00
 
-	if [ "$driver" = "88XXau" ]; then
-		iw "$wfb_dev" set txpower fixed "$((txpower * -100))"
-	else
-		iw "$wfb_dev" set txpower fixed "$((txpower * 50))"
-	fi
-
-	case "$mode" in
-		"HT20")
-			bandwidth=20
-			;;
-		"HT40+" | "HT40-")
-			bandwidth=40
-			;;
-	esac
+	[ "$driver" = "88XXau" ] && wfb_pwr=$((txpower * -100)) || wfb_pwr=$((txpower * 50))
+	iw "$wfb_dev" set txpower fixed "$wfb_pwr"
+	[ "$mode" = "HT20" ] && bandwidth=20 || bandwidth=40
 }
 
 start_broadcast() {
@@ -90,15 +76,13 @@ start_tunnel() {
 }
 
 start_telemetry() {
-	if [ "$(ipcinfo -c)" = "ssc33x" ]; then
-		devmem 0x1F207890 16 0x8
-	fi
+	[ "$(ipcinfo -c)" = "ssc33x" ] && devmem 0x1F207890 16 0x8
 
 	if [ "$router" = "msposd" ]; then
 		echo "- Starting $router"
 		size=$(curl -s localhost/api/v1/config.json | jsonfilter -e "@.video0.size")
-		msposd --baudrate 115200 --channels 8 --ahi 0 -osd -r "$osd_fps" \
-			--master "$serial" --out 10.5.0.1:14551 --size "${size:-1280x720}" > /dev/null &
+		msposd -b 115200 -c 8 -d -r $osd_fps -z "${size:-1280x720}" \
+			-m "$serial" -o 10.5.0.1:14551 > /dev/null &
 	elif [ "$router" = "mavfwd" ]; then
 		echo "- Starting $router"
 		mavfwd --baudrate 115200 --channels 8 -p 100 -a 15 -t \
@@ -107,9 +91,7 @@ start_telemetry() {
 }
 
 video_settings() {
-	if [ "$(ipcinfo -s)" = "imx415" ]; then
-		cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
-	fi
+	[ "$(ipcinfo -s)" = "imx415" ] && cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
 	cli -s .isp.exposure 5
 	cli -s .video0.fps 60
 	cli -s .video0.codec h265
