@@ -1,314 +1,310 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Camera</title>
-  <style>
-    body {
-      font-family: Helvetica;
-      background-color: #1e1e1e;
-      margin: 0;
-      padding: 0;
-      color: #dcdcdc;
-      text-align: center;
-    }
-    header {
-      background-color: #252526;
-      color: white;
-      padding: 15px 0;
-    }
-    h3 {
-      font-size: 1.5rem;
-      margin-top: 1rem;
-      color: #dee2e6bf;
-    }
-    .container {
-      padding: 20px;
-    }
-    .form-section {
-      background-color: #2d2d2d;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px #00000080;
-      max-width: 40%;
-      padding: 20px;
-      margin: 20px auto;
-    }
-    .form-section label {
-      display: inline-block;
-      font-weight: bold;
-      margin: 10px 0 5px;
-      width: 150px;
-      vertical-align: top;
-      color: #dee2e6;
-    }
-    .form-section input, select {
-      width: 180px;
-      padding: 10px;
-      margin-bottom: 15px;
-      border-radius: 4px;
-      border: 1px solid #555;
-      background-color: #3c3c3c;
-      color: #dcdcdc;
-      display: inline-block;
-      box-sizing: border-box;
-    }
-    .form-section button {
-      background-color: #0d6efd80;
-	  box-shadow: 0 2px 10px #00000040;
-      color: white;
-      padding: 10px 60px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-    .form-section button:hover {
-      background-color: #0b5ed7;
-    }
-    #preview {
-      width: 100%;
-      max-width: 1200px;
-      aspect-ratio: 16/9;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px #00000080;
-    }
-    .row {
-      margin-bottom: 15px;
-    }
-  </style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Camera</title>
+	<style>
+		body {
+			font-family: Helvetica;
+			background-color: #1e1e1e;
+			color: #dcdcdc;
+			text-align: center;
+		}
+		header {
+			background-color: #252526;
+			border-radius: 4px;
+			box-shadow: 0 2px 10px #00000080;
+			color: white;
+			padding: 15px 0;
+		}
+		h3 {
+			font-size: 1.5rem;
+			margin-top: 1rem;
+			color: #dee2e6bf;
+		}
+		.container {
+			padding: 20px;
+		}
+		.form-section {
+			background-color: #2d2d2d;
+			border-radius: 4px;
+			box-shadow: 0 2px 10px #00000080;
+			max-width: 40%;
+			padding: 20px;
+			margin: 20px auto;
+		}
+		.form-section label {
+			display: inline-block;
+			font-weight: bold;
+			margin: 10px 0 5px;
+			width: 150px;
+			vertical-align: top;
+			color: #dee2e6;
+		}
+		.form-section select {
+			width: 120px;
+			padding: 10px;
+			margin-bottom: 15px;
+			border-radius: 4px;
+			border: 1px solid #555;
+			background-color: #3c3c3c;
+			color: #dcdcdc;
+			display: inline-block;
+			box-sizing: border-box;
+		}
+		.form-section input {
+			width: 120px;
+			height: 25px;
+		}
+		.form-section button {
+			background-color: #0d6efd80;
+			box-shadow: 0 2px 10px #00000040;
+			color: white;
+			padding: 10px 60px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 1rem;
+		}
+		.form-section button:hover {
+			background-color: #0b5ed7;
+		}
+		#preview {
+			width: 100%;
+			max-width: 1200px;
+			background-color: #000;
+			box-shadow: 0 2px 10px #00000080;
+			border-radius: 4px;
+		}
+		.row {
+			margin-bottom: 15px;
+		}
+	</style>
 </head>
 <body>
 
 <header>
-  <img src="logo.svg" width="220px">
+	<img src="logo.svg" width="220px">
 </header>
 
 <div class="container">
-  <section>
-    <video id="preview" poster="/mjpeg" style="background:url(stream.svg); background-size:cover;"></video>
-  </section>
+	<section>
+		<video id="preview" poster="/mjpeg"></video>
+	</section>
 
-  <section class="form-section">
-    <h3>Video</h3>
-    <form id="majestic-form">
-      <div class="row">
-        <label for="video0_fps">FPS:</label>
-        <select id="video0_fps" name="majestic.video0.fps">
-          <option value="30">30</option>
-          <option value="60">60</option>
-          <option value="90">90</option>
-          <option value="120">120</option>
-        </select>
-      </div>
-      <div class="row">
-        <label for="video0_codec">Codec:</label>
-        <select id="video0_codec" name="majestic.video0.codec">
-          <option value="h264">H264</option>
-          <option value="h265">H265</option>
-        </select>
-      </div>
-      <div class="row">
-        <label for="video0_bitrate">Bitrate:</label>
-        <select id="video0_bitrate" name="majestic.video0.bitrate">
-          <option value="1024">1024</option>
-          <option value="2048">2048</option>
-          <option value="3072">3072</option>
-          <option value="4096">4096</option>
-          <option value="5120">5120</option>
-          <option value="6144">6144</option>
-          <option value="7168">7168</option>
-          <option value="8192">8192</option>
-        </select>
-      </div>
-    </form>
-    <button id="apply-majestic-button">Apply</button>
-  </section>
+	<section class="form-section">
+		<h3>Video</h3>
+		<form id="majestic-form">
+			<div class="row">
+				<label for="fps">FPS:</label>
+				<select id="fps" name="majestic.video0.fps">
+					<option value="30">30</option>
+					<option value="60">60</option>
+					<option value="90">90</option>
+					<option value="120">120</option>
+				</select>
+			</div>
+			<div class="row">
+				<label for="codec">Codec:</label>
+				<select id="codec" name="majestic.video0.codec">
+					<option value="h264">H264</option>
+					<option value="h265">H265</option>
+				</select>
+			</div>
+			<div class="row">
+				<label for="bitrate">Bitrate:</label>
+				<select id="bitrate" name="majestic.video0.bitrate"></select>
+			</div>
+			<div class="row">
+				<label for="records">Record:</label>
+				<input type="checkbox" id="records" name="majestic.records.enabled">
+			</div>
+		</form>
+		<button id="apply-majestic-button">Apply</button>
+	</section>
 
-  <section class="form-section">
-    <h3>Wireless</h3>
-    <form id="wfb-form">
-      <div class="row">
-        <label for="txpower">TX Power:</label>
-        <input type="number" id="txpower" name="wfb.wireless.txpower">
-      </div>
-      <div class="row">
-        <label for="channel">Channel:</label>
-        <select id="channel" name="wfb.wireless.channel">
-          <option value="32">32</option>
-          <option value="36">36</option>
-          <option value="40">40</option>
-          <option value="44">44</option>
-          <option value="48">48</option>
-          <option value="52">52</option>
-          <option value="56">56</option>
-          <option value="60">60</option>
-          <option value="64">64</option>
-          <option value="68">68</option>
-          <option value="96">96</option>
-          <option value="100">100</option>
-          <option value="104">104</option>
-          <option value="108">108</option>
-          <option value="112">112</option>
-          <option value="116">116</option>
-          <option value="120">120</option>
-          <option value="124">124</option>
-          <option value="128">128</option>
-          <option value="132">132</option>
-          <option value="136">136</option>
-          <option value="140">140</option>
-          <option value="144">144</option>
-          <option value="149">149</option>
-          <option value="153">153</option>
-          <option value="157">157</option>
-          <option value="161">161</option>
-          <option value="165">165</option>
-          <option value="169">169</option>
-          <option value="173">173</option>
-          <option value="177">177</option>
-        </select>
-      </div>
-      <div class="row">
-        <label for="mode">Mode:</label>
-        <select id="mode" name="wfb.wireless.mode">
-          <option value="HT20">HT20</option>
-          <option value="HT40-">HT40-</option>
-          <option value="HT40+">HT40+</option>
-        </select>
-      </div>
+	<section class="form-section">
+		<h3>Wireless</h3>
+		<form id="wfb-form">
+			<div class="row">
+				<label for="txpower">TX Power:</label>
+				<select id="txpower" name="wfb.wireless.txpower"></select>
+			</div>
+			<div class="row">
+				<label for="channel">Channel:</label>
+				<select id="channel" name="wfb.wireless.channel">
+					<option value="32">32</option>
+					<option value="36">36</option>
+					<option value="40">40</option>
+					<option value="44">44</option>
+					<option value="48">48</option>
+					<option value="52">52</option>
+					<option value="56">56</option>
+					<option value="60">60</option>
+					<option value="64">64</option>
+					<option value="68">68</option>
+					<option value="96">96</option>
+					<option value="100">100</option>
+					<option value="104">104</option>
+					<option value="108">108</option>
+					<option value="112">112</option>
+					<option value="116">116</option>
+					<option value="120">120</option>
+					<option value="124">124</option>
+					<option value="128">128</option>
+					<option value="132">132</option>
+					<option value="136">136</option>
+					<option value="140">140</option>
+					<option value="144">144</option>
+					<option value="149">149</option>
+					<option value="153">153</option>
+					<option value="157">157</option>
+					<option value="161">161</option>
+					<option value="165">165</option>
+					<option value="169">169</option>
+					<option value="173">173</option>
+					<option value="177">177</option>
+				</select>
+			</div>
+			<div class="row">
+				<label for="mode">Mode:</label>
+				<select id="mode" name="wfb.wireless.mode">
+					<option value="HT20">HT20</option>
+					<option value="HT40-">HT40-</option>
+					<option value="HT40+">HT40+</option>
+				</select>
+			</div>
 
-      <h3>Broadcast</h3>
-      <div class="row">
-        <label for="wfb_index">WFB Index:</label>
-        <select id="wfb_index" name="wfb.broadcast.wfb_index">
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-        </select>
-      </div>
-      <div class="row">
-        <label for="tun_index">TUN Index:</label>
-        <select id="tun_index" name="wfb.broadcast.tun_index">
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-        </select>
-      </div>
+			<h3>Broadcast</h3>
+			<div class="row">
+				<label for="wfb_index">WFB Index:</label>
+				<select id="wfb_index" name="wfb.broadcast.wfb_index"></select>
+			</div>
+			<div class="row">
+				<label for="tun_index">TUN Index:</label>
+				<select id="tun_index" name="wfb.broadcast.tun_index"></select>
+			</div>
 
-      <h3>Telemetry</h3>
-      <div class="row">
-        <label for="router">Router:</label>
-        <select id="router" name="wfb.telemetry.router">
-          <option value="msposd">msposd</option>
-          <option value="mavfwd">mavfwd</option>
-        </select>
-      </div>
-      <div class="row">
-        <label for="serial">Serial:</label>
-        <select id="serial" name="wfb.telemetry.serial">
-          <option value="/dev/ttyS0">/dev/ttyS0</option>
-          <option value="/dev/ttyS2">/dev/ttyS2</option>
-        </select>
-      </div>
-    </form>
-    <button id="apply-wfb-button">Apply</button>
-  </section>
+			<h3>Telemetry</h3>
+			<div class="row">
+				<label for="router">Router:</label>
+				<select id="router" name="wfb.telemetry.router">
+					<option value="msposd">msposd</option>
+					<option value="mavfwd">mavfwd</option>
+				</select>
+			</div>
+			<div class="row">
+				<label for="serial">Serial:</label>
+				<select id="serial" name="wfb.telemetry.serial">
+					<option value="/dev/ttyS0">/dev/ttyS0</option>
+					<option value="/dev/ttyS2">/dev/ttyS2</option>
+				</select>
+			</div>
+		</form>
+		<button id="apply-wfb-button">Apply</button>
+	</section>
 
-  <section class="form-section">
-    <h3>Configuration</h3>
-    <button id="reset-button">Reset</button>
-  </section>
+	<section class="form-section">
+		<h3>Configuration</h3>
+		<button id="reset-button">Reset</button>
+	</section>
 </div>
 
 <script src="js-yaml.min.js"></script>
 <script>
-  let configData = { majestic: {}, wfb: {} };
+	let configData = { majestic: {}, wfb: {} };
 
-  async function loadYAML(url, setter) {
-    const response = await fetch(url);
-    const text = await response.text();
-    setter(jsyaml.load(text));
-  }
+	async function loadYAML(url, setter) {
+		const response = await fetch(url);
+		const text = await response.text();
+		setter(jsyaml.load(text));
+	}
 
-  async function uploadYAML(data, location) {
-    const yamlData = jsyaml.dump(data);
-    await fetch('/upload', {
-      method: 'POST',
-      headers: { 'File-Location': location },
-      body: yamlData
-    });
-  }
+	async function uploadYAML(data, location) {
+		const yamlData = jsyaml.dump(data);
+		await fetch('/upload', {
+			method: 'POST',
+			headers: { 'File-Location': location },
+			body: yamlData
+		});
+	}
 
-  async function runCommand(command) {
-    await fetch('/command', {
-      method: 'POST',
-      headers: { 'Run-Command': command }
-    });
-  }
+	async function runCommand(command) {
+		await fetch('/command', {
+			method: 'POST',
+			headers: { 'Run-Command': command }
+		});
+	}
 
-  function syncForm(data, formPrefix, mode) {
-    Object.keys(data).forEach((section) => {
-      Object.keys(data[section]).forEach((key) => {
-        const field = document.querySelector(`[name="${formPrefix}.${section}.${key}"]`);
-        if (field) {
-          if (mode === "setup") {
-            field.value = data[section][key];
-          } else if (mode === "update") {
-            data[section][key] = field.value;
-          }
-        }
-      });
-    });
-  }
+	function syncForm(data, formPrefix, mode) {
+		Object.keys(data).forEach((section) => {
+			Object.keys(data[section]).forEach((key) => {
+				const field = document.getElementsByName(formPrefix + '.' + section + '.' + key)[0];
+				if (field) {
+					if (mode === "setup") {
+						field.value = data[section][key];
+					} else if (mode === "update") {
+						data[section][key] = field.value;
+					}
+				}
+			});
+		});
+	}
 
-  function executeDelay(button, command) {
-    button.disabled = true;
-    runCommand(command);
-    setTimeout(() => {
-      button.disabled = false;
-      location.reload();
-    }, 1000);
-  }
+	function executeDelay(button, command) {
+		button.disabled = true;
+		runCommand(command);
+		setTimeout(() => {
+			button.disabled = false;
+			location.reload();
+		}, 1000);
+	}
 
-  document.getElementById('apply-majestic-button').addEventListener('click', function() {
-    if (configData.majestic) {
-      syncForm(configData.majestic, 'majestic', "update");
-      uploadYAML(configData.majestic, '/etc/majestic.yaml');
-      executeDelay(this, 'killall -1 majestic');
-    }
-  });
+	function populateSelect(id, start, end, step) {
+		const select = document.getElementById(id);
+		for (let i = start; i <= end; i += step) {
+			const option = document.createElement('option');
+			option.value = i;
+			option.textContent = i;
+			select.appendChild(option);
+		}
+	}
 
-  document.getElementById('apply-wfb-button').addEventListener('click', function() {
-    if (configData.wfb) {
-      syncForm(configData.wfb, 'wfb', "update");
-      uploadYAML(configData.wfb, '/etc/wfb.yaml');
-      executeDelay(this, 'wifibroadcast start');
-    }
-  });
+	populateSelect('bitrate', 1024, 20480, 1024);
+	populateSelect('txpower', 1, 50, 1);
+	populateSelect('wfb_index', 0, 8, 1);
+	populateSelect('tun_index', 0, 8, 1);
 
-  document.getElementById('reset-button').addEventListener('click', function() {
-    executeDelay(this, 'wifibroadcast reset');
-  });
+	document.getElementById('apply-majestic-button').addEventListener('click', function() {
+		if (configData.majestic) {
+			syncForm(configData.majestic, 'majestic', "update");
+			uploadYAML(configData.majestic, '/etc/majestic.yaml');
+			executeDelay(this, 'killall -1 majestic');
+		}
+	});
 
-  loadYAML('/etc/majestic.yaml', (data) => {
-    configData.majestic = data;
-    syncForm(configData.majestic, 'majestic', "setup");
-  });
+	document.getElementById('apply-wfb-button').addEventListener('click', function() {
+		if (configData.wfb) {
+			syncForm(configData.wfb, 'wfb', "update");
+			uploadYAML(configData.wfb, '/etc/wfb.yaml');
+			executeDelay(this, 'wifibroadcast start');
+		}
+	});
 
-  loadYAML('/etc/wfb.yaml', (data) => {
-    configData.wfb = data;
-    syncForm(configData.wfb, 'wfb', "setup");
-  });
+	document.getElementById('reset-button').addEventListener('click', function() {
+		executeDelay(this, 'wifibroadcast reset');
+	});
+
+	loadYAML('/etc/majestic.yaml', (data) => {
+		configData.majestic = data;
+		syncForm(configData.majestic, 'majestic', "setup");
+	});
+
+	loadYAML('/etc/wfb.yaml', (data) => {
+		configData.wfb = data;
+		syncForm(configData.wfb, 'wfb', "setup");
+	});
 </script>
 
 </body>

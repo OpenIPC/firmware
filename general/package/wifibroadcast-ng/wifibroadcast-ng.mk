@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-WIFIBROADCAST_NG_VERSION = f7172e55611679d6723f39383f1359ac9ec7c64d
+WIFIBROADCAST_NG_VERSION = 82fd8b2d3caa52000b51a8c750db8b8af052c079
 WIFIBROADCAST_NG_SITE = $(call github,svpcom,wfb-ng,$(WIFIBROADCAST_NG_VERSION))
 WIFIBROADCAST_NG_LICENSE = GPL-3.0
 
