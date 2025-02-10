@@ -55,6 +55,19 @@ index cbc6b8a..0eb63d7 100644
      if (args->homeDir != NULL) {
          // perfect just using the homeDir
          make_directory(args->homeDir);
+diff --git a/platform_integration_example/CMakeLists.txt b/platform_integration_example/CMakeLists.txt
+index c30f4ab..b01ec4c 100644
+--- a/platform_integration_example/CMakeLists.txt
++++ b/platform_integration_example/CMakeLists.txt
+@@ -41,7 +41,7 @@ else()
+     nm_mbedtls_srv
+     nm_mbedtls_random
+     nm_mbedtls_spake2
+-    3rdparty_mbedtls
++    mbedtls
+     )
+ endif()
+ 
 diff --git a/src/core/CMakeLists.txt b/src/core/CMakeLists.txt
 index 60b89b3..b67bb86 100644
 --- a/src/core/CMakeLists.txt
