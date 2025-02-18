@@ -1,8 +1,13 @@
 #!/bin/sh
-####################Variables Definition##########################
+#
+# This is part of OpenIPC.org project | 2025.02.18
+#
+
+# Board
+board=demo
 
 # SoC detect
-CHIP_TYPE=$(ipcinfo --chip-name)
+chipid=$(ipcinfo --chip-name)
 
 # Memory config
 mem_start=0x40000000 # phy mem start
@@ -13,7 +18,6 @@ mem_total=${mem_total:=64}
 os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
 
-BOARD=demo
 YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 
 cd /lib/modules/$(uname -r)/goke/
@@ -23,30 +27,30 @@ report_error() {
 	exit 1
 }
 
-check_allocator() {
-	allocator=$(grep mmz_allocator /proc/cmdline)
-	if [ -z "${allocator}" ]; then
-		if [ ${mem_total} -ge 128 ]; then
-			set_allocator cma
-		else
-			set_allocator xmedia
-		fi
-	fi
+calc_mmz_info() {
+        mmz_start=$(echo "$mem_start $os_mem_size" |
+                awk 'BEGIN { temp = 0; }
+        {       
+                temp = $1/1024/1024 + $2;
+        }       
+        END { printf("0x%x00000\n", temp); }')
+
+        mmz_size=$(echo "$mem_total $os_mem_size" |
+                awk 'BEGIN { temp = 0; }
+        {
+                temp = $1 - $2;
+        }
+        END { printf("%dM\n", temp); }')
+        echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
 }
 
 insert_osal() {
-	check_allocator
-
-	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
-	if [ -z "$MMZ" ]; then
-		modprobe xm_osal mmz_allocator=xmedia mmz=anonymous,0,$mmz_start,$mmz_size || report_error
-	else
-		modprobe xm_osal mmz_allocator=cma mmz=$MMZ || report_error
-	fi
+	calc_mmz_info
+	modprobe xm_osal mmz_allocator=xmedia mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 }
 
 insert_detect() {
-	modprobe xm_sysconfig chip=$CHIP_TYPE sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
+	modprobe xm_sysconfig chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
 	insmod xm_base.ko
 	modprobe xm_isp
@@ -88,7 +92,7 @@ insert_isp() {
 }
 
 insert_isp_piris() {
-	if [ "$CHIP_TYPE" == "gk7605v100" -a "$BOARD" == "demo" ]; then
+	if [ "${chipid}" == "gk7605v100" -a "${board}" == "demo" ]; then
 		modprobe xm_piris
 	fi
 }
@@ -97,7 +101,7 @@ insert_ko() {
 	if [ "$SENSOR" == "bt656" ] || [ "$SENSOR" == "jxf23_dc" ]; then
 		YUV_TYPE0=1
 	fi
-	modprobe xm_sysconfig chip=$CHIP_TYPE sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
+	modprobe xm_sysconfig chip=${chipid} sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
 	insmod xm_base.ko
 	insmod xm_sys.ko
@@ -172,23 +176,6 @@ load_usage() {
 	echo -e "for example: ./load_goke -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
 }
 
-calc_mmz_info() {
-	mmz_start=$(echo "$mem_start $os_mem_size" |
-		awk 'BEGIN { temp = 0; }
-        {
-                temp = $1/1024/1024 + $2;
-        }
-        END { printf("0x%x00000\n", temp); }')
-
-	mmz_size=$(echo "$mem_total $os_mem_size" |
-		awk 'BEGIN { temp = 0; }
-        {
-                temp = $1 - $2;
-        }
-        END { printf("%dM\n", temp); }')
-	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
-}
-
 ######################parse arg###################################
 b_arg_sensor0=0
 b_arg_sensor1=0
@@ -221,7 +208,7 @@ for arg in $@; do
 
 	if [ $b_arg_board -eq 1 ]; then
 		b_arg_board=0
-		BOARD=$arg
+		board=$arg
 	fi
 
 	case $arg in
@@ -260,8 +247,6 @@ if [ $os_mem_size -ge $mem_total ]; then
 	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
 	exit
 fi
-
-calc_mmz_info
 
 #######################Action###############################
 
