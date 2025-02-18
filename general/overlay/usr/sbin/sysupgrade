@@ -294,7 +294,7 @@ for i in "$@"; do
 			shift
 			;;
 
-		-f | --force_all)
+		-f | --force_all | --force_md5 | --force_soc | --force_ver)
 			skip_md5=1
 			skip_soc=1
 			skip_ver=1
