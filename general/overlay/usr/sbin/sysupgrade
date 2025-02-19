@@ -1,12 +1,8 @@
 #!/bin/sh
-#
-# OpenIPC.org | 2024
-#
-
-scr_version=1.0.45
+# OpenIPC.org | 2025
+scr_version=1.0.46
 
 args="$@"
-
 LOCK_FILE=/tmp/sysupgrade.lock
 
 echo_c() {
@@ -226,9 +222,6 @@ Where:
       --archive=[FILE]  Custom archive to update from (.tgz format).
       --kernel=[FILE]   Update kernel from file (uImage format).
       --rootfs=[FILE]   Update rootfs from file (squashfs format).
-      --force_md5       Do not validate MD5 hash.
-      --force_soc       Do not validate processor.
-      --force_ver       Do not validate release version.
   -f, --force_all       Do not validate anything.
   -n, --wipe_overlay    Wipe overlay partition.
   -x, --no_reboot       Do not reboot after updating.
@@ -252,28 +245,6 @@ reboot_system() {
 
 for i in "$@"; do
 	case $i in
-		-f | --force_all)
-			skip_md5=1
-			skip_soc=1
-			skip_ver=1
-			shift
-			;;
-
-		--force_md5)
-			skip_md5=1
-			shift
-			;;
-
-		--force_soc)
-			skip_soc=1
-			shift
-			;;
-
-		--force_ver)
-			skip_ver=1
-			shift
-			;;
-
 		-h | --help)
 			print_sysinfo
 			print_usage
@@ -293,11 +264,6 @@ for i in "$@"; do
 			shift
 			;;
 
-		-n | --wipe_overlay)
-			clear_overlay=1
-			shift
-			;;
-
 		-r)
 			update_rootfs=1
 			remote_update=1
@@ -311,18 +277,32 @@ for i in "$@"; do
 			shift
 			;;
 
-		-s)
-			silent_update=1
-			shift
-			;;
-
 		--url=*)
+			update_kernel=1
+			update_rootfs=1
+			remote_update=1
 			url="${i#*=}"
 			shift
 			;;
 
 		--archive=*)
+			update_kernel=1
+			update_rootfs=1
+			remote_update=1
+			skip_selfupdate=1
 			archive="${i#*=}"
+			shift
+			;;
+
+		-f | --force_all | --force_md5 | --force_soc | --force_ver)
+			skip_md5=1
+			skip_soc=1
+			skip_ver=1
+			shift
+			;;
+
+		-n | --wipe_overlay)
+			clear_overlay=1
 			shift
 			;;
 
@@ -333,6 +313,11 @@ for i in "$@"; do
 
 		-z | --no_update)
 			skip_selfupdate=1
+			shift
+			;;
+
+		-s)
+			silent_update=1
 			shift
 			;;
 
