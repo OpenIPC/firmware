@@ -63,7 +63,7 @@ load_interface() {
 
 start_broadcast() {
 	echo "- Starting wfb_tx"
-	wfb_tx -K "$wfb_key" -M "$wfb_index" -B "$bandwidth" -C 8000 \
+	wfb_tx -K "$wfb_key" -M "$wfb_index" -B "$bandwidth" -C 8000 -G short \
 		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wfb_dev" &> /dev/null &
 }
 
@@ -92,12 +92,16 @@ start_telemetry() {
 
 video_settings() {
 	[ "$(ipcinfo -s)" = "imx415" ] && cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
+
 	cli -s .isp.exposure 5
 	cli -s .video0.fps 60
+	cli -s .video0.bitrate 10240
 	cli -s .video0.codec h265
 	cli -s .video0.rcMode cbr
 	cli -s .outgoing.enabled true
 	cli -s .outgoing.server udp://0.0.0.0:5600
+	cli -s .fpv.enabled true
+	cli -s .fpv.noiseLevel 1
 }
 
 start() {
