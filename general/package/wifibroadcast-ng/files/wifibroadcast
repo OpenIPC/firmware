@@ -76,23 +76,24 @@ start_tunnel() {
 }
 
 start_telemetry() {
-	[ "$(ipcinfo -c)" = "ssc33x" ] && devmem 0x1F207890 16 0x8
+	chipset=$(ipcinfo -c)
+	[ "$chipset" = "ssc33x" ] && devmem 0x1F207890 16 0x8
 
+	echo "- Starting $router"
 	if [ "$router" = "msposd" ]; then
-		echo "- Starting $router"
-		size=$(curl -s localhost/api/v1/config.json | jsonfilter -e "@.video0.size")
-		msposd -b 115200 -c 8 -d -r $osd_fps -z "${size:-1280x720}" \
+		config=$(curl -s localhost/api/v1/config.json)
+		[ -n "$config" ] && size=$(echo "$config" | jsonfilter -e "@.video0.size")
+		msposd -b 115200 -c 8 -d -r "$osd_fps" -z "${size:-1280x720}" \
 			-m "$serial" -o 10.5.0.1:14551 > /dev/null &
 	elif [ "$router" = "mavfwd" ]; then
-		echo "- Starting $router"
 		mavfwd --baudrate 115200 --channels 8 -p 100 -a 15 -t \
 			--master "$serial" --in 0.0.0.0:14550 --out 10.5.0.1:14551 > /dev/null &
 	fi
 }
 
 video_settings() {
-	[ "$(ipcinfo -s)" = "imx415" ] && cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
-
+	sensor=$(ipcinfo -s)
+	cli -s .isp.sensorConfig /etc/sensors/"$sensor"_fpv.bin
 	cli -s .isp.exposure 5
 	cli -s .video0.fps 60
 	cli -s .video0.bitrate 10240
