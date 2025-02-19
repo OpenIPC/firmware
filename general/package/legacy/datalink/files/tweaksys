@@ -90,7 +90,6 @@ sigmastar() {
 	sed -i "s|serial=/dev/ttyAMA0|serial=/dev/ttyS2|g" /etc/telemetry.conf
 	sed -i "s|Device = /dev/ttyAMA0|Device = /dev/ttyS2|g" /etc/mavlink.conf
 
-	cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
 	cli -s .isp.exposure 5
 	cli -s .video0.codec h265
 	cli -s .video0.size 1920x1080
