@@ -19,6 +19,11 @@ case "$1" in
 			touch /etc/network.ok
 		fi
 
+		if [ -e /usr/share/openipc/muxes.sh ]; then
+			echo "Run custom muxes & gpios preset script..."
+			sh /usr/share/openipc/muxes.sh
+		fi
+
 		check_mac
 		;;
 
