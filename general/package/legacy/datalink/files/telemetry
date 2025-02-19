@@ -23,12 +23,12 @@ start_drone_telemetry() {
 		telemetry_tx -p "$stream_tx" -u "$port_tx" -K "$keydir/$unit.key" -B "$bandwidth" \
 			-M "$mcs_index" -S "$stbc" -L "$ldpc" -G "$guard_interval" -k "$fec_k" -n "$fec_n" \
 			-T "$pool_timeout" -i "$link_id" -f "$frame_type" "$wlan" > /dev/null &
-    	elif [ "$router" -eq 3 ]; then
-        	# Increment $port_tx by 1 if $router is equal to 3 for ground station OSD
-        	port_tx=$((port_tx + 1))
-        	telemetry_tx -p "$stream_tx" -u "$port_tx" -K "$keydir/$unit.key" -B "$bandwidth" \
-            		-M "$mcs_index" -S "$stbc" -L "$ldpc" -G "$guard_interval" -k "$fec_k" -n "$fec_n" \
-            		-T "$pool_timeout" -i "$link_id" -f "$frame_type" "$wlan" > /dev/null &
+	elif [ "$router" -eq 3 ]; then
+		# Increment $port_tx by 1 if $router is equal to 3 for ground station OSD
+		port_tx=$((port_tx + 1))
+		telemetry_tx -p "$stream_tx" -u "$port_tx" -K "$keydir/$unit.key" -B "$bandwidth" \
+			-M "$mcs_index" -S "$stbc" -L "$ldpc" -G "$guard_interval" -k "$fec_k" -n "$fec_n" \
+			-T "$pool_timeout" -i "$link_id" -f "$frame_type" "$wlan" > /dev/null &
 	fi
 }
 
