@@ -23,6 +23,12 @@ start_drone_telemetry() {
 		telemetry_tx -p "$stream_tx" -u "$port_tx" -K "$keydir/$unit.key" -B "$bandwidth" \
 			-M "$mcs_index" -S "$stbc" -L "$ldpc" -G "$guard_interval" -k "$fec_k" -n "$fec_n" \
 			-T "$pool_timeout" -i "$link_id" -f "$frame_type" "$wlan" > /dev/null &
+	elif [ "$router" -eq 3 ]; then
+		# Increment $port_tx by 1 if $router is equal to 3 for ground station OSD
+		port_tx=$((port_tx + 1))
+		telemetry_tx -p "$stream_tx" -u "$port_tx" -K "$keydir/$unit.key" -B "$bandwidth" \
+			-M "$mcs_index" -S "$stbc" -L "$ldpc" -G "$guard_interval" -k "$fec_k" -n "$fec_n" \
+			-T "$pool_timeout" -i "$link_id" -f "$frame_type" "$wlan" > /dev/null &
 	fi
 }
 
@@ -44,6 +50,9 @@ case "$1" in
 			if [ "$router" -eq 2  ]; then
 				msposd --channels "$channels" --master "$serial" --baudrate "$baud"  \
 					--out 127.0.0.1:$(($port_tx + 1)) -osd -r "$fps" --ahi "$ahi" > /dev/null &
+			elif [ "$router" -eq 3  ]; then
+				msposd --channels "$channels" --master "$serial" --baudrate "$baud"  \
+					--out 127.0.0.1:$(($port_tx + 1)) -r "$fps" --ahi "$ahi" > /dev/null &
 			else
 				mavfwd --channels "$channels" --master "$serial" --baudrate "$baud" -p 100 -t -a "$aggregate" \
 					--out 127.0.0.1:$port_tx --in 127.0.0.1:$port_rx > /dev/null &
