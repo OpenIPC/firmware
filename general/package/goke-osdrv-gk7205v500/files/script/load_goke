@@ -54,13 +54,13 @@ insert_detect() {
 	insert_osal
 	insmod xm_base.ko
 	modprobe xm_isp
-	modprobe xm_sensor_i2c
-	modprobe xm_sensor_spi
+	modprobe xm_isp_sensor_i2c
+	modprobe xm_isp_sensor_spi
 }
 
 remove_detect() {
-	rmmod -w xm_sensor_spi
-	rmmod -w xm_sensor_i2c
+	rmmod -w xm_isp_sensor_spi
+	rmmod -w xm_isp_sensor_i2c
 	rmmod -w xm_isp
 	rmmod -w xm_base
 	rmmod -w xm_osal >/dev/null 2>&1
@@ -93,7 +93,7 @@ insert_isp() {
 
 insert_isp_piris() {
 	if [ "${chipid}" == "gk7605v100" -a "${board}" == "demo" ]; then
-		modprobe xm_piris
+		modprobe xm_isp_piris
 	fi
 }
 
@@ -111,8 +111,8 @@ insert_ko() {
 	insmod xm_vi.ko
 	insert_isp
 	insmod xm_vpss.ko
-	# insmod xm_vo.ko                       # unused on XmIPC
-	# insmod gfbg.ko video="gfbg:vram0_size:1620"   # unused on XmIPC  # default fb0:D1
+	# insmod xm_vo.ko # unused on XmIPC
+	# insmod gfbg.ko video="gfbg:vram0_size:1620" # unused on XmIPC  # default fb0:D1
 	insmod xm_chnl.ko
 	insmod xm_vedu.ko
 	insmod xm_rc.ko
@@ -121,24 +121,24 @@ insert_ko() {
 	insmod xm_h265e.ko
 	insmod xm_jpege.ko
 	insmod xm_ive.ko save_power=0
-	modprobe xm_pwm
-	modprobe xm_sensor_i2c
-	modprobe xm_sensor_spi
-	# insert_isp_piris                              # unused on XmIPC
-	# insert_sil9024;                               # unused on XmIPC  # BT1120
+	modprobe xm_isp_pwm
+	modprobe xm_isp_sensor_i2c
+	modprobe xm_isp_sensor_spi
+	# insert_isp_piris # unused on XmIPC
+	# insert_sil9024; # unused on XmIPC  # BT1120
 	insert_audio
 	modprobe xm_mipi_rx
-	# insmod xm_pm.ko                       # unused on XmIPC
-	modprobe xm_wdt
+	# insmod xm_pm.ko # unused on XmIPC
+	# modprobe xm_wdt # temporarily disabled
 }
 
 remove_ko() {
-	rmmod -w xm_wdt
-	# rmmod -w xm_pm                           # unused on XmIPC
+	# rmmod -w xm_wdt
+	# rmmod -w xm_pm
 	remove_audio
 	rmmod -w xm_mipi_rx
-	# rmmod -w xm_piris                              # unused on XmIPC
-	# rmmod -w sil9024 &> /dev/null                    # unused on XmIPC
+	# rmmod -w xm_isp_piris
+	# rmmod -w sil9024 &> /dev/null
 	rmmod -w xm_ive
 	rmmod -w xm_rc
 	rmmod -w xm_jpege
@@ -147,17 +147,17 @@ remove_ko() {
 	rmmod -w xm_venc
 	rmmod -w xm_vedu
 	rmmod -w xm_chnl
-	# rmmod -w gfbg                                    # unused on XmIPC
-	# rmmod -w xm_vo                           # unused on XmIPC
+	# rmmod -w gfbg
+	# rmmod -w xm_vo
 	rmmod -w xm_vpss
 	rmmod -w xm_isp
 	rmmod -w xm_vi
 	rmmod -w xm_vgs
 	rmmod -w xm_rgn
 	# rmmod -w xm_tde
-	rmmod -w xm_sensor_i2c &>/dev/null
-	rmmod -w xm_sensor_spi &>/dev/null
-	rmmod -w xm_pwm
+	rmmod -w xm_isp_sensor_i2c &>/dev/null
+	rmmod -w xm_isp_sensor_spi &>/dev/null
+	rmmod -w xm_isp_pwm
 	rmmod -w xm_sys
 	rmmod -w xm_base
 	rmmod -w xm_osal

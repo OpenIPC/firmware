@@ -57,7 +57,7 @@ case "$CMD" in
 		echo -e "  $(lsusb | awk '{print $6}' | sort | tr '\n' ' ')\n"
 		echo "Memory:"
 		echo -e "  totalmem - $(fw_printenv -n totalmem)"
-		echo -e "  osmem    - $(fw_printenv -n osmem)\n"
+		echo -e "  osmem    - $(fw_printenv -n osmem || echo 'not set')\n"
 		echo "Processor:"
 		echo -e "  detected - $(ipcinfo -ci | tr '\n' '\t')"
 		echo -e "  recorded - $(fw_printenv -n soc)\n"
