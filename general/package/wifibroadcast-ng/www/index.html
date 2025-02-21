@@ -230,8 +230,8 @@
 			<div class="row">
 				<label for="serial">Serial:</label>
 				<select id="serial" name="wfb.telemetry.serial">
-					<option value="ttyS0">/dev/ttyS0</option>
-					<option value="ttyS2">/dev/ttyS2</option>
+					<option value="ttyS0">ttyS0</option>
+					<option value="ttyS2">ttyS2</option>
 				</select>
 			</div>
 		</form>
@@ -272,10 +272,23 @@
 		Object.keys(data).forEach((section) => {
 			Object.keys(data[section]).forEach((key) => {
 				const field = document.getElementsByName(formPrefix + '.' + section + '.' + key)[0];
-				if (field) {
-					if (mode === "setup") {
-						field.value = data[section][key];
-					} else if (mode === "update") {
+				if (!field) {
+					return;
+				}
+
+				const isCheckbox = field.type === "checkbox";
+				const value = data[section][key];
+
+				if (mode === "setup") {
+					if (isCheckbox) {
+						field.checked = value === true;
+					} else {
+						field.value = value;
+					}
+				} else if (mode === "update") {
+					if (isCheckbox) {
+						data[section][key] = field.checked;
+					} else {
 						data[section][key] = field.value;
 					}
 				}
@@ -311,16 +324,18 @@
 		document.getElementById(buttonId).addEventListener('click', function () {
 			if (configKey && configData[configKey]) {
 				syncForm(configData[configKey], configKey, "update");
+				var yamlPath = '/etc/' + configKey + '.yaml';
 				uploadYAML(configData[configKey], yamlPath);
 			}
 			executeDelay(this, command);
 		});
 	}
 
-	addClickListener('apply-video-button', 'killall -1 majestic', 'majestic', '/etc/majestic.yaml');
-	addClickListener('apply-wfb-button', 'wifibroadcast start', 'wfb', '/etc/wfb.yaml');
-	addClickListener('reset-wfb-button', 'wifibroadcast resetw');
+	addClickListener('apply-video-button', 'killall -1 majestic', 'majestic');
+	addClickListener('apply-wfb-button', 'wifibroadcast start', 'wfb');
+
 	addClickListener('reset-video-button', 'wifibroadcast resetv');
+	addClickListener('reset-wfb-button', 'wifibroadcast resetw');
 
 	loadYAML('/etc/majestic.yaml', (data) => {
 		configData.majestic = data;
