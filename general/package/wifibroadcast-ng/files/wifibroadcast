@@ -13,7 +13,6 @@ wfb_yaml() {
 }
 
 load_config() {
-	wfb_yaml /rom/etc/wfb.yaml
 	wfb_yaml /etc/wfb.yaml
 	[ ! -e "$wfb_key" ] && wfb_key=/rom/etc/drone.key
 }
@@ -84,10 +83,10 @@ start_telemetry() {
 		config=$(curl -s localhost/api/v1/config.json)
 		[ -n "$config" ] && size=$(echo "$config" | jsonfilter -e "@.video0.size")
 		msposd -b 115200 -c 8 -d -r "$osd_fps" -z "${size:-1280x720}" \
-			-m "$serial" -o 10.5.0.1:14551 > /dev/null &
+			-m /dev/"$serial" -o 10.5.0.1:14551 > /dev/null &
 	elif [ "$router" = "mavfwd" ]; then
-		mavfwd --baudrate 115200 --channels 8 -p 100 -a 15 -t \
-			--master "$serial" --in 0.0.0.0:14550 --out 10.5.0.1:14551 > /dev/null &
+		mavfwd -b 115200 -c 8 -p 100 -a 15 -t \
+			-m /dev/"$serial" -i 0.0.0.0:14550 -o 10.5.0.1:14551 > /dev/null &
 	fi
 }
 
@@ -95,14 +94,16 @@ video_settings() {
 	sensor=$(ipcinfo -s)
 	cli -s .isp.sensorConfig /etc/sensors/"$sensor"_fpv.bin
 	cli -s .isp.exposure 5
-	cli -s .video0.fps 60
-	cli -s .video0.bitrate 10240
+	cli -s .video0.fps 90
+	cli -s .video0.bitrate 8192
 	cli -s .video0.codec h265
 	cli -s .video0.rcMode cbr
 	cli -s .outgoing.enabled true
 	cli -s .outgoing.server udp://0.0.0.0:5600
 	cli -s .fpv.enabled true
 	cli -s .fpv.noiseLevel 1
+
+	killall -1 majestic
 }
 
 start() {
@@ -114,7 +115,6 @@ start() {
 		sleep 1
 		video_settings
 		touch /etc/system.ok
-		killall -1 majestic
 	fi
 
 	stop
@@ -137,14 +137,18 @@ case "$1" in
 		$1
 		;;
 
-	reset)
+	resetv)
 		cp -f /rom/etc/majestic.yaml /etc/majestic.yaml
-		cp -f /rom/etc/wfb.yaml /etc/wfb.yaml
 		video_settings
 		;;
 
+	resetw)
+		cp -f /rom/etc/wfb.yaml /etc/wfb.yaml
+		start
+		;;
+
 	*)
-		echo "Usage: $0 {start|stop|reset}"
+		echo "Usage: $0 {start|stop|resetv|resetw}"
 		exit 1
 		;;
 esac
