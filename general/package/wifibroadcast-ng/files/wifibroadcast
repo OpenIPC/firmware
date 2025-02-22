@@ -2,6 +2,10 @@
 wfb_key=/etc/drone.key
 wfb_dev=wlan0
 
+echo_log() {
+	echo "$1" | logger -s -t wifibroadcast
+}
+
 wfb_yaml() {
 	if [ -e "$1" ]; then
 		while IFS=: read -r key value; do
@@ -38,14 +42,13 @@ load_modules() {
 	done
 
 	if [ -z "$driver" ]; then
-		echo "- Wireless module not detected!"
+		echo_log "Wireless module not detected!"
 		exit 1
-	else
-		echo "- Detected driver: $driver"
 	fi
 
+	echo_log "Detected driver: $driver"
 	if ! ifconfig "$wfb_dev" up; then
-		echo "- Wireless driver not found!"
+		echo_log "Wireless driver not found!"
 		exit 1
 	fi
 }
@@ -61,13 +64,13 @@ load_interface() {
 }
 
 start_broadcast() {
-	echo "- Starting wfb_tx"
+	echo_log "Starting wfb_tx"
 	wfb_tx -K "$wfb_key" -M "$wfb_index" -B "$bandwidth" -C 8000 -G short \
 		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wfb_dev" &> /dev/null &
 }
 
 start_tunnel() {
-	echo "- Starting wfb_tun"
+	echo_log "Starting wfb_tun"
 	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$link_id" "$wfb_dev" &> /dev/null &
 	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$tun_index" \
 		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wfb_dev" &> /dev/null &
@@ -78,7 +81,7 @@ start_telemetry() {
 	chipset=$(ipcinfo -c)
 	[ "$chipset" = "ssc33x" ] && devmem 0x1F207890 16 0x8
 
-	echo "- Starting $router"
+	echo_log "Starting $router"
 	if [ "$router" = "msposd" ]; then
 		config=$(curl -s localhost/api/v1/config.json)
 		[ -n "$config" ] && size=$(echo "$config" | jsonfilter -e "@.video0.size")
@@ -102,8 +105,6 @@ video_settings() {
 	cli -s .outgoing.server udp://0.0.0.0:5600
 	cli -s .fpv.enabled true
 	cli -s .fpv.noiseLevel 1
-
-	killall -1 majestic
 }
 
 start() {
@@ -126,7 +127,7 @@ start() {
 stop() {
 	for process in wfb_rx wfb_tx wfb_tun msposd mavfwd; do
 		if [ -n "$(pidof $process)" ]; then
-			echo "- Stopping $process"
+			echo_log "Stopping $process"
 			killall -q "$process"
 		fi
 	done
