@@ -9,6 +9,7 @@ async function loadYAML(url, setter) {
 async function uploadYAML(data, location) {
 	const yamlData = jsyaml.dump(data);
 	await fetch('/upload', {
+		method: 'POST',
 		headers: { 'File-Location': location },
 		body: yamlData
 	});
@@ -16,6 +17,7 @@ async function uploadYAML(data, location) {
 
 async function runCommand(command) {
 	await fetch('/command', {
+		method: 'POST',
 		headers: { 'Run-Command': command }
 	});
 }

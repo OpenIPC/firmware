@@ -116,6 +116,7 @@ start() {
 		sleep 1
 		video_settings
 		touch /etc/system.ok
+		killall -1 majestic
 	fi
 
 	stop
