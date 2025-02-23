@@ -1,0 +1,51 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        
+        # Read alink mode from YAML
+        alink="$(yaml-cli -i /etc/wfb.yaml -g .wireless.alink)"
+
+        # If empty or unknown, treat as disabled
+        case "$alink" in
+            simple-alink)
+                echo "alink mode: simple-alink"
+                # Put the commands you need for starting 'simple-alink' here
+                socket_srv --udp 5557 simple_alink.sh &>/dev/null &
+                ;;
+            greg-alink)
+                echo "alink mode: greg-alink"
+                # Put the commands you need for starting 'greg-alink' here
+                ;;
+            ""|disabled|*)
+                # If empty, explicitly "disabled", or unrecognized value
+                echo "alink mode is 'disabled' (or unrecognized), skipping alink start."
+                ;;
+        esac
+        ;;
+
+    stop)
+        # Read alink mode again
+        alink="$(yaml-cli -i /etc/wfb.yaml -g .wireless.alink)"
+
+        # Stop whichever mode was started
+        case "$alink" in
+            simple-alink)
+                echo "Stopping simple-alink..."
+                killall -q simple_alink.sh
+                ;;
+            greg-alink)
+                echo "Stopping greg-alink..."
+                
+                ;;
+            ""|disabled|*)
+                echo "alink mode is 'disabled' (or unrecognized), nothing to stop."
+                ;;
+        esac
+        ;;
+
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac

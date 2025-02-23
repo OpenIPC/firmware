@@ -1,0 +1,18 @@
+#!/bin/sh
+
+case "$1" in
+        start)
+                echo "Starting provisioner bind service..."
+
+                if [ "$(yaml-cli -i /etc/wfb.yaml -g .wireless.allow_startup_bind)" = "true" ]; then
+                        echo "allow_startup_bind is true; starting provision_bind.sh in the background..."
+                        provision_bind.sh &>/dev/null &
+                else
+                        echo "allow_startup_bind is not true; skipping provision_bind.sh"
+                fi
+                ;;
+        *)
+                echo "Usage: $0 {start}"
+                exit 1
+                ;;
+esac

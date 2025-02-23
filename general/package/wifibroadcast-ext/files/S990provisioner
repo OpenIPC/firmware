@@ -1,0 +1,18 @@
+#!/bin/sh
+
+case "$1" in
+	start)
+		echo "Starting provisioner service..."
+		provision_listen.sh &>/dev/null &
+		;;
+
+	stop)
+		echo "Stopping provisioner service..."
+		killall -q provision_listen.sh
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac

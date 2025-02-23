@@ -1,0 +1,18 @@
+#!/bin/sh
+
+case "$1" in
+	start)
+		echo "Starting temperature check..."
+		temperature_check.sh &>/dev/null &
+		;;
+
+	stop)
+		echo "Stopping temperature check..."
+		killall -q temperature_check.sh
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac
