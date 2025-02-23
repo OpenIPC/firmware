@@ -72,7 +72,7 @@ jobs:
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}
           echo ${URL}
           if ! wget -q --spider ${URL}; then
-            make BOARD=${CONFIG} toolchain
+            make BOARD=${{matrix.platform}} toolchain
             SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
             mv ${SDK} ${GCC}
             echo GCC=${GCC} >> ${GITHUB_ENV}
