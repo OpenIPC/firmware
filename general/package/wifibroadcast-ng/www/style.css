@@ -1,0 +1,105 @@
+body {
+	font-family: Helvetica;
+	background-color: #1e1e1e;
+	color: #dcdcdc;
+	text-align: center;
+}
+
+header {
+	background-color: #252526;
+	border-radius: 4px;
+	box-shadow: 0 2px 10px #00000080;
+	color: white;
+	padding: 15px 0;
+}
+
+h3 {
+	font-size: 1.5rem;
+	margin-top: 1rem;
+	color: #dee2e6bf;
+}
+
+.container {
+	padding: 20px;
+}
+
+.form-section {
+	background-color: #2d2d2d;
+	border-radius: 4px;
+	box-shadow: 0 2px 10px #00000080;
+	max-width: 40%;
+	padding: 20px;
+	margin: 20px auto;
+}
+
+.form-section label {
+	display: inline-block;
+	font-weight: bold;
+	margin: 10px 0 5px;
+	width: 150px;
+	vertical-align: top;
+	color: #dee2e6;
+}
+
+.form-section select {
+	width: 120px;
+	padding: 10px;
+	margin-bottom: 15px;
+	border-radius: 4px;
+	border: 1px solid #555;
+	background-color: #3c3c3c;
+	color: #dcdcdc;
+	display: inline-block;
+	box-sizing: border-box;
+}
+
+.form-section input {
+	width: 120px;
+	height: 25px;
+}
+
+.button-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.form-section button {
+	width: 160px;
+	padding: 10px;
+	margin: 10px;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 1rem;
+	color: white;
+	box-shadow: 0 2px 10px #00000040;
+}
+
+#apply-video-button, #apply-wfb-button {
+	background-color: #0d4aa5;
+}
+
+#apply-video-button:hover, #apply-wfb-button:hover {
+	background-color: #115fd4;
+}
+
+#reset-video-button, #reset-wfb-button {
+	background-color: #a11212;
+}
+
+#reset-video-button:hover, #reset-wfb-button:hover {
+	background-color: #cf1717;
+}
+
+#preview {
+	width: 100%;
+	max-width: 1200px;
+	background-color: #000;
+	box-shadow: 0 2px 10px #00000080;
+	border-radius: 4px;
+}
+
+.row {
+	margin-bottom: 15px;
+}

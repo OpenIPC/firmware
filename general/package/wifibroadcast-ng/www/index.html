@@ -3,84 +3,8 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Camera</title>
-	<style>
-		body {
-			font-family: Helvetica;
-			background-color: #1e1e1e;
-			color: #dcdcdc;
-			text-align: center;
-		}
-		header {
-			background-color: #252526;
-			border-radius: 4px;
-			box-shadow: 0 2px 10px #00000080;
-			color: white;
-			padding: 15px 0;
-		}
-		h3 {
-			font-size: 1.5rem;
-			margin-top: 1rem;
-			color: #dee2e6bf;
-		}
-		.container {
-			padding: 20px;
-		}
-		.form-section {
-			background-color: #2d2d2d;
-			border-radius: 4px;
-			box-shadow: 0 2px 10px #00000080;
-			max-width: 40%;
-			padding: 20px;
-			margin: 20px auto;
-		}
-		.form-section label {
-			display: inline-block;
-			font-weight: bold;
-			margin: 10px 0 5px;
-			width: 150px;
-			vertical-align: top;
-			color: #dee2e6;
-		}
-		.form-section select {
-			width: 120px;
-			padding: 10px;
-			margin-bottom: 15px;
-			border-radius: 4px;
-			border: 1px solid #555;
-			background-color: #3c3c3c;
-			color: #dcdcdc;
-			display: inline-block;
-			box-sizing: border-box;
-		}
-		.form-section input {
-			width: 120px;
-			height: 25px;
-		}
-		.form-section button {
-			background-color: #0d6efd80;
-			box-shadow: 0 2px 10px #00000040;
-			color: white;
-			padding: 10px 60px;
-			border: none;
-			border-radius: 4px;
-			cursor: pointer;
-			font-size: 1rem;
-		}
-		.form-section button:hover {
-			background-color: #0b5ed7;
-		}
-		#preview {
-			width: 100%;
-			max-width: 1200px;
-			background-color: #000;
-			box-shadow: 0 2px 10px #00000080;
-			border-radius: 4px;
-		}
-		.row {
-			margin-bottom: 15px;
-		}
-	</style>
+	<link rel="stylesheet" href="style.css">
+	<title>OpenIPC</title>
 </head>
 <body>
 
@@ -121,7 +45,10 @@
 				<input type="checkbox" id="records" name="majestic.records.enabled">
 			</div>
 		</form>
-		<button id="apply-majestic-button">Apply</button>
+		<div class="button-container">
+			<button id="apply-video-button">Apply</button>
+			<button id="reset-video-button">Reset</button>
+		</div>
 	</section>
 
 	<section class="form-section">
@@ -197,115 +124,20 @@
 			<div class="row">
 				<label for="serial">Serial:</label>
 				<select id="serial" name="wfb.telemetry.serial">
-					<option value="/dev/ttyS0">/dev/ttyS0</option>
-					<option value="/dev/ttyS2">/dev/ttyS2</option>
+					<option value="ttyS0">ttyS0</option>
+					<option value="ttyS2">ttyS2</option>
 				</select>
 			</div>
 		</form>
-		<button id="apply-wfb-button">Apply</button>
-	</section>
-
-	<section class="form-section">
-		<h3>Configuration</h3>
-		<button id="reset-button">Reset</button>
+		<div class="button-container">
+			<button id="apply-wfb-button">Apply</button>
+			<button id="reset-wfb-button">Reset</button>
+		</div>
 	</section>
 </div>
 
 <script src="js-yaml.min.js"></script>
-<script>
-	let configData = { majestic: {}, wfb: {} };
-
-	async function loadYAML(url, setter) {
-		const response = await fetch(url);
-		const text = await response.text();
-		setter(jsyaml.load(text));
-	}
-
-	async function uploadYAML(data, location) {
-		const yamlData = jsyaml.dump(data);
-		await fetch('/upload', {
-			method: 'POST',
-			headers: { 'File-Location': location },
-			body: yamlData
-		});
-	}
-
-	async function runCommand(command) {
-		await fetch('/command', {
-			method: 'POST',
-			headers: { 'Run-Command': command }
-		});
-	}
-
-	function syncForm(data, formPrefix, mode) {
-		Object.keys(data).forEach((section) => {
-			Object.keys(data[section]).forEach((key) => {
-				const field = document.getElementsByName(formPrefix + '.' + section + '.' + key)[0];
-				if (field) {
-					if (mode === "setup") {
-						field.value = data[section][key];
-					} else if (mode === "update") {
-						data[section][key] = field.value;
-					}
-				}
-			});
-		});
-	}
-
-	function executeDelay(button, command) {
-		button.disabled = true;
-		runCommand(command);
-		setTimeout(() => {
-			button.disabled = false;
-			location.reload();
-		}, 1000);
-	}
-
-	function populateSelect(id, start, end, step) {
-		const select = document.getElementById(id);
-		for (let i = start; i <= end; i += step) {
-			const option = document.createElement('option');
-			option.value = i;
-			option.textContent = i;
-			select.appendChild(option);
-		}
-	}
-
-	populateSelect('bitrate', 1024, 20480, 1024);
-	populateSelect('txpower', 1, 50, 1);
-	populateSelect('wfb_index', 0, 8, 1);
-	populateSelect('tun_index', 0, 8, 1);
-
-	document.getElementById('apply-majestic-button').addEventListener('click', function() {
-		if (configData.majestic) {
-			syncForm(configData.majestic, 'majestic', "update");
-			uploadYAML(configData.majestic, '/etc/majestic.yaml');
-			executeDelay(this, 'killall -1 majestic');
-		}
-	});
-
-	document.getElementById('apply-wfb-button').addEventListener('click', function() {
-		if (configData.wfb) {
-			syncForm(configData.wfb, 'wfb', "update");
-			uploadYAML(configData.wfb, '/etc/wfb.yaml');
-			executeDelay(this, 'wifibroadcast start');
-		}
-	});
-
-	document.getElementById('reset-button').addEventListener('click', function() {
-		executeDelay(this, 'wifibroadcast reset');
-	});
-
-	loadYAML('/etc/majestic.yaml', (data) => {
-		configData.majestic = data;
-		syncForm(configData.majestic, 'majestic', "setup");
-	});
-
-	loadYAML('/etc/wfb.yaml', (data) => {
-		configData.wfb = data;
-		syncForm(configData.wfb, 'wfb', "setup");
-	});
-</script>
+<script src="script.js"></script>
 
 </body>
 </html>
