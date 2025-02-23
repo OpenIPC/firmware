@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera</title>
+  <style>
+    /* Apply border-box to all elements */
+    *, *:before, *:after {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #1e1e1e;
+      margin: 0;
+      padding: 0;
+      color: #dcdcdc;
+      text-align: center;
+    }
+    header {
+      background-color: #252526;
+      color: white;
+      padding: 15px 0;
+    }
+    header img {
+      display: block;
+      margin: 0 auto;
+    }
+    /* Overall information below the logo */
+    .ww-info {
+      color: #666;
+      font-style: italic;
+      text-align: center;
+      margin-top: 10px;
+    }
+    h3 {
+      font-size: 1.5rem;
+      margin-top: 1rem;
+      color: #dee2e6bf;
+      text-align: left;
+    }
+    /* Container with consistent width */
+    .container {
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: left;
+    }
+    /* Form sections use full container width */
+    .form-section {
+      background-color: #2d2d2d;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px #00000080;
+      width: 100%;
+      padding: 20px;
+      margin: 20px auto;
+    }
+    .form-section label {
+      width: 150px;
+      font-weight: bold;
+      color: #dee2e6;
+    }
+    .form-section input, 
+    .form-section select {
+      width: 180px;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background-color: #3c3c3c;
+      color: #dcdcdc;
+    }
+    .form-section button {
+      background-color: #0d6efd80;
+      box-shadow: 0 2px 10px #00000040;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      vertical-align: middle;
+      width: 200px; /* uniform button width */
+    }
+    .form-section button:hover {
+      background-color: #0b5ed7;
+    }
+    /* Red reset button style */
+    .red-button {
+      background-color: red !important;
+    }
+    /* Benchtest and Reboot button style (orange-yellow) */
+    .bench-button {
+      background-color: #D98C00 !important;
+    }
+    /* MJPEG video: same width as container */
+    #preview {
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 16/9;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px #00000080;
+    }
+    /* YAML output styling */
+    pre {
+      background-color: #3c3c3c;
+      padding: 10px;
+      border-radius: 4px;
+      color: #dcdcdc;
+      max-height: 500px;
+      overflow: auto;
+    }
+    /* VTX Log: half the height of VTX Info */
+    .log-pre {
+      max-height: 250px;
+    }
+    /* Configurator link styling */
+    .configurator-link {
+      margin-top: 20px;
+      background-color: #2d2d2d;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px #00000080;
+    }
+    .configurator-link a {
+      color: #0d6efd;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .configurator-link a:hover {
+      text-decoration: underline;
+    }
+    /* Small note styling */
+    .small-note {
+      font-size: 0.85rem;
+      color: #aaa;
+      margin: 5px 0 0 160px; /* indent to align with input fields */
+    }
+    /* Control group styling for standalone settings */
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    /* For groups that contain only a button, add a placeholder label */
+    .control-group .placeholder {
+      display: inline-block;
+      width: 150px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="logo.svg" width="220px" alt="Logo">
+  <div id="wwInfo" class="ww-info">Loading overall info...</div>
+</header>
+
+<div class="container">
+  <!-- MJPEG Stream Section -->
+  <section>
+    <video id="preview" poster="/mjpeg" style="background:url(stream.svg); background-size:cover;"></video>
+  </section>
+
+  <!-- Configurator Link & Description -->
+  <div class="configurator-link">
+    <a href="https://github.com/OpenIPC/openipc-configurator/releases" target="_blank">
+      OpenIPC Configurator
+    </a>
+    <p>
+      A multi-platform configuration tool for OpenIPC cameras, built using Avalonia UI.
+      The application provides a user-friendly interface for managing camera settings,
+      viewing telemetry data, and setting up the camera.
+      <br><br>
+      <strong>Camera settings management:</strong> configure camera settings such as resolution, frame rate, and exposure<br>
+      <strong>Telemetry:</strong> view real-time telemetry data from the camera, including metrics such as temperature, voltage, and signal strength<br>
+      <strong>Setup wizards:</strong> guided setup processes for configuring the camera and connecting to the network<br>
+      <strong>Multi-platform support:</strong> run the application on Windows, macOS, and Linux platforms<br>
+      <strong>YAML-based configuration files:</strong> easily edit and customize camera settings using YAML configuration files
+    </p>
+  </div>
+
+  <!-- Bind with Groundstation Section -->
+  <section class="form-section">
+    <h3>Bind with groundstation</h3>
+    <div class="control-group">
+      <label>Bind:</label>
+      <button id="bind-wfb-button">Bind</button>
+    </div>
+  </section>
+
+  <!-- Standalone Settings Section -->
+  <section class="form-section">
+    <h3>Standalone settings</h3>
+    <!-- Passphrase Bind Control Group -->
+    <div class="control-group">
+      <label for="passphraseInput">Passphrase:</label>
+      <input type="text" id="passphraseInput" placeholder="Enter passphrase">
+      <button id="passphraseBindButton">Bind</button>
+    </div>
+    <div class="small-note">
+      Note: setting key with a passphrase requires a matching passphrase key on the groundstation.
+    </div>
+    <!-- Set VTX Name Control Group -->
+    <div class="control-group">
+      <label for="vtxNameInput">VTX Name:</label>
+      <input type="text" id="vtxNameInput" placeholder="Default: OpenIPC">
+      <button id="setVtxNameButton">Set VTX Name</button>
+    </div>
+    <!-- Set Wifi Adapter Control Group -->
+    <div class="control-group">
+      <label for="wifiAdapterSelect">Wifi Adapter:</label>
+      <select id="wifiAdapterSelect"></select>
+      <button id="setWifiAdapterButton">Set Wifi</button>
+    </div>
+    <!-- Set Bitrate Control Group -->
+    <div class="control-group">
+      <label for="bitrateSelect">Bitrate:</label>
+      <select id="bitrateSelect"></select>
+      <button id="setBitrateButton">Set Bitrate</button>
+    </div>
+    <!-- Benchtest and Reboot Control Group -->
+    <div class="control-group">
+      <label class="placeholder"></label>
+      <button id="benchTestButton" class="bench-button">Benchtest</button>
+      <button id="rebootButton" class="bench-button">Reboot</button>
+    </div>
+    <div class="small-note">
+      Note: Benchtest puts the VTX into low power mode. Always use a fan when benchtesting!
+    </div>
+  </section>
+
+  <!-- VTX Info Section -->
+  <section class="form-section">
+    <h3>VTX Info</h3>
+    <pre id="vtxDisplay">Loading...</pre>
+    <button id="refreshVtxButton">Refresh</button>
+  </section>
+
+  <!-- VTX Log Section -->
+  <section class="form-section">
+    <h3>VTX Log</h3>
+    <pre id="vtxLog" class="log-pre">Loading log...</pre>
+  </section>
+</div>
+
+<!-- Reset VTX Section -->
+<div class="container">
+  <section class="form-section">
+    <h3>Reset VTX</h3>
+    <div class="control-group">
+      <label class="placeholder"></label>
+      <button id="reset-button" class="red-button">Reset</button>
+    </div>
+  </section>
+</div>
+
+<script src="js-yaml.min.js"></script>
+<script>
+  let configData = { majestic: {}, wfb: {} };
+
+  async function loadYAML(url, setter) {
+    const response = await fetch(url);
+    const text = await response.text();
+    setter(jsyaml.load(text));
+  }
+
+  async function uploadYAML(data, location) {
+    const yamlData = jsyaml.dump(data);
+    await fetch('/upload', {
+      method: 'POST',
+      headers: { 'File-Location': location },
+      body: yamlData
+    });
+  }
+
+  async function runCommand(command) {
+    await fetch('/command', {
+      method: 'POST',
+      headers: { 'Run-Command': command }
+    });
+  }
+
+  function syncForm(data, formPrefix, mode) {
+    Object.keys(data).forEach((section) => {
+      Object.keys(data[section]).forEach((key) => {
+        const field = document.querySelector('[name="' + formPrefix + '.' + section + '.' + key + '"]');
+        if (field) {
+          if (mode === "setup") {
+            field.value = data[section][key];
+          } else if (mode === "update") {
+            data[section][key] = field.value;
+          }
+        }
+      });
+    });
+  }
+
+  function executeDelay(button, command) {
+    button.disabled = true;
+    runCommand(command);
+    setTimeout(() => {
+      button.disabled = false;
+      location.reload();
+    }, 1000);
+  }
+
+  // On page load, execute get_www_info.sh then load overall info
+  window.addEventListener('load', function() {
+    runCommand('get_www_info.sh')
+      .then(loadWwInfo)
+      .catch(loadWwInfo);
+  });
+
+  // Load overall info from /tmp/www_info
+  function loadWwInfo() {
+    fetch('/tmp/www_info')
+      .then(response => response.text())
+      .then(text => {
+        if (text.trim().toLowerCase().includes("<html")) {
+          document.getElementById('wwInfo').textContent = "VTX information not currently available ...";
+        } else {
+          document.getElementById('wwInfo').textContent = text.trim() || "VTX information not currently available ...";
+        }
+      })
+      .catch(err => {
+        document.getElementById('wwInfo').textContent = "VTX information not currently available ...";
+      });
+  }
+
+  // Bind with groundstation
+  document.getElementById('bind-wfb-button').addEventListener('click', function() {
+    executeDelay(this, 'provision_bind.sh');
+  });
+
+  // Passphrase bind
+  document.getElementById('passphraseBindButton').addEventListener('click', function() {
+    const passphrase = document.getElementById('passphraseInput').value.trim();
+    if (!passphrase) {
+      alert('Please enter a passphrase.');
+      return;
+    }
+    executeDelay(this, 'keygen ' + passphrase + ';generate_vtx_info.sh');
+  });
+
+  // Set VTX Name
+  document.getElementById('setVtxNameButton').addEventListener('click', function() {
+    let vtxName = document.getElementById('vtxNameInput').value.trim();
+    if (!vtxName) {
+      vtxName = 'OpenIPC';
+    }
+    executeDelay(this, 'fw_setenv vtx_name ' + vtxName + ';generate_vtx_info.sh');
+  });
+
+  // Set Wifi Adapter
+  document.getElementById('setWifiAdapterButton').addEventListener('click', function() {
+    let wifiProfile = document.getElementById('wifiAdapterSelect').value;
+    if (!wifiProfile) {
+      wifiProfile = 'default';
+    }
+    executeDelay(this, 'fw_setenv wifi_profile ' + wifiProfile + ';generate_vtx_info.sh;wifibroadcast start');
+  });
+
+  // Set Bitrate
+  document.getElementById('setBitrateButton').addEventListener('click', function() {
+    const bitrate = document.getElementById('bitrateSelect').value;
+    if (!bitrate) {
+      alert('No bitrate selected.');
+      return;
+    }
+    executeDelay(this, 'set_bitrate.sh ' + bitrate);
+  });
+
+  // Benchtest
+  document.getElementById('benchTestButton').addEventListener('click', function() {
+    executeDelay(this, 'set_benchtesting.sh');
+  });
+
+  // Reboot button
+  document.getElementById('rebootButton').addEventListener('click', function() {
+    executeDelay(this, 'reboot');
+  });
+
+  // Reset VTX with confirmation
+  document.getElementById('reset-button').addEventListener('click', function() {
+    if (confirm("This action will factory reset the VTX. Make sure the unit is powered during the next 2 minutes.")) {
+      executeDelay(this, 'firstboot.sh');
+    }
+  });
+
+  // Load YAML configuration files (if needed)
+  loadYAML('/etc/majestic.yaml', (data) => {
+    configData.majestic = data;
+    syncForm(configData.majestic, 'majestic', "setup");
+  });
+  loadYAML('/etc/wfb.yaml', (data) => {
+    configData.wfb = data;
+    syncForm(configData.wfb, 'wfb', "setup");
+  });
+  
+  // Function to load and display /etc/vtx_info.yaml as plain text
+  function loadVtxYaml() {
+    fetch('/etc/vtx_info.yaml')
+      .then(function(response) {
+        if (!response.ok) { throw new Error('Network response was not ok'); }
+        return response.text();
+      })
+      .then(function(text) {
+        document.getElementById('vtxDisplay').textContent = text;
+      })
+      .catch(function(err) {
+        document.getElementById('vtxDisplay').textContent = 'Error loading VTX info: ' + err;
+      });
+  }
+
+  // Function to load latest 50 lines from /tmp/vtx.log
+  function loadVtxLog() {
+    fetch('/tmp/vtx.log')
+      .then(function(response) {
+        if (!response.ok) { throw new Error('Network response was not ok'); }
+        return response.text();
+      })
+      .then(function(text) {
+        if (text.trim().toLowerCase().includes("<html")) {
+          document.getElementById('vtxLog').textContent = "";
+        } else {
+          let lines = text.trim().split('\n');
+          let last50 = lines.slice(-50).join('\n');
+          document.getElementById('vtxLog').textContent = last50 || "No log available.";
+        }
+      })
+      .catch(function(err) {
+        document.getElementById('vtxLog').textContent = "No log available.";
+      });
+  }
+  
+  // Refresh VTX Info and VTX Log together
+  document.getElementById('refreshVtxButton').addEventListener('click', function() {
+    loadVtxYaml();
+    loadVtxLog();
+  });
+  loadVtxYaml();
+  loadVtxLog();
+
+  // Function to load wifi profiles from /etc/wifi_profiles.yaml and populate the dropdown
+  function loadWifiProfiles() {
+    fetch('/etc/wifi_profiles.yaml')
+      .then(function(response) {
+        if (!response.ok) { throw new Error('Network response was not ok'); }
+        return response.text();
+      })
+      .then(function(text) {
+        let data = jsyaml.load(text);
+        let profiles = (data && data.all_profiles && Array.isArray(data.all_profiles)) ? data.all_profiles : ['default'];
+        let select = document.getElementById('wifiAdapterSelect');
+        select.innerHTML = '';
+        profiles.forEach(function(profile) {
+          let option = document.createElement('option');
+          option.value = profile;
+          option.textContent = profile;
+          select.appendChild(option);
+        });
+      })
+      .catch(function(err) {
+        let select = document.getElementById('wifiAdapterSelect');
+        select.innerHTML = '';
+        let option = document.createElement('option');
+        option.value = 'default';
+        option.textContent = 'default';
+        select.appendChild(option);
+      });
+  }
+  loadWifiProfiles();
+
+  // Function to load available bitrates from /etc/vtx_info.yaml and populate the dropdown
+  function loadAvailableBitrates() {
+    fetch('/etc/vtx_info.yaml')
+      .then(function(response) {
+        if (!response.ok) { throw new Error('Network response was not ok'); }
+        return response.text();
+      })
+      .then(function(text) {
+        let data = jsyaml.load(text);
+        let bitrates = (data && data.video && data.video.bitrate && Array.isArray(data.video.bitrate)) ? data.video.bitrate : [];
+        let select = document.getElementById('bitrateSelect');
+        select.innerHTML = '';
+        if (bitrates.length === 0) {
+          let option = document.createElement('option');
+          option.value = '';
+          option.textContent = 'No bitrates available';
+          select.appendChild(option);
+        } else {
+          bitrates.forEach(function(br) {
+            let option = document.createElement('option');
+            option.value = br;
+            option.textContent = br;
+            select.appendChild(option);
+          });
+        }
+      })
+      .catch(function(err) {
+        let select = document.getElementById('bitrateSelect');
+        select.innerHTML = '';
+        let option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'default';
+        select.appendChild(option);
+      });
+  }
+  loadAvailableBitrates();
+</script>
+
+</body>
+</html>
