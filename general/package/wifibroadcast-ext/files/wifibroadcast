@@ -1,0 +1,207 @@
+#!/bin/sh
+wfb_key=/etc/drone.key
+wfb_dev=wlan0
+
+wfb_yaml() {
+    if [ -e "$1" ]; then
+        local CONFIG_FILE="$1"
+
+        wireless_keys="txpower channel wifi_mode passphrase video_key tunnel_key bind_key link_id"
+        for key in $wireless_keys; do
+            val="$(yaml-cli -i "$CONFIG_FILE" -g ".wireless.$key" 2>/dev/null)"
+            if [ -n "$val" ]; then
+                varname="WIRELESS_$(echo "$key" | tr '[:lower:]' '[:upper:]')"
+                eval "$varname='$val'"
+                # echo "$varname=$val"
+            fi
+        done
+
+        broadcast_keys="mcs_index fec_k fec_n force_vht ldpc stbc guard_interval bw"
+        for key in $broadcast_keys; do
+            val="$(yaml-cli -i "$CONFIG_FILE" -g ".broadcast.$key" 2>/dev/null)"
+            if [ -n "$val" ]; then
+                varname="BROADCAST_$(echo "$key" | tr '[:lower:]' '[:upper:]')"
+                eval "$varname='$val'"
+                # echo "$varname=$val"
+            fi
+        done
+
+        # Check for broadcast redundancy setting.
+        # If .wireless.broadcast_redundancy returns "auto", then run detect_redundancy.sh.
+        # Its output should be two numbers (e.g. "8 12"). If either number is empty, default to 8 and 12.
+        redundancy_val="$(yaml-cli -i "$CONFIG_FILE" -g .wireless.broadcast_redundancy 2>/dev/null)"
+        if [ "$redundancy_val" = "auto" ]; then
+            result="$(detect_redundancy.sh)"
+            fec_k=$(echo "$result" | awk '{print $1}')
+            fec_n=$(echo "$result" | awk '{print $2}')
+            [ -z "$fec_k" ] && fec_k=8
+            [ -z "$fec_n" ] && fec_n=12
+            BROADCAST_FEC_K="$fec_k"
+            BROADCAST_FEC_N="$fec_n"
+        fi
+
+        tunnel_keys="mcs_index fec_k fec_n force_vht ldpc stbc"
+        for key in $tunnel_keys; do
+            val="$(yaml-cli -i "$CONFIG_FILE" -g ".tunnel.$key" 2>/dev/null)"
+            if [ -n "$val" ]; then
+                varname="TUNNEL_$(echo "$key" | tr '[:lower:]' '[:upper:]')"
+                eval "$varname='$val'"
+                # echo "$varname=$val"
+            fi
+        done
+
+        telemetry_keys="router serial osd_fps channels"
+        for key in $telemetry_keys; do
+            val="$(yaml-cli -i "$CONFIG_FILE" -g ".telemetry.$key" 2>/dev/null)"
+            if [ -n "$val" ]; then
+                varname="TELEMETRY_$(echo "$key" | tr '[:lower:]' '[:upper:]')"
+                eval "$varname='$val'"
+                # echo "$varname=$val"
+            fi
+        done
+    fi
+}
+
+load_config() {
+    wfb_yaml /etc/wfb.yaml
+
+    if [ ! -e "$wfb_key" ]; then
+        wfb_key="/rom/etc/drone.key"
+    fi
+}
+
+load_modules() {
+    for card in $(lsusb | awk '{print $6}' | sort | uniq); do
+        case "$card" in
+            "0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
+                driver=88XXau
+                modprobe "$driver"
+                ;;
+            "0bda:a81a")
+                driver=8812eu
+                modprobe "$driver" rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+                ;;
+            "0bda:f72b" | "0bda:b733")
+                driver=8733bu
+                modprobe "$driver" rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+                ;;
+        esac
+    done
+
+    if [ -z "$driver" ]; then
+        echo "- Wireless module not detected!"
+        exit 1
+    else
+        echo "- Detected driver: $driver"
+    fi
+
+    if ! ifconfig "$wfb_dev" up; then
+        echo "- Wireless driver not found!"
+        exit 1
+    fi
+}
+
+load_interface() {
+    iw "$wfb_dev" set monitor none
+    iw "$wfb_dev" set channel "$WIRELESS_CHANNEL" "$WIRELESS_WIFI_MODE"
+    iw reg set 00
+
+    if [ "$driver" = "88XXau" ]; then
+        iw "$wfb_dev" set txpower fixed "$((WIRELESS_TXPOWER * -100))"
+    else
+        iw "$wfb_dev" set txpower fixed "$((WIRELESS_TXPOWER * 50))"
+    fi
+}
+
+start_broadcast() {
+    echo "- Starting wfb_tx"
+    wfb_tx -K "$WIRELESS_VIDEO_KEY" -M "$BROADCAST_MCS_INDEX" -G "$BROADCAST_GUARD_INTERVAL" -B "$BROADCAST_BW" -C 8000 \
+        -k "$BROADCAST_FEC_K" -n "$BROADCAST_FEC_N" -i "$WIRELESS_LINK_ID" "$wfb_dev" &> /dev/null &
+}
+
+start_tunnel() {
+    echo "- Starting wfb_tun"
+    wfb_rx -p 160 -u 5800 -K "$WIRELESS_TUNNEL_KEY" -i "$WIRELESS_LINK_ID" "$wfb_dev" &> /dev/null &
+    wfb_tx -p 32 -u 5801 -K "$WIRELESS_TUNNEL_KEY" -M "$TUNNEL_MCS_INDEX" \
+        -k "$TUNNEL_FEC_K" -n "$TUNNEL_FEC_N" -i "$WIRELESS_LINK_ID" "$wfb_dev" &> /dev/null &
+    wfb_tun -a 10.5.0.10/24 > /dev/null &
+}
+
+start_telemetry() {
+    if [ "$(ipcinfo -c)" = "ssc33x" ]; then
+        devmem 0x1F207890 16 0x8
+    fi
+    
+    
+    if [ "$TELEMETRY_ROUTER" = "msposd" ]; then
+        echo "- Starting $TELEMETRY_ROUTER"
+        size=$(yaml-cli -i /etc/majestic.yaml -g .video0.size)
+        msposd --baudrate 115200 --channels 8 --ahi 0 -osd -r "$TELEMETRY_OSD_FPS" \
+            --master "$TELEMETRY_SERIAL" --out 10.5.0.1:14551 --size "${size:-1280x720}" > /dev/null &
+    elif [ "$TELEMETRY_ROUTER" = "mavfwd" ]; then
+        echo "- Starting $TELEMETRY_ROUTER"
+        mavfwd --baudrate 115200 --channels $TELEMETRY_CHANNELS -p 100 -a 15 -t \
+            --master "$TELEMETRY_SERIAL" --in 0.0.0.0:14550 --out 10.5.0.1:14551 > /dev/null &
+    fi
+}
+
+video_settings() {
+    if [ "$(ipcinfo -s)" = "imx415" ]; then
+        cli -s .isp.sensorConfig /etc/sensors/imx415_fpv.bin
+    fi
+    cli -s .isp.exposure 5
+    cli -s .video0.fps 60
+    cli -s .video0.codec h265
+    cli -s .video0.rcMode cbr
+    cli -s .outgoing.enabled true
+    cli -s .outgoing.server udp://0.0.0.0:5600
+}
+
+start() {
+    load_config
+    load_modules
+    load_interface
+
+    if [ ! -e /etc/system.ok ]; then
+        sleep 1
+        video_settings
+        touch /etc/system.ok
+        killall -1 majestic
+    fi
+
+    stop
+    start_broadcast
+    start_tunnel
+    start_telemetry
+}
+
+bind() {
+    provision_bind.sh
+}
+
+stop() {
+    for process in wfb_rx wfb_tx wfb_tun msposd mavfwd; do
+        if [ -n "$(pidof $process)" ]; then
+            echo "- Stopping $process"
+            killall -q "$process"
+        fi
+    done
+}
+
+case "$1" in
+    start|stop)
+        $1
+        ;;
+    bind)
+        provision_bind.sh
+        ;;
+    reset)
+        cp -f /rom/etc/majestic.yaml /etc/majestic.yaml
+        cp -f /rom/etc/wfb.yaml /etc/wfb.yaml
+        video_settings
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|reset|bind}"
+        exit 1
+        ;;
+esac
