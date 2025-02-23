@@ -9,17 +9,17 @@
 <body>
 
 <header>
-	<img src="logo.svg" width="220px">
+	<a href="javascript:location.reload()"><img src="logo.webp" width="220dp"></a>
 </header>
 
 <div class="container">
-	<section>
+	<section class="video-section">
 		<video id="preview" poster="/mjpeg"></video>
 	</section>
 
 	<section class="form-section">
-		<h3>Video</h3>
 		<form id="majestic-form">
+			<h3>Video</h3>
 			<div class="row">
 				<label for="fps">FPS:</label>
 				<select id="fps" name="majestic.video0.fps">
@@ -41,10 +41,26 @@
 				<select id="bitrate" name="majestic.video0.bitrate"></select>
 			</div>
 			<div class="row">
-				<label for="records">Record:</label>
+				<label for="records">Recording:</label>
 				<input type="checkbox" id="records" name="majestic.records.enabled">
 			</div>
+
+			<hr class="divider">
+
+			<h3>Audio</h3>
+			<div class="row">
+				<label for="records">Enabled:</label>
+				<input type="checkbox" id="audio" name="majestic.audio.enabled">
+			</div>
+			<div class="row">
+				<label for="srate">Samplerate:</label>
+				<select id="srate" name="majestic.audio.srate">
+					<option value="8000">8000</option>
+					<option value="48000">48000</option>
+				</select>
+			</div>
 		</form>
+
 		<div class="button-container">
 			<button id="apply-video-button">Apply</button>
 			<button id="reset-video-button">Reset</button>
@@ -52,8 +68,8 @@
 	</section>
 
 	<section class="form-section">
-		<h3>Wireless</h3>
 		<form id="wfb-form">
+			<h3>Wireless</h3>
 			<div class="row">
 				<label for="txpower">TX Power:</label>
 				<select id="txpower" name="wfb.wireless.txpower"></select>
@@ -94,14 +110,8 @@
 					<option value="177">177</option>
 				</select>
 			</div>
-			<div class="row">
-				<label for="mode">Mode:</label>
-				<select id="mode" name="wfb.wireless.mode">
-					<option value="HT20">HT20</option>
-					<option value="HT40-">HT40-</option>
-					<option value="HT40+">HT40+</option>
-				</select>
-			</div>
+
+			<hr class="divider">
 
 			<h3>Broadcast</h3>
 			<div class="row">
@@ -112,6 +122,8 @@
 				<label for="tun_index">TUN Index:</label>
 				<select id="tun_index" name="wfb.broadcast.tun_index"></select>
 			</div>
+
+			<hr class="divider">
 
 			<h3>Telemetry</h3>
 			<div class="row">
@@ -129,6 +141,7 @@
 				</select>
 			</div>
 		</form>
+
 		<div class="button-container">
 			<button id="apply-wfb-button">Apply</button>
 			<button id="reset-wfb-button">Reset</button>
