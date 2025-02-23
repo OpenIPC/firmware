@@ -1,0 +1,55 @@
+all_profiles: [vipers_profile,user1,user2,default]
+all_keys: [drone.key,drone-secret1.key,drone-secret2.key,drone-secret3.key,bind.key]
+all_styles: [freestyle,cinematic,cruising]
+all_fps: [30,59,69,90,120]
+all_size: [1280x720,1440x1080,1920x1080]
+all_sensor_config: [imx335.bin,imx415.bin,gregSpike05-2-lessblue.bin]
+profiles:
+  vipers_profile:
+    wireless:
+      channel: 161
+      style: freestyle
+      allow_bw: [20,40]
+      video_key: /etc/drone-secret1.key
+      tunnel_key: /etc/drone-secret1.key
+      bind_key: /etc/bind.key
+    video:
+      size: 1280x720
+      max_fps: 90
+      max_bitrate: 12000
+      style: freestyle
+    telemetry:
+      osd: msposd
+      connected_fc: betaflight
+      serial_tty: ttyS2
+  user1:
+    size: [1280x720]
+  user2:
+    size: [1280x720]
+  default:
+    size: [1280x720]
+settings:
+  style:
+    freestyle:
+      noiseLevel: 0
+      sensor_config: /etc/sensors/gregSpike05-2-lessblue.bin
+      fec_n: 10
+      fec_k: 12
+      max_mcs: 3
+      max_bitrate: 12000
+      bw: 20
+      max_tx_pwr: 50
+    cinematic:
+      fec_n: 9
+      fec_k: 10
+      max_mcs: 5
+      max_bitrate: 20000
+      bw: 40
+      max_tx_pwr: 35
+    cruising:
+      fec_n: 8
+      fec_k: 12
+      max_mcs: 1
+      max_bitrate: 6000
+      bw: 20
+      max_tx_pwr: 63

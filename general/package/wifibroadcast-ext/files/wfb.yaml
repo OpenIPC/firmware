@@ -1,0 +1,40 @@
+wireless:
+  txpower: 1
+  channel: 165
+  wifi_mode: HT20
+  passphrase: openipc
+  video_key: /etc/drone.key
+  tunnel_key: /etc/drone.key
+  bind_key: /etc/bind.key
+  link_id: 7669206
+  max_bw: 20
+  vtx_name: OpenIPC
+  wifi_module: default
+  allow_startup_bind: true
+  alink: disabled
+  temperature_throttle: enable
+  profile: vipers_profile
+  broadcast_redundancy: disabled
+broadcast:
+  mcs_index: 2
+  fec_k: 8
+  fec_n: 12
+  force_vht: false
+  bw: 20
+  ldpc_rx: 0
+  ldpc_tx: 1
+  stbc: 0
+  guard_interval: short
+tunnel:
+  mcs_index: 1
+  fec_k: 1
+  fec_n: 2
+  force_vht: false
+  ldpc: 0
+  stbc: 0
+telemetry:
+  router: msposd
+  serial: /dev/ttyS2
+  osd_fps: 1010
+  channels: 5
+  tx_on_arm: enabled

@@ -1,0 +1,22 @@
+all_profiles: [vipers_profile,user1,user2,default]
+profiles:
+  vipers_profile:
+    wireless:
+      channel: 161
+      redundancy: medium
+      range_preference: long
+    video:
+      size: 1280x720
+      fps: 90
+      bitrate_target: 12000
+    telemetry:
+      osd: msposd
+      connected_fc: betaflight
+      serial_tty: ttyS2
+  user1:
+    size: [1280x720]
+  user2:
+    size: [1280x720]
+  default:
+    size: [1280x720]
+

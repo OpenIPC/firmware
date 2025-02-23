@@ -1,0 +1,76 @@
+system:
+  webPort: 80
+  httpsPort: 443
+  logLevel: debug
+isp:
+  antiFlicker: disabled
+  sensorConfig: /etc/sensors/02gregWDR.bin
+  exposure: 11
+image:
+  mirror: false
+  flip: false
+  rotate: 0
+  contrast: 50
+  hue: 50
+  saturation: 50
+  luminance: 50
+video0:
+  enabled: true
+  codec: h265
+  fps: 90
+  size: 1280x720
+  bitrate: 9333
+  rcMode: cbr
+  gopSize: 1.0
+video1:
+  enabled: false
+  codec: h264
+  size: 704x576
+  fps: 15
+jpeg:
+  enabled: true
+  qfactor: 50
+  fps: 5
+osd:
+  enabled: false
+  font: "/usr/share/fonts/truetype/UbuntuMono-Regular.ttf"
+  template: "%d.%m.%Y %H:%M:%S"
+  posX: 16
+  posY: 16
+audio:
+  enabled: false
+  volume: 30
+  srate: 8000
+  codec: opus
+  outputEnabled: false
+  outputVolume: 30
+rtsp:
+  enabled: false
+  port: 554
+nightMode:
+  colorToGray: true
+  irCutSingleInvert: false
+  lightMonitor: false
+  lightSensorInvert: false
+motionDetect:
+  enabled: false
+  visualize: false
+  debug: false
+records:
+  enabled: false
+  path: "/mnt/mmcblk0p1/%F"
+  split: 20
+  maxUsage: 95
+outgoing:
+  enabled: true
+  server: udp://0.0.0.0:5600
+watchdog:
+  enabled: true
+  timeout: 300
+hls:
+  enabled: false
+fpv:
+  enabled: true
+  noiseLevel: 0
+  refPred: true
+  refEnhance: 6
