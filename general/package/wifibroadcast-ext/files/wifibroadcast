@@ -40,11 +40,21 @@ wfb_yaml() {
             BROADCAST_FEC_N="$fec_n"
         fi
 
-        tunnel_keys="mcs_index fec_k fec_n force_vht ldpc stbc"
+        tunnel_keys="enabled mcs_index fec_k fec_n force_vht ldpc stbc"
         for key in $tunnel_keys; do
             val="$(yaml-cli -i "$CONFIG_FILE" -g ".tunnel.$key" 2>/dev/null)"
             if [ -n "$val" ]; then
                 varname="TUNNEL_$(echo "$key" | tr '[:lower:]' '[:upper:]')"
+                eval "$varname='$val'"
+                # echo "$varname=$val"
+            fi
+        done
+
+        android_tunnel_keys="enabled mcs_index fec_k fec_n force_vht ldpc stbc"
+        for key in $android_tunnel_keys; do
+            val="$(yaml-cli -i "$CONFIG_FILE" -g ".android_tunnel.$key" 2>/dev/null)"
+            if [ -n "$val" ]; then
+                varname="ANDROID_TUNNEL_$(echo "$key" | tr '[:lower:]' '[:upper:]')"
                 eval "$varname='$val'"
                 # echo "$varname=$val"
             fi
@@ -120,11 +130,22 @@ start_broadcast() {
 }
 
 start_tunnel() {
-    echo "- Starting wfb_tun"
+    echo $TUNNEL_ENABLED
+    if [ "$TUNNEL_ENABLED" = "true" ]; then
+    echo "- Starting primary wfb_tun"
     wfb_rx -p 160 -u 5800 -K "$WIRELESS_TUNNEL_KEY" -i "$WIRELESS_LINK_ID" "$wfb_dev" &> /dev/null &
     wfb_tx -p 32 -u 5801 -K "$WIRELESS_TUNNEL_KEY" -M "$TUNNEL_MCS_INDEX" \
         -k "$TUNNEL_FEC_K" -n "$TUNNEL_FEC_N" -i "$WIRELESS_LINK_ID" "$wfb_dev" &> /dev/null &
     wfb_tun -a 10.5.0.10/24 > /dev/null &
+    fi
+    echo $ANDROID_TUNNEL_ENABLED
+    if [ "$ANDROID_TUNNEL_ENABLED" = "true" ]; then
+        echo "- Starting Android Tunnel"
+        wfb_rx -p 190 -u 5802 -K "$WIRELESS_TUNNEL_KEY" -i "$WIRELESS_LINK_ID" "$wfb_dev" &> /dev/null &
+        wfb_tx -p 42 -u 5803 -K "$WIRELESS_TUNNEL_KEY" -M "$ANDROID_TUNNEL_MCS_INDEX" \
+            -k "$ANDROID_TUNNEL_FEC_K" -n "$ANDROID_TUNNEL_FEC_N" -i "$WIRELESS_LINK_ID" "$wfb_dev" &> /dev/null &
+        wfb_tun -t wfb-android-tun -u 5803 -l 5802 -T 30 -a 10.5.1.10/24 > /dev/null &
+    fi
 }
 
 start_telemetry() {
