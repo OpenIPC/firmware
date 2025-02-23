@@ -99,3 +99,7 @@ loadYAML('/etc/wfb.yaml', (data) => {
 	configData.wfb = data;
 	syncForm(configData.wfb, 'wfb', "setup");
 });
+
+if (navigator.userAgent.includes("Android")) {
+	document.querySelector('.video-section').style.display = 'none';
+}
