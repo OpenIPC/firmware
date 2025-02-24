@@ -71,7 +71,7 @@ timer:
 
 toolchain: defconfig
 ifeq ($(BR2_TOOLCHAIN_EXTERNAL),y)
-	@cp -rf $(PWD)/general/legacy/package/gcc $(TARGET)/buildroot-$(BR_VER)/package
+	@cp -rf $(PWD)/general/package/gcc $(TARGET)/buildroot-$(BR_VER)/package
 	@$(MAKE) -f $(PWD)/general/toolchain.mk BR_CONF=$(BR_CONF) CONFIG=$(PWD)/$(CONFIG)
 	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
 endif
