@@ -22,6 +22,10 @@ async function runCommand(command) {
 	});
 }
 
+if (navigator.userAgent.includes("Android")) {
+	document.querySelector('.video-section').style.display = 'none';
+}
+
 function syncForm(data, formPrefix, mode) {
 	Object.keys(data).forEach((section) => {
 		Object.keys(data[section]).forEach((key) => {
@@ -34,17 +38,10 @@ function syncForm(data, formPrefix, mode) {
 			const value = data[section][key];
 
 			if (mode === "setup") {
-				if (isCheckbox) {
-					field.checked = value === true;
-				} else {
-					field.value = value;
-				}
+				isCheckbox ? field.checked = value === true : field.value = value;
 			} else if (mode === "update") {
-				if (isCheckbox) {
-					data[section][key] = field.checked;
-				} else {
-					data[section][key] = field.value;
-				}
+				data[section][key] = isCheckbox ?
+					field.checked : (isNaN(field.value) ? field.value : Number(field.value));
 			}
 		});
 	});
@@ -99,7 +96,3 @@ loadYAML('/etc/wfb.yaml', (data) => {
 	configData.wfb = data;
 	syncForm(configData.wfb, 'wfb', "setup");
 });
-
-if (navigator.userAgent.includes("Android")) {
-	document.querySelector('.video-section').style.display = 'none';
-}

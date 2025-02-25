@@ -12,11 +12,11 @@
 	<a href="javascript:location.reload()"><img src="logo.webp" width="220dp"></a>
 </header>
 
-<div class="container">
-	<section class="video-section">
-		<video id="preview" poster="/mjpeg"></video>
-	</section>
+<section class="video-section">
+	<video id="preview" poster="/mjpeg"></video>
+</section>
 
+<div class="container">
 	<section class="form-section">
 		<form id="majestic-form">
 			<h3>Video</h3>
@@ -41,7 +41,7 @@
 				<select id="bitrate" name="majestic.video0.bitrate"></select>
 			</div>
 			<div class="row">
-				<label for="records">Recording:</label>
+				<label for="records">Record:</label>
 				<input type="checkbox" id="records" name="majestic.records.enabled">
 			</div>
 
@@ -53,13 +53,15 @@
 				<input type="checkbox" id="audio" name="majestic.audio.enabled">
 			</div>
 			<div class="row">
-				<label for="srate">Samplerate:</label>
+				<label for="srate">Sample:</label>
 				<select id="srate" name="majestic.audio.srate">
 					<option value="8000">8000</option>
 					<option value="48000">48000</option>
 				</select>
 			</div>
 		</form>
+
+		<hr class="divider">
 
 		<div class="button-container">
 			<button id="apply-video-button">Apply</button>
@@ -115,12 +117,8 @@
 
 			<h3>Broadcast</h3>
 			<div class="row">
-				<label for="wfb_index">WFB Index:</label>
-				<select id="wfb_index" name="wfb.broadcast.wfb_index"></select>
-			</div>
-			<div class="row">
-				<label for="tun_index">TUN Index:</label>
-				<select id="tun_index" name="wfb.broadcast.tun_index"></select>
+				<label for="wfb_index">MCS Index:</label>
+				<select id="wfb_index" name="wfb.broadcast.mcs_index"></select>
 			</div>
 
 			<hr class="divider">
@@ -141,6 +139,8 @@
 				</select>
 			</div>
 		</form>
+
+		<hr class="divider">
 
 		<div class="button-container">
 			<button id="apply-wfb-button">Apply</button>

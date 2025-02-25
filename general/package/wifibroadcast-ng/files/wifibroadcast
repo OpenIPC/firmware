@@ -55,25 +55,25 @@ load_modules() {
 
 load_interface() {
 	iw "$wfb_dev" set monitor none
-	iw "$wfb_dev" set channel "$channel" "$mode"
+	iw "$wfb_dev" set channel "$channel" "$width"
 	iw reg set 00
 
-	[ "$driver" = "88XXau" ] && wfb_pwr=$((txpower * -100)) || wfb_pwr=$((txpower * 50))
-	iw "$wfb_dev" set txpower fixed "$wfb_pwr"
-	[ "$mode" = "HT20" ] && bandwidth=20 || bandwidth=40
+	[ "$driver" = "88XXau" ] && wfb_power=$((txpower * -100)) || wfb_power=$((txpower * 50))
+	iw "$wfb_dev" set txpower fixed "$wfb_power"
+	[ "$width" = "HT20" ] && wfb_width=20 || wfb_width=40
 }
 
 start_broadcast() {
 	echo_log "Starting wfb_tx"
-	wfb_tx -K "$wfb_key" -M "$wfb_index" -B "$bandwidth" -C 8000 -G short \
-		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wfb_dev" &> /dev/null &
+	wfb_tx -K "$wfb_key" -M "$mcs_index" -B "$wfb_width" -k "$fec_k" -n "$fec_n" \
+		-S "$stbc" -L "$ldpc" -i "$link_id" -C 8000 -G short "$wfb_dev" &> /dev/null &
 }
 
 start_tunnel() {
 	echo_log "Starting wfb_tun"
 	wfb_rx -p 160 -u 5800 -K "$wfb_key" -i "$link_id" "$wfb_dev" &> /dev/null &
-	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$tun_index" \
-		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wfb_dev" &> /dev/null &
+	wfb_tx -p 32 -u 5801 -K "$wfb_key" -M "$tun_index" -k "$fec_k" -n "$fec_n" \
+		-S "$stbc" -L "$ldpc" -i "$link_id" "$wfb_dev" &> /dev/null &
 	wfb_tun -a 10.5.0.10/24 > /dev/null &
 }
 
