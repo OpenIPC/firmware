@@ -19,69 +19,78 @@ h3 {
 	color: #dee2e6bf;
 }
 
-.row {
-	margin: 20px;
+.container {
+	display: flex;
+	justify-content: space-evenly;
+	width: 100%;
+}
+
+.form-section .row {
+	display: flex;
+	justify-content: space-between;
+	margin: 10px 40px;
 }
 
 .form-section {
+	width: 45%;
+	margin: 20px 0;
+	padding-top: 20px;
 	background-color: #2d2d2d;
 	border-radius: 4px;
 	box-shadow: 0 2px 10px #00000080;
-	max-width: 60%;
-	padding: 20px;
-	margin: 20px auto;
 }
 
 .form-section label {
+	width: 10vw;
+	margin: 10px 0 5px;
 	display: inline-block;
 	font-weight: bold;
-	margin: 10px 0 5px;
-	width: 150px;
-	vertical-align: top;
 	color: #dee2e6;
+	font-size: 0.9rem;
 }
 
 .form-section select {
-	width: 120px;
+	width: 16vw;
 	padding: 10px;
 	margin-bottom: 15px;
+	background-color: #3c3c3c;
 	border-radius: 4px;
 	border: 1px solid #555;
-	background-color: #3c3c3c;
 	color: #dcdcdc;
-	display: inline-block;
-	box-sizing: border-box;
+	font-size: 0.9rem;
 }
 
 .form-section input {
-	width: 120px;
-	height: 25px;
+	width: 16vw;
+	height: 26px;
+	margin-bottom: 25px;
+}
+
+.form-section button {
+	width: 20vw;
+	padding: 10px;
+	margin: 10px;
+	border: none;
+	cursor: pointer;
+	font-size: 1rem;
+	color: white;
+	border-radius: 4px;
+	box-shadow: 0 2px 10px #00000040;
 }
 
 .button-container {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-}
-
-.form-section button {
-	width: 160px;
-	padding: 10px;
-	margin: 10px;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 1rem;
-	color: white;
-	box-shadow: 0 2px 10px #00000040;
+	margin: 25px;
 }
 
 #preview {
 	width: 100%;
-	max-width: 80%;
+	max-width: 75%;
 	background-color: #000;
-	box-shadow: 0 2px 10px #00000080;
 	border-radius: 4px;
+	box-shadow: 0 2px 10px #00000080;
 }
 
 #apply-video-button, #apply-wfb-button {
