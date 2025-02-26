@@ -35,10 +35,9 @@ function syncForm(data, formPrefix, mode) {
 			}
 
 			const isCheckbox = field.type === "checkbox";
-			const value = data[section][key];
-
 			if (mode === "setup") {
-				isCheckbox ? field.checked = value === true : field.value = value;
+				isCheckbox ?
+					field.checked = data[section][key] === true : field.value = data[section][key];
 			} else if (mode === "update") {
 				data[section][key] = isCheckbox ?
 					field.checked : (isNaN(field.value) ? field.value : Number(field.value));
