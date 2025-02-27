@@ -83,8 +83,7 @@ function populateSelect(id, start, end, step) {
 
 populateSelect('bitrate', 1024, 20480, 1024);
 populateSelect('txpower', 1, 58, 1);
-populateSelect('wfb_index', 0, 8, 1);
-populateSelect('tun_index', 0, 8, 1);
+populateSelect('mcs_index', 0, 8, 1);
 
 loadYAML('/etc/majestic.yaml', (data) => {
 	configData.majestic = data;

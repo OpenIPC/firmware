@@ -84,14 +84,14 @@ start_telemetry() {
 
 	echo_log "Starting $router"
 	if [ "$router" = "mavfwd" ]; then
-		mavfwd -b 115200 -c 8 -p 100 -a 15 -t \
-			-m /dev/"$serial" -i 0.0.0.0:14550 -o 10.5.0.1:14551 > /dev/null &
+		mavfwd -b 115200 -c 8 -p 100 -a 15 -t -m /dev/"$serial" \
+			-i 0.0.0.0:14550 -o 10.5.0.1:14551 > /dev/null &
 	else
 		if [ "$router" = "msposd" ]; then
 			size=$(curl -s localhost/api/v1/config.json | jsonfilter -e "@.video0.size")
 		fi
-		msposd -b 115200 -c 8 -z "$size" -r "$osd_fps" \
-			-m /dev/"$serial" -o 10.5.0.1:14551 > /dev/null &
+		msposd -b 115200 -c 8 -r "$osd_fps" -m /dev/"$serial" \
+			-o 10.5.0.1:14551 -z "$size" > /dev/null &
 	fi
 }
 
@@ -99,7 +99,7 @@ video_settings() {
 	sensor=$(ipcinfo -s)
 	cli -s .isp.sensorConfig /etc/sensors/"$sensor"_fpv.bin
 	cli -s .isp.exposure 5
-	cli -s .video0.fps 90
+	cli -s .video0.fps 60
 	cli -s .video0.bitrate 8192
 	cli -s .video0.codec h265
 	cli -s .video0.rcMode cbr
