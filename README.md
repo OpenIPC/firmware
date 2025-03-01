@@ -1,10 +1,10 @@
-![OpenIPC Logo](https://cdn.themactep.com/images/logo_openipc.png)
+![OpenIPC logo][logo]
 
-
-## OpenIPC firmware
+## Alternative open firmware for your IP camera
+_(based on Buildroot)_
 
 [![Telegram](https://openipc.org/images/telegram_button.svg)][telegram]
-_(based on Buildroot)_
+
 
 OpenIPC is a rapidly developing open source alternative [firmware][firmware] for 
 popular IP cameras from an [open community](https://opencollective.com/openipc).
@@ -18,18 +18,11 @@ expected to grow further.
 More information about the [project][project] is available in our [website][website]
 and on the [wiki][wiki].
 
-[firmware]: https://github.com/openipc/firmware/
-[telegram]: https://t.me/OpenIPC
-[project]: https://github.com/openipc/
-[website]: https://openipc.org/
-[wiki]: https://openipc.github.io/wiki/
-
-
 ## Support
 
 OpenIPC offers two levels of support.
 
-- Free support through the community (via [chat][chat]).
+- Free support through the community (via [chat][telegram]).
 - Paid commercial support (from the team of developers).
 
 Please consider subscribing for paid commercial support if you intend to use our product for business.
@@ -57,8 +50,19 @@ You can make a financial contribution to the project at [Open Collective][contri
 Thank you.
 
 <p align="center">
-<a href="https://opencollective.com/openipc/contribute/backer-14335/checkout" target="_blank"><img src="https://openipc.org/files/donatetoopencollectivebutton.webp" alt="Open Collective donate button"></a>
+<a href="https://opencollective.com/openipc/contribute/backer-14335/checkout" target="_blank"><img src="https://opencollective.com/webpack/donate/button@2x.png?color=blue" width="250" alt="Open Collective donate button"></a>
 </p>
 
 [chat]: https://openipc.org/our-channels
 [contribution]: https://opencollective.com/openipc/contribute/backer-14335/checkout
+
+
+[firmware]: https://github.com/openipc/firmware
+[logo]: https://openipc.org/assets/openipc-logo-black.svg
+[mit]: https://opensource.org/license/mit
+[opencollective]: https://opencollective.com/openipc
+[paypal]: https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS
+[project]: https://github.com/openipc
+[telegram]: https://openipc.org/our-channels
+[website]: https://openipc.org
+[wiki]: https://github.com/openipc/wiki
