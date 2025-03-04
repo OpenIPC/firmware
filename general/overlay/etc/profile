@@ -83,6 +83,10 @@ legacy_webui() {
 	curl -s -L https://github.com/openipc/webui/raw/master/files/usr/sbin/updatewebui.sh -o /tmp/webui.sh && sh /tmp/webui.sh
 }
 
+majestic_webui() {
+	curl -s -L https://raw.githubusercontent.com/openipc/majestic-webui/master/sbin/updatewebui -o /tmp/webui.sh && sh /tmp/webui.sh
+}
+
 # Source configuration files from /etc/profile.d
 for i in /etc/profile.d/*.sh; do
 	[ -r "$i" ] && . "$i"
