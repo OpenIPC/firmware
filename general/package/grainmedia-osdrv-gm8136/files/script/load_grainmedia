@@ -306,7 +306,10 @@ devmem 0x9a100030 32 0xDF000f04
 
 devmem 0x90c00044 32 0x00000007
 devmem 0x90c000b4 32 0xFFD374F0 #close SD card and mjpeg
-devmem 0x90b00010 32 0x14040000 #close audio
+
+if [ "$chipid" == "8135" ]; then
+    devmem 0x90b00010 32 0x14040000 #close audio
+fi
 
 #devmem 0x96105440 32 0x01500000
 #devmem 0x96105438 32 0x01500000
