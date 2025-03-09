@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.46
+scr_version=1.0.47
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -100,6 +100,7 @@ free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
 	killall -q -3 majestic
 	sleep 1
+	/etc/init.d/S99rc.local stop
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
 	/etc/init.d/S02klogd stop
