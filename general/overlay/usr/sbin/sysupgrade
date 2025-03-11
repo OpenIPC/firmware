@@ -98,9 +98,6 @@ download_firmware() {
 
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
-	if [ -f /etc/init.d/S73ruby ]; then
-    		/etc/init.d/S73ruby stop
-	fi
 	killall -q -3 majestic
 	sleep 1
 	/etc/init.d/S99rc.local stop
