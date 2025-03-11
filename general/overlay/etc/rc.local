@@ -11,4 +11,18 @@
 #
 # By default this script does nothing.
 
+target_dir="/mnt/mmcblk0p1"
+[ ! -d "$target_dir" ] && echo "not find" && exit 1
+
+latest_time=$(find "$target_dir" -exec stat -c '%Y' {} \; 2>/dev/null | sort -nr | head -1)
+[ -z "$latest_time" ] && echo "no sub dir" && exit 0
+echo latest_time $latest_time
+
+current_time=$(date +%s)
+echo current_time $current_time
+
+if [ "$latest_time" -gt "$current_time" ]; then
+    date -s "@$latest_time" >/dev/null && echo "ok" || echo "fail"
+fi
+
 exit 0
