@@ -95,7 +95,7 @@ void set_gpio(int pin, int value) {
 }
 
 void get_gpio_config() {
-    FILE *fp = popen("fw_printenv -n motorgpio", "r");
+    FILE *fp = popen("fw_printenv -n gpio_motors", "r");
     if (fp == NULL) {
         printf("Unable to run fw_printenv\n");
         exit(EXIT_FAILURE);
@@ -121,7 +121,7 @@ void get_gpio_config() {
             exit(EXIT_FAILURE);
         }
     } else {
-        printf("Error: Unable to read from fw_printenv.\n");
+        printf("Error: Unable to read gpio_motors from fw_printenv.\n");
         exit(EXIT_FAILURE);
     }
 
