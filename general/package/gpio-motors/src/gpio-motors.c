@@ -5,19 +5,6 @@
 #include <string.h>
 #include <unistd.h>
 
-typedef struct {
-    char *name;
-    int pan[4];
-    int tilt[4];
-} config;
-
-static config list[] = {
-    { "gk7205v200",    { 52, 53, 56, 57 }, { 69, 70, 59, 58 } },
-    { "gm8136-faleemi",{ 51, 52, 53, 54 }, { 55, 28, 29, 30 } },
-    { "hi3516cv200-fdt",{ 60, 61, 37, 38 }, { 54, 55, 56, 57 } },
-    { "ssc337de-foscam",{ 1, 2, 12, 13  }, { 62, 63, 64, 65 } },
-};
-
 int PAN_PINS[4];
 int TILT_PINS[4];
 
@@ -27,8 +14,8 @@ int STEP_SEQUENCE[8][4] = {
 };
 
 int REVERSE_STEP_SEQUENCE[8][4] = {
-	{1, 0, 0, 1}, {0, 0, 0, 1}, {0, 0, 1, 1}, {0, 0, 1, 0},
-	{0, 1, 1, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}, {1, 0, 0, 0}
+    {1, 0, 0, 1}, {0, 0, 0, 1}, {0, 0, 1, 1}, {0, 0, 1, 0},
+    {0, 1, 1, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}, {1, 0, 0, 0}
 };
 
 void release_gpio(int pin) {
@@ -39,26 +26,24 @@ void release_gpio(int pin) {
         fprintf(file, "%d", 0);
         fclose(file);
     } else {
-        printf("Unable to set value of GPIO %d to 0: [%d] %s\n", pin, errno, strerror(errno));	
-	}
+        printf("Unable to set value of GPIO %d to 0: [%d] %s\n", pin, errno, strerror(errno));    
+    }
 
-	file = fopen("/sys/class/gpio/unexport", "w");
+    file = fopen("/sys/class/gpio/unexport", "w");
     if (file) {
         fprintf(file, "%d", pin);
         fclose(file);
     } else {
-        printf("Unable to unexport GPIO %d: [%d] %s\n", pin, errno, strerror(errno));	
+        printf("Unable to unexport GPIO %d: [%d] %s\n", pin, errno, strerror(errno));    
     }
 }
 
 void cleanup() {
-
-	for (int i = 0; i < 4; i++) {
-		release_gpio(PAN_PINS[i]);
-		release_gpio(TILT_PINS[i]);
-	}
-
-	exit(EXIT_FAILURE);
+    for (int i = 0; i < 4; i++) {
+        release_gpio(PAN_PINS[i]);
+        release_gpio(TILT_PINS[i]);
+    }
+    exit(EXIT_FAILURE);
 }
 
 void export_gpio(int pin) {
@@ -70,8 +55,8 @@ void export_gpio(int pin) {
         fprintf(file, "%d", pin);
         fclose(file);
     } else {
-        printf("Unable export GPIO %d: [%d] %s\n", pin, errno, strerror(errno));	
-		cleanup();
+        printf("Unable export GPIO %d: [%d] %s\n", pin, errno, strerror(errno));    
+        cleanup();
     }
 
     snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/direction", pin);
@@ -80,9 +65,8 @@ void export_gpio(int pin) {
         fprintf(file, "out");
         fclose(file);
     } else {
-        printf("Unable to set direction of GPIO %d: [%d] %s\n", pin, errno, strerror(errno));	
-		cleanup();
-
+        printf("Unable to set direction of GPIO %d: [%d] %s\n", pin, errno, strerror(errno));    
+        cleanup();
     }
 }
 
@@ -92,8 +76,8 @@ void unexport_gpio(int pin) {
         fprintf(file, "%d", pin);
         fclose(file);
     } else {
-        printf("Unable to unexport GPIO %d: [%d] %s\n", pin, errno, strerror(errno));	
-		cleanup();
+        printf("Unable to unexport GPIO %d: [%d] %s\n", pin, errno, strerror(errno));    
+        cleanup();
     }
 }
 
@@ -105,38 +89,56 @@ void set_gpio(int pin, int value) {
         fprintf(file, "%d", value);
         fclose(file);
     } else {
-        printf("Unable to set value of GPIO %d: [%d] %s\n", pin, errno, strerror(errno));	
-		cleanup();
+        printf("Unable to set value of GPIO %d: [%d] %s\n", pin, errno, strerror(errno));    
+        cleanup();
     }
 }
 
+void get_gpio_config() {
+    FILE *fp = popen("fw_printenv -n gpio_motors", "r");
+    if (fp == NULL) {
+        printf("Unable to run fw_printenv\n");
+        exit(EXIT_FAILURE);
+    }
+
+    char line[32];
+    if (fgets(line, sizeof(line), fp) != NULL) {
+        char *token = strtok(line, " ");
+        int index = 0;
+
+        while (token != NULL && index < 8) {
+            if (index < 4) {
+                PAN_PINS[index] = atoi(token);
+            } else {
+                TILT_PINS[index - 4] = atoi(token);
+            }
+            token = strtok(NULL, " ");
+            index++;
+        }
+
+        if (index != 8) {
+            printf("Error: Expected 8 GPIO values, but got %d.\n", index);
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        printf("Error: Unable to read gpio_motors from fw_printenv.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    fclose(fp);
+}
+
 int main(int argc, char *argv[]) {
-    if (argc != 5) {
-        fprintf(stderr, "Usage: %s <config> <pan steps> <tilt steps> <delay>\n", argv[0]);
+    if (argc != 4) {
+        fprintf(stderr, "Usage: %s <pan steps> <tilt steps> <delay (ms)>\n", argv[0]);
         return 1;
     }
 
-	int pan_steps = atoi(argv[2]);
-    int tilt_steps = atoi(argv[3]);
-	int delay = atoi(argv[4]);
+    int pan_steps = atoi(argv[1]);
+    int tilt_steps = atoi(argv[2]);
+    int delay = atoi(argv[3]) * 1000;
 
-    config *selected_config = NULL;
-    int config_count = sizeof(list) / sizeof(list[0]);
-    for (int i = 0; i < config_count; i++) {
-        if (strcmp(list[i].name, argv[1]) == 0) {
-            selected_config = &list[i];
-            break;
-        }
-    }
-    if (selected_config == NULL) {
-        fprintf(stderr, "Error: config '%s' not found.\n", argv[1]);
-		return 1;
-    }
-
-    for (int i = 0; i < 4; i++) {
-        PAN_PINS[i] = selected_config->pan[i];
-        TILT_PINS[i] = selected_config->tilt[i];
-    }
+    get_gpio_config();
 
     for (int i = 0; i < 4; i++) {
         export_gpio(PAN_PINS[i]);
@@ -150,7 +152,7 @@ int main(int argc, char *argv[]) {
     int pan_micro = 0;
     int tilt_micro = 0;
 
-	while (pan_remaining > 0 || tilt_remaining > 0) {
+    while (pan_remaining > 0 || tilt_remaining > 0) {
         int pan_has = pan_remaining > 0;
         int tilt_has = tilt_remaining > 0;
 
@@ -183,8 +185,10 @@ int main(int argc, char *argv[]) {
         usleep(eff_delay);
     }
 
-	for (int i = 0; i < 4; i++) {
-		release_gpio(PAN_PINS[i]);
-		release_gpio(TILT_PINS[i]);
-	}
+    for (int i = 0; i < 4; i++) {
+        release_gpio(PAN_PINS[i]);
+        release_gpio(TILT_PINS[i]);
+    }
+
+    return 0;
 }
