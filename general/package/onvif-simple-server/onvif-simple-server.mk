@@ -21,6 +21,8 @@ define ONVIF_SIMPLE_SERVER_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 0755 -t $(TARGET_DIR)/usr/sbin $(@D)/wsd_simple_server
 	$(INSTALL) -m 0755 -d $(TARGET_DIR)/etc
 	$(INSTALL) -m 0644 -t $(TARGET_DIR)/etc $(ONVIF_SIMPLE_SERVER_PKGDIR)/files/onvif.conf
+	$(INSTALL) -m 0755 -d $(TARGET_DIR)/etc/init.d
+	$(INSTALL) -m 0755 -t $(TARGET_DIR)/etc/init.d $(ONVIF_SIMPLE_SERVER_PKGDIR)/files/S96onvifserver
 	$(INSTALL) -m 0755 -d $(TARGET_DIR)/var/www/onvif/device_service_files
 	$(INSTALL) -m 0644 -t $(TARGET_DIR)/var/www/onvif/device_service_files $(@D)/device_service_files/*
 	$(INSTALL) -m 0755 -d $(TARGET_DIR)/var/www/onvif/generic_files
