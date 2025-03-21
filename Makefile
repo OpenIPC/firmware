@@ -79,7 +79,9 @@ endif
 
 repack:
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
-ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
+ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
+	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.squashfs,5120,nor)
+else ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
 	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,5120,nor)
 else
 	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,8192,nor)
