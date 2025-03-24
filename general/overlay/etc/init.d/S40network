@@ -2,6 +2,7 @@
 dev=$(fw_printenv -n wlandev)
 mac=$(fw_printenv -n wlanmac)
 net=$(fw_printenv -n netaddr_fallback)
+eth=$(fw_printenv -n ethaddr)
 
 set_wireless() {
 	path=/etc/wireless
@@ -12,7 +13,7 @@ set_wireless() {
 		ifup usb0
 		ifup eth1
 	fi
-	[ -e /sys/class/net/eth0 ] && ifconfig eth0 "${net:-192.168.2.10}"
+	[ -e /sys/class/net/eth0 ] && ifconfig eth0 "${net:-192.168.2.10}" netmask 255.255.255.0 hw ether "${eth:-00:00:23:34:45:66}"
 }
 
 start() {
