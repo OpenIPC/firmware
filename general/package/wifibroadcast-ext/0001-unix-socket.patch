@@ -1,0 +1,127 @@
+diff --git a/src/tx.cpp b/src/tx.cpp
+index 4dcfd87..b1a9d94 100644
+--- a/src/tx.cpp
++++ b/src/tx.cpp
+@@ -1347,7 +1347,7 @@ int open_control_fd(int control_port)
+ void local_loop(int argc, char* const* argv, int optind, int srv_port, int rcv_buf, int log_interval,
+                 int udp_port, int debug_port, int k, int n, const string &keypair, int fec_timeout,
+                 uint64_t epoch, uint32_t channel_id, uint32_t fec_delay, bool use_qdisc, uint32_t fwmark,
+-                radiotap_header_t &radiotap_header, uint8_t frame_type, int control_port, bool mirror)
++                radiotap_header_t &radiotap_header, uint8_t frame_type, int control_port, int socket_type, bool mirror)
+ {
+     vector<int> rx_fd;
+     vector<string> wlans;
+@@ -1357,7 +1357,7 @@ void local_loop(int argc, char* const* argv, int optind, int srv_port, int rcv_b
+     for(int i = 0; optind + i < argc; i++)
+     {
+         int bind_port = udp_port != 0 ? udp_port + i : 0;
+-        int fd = open_udp_socket_for_rx(bind_port, rcv_buf);
++        int fd = open_udp_socket_for_rx(bind_port, rcv_buf, INADDR_ANY, socket_type);
+ 
+         if (udp_port == 0)
+         {
+@@ -1371,7 +1371,15 @@ void local_loop(int argc, char* const* argv, int optind, int srv_port, int rcv_b
+             bind_port = ntohs(saddr.sin_port);
+             IPC_MSG("%" PRIu64 "\tLISTEN_UDP\t%d:%x\n", get_time_ms(), bind_port, i);
+         }
+-        WFB_INFO("Listen on %d for %s\n", bind_port, argv[optind + i]);
++
++        if (socket_type == SOCK_SEQPACKET)
++        {
++            WFB_INFO("Listen on %s for %s\n", UNIX_SOCKET, argv[optind + i]);
++        }
++        else
++        {
++            WFB_INFO("Listen on %d for %s\n", bind_port, argv[optind + i]);
++        }
+         rx_fd.push_back(fd);
+         wlans.push_back(string(argv[optind + i]));
+     }
+@@ -1499,8 +1507,9 @@ int main(int argc, char * const *argv)
+     bool use_qdisc = false;
+     uint32_t fwmark = 0;
+     tx_mode_t tx_mode = LOCAL;
++    int socket_type = SOCK_DGRAM;
+ 
+-    while ((opt = getopt(argc, argv, "dI:K:k:n:u:p:F:l:B:G:S:L:M:N:D:T:i:e:R:f:mVQP:C:")) != -1) {
++    while ((opt = getopt(argc, argv, "dI:K:k:n:u:p:F:l:B:G:S:L:M:N:D:T:i:e:R:f:mVQUP:C:")) != -1) {
+         switch (opt) {
+         case 'I':
+             tx_mode = INJECTOR;
+@@ -1599,10 +1608,13 @@ int main(int argc, char * const *argv)
+         case 'C':
+             control_port = atoi(optarg);
+             break;
++        case 'U':
++            socket_type = SOCK_SEQPACKET;
++            break;
+         default: /* '?' */
+         show_usage:
+             WFB_INFO("Local TX: %s [-K tx_key] [-k RS_K] [-n RS_N] [-u udp_port] [-R rcv_buf] [-p radio_port] [-F fec_delay] [-B bandwidth] [-G guard_interval] [-S stbc] [-L ldpc] [-M mcs_index] [-N VHT_NSS]\n"
+-                            "             [-T fec_timeout] [-l log_interval] [-e epoch] [-i link_id] [-f { data | rts }] [-m] [-V] [-Q] [-P fwmark] [-C control_port] interface1 [interface2] ...\n",
++                            "             [-T fec_timeout] [-l log_interval] [-e epoch] [-i link_id] [-f { data | rts }] [-m] [-V] [-Q] [-U] [-P fwmark] [-C control_port] interface1 [interface2] ...\n",
+                     argv[0]);
+             WFB_INFO("TX distributor: %s -d [-K tx_key] [-k RS_K] [-n RS_N] [-u udp_port] [-R rcv_buf] [-p radio_port] [-F fec_delay] [-B bandwidth] [-G guard_interval] [-S stbc] [-L ldpc] [-M mcs_index] [-N VHT_NSS]\n"
+                             "                      [-T fec_timeout] [-l log_interval] [-e epoch] [-i link_id] [-f { data | rts }] [-m] [-V] [-Q] [-P fwmark] [-C control_port] host1:port1,port2,... [host2:port1,port2,...] ...\n",
+@@ -1658,7 +1670,7 @@ int main(int argc, char * const *argv)
+             local_loop(argc, argv, optind, srv_port, rcv_buf, log_interval,
+                        udp_port, debug_port, k, n, keypair, fec_timeout,
+                        epoch, channel_id, fec_delay, use_qdisc, fwmark,
+-                       radiotap_header, frame_type, control_port, mirror);
++                       radiotap_header, frame_type, control_port, socket_type, mirror);
+             break;
+ 
+ 
+diff --git a/src/wifibroadcast.cpp b/src/wifibroadcast.cpp
+index d082958..a1f9f76 100644
+--- a/src/wifibroadcast.cpp
++++ b/src/wifibroadcast.cpp
+@@ -18,6 +18,7 @@
+ #include <stdlib.h>
+ #include <stdarg.h>
+ #include <sys/socket.h>
++#include <sys/un.h>
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+ #include <string>
+@@ -65,9 +66,26 @@ uint64_t get_time_us(void) // in microseconds
+ int open_udp_socket_for_rx(int port, int rcv_buf_size, uint32_t bind_addr, int socket_type, int socket_protocol)
+ {
+     struct sockaddr_in saddr;
+-    int fd = socket(AF_INET, socket_type, socket_protocol);
++    struct sockaddr_un uaddr;
++
++    int socket_family = (socket_type == SOCK_SEQPACKET) ? AF_UNIX : AF_INET;
++    int fd = socket(socket_family, socket_type, socket_protocol);
+     if (fd < 0) throw runtime_error(string_format("Error opening socket: %s", strerror(errno)));
+ 
++    if (socket_family == AF_UNIX)
++    {
++        memset(&uaddr, '\0', sizeof(uaddr));
++        uaddr.sun_family = socket_family;
++        strcpy(uaddr.sun_path, UNIX_SOCKET);
++
++        if (::connect(fd, (struct sockaddr *) &uaddr, sizeof(uaddr)) < 0)
++        {
++            close(fd);
++            throw runtime_error(string_format("Unable to connect to %s : %s", uaddr.sun_path, strerror(errno)));
++        }
++        return fd;
++    }
++
+     const int optval = 1;
+     if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval , sizeof(optval)) !=0)
+     {
+diff --git a/src/wifibroadcast.hpp b/src/wifibroadcast.hpp
+index 0947a76..9bc8e1d 100644
+--- a/src/wifibroadcast.hpp
++++ b/src/wifibroadcast.hpp
+@@ -286,6 +286,8 @@ typedef struct {
+ #define IPC_MSG_SEND()  fflush(stdout)
+ #endif
+ 
++#define UNIX_SOCKET "/tmp/wfb_stream"
++
+ int open_udp_socket_for_rx(int port, int rcv_buf_size, uint32_t bind_addr = INADDR_ANY, int socket_type = SOCK_DGRAM, int socket_protocol = 0);
+ uint64_t get_time_ms(void);
+ uint64_t get_time_us(void);
