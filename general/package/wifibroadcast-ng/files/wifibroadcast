@@ -62,6 +62,10 @@ load_interface() {
 
 	[ "$driver" = "88XXau" ] && wfb_power=$((txpower * -100)) || wfb_power=$((txpower * 50))
 	iw "$wfb_dev" set txpower fixed "$wfb_power"
+
+	if [ "$jumbo_frames" = "true" ]; then
+		ip link set dev "$wfb_dev" mtu 3994
+	fi
 }
 
 start_broadcast() {
