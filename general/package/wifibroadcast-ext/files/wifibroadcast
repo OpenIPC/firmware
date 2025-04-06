@@ -1,0 +1,162 @@
+#!/bin/sh
+wfb_key=/etc/drone.key
+wfb_dev=wlan0
+
+echo_log() {
+	echo "$1" | logger -s -t wifibroadcast
+}
+
+wfb_yaml() {
+	if [ -e "$1" ]; then
+		while IFS=: read -r key value; do
+			key=$(eval echo "$key")
+			value=$(eval echo "$value")
+			export "$key=$value"
+		done < "$1"
+	fi
+}
+
+load_config() {
+	wfb_yaml /etc/wfb.yaml
+	[ ! -e "$wfb_key" ] && wfb_key=/rom/etc/drone.key
+}
+
+load_modules() {
+	for card in $(lsusb | awk '{print $6}' | uniq); do
+		case "$card" in
+			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
+				driver=88XXau
+				modprobe "$driver"
+				;;
+
+			"0bda:a81a")
+				driver=8812eu
+				modprobe "$driver" rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+				;;
+
+			"0bda:f72b" | "0bda:b733")
+				driver=8733bu
+				modprobe "$driver" rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+				;;
+		esac
+	done
+
+	if [ -z "$driver" ]; then
+		echo_log "Wireless module not detected!"
+		exit 1
+	fi
+
+	echo_log "Detected driver: $driver"
+	if ! ifconfig "$wfb_dev" up; then
+		echo_log "Wireless driver not found!"
+		exit 1
+	fi
+}
+
+load_interface() {
+	iw "$wfb_dev" set monitor none
+
+	[ "$width" = "40" ] && wfb_width=HT40+ || wfb_width=HT20
+	iw "$wfb_dev" set channel "$channel" "$wfb_width"
+	iw reg set 00
+
+	[ "$driver" = "88XXau" ] && wfb_power=$((txpower * -100)) || wfb_power=$((txpower * 50))
+	iw "$wfb_dev" set txpower fixed "$wfb_power"
+
+	if [ "$jumbo_frames" = "true" ]; then
+		ip link set dev "$wfb_dev" mtu 3994
+	fi
+}
+
+start_broadcast() {
+	echo_log "Starting wfb_tx"
+	wfb_tx -K "$wfb_key" -M "$mcs_index" -B "$width" -k "$fec_k" -n "$fec_n" \
+		-S "$stbc" -L "$ldpc" -i "$link_id" -C 8000 -G short "$wfb_dev" &> /dev/null &
+}
+
+start_tunnel() {
+	echo_log "Starting wfb_tun"
+	wfb_rx -K "$wfb_key" -i "$link_id" -p 160 -u 5800 "$wfb_dev" &> /dev/null &
+	wfb_tx -K "$wfb_key" -M "$tun_index" -B "$width" -k "$fec_k" -n "$fec_n" \
+		-S "$stbc" -L "$ldpc" -i "$link_id" -p 32 -u 5801 "$wfb_dev" &> /dev/null &
+	wfb_tun -a 10.5.0.10/24 > /dev/null &
+}
+
+start_telemetry() {
+	chipset=$(ipcinfo -c)
+	[ "$chipset" = "ssc33x" ] && devmem 0x1F207890 16 0x8
+
+	echo_log "Starting $router"
+	if [ "$router" = "mavfwd" ]; then
+		mavfwd -b 115200 -c 8 -p 100 -a 15 -t -m /dev/"$serial" \
+			-i 0.0.0.0:14550 -o 10.5.0.1:14551 > /dev/null &
+	else
+		if [ "$router" = "msposd" ]; then
+			size=$(curl -s localhost/api/v1/config.json | jsonfilter -e "@.video0.size")
+		fi
+		msposd -b 115200 -c 8 -r "$osd_fps" -m /dev/"$serial" \
+			-o 10.5.0.1:14551 -z "$size" > /dev/null &
+	fi
+}
+
+video_settings() {
+	sensor=$(ipcinfo -s)
+	cli -s .isp.sensorConfig /etc/sensors/"$sensor"_fpv.bin
+	cli -s .isp.exposure 5
+	cli -s .video0.fps 60
+	cli -s .video0.bitrate 8192
+	cli -s .video0.codec h265
+	cli -s .video0.rcMode cbr
+	cli -s .outgoing.enabled true
+	cli -s .outgoing.server udp://0.0.0.0:5600
+	cli -s .fpv.enabled true
+	cli -s .fpv.noiseLevel 1
+}
+
+start() {
+	load_config
+	load_modules
+	load_interface
+
+	if [ ! -e /etc/system.ok ]; then
+		sleep 1
+		video_settings
+		touch /etc/system.ok
+		killall -1 majestic
+	fi
+
+	stop
+	start_broadcast
+	start_tunnel
+	start_telemetry
+}
+
+stop() {
+	for process in wfb_rx wfb_tx wfb_tun msposd mavfwd; do
+		if [ -n "$(pidof $process)" ]; then
+			echo_log "Stopping $process"
+			killall -q "$process"
+		fi
+	done
+}
+
+case "$1" in
+	start|stop)
+		$1
+		;;
+
+	resetv)
+		cp -f /rom/etc/majestic.yaml /etc/majestic.yaml
+		video_settings
+		;;
+
+	resetw)
+		cp -f /rom/etc/wfb.yaml /etc/wfb.yaml
+		start
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|resetv|resetw}"
+		exit 1
+		;;
+esac
