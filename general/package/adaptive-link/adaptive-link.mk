@@ -5,7 +5,7 @@
 ################################################################################
 
 ADAPTIVE_LINK_SITE = $(call github,openipc,adaptive-link,$(ADAPTIVE_LINK_VERSION))
-ADAPTIVE_LINK_VERSION = 'd4b8ec142a0566f2c1fd302bccaef77ca1f5817c'
+ADAPTIVE_LINK_VERSION = '2c45d5fb0cac64c3654bc8d6043ed3d8c2e85f9e'
 
 ADAPTIVE_LINK_LICENSE = GPL-3.0
 ADAPTIVE_LINK_LICENSE_FILES = LICENSE
@@ -27,7 +27,7 @@ define ADAPTIVE_LINK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/alink.conf
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/txprofiles.conf
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/txprofiles/txprofiles.conf
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/alink_drone
 endef
 
