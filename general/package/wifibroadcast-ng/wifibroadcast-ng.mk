@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-WIFIBROADCAST_NG_VERSION = 6c5febf31c713beacd63221bfd74dfe30031c44d
+WIFIBROADCAST_NG_VERSION = fd3042d27d6f5ef9e1d4f4bf49a8efec307bc4d1
 WIFIBROADCAST_NG_SITE = $(call github,svpcom,wfb-ng,$(WIFIBROADCAST_NG_VERSION))
 WIFIBROADCAST_NG_LICENSE = GPL-3.0
 
@@ -30,11 +30,7 @@ define WIFIBROADCAST_NG_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/wfb_tx
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/wfb_tx_cmd
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/wfb_tun
-	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(WIFIBROADCAST_NG_PKGDIR)/files/wfb-cli
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(WIFIBROADCAST_NG_PKGDIR)/files/wifibroadcast
-
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/var/www
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/var/www $(WIFIBROADCAST_NG_PKGDIR)/www/*
 endef
 
 $(eval $(generic-package))
