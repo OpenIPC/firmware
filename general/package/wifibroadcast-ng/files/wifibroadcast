@@ -66,7 +66,7 @@ load_interface() {
 
 start_broadcast() {
 	echo_log "Starting wfb_tx"
-	wfb_tx -K "$wfb_key" -M "$mcs_index" -B "$width" -k "$fec_k" -n "$fec_n" \
+	wfb_tx -K "$wfb_key" -M "$mcs_index" -B "$width" -k "$fec_k" -n "$fec_n" -U rtp_local \
 		-S "$stbc" -L "$ldpc" -i "$link_id" -C 8000 -G short "$wfb_dev" &> /dev/null &
 }
 
@@ -104,7 +104,7 @@ video_settings() {
 	cli -s .video0.codec h265
 	cli -s .video0.rcMode cbr
 	cli -s .outgoing.enabled true
-	cli -s .outgoing.server udp://0.0.0.0:5600
+	cli -s .outgoing.wfb true
 	cli -s .fpv.enabled true
 	cli -s .fpv.noiseLevel 1
 }
