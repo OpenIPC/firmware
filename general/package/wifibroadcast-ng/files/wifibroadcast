@@ -141,18 +141,14 @@ case "$1" in
 		$1
 		;;
 
-	resetv)
+	reset)
+		cp -f /rom/etc/wfb.yaml /etc/wfb.yaml
 		cp -f /rom/etc/majestic.yaml /etc/majestic.yaml
 		video_settings
 		;;
 
-	resetw)
-		cp -f /rom/etc/wfb.yaml /etc/wfb.yaml
-		start
-		;;
-
 	*)
-		echo "Usage: $0 {start|stop|resetv|resetw}"
+		echo "Usage: $0 {start|stop|reset}"
 		exit 1
 		;;
 esac
