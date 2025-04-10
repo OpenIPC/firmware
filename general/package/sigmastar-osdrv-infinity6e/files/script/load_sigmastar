@@ -15,7 +15,7 @@ detect_sensor() {
 	fi
 
 	SENSOR=$(ipcinfo -s)
-	if [ "$BUILD" != "fpv" ]
+	if [ "$BUILD" != "fpv" ]; then
 		fw_setenv sensor "$SENSOR"
 	fi
 }
