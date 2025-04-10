@@ -1,5 +1,6 @@
 #!/bin/sh
 wfb_key=/etc/drone.key
+wfb_cfg=/etc/wfb.yaml
 wfb_dev=wlan0
 
 echo_log() {
@@ -17,7 +18,7 @@ wfb_yaml() {
 }
 
 load_config() {
-	wfb_yaml /etc/wfb.yaml
+	wfb_yaml "$wfb_cfg"
 	[ ! -e "$wfb_key" ] && wfb_key=/rom/etc/drone.key
 }
 
@@ -142,13 +143,18 @@ case "$1" in
 		;;
 
 	reset)
-		cp -f /rom/etc/wfb.yaml /etc/wfb.yaml
+		cp -f /rom/"$wfb_cfg" "$wfb_cfg"
 		cp -f /rom/etc/majestic.yaml /etc/majestic.yaml
 		video_settings
 		;;
 
+	cli)
+		shift
+		yaml-cli -i "$wfb_cfg" "$@"
+		;;
+
 	*)
-		echo "Usage: $0 {start|stop|reset}"
+		echo "Usage: $0 {start|stop|reset|cli}"
 		exit 1
 		;;
 esac
