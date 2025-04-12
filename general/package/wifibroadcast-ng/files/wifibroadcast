@@ -87,21 +87,21 @@ start_telemetry() {
 	chipset=$(ipcinfo -c)
 	[ "$chipset" = "ssc33x" ] && devmem 0x1F207890 16 0x8
 
-	port_rx=14551
-	port_tx=14550
+	port_rx=14550
+	port_tx=14551
 
 	echo_log "Starting $router"
 	load_wfb 144 16 "$port_rx" "$port_tx"
 
 	if [ "$router" = "mavfwd" ]; then
 		mavfwd -b 115200 -c 8 -p 100 -a 15 -t -m /dev/"$serial" \
-			-i 0.0.0.0:"$port_rx" -o 0.0.0.0:"$port_tx" > /dev/null &
+			-o 127.0.0.1:"$port_tx" -i 127.0.0.1:"$port_rx" > /dev/null &
 	else
 		if [ "$router" = "msposd" ]; then
 			size=$(curl -s localhost/api/v1/config.json | jsonfilter -qe "@.video0.size")
 		fi
 		msposd -b 115200 -c 8 -r "$osd_fps" -m /dev/"$serial" \
-			-o 0.0.0.0:"$port_rx" -z "$size" > /dev/null &
+			-o 127.0.0.1:"$port_tx" -z "$size" > /dev/null &
 	fi
 }
 
