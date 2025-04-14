@@ -46,10 +46,11 @@ load_modules() {
 
 	echo_log "Detected driver: $driver"
 	[ -e /sys/class/net/"$wfb_dev" ] && return
+	sleep 1
 
 	[ "$driver" != "88XXau" ] && opts="rtw_tx_pwr_by_rate=2 rtw_tx_pwr_lmt_enable=2"
 	modprobe "$driver" "$opts"
-	sleep 5
+	sleep 3
 
 	if ! ifconfig "$wfb_dev" up; then
 		echo_log "Wireless driver not found!"
@@ -128,7 +129,6 @@ start() {
 	load_interface
 
 	if [ ! -e /etc/system.ok ]; then
-		sleep 1
 		video_settings
 		touch /etc/system.ok
 		killall -1 majestic
