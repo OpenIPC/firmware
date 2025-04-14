@@ -27,17 +27,14 @@ load_modules() {
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
 				driver=88XXau
-				modprobe "$driver"
 				;;
 
 			"0bda:a81a")
 				driver=8812eu
-				modprobe "$driver" rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
 
 			"0bda:f72b" | "0bda:b733")
 				driver=8733bu
-				modprobe "$driver" rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
 				;;
 		esac
 	done
@@ -48,6 +45,12 @@ load_modules() {
 	fi
 
 	echo_log "Detected driver: $driver"
+	[ -e /sys/class/net/"$wfb_dev" ] && return
+
+	[ "$driver" != "88XXau" ] && opts="rtw_tx_pwr_by_rate=2 rtw_tx_pwr_lmt_enable=2"
+	modprobe "$driver" "$opts"
+	sleep 5
+
 	if ! ifconfig "$wfb_dev" up; then
 		echo_log "Wireless driver not found!"
 		exit 1
