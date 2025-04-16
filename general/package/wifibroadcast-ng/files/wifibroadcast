@@ -18,8 +18,9 @@ wfb_yaml() {
 }
 
 load_config() {
+	wfb_yaml /rom"$wfb_cfg"
 	wfb_yaml "$wfb_cfg"
-	[ ! -e "$wfb_key" ] && wfb_key=/rom/etc/drone.key
+	[ ! -e "$wfb_key" ] && wfb_key=/rom"$wfb_key"
 }
 
 load_modules() {
@@ -48,13 +49,27 @@ load_modules() {
 	[ -e /sys/class/net/"$wfb_dev" ] && return
 	sleep 1
 
-	[ "$driver" != "88XXau" ] && opts="rtw_tx_pwr_by_rate=2 rtw_tx_pwr_lmt_enable=2"
-	modprobe "$driver" "$opts"
+	if [ "$driver" != "88XXau" ]; then
+		opt1="rtw_tx_pwr_by_rate=2"
+		opt2="rtw_tx_pwr_lmt_enable=2"
+	fi
+
+	modprobe "$driver" "$opt1" "$opt2"
 	sleep 3
 
 	if ! ifconfig "$wfb_dev" up; then
 		echo_log "Wireless driver not found!"
 		exit 1
+	fi
+}
+
+load_mlink() {
+	ifconfig "$wfb_dev" mtu "$mlink"
+
+	nalu=$((mlink - 100))
+	if [ "$(cli -g .outgoing.naluSize)" != "$nalu" ]; then
+		cli -s .outgoing.naluSize "$nalu"
+		killall -1 majestic
 	fi
 }
 
@@ -126,6 +141,7 @@ video_settings() {
 start() {
 	load_config
 	load_modules
+	load_mlink
 	load_interface
 
 	if [ ! -e /etc/system.ok ]; then
@@ -155,7 +171,7 @@ case "$1" in
 		;;
 
 	reset)
-		cp -f /rom/"$wfb_cfg" "$wfb_cfg"
+		cp -f /rom"$wfb_cfg" "$wfb_cfg"
 		cp -f /rom/etc/majestic.yaml /etc/majestic.yaml
 		video_settings
 		;;
