@@ -317,4 +317,11 @@ if [ "$1" = "atbm603x-t31-zte-k540" ]; then
 	exit 0
 fi
 
+# T31 Aoni E97VJ62
+if [ "$1" = "rtl8188fu-t31-aoni-e97vj62" ]; then
+	set_gpio 53 1
+	modprobe 8188fu
+  exit 0
+fi
+
 exit 1
