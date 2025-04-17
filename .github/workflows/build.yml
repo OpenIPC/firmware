@@ -19,35 +19,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Sigmastar [I6E]
-          - {"platform": "ssc30kq", "release": "fpv"}
-          - {"platform": "ssc30kq", "release": "rubyfpv"}
-          - {"platform": "ssc30kq", "release": "lite"}
-          - {"platform": "ssc30kq", "release": "ultimate"}
-          - {"platform": "ssc338q", "release": "fpv"}
-          - {"platform": "ssc338q", "release": "rubyfpv"}
-          - {"platform": "ssc338q", "release": "lite"}
-          - {"platform": "ssc338q", "release": "ultimate"}
-
           # Goke [GK7205V200]
-          - {"platform": "gk7202v300", "release": "lite"}
-          - {"platform": "gk7205v200", "release": "lte"}
           - {"platform": "gk7205v200", "release": "fpv"}
-          - {"platform": "gk7205v200", "release": "rubyfpv"}
           - {"platform": "gk7205v200", "release": "venc"}
-          - {"platform": "gk7205v200", "release": "lite"}
-          - {"platform": "gk7205v200", "release": "ultimate"}
-          - {"platform": "gk7205v210", "release": "fpv"}
-          - {"platform": "gk7205v210", "release": "rubyfpv"}
-          - {"platform": "gk7205v210", "release": "venc"}
-          - {"platform": "gk7205v210", "release": "lite"}
-          - {"platform": "gk7205v300", "release": "lte"}
-          - {"platform": "gk7205v300", "release": "fpv"}
-          - {"platform": "gk7205v300", "release": "rubyfpv"}
-          - {"platform": "gk7205v300", "release": "venc"}
-          - {"platform": "gk7205v300", "release": "lite"}
-          - {"platform": "gk7205v300", "release": "ultimate"}
-          - {"platform": "gk7605v100", "release": "lite"}
+
 
     steps:
       - name: Checkout source
