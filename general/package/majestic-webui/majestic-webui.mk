@@ -27,6 +27,7 @@ define MAJESTIC_WEBUI_STANDARD_FIXUP
 	rm $(TARGET_DIR)/var/www/cgi-bin/fpv-wfb.cgi
 	rm $(TARGET_DIR)/var/www/cgi-bin/j/locale_fpv.cgi
 	rm $(TARGET_DIR)/var/www/cgi-bin/p/header_fpv.cgi
+	rm $(TARGET_DIR)/var/www/cgi-bin/p/fpv_common.cgi
 endef
 
 define MAJESTIC_WEBUI_FPV_FIXUP
