@@ -50,8 +50,8 @@ load_modules() {
 	sleep 1
 
 	if [ "$driver" != "88XXau" ]; then
-		opt1="rtw_tx_pwr_by_rate=2"
-		opt2="rtw_tx_pwr_lmt_enable=2"
+		opt1="rtw_tx_pwr_by_rate=0"
+		opt2="rtw_tx_pwr_lmt_enable=0"
 	fi
 
 	modprobe "$driver" "$opt1" "$opt2"
