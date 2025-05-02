@@ -88,9 +88,7 @@ else
 endif
 endif
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
-ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
-	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.ubi,16384,nand)
-else ifeq ($(BR2_OPENIPC_SOC_VENDOR),"sigmastar")
+ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"rockchip" "sigmastar"),)
 	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
 else
 	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand)
