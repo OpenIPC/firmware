@@ -1,7 +1,9 @@
 #!/bin/sh
 MODULE=/lib/modules/5.10.160/rockchip
 
+modprobe mis5001
 modprobe sc3336
+
 modprobe video_rkcif
 modprobe video_rkisp
 modprobe phy-rockchip-csi2-dphy-hw
