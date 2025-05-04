@@ -4,6 +4,7 @@
 #
 ################################################################################
 
+LINUX_PATCHER_DEPENDENCIES = linux
 export UIMAGE_NAME = Linux-$(LINUX_VERSION_PROBED)-$(OPENIPC_SOC_MODEL)
 
 # Exclude buildroot yylloc patches
@@ -19,8 +20,15 @@ define LINUX_PATCHER_CONFIG_ATHEROS
 endef
 endif
 
+ifneq ($(BR2_PACKAGE_LINUX_PATCHER_SIGMASTAR_DTB),"")
+define LINUX_PATCHER_CONFIG_SIGMASTAR_DTB
+	$(call KCONFIG_SET_OPT,CONFIG_SS_DTB_NAME,$(BR2_PACKAGE_LINUX_PATCHER_SIGMASTAR_DTB))
+endef
+endif
+
 define LINUX_PATCHER_LINUX_CONFIG_FIXUPS
 	$(LINUX_PATCHER_CONFIG_ATHEROS)
+	$(LINUX_PATCHER_CONFIG_SIGMASTAR_DTB)
 endef
 
 $(eval $(generic-package))

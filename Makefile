@@ -1,4 +1,4 @@
-BR_VER = 2024.02.6
+BR_VER = 2024.02.10
 BR_MAKE = $(MAKE) -C $(TARGET)/buildroot-$(BR_VER) BR2_EXTERNAL=$(PWD)/general O=$(TARGET)
 BR_LINK = https://github.com/buildroot/buildroot/archive
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
@@ -23,10 +23,10 @@ endif
 all: build repack timer
 
 build: defconfig
-	@$(BR_MAKE) all
+	@$(BR_MAKE) all -j$(shell nproc)
 
 br-%: defconfig
-	@$(BR_MAKE) $(subst br-,,$@)
+	@$(BR_MAKE) $(subst br-,,$@) -j$(shell nproc)
 
 defconfig: prepare
 	@echo --- $(or $(CONFIG),$(error variable BOARD not found))
@@ -71,23 +71,24 @@ timer:
 
 toolchain: defconfig
 ifeq ($(BR2_TOOLCHAIN_EXTERNAL),y)
+	@cp -rf $(PWD)/general/package/gcc $(TARGET)/buildroot-$(BR_VER)/package
 	@$(MAKE) -f $(PWD)/general/toolchain.mk BR_CONF=$(BR_CONF) CONFIG=$(PWD)/$(CONFIG)
 	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
 endif
-	@$(BR_MAKE) sdk
+	@$(BR_MAKE) sdk -j$(shell nproc)
 
 repack:
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
-ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
+ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
+	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.squashfs,5120,nor)
+else ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
 	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,5120,nor)
 else
 	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,8192,nor)
 endif
 endif
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
-ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
-	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.ubi,16384,nand)
-else ifeq ($(BR2_OPENIPC_SOC_VENDOR),"sigmastar")
+ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"rockchip" "sigmastar"),)
 	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
 else
 	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand)

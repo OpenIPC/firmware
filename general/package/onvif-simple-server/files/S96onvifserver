@@ -1,0 +1,59 @@
+#!/bin/sh
+
+ONVIF_CONFIG="/etc/onvif.conf"
+HTTPD_CONFIG="/etc/httpd_onvif.conf"
+WWW_PATH="/var/www"
+ONVIF_PORT=$(awk -F= '/^port=/{print $2}' ${ONVIF_CONFIG})
+DAEMON="httpd"
+PIDFILE="/var/run/httpd_onvif.pid"
+DAEMON_ARGS="-p $ONVIF_PORT -h $WWW_PATH -c $HTTPD_CONFIG -f"
+
+start() {
+	echo -n "Starting ONVIF HTTPD server: "
+
+	fw_version="OpenIPC $(grep "OPENIPC_VERSION" /etc/os-release | cut -d= -f2 | tr -d '"')"
+	network_interface=$(ip route | awk '/default/ {print $5}' | head -n1)
+	network_macaddr=$(cat /sys/class/net/${network_interface}/address | sed 's/://g')
+	soc=$(ipcinfo --chip-name)
+
+	sed -i "s/^firmware_ver=.*/firmware_ver=$fw_version/" $ONVIF_CONFIG
+	sed -i "s/^hardware_id=.*/hardware_id=$soc/" $ONVIF_CONFIG
+	sed -i "s/^serial_num=.*/serial_num=$network_macaddr/" $ONVIF_CONFIG
+	sed -i "s/^ifs=.*/ifs=$network_interface/" $ONVIF_CONFIG
+	echo -e "A:*\n/cgi-bin*:*\n" > $HTTPD_CONFIG
+
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
+	if [ $? -eq 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+}
+
+stop() {
+	echo -n "Stopping ONVIF HTTPD server: "
+	start-stop-daemon -K -q -p "$PIDFILE"
+	if [ $? -eq 0 ]; then
+		rm -f "$PIDFILE"
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+}
+
+case "$1" in
+	start|stop)
+		$1
+		;;
+
+	restart)
+		stop
+		sleep 3
+		start
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart}"
+		exit 1
+		;;
+esac

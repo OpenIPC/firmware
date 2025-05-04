@@ -1,0 +1,287 @@
+#!/bin/sh
+#
+# This is part of OpenIPC.org project | 2025.02.18
+#
+
+# Board
+board=demo
+
+# SoC detect
+chipid=$(ipcinfo --chip-name)
+
+# Memory config
+mem_start=0x40000000 # phy mem start
+
+mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+mem_total=${mem_total:=64}
+
+os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
+os_mem_size=${os_mem_size:=32}
+
+YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
+
+cd /lib/modules/$(uname -r)/goke/
+
+report_error() {
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+calc_mmz_info() {
+        mmz_start=$(echo "$mem_start $os_mem_size" |
+                awk 'BEGIN { temp = 0; }
+        {       
+                temp = $1/1024/1024 + $2;
+        }       
+        END { printf("0x%x00000\n", temp); }')
+
+        mmz_size=$(echo "$mem_total $os_mem_size" |
+                awk 'BEGIN { temp = 0; }
+        {
+                temp = $1 - $2;
+        }
+        END { printf("%dM\n", temp); }')
+        echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+}
+
+insert_osal() {
+	calc_mmz_info
+	modprobe xm_osal mmz_allocator=xmedia mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+}
+
+insert_detect() {
+	modprobe xm_sysconfig chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
+	insert_osal
+	insmod xm_base.ko
+	modprobe xm_isp
+	modprobe xm_isp_sensor_i2c
+	modprobe xm_isp_sensor_spi
+}
+
+remove_detect() {
+	rmmod -w xm_isp_sensor_spi
+	rmmod -w xm_isp_sensor_i2c
+	rmmod -w xm_isp
+	rmmod -w xm_base
+	rmmod -w xm_osal >/dev/null 2>&1
+	rmmod -w xm_sys_config
+}
+
+insert_audio() {
+	insmod xm_aio.ko
+	insmod xm_ai.ko
+	insmod xm_ao.ko
+	insmod xm_aenc.ko
+	insmod xm_adec.ko
+	insmod xm_acodec.ko
+	echo "insert audio"
+}
+
+remove_audio() {
+	rmmod -w xm_acodec
+	rmmod -w xm_adec
+	rmmod -w xm_aenc
+	rmmod -w xm_ao
+	rmmod -w xm_ai
+	rmmod -w xm_aio
+	echo "remove audio"
+}
+
+insert_isp() {
+	modprobe xm_isp
+}
+
+insert_isp_piris() {
+	if [ "${chipid}" == "gk7605v100" -a "${board}" == "demo" ]; then
+		modprobe xm_isp_piris
+	fi
+}
+
+insert_ko() {
+	if [ "$SENSOR" == "bt656" ] || [ "$SENSOR" == "jxf23_dc" ]; then
+		YUV_TYPE0=1
+	fi
+	modprobe xm_sysconfig chip=${chipid} sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
+	insert_osal
+	insmod xm_base.ko
+	insmod xm_sys.ko
+	# insmod xm_tde.ko
+	insmod xm_rgn.ko
+	insmod xm_vgs.ko max_vgs_job=20 max_vgs_node=20 max_vgs_task=20
+	insmod xm_vi.ko
+	insert_isp
+	insmod xm_vpss.ko
+	# insmod xm_vo.ko # unused on XmIPC
+	# insmod gfbg.ko video="gfbg:vram0_size:1620" # unused on XmIPC  # default fb0:D1
+	insmod xm_chnl.ko
+	insmod xm_vedu.ko
+	insmod xm_rc.ko
+	insmod xm_venc.ko VencMaxChnNum=3
+	insmod xm_h264e.ko
+	insmod xm_h265e.ko
+	insmod xm_jpege.ko
+	insmod xm_ive.ko save_power=0
+	modprobe xm_isp_pwm
+	modprobe xm_isp_sensor_i2c
+	modprobe xm_isp_sensor_spi
+	# insert_isp_piris # unused on XmIPC
+	# insert_sil9024; # unused on XmIPC  # BT1120
+	insert_audio
+	modprobe xm_mipi_rx
+	# insmod xm_pm.ko # unused on XmIPC
+	# modprobe xm_wdt # temporarily disabled
+}
+
+remove_ko() {
+	# rmmod -w xm_wdt
+	# rmmod -w xm_pm
+	remove_audio
+	rmmod -w xm_mipi_rx
+	# rmmod -w xm_isp_piris
+	# rmmod -w sil9024 &> /dev/null
+	rmmod -w xm_ive
+	rmmod -w xm_rc
+	rmmod -w xm_jpege
+	rmmod -w xm_h264e
+	rmmod -w xm_h265e
+	rmmod -w xm_venc
+	rmmod -w xm_vedu
+	rmmod -w xm_chnl
+	# rmmod -w gfbg
+	# rmmod -w xm_vo
+	rmmod -w xm_vpss
+	rmmod -w xm_isp
+	rmmod -w xm_vi
+	rmmod -w xm_vgs
+	rmmod -w xm_rgn
+	# rmmod -w xm_tde
+	rmmod -w xm_isp_sensor_i2c &>/dev/null
+	rmmod -w xm_isp_sensor_spi &>/dev/null
+	rmmod -w xm_isp_pwm
+	rmmod -w xm_sys
+	rmmod -w xm_base
+	rmmod -w xm_osal
+	rmmod -w xm_sys_config
+}
+
+load_usage() {
+	echo "Usage:  ./load_goke [-option] [sensor_name]"
+	echo "options:"
+	echo "    -i                       insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a                       remove modules first, then insert modules"
+	echo "    -sensor sensor_name      config sensor type [default: imx307]"
+	echo "    -h                       help information"
+	echo -e "Available sensors: gc2053 imx307 imx327 imx335 os05a sc2231 sc3235 sc4236  etc."
+	echo -e "for example: ./load_goke -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
+}
+
+######################parse arg###################################
+b_arg_sensor0=0
+b_arg_sensor1=0
+b_arg_yuv_type0=0
+b_arg_insmod=0
+b_arg_remove=0
+b_arg_os_mem=0
+b_arg_board=0
+
+for arg in $@; do
+	if [ $b_arg_sensor0 -eq 1 ]; then
+		b_arg_sensor0=0
+		SENSOR=$arg
+	fi
+
+	if [ $b_arg_os_mem -eq 1 ]; then
+		b_arg_os_mem=0
+		os_mem_size=$arg
+
+		if [ -z $os_mem_size ]; then
+			echo "[error] os_mem_size is null"
+			exit
+		fi
+	fi
+
+	if [ $b_arg_yuv_type0 -eq 1 ]; then
+		b_arg_yuv_type0=0
+		YUV_TYPE0=$arg
+	fi
+
+	if [ $b_arg_board -eq 1 ]; then
+		b_arg_board=0
+		board=$arg
+	fi
+
+	case $arg in
+	"-i")
+		b_arg_insmod=1
+		;;
+	"-r")
+		b_arg_remove=1
+		;;
+	"-a")
+		b_arg_insmod=1
+		b_arg_remove=1
+		;;
+	"-h")
+		load_usage
+		;;
+	"-sensor0")
+		b_arg_sensor0=1
+		;;
+	"-sensor")
+		b_arg_sensor0=1
+		;;
+	"-osmem")
+		b_arg_os_mem=1
+		;;
+	"-yuv0")
+		b_arg_yuv_type0=1
+		;;
+	"-board")
+		b_arg_board=1
+		;;
+	esac
+done
+#######################parse arg end########################
+if [ $os_mem_size -ge $mem_total ]; then
+	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+	exit
+fi
+
+#######################Action###############################
+
+if [ $# -lt 1 ]; then
+	load_usage
+	exit 0
+fi
+
+if [ $b_arg_insmod -eq 1 ]; then
+	if [ -n "$SENSOR" ]; then
+		logger -s -p daemon.info -t goke "SENSOR: ${SENSOR}"
+	else
+		if fw_printenv -n sensor >/dev/null; then
+			export SENSOR=$(fw_printenv -n sensor)
+			logger -s -p daemon.info -t goke "Get data from U-Boot ENV and set SENSOR as ${SENSOR}"
+		else
+			insert_detect
+			SENSOR_DETECT=$(ipcinfo --short-sensor)
+			export SENSOR=${SENSOR_DETECT:=unknown}
+			remove_detect
+			logger -s -p daemon.info -t goke "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+			fw_setenv sensor $SENSOR && logger -s -p daemon.info -t goke "Writing ${SENSOR} to U-Boot ENV"
+		fi
+	fi
+fi
+
+if [ $b_arg_remove -eq 1 ]; then
+	remove_ko
+fi
+
+if [ "$SENSOR" = "unknown" ]; then
+	logger -s -p daemon.err -t goke "SENSOR is not detected, aborting..."
+	exit 1
+else
+	if [ $b_arg_insmod -eq 1 ]; then
+		insert_ko
+	fi
+fi

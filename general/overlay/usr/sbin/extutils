@@ -46,6 +46,26 @@ case "$CMD" in
 		fi
 		;;
 
+        sysinfo)
+		echo ""
+		echo "Firmware:"
+		echo -e "  $(grep -e OPENIPC_VERSION /etc/os-release)\n"
+		echo "Majestic:"
+		echo -e "  internal - $(/rom/usr/bin/majestic -v)"
+		echo -e "  external - $(/usr/bin/majestic -v)\n"
+		echo "USB devices:"
+		echo -e "  $(lsusb | awk '{print $6}' | sort | tr '\n' ' ')\n"
+		echo "Memory:"
+		echo -e "  totalmem - $(fw_printenv -n totalmem)"
+		echo -e "  osmem    - $(fw_printenv -n osmem || echo 'not set')\n"
+		echo "Processor:"
+		echo -e "  detected - $(ipcinfo -ci | tr '\n' '\t')"
+		echo -e "  recorded - $(fw_printenv -n soc)\n"
+		echo "Sensor:"
+		echo -e "  detected - $(ipcinfo -s)"
+		echo -e "  recorded - $(fw_printenv -n sensor)\n"
+                ;;
+
 	*)
 		;;
 esac

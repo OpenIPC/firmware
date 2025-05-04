@@ -5,8 +5,8 @@
 ################################################################################
 
 RUBYFPV_SITE_METHOD = git
-RUBYFPV_SITE = https://github.com/PetruSoroaga/RubyFPV
-RUBYFPV_VERSION = f6bbc7725e0d635f993948c2888bbe0ce84f0e60
+RUBYFPV_SITE = https://github.com/RubyFPV/RubyFPV
+RUBYFPV_VERSION = HEAD
 
 RUBYFPV_DEPENDENCIES += libpcap iw
 
@@ -37,7 +37,7 @@ define RUBYFPV_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(@D)/ruby_rt_vehicle
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(@D)/ruby_tx_telemetry
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/sbin $(RUBYFPV_PKGDIR)/files/ruby_stop.sh
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/sbin $(RUBYFPV_PKGDIR)/files/version_ruby_base.txt
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/sbin $(@D)/version_ruby_base.txt
 endef
 
 $(eval $(generic-package))

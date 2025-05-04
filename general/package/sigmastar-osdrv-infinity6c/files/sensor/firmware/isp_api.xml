@@ -119,14 +119,14 @@
 			<ITEM Name="API_ExposureStrategyEx_PRIORITY" Type="U32" M="1" N="1" Min="0" Max="2" Text="Priority" GuiType="ComboBox" Param="BrightTTone,DarkTone,HDRAuto" Info="" />
 			<ITEM Name="API_ExposureStrategyEx_BT_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="BT_Num" GuiType="NumScroll" Param="" Info="Number of the points" />
 			<ITEM Name="API_ExposureStrategyEx_PAD1" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
-			<ITEM Name="API_ExposureStrategyEx_BT_BV" Type="S32" M="16" N="1" Min="-81920" Max="245760" Text="BT_BV" GuiType="DataGrid" Param="" Info="BV value, X-axis of all BT LUTs" />
+			<ITEM Name="API_ExposureStrategyEx_BT_BV" Type="S32" M="16" N="1" Min="-1048576" Max="245760" Text="BT_BV" GuiType="DataGrid" Param="" Info="BV value, X-axis of all BT LUTs" />
 			<ITEM Name="API_ExposureStrategyEx_BT_THDY" Type="U32" M="16" N="1" Min="0" Max="255" Text="BT_ThdY" GuiType="DataGrid" Param="" Info="Y threshold, Y-axis of the ThdY LUT" />
 			<ITEM Name="API_ExposureStrategyEx_BT_PERCENTx10" Type="U32" M="16" N="1" Min="0" Max="1000" Text="BT_Percentx10" GuiType="DataGrid" Param="" Info="Percent x10, Y-axis of Percent LUT" />
 			<ITEM Name="API_ExposureStrategyEx_BT_TARGETYx10" Type="U32" M="16" N="1" Min="0" Max="2550" Text="BT_TargetYx10" GuiType="DataGrid" Param="" Info="BTTargetY x10, Y-axis of BTTargetY LUT" />
 			<ITEM Name="API_ExposureStrategyEx_BT_MaxOffsetDown" Type="U32" M="16" N="1" Min="0" Max="2550" Text="BT_MaxOffsetDown" GuiType="DataGrid" Param="" Info="MaxOffsetDown, Y-axis of Offset LUT" />
 			<ITEM Name="API_ExposureStrategyEx_DT_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="DT_Num" GuiType="NumScroll" Param="" Info="Number of the points" />
 			<ITEM Name="API_ExposureStrategyEx_PAD2" Type="U16" M="1" N="1" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
-			<ITEM Name="API_ExposureStrategyEx_DT_BV" Type="S32" M="16" N="1" Min="-81920" Max="245760" Text="DT_BV" GuiType="DataGrid" Param="" Info="BV value, X-axis of all DT LUTs" />
+			<ITEM Name="API_ExposureStrategyEx_DT_BV" Type="S32" M="16" N="1" Min="-1048576" Max="245760" Text="DT_BV" GuiType="DataGrid" Param="" Info="BV value, X-axis of all DT LUTs" />
 			<ITEM Name="API_ExposureStrategyEx_DT_THDY" Type="U32" M="16" N="1" Min="0" Max="255" Text="DT_ThdY" GuiType="DataGrid" Param="" Info="Y threshold, Y-axis of the ThdY LUT" />
 			<ITEM Name="API_ExposureStrategyEx_DT_PERCENTx10" Type="U32" M="16" N="1" Min="0" Max="1000" Text="DT_Percentx10" GuiType="DataGrid" Param="" Info="Percent x10, Y-axis of Percent LUT" />
 			<ITEM Name="API_ExposureStrategyEx_DT_TARGETYx10" Type="U32" M="16" N="1" Min="0" Max="2550" Text="DT_TargetYx10" GuiType="DataGrid" Param="" Info="DTTargetY x10, Y-axis of DTTargetY LUT" />
@@ -149,7 +149,7 @@
 		<GROUP Name="AEHdrRatio" Id="5137" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
 			<ITEM Name="API_AEHdrRatio_NUM" Type="U32" M="1" N="1" Min="1" Max="16" Text="AE Hdr Points Num" GuiType="NumScroll" Param="" Info="Length of Upper bound array" />
 			<ITEM Name="API_AEHdrRatio_Y" Type="S32" M="16" N="1" Min="1" Max="65535" Text="Hdr Ratio" GuiType="DataGrid" Param="" Info="Luminance Offset" />
-			<ITEM Name="API_AEHdrRatio_X" Type="S32" M="16" N="1" Min="-81920" Max="245760" Text="By Total Gain" GuiType="DataGrid" Param="" Info="BV value" />
+			<ITEM Name="API_AEHdrRatio_X" Type="S32" M="16" N="1" Min="-1048576" Max="245760" Text="By Total Gain" GuiType="DataGrid" Param="" Info="BV value" />
 		</GROUP>
 		<GROUP Name="AEPlainShortTbl" Id="5131" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
 			<ITEM Name="API_AEPlainTbl_Short_EXPTBL" Type="U32" M="1" N="1" Min="1" Max="16" Text="NumOfShortExpoTblEntry" GuiType="NumScroll" Param="" Info="Number of Short Exposure Entry" />
@@ -255,9 +255,15 @@
 		</GROUP>
 		<GROUP Name="AWBStatisFilter" Id="6156" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
 			<ITEM Name="API_AWBStatisFilter_NodeNum" Type="U32" M="1" N="1" Min="0" Max="4" Text="NodeNum" GuiType="NumScroll" Param="" Info="" />
-			<ITEM Name="API_AWBStatisFilter_LutX_BV" Type="S32" M="4" N="1" Min="-81920" Max="245760" Text="LutX_BV" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AWBStatisFilter_LutX_BV" Type="S32" M="4" N="1" Min="-1048576" Max="245760" Text="LutX_BV" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_AWBStatisFilter_LutY_HighThd" Type="S32" M="4" N="1" Min="0" Max="255" Text="LutY_HighThd" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_AWBStatisFilter_LutY_LowThd" Type="S32" M="4" N="1" Min="0" Max="255" Text="LutY_LowThd" GuiType="DataGrid" Param="" Info="" />
+		</GROUP>
+		<GROUP Name="AWBStatisNr" Id="6157" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
+			<ITEM Name="API_AWBStatisNr_NodeNum" Type="U32" M="1" N="1" Min="0" Max="4" Text="NodeNum" GuiType="NumScroll" Param="" Info="" />
+			<ITEM Name="API_AWBStatisNr_LutX_BV" Type="S32" M="4" N="1" Min="-1048576" Max="245760" Text="LutX_BV" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AWBStatisNr_LutY_SfLvl" Type="S32" M="4" N="1" Min="0" Max="4" Text="LutY_SfLvl" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_AWBStatisNr_LutY_TfLvl" Type="S32" M="4" N="1" Min="0" Max="63" Text="LutY_TfLvl" GuiType="DataGrid" Param="" Info="" />
 		</GROUP>
 		<GROUP Name="WBMultiLSAttr" Id="6148" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="R">
 			<ITEM Name="API_AWBMultiLSAttr_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="Enable multi light source color calibration" />
@@ -299,7 +305,7 @@
 			<ITEM Name="API_AWBSpecialCase_Group2_CntLutY" Type="S32" M="4" N="4" Min="0" Max="100" Text="Group2.CntLut.Y" GuiType="DataGrid" Param="NODE(0~3/1):CASE(0~3/1)" Info="" />
 			<ITEM Name="API_AWBSpecialCase_BvLut_NodeNum" Type="U8" M="1" N="4" Min="0" Max="4" Text="BvLut.NodeNum" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="" />
 			<ITEM Name="API_AWBSpecialCase_BvLut_PAD" Type="U8" M="3" N="4" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
-			<ITEM Name="API_AWBSpecialCase_BvLut_X" Type="S32" M="4" N="4" Min="-81920" Max="245760" Text="BvLut.X" GuiType="DataGrid" Param="NODE(0~3/1):CASE(0~3/1)" Info="" />
+			<ITEM Name="API_AWBSpecialCase_BvLut_X" Type="S32" M="4" N="4" Min="-1048576" Max="245760" Text="BvLut.X" GuiType="DataGrid" Param="NODE(0~3/1):CASE(0~3/1)" Info="" />
 			<ITEM Name="API_AWBSpecialCase_BvLut_Y" Type="S32" M="4" N="4" Min="0" Max="1024" Text="BvLut.Y" GuiType="DataGrid" Param="NODE(0~3/1):CASE(0~3/1)" Info="" />
 			<ITEM Name="API_AWBSpecialCase_eMode" Type="U32" M="1" N="4" Min="0" Max="2" Text="Mode" GuiType="DataGrid" Param=":CASE(0~3/1)" Info="0:WeightCtrl, 1:Prefer CT, 2:Prefer RBgain" />
 			<ITEM Name="API_AWBSpecialCase_Weight" Type="U16" M="10" N="4" Min="0" Max="1024" Text="Weight" GuiType="DataGrid" Param="20000k,15000k,10000k,6500k,5000k,4000k,3000k,2300k,1500k,1000k:CASE(0~3/1)" Info="" />
@@ -790,24 +796,24 @@
 		<GROUP Name="HSV" Id="4120" ParamId="0" Action="RW" AutoMode="2~27" InFile="true" FileMode="W">
 			<ITEM Name="API_HSV_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="HSV Enable" />
 			<ITEM Name="API_HSV_OP_TYPE" Type="U32" M="1" N="1" Min="0" Max="1" Text="OpType" GuiType="ComboBox" Param="Auto,Manual" Info="Auto/Manual Mode" />
-			<ITEM Name="API_HSV_AUTO_HueByHueLUT" Type="S16" M="36" N="16" Min="-127" Max="127" Text="Auto.HuebyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_HueByHueLUT" Type="S16" M="36" N="16" Min="-127" Max="127" Text="Auto.HuebyHueLut" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_HueBySatLUT" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.HuebySatLut" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_HueByYLUT" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.HuebyYLut" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_HSV_AUTO_SatByHueLUT" Type="U16" M="36" N="16" Min="0" Max="255" Text="Auto.SatbyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_SatByHueLUT" Type="U16" M="36" N="16" Min="0" Max="255" Text="Auto.SatbyHueLut" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_SatBySatLUT" Type="S16" M="9" N="16" Min="-511" Max="511" Text="Auto.SatbySatLut" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_SatByYLUT" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.SatbyYLut" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_SatBySYLUT" Type="S16" M="9" N="16" Min="-511" Max="511" Text="Auto.SatbySYLut" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_HSV_AUTO_YByHueLUT" Type="S16" M="36" N="16" Min="-511" Max="511" Text="Auto.YbyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_YByHueLUT" Type="S16" M="36" N="16" Min="-511" Max="511" Text="Auto.YbyHueLut" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_YBySatLUT" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.YbySatLut" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_YByYLUT" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.YbyYLut" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_HSV_AUTO_HueByHueLUT_ByIso" Type="S16" M="36" N="16" Min="-127" Max="127" Text="Auto.HuebyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_HueByHueLUT_ByIso" Type="S16" M="36" N="16" Min="-127" Max="127" Text="Auto.HuebyHueLut_ByIso" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_HueBySatLUT_ByIso" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.HuebySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_HueByYLUT_ByIso" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.HuebyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_HSV_AUTO_SatByHueLUT_ByIso" Type="U16" M="36" N="16" Min="0" Max="255" Text="Auto.SatbyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_SatByHueLUT_ByIso" Type="U16" M="36" N="16" Min="0" Max="255" Text="Auto.SatbyHueLut_ByIso" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_SatBySatLUT_ByIso" Type="S16" M="9" N="16" Min="-511" Max="511" Text="Auto.SatbySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_SatByYLUT_ByIso" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.SatbyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_SatBySYLUT_ByIso" Type="S16" M="9" N="16" Min="-511" Max="511" Text="Auto.SatbySYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_HSV_AUTO_YByHueLUT_ByIso" Type="S16" M="36" N="16" Min="-511" Max="511" Text="Auto.YbyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_AUTO_YByHueLUT_ByIso" Type="S16" M="36" N="16" Min="-511" Max="511" Text="Auto.YbyHueLut_ByIso" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_YBySatLUT_ByIso" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.YbySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_YByYLUT_ByIso" Type="U16" M="9" N="16" Min="0" Max="255" Text="Auto.YbyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_VibranceEN" Type="U32" M="1" N="16" Min="0" Max="255" Text="Auto.VibranceEN" GuiType="DataGrid" Param="" Info="" />
@@ -816,24 +822,24 @@
 			<ITEM Name="API_HSV_AUTO_GrayProtectTH" Type="U16" M="1" N="16" Min="0" Max="1023" Text="Auto.GP.TH" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_DebugMode" Type="U8" M="1" N="16" Min="0" Max="4" Text="Auto.DebugMode" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_AUTO_PAD2" Type="U8" M="3" N="16" Min="0" Max="0" Text="" GuiType="" Param="" Info="" />
-			<ITEM Name="API_HSV_MANUAL_HueByHueLUT" Type="S16" M="36" N="1" Min="-127" Max="127" Text="Manual.HuebyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_HueByHueLUT" Type="S16" M="36" N="1" Min="-127" Max="127" Text="Manual.HuebyHueLut" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_HueBySatLUT" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.HuebySatLut" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_HueByYLUT" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.HuebyYLut" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_HSV_MANUAL_SatByHueLUT" Type="U16" M="36" N="1" Min="0" Max="255" Text="Manual.SatbyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_SatByHueLUT" Type="U16" M="36" N="1" Min="0" Max="255" Text="Manual.SatbyHueLut" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_SatBySatLUT" Type="S16" M="9" N="1" Min="-511" Max="511" Text="Manual.SatbySatLut" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_SatByYLUT" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.SatbyYLut" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_SatBySYLUT" Type="S16" M="9" N="1" Min="-511" Max="511" Text="Manual.SatbySYLut" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_HSV_MANUAL_YByHueLUT" Type="S16" M="36" N="1" Min="-511" Max="511" Text="Manual.YbyHueLut" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_YByHueLUT" Type="S16" M="36" N="1" Min="-511" Max="511" Text="Manual.YbyHueLut" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_YBySatLUT" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.YbySatLut" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_YByYLUT" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.YbyYLut" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_HSV_MANUAL_HueByHueLUT_ByIso" Type="S16" M="36" N="1" Min="-127" Max="127" Text="Manual.HuebyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_HueByHueLUT_ByIso" Type="S16" M="36" N="1" Min="-127" Max="127" Text="Manual.HuebyHueLut_ByIso" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_HueBySatLUT_ByIso" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.HuebySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_HueByYLUT_ByIso" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.HuebyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_HSV_MANUAL_SatByHueLUT_ByIso" Type="U16" M="36" N="1" Min="0" Max="255" Text="Manual.SatbyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_SatByHueLUT_ByIso" Type="U16" M="36" N="1" Min="0" Max="255" Text="Manual.SatbyHueLut_ByIso" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_SatBySatLUT_ByIso" Type="S16" M="9" N="1" Min="-511" Max="511" Text="Manual.SatbySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_SatByYLUT_ByIso" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.SatbyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_SatBySYLUT_ByIso" Type="S16" M="9" N="1" Min="-511" Max="511" Text="Manual.SatbySYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_HSV_MANUAL_YByHueLUT_ByIso" Type="S16" M="36" N="1" Min="-511" Max="511" Text="Manual.YbyHueLut_ByIso" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_HSV_MANUAL_YByHueLUT_ByIso" Type="S16" M="36" N="1" Min="-511" Max="511" Text="Manual.YbyHueLut_ByIso" GuiType="DataHSV2" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_YBySatLUT_ByIso" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.YbySatLut_ByIso" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_YByYLUT_ByIso" Type="U16" M="9" N="1" Min="0" Max="255" Text="Manual.YbyYLut_ByIso" GuiType="DataGrid" Param="" Info="" />
 			<ITEM Name="API_HSV_MANUAL_VibranceEN" Type="U32" M="1" N="1" Min="0" Max="255" Text="Manual.VibranceEN" GuiType="NumScroll" Param="" Info="" />
@@ -1306,7 +1312,7 @@
 			<ITEM Name="API_ALSC_CTRL_POINTS_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="Points Num" GuiType="NumScroll" Param="" Info="" />
 			<ITEM Name="API_ALSC_CTRL_PAD2" Type="U16" M="1" N="1" Min="0" Max="100" Text="" GuiType="" Param="" Info="" />
 			<ITEM Name="API_ALSC_CTRL_RATIO" Type="S32" M="16" N="1" Min="0" Max="128" Text="Ratio" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_ALSC_CTRL_BV" Type="S32" M="16" N="1" Min="-281920" Max="245760" Text="BV" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_ALSC_CTRL_BV" Type="S32" M="16" N="1" Min="-1048576" Max="245760" Text="BV" GuiType="DataGrid" Param="" Info="" />
 		</GROUP>
 		<GROUP Name="LSC" Id="4129" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
 			<ITEM Name="API_LSC_EN" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="" />
@@ -1330,7 +1336,7 @@
 			<ITEM Name="API_LSC_CTRL_POINTS_NUM" Type="U16" M="1" N="1" Min="1" Max="16" Text="Points Num" GuiType="NumScroll" Param="" Info="" />
 			<ITEM Name="API_LSC_CTRL_PAD2" Type="U16" M="1" N="1" Min="0" Max="100" Text="" GuiType="" Param="" Info="" />
 			<ITEM Name="API_LSC_CTRL_RATIO" Type="S32" M="16" N="1" Min="0" Max="128" Text="Ratio" GuiType="DataGrid" Param="" Info="" />
-			<ITEM Name="API_LSC_CTRL_BV" Type="S32" M="16" N="1" Min="-281920" Max="245760" Text="BV" GuiType="DataGrid" Param="" Info="" />
+			<ITEM Name="API_LSC_CTRL_BV" Type="S32" M="16" N="1" Min="-1048576" Max="245760" Text="BV" GuiType="DataGrid" Param="" Info="" />
 		</GROUP>
 		<GROUP Name="DARK_SHADING" Id="4160" ParamId="0" Action="RW" AutoMode="0" InFile="true" FileMode="W">
 			<ITEM Name="API_DARK_SHADING_ENABLE" Type="U32" M="1" N="1" Min="0" Max="1" Text="Enable" GuiType="CheckBox" Param="" Info="" />

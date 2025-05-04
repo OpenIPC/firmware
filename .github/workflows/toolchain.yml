@@ -8,58 +8,60 @@ env:
 jobs:
   toolchain:
     name: Toolchain
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
-        include:
+        platform:
           # Sigmastar
-          - {"platform": "ssc325"}
-          - {"platform": "ssc335"}
-          - {"platform": "ssc377"}
-          - {"platform": "ssc338q"}
+          - ssc325_lite
+          - ssc335_lite
+          - ssc377_lite
+          - ssc338q_lite
 
           # Hisilicon
-          - {"platform": "hi3516av100"}
-          - {"platform": "hi3516cv100"}
-          - {"platform": "hi3516cv200"}
-          - {"platform": "hi3516cv300"}
-          - {"platform": "hi3516cv500"}
-          - {"platform": "hi3516ev200"}
-          - {"platform": "hi3519v101"}
-          - {"platform": "hi3536cv100"}
-          - {"platform": "hi3536dv100"}
+          - hi3516av100_lite
+          - hi3516cv100_lite
+          - hi3516cv200_lite
+          - hi3516cv300_lite
+          - hi3516cv500_lite
+          - hi3516ev200_lite
+          - hi3519v101_lite
+          - hi3536cv100_lite
+          - hi3536dv100_lite
 
           # Goke
-          - {"platform": "gk7102"}
-          - {"platform": "gk7205v200"}
+          - gk7102_lite
+          - gk7205v200_lite
+          - gk7205v500_lite
 
           # Ingenic
-          - {"platform": "t20"}
-          - {"platform": "t21"}
-          - {"platform": "t31"}
-          - {"platform": "t40"}
+          - t20_lite
+          - t21_lite
+          - t31_lite
+          - t40_lite
 
           # Allwinner
-          - {"platform": "v851s"}
+          - v851s_lite
 
           # Fullhan
-          - {"platform": "fh8852v100"}
-          - {"platform": "fh8852v200"}
+          - fh8852v100_lite
+          - fh8852v200_lite
 
           # Grainmedia
-          - {"platform": "gm8136"}
+          - gm8136_lite
 
           # Novatek
-          - {"platform": "nt98562"}
+          - nt98562_lite
 
           # Rockchip
-          - {"platform": "rv1126"}
+          - rv1106_lite
+          - rv1126_lite
 
           # Xiongmai
-          - {"platform": "xm510"}
-          - {"platform": "xm530"}
+          - xm510_lite
+          - xm530_lite
 
     steps:
       - name: Checkout source
@@ -67,12 +69,11 @@ jobs:
 
       - name: Build toolchain
         run: |
-          CONFIG=$(find br-ext-chip-* -name ${{matrix.platform}}_lite_defconfig)
-          GCC=$(make BOARD=${CONFIG} toolname).tgz
+          GCC=$(make BOARD=${{matrix.platform}} toolname).tgz
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}
           echo ${URL}
           if ! wget -q --spider ${URL}; then
-            make BOARD=${CONFIG} toolchain
+            make BOARD=${{matrix.platform}} toolchain
             SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
             mv ${SDK} ${GCC}
             echo GCC=${GCC} >> ${GITHUB_ENV}

@@ -1,16 +1,9 @@
 #!/bin/sh
-#
-# OpenIPC.org | 2024
-#
+# OpenIPC.org | 2025
+scr_version=1.0.47
 
-scr_version=1.0.43
-
-args=" $@"
-
+args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
-IPCINFO=/tmp/ipcinfo
-
-[ -f ${IPCINFO} ] && chmod +x ${IPCINFO} || IPCINFO=$(which ipcinfo)
 
 echo_c() {
 	# 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan, 37 white, 38 grey
@@ -61,11 +54,11 @@ do_update_rootfs() {
 	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$soc"
 	echo_c 33 "\nRootFS"
 	echo "Update rootfs from $x"
-	[ ! -f "$x" ] && die "File ${x} not found"
+	[ ! -f "$x" ] && die "File $x not found"
 	local y=/tmp/rootfs
 	if mkdir -p "$y" && loop=$(losetup -f) && losetup "$loop" "$x" && mount "$loop" "$y"; then
 		rootfs_version=$(get_system_version "$y")
-		check_soc "$(head -1 ${y}/etc/hostname | cut -d- -f2)"
+		check_soc "$(head -1 $y/etc/hostname | cut -d- -f2)"
 		compare_versions "$system_version" "$rootfs_version" && exit_update=1
 		umount "$y" && rm -rf "$y" && losetup -d "$loop"
 		[ "1" = "$exit_update" ] && return 0
@@ -86,15 +79,18 @@ do_wipe_overlay() {
 download_firmware() {
 	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
-	[ "$branch_dev" = "1" ] && branch="dev" || branch="latest"
 	osr=$(get_system_build)
-	ftype="nor"
-	build="${soc}-${ftype}-${osr}"
-	[ -z "$url" ] && url=$(fw_printenv -n upgrade || echo "https://github.com/OpenIPC/firmware/releases/download/${branch}/openipc.${build}.tgz")
-	echo "Download from $url"
-	[ -z "$HASERLVER" ] && progress="-#" || progress="-s"
-	[ "$(curl -o /dev/null -s -k -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
-	curl --connect-timeout 30 -s -k -m 120 -L "$url" ${progress} -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+	build="$soc-nor-$osr"
+	if [ -n "$archive" ]; then
+		[ ! -f "$archive" ] && die "File $archive not found"
+		gzip -d "$archive" -c | tar xf - -C /tmp && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
+	else
+		[ "$osr" = "lite" ] || [ "$osr" = "ultimate" ] && repo=firmware
+		[ -z "$url" ] && url=$(fw_printenv -n upgrade || echo "https://github.com/OpenIPC/${repo:-builder}/releases/download/latest/openipc.$build.tgz")
+		echo "Download from $url"
+		[ "$(curl -o /dev/null -s -k -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
+		curl --connect-timeout 30 -s -k -m 120 -L "$url" -s -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+	fi
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 	fi
@@ -103,7 +99,8 @@ download_firmware() {
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
 	killall -q -3 majestic
-  sleep 1
+	sleep 1
+	/etc/init.d/S99rc.local stop
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
 	/etc/init.d/S02klogd stop
@@ -135,17 +132,17 @@ sync_time() {
 }
 
 self_update() {
-	if echo "${args}" | grep -E "\-(k|r|w|url)" >/dev/null 2>&1; then
+	if echo "$args" | grep -E "\-(k|r|w|url)" >/dev/null 2>&1; then
 		sync_time
 		echo -e "\nChecking for sysupgrade update..."
 		curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
 		if [ -f /tmp/sysupgrade ] && grep -q "#!/bin/sh" /tmp/sysupgrade; then
 			dstv=$(grep scr_version /tmp/sysupgrade | head -1 | cut -f 2 -d '=')
-			if ! [ "${scr_version}" = "${dstv}" ]; then
+			if ! [ "$scr_version" = "$dstv" ]; then
 				echo "A new version is available, trying to activate updated script..."
 				chmod +x /tmp/sysupgrade
 				echo -e "Done. Restarting...\n"
-				exec /tmp/sysupgrade ${args}
+				exec /tmp/sysupgrade $args
 				exit 1
 			else
 				echo "Same version. No update required."
@@ -166,9 +163,9 @@ check_sdcard() {
 		echo_c 34 "$d"
 		local f
 		for f in $stoplist; do
-			echo "- checking for ${d}/${f}"
-			if [ -f "${d}/${f}" ]; then
-				echo_c 31 "\nCannot upgrade! Recovery file ${d}/${f} found on the mounted SD card!"
+			echo "- checking for $d/$f"
+			if [ -f "$d/$f" ]; then
+				echo_c 31 "\nCannot upgrade! Recovery file $d/$f found on the mounted SD card!"
 				echo_c 37 "Please remove the card from the slot and restart sysupgrade."
 				exit 1
 			fi
@@ -194,12 +191,12 @@ get_kernel_version() {
 }
 
 get_system_info() {
-	vendor=$(${IPCINFO} -v)
+	vendor=$(ipcinfo -v)
 	soc=$(fw_printenv -n soc) || die "SoC is not defined in U-Boot environment"
 	kernel_device=$(get_device "kernel")
 	kernel_version=$(get_kernel_version "$kernel_device")
 	system_version=$(get_system_version "")
-	flash_type=$(${IPCINFO} -F)
+	flash_type=$(ipcinfo -F)
 }
 
 get_system_version() {
@@ -212,7 +209,7 @@ get_system_build() {
 
 print_sysinfo() {
 	get_system_info
-	echo_c 33 "OpenIPC System Updater v${scr_version}"
+	echo_c 33 "OpenIPC System Updater v$scr_version"
 	echo_c 36 "\nVendor\t$vendor\nSoC\t$soc\nKernel\t$kernel_version\nRootFS\t$system_version"
 }
 
@@ -220,20 +217,17 @@ print_usage() {
 	echo "
 Usage: $0 [options]
 Where:
-  -k                   Update kernel from online repository.
-  -r                   Update rootfs from online repository.
-  -d                   Update firmware from development branch.
-      --url=[URL]      Custom URL to update from (.tgz format).
-      --kernel=[FILE]  Update kernel from file (uImage format).
-      --rootfs=[FILE]  Update rootfs from file (squashfs format).
-      --force_md5      Do not validate MD5 hash.
-      --force_soc      Do not validate processor.
-      --force_ver      Do not validate release version.
-  -f, --force_all      Do not validate anything.
-  -n, --wipe_overlay   Wipe overlay partition.
-  -x, --no_reboot      Do not reboot after updating.
-  -z, --no_update      Do not update self.
-  -h, --help           Display this help and exit.
+  -k                    Update kernel from online repository.
+  -r                    Update rootfs from online repository.
+      --url=[URL]       Custom URL to update from (.tgz format).
+      --archive=[FILE]  Custom archive to update from (.tgz format).
+      --kernel=[FILE]   Update kernel from file (uImage format).
+      --rootfs=[FILE]   Update rootfs from file (squashfs format).
+  -f, --force_all       Do not validate anything.
+  -n, --wipe_overlay    Wipe overlay partition.
+  -x, --no_reboot       Do not reboot after updating.
+  -z, --no_update       Do not update self.
+  -h, --help            Display this help and exit.
 "
 }
 
@@ -252,33 +246,6 @@ reboot_system() {
 
 for i in "$@"; do
 	case $i in
-		-f | --force_all)
-			skip_md5=1
-			skip_soc=1
-			skip_ver=1
-			shift
-			;;
-
-		--force_md5)
-			skip_md5=1
-			shift
-			;;
-
-		--force_soc)
-			skip_soc=1
-			shift
-			;;
-
-		--force_ver)
-			skip_ver=1
-			shift
-			;;
-
-		-d)
-			branch_dev=1
-			shift
-			;;
-
 		-h | --help)
 			print_sysinfo
 			print_usage
@@ -298,11 +265,6 @@ for i in "$@"; do
 			shift
 			;;
 
-		-n | --wipe_overlay)
-			clear_overlay=1
-			shift
-			;;
-
 		-r)
 			update_rootfs=1
 			remote_update=1
@@ -316,13 +278,32 @@ for i in "$@"; do
 			shift
 			;;
 
-		-s)
-			silent_update=1
+		--url=*)
+			update_kernel=1
+			update_rootfs=1
+			remote_update=1
+			url="${i#*=}"
 			shift
 			;;
 
-		--url=*)
-			url="${i#*=}"
+		--archive=*)
+			update_kernel=1
+			update_rootfs=1
+			remote_update=1
+			skip_selfupdate=1
+			archive="${i#*=}"
+			shift
+			;;
+
+		-f | --force_all | --force_md5 | --force_soc | --force_ver)
+			skip_md5=1
+			skip_soc=1
+			skip_ver=1
+			shift
+			;;
+
+		-n | --wipe_overlay)
+			clear_overlay=1
 			shift
 			;;
 
@@ -333,6 +314,11 @@ for i in "$@"; do
 
 		-z | --no_update)
 			skip_selfupdate=1
+			shift
+			;;
+
+		-s)
+			silent_update=1
 			shift
 			;;
 
