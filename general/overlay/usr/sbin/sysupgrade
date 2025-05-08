@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.47
+scr_version=1.0.48
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -31,18 +31,17 @@ compare_versions() {
 
 do_update_kernel() {
 	local x=$1
-	[ -z "$x" ] && x="/tmp/uImage.$soc"
+	if [ -z "$x" ]; then
+		[ "$vendor" = "rockchip" ] && x="/tmp/zboot.img.$soc" || x="/tmp/uImage.$soc"
+	fi
 	echo_c 33 "\nKernel"
 	echo "Update kernel from $x"
 	[ ! -f "$x" ] && die "File $x not found"
 	if [ "1" != "$skip_soc" ]; then
 		local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
-		# FIXME: Ingenic kernels do not include proper SoC identifiers.
-		case "$soc" in
-			t31) [ "t" != "$ksoc" ] && die "Wrong SoC!" ;;
-			t21) [ "" != "$ksoc" ] && die "Wrong SoC!" ;;
-			*) check_soc "$ksoc"
-		esac
+		if [ "$vendor" != "ingenic" ] && [ "$vendor" != "rockchip" ]; then
+			check_soc "$ksoc"
+		fi
 		compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 	fi
 	set_progress flashcp -v "$x" "$kernel_device"
