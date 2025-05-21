@@ -136,6 +136,8 @@ video_settings() {
 	cli -s .outgoing.wfb true
 	cli -s .fpv.enabled true
 	cli -s .fpv.noiseLevel 1
+	cli -s .records.split 1
+	cli -s .records.notime true
 }
 
 start() {
