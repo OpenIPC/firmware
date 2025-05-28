@@ -7,17 +7,10 @@ date +GITHUB_VERSION="\"${GIT_BRANCH-local}+${GIT_HASH-build}, %Y-%m-%d"\" >> ${
 echo BUILD_OPTION=${OPENIPC_VARIANT} >> ${FILE}
 date +TIME_STAMP=%s >> ${FILE}
 
-CONF="USES_GLIBC=y|OSDRV_T30=y|OSDRV_V85X=y|LIBV4L=y|MAVLINK_ROUTER=y|RUBYFPV=y|WIFIBROADCAST=y|WIFIBROADCAST_NG=y|AUDIO_PROCESSING_OPENIPC=y"
-if ! grep -qP ${CONF} ${BR2_CONFIG}; then
-	rm -f ${TARGET_DIR}/usr/lib/libstdc++*
-fi
-
-if grep -q "USES_MUSL=y" ${BR2_CONFIG}; then
-	ln -sf libc.so ${TARGET_DIR}/lib/ld-uClibc.so.0
-	ln -sf ../../lib/libc.so ${TARGET_DIR}/usr/bin/ldd
-fi
-
-LIST="${BR2_EXTERNAL_GENERAL_PATH}/scripts/excludes/${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}.list"
-if [ -f ${LIST} ]; then
-	xargs -a ${LIST} -I % rm -f ${TARGET_DIR}%
-fi
+cd ${BINARIES_DIR}
+ext4_pos="$(fdisk  -l sysimage-sdcard.img | grep sysimage-sdcard.img2 | cut -d ' ' -f2)"
+dd if=rootfs.ext4  of=sysimage-sdcard.img seek=${ext4_pos} conv=notrunc
+gzip -k -f sysimage-sdcard.img
+chmod a+r sysimage-sdcard.img.gz
+cd -
+echo -e "k230 image is \033[31m ${BINARIES_DIR}/sysimage-sdcard.img.gz \033[0m"
