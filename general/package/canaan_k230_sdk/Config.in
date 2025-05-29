@@ -15,9 +15,9 @@ config BR2_PACKAGE_CANAAN_K230_SDK_BUILD_FROM_SRC
 
 	  https://github.com/kendryte/k230_linux_sdk/
 
-config BR2_PACKAGE_CANAAN_K230_SDK_BOARD
-	string "k230 board name"
-	default "01studio"
+config BR2_PACKAGE_CANAAN_K230_SDK_CONF
+	string "k230 sdk  config"
+	default "k230_canmv_01studio_defconfig"
 	help
 	  canaan k230 SoCs SDK
 
