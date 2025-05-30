@@ -1,0 +1,54 @@
+From 99d0e3e9da9aaf4c4cbf6a4b10d2ad558e65ed61 Mon Sep 17 00:00:00 2001
+From: wangjianxin <wangjianxin@canaan-creative.com>
+Date: Fri, 30 May 2025 11:53:35 +0800
+Subject: [PATCH] support gcc 14
+
+---
+ toolchain/Config.in                                          | 5 +++++
+ .../toolchain-external-custom/Config.in.options              | 4 ++++
+ 2 files changed, 9 insertions(+)
+ mode change 100644 => 100755 toolchain/Config.in
+ mode change 100644 => 100755 toolchain/toolchain-external/toolchain-external-custom/Config.in.options
+
+diff --git a/toolchain/Config.in b/toolchain/Config.in
+old mode 100644
+new mode 100755
+index bd4f80bd..d0483628
+--- a/toolchain/Config.in
++++ b/toolchain/Config.in
+@@ -792,10 +792,15 @@ config BR2_TOOLCHAIN_GCC_AT_LEAST_13
+ 	bool
+ 	select BR2_TOOLCHAIN_GCC_AT_LEAST_12
+ 
++config BR2_TOOLCHAIN_GCC_AT_LEAST_14
++	bool
++	select BR2_TOOLCHAIN_GCC_AT_LEAST_13
++
+ # This order guarantees that the highest version is set, as kconfig
+ # stops affecting a value on the first matching default.
+ config BR2_TOOLCHAIN_GCC_AT_LEAST
+ 	string
++	default "14"	if BR2_TOOLCHAIN_GCC_AT_LEAST_14
+ 	default "13"	if BR2_TOOLCHAIN_GCC_AT_LEAST_13
+ 	default "12"	if BR2_TOOLCHAIN_GCC_AT_LEAST_12
+ 	default "11"	if BR2_TOOLCHAIN_GCC_AT_LEAST_11
+diff --git a/toolchain/toolchain-external/toolchain-external-custom/Config.in.options b/toolchain/toolchain-external/toolchain-external-custom/Config.in.options
+old mode 100644
+new mode 100755
+index 5554d567..838ac79a
+--- a/toolchain/toolchain-external/toolchain-external-custom/Config.in.options
++++ b/toolchain/toolchain-external/toolchain-external-custom/Config.in.options
+@@ -46,6 +46,10 @@ choice
+ 	  Set to the gcc version that is used by your external
+ 	  toolchain.
+ 
++config BR2_TOOLCHAIN_EXTERNAL_GCC_14
++	bool "14.x"
++	select BR2_TOOLCHAIN_GCC_AT_LEAST_14
++
+ config BR2_TOOLCHAIN_EXTERNAL_GCC_13
+ 	bool "13.x"
+ 	select BR2_TOOLCHAIN_GCC_AT_LEAST_13
+-- 
+2.46.0
+
