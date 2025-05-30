@@ -39,8 +39,9 @@ prepare:
 		mkdir -p $(TARGET); tar -xf $(BR_FILE) -C $(TARGET); \
 		if grep "BR2_OPENIPC_SOC_FAMILY=\"k230\"" $(CONFIG) >/dev/null ; then \
 			$(TARGET)/buildroot-$(BR_VER)/support/scripts/apply-patches.sh -s \
-			$(TARGET)/buildroot-$(BR_VER)/ general/package/canaan_k230_sdk/buildroot_patch/ *.patch; fi; \
-		fi
+			$(TARGET)/buildroot-$(BR_VER)/ \
+			general/package/canaan_k230_sdk/buildroot_patch/      *.patch;   fi; \
+	fi
 
 
 help:
