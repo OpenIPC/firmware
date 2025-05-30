@@ -21,8 +21,6 @@ k230_openipc_img_replace_rootfs()
 k230_openipc_img_env_replace()
 {
     cd ${BINARIES_DIR}
-    env;
-    mkenvimage -h;
     mkenvimage  -s 0x10000 -o env.env  ${BR2_EXTERNAL}/package/canaan_k230_sdk/k230_env.env
 
     dd if=env.env  of=sysimage-sdcard.img seek=3840 conv=notrunc
