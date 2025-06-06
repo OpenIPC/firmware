@@ -13,7 +13,7 @@ my_umount() {
 my_mount() {
 	mkdir -p "${destdir}/$1" || exit 1
 
-	if ! mount -t auto -o sync "/dev/$1" "${destdir}/$1"; then
+	if ! mount -t auto "/dev/$1" "${destdir}/$1"; then
 		# failed to mount, clean up mountpoint
 		rmdir "${destdir}/$1"
 		exit 1
