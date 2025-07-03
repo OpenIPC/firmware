@@ -1,0 +1,151 @@
+all_profiles: [bl-r8812af1,bl-m8812eu2,bl-m8731bu4,default]
+profiles:
+  bl-r8812af1:
+    description: "Not tested with instruments yet."
+    bw: [20,40]
+    stbc: [0,1]
+    ldpc_rx: [0,1]
+    ldpc_tx: [0,1]
+    guard: [long,short]
+    mcs: [0,1,2,3,4,5,6,7]
+    max_mtu: 3993
+    tx_power:
+      mcs0: [-1000,-3500,-4000,-4500,-5100] 
+      mcs1: [-1000,-3000,-3750,-4000,-4500]
+      mcs2: [-1000,-3000,-3500,-3750,-4000]
+      mcs3: [-1000,-2500,-3000,-3500,-3750]
+      mcs4: [-1000,-2500,-3000,-3000,-3500]
+      mcs5: [-1000,-2000,-2000,-2000,-2000]
+      mcs6: [-1000,-2000,-2000,-2000,-2000]
+      mcs7: [-1000,-2000,-2000,-2000,-2000]
+    pwr_mw:
+      0: [1mW,1mW,1mW,1mW,1mW,1mW,1mW,1mW]
+      1: [25mW,25mW,25mW,25mW,25mW,25mW,25mW,25mW]
+      2: [40W,40mW,40mW,30mW,30mW,30mW,30mW,30mW]
+      3: [70mW,70mW,70mW,60mW,60mW,60mW,50mW,50mW]
+      4: [100mW,100mW,100mW,90mW,90mW,80mW,80mW,70mW]
+    link_modes:
+      20mhz: [mcs0_20mhz_lgi, mcs1_20mhz_lgi, mcs2_20mhz_lgi, mcs3_20mhz_lgi, mcs4_20mhz_sgi, mcs5_20mhz_sgi]
+      40mhz: [mcs1_40mhz_lgi, mcs2_40mhz_lgi, mcs3_40mhz_lgi, mcs4_40mhz_sgi, mcs5_40mhz_sgi]
+  bl-m8812eu2:
+    description: "Not tested with instruments yet."
+    bw: [10,20]
+    stbc: [0,1]
+    ldpc_rx: [0,1]
+    ldpc_tx: [0,1]
+    guard: [long,short]
+    mcs: [0,1,2,3,4,5,6,7]
+    max_mtu: 3993
+    tx_power:
+      mcs0: [50,200,1400,2500,2900]
+      mcs1: [50,200,1400,2500,2750]
+      mcs2: [50,200,1500,2250,2500]
+      mcs3: [50,200,1600,2000,2250]
+      mcs4: [50,200,1750,1750,1900]
+      mcs5: [50,200,1750,1750,1900]
+      mcs6: [50,200,1500,1500,1900]
+      mcs7: [50,200,1250,1250,1900]
+    pwr_mw:
+      0: [1mW,1mW,1mW,1mW,1mW,1mW,1mW,1mW]
+      1: [25mW, 25mW,25mW,25mW,25mW,25mW,25mW,25mW]
+      2: [400mW,400mW,400mW,400mW,400mW,400mW,400mW,350mW]
+      3: [600mW,600mW,600mW,600mW,500mW,400mW,400mW,350mW]
+      4: [800mW,800mW,700mW,700mW,550mW,425mW,425mW,375mW]
+    link_modes:
+      10mhz: [mcs0_10mhz_lgi, mcs1_10mhz_lgi, mcs2_10mhz_lgi, mcs2_10mhz_sgi, mcs3_10mhz_lgi, mcs3_10mhz_sgi]
+      20mhz: [mcs0_20mhz_lgi, mcs1_20mhz_lgi, mcs2_20mhz_lgi, mcs3_20mhz_lgi, mcs4_20mhz_sgi, mcs5_20mhz_sgi]
+    channels:
+      10: 
+        dfs: [100,104,108,112,116,120,124,128,132,136,140,144]
+        non-dfs: [36,40,44,48,149,153,157,161,165]      
+      20:
+        dfs: [100,104,108,112,116,120,124,128,132,136,140,144]
+        non-dfs: [36,40,44,48,149,153,157,161,165]
+    presets:
+      all_presets: [long_range, medium_range,short_range,cinematic]
+      long_range:
+        description: "Long range datalink profile with low bitrate and high resilience. Recommended for 30-60fps video or for challenging enviroments."
+        video_bitrate: 4096
+        link_mode: mcs1_20mhz_lgi
+        fec_k: 4
+        fec_n: 6
+        mlink: 1200
+        recommended_diversity: [1,2,3,4]
+      medium_range:
+        description: "Medium range datalink profile with medium bitrate and medium resilience."
+        video_bitrate: 8192
+        link_mode: mcs2_20mhz_lgi
+        fec_k: 8
+        fec_n: 12
+        mlink: 2000
+        recommended_diversity: [1,2,3,4]
+      short_range:
+        description: "Short range datalink profile with medium-high bitrate and medium resilience."
+        video_bitrate: 12288
+        link_mode: mcs3_20mhz_lgi
+        fec_k: 8
+        fec_n: 12
+        mlink: 2400
+        recommended_diversity: [2,3,4]
+      cinematic:
+        description: "Very short range datalink profile with high bitrate and low resilience."
+        video_bitrate: 22600
+        link_mode: mcs5_20mhz_sgi
+        fec_k: 4
+        fec_n: 6
+        mlink: 3200
+        recommended_diversity: [3,4]
+  bl-m8731bu4:
+    description: "Tested with real instruments and mapped."
+    bw: [10,20,40]
+    stbc: [0]
+    ldpc_rx: [0]
+    ldpc_tx: [0,1]
+    guard: [long,short]
+    mcs: [0,1,2,3,4,5,6,7]
+    max_mtu: 3993
+    tx_power:
+      mcs0: [50, 1300, 1600, 1800, 2000]
+      mcs1: [50, 1300, 1500, 1600, 1800]
+      mcs2: [50, 1300, 1500, 1500, 1600]
+      mcs3: [50, 1200, 1400, 1500, 1500]
+      mcs4: [50, 1200, 1400, 1200, 1500]
+      mcs5: [50, 1200, 1200, 1200, 1400]
+      mcs6: [50, 1000, 1000, 1000, 1200]
+      mcs7: [50, 1000, 1000, 1000, 1000]
+    pwr_mw:
+      0: [1mW, 1mW, 1mW, 1mW, 1mW, 1mW, 1mW, 1mW]
+      1: [25mW, 25mW, 25mW, 25mW, 25mW, 16mW, 13mW, 8mW]
+      2: [80mW, 66mW, 58mW, 25mW, 25mW, 16mW, 13mW, 8mW]
+      3: [158mW, 148mW, 79mW, 25mW, 25mW, 16mW, 13mW, 8mW]
+      4: [213mW, 200mW, 79mW, 25mW, 25mW, 16mW, 13mW, 8mW]
+    link_modes:
+      10mhz: [mcs0_10mhz_lgi, mcs1_10mhz_lgi, mcs2_10mhz_lgi, mcs2_10mhz_sgi, mcs3_10mhz_lgi, mcs3_10mhz_sgi]
+      20mhz: [mcs0_20mhz_lgi, mcs1_20mhz_lgi, mcs2_20mhz_lgi, mcs3_20mhz_lgi, mcs4_20mhz_sgi, mcs5_20mhz_sgi]
+      40mhz: [mcs1_40mhz_lgi, mcs2_40mhz_lgi, mcs3_40mhz_lgi, mcs4_40mhz_sgi, mcs5_40mhz_sgi]
+  default:
+    description: "Default burnproof profile. Change to your correct profile."
+    bw: [20]
+    stbc: [0]
+    ldpc_rx: [0]
+    ldpc_tx: [0]
+    guard: [long]
+    mcs: [0,1,2]
+    max_mtu: 1500
+    tx_power:
+      mcs0: [50]
+      mcs1: [50]
+      mcs2: [50]
+      mcs3: [50]
+      mcs4: [50]
+      mcs5: [50]
+      mcs6: [50]
+      mcs7: [50]
+    pwr_mw:
+      0: 1mW
+      1: 1mW
+      2: 1mW
+      3: 1mW
+      4: 1mW
+    link_modes:
+      20mhz: [mcs0_20mhz_lgi, mcs1_20mhz_lgi, mcs2_20mhz_lgi, mcs3_20mhz_lgi, mcs4_20mhz_sgi, mcs5_20mhz_sgi]
