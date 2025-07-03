@@ -28,7 +28,7 @@ define ADAPTIVE_LINK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/alink.conf
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/wlan_profiles.yaml
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/wlan_adapters.yaml
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/txprofiles/txprofiles.conf
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/alink_drone
 endef
