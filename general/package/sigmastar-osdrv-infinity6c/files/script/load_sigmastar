@@ -5,7 +5,6 @@
 
 MODULE=/lib/modules/5.10.61/sigmastar
 SENSOR=$(fw_printenv -n sensor)
-BUILD=$(grep BUILD_OPTION /etc/os-release | cut -d= -f2)
 
 detect_sensor() {
 	insmod $MODULE/sensor_config.ko
@@ -15,7 +14,7 @@ detect_sensor() {
 	fi
 
 	SENSOR=$(ipcinfo -s)
-	if [ "$BUILD" != "fpv" ]; then
+	if ! grep -q fpv /etc/os-release; then
 		fw_setenv sensor "$SENSOR"
 	fi
 }
