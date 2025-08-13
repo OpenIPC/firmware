@@ -1,6 +1,7 @@
 #!/bin/bash
 DATE=$(date +%y.%m.%d)
 FILE=${TARGET_DIR}/usr/lib/os-release
+set -e
 
 echo OPENIPC_VERSION=${DATE:0:1}.${DATE:1} >> ${FILE}
 date +GITHUB_VERSION="\"${GIT_BRANCH-local}+${GIT_HASH-build}, %Y-%m-%d"\" >> ${FILE}

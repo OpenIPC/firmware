@@ -14,8 +14,8 @@ k230_download_url := $(shell \
 	fi ; )
 
 
-CANAAN_K230_SDK_EXTRA_DOWNLOADS := $(k230_download_url)/$(call qstrip ,$(BR2_PACKAGE_CANAAN_K230_SDK_CONF))/sysimage-sdcard.img.gz
-CANAAN_K230_SDK_EXTRA_DOWNLOADS += $(k230_download_url)/$(call qstrip ,$(BR2_PACKAGE_CANAAN_K230_SDK_CONF))/rootfs.tar.xz
+CANAAN_K230_SDK_EXTRA_DOWNLOADS := $(k230_download_url)/$(call qstrip ,$(BR2_PACKAGE_CANAAN_K230_SDK_CONF))_sysimage-sdcard.img.gz
+CANAAN_K230_SDK_EXTRA_DOWNLOADS += $(k230_download_url)/$(call qstrip ,$(BR2_PACKAGE_CANAAN_K230_SDK_CONF))_rootfs.tar.xz
 
 define CANAAN_K230_SDK_INSTALL_TARGET_CMDS
 	tar -xf $(CANAAN_K230_SDK_DL_DIR)/rootfs.tar.xz -C $(TARGET_DIR)
