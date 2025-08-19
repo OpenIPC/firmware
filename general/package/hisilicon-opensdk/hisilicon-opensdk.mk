@@ -34,6 +34,8 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/sony_imx335/libsns_imx335.so $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/sony_imx307/libsns_imx307.so $(TARGET_DIR)/usr/lib/sensors
+	#
+	# Using non-original SDK causes a lot of noise, the problem is not solved yet. Please use binary module or build this driver with original SDK from HiSilicon/Goke.
   # $(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/imagedesign_mis2008/libsns_mis2008.so $(TARGET_DIR)/usr/lib/sensors
 endef
 
