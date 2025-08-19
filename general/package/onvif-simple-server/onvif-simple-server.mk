@@ -5,7 +5,7 @@
 ################################################################################
 
 ONVIF_SIMPLE_SERVER_SITE = $(call github,roleoroleo,onvif_simple_server,$(ONVIF_SIMPLE_SERVER_VERSION))
-ONVIF_SIMPLE_SERVER_VERSION = e2370712b333068afb08051fe3046aa2324148ff
+ONVIF_SIMPLE_SERVER_VERSION = 7c8672fe84a14dfdc02ba7fdb1f9f88074b2efc6
 
 ONVIF_SIMPLE_SERVER_DEPENDENCIES = mbedtls
 ONVIF_SIMPLE_SERVER_LICENSE = MIT
