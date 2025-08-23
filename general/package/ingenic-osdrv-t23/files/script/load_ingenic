@@ -83,3 +83,9 @@ if [ $? -ne 0 ]; then
 	modprobe audio spk_gpio=-1
 	check_return "modprobe audio"
 fi
+
+lsmod | grep -q "jzmmc_v12"
+if [ $? -ne 0 ]; then
+	modprobe jzmmc_v12 detect_pin=$(fw_printenv -n gpio_mmc || echo 59)
+	check_return "modprobe mmc"
+fi
