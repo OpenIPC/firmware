@@ -10,7 +10,7 @@ jobs:
       - name: Prepare
         run: |
           sudo apt-get update
-          sudo apt-get install gcc-arm-linux-gnueabi gcc-mipsel-linux-gnu u-boot-tools lzop gnutls-dev lzma-alone
+          sudo apt-get install gcc-arm-linux-gnueabi gcc-mipsel-linux-gnu u-boot-tools lzop gnutls-dev lzma-alone uuid-dev
 
       - name: Allwinner
         run: |
