@@ -5,6 +5,12 @@ This package is created and intended for unification and use in all firmware and
 
 ## Configuring known devices
 
+#### Basic Example
+```
+fw_setenv gpio_motors 'H1 H2 H3 H4 V1 V2 V3 V4'
+```
+First, the GPIOs responsible for Horizontal rotation are added, and next then the GPIOs responsible for Vertical rotation are added, a total of 8 characters.
+
 #### GK7205V200 (unknown model)
 ```
 fw_setenv gpio_motors '52 53 56 57 69 70 59 58'
@@ -25,7 +31,10 @@ fw_setenv gpio_motors '60 61 37 38 54 55 56 57'
 fw_setenv gpio_motors '1 2 12 13 62 63 64 65'
 ```
 
-We will add more information as soon as possible after testing.
+#### SSC30KD, CMCC DS-YTJ5101
+```
+fw_setenv gpio_motors '111 112 113 114 59 60 8 9'
+```
 
 #### T31, Jooan Q3R-U
 ```
