@@ -66,6 +66,10 @@ case "$CMD" in
 		echo -e "  recorded - $(fw_printenv -n sensor)\n"
                 ;;
 
+        netip_hash)
+                echo -n "$@" | md5sum | fold -w 2 | awk 'NR<17{printf "%d\n", "0x"$0}' | sed 'N;s/\n/ /' | awk '{c=($1+$2)%62; if (c<10) c+=48; else if (c<36) c+=55; else c+=61; printf "%c", c}'
+                ;;
+
 	*)
 		;;
 esac
