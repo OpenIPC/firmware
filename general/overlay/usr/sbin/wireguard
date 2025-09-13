@@ -1,7 +1,7 @@
 #!/bin/sh
 
-modprobe wireguard
-ip link add dev wg0 type wireguard
+modprobe wireguard || { echo "Error: Failed to load wireguard module." >&2; exit 1; }
+ip link add dev wg0 type wireguard || { echo "Error: Failed to create wg0 interface." >&2; exit 1; }
 
 ( echo "#"
   echo "[Interface]"
