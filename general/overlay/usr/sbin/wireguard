@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -e
-
 modprobe wireguard
 ip link add dev wg0 type wireguard
 
