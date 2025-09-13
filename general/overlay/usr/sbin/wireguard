@@ -19,5 +19,10 @@ ip link add dev wg0 type wireguard
 ) >>/tmp/wireguard.conf
 
 wg setconf wg0 /tmp/wireguard.conf
-ip address add dev wg0 $(fw_printenv -n wg_address)
+wg_address="$(fw_printenv -n wg_address)"
+if [ -z "$wg_address" ]; then
+    echo "Error: wg_address environment variable is not set or empty." >&2
+    exit 1
+fi
+ip address add dev wg0 "$wg_address"
 ip link set up dev wg0
