@@ -1,0 +1,29 @@
+#!/bin/sh
+
+modprobe wireguard || { echo "Error: Failed to load wireguard module." >&2; exit 1; }
+ip link add dev wg0 type wireguard || { echo "Error: Failed to create wg0 interface." >&2; exit 1; }
+
+WG_PRIVKEY="$(fw_printenv -n wg_privkey)"
+( echo "#"
+  echo "[Interface]"
+  echo "PrivateKey = $WG_PRIVKEY"
+  # echo "Address = $(fw_printenv -n wg_address)"
+  # echo "DNS = $(fw_printenv -n wg_dns)"
+  echo
+  echo "[Peer]"
+  echo "Endpoint = $(fw_printenv -n wg_endpoint)"
+  echo "PersistentKeepalive = $(fw_printenv -n wg_alive)"
+  echo "PublicKey = $(fw_printenv -n wg_pubkey)"
+  echo "PresharedKey = $(fw_printenv -n wg_sharkey)"
+  echo "AllowedIPs = $(fw_printenv -n wg_allowed)"
+  echo "#"
+) >>/tmp/wireguard.conf
+
+wg setconf wg0 /tmp/wireguard.conf
+wg_address="$(fw_printenv -n wg_address)"
+if [ -z "$wg_address" ]; then
+    echo "Error: wg_address environment variable is not set or empty." >&2
+    exit 1
+fi
+ip address add dev wg0 "$wg_address"
+ip link set up dev wg0
