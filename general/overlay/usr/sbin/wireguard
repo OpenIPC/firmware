@@ -3,9 +3,10 @@
 modprobe wireguard || { echo "Error: Failed to load wireguard module." >&2; exit 1; }
 ip link add dev wg0 type wireguard || { echo "Error: Failed to create wg0 interface." >&2; exit 1; }
 
+WG_PRIVKEY="$(fw_printenv -n wg_privkey)"
 ( echo "#"
   echo "[Interface]"
-  echo "PrivateKey = $(fw_printenv -n wg_privkey)"
+  echo "PrivateKey = $WG_PRIVKEY"
   # echo "Address = $(fw_printenv -n wg_address)"
   # echo "DNS = $(fw_printenv -n wg_dns)"
   echo
