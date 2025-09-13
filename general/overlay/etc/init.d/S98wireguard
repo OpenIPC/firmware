@@ -1,0 +1,18 @@
+#!/bin/sh
+
+case "$1" in
+	start)
+		wgc=$(fw_printenv -n wg_privkey)
+		if [ -n "$wgc" ]; then
+			wireguard
+		fi
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
+		;;
+esac
