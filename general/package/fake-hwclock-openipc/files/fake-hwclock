@@ -14,6 +14,7 @@ if [[ "$MODE" == "load" ]]; then
         LAST_TS=$(cat "$TIMESTAMP_FILE")
         if [[ -n "$LAST_TS" ]]; then
             echo "fake-hwclock: Setting time to $(date -d @"$LAST_TS")"
+			date -s @"$LAST_TS" >/dev/null 2>&1
         fi
     fi
 elif [[ "$MODE" == "save" ]]; then
