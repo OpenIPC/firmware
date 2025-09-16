@@ -1,0 +1,27 @@
+#!/bin/sh
+
+if [[ $# -lt 2 ]]; then
+    exit 1
+fi
+
+MODE="$1"
+TIMESTAMP_FILE="$2"
+
+mkdir -p "$(dirname "$TIMESTAMP_FILE")"
+
+if [[ "$MODE" == "load" ]]; then
+    if [[ -f "$TIMESTAMP_FILE" ]]; then
+        LAST_TS=$(cat "$TIMESTAMP_FILE")
+        if [[ -n "$LAST_TS" ]]; then
+            echo "fake-hwclock: Setting time to $(date -d @"$LAST_TS")"
+        fi
+    fi
+elif [[ "$MODE" == "save" ]]; then
+    date +%s > "$TIMESTAMP_FILE"
+elif [[ "$MODE" =~ ^[0-9]+$ ]]; then
+    INTERVAL="$MODE"
+    while true; do
+        date +%s > "$TIMESTAMP_FILE"
+        sleep "$INTERVAL"
+    done
+fi

@@ -1,0 +1,36 @@
+#!/bin/sh
+
+DAEMON="fake-hwclock"
+PIDFILE="/var/run/$DAEMON.pid"
+DAEMON_ARGS="5 /etc/fake-hwclock.data"
+
+case "$1" in
+	start)
+		echo -n "Starting $DAEMON: "
+		fake-hwclock load /etc/fake-hwclock.data
+		# Save timestamp every 5 seconds
+		start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
+		if [ $? -eq 0 ]; then
+			echo "OK"
+		else
+			echo "FAIL"
+		fi
+		;;
+
+	stop)
+		echo -n "Stopping $DAEMON: "
+		start-stop-daemon -K -q -p "$PIDFILE"
+		if [ $? -eq 0 ]; then
+			rm -f "$PIDFILE"
+			fake-hwclock save /etc/fake-hwclock.data
+			echo "OK"
+		else
+			echo "FAIL"
+		fi
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac
