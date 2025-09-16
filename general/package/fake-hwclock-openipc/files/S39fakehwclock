@@ -6,7 +6,6 @@ DAEMON_ARGS="5 /etc/fake-hwclock.data"
 
 case "$1" in
 	start)
-		echo -n "Starting $DAEMON: "
 		fake-hwclock load /etc/fake-hwclock.data
 		# Save timestamp every 5 seconds
 		start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
