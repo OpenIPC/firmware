@@ -12,8 +12,11 @@ detect_sensor() {
 		echo srcfg 0 1 0 0 0 0 > /dev/srcfg
 		rmmod sensor_config
 	fi
+
 	SENSOR=$(ipcinfo -s)
-	fw_setenv sensor "$SENSOR"
+	if ! grep -q fpv /etc/os-release; then
+		fw_setenv sensor "$SENSOR"
+	fi
 }
 
 set_sensor() {

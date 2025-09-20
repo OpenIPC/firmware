@@ -24,6 +24,7 @@ load_config() {
 }
 
 load_modules() {
+	adapter_id=""
 	for card in $(lsusb | awk '{print $6}' | uniq); do
 		case "$card" in
 			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
@@ -32,10 +33,12 @@ load_modules() {
 
 			"0bda:a81a")
 				driver=8812eu
+				adapter_id="bl-m8812eu2"
 				;;
 
 			"0bda:f72b" | "0bda:b733")
 				driver=8733bu
+				adapter_id="bl-m8731bu4"
 				;;
 		esac
 	done
@@ -60,6 +63,11 @@ load_modules() {
 	if ! ifconfig "$wfb_dev" up; then
 		echo_log "Wireless driver not found!"
 		exit 1
+	fi
+
+	# Set .wireless.wlan_adapter in /etc/wfb.yaml if adapter_id is set
+	if [ -n "$adapter_id" ]; then
+		yaml-cli-multi -i /etc/wfb.yaml -s .wireless.wlan_adapter "$adapter_id"
 	fi
 }
 
@@ -121,21 +129,64 @@ start_telemetry() {
 		fi
 		msposd -b 115200 -c 8 -r "$osd_fps" -m /dev/"$serial" \
 			-o 127.0.0.1:"$port_tx" -z "$size" > /dev/null &
+
+		sleep 5
+		echo "&L70&F28&G8CPU:&C TEMP:&T\n&B" >/tmp/MSPOSD.msg
 	fi
 }
 
 video_settings() {
+	for card in $(lsusb | awk '{print $6}' | uniq); do
+		case "$card" in
+			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
+				driver=88XXau
+				wifibroadcast cli -s .wireless.txpower 20
+				wifibroadcast cli -s .wireless.wlan_adapter bl-r8812af1
+				wifibroadcast cli -s .broadcast.stbc 1
+				wifibroadcast cli -s .broadcast.ldpc 1
+				;;
+
+			"0bda:a81a")
+				driver=8812eu
+				wifibroadcast cli -s .wireless.txpower 40
+				wifibroadcast cli -s .wireless.wlan_adapter bl-m8812eu2
+				wifibroadcast cli -s .broadcast.stbc 1
+				wifibroadcast cli -s .broadcast.ldpc 1
+				;;
+
+			"0bda:f72b" | "0bda:b733")
+				driver=8733bu
+				wifibroadcast cli -s .wireless.txpower 20
+				wifibroadcast cli -s .wireless.wlan_adapter bl-m8731bu4
+				wifibroadcast cli -s .broadcast.stbc 0
+				wifibroadcast cli -s .broadcast.ldpc 0
+				;;
+		esac
+	done
+
 	sensor=$(ipcinfo -s)
 	cli -s .isp.sensorConfig /etc/sensors/"$sensor"_fpv.bin
-	cli -s .isp.exposure 5
+	cli -s .isp.exposure 16
 	cli -s .video0.fps 60
-	cli -s .video0.bitrate 8192
+	cli -s .video0.bitrate 8000
 	cli -s .video0.codec h265
 	cli -s .video0.rcMode cbr
 	cli -s .outgoing.enabled true
 	cli -s .outgoing.wfb true
+	cli -s .records.split 1
+	cli -s .records.notime true
 	cli -s .fpv.enabled true
-	cli -s .fpv.noiseLevel 1
+	cli -s .fpv.noiseLevel 0
+
+	wifibroadcast cli -s .wireless.mlink 3994
+	wifibroadcast cli -s .wireless.link_control alink
+	sed -i '/alink_drone &/d' /etc/rc.local && sed -i -e '$i alink_drone &' /etc/rc.local
+
+	if [ "$sensor" = "imx335" ]; then
+		cli -s .video0.size 1920x1440
+	else
+		cli -s .video0.size 1920x1080
+	fi
 }
 
 start() {
