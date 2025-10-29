@@ -7,8 +7,6 @@ WG_PRIVKEY="$(fw_printenv -n wg_privkey)"
 ( echo "#"
   echo "[Interface]"
   echo "PrivateKey = $WG_PRIVKEY"
-  # echo "Address = $(fw_printenv -n wg_address)"
-  # echo "DNS = $(fw_printenv -n wg_dns)"
   echo
   echo "[Peer]"
   echo "Endpoint = $(fw_printenv -n wg_endpoint)"
@@ -27,3 +25,7 @@ if [ -z "$wg_address" ]; then
 fi
 ip address add dev wg0 "$wg_address"
 ip link set up dev wg0
+for i in $(fw_printenv -n wg_allowed | tr ',' ' '); do
+    ip -4 route add "$i" dev wg0
+done
+
