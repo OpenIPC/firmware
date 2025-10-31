@@ -3,7 +3,7 @@
 ################################################################################
 
 APALINK_VERSION = 1.2
-APALINK_SITE = https://github.com/carabidulebabat/AP-ALINK-FPV.git(call github,carabidulebabat,AP-ALINK-FPV,$(APALINK_VERSION))
+APALINK_SITE = (call github,carabidulebabat,AP-ALINK-FPV,$(APALINK_VERSION))
 
 define APALINK_BUILD_CMDS
 	$(MAKE) -C $(@D) \
