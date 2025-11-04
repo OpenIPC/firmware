@@ -5,7 +5,7 @@
 ################################################################################
 
 ADAPTIVE_LINK_SITE = $(call github,openipc,adaptive-link,$(ADAPTIVE_LINK_VERSION))
-ADAPTIVE_LINK_VERSION = 'dca368dbaa025472e9836712c52d41bca1a9042b'
+ADAPTIVE_LINK_VERSION = '3a831a75cb25df403374fa5104ea494c140695da'
 ADAPTIVE_LINK_DEPENDENCIES = yaml-cli-multi
 
 ADAPTIVE_LINK_LICENSE = GPL-3.0
