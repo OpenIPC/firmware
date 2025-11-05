@@ -43,4 +43,15 @@ define MSPOSD_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(@D)/vtxmenu.ini
 endef
 
+define MSPOSD_INSTALL_LIBRARIES
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(MSPOSD_OSDRV)/files/lib/libcam_os_wrapper.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(MSPOSD_OSDRV)/files/lib/libmi_rgn.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(MSPOSD_OSDRV)/files/lib/libmi_sys.so
+endef
+
+ifeq ($(OPENIPC_SOC_VENDOR),sigmastar)
+MSPOSD_POST_INSTALL_TARGET_HOOKS += MSPOSD_INSTALL_LIBRARIES
+endif
+
 $(eval $(generic-package))
