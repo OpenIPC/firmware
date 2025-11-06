@@ -1,0 +1,79 @@
+#!/bin/sh
+#
+# OpenIPC reboot wrapper script
+# Ensures proper overlay sync before reboot
+#
+
+# Check for help/info flags first - pass through immediately
+for arg in "$@"; do
+    case "$arg" in
+        -h|--help|--version)
+            # Find the real busybox reboot command
+            if [ -x /bin/busybox ]; then
+                exec /bin/busybox reboot "$@"
+            elif [ -x /usr/bin/busybox ]; then
+                exec /usr/bin/busybox reboot "$@"
+            else
+                # Fallback to system reboot
+                exec /sbin/reboot "$@"
+            fi
+            ;;
+    esac
+done
+
+# Parse arguments to check for force flag and no-sync flag
+force_reboot=0
+no_sync=0
+delay=0
+for arg in "$@"; do
+    case "$arg" in
+        -f|--force)
+            force_reboot=1
+            ;;
+        -n)
+            no_sync=1
+            ;;
+        -d)
+            # Get next argument as delay value
+            shift
+            delay="$1"
+            ;;
+        -d*)
+            # Extract delay value from -d<num> format
+            delay="${arg#-d}"
+            ;;
+    esac
+done
+
+# If not a forced reboot and sync is not disabled, ensure proper sync
+if [ "$force_reboot" -eq 0 ] && [ "$no_sync" -eq 0 ]; then
+    echo "Syncing overlay filesystem..."
+    sync
+    
+    # Give a brief moment for sync to complete
+    sleep 1
+    
+    # Attempt graceful shutdown by stopping services
+    if [ -f /etc/init.d/rcK ]; then
+        echo "Stopping services gracefully..."
+        /etc/init.d/rcK >/dev/null 2>&1
+    fi
+    
+    # Final sync
+    sync
+fi
+
+# Handle delay if specified
+if [ "$delay" -gt 0 ]; then
+    sleep "$delay"
+fi
+
+# Call the actual reboot command - find busybox location
+if [ -x /bin/busybox ]; then
+    exec /bin/busybox reboot "$@"
+elif [ -x /usr/bin/busybox ]; then
+    exec /usr/bin/busybox reboot "$@"
+else
+    # Fallback to system reboot
+    exec /sbin/reboot "$@"
+fi
