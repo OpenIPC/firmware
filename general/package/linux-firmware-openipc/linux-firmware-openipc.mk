@@ -8,6 +8,8 @@ ifeq ($(BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_ATHEROS_9271),y)
 define LINUX_FIRMWARE_OPENIPC_INSTALL_ATHEROS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/firmware/ath9k_htc
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/firmware/ath9k_htc $(LINUX_FIRMWARE_OPENIPC_PKGDIR)/files/ath9k_htc/htc_9271-1.4.0.fw
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/firmware/ath9k_htc $(LINUX_FIRMWARE_OPENIPC_PKGDIR)/files/ath9k_htc/htc_9271.fw.1
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/firmware/ath9k_htc $(LINUX_FIRMWARE_OPENIPC_PKGDIR)/files/ath9k_htc/htc_9271.fw.3
 endef
 endif
 
