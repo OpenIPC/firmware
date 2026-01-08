@@ -24,6 +24,10 @@ set_sensor() {
 		gc4653|imx335|imx415|os04a10|sc4336p|sc401ai|sc501ai|sc830ai|sc850sl)
 			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
+		gc8613ya|os03a10|sc450ai|sc535hai|sp4329)
+			# Experimental sensors will be listed in a separate section. @FlyRouter
+			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
+			;;
 		*)
 			echo -e "\n\e[1;31mUNSUPPORTED sensor - $SENSOR\e[0m\n" | logger -s -t OpenIPC
 			;;
