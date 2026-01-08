@@ -92,6 +92,14 @@ if [ "$1" = "atbm603x-gk7205v300-xm-g6s" ]; then
 	exit 0
 fi
 
+# GK7205V300 IPC-38x38-WIFI (IVG-6GS compatible boards with ATBM6012B/6032)
+if [ "$1" = "IPC-38x38-WIFI-atbm603x-usb" ]; then
+	devmem 0x100C0080 32 0x530
+	set_gpio 7 0
+	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
 # GK7205V300 Vase
 if [ "$1" = "rtl8811cu-gk7205v300-vase" ]; then
 	devmem 0x100c0080 32 0x0
