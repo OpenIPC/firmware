@@ -62,3 +62,4 @@ gpio-motors -20 10 30
 ## More info
 
 - [Our Wiki](https://github.com/OpenIPC/wiki/blob/master/en/motors.md)
+- [Motors repo](https://github.com/openipc/motors)
