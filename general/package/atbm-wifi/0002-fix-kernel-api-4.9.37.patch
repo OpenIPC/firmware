@@ -1,0 +1,26 @@
+diff --git a/hal_apollo/main.c b/hal_apollo/main.c
+index abc123..def456 100644
+--- a/hal_apollo/main.c
++++ b/hal_apollo/main.c
+@@ -1879,9 +1879,7 @@ static int access_file(char *path, char *buffer, int size, int isRead)
+ #endif
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+ 			ret = kernel_read(fp,buffer,size,&fp->f_pos);
+-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 84))
+-			ret = kernel_read(fp,fp->f_pos,buffer,size);
+-
++#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 14))
+ #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 14))
+ 			ret = kernel_read(fp,&fp->f_pos,buffer,size);
+ #else
+@@ -1905,9 +1903,7 @@ static int access_file(char *path, char *buffer, int size, int isRead)
+ #endif
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+ 			ret = kernel_write(fp,buffer,size,&fp->f_pos);
+-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 84))
+-			ret = kernel_write(fp,buffer,size,fp->f_pos);
+-
++#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 14))
+ #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 14))
+ 			ret = kernel_write(fp,&fp->f_pos,buffer,size);
+ #else

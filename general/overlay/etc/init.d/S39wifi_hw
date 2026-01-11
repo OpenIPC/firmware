@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# Initialize WiFi hardware before network starts
+# This script runs before S40network to ensure GPIO and USB are ready
+# before the driver attempts to probe the device
+
+case "$1" in
+	start)
+		# Check if wlandev is set and if it's an ATBM USB device
+		dev=$(fw_printenv -n wlandev 2>/dev/null)
+		if [ -n "$dev" ] && echo "$dev" | grep -q "atbm.*usb"; then
+			echo "Initializing WiFi hardware for $dev..."
+			# Set USB register
+			devmem 0x100C0080 32 0x530 2>/dev/null
+			# Enable WiFi power (GPIO 7 LOW)
+			gpio clear 7 2>/dev/null
+			# Wait for hardware to stabilize
+			sleep 1
+		fi
+		;;
+	stop)
+		# Disable WiFi power on shutdown
+		dev=$(fw_printenv -n wlandev 2>/dev/null)
+		if [ -n "$dev" ] && echo "$dev" | grep -q "atbm.*usb"; then
+			gpio set 7 2>/dev/null
+		fi
+		;;
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac
+
+exit 0
