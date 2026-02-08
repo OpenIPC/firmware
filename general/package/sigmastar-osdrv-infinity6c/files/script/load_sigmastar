@@ -25,7 +25,7 @@ set_sensor() {
 			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		gc8613ya|os03a10|sc450ai|sc535hai|sp4329)
-			# Experimental sensors will be listed in a separate section. @FlyRouter
+			# Experimental sensors will be listed in a separate section. For contact: https://t.me/FlyRouter
 			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		*)
