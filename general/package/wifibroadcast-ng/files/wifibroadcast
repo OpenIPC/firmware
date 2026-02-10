@@ -57,7 +57,8 @@ load_modules() {
 		opt2="rtw_tx_pwr_lmt_enable=0"
 	fi
 
-	modprobe "$driver" "$opt1" "$opt2"
+	
+	modprobe "$driver" "$opt1" "$opt2" MaxTxBufLen=32
 	sleep 3
 
 	if ! ifconfig "$wfb_dev" up; then
@@ -101,7 +102,7 @@ load_wfb() {
 start_broadcast() {
 	echo_log "Starting wfb_tx"
 	wfb_tx -K "$wfb_key" -M "$mcs_index" -B "$width" -k "$fec_k" -n "$fec_n" -U rtp_local \
-		-S "$stbc" -L "$ldpc" -i "$link_id" -C 8000 "$wfb_dev" &> /dev/null &
+		-S "$stbc" -L "$ldpc" -i "$link_id" -C 8000 -J 10 -E 5000 "$wfb_dev" &> /dev/null &
 }
 
 start_tunnel() {
