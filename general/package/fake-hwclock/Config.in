@@ -1,0 +1,5 @@
+config BR2_PACKAGE_FAKE_HWCLOCK
+	bool "fake-hwclock"
+	help
+	  Restores system time from a file on boot, saves the current time, or periodically updates a timestamp file to maintain time on systems without a hardware RTC.
+
