@@ -1,0 +1,18 @@
+#!/bin/sh
+
+case "$1" in
+	start)
+		echo "Starting idr requester..."
+		aalink_idr5 &
+		;;
+
+	stop)
+		echo "Stopping aalink..."
+		killall -q aalink_idr5
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac

@@ -1,0 +1,66 @@
+#!/bin/sh
+
+. /etc/init.d/libmedia.sh
+
+DAEMON="msposd"
+PIDFILE="/var/run/$DAEMON.pid"
+MAJESTIC_API="http://localhost/api/v1/config.json"
+
+build_args() {
+    msposd_tty="$(fw_printenv -n msposd_tty 2>/dev/null || echo /dev/ttyS2)"
+    size="$(curl -s "$MAJESTIC_API" | jsonfilter -qe "@.video0.size" 2>/dev/null)"
+    [ -n "$size" ] || size="1920x1080"
+
+    if [ "$msposd_tty" = "standalone" ]; then
+        vert="$(echo "$size" | cut -d'x' -f2)"
+        [ -n "$vert" ] || vert=1080
+        [ "$vert" -lt 720 ] && size="1280x720"
+        echo "-b 115200 -x 99 -r 1010 --msp-hz 3 --render-hz 3 --msg-hz 3 -m /dev/ttyS2 -z $size"
+    else
+        echo "-b 115200 -r 1010 --msp-hz 3 --render-hz 3 --msg-hz 3 -m $msposd_tty -z $size"
+    fi
+}
+
+start() {
+    echo "Starting $DAEMON..."
+    wait_for_http_ready "$MAJESTIC_API" 20 || {
+        echo "majestic API not ready; refusing to start $DAEMON"
+        return 1
+    }
+
+    devmem 0x1F207890 16 0x8 >/dev/null 2>&1 || true
+    sleep 1
+
+    args="$(build_args)"
+    start_service "$DAEMON" "$PIDFILE" $args || return 1
+    echo "$DAEMON started with args: $args"
+}
+
+stop() {
+    echo "Stopping $DAEMON..."
+    stop_service "$DAEMON" "$PIDFILE" 12
+}
+
+status() {
+    if ensure_pidfile "$DAEMON" "$PIDFILE"; then
+        echo "$DAEMON running pid=$(cat "$PIDFILE")"
+        return 0
+    fi
+    echo "$DAEMON stopped"
+    return 1
+}
+
+restart() {
+    stop
+    start
+}
+
+case "$1" in
+    start|stop|restart|status)
+        "$1"
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
