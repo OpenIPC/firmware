@@ -1,8 +1,0 @@
-config BR2_PACKAGE_APFPV_GREG10
-	bool "apfpv-greg10"
-	default n
-	select BR2_PACKAGE_LIBEVENT_OPENIPC
-	help
-	  Builds the custom APFPV Greg10 user-space stack from the configured
-	  GitHub repos and installs the matching init scripts.
-	  Local testing with private repos uses the authenticated gh CLI.
