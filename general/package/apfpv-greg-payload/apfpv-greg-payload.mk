@@ -9,7 +9,7 @@ APFPV_GREG_PAYLOAD_SITE_METHOD = local
 APFPV_GREG_PAYLOAD_LICENSE = Mixed
 APFPV_GREG_PAYLOAD_GIT = $(shell command -v git 2>/dev/null)
 APFPV_GREG_PAYLOAD_REPO_BRANCH = main
-APFPV_GREG_PAYLOAD_REPO = https://github.com/sickgreg/apfpv-greg10-package.git
+APFPV_GREG_PAYLOAD_REPO = https://github.com/sickgreg/apfpv-greg-package.git
 
 ifeq ($(OPENIPC_SOC_VENDOR),sigmastar)
 APFPV_GREG_PAYLOAD_PLATFORM_PAYLOAD = sigmastar-4.9.84
