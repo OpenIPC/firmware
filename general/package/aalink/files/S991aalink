@@ -1,0 +1,52 @@
+#!/bin/sh
+
+. /etc/init.d/libmedia.sh
+
+DAEMON="aalink"
+PIDFILE="/var/run/$DAEMON.pid"
+
+start() {
+    echo "Starting $DAEMON..."
+    start_service "$DAEMON" "$PIDFILE" || return 1
+    echo "$DAEMON started"
+}
+
+stop() {
+    echo "Stopping $DAEMON..."
+    stop_service "$DAEMON" "$PIDFILE" 12 || return 1
+    echo "$DAEMON stopped"
+}
+
+status() {
+    if ensure_pidfile "$DAEMON" "$PIDFILE"; then
+        echo "$DAEMON running pid=$(cat "$PIDFILE")"
+        return 0
+    fi
+    echo "$DAEMON stopped"
+    return 1
+}
+
+reload() {
+    pids="$(pidof "$DAEMON" 2>/dev/null || true)"
+    [ -n "$pids" ] || {
+        echo "$DAEMON not running"
+        return 1
+    }
+    echo "Sending SIGHUP to $DAEMON: $pids"
+    kill -HUP $pids
+}
+
+restart() {
+    stop
+    start
+}
+
+case "$1" in
+    start|stop|restart|reload|status)
+        "$1"
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|reload|status}"
+        exit 1
+        ;;
+esac

@@ -1,0 +1,19 @@
+#!/bin/sh
+
+case "$1" in
+	start)
+		echo "Starting air_man..."
+		sleep 2
+		air_man_ap > /dev/null &
+		;;
+
+	stop)
+		echo "Stopping air_man..."
+		killall -q air_man_ap
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac
