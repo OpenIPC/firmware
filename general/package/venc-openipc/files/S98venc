@@ -1,20 +1,22 @@
 #!/bin/sh
-#
-# Start venc encoder
-#
-
 . /etc/venc.conf
 
 case "$1" in
-  start)
-    echo "Starting venc encoder service..."
-    venc -h ${host} -p ${port} -v ${version} -s ${size} -f ${fps} -c ${codec} -g ${gop} -m ${mode} -d ${data_format} -r ${rate} -n ${payload_size} ${extra} > /dev/null 2>&1 &
-    ;;
-  stop)
-    echo "Stopping venc encoder service..."
-    kill -9 $(pidof venc)
-    ;;
-    *)
-    echo "Usage: $0 {start|stop}"
-    exit 1
+	start)
+		echo "Starting venc service..."
+		if [ -e /usr/bin/star ]; then
+			star &
+		else
+			venc -h ${host} -p ${port} -v ${version} -s ${size} -f ${fps} -c ${codec} -g ${gop} -m ${mode} -d ${data_format} -r ${rate} -n ${payload_size} ${extra} > /dev/null 2>&1 &
+		fi
+		;;
+
+	stop)
+		echo "Stopping venc service..."
+		killall -q star venc
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
 esac
