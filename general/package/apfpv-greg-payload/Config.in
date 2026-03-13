@@ -1,0 +1,8 @@
+config BR2_PACKAGE_APFPV_GREG_PAYLOAD
+	bool "apfpv-greg-payload"
+	default n
+	help
+	  Installs the shared APFPV Greg payload from the public payload repo.
+	  This package provides APFPV-specific files that are not owned by a
+	  single source repo, including CGI glue, helper scripts, shared
+	  assets, modules, and sensor blobs.

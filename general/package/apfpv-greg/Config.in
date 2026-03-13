@@ -1,0 +1,13 @@
+config BR2_PACKAGE_APFPV_GREG
+	bool "apfpv-greg"
+	default n
+	select BR2_PACKAGE_AALINK
+	select BR2_PACKAGE_AALINK_IDR5
+	select BR2_PACKAGE_AIR_MAN_AP
+	select BR2_PACKAGE_APFPV_GREG_MSPOSD
+	select BR2_PACKAGE_APFPV_GREG_PAYLOAD
+	help
+	  Meta-package for the APFPV Greg firmware stack. Selecting this
+	  package enables the APFPV Greg userspace components and shared
+	  payload while keeping the final-override files in the device
+	  overlays.

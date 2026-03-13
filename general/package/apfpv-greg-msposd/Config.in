@@ -1,0 +1,8 @@
+config BR2_PACKAGE_APFPV_GREG_MSPOSD
+	bool "apfpv-greg-msposd"
+	default n
+	select BR2_PACKAGE_LIBEVENT_OPENIPC
+	help
+	  Builds the custom APFPV Greg msposd binary from the public
+	  sickgreg/msposd repo and installs it as /usr/bin/msposd together
+	  with its fonts, config, runtime libraries, and service script.
