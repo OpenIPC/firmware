@@ -1,0 +1,23 @@
+#
+# Copyright (c) OpenIPC  https://openipc.org  MIT License
+#
+# Config.in — Kconfig entry for the netblink package
+#
+
+config BR2_PACKAGE_NETBLINK
+bool "netblink"
+default n
+help
+  A minimal Linux command-line utility that monitors network
+  connectivity or traffic and indicates status via a GPIO-driven
+  LED using the sysfs interface.
+
+  Two modes are supported:
+    ping     — periodically ping a host; blink LED based on RTT.
+    traffic  — monitor interface tx+rx; blink LED based on rate.
+
+  Usage:
+    netblink <gpio> ping <host> [interval_sec [timeout_sec]]
+    netblink <gpio> traffic [interface]
+
+  https://openipc.org
