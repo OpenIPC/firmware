@@ -1,0 +1,34 @@
+#
+# Copyright (c) OpenIPC  https://openipc.org  MIT License
+#
+# Config.in — Buildroot package Kconfig menu
+#
+config BR2_PACKAGE_MDNSD_OPENIPC
+	bool "mdnsd-openipc"
+	depends on BR2_USE_MMU # fork()
+	help
+	  Small mDNS-SD daemon for advertising services and device
+	  discovery, similar to Avahi and Bonjour.
+
+	  By default, mdnsd runs on all interfaces that support
+	  multicast.  It reads services to announce from
+	  /etc/mdns.d/*.service, a few common services are included
+	  below.  To override the defaults, e.g., path to services,
+	  TTL of multicast frames, or the default interface, set
+	  MDNSD_ARGS in /etc/default/mdnsd
+
+	  Note: currently no NSS integration with GLIBC.
+
+	  https://github.com/troglobit/mdnsd
+
+if BR2_PACKAGE_MDNSD_OPENIPC
+
+config BR2_PACKAGE_MDNSD_MQUERY_OPENIPC
+	bool "mquery-openipc"
+	help
+	  Scan a LAN for mDNS capable devices, or query specific
+	  records, similar to the mdns-scan tool.  Useful for
+	  verifying multicast connectivity or locating neighbors with
+	  link-local address.
+
+endif
