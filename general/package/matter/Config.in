@@ -1,0 +1,60 @@
+#
+# Copyright (c) OpenIPC  https://openipc.org  MIT License
+#
+# Config.in — Kconfig entry for the matter package
+#
+
+config BR2_PACKAGE_MATTER
+	bool "matter"
+	depends on BR2_USE_MMU
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	help
+	  OpenIPC Matter-compatible IP camera server.
+
+	  Implements a subset of the Matter 1.2 specification sufficient
+	  to make an IP camera discoverable and controllable by Matter
+	  controllers (Apple Home, Google Home, Amazon Alexa, etc.):
+
+	    - Clusters: OnOff, LevelControl, BasicInformation,
+	                OccupancySensing, Identify
+	    - WriteAttribute support
+	    - mDNS announcement (PTR + SRV + TXT records)
+	    - TCP commissioning stub (PASE / PBKDFParamRequest)
+	    - RTSP stream URL as a Matter attribute
+	    - Client connection limit and 30 s receive timeout
+
+	  Designed for OpenIPC IP cameras and other resource-constrained
+	  embedded Linux targets (uClibc / musl / glibc).
+	  No external libraries required — pure C99 / POSIX.
+
+	  https://openipc.org
+
+if BR2_PACKAGE_MATTER
+
+config BR2_PACKAGE_MATTER_RTSP_URL
+	string "Default RTSP stream URL"
+	default "rtsp://127.0.0.1:554/stream"
+	help
+	  RTSP URL written into /etc/matter.conf as the default stream
+	  source.  Can be overridden at runtime by editing that file or
+	  by passing the URL as the first argument to matter-server.
+
+config BR2_PACKAGE_MATTER_PORT
+	int "Matter TCP port"
+	range 1 65535
+	default 5540
+	help
+	  TCP port the Matter server listens on.  5540 is the default
+	  port defined by the Matter specification.
+	  Written into /etc/matter.conf; can be overridden at runtime.
+
+config BR2_PACKAGE_MATTER_INIT_STARTLEVEL
+	int "Init script start level"
+	range 10 99
+	default 90
+	help
+	  Numeric prefix of the SysV-style init script installed under
+	  /etc/init.d.  Higher numbers start later in the boot sequence.
+	  90 ensures the network is up before the Matter server starts.
+
+endif

@@ -1,0 +1,104 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Copyright (c) OpenIPC  https://openipc.org  tech@openipc.eu
+#
+# S90matter — SysV init script for the OpenIPC Matter IP camera server.
+#
+# Part of the OpenIPC firmware ecosystem.
+#
+# Targets:  IP cameras, routers, NVR, embedded Linux
+# Standard: C99 / POSIX.1-2008 (uClibc / musl / glibc)
+#
+# Sources /etc/matter.conf, exports MATTER_* environment variables,
+# and manages the matter-server daemon via start-stop-daemon.
+#
+### BEGIN INIT INFO
+# Provides:          matter-server
+# Required-Start:    $network $local_fs
+# Required-Stop:     $network $local_fs
+# Default-Start:     S
+# Default-Stop:      0 6
+# Short-Description: OpenIPC Matter IP Camera Server
+# Description:       Starts the OpenIPC Matter-compatible IP camera server.
+#                    Announces the device via mDNS and handles Matter
+#                    Interaction Model commands over TCP port 5540.
+### END INIT INFO
+
+DAEMON=/usr/sbin/matter-server
+NAME=matter-server
+PIDFILE=/var/run/matter-server.pid
+CONFIG=/etc/matter.conf
+
+# Default runtime parameters — override in /etc/matter.conf
+MATTER_RTSP_URL="rtsp://127.0.0.1:554/stream"
+MATTER_PORT=5540
+MATTER_VENDOR_NAME="OpenIPC"
+MATTER_PRODUCT_NAME="OpenIPC IP Camera"
+MATTER_NODE_LABEL="IP Camera"
+MATTER_HW_VERSION="HW-1.0"
+MATTER_SW_VERSION="SW-1.0.0"
+
+# Load site-specific configuration if present
+[ -f "$CONFIG" ] && . "$CONFIG"
+
+# Export all MATTER_* variables so the daemon inherits them
+export MATTER_RTSP_URL MATTER_PORT \
+       MATTER_VENDOR_NAME MATTER_PRODUCT_NAME MATTER_NODE_LABEL \
+       MATTER_HW_VERSION MATTER_SW_VERSION
+
+start() {
+	echo -n "Starting $NAME: "
+	if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+		echo "already running (pid $(cat "$PIDFILE"))"
+		return 0
+	fi
+	start-stop-daemon -S -b -m -p "$PIDFILE" \
+		-x "$DAEMON" -- "$MATTER_RTSP_URL" "$MATTER_PORT"
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		echo "OK"
+	else
+		echo "FAILED"
+	fi
+	return $RETVAL
+}
+
+stop() {
+	echo -n "Stopping $NAME: "
+	if [ ! -f "$PIDFILE" ]; then
+		echo "not running"
+		return 0
+	fi
+	start-stop-daemon -K -q -p "$PIDFILE"
+	RETVAL=$?
+	rm -f "$PIDFILE"
+	if [ $RETVAL -eq 0 ]; then
+		echo "OK"
+	else
+		echo "FAILED"
+	fi
+	return $RETVAL
+}
+
+status() {
+	if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+		echo "$NAME is running (pid $(cat "$PIDFILE"))"
+		return 0
+	else
+		echo "$NAME is not running"
+		return 1
+	fi
+}
+
+case "$1" in
+	start)   start   ;;
+	stop)    stop    ;;
+	restart) stop; sleep 1; start ;;
+	status)  status  ;;
+	*)
+		echo "Usage: $0 {start|stop|restart|status}"
+		exit 1
+		;;
+esac
+
+exit $?
