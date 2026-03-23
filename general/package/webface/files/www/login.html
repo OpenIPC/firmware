@@ -1,0 +1,85 @@
+<!-- Copyright (c) OpenIPC  https://openipc.org  MIT License -->
+<!-- login.html — authentication login page -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self'; form-action 'self'">
+<title>Login</title>
+<link rel="stylesheet" href="/assets/css/webface.css">
+</head>
+<body class="page-login">
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <div class="logo-title">OpenIPC</div>
+      <div class="logo-sub">Secure Access Portal</div>
+    </div>
+  </div>
+
+  <h1>Authorization</h1>
+  <div class="subtitle">$ auth_request --interactive<span>_</span></div>
+
+  <div class="error-msg" id="errMsg">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span id="errText">Invalid username or password</span>
+  </div>
+
+  <form id="loginForm" novalidate>
+    <div class="field">
+      <label for="username">Username</label>
+      <div class="input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+        <input type="text" id="username" name="username" autocomplete="username"
+               placeholder="admin" spellcheck="false" autocapitalize="none">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="password">Password</label>
+      <div class="input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <input type="password" id="password" name="password" autocomplete="current-password"
+               placeholder="••••••••">
+        <button type="button" class="toggle-pw" id="togglePw" aria-label="Show password">
+          <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <button type="submit" class="btn" id="submitBtn"><span>Log in</span></button>
+  </form>
+
+  <div class="card-footer">
+    <div class="status-dot">
+      <div class="dot"></div>
+      <span>Secure connection</span>
+    </div>
+    <div class="version">v1.0.0</div>
+  </div>
+</div>
+
+<script src="/assets/js/login.js"></script>
+</body>
+</html>
