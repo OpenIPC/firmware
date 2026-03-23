@@ -1,0 +1,28 @@
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 7993d31..6ab4920 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -42,8 +42,7 @@ pkglib_LTLIBRARIES =	plugin_demo.la \
+ 			plugin_stripheader.la \
+ 			plugin_siptrunk.la \
+ 			plugin_fix_fbox_anoncall.la \
+-			plugin_stats.la \
+-			plugin_blacklist.la
++			plugin_stats.la
+ 
+ DLOPENPLUGINS = 	-dlopen plugin_demo.la \
+ 			-dlopen plugin_shortdial.la \
+diff --git a/src/Makefile.in b/src/Makefile.in
+index 45ada1a..121a315 100644
+--- a/src/Makefile.in
++++ b/src/Makefile.in
+@@ -535,8 +535,7 @@ pkglib_LTLIBRARIES = plugin_demo.la \
+ 			plugin_stripheader.la \
+ 			plugin_siptrunk.la \
+ 			plugin_fix_fbox_anoncall.la \
+-			plugin_stats.la \
+-			plugin_blacklist.la
++			plugin_stats.la
+ 
+ DLOPENPLUGINS = -dlopen plugin_demo.la \
+ 			-dlopen plugin_shortdial.la \
