@@ -1,0 +1,27 @@
+#
+# Copyright (c) OpenIPC  https://openipc.org  MIT License
+#
+# Config.in — Kconfig entry for the ntfy package
+#
+
+config BR2_PACKAGE_NTFY
+	bool "ntfy"
+	depends on BR2_USE_MMU
+	depends on BR2_PACKAGE_LIBCURL_OPENIPC
+	help
+	  Lightweight ntfy.sh notification client for embedded Linux.
+
+	  Publish messages to and subscribe from any ntfy-compatible
+	  server (ntfy.sh or self-hosted) using a simple CLI:
+
+	    ntfy pub <topic> <message>    — publish a notification
+	    ntfy sub <topic>              — subscribe (streaming)
+	    ntfy poll <topic>             — poll cached messages
+
+	  Features: bearer and basic auth, message priority/title/tags,
+	  streaming and poll modes, stdin message input for scripts.
+
+	  Uses libcurl for HTTP/HTTPS transport.  Single small binary,
+	  no other external dependencies.
+
+	  https://openipc.org
