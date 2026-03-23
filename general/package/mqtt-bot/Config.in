@@ -1,0 +1,27 @@
+#
+# Copyright (c) OpenIPC  https://openipc.org  MIT License
+#
+# Config.in — Kconfig entry for the mqtt-bot package
+#
+
+config BR2_PACKAGE_MQTT_BOT
+	bool "mqtt-bot"
+	default n
+	depends on BR2_PACKAGE_MOSQUITTO
+	depends on BR2_PACKAGE_MBEDTLS_OPENIPC
+	help
+	  Lightweight MQTT command executor designed for routers and
+	  IP cameras.
+
+	  Subscribes to an MQTT topic, executes only explicitly whitelisted
+	  commands, and publishes their stdout/stderr output back to a
+	  configurable response topic.
+
+	  Built-in "snap" command fetches a JPEG frame from the local HTTP
+	  server (http://localhost/image.jpg) and publishes the raw binary
+	  data over MQTT.
+
+	  TLS is provided by mosquitto compiled against mbedTLS — no OpenSSL
+	  dependency, suitable for size-constrained embedded targets.
+
+	  https://openipc.org
