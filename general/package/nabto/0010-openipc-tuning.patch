@@ -1,0 +1,28 @@
+--- a/apps/tcp_tunnel_device/src/tcp_tunnel_main.c	2025-02-09 15:51:38.944604499 +0300
++++ b/apps/tcp_tunnel_device/src/tcp_tunnel_main.c	2025-02-09 16:51:44.704722514 +0300
+@@ -547,7 +547,7 @@
+         return false;
+     }
+ 
+-    ec = nabto_device_set_app_name(tunnel->device, "Tcp Tunnel");
++    ec = nabto_device_set_app_name(tunnel->device, "P2P Cloud");
+     if (ec != NABTO_DEVICE_EC_OK) {
+         printf("Cannot set app name" NEWLINE);
+         return false;
+--- a/apps/tcp_tunnel_device/src/tcp_tunnel_init.c	2024-03-21 14:12:16.000000000 +0300
++++ b/apps/tcp_tunnel_device/src/tcp_tunnel_init.c	2025-02-09 16:57:20.099099552 +0300
+@@ -378,12 +378,12 @@
+             case CHOICE_RTSP: {
+                 service->id = strdup("rtsp");
+                 service->type = strdup("rtsp");
+-                service->port = prompt_uint16_default("Enter the port of your RTSP server", 0xffff, 8554);
++                service->port = prompt_uint16_default("Enter the port of your RTSP server", 0xffff, 554);
+ 
+                 const char* key = "rtsp-path";
+                 char value[64] = {0};
+ 
+-                const char* endpoint = "/video";
++                const char* endpoint = "/stream=0";
+                 prompt("Enter your RTSP endpoint (default: %s)", value, ARRAY_SIZE(value), endpoint);
+                 if (value[0] != 0) {
+                     endpoint = value;
