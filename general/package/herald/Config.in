@@ -1,0 +1,24 @@
+#
+# Copyright (c) OpenIPC  https://openipc.org  MIT License
+#
+# Config.in — Kconfig entry for the herald package
+#
+
+config BR2_PACKAGE_HERALD
+	bool "herald"
+	depends on BR2_USE_MMU
+	help
+	  Herald is a compact mDNS/DNS-SD stack (RFC 6762 / RFC 6763)
+	  built for the OpenIPC project.
+
+	  Ships two small standalone utilities:
+	    herald-server  — announces a service on the local network
+	                     and responds to mDNS queries
+	    herald-client  — scans the network and lists discovered
+	                     services
+
+	  Designed for OpenIPC IP cameras, routers, and other
+	  resource-constrained embedded Linux targets (uClibc/musl/glibc).
+	  No external libraries required.
+
+	  https://openipc.org
