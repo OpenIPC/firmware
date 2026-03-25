@@ -9,6 +9,7 @@ HOSTNAME=$(cat /etc/hostname 2>/dev/null || echo "camera")
 UPTIME=$(uptime 2>/dev/null | sed 's/.*up /up /' | sed 's/,  load.*//')
 KERNEL=$(uname -r 2>/dev/null)
 MEMFREE=$(grep MemAvailable /proc/meminfo 2>/dev/null | awk '{printf "%.1f MB", $2/1024}')
+SNAP_TS=$(date +%s)
 
 echo "Content-Type: text/html"
 echo "Cache-Control: no-store"
@@ -96,6 +97,14 @@ echo ""
       <li><a href="https://openipc.org/wiki" target="_blank" rel="noopener">Wiki</a> — Documentation and guides</li>
       <li><a href="https://openipc.org/supported-hardware" target="_blank" rel="noopener">Supported hardware</a> — List of compatible devices</li>
     </ul>
+  </div>
+
+  <!-- Camera snapshot -->
+  <div class="card">
+    <h2>Camera Snapshot</h2>
+    <div class="snapshot">
+      <img src="/image.jpg?<%= $SNAP_TS %>" alt="Camera snapshot">
+    </div>
   </div>
 
   <div class="footer">webface v1.0.0 &middot; OpenIPC</div>

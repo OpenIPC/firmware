@@ -47,29 +47,21 @@
 
     setLoading(true);
 
-    // haserl requires x-www-form-urlencoded to populate POST_* vars
     fetch('/cgi-bin/auth.cgi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ username: user, password: pass })
     })
     .then(function(resp) {
-      if (resp.ok) {
-        return resp.json().then(function(data) {
-          if (data.ok) {
-            // Success — redirect to protected page
-            window.location.href = data.redirect || '/cgi-bin/index.cgi';
-          } else {
-            showError(data.error || 'Invalid username or password');
-          }
-        });
-      } else if (resp.status === 401) {
-        showError('Invalid username or password');
-      } else if (resp.status === 429) {
-        showError('Too many attempts. Try again later');
-      } else {
+      return resp.json().then(function(data) {
+        if (resp.ok && data.ok) {
+          window.location.href = data.redirect || '/cgi-bin/index.cgi';
+        } else {
+          showError(data.error || 'Invalid username or password');
+        }
+      }).catch(function() {
         showError('Server error: ' + resp.status);
-      }
+      });
     })
     .catch(function() {
       showError('Cannot connect to server');

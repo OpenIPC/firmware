@@ -53,6 +53,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
   cat > "$SESSION_FILE" <<EOF
 user=${USERNAME}
 created=${NOW}
+started=${NOW}
 ip=${REMOTE_ADDR}
 EOF
   chmod 600 "$SESSION_FILE"

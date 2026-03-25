@@ -9,6 +9,7 @@
 SESSION_DIR="/tmp/sessions"
 SESSION_COOKIE="SESSIONID"
 SESSION_TTL=3600                  # seconds (1 hour)
+SESSION_MAX_TTL=86400             # absolute max lifetime (24 hours)
 LOGIN_PAGE="/login.html"
 PASSWD_FILE="/etc/webface.passwd"   # user:sha256hash
 REDIRECT_OK="/cgi-bin/index.cgi"
@@ -90,6 +91,14 @@ validate_session() {
     return 1
   fi
 
+  # Absolute lifetime (ignores sliding refresh)
+  local started
+  started=$(grep "^started=" "$sfile" 2>/dev/null | cut -d= -f2)
+  if [ -n "$started" ] && [ "$(( now - started ))" -gt "$SESSION_MAX_TTL" ]; then
+    rm -f "$sfile"
+    return 1
+  fi
+
   # IP binding
   local sess_ip
   sess_ip=$(grep "^ip=" "$sfile" 2>/dev/null | cut -d= -f2)
@@ -108,13 +117,18 @@ validate_session() {
 # Remove expired session files (called on each login attempt)
 
 cleanup_sessions() {
-  local now sf created
+  local now sf created started
   now=$(date +%s)
   for sf in "${SESSION_DIR}"/*; do
     [ -f "$sf" ] || continue
     created=$(grep "^created=" "$sf" 2>/dev/null | cut -d= -f2)
     [ -z "$created" ] && { rm -f "$sf"; continue; }
     if [ "$(( now - created ))" -gt "$SESSION_TTL" ]; then
+      rm -f "$sf"
+      continue
+    fi
+    started=$(grep "^started=" "$sf" 2>/dev/null | cut -d= -f2)
+    if [ -n "$started" ] && [ "$(( now - started ))" -gt "$SESSION_MAX_TTL" ]; then
       rm -f "$sf"
     fi
   done
@@ -159,7 +173,8 @@ record_fail() {
   fi
 
   count=$(( count + 1 ))
-  printf '%s\n%s\n' "$count" "$now" > "$fail_file"
+  printf '%s\n%s\n' "$count" "$now" > "${fail_file}.$$"
+  mv -f "${fail_file}.$$" "$fail_file"
 }
 
 clear_fails() {

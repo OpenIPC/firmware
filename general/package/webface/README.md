@@ -100,11 +100,10 @@ echo "user2:$(echo -n 'pass2' | sha256sum | awk '{print $1}')" >> /etc/webface.p
 
 ## 3. Use together with Majestic
 
-Enable specifying the directory for use **Cookie-based Session Authentication** and
-disable **Basic Auth**.
+Enable specifying the directory for use **Cookie-based Session Authentication**.
 
 ```
-cli -s .system.staticDir /www
+cli -s .system.staticDir /var/www
 ```
 
 ---
@@ -171,7 +170,8 @@ All settings are centralized in `auth_common.sh`:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `SESSION_DIR` | `/tmp/sessions` | Directory for session files |
-| `SESSION_TTL` | `3600` | Session lifetime in seconds |
+| `SESSION_TTL` | `3600` | Session idle timeout in seconds |
+| `SESSION_MAX_TTL` | `86400` | Absolute max session lifetime (24 h) |
 | `PASSWD_FILE` | `/etc/webface.passwd` | Path to credentials file |
 | `AUTH_MAX_ATTEMPTS` | `5` | Failed logins before IP lockout |
 | `AUTH_LOCKOUT_SEC` | `300` | Lockout duration in seconds |
@@ -188,7 +188,7 @@ All settings are centralized in `auth_common.sh`:
 | Cookie HttpOnly + SameSite=Strict | Set-Cookie header |
 | Constant delay on every login attempt | sleep 1 (prevents timing oracle) |
 | Token from /dev/urandom (128 bits) | gen_token() |
-| Sessions expire after TTL | SESSION_TTL=3600 |
+| Sessions expire after TTL | SESSION_TTL=3600, SESSION_MAX_TTL=86400 |
 | Session IP binding | REMOTE_ADDR validated on each request |
 | Token sanitization (hex only) | tr -cd '0-9a-f' (prevents path traversal) |
 | Username sanitization | tr -cd 'a-zA-Z0-9_-' |
