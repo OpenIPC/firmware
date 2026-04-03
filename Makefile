@@ -4,6 +4,7 @@ BR_LINK = https://github.com/buildroot/buildroot/archive
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
 BR_CONF = $(TARGET)/openipc_defconfig
 TARGET ?= $(PWD)/output
+export CMAKE_POLICY_VERSION_MINIMUM := 3.5
 
 CONFIG = $(error variable BOARD not defined)
 TIMER := $(shell date +%s)
