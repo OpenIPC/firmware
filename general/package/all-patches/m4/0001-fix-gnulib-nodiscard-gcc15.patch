@@ -1,0 +1,21 @@
+From: OpenIPC <dev@openipc.org>
+Subject: [PATCH] Fix gnulib _GL_ATTRIBUTE_NODISCARD for GCC 15 / C23
+
+GCC 15 defaults to C23 where __STDC_VERSION__ > 201710L, causing gnulib
+to use [[__nodiscard__]] C23 attribute syntax. This syntax doesn't work
+when placed between 'inline' and the return type in older gnulib code.
+
+Fall back to __attribute__((warn_unused_result)) which works in all
+positions.
+
+--- a/lib/config.hin
++++ b/lib/config.hin
+@@ -2586,7 +2586,7 @@
+ # define _GL_ATTRIBUTE_MALLOC
+ #endif
+ 
+-#if 201710L < __STDC_VERSION__
++#if 0 && 201710L < __STDC_VERSION__
+ # define _GL_ATTRIBUTE_NODISCARD [[__nodiscard__]]
+ #elif _GL_HAS_ATTRIBUTE (warn_unused_result)
+ # define _GL_ATTRIBUTE_NODISCARD __attribute__ ((__warn_unused_result__))
