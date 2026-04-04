@@ -102,7 +102,7 @@ insert_detect() {
 remove_detect() {
 	rmmod -w open_sensor_spi
 	rmmod -w open_sensor_i2c
-	rmmod -w gk7205v200_isp
+	rmmod -w open_isp
 	rmmod -w gk7205v200_base
 	rmmod -w open_osal >/dev/null 2>&1
 	rmmod -w open_sys_config
