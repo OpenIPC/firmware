@@ -32,6 +32,7 @@ br-%: defconfig
 defconfig: prepare
 	@echo --- $(or $(CONFIG),$(error variable BOARD not found))
 	@cat $(CONFIG) $(PWD)/general/openipc.fragment > $(BR_CONF)
+	@grep -s '^BR2_GLOBAL_PATCH_DIR=' $(CONFIG) >> $(BR_CONF) || true
 	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
 
 prepare:
