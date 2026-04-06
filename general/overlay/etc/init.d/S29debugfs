@@ -1,0 +1,21 @@
+#!/bin/sh
+
+case "$1" in
+	start)
+		if grep -q debugfs /proc/filesystems; then
+			echo "Mounting debugfs..."
+			mount -t debugfs none /sys/kernel/debug
+		fi
+		;;
+
+	stop)
+		if mountpoint -q /sys/kernel/debug 2>/dev/null; then
+			umount /sys/kernel/debug
+		fi
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac
