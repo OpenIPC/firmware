@@ -10,6 +10,11 @@ HISILICON_OPENSDK_VERSION = 6fe935a
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
 
+# Ensure opensdk installs after osdrv so our modules overwrite vendor ones
+ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV500),y)
+HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3516cv500
+endif
+
 HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
 HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
 	DISABLE_IST=1 \
@@ -48,6 +53,7 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
 		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
 	)
+	$(INSTALL) -m 644 $(@D)/libraries/isp/libisp.so $(TARGET_DIR)/usr/lib/libisp.so
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	$(INSTALL) -m 644 $(@D)/kernel/open_osal.ko       $(HISILICON_OPENSDK_KMOD_DST)/hi_osal.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_sys_config.ko  $(HISILICON_OPENSDK_KMOD_DST)/sys_config.ko
