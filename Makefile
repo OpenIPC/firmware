@@ -78,6 +78,7 @@ ifeq ($(BR2_TOOLCHAIN_EXTERNAL),y)
 	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
 endif
 	@$(BR_MAKE) sdk -j$(shell nproc)
+	@$(call BUNDLE_SDK)
 
 repack:
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
@@ -99,6 +100,27 @@ endif
 ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
 	@$(call PREPARE_REPACK,uImage,16384,,,initramfs)
 endif
+
+define BUNDLE_SDK
+	$(eval OSDRV_DIR = $(PWD)/general/package/$(OPENIPC_SOC_VENDOR)-osdrv-$(OPENIPC_SOC_FAMILY)/files)
+	$(eval SDK_TGZ = $(shell find $(TARGET)/images -name '*_sdk-buildroot.tar.gz' | head -1))
+	$(eval SDK_TOP = $(shell tar tzf $(SDK_TGZ) | head -1 | cut -d/ -f1))
+	$(eval COMPAT_SRC = $(PWD)/general/package/uclibc-compat/src/uclibc-compat.c)
+	$(eval SDK_CC = $(shell ls $(TARGET)/host/bin/*-gcc 2>/dev/null | head -1))
+	if [ -d "$(OSDRV_DIR)" ] && [ -n "$(SDK_TGZ)" ]; then \
+		rm -rf /tmp/sdk-overlay && mkdir -p /tmp/sdk-overlay/$(SDK_TOP)/sdk; \
+		cp -a $(OSDRV_DIR)/* /tmp/sdk-overlay/$(SDK_TOP)/sdk/; \
+		if [ -f "$(COMPAT_SRC)" ] && [ -n "$(SDK_CC)" ]; then \
+			$(SDK_CC) -shared -Wall -O2 -fPIC \
+				-o /tmp/sdk-overlay/$(SDK_TOP)/sdk/lib/libuclibc-compat.so \
+				$(COMPAT_SRC); \
+		fi; \
+		gunzip $(SDK_TGZ) && \
+		tar rf $(SDK_TGZ:.tar.gz=.tar) -C /tmp/sdk-overlay $(SDK_TOP) && \
+		gzip $(SDK_TGZ:.tar.gz=.tar); \
+		rm -rf /tmp/sdk-overlay; \
+	fi
+endef
 
 define PREPARE_REPACK
 	$(if $(1),$(call CHECK_SIZE,$(1),$(2)))

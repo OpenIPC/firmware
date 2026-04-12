@@ -1,0 +1,13 @@
+config BR2_PACKAGE_UCLIBC_COMPAT
+	bool "uclibc-compat"
+	help
+	  Compatibility shim for vendor binaries built against uclibc or
+	  old glibc that must run on musl.  Provides ABI translation for
+	  struct stat (96B uclibc vs 152B musl), mmap off_t (4B vs 8B),
+	  and missing symbols (__ctype_b, __assert, memcpy_s, etc).
+
+	  Executables that load vendor .so files should link with
+	  -luclibc-compat (static archive) so the shim symbols appear
+	  in the executable's scope before musl's.
+
+	  https://github.com/OpenIPC/firmware/issues/1992
