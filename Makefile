@@ -65,6 +65,9 @@ clean:
 distclean:
 	@rm -rf $(BR_FILE) $(TARGET)
 
+audit-abi:
+	@python3 $(PWD)/general/scripts/audit-vendor-abi.py
+
 deps:
 	sudo apt-get install -y automake autotools-dev bc build-essential cpio \
 		curl file fzf git libncurses-dev libtool lzop make rsync unzip wget libssl-dev
