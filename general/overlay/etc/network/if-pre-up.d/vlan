@@ -1,0 +1,48 @@
+#!/bin/sh
+
+# Most of this stuff is to enable vlans
+
+case "$IFACE" in
+	vlan0*)
+		vconfig set_name_type VLAN_PLUS_VID
+		VLANID=$(echo $IFACE|sed "s/vlan0*//")
+		;;
+
+	vlan*)
+		vconfig set_name_type VLAN_PLUS_VID_NO_PAD
+		VLANID=$(echo $IFACE|sed "s/vlan*//")
+		;;
+
+	*.0*)
+		vconfig set_name_type DEV_PLUS_VID
+		VLANID=$(echo $IFACE|sed "s/.*\.0*\([0-9]\+\)$/\1/g")
+		IF_VLAN_RAW_DEVICE=$(echo $IFACE|sed "s/^\(.*\)\.[^.]*/\1/")
+		;;
+
+	*.*)
+		vconfig set_name_type DEV_PLUS_VID_NO_PAD
+		VLANID=$(echo $IFACE|sed "s/.*\.0*\([0-9]\+\)$/\1/g")
+		IF_VLAN_RAW_DEVICE=$(echo $IFACE|sed "s/^\(.*\)\.[^.]*/\1/")
+		;;
+
+	*)
+		exit 0
+		;;
+esac
+
+if [ -n "$IF_VLAN_RAW_DEVICE" ]; then
+	[ ! -x /sbin/vconfig ] && exit 0
+
+	if ! ip link show dev "$IF_VLAN_RAW_DEVICE" > /dev/null; then
+		echo "$IF_VLAN_RAW_DEVICE does not exist, unable to create $IFACE"
+		exit 1
+	fi
+
+	ip link set up dev $IF_VLAN_RAW_DEVICE
+	vconfig add $IF_VLAN_RAW_DEVICE $VLANID
+fi
+
+ip link set qlen 1000 dev $IFACE
+
+# This is not vlan specific, and should actually go somewhere else.
+[ -n "$IF_HW_MAC_ADDRESS" ] && ip link set $IFACE address $IF_HW_MAC_ADDRESS

@@ -1,0 +1,87 @@
+name: toolchain
+on:
+  workflow_dispatch:
+
+env:
+  TAG_NAME: toolchain
+
+jobs:
+  toolchain:
+    name: Toolchain
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          # Sigmastar
+          - ssc325_lite
+          - ssc335_lite
+          - ssc377_lite
+          - ssc338q_lite
+
+          # Hisilicon
+          - hi3516av100_lite
+          - hi3516cv100_lite
+          - hi3516cv200_lite
+          - hi3516cv300_lite
+          - hi3516cv500_lite
+          - hi3516ev200_lite
+          - hi3519v101_lite
+          - hi3536cv100_lite
+          - hi3536dv100_lite
+
+          # Goke
+          - gk7102_lite
+          - gk7205v200_lite
+          - gk7205v500_lite
+
+          # Ingenic
+          - t20_lite
+          - t21_lite
+          - t31_lite
+          - t40_lite
+
+          # Allwinner
+          - v851s_lite
+
+          # Fullhan
+          - fh8852v100_lite
+          - fh8852v200_lite
+
+          # Grainmedia
+          - gm8136_lite
+
+          # Novatek
+          - nt98562_lite
+
+          # Rockchip
+          - rv1106_lite
+          - rv1126_lite
+
+          # Xiongmai
+          - xm510_lite
+          - xm530_lite
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Build toolchain
+        run: |
+          GCC=$(make BOARD=${{matrix.platform}} toolname).tgz
+          URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}
+          echo ${URL}
+          if ! wget -q --spider ${URL}; then
+            make BOARD=${{matrix.platform}} toolchain
+            SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
+            mv ${SDK} ${GCC}
+            echo GCC=${GCC} >> ${GITHUB_ENV}
+          fi
+
+      - name: Upload toolchain
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{env.TAG_NAME}}
+          make_latest: false
+          files: ${{env.GCC}}

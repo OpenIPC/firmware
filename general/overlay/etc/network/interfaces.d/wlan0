@@ -1,0 +1,5 @@
+iface wlan0 inet dhcp
+    pre-up wpa_passphrase "$(fw_printenv -n wlanssid)" "$(fw_printenv -n wlanpass)" > /tmp/wpa_supplicant.conf
+    pre-up sed -i 's/#psk.*/scan_ssid=1/g' /tmp/wpa_supplicant.conf
+    pre-up wpa_supplicant -B -i wlan0 -D nl80211,wext -c /tmp/wpa_supplicant.conf
+    post-down killall -q wpa_supplicant

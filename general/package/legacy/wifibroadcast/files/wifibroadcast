@@ -1,0 +1,182 @@
+#!/bin/sh
+chip=$(ipcinfo -c)
+vendor=$(ipcinfo -v)
+keydir=/etc
+
+if [ -e /etc/datalink.conf ]; then
+	. /etc/datalink.conf
+fi
+
+if [ -e /etc/wfb.conf ]; then
+	. /etc/wfb.conf
+fi
+
+set_mcs() {
+	if [ "$vendor" = "ingenic" ]; then
+		mcs=$(ls -l /lib/firmware | grep "htc_9271" | awk { 'print $11' } | cut -d "." -f3)
+	else
+		mcs=$(ls -l /lib/firmware/ath9k_htc | grep "htc_9271-1.4.0.fw" | cut -d "." -f6)
+	fi
+
+	if [ -z "$mcs" ]; then
+		setmcs "$mcs_index"
+	fi
+
+	if [ "$mcs_index" -eq 1 ] || [ "$mcs_index" -eq 3 ]; then
+		if [ ! "$mcs_index" -eq "$mcs" ]; then
+			setmcs "$mcs_index"
+			sleep 3
+		fi
+	fi
+}
+
+detect_wifi_card() {
+	devices=$(lsusb | cut -d ' ' -f6 | sort | uniq)
+	for card in $devices; do
+		case "$card" in
+			"0bda:8812" | "0bda:881a" | "0b05:17d2" | "2357:0101" | "2604:0012")
+				driver="88XXau"
+				modprobe 88XXau rtw_tx_pwr_idx_override="$driver_txpower_override"
+				;;
+
+			"0bda:a81a")
+				driver="8812eu"
+				modprobe 8812eu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+				;;
+
+			"0bda:f72b" | "0bda:b733")
+				driver="8733bu"
+				modprobe 8733bu rtw_regd_src=1 rtw_tx_pwr_by_rate=0 rtw_tx_pwr_lmt_enable=0
+				;;
+
+			"0cf3:9271" | "040d:3801")
+				driver="ar9271"
+				if [ "$unit" != "gs" ]; then
+					set_mcs
+				fi
+				modprobe mac80211
+				modprobe ath9k_hw txpower="$txpower"
+				modprobe ath9k_htc
+				;;
+		esac
+	done
+
+	if [ -z "$driver" ]; then
+		echo "Wireless module not detected, check the usb connection."
+		exit 1
+	else
+		echo "Detected: $driver"
+	fi
+
+	local n=0
+	while ! ifconfig -a | grep -q "$wlan"; do
+		if [ "$n" -ge 5 ]; then
+			echo "No interface for $wlan, check the usb connection."
+			exit 1
+		fi
+		sleep 0.5
+		n=$((n + 1))
+	done
+}
+
+load_modules() {
+	modprobe cfg80211
+	detect_wifi_card
+}
+
+load_interface() {
+	if [ "$driver" = "ar9271" ]; then
+		iwconfig "$wlan" mode monitor
+		ifconfig "$wlan" up
+	else
+		ifconfig "$wlan" up
+		iwconfig "$wlan" mode monitor
+	fi
+
+	if [ "$driver" = "8812eu" ] || [ "$driver" = "8733bu" ]; then
+		iw dev "$wlan" set txpower fixed $((driver_txpower_override * 50))
+	fi
+
+	iw reg set "$region"
+
+	if [ -n "$frequency" ]; then
+		iwconfig "$wlan" freq "$frequency"
+	else
+		iwconfig "$wlan" channel "$channel"
+	fi
+}
+
+start_drone_wfb() {
+	wfb_tx -p "$stream" -u "$udp_port" -R "$rcv_buf" -K "$keydir/$unit.key" -B "$bandwidth" \
+		-M "$mcs_index" -S "$stbc" -L "$ldpc" -G "$guard_interval" -k "$fec_k" -n "$fec_n" \
+		-T "$pool_timeout" -i "$link_id" -f "$frame_type" -C 8000 "$wlan" > /dev/null &
+}
+
+start_gs_wfb() {
+	wfb_rx -c "$udp_addr" -u "$udp_port" -p "$stream" -K "$keydir/$unit.key" -i "$link_id" "$wlan" > /dev/null &
+}
+
+start_tunnel_wfb() {
+	if [ ! -e /usr/bin/tunnel_rx ] || [ ! -e /usr/bin/tunnel_tx ]; then
+		ln -fs /usr/bin/wfb_rx /usr/bin/tunnel_rx
+		ln -fs /usr/bin/wfb_tx /usr/bin/tunnel_tx
+	fi
+
+	tunnel_rx -p 160 -u 5800 -K "$keydir/$unit.key" -i "$link_id" "$wlan" > /dev/null &
+	tunnel_tx -p 32 -u 5801 -K "$keydir/$unit.key" -M "$mcs_index" -S "$stbc" -L "$ldpc" \
+		-k "$fec_k" -n "$fec_n" -i "$link_id" "$wlan" > /dev/null &
+	wfb_tun -a 10.5.0.10/24 > /dev/null &
+}
+
+case "$1" in
+	start)
+		if [ "$daemon" -eq 1 ]; then
+			echo "Loading modules and wireless driver..."
+			load_modules
+			load_interface
+
+			if ! cat "$keydir/$unit.key" > /dev/null 2>&1; then
+				echo "Generating drone & ground station keys..."
+				cd $keydir && wfb_keygen
+			fi
+
+			start_${unit}_wfb
+
+			if [ "$telemetry" = "true" ]; then
+				if [ "$chip" = "gk7205v200" ]; then
+					devmem 0x120C0010 32 0x1E04
+				elif [ "$chip" = "ssc33x" ]; then
+					devmem 0x1F207890 16 0x8
+				fi
+				telemetry start
+			fi
+
+			if [ "$tunnel" = "true" ]; then
+				start_tunnel_wfb
+			fi
+		else
+			echo "Wifibroadcast service disabled in wfb.conf"
+		fi
+		;;
+
+	stop)
+		echo "Stopping wifibroadcast service..."
+		killall -q wfb_tx
+		killall -q wfb_rx
+
+		if [ "$telemetry" = "true" ]; then
+			telemetry stop
+		fi
+
+		if [ "$tunnel" = "true" ]; then
+			killall -q tunnel_rx
+			killall -q tunnel_tx
+			killall -q wfb_tun
+		fi
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac

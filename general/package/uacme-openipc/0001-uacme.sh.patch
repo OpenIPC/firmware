@@ -1,0 +1,19 @@
+--- a/uacme.sh	2021-08-11 00:54:06.720473918 +0300
++++ b/uacme.sh	2021-08-11 00:53:57.168540420 +0300
+@@ -16,7 +16,7 @@
+ # You should have received a copy of the GNU General Public License
+ # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ 
+-CHALLENGE_PATH="${UACME_CHALLENGE_PATH:-/var/www/.well-known/acme-challenge}"
++CHALLENGE_PATH="${UACME_CHALLENGE_PATH:-/tmp/.well-known/acme-challenge}"
+ ARGS=5
+ E_BADARGS=85
+ 
+@@ -36,6 +36,7 @@ case "$METHOD" in
+     "begin")
+         case "$TYPE" in
+             http-01)
++                mkdir -p ${CHALLENGE_PATH}
+                 echo -n "${AUTH}" > "${CHALLENGE_PATH}/${TOKEN}"
+                 exit $?
+                 ;;

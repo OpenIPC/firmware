@@ -1,0 +1,20 @@
+--- a/hal_apollo/dev_ioctl.c	2024-11-24 17:40:15.325813428 -0800
++++ b/hal_apollo/dev_ioctl.c	2024-11-24 16:16:47.360567731 -0800
+@@ -320,7 +320,7 @@
+ 					memcpy(&ap_vendor_cfg_ie.private_ie , &private_ie,sizeof(struct atbm_vendor_cfg_ie)); 
+ 					
+ 					ap_vendor_cfg_ie.ap_sdata = sdata;
+-					ieee80211_send_probe_resp_mgmt_queue(hw_priv,&ap_vendor_cfg_ie,1);
++					ieee80211_send_probe_resp_mgmt_queue(hw_priv,(char *) &ap_vendor_cfg_ie,1);
+ 
+ 					
+ 				
+@@ -350,7 +350,7 @@
+ 					memset(&customer_action_ie,0,sizeof(struct atbm_customer_action));
+ 					customer_action_ie.sdata = sdata;
+ 					customer_action_ie.action = msg->externData[1];
+-					ieee80211_send_action_mgmt_queue(hw_priv,&customer_action_ie,1);					
++					ieee80211_send_action_mgmt_queue(hw_priv,(char *)&customer_action_ie,1);					
+ 				}
+ 			}break;
+ 		default:{

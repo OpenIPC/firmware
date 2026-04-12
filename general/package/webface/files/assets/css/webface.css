@@ -1,0 +1,465 @@
+/* webface.css — Unified styles for the webface auth system
+ * Copyright (c) OpenIPC  https://openipc.org  MIT License
+ *
+ * Page-specific rules scoped via body classes:
+ *   .page-login     — login.html
+ *   .page-dashboard — index.cgi
+ */
+
+/* =============================================================
+ *  1. DESIGN TOKENS
+ * ============================================================= */
+:root {
+  --bg:        #0a0e14;
+  --surface:   #0d1520;
+  --border:    #1a2e45;
+  --accent:    #00d4ff;
+  --text:      #c8dae8;
+  --muted:     #4a6580;
+  --error:     #ff4560;
+  --success:   #00e5a0;
+  --mono:      'Courier New', Courier, monospace;
+  --sans:      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+
+/* =============================================================
+ *  2. RESET & BASE
+ * ============================================================= */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+}
+
+/* Login page: centered flex layout, no scroll */
+body.page-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Dashboard page: normal document flow with padding */
+body.page-dashboard {
+  padding: 24px;
+  line-height: 1.6;
+}
+
+
+/* =============================================================
+ *  3. SHARED COMPONENTS
+ * ============================================================= */
+
+/* ── Base card ─────────────────────────────────────────────── */
+.card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+
+/* =============================================================
+ *  4. LOGIN PAGE  (.page-login)
+ * ============================================================= */
+
+/* ── Animated grid background ──────────────────────────────── */
+body.page-login::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: gridDrift 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes gridDrift {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(40px); }
+}
+
+/* ── Decorative glow orbs ──────────────────────────────────── */
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: pulse 8s ease-in-out infinite alternate;
+}
+.orb-1 { width: 400px; height: 400px; background: rgba(0,119,170,.18); top: -100px; right: -100px; animation-delay: 0s; }
+.orb-2 { width: 300px; height: 300px; background: rgba(0,212,255,.10); bottom: -80px; left: -80px; animation-delay: 3s; }
+
+@keyframes pulse {
+  from { opacity: .6; transform: scale(1); }
+  to   { opacity: 1;  transform: scale(1.12); }
+}
+
+/* ── Login card ────────────────────────────────────────────── */
+.page-login .card {
+  width: 420px;
+  padding: 44px 40px 40px;
+  box-shadow:
+    0 0 0 1px rgba(0,212,255,.06),
+    0 20px 60px rgba(0,0,0,.7),
+    inset 0 1px 0 rgba(255,255,255,.04);
+  animation: slideIn .5s cubic-bezier(.22,1,.36,1) both;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Accent corner decorations */
+.page-login .card::before,
+.page-login .card::after {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  border-color: var(--accent);
+  border-style: solid;
+}
+.page-login .card::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.page-login .card::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+/* ── Header / logo ─────────────────────────────────────────── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.logo-icon {
+  width: 36px; height: 36px;
+  border: 1.5px solid var(--accent);
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+.logo-icon svg { width: 18px; height: 18px; color: var(--accent); }
+.logo-text { line-height: 1.2; }
+.logo-title {
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--accent);
+  letter-spacing: .06em;
+}
+.logo-sub {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.page-login h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #e8f4ff;
+  letter-spacing: .02em;
+  margin-bottom: 6px;
+}
+.subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 28px;
+  font-family: var(--mono);
+}
+.subtitle span {
+  color: var(--accent);
+  animation: blink 1.2s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── Form fields ───────────────────────────────────────────── */
+.field { margin-bottom: 18px; }
+
+.page-login label {
+  display: block;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+
+.input-wrap { position: relative; }
+
+.input-wrap > svg {
+  position: absolute;
+  left: 12px; top: 50%;
+  transform: translateY(-50%);
+  width: 16px; height: 16px;
+  color: var(--muted);
+  pointer-events: none;
+  transition: color .2s;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  background: rgba(0,0,0,.4);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 11px 36px 11px 38px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0,212,255,.08);
+}
+.input-wrap:focus-within > svg { color: var(--accent); }
+
+/* Password visibility toggle button */
+.toggle-pw {
+  position: absolute;
+  right: 10px; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none;
+  cursor: pointer; padding: 4px;
+  color: var(--muted);
+  transition: color .2s;
+  display: flex; align-items: center;
+}
+.toggle-pw:hover { color: var(--accent); }
+.toggle-pw svg { width: 16px; height: 16px; }
+
+/* ── Error banner ──────────────────────────────────────────── */
+.error-msg {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,69,96,.08);
+  border: 1px solid rgba(255,69,96,.3);
+  border-radius: 3px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--error);
+  font-family: var(--mono);
+  margin-bottom: 18px;
+  animation: shake .35s ease;
+}
+.error-msg.show { display: flex; }
+.error-msg svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%,60%  { transform: translateX(-5px); }
+  40%,80%  { transform: translateX(5px); }
+}
+
+/* ── Submit button ─────────────────────────────────────────── */
+.btn {
+  width: 100%;
+  padding: 13px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: color .2s, box-shadow .2s;
+  margin-top: 4px;
+}
+
+/* Slide-in fill effect on hover */
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  transform: translateX(-101%);
+  transition: transform .3s cubic-bezier(.22,1,.36,1);
+  z-index: 0;
+}
+.btn:hover::before { transform: translateX(0); }
+.btn:hover { color: var(--bg); box-shadow: 0 0 20px rgba(0,212,255,.25); }
+.btn:active { transform: scale(.98); }
+.btn span { position: relative; z-index: 1; }
+
+/* Loading spinner (replaces button text while submitting) */
+.btn.loading span { visibility: hidden; }
+.btn.loading::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  animation: spin .7s linear infinite;
+  z-index: 1;
+}
+@keyframes spin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+/* ── Login card footer ─────────────────────────────────────── */
+.card-footer {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.status-dot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; }
+  50%      { opacity: .4; }
+}
+.version {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  opacity: .5;
+}
+
+
+/* =============================================================
+ *  5. DASHBOARD PAGE  (.page-dashboard)
+ * ============================================================= */
+
+/* ── Layout ─────────────────────────────────────────────────── */
+.container { max-width: 800px; margin: 0 auto; }
+
+/* ── Top bar ────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+.topbar-user {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+}
+.topbar-user::before { content: '$ '; color: var(--muted); }
+.logout-link {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 3px;
+  transition: color .2s, border-color .2s;
+}
+.logout-link:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ── Info grid ──────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 16px;
+}
+.stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--accent);
+}
+
+/* ── Dashboard content card ────────────────────────────────── */
+.page-dashboard .card {
+  padding: 28px;
+  margin-bottom: 20px;
+}
+
+/* ── Camera snapshot ───────────────────────────────────────── */
+.snapshot { text-align: center; }
+.snapshot img {
+  max-width: 100%;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  display: block;
+  margin: 0 auto;
+}
+.page-dashboard .card h2 {
+  font-size: 18px;
+  color: #e8f4ff;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+.page-dashboard .card h3 {
+  font-size: 15px;
+  color: var(--accent);
+  margin: 20px 0 8px;
+  font-weight: 600;
+}
+.page-dashboard .card p { margin-bottom: 12px; font-size: 14px; }
+.page-dashboard .card a { color: var(--accent); text-decoration: none; }
+.page-dashboard .card a:hover { text-decoration: underline; }
+.page-dashboard .card ul {
+  margin: 8px 0 12px 20px;
+  font-size: 14px;
+}
+.page-dashboard .card li { margin-bottom: 4px; }
+.page-dashboard .card code {
+  font-family: var(--mono);
+  font-size: 13px;
+  background: rgba(0,212,255,.06);
+  padding: 1px 5px;
+  border-radius: 2px;
+  color: var(--accent);
+}
+
+/* ── Dashboard footer ──────────────────────────────────────── */
+.footer {
+  text-align: center;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  opacity: .6;
+  padding: 12px 0;
+}

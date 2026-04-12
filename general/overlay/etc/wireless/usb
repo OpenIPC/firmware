@@ -1,0 +1,327 @@
+#!/bin/sh
+
+set_gpio() {
+	[ "$2" -eq 1 ] && gpio set $1 || gpio clear $1
+	sleep 1
+}
+
+# Generic MT7601U
+if [ "$1" = "mt7601u-generic" ]; then
+	modprobe mt7601u
+	exit 0
+fi
+
+# Generic RTL8188EU
+if [ "$1" = "rtl8188eu-generic" ]; then
+	modprobe 8188eu
+	exit 0
+fi
+
+# Generic RTL8188FU
+if [ "$1" = "rtl8188fu-generic" ]; then
+	modprobe 8188fu
+	exit 0
+fi
+
+# Generic RTL8733BU
+if [ "$1" = "rtl8733bu-generic" ]; then
+	modprobe 8733bu
+	exit 0
+fi
+
+# Generic RTL8811CU
+if [ "$1" = "rtl8811cu-generic" ]; then
+	modprobe 8821cu
+	exit 0
+fi
+
+# Generic RTL8812AU
+if [ "$1" = "rtl8812au-generic" ]; then
+	modprobe 88XXau rtw_ht_enable=0 rtw_led_enable=0
+	exit 0
+fi
+
+# Generic ATBM603x
+if [ "$1" = "atbm603x-generic-usb" ]; then
+	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
+# GK7205V200 CamHi
+if [ "$1" = "mt7601u-gk7205v200-camhi" ]; then
+	set_gpio 9 0
+	modprobe mt7601u
+	exit 0
+fi
+
+# GK7205V300 CamHi
+if [ "$1" = "mt7601u-gk7205v300-camhi" ]; then
+	devmem 0x100C0080 32 0x530
+	set_gpio 7 0
+	modprobe mt7601u
+	exit 0
+fi
+
+# GK7205V200 CamHi
+if [ "$1" = "rtl8733bu-gk7205v200-camhi" ]; then
+	set_gpio 9 0
+	modprobe 8733bu
+	exit 0
+fi
+
+# GK7205V200 Kafei
+if [ "$1" = "8188fu-gk7205v200-kafei" ]; then
+	set_gpio 57 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# GK7205V300 CamHi
+if [ "$1" = "rtl8733bu-gk7205v300-camhi" ]; then
+	devmem 0x100c0080 32 0x0
+	set_gpio 7 0
+	modprobe 8733bu
+	exit 0
+fi
+
+# GK7205V300 XM IVG-G6S
+if [ "$1" = "atbm603x-gk7205v300-xm-g6s" ]; then
+  devmem 0x100C0080 32 0x530
+  set_gpio 7 0
+	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
+# GK7205V300 Vase
+if [ "$1" = "rtl8811cu-gk7205v300-vase" ]; then
+	devmem 0x100c0080 32 0x0
+	set_gpio 7 1
+	modprobe 8821cu
+	exit 0
+fi
+
+# HI3516EV200 CamHi
+if [ "$1" = "mt7601u-hi3516ev200-camhi" ]; then
+	set_gpio 9 0
+	modprobe mt7601u
+	exit 0
+fi
+
+# HI3516EV300 CamHi
+if [ "$1" = "mt7601u-hi3516ev300-camhi" ]; then
+	devmem 0x100C0080 32 0x530
+	set_gpio 7 0
+	modprobe mt7601sta
+	exit 0
+fi
+
+# HI3518EV100 CamHi
+if [ "$1" = "mt7601u-hi3518ev100-camhi" ]; then
+	modprobe mt7601sta
+	exit 0
+fi
+
+# HI3518EV200 LifeSmart
+if [ "$1" = "rtl8188fu-hi3518ev200-lifesmart" ]; then
+	set_gpio 54 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# HI3518EV200 Switcam HS303 (V1)
+if [ "$1" = "rtl8188fu-switcam-hs303" ]; then
+	set_gpio 3 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# HI3518EV200 Lenovo Snowman 1080p
+if [ "$1" = "rtl8188eus-hi3518ev200-lenovo" ]; then
+	devmem 0x200f006c 32 0
+	modprobe 8188eu
+	exit 0
+fi
+
+# HI3518EV200 Qtech QVC-IPC-136W
+if [ "$1" = "rtl8188eu-hi3518ev200-qvc-ipc-136w" ]; then
+	set_gpio 7 1
+	modprobe 8188eu
+	exit 0
+fi
+
+# HI3518EV200 Switcam HS303 V2
+if [ "$1" = "rtl8188eus-switcam-hs303v2" ]; then
+	set_gpio 54 1
+	modprobe 8188eu
+	exit 0
+fi
+
+# HI3518EV300 Unknown1
+if [ "$1" = "rtl8188fu-hi3518ev300-unknown1" ]; then
+	set_gpio 57 0
+	modprobe mac80211
+	modprobe 8188fu
+	exit 0
+fi
+
+# HI3518EV300 t5810hct-m02
+if [ "$1" = "rtl8188fu-hi3518ev300-t5810hct-m02" ]; then
+	set_gpio 40 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC325DE IMOU C22EP-S2
+if [ "$1" = "rtl8188fu-ssc325de-imou-c22ep-s2" ]; then
+	set_gpio 62 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC335DE IMOU C22E-S2 V2
+if [ "$1" = "rtl8188fu-ssc335de-imou-c22e-s2-v2" ]; then
+	set_gpio 14 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC333 Babysense See HD IP206
+if [ "$1" = "rtl8188fu-babysense-see-hd-ip206" ]; then
+	set_gpio 14 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC333 Meari Speed 6S
+if [ "$1" = "rtl8188fu-ssc333-meari-speed-6s" ]; then
+	set_gpio 14 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC333 Tapo C110
+if [ "$1" = "ssw101b-ssc333-tapo-c110" ]; then
+	set_gpio 16 1
+	modprobe ssw101b_wifi_usb
+	exit 0
+fi
+
+# SSC333 Tapo C110 v2.6
+if [ "$1" = "atbm6012b-ssc333-tapo-c110" ]; then
+	set_gpio 16 1
+	modprobe atbm6012b_wifi_usb
+	exit 0
+fi
+
+# SSC335DE Uniview C1L-2WN-G
+if [ "$1" = "rtl8188fu-ssc335de-uniview-c1l-2wn-g" ]; then
+	set_gpio 1 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC337DE BroadbandService
+if [ "$1" = "aic8800-ssc337de-broadband" ]; then
+	modprobe aic8800_fdrv
+	exit 0
+fi
+
+# SSC337DE BroadbandService
+if [ "$1" = "rtl8188fu-ssc337de-broadband" ]; then
+	set_gpio 2 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC337DE Foscam
+if [ "$1" = "rtl8188fu-ssc337de-foscam" ]; then
+	set_gpio 15 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# SSC377 Dahua
+if [ "$1" = "ssv6x5x-ssc377-dahua" ]; then
+	set_gpio 10 1
+	modprobe ssv6x5x
+	exit 0
+fi
+
+# T10 NVT
+if [ "$1" = "mt7601sta-t10-nvt" ]; then
+	modprobe cfg80211
+	modprobe mt7601sta
+	exit 0
+fi
+
+# T21 BJS
+if [ "$1" = "rtl8188fu-t21-bjs" ]; then
+	set_gpio 50 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# T21 Smartwares
+if [ "$1" = "rtl8188fu-t21-smartwares" ]; then
+	set_gpio 49 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# T31 Aoni EP01J05
+if [ "$1" = "rtl8188fu-t31-aoni-ep01j05" ]; then
+	set_gpio 43 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# T31 Aosu C5L
+if [ "$1" = "rtl8188fu-t31-aosu-c5l" ]; then
+	set_gpio 43 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# T31 CamHi
+if [ "$1" = "mt7601u-t31-camhi" ]; then
+	set_gpio 61 0
+	modprobe mac80211
+	exit 0
+fi
+
+# T31 Camhipro
+if [ "$1" = "rtl8733bu-t31-camhipro" ]; then
+	set_gpio 61 0
+	modprobe 8733bu
+	exit 0
+fi
+
+# T31 iFlytek
+if [ "$1" = "ssv6155-t31-iflytek" ]; then
+	set_gpio 10 1
+	modprobe ssv6155
+	exit 0
+fi
+
+# T31 iFlytek XFP301-M
+if [ "$1" = "rtl8188fu-t31-iflytek-xfp301m" ]; then
+	set_gpio 10 1
+	modprobe 8188fu
+	exit 0
+fi
+
+# T31 ZTE K540
+if [ "$1" = "atbm603x-t31-zte-k540" ]; then
+	set_gpio 51 0
+	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
+# T31 Aoni E97VJ62
+if [ "$1" = "rtl8188fu-t31-aoni-e97vj62" ]; then
+	set_gpio 53 1
+	modprobe 8188fu
+  exit 0
+fi
+
+exit 1

@@ -1,0 +1,79 @@
+#!/bin/sh
+
+KMOD_PATH=/lib/modules/$(uname -r)/ingenic
+SOC=$(fw_printenv -n soc)
+vendor=$(ipcinfo -v)
+
+if [ ! -f /usr/sbin/sensor_cli ]; then
+	ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
+fi
+
+echo 1 >/proc/sys/vm/overcommit_memory
+
+log_vendor() {
+	logger -s -p daemon.info -t ${vendor} "$1"
+}
+
+check_return() {
+	if [ $? -ne 0 ]; then
+		echo err: $1
+		echo exit
+		exit
+	fi
+}
+
+lsmod | grep -q "sinfo"
+if [ $? -ne 0 ]; then
+	modprobe sinfo.ko
+	check_return "modprobe sinfo"
+fi
+
+SENSOR=$(fw_printenv -n sensor)
+if [ -n "$SENSOR" ]; then
+	export ${SENSOR}
+	log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
+else
+	echo 1 >/proc/jz/sinfo/info
+	check_return "start sinfo"
+	SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+	check_return "get sensor type"
+	SENSOR=${SENSOR_INFO#*:}
+	if [ "sensor not found" = "$SENSOR" ]; then
+		unset SENSOR
+		fw_setenv sensor
+	else
+		log_vendor "Get data from sinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && log_vendor "Write detected ${SENSOR} to U-Boot ENV"
+	fi
+fi
+
+case ${SENSOR} in
+	*)
+		ISP_PARAM=""
+		SENSOR_PARAM=""
+		;;
+esac
+
+echo --------------------
+echo "ISP_PARAM: ${ISP_PARAM}"
+echo "SENSOR: ${SENSOR}"
+echo "SENSOR_PARAM: ${SENSOR_PARAM}"
+echo --------------------
+
+lsmod | grep -q "tx_isp"
+if [ $? -ne 0 ]; then
+	modprobe tx-isp-${SOC} ${ISP_PARAM}
+	check_return "modprobe isp drv"
+fi
+
+lsmod | grep -q ${SENSOR}
+if [ $? -ne 0 ]; then
+	modprobe sensor_${SENSOR}_${SOC} ${SENSOR_PARAM}
+	check_return "modprobe sensor drv"
+fi
+
+lsmod | grep -q "audio"
+if [ $? -ne 0 ]; then
+	modprobe audio spk_gpio=-1
+	check_return "modprobe audio"
+fi

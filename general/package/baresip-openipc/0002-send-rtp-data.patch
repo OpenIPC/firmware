@@ -1,0 +1,34 @@
+diff --git a/include/baresip.h b/include/baresip.h
+index ab7b1b38..d33959d9 100644
+--- a/include/baresip.h
++++ b/include/baresip.h
+@@ -616,12 +616,15 @@ typedef int  (auplay_alloc_h)(struct auplay_st **stp, const struct auplay *ap,
+ 			      struct auplay_prm *prm, const char *device,
+ 			      auplay_write_h *wh, void *arg);
+ 
++typedef void (auplay_send_h)(const void *sampv, size_t sampc);
++
+ /** Defines an Audio Player */
+ struct auplay {
+ 	struct le        le;
+ 	const char      *name;
+ 	struct list      dev_list;
+ 	auplay_alloc_h  *alloch;
++	auplay_send_h   *asendh;
+ };
+ 
+ int auplay_register(struct auplay **pp, struct list *auplayl,
+diff --git a/src/aureceiver.c b/src/aureceiver.c
+index 43ae2bd8..bc03f025 100644
+--- a/src/aureceiver.c
++++ b/src/aureceiver.c
+@@ -194,6 +194,9 @@ static int aurecv_push_aubuf(struct audio_recv *ar, const struct auframe *af)
+ 		re_atomic_rlx_set(&ar->stats.latency,
+ 				  aubuf_cur_size(ar->aubuf) / bpms);
+ 
++	if (ar->ap->asendh)
++		ar->ap->asendh(af->sampv, af->sampc * 2);
++
+ 	return 0;
+ }
+ 

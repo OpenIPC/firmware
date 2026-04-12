@@ -1,0 +1,13 @@
+#!/bin/sh
+
+WIFI=$1
+
+if [ "$WIFI" = "xm711" ]; then
+    insmod /lib/modules/3.10.103+/xiongmai/dwc_common_port_lib.ko
+    insmod /lib/modules/3.10.103+/xiongmai/dwc_otg.ko
+    insmod /lib/modules/3.10.103+/xiongmai/wifi_pdn.ko value=96
+    insmod /lib/modules/3.10.103+/xiongmai/compat.ko
+    insmod /lib/modules/3.10.103+/kernel/net/wireless/cfg80211.ko     # grab from original firmware
+    # insmod /lib/modules/3.10.103+/kernel/net/mac80211/mac80211.ko   # not used with grabbed cfg80211
+    insmod /lib/modules/3.10.103+/xiongmai/xm711.ko
+fi

@@ -1,0 +1,87 @@
+#!/bin/sh
+
+# on EV200:
+# GPIO1_0 -> GPIO8 (1*8+0 = 8)
+# GPIO1_1 -> GPIO9 (1*8+1 = 9)
+
+# on EV300:
+# GPIO1_3 -> GPIO11
+# GPIO1_2 -> GPIO10
+
+#(normal mode)
+ir_cut_enable() {
+  # pin_mux
+  echo "$gpio_0" >/sys/class/gpio/unexport
+  echo "$gpio_1" >/sys/class/gpio/unexport
+  echo "$gpio_0" >/sys/class/gpio/export
+  echo "$gpio_1" >/sys/class/gpio/export
+
+  # dir
+  echo "out" >/sys/class/gpio/gpio$gpio_0/direction
+  echo "out" >/sys/class/gpio/gpio$gpio_1/direction
+
+  # data, gpio_1: 0, gpio_0: 1  (normal mode)
+  echo "1" >/sys/class/gpio/gpio$gpio_0/value
+  echo "0" >/sys/class/gpio/gpio$gpio_1/value
+
+  #sleep 1s
+  sleep 1
+
+  # back to original
+  echo "0" >/sys/class/gpio/gpio$gpio_0/value
+  echo "0" >/sys/class/gpio/gpio$gpio_1/value
+}
+
+# (ir mode)
+ir_cut_disable() {
+  # pin_mux
+  echo "$gpio_0" >/sys/class/gpio/unexport
+  echo "$gpio_1" >/sys/class/gpio/unexport
+  echo "$gpio_0" >/sys/class/gpio/export
+  echo "$gpio_1" >/sys/class/gpio/export
+
+  # dir
+  echo "out" >/sys/class/gpio/gpio$gpio_0/direction
+  echo "out" >/sys/class/gpio/gpio$gpio_1/direction
+
+  # data, gpio_1: 1, gpio_0: 0  (ir mode)
+  echo "0" >/sys/class/gpio/gpio$gpio_0/value
+  echo "1" >/sys/class/gpio/gpio$gpio_1/value
+
+  #sleep 1s
+  sleep 1
+
+  # back to original
+  echo "0" >/sys/class/gpio/gpio$gpio_0/value
+  echo "0" >/sys/class/gpio/gpio$gpio_1/value
+}
+
+gpio_0=0
+gpio_1=0
+
+if [ $# -lt 2 ]; then
+  echo "usage : ./ircut_demo <chip> <mode>"
+  echo "for example:"
+  echo "ir mode : ./ircut_demo hi3516ev200 1"
+else
+  if [ $1 = "hi3516ev200" ]; then
+    gpio_0=8
+    gpio_1=9
+  elif [ $1 = "hi3516ev300" ]; then
+    gpio_0=11
+    gpio_1=10
+  else
+    echo "wrong chipid: $1, please select: hi3516ev200 or hi3516ev300."
+    exit
+  fi
+
+  if [ $2 -eq 0 ]; then
+    echo "normal mode, ir_cut on"
+    ir_cut_enable >/dev/null
+  elif [ $2 -eq 1 ]; then
+    echo "ir mode, ir_cut off"
+    ir_cut_disable >/dev/null
+  else
+    echo "invalid mode, please slect 0 or 1."
+  fi
+fi

@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# Start telnet server
+#
+
+TELNETD_ARGS="-F -p 4321 -l /bin/sh"
+[ -r /etc/default/telnet ] && . /etc/default/telnet
+
+start() {
+	printf "Starting telnetd: "
+	[ -f /usr/sbin/telnetd ] || echo -en "DISABLED, "
+	start-stop-daemon -S -q -m -b -p /var/run/telnetd.pid -x /usr/sbin/telnetd -- $TELNETD_ARGS
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+
+stop() {
+	printf "Stopping telnetd: "
+	[ -f /usr/sbin/telnetd ] || echo -en "DISABLED, "
+	start-stop-daemon -K -q -p /var/run/telnetd.pid -x /usr/sbin/telnetd
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+}
+
+case "$1" in
+	start|stop)
+		"$1"
+		;;
+
+	restart|reload)
+		stop
+		start
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+		;;
+esac
+
+exit $?

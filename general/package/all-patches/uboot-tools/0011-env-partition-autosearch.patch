@@ -1,0 +1,162 @@
+diff --git a/tools/env/fw_env.c b/tools/env/fw_env.c
+index 2a61a5d6f0..2edb872cc6 100644
+--- a/tools/env/fw_env.c
++++ b/tools/env/fw_env.c
+@@ -37,7 +37,11 @@
+ # include <mtd/mtd-user.h>
+ #endif
+ 
++#ifndef __packed
++#define __packed __attribute__((packed))
++#endif
+ #include <mtd/ubi-user.h>
++#undef __packed
+ 
+ #include "fw_env_private.h"
+ #include "fw_env.h"
+@@ -484,7 +488,8 @@ int fw_printenv(int argc, char *argv[], int value_only, struct env_opts *opts)
+ 
+ 		val = fw_getenv(name);
+ 		if (!val) {
+-			fprintf(stderr, "## Error: \"%s\" not defined\n", name);
++			if (!value_only)
++				fprintf(stderr, "## Error: \"%s\" not defined\n", name);
+ 			rc = -1;
+ 			continue;
+ 		}
+@@ -1725,6 +1730,105 @@ static int check_device_config(int dev)
+ 	return rc;
+ }
+ 
++#define CRC_SZ 4
++
++// By default use 0x10000 but then can be changed after detection
++static size_t env_len = 0x10000;
++
++// Detect U-Boot environment area offset
++static int uboot_detect_env(void *buf, size_t size, size_t erasesize) {
++	size_t possible_lens[] = {0x10000, 0x40000, 0x20000};
++
++	// Jump over memory by step
++	int scan_step = erasesize;
++
++	for (int baddr = 0; baddr < size; baddr += scan_step) {
++		uint32_t expected_crc = *(int *)(buf + baddr);
++
++		for (int i = 0; i < sizeof(possible_lens) / sizeof(possible_lens[0]);
++				i++) {
++			if (possible_lens[i] + baddr > size)
++				continue;
++
++			uint32_t crc = crc32(0, buf + baddr + CRC_SZ, possible_lens[i] - CRC_SZ);
++
++#if 0
++			printf("Detecting at %#x with len %#x CRC is %#x ~ %#x\n", baddr,
++					possible_lens[i], crc, expected_crc);
++#endif
++			if (crc == expected_crc) {
++				env_len = possible_lens[i];
++				return baddr;
++			}
++		}
++	}
++
++	return -1;
++}
++
++static char *open_mtdblock(int i, int *fd, uint32_t size, int flags) {
++	char filename[PATH_MAX];
++
++	snprintf(filename, sizeof filename, "/dev/mtdblock%d", i);
++	*fd = open(filename, O_RDONLY);
++	if (*fd == -1) {
++		return NULL;
++	}
++
++	char *addr =
++		(char *)mmap(NULL, size, PROT_READ, MAP_PRIVATE | flags, *fd, 0);
++	if ((void *)addr == MAP_FAILED) {
++		close(*fd);
++		return NULL;
++	}
++
++	return addr;
++}
++
++static char dev[80];
++static int detect_env(void) {
++	FILE *fp;
++	char name[80];
++	int i, es, ee;
++	struct mtd_info_user mtd;
++	int res = 0;
++
++	if ((fp = fopen("/proc/mtd", "r"))) {
++		bool running = true;
++		while (fgets(dev, sizeof dev, fp) && running) {
++			name[0] = 0;
++			if (sscanf(dev, "mtd%d: %x %x \"%64[^\"]\"", &i, &es, &ee, name)) {
++				snprintf(dev, sizeof dev, "/dev/mtd%d", i);
++				int devfd = open(dev, O_RDWR);
++				if (devfd < 0)
++					continue;
++
++				if (ioctl(devfd, MEMGETINFO, &mtd) >= 0) {
++					int blockfd;
++					char *addr = open_mtdblock(
++								i, &blockfd, mtd.size, MAP_POPULATE /* causes read-ahead on the file */);
++					if (!addr)
++						return res;
++					int off = uboot_detect_env(addr, mtd.size, mtd.erasesize);
++					close(blockfd);
++					if (off != -1) {
++						DEVNAME(0) = dev;
++						DEVOFFSET(0) = off;
++						ENVSIZE(0) = env_len;
++						DEVESIZE(0) = mtd.erasesize;
++						ENVSECTORS(0) = env_len / mtd.erasesize;
++						res = 1;
++						break;
++					}
++				}
++				close(devfd);
++			}
++		}
++		fclose(fp);
++	}
++	return res;
++}
++
+ static int parse_config(struct env_opts *opts)
+ {
+ 	int rc;
+@@ -1735,9 +1839,26 @@ static int parse_config(struct env_opts *opts)
+ #if defined(CONFIG_FILE)
+ 	/* Fills in DEVNAME(), ENVSIZE(), DEVESIZE(). Or don't. */
+ 	if (get_config(opts->config_file)) {
+-		fprintf(stderr, "Cannot parse config file '%s': %m\n",
+-			opts->config_file);
+-		return -1;
++		if (!detect_env()) {
++			fprintf(stderr, "Cannot parse config file '%s': %m\n",
++				opts->config_file);
++			return -1;
++		}
++		FILE* f = fopen(opts->config_file, "wb");
++		if (f == NULL) {
++			fprintf(stderr, "Cannot open config file '%s': %m\n",
++				opts->config_file);
++			return -1;
++		}
++		if (fprintf(f, "%s\t%#llx\t%#lx\t%#lx\t%#lx\n",
++			    DEVNAME(0),
++			    DEVOFFSET(0),
++			    ENVSIZE(0), DEVESIZE(0), ENVSECTORS(0)) < 0) {
++			fprintf(stderr, "Cannot write config file '%s': %m\n",
++				opts->config_file);
++			return -1;
++		}
++		fclose(f);
+ 	}
+ #else
+ 	DEVNAME(0) = DEVICE1_NAME;

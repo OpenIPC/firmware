@@ -1,0 +1,10 @@
+config BR2_PACKAGE_WIFIBROADCAST
+	bool "wifibroadcast"
+	select BR2_PACKAGE_LIBPCAP
+	select BR2_PACKAGE_LIBSODIUM
+	select BR2_PACKAGE_IW
+	select BR2_PACKAGE_DATALINK
+	help
+	  Transmit hd video over wifi for the UAV.
+
+	  https://github.com/svpcom/wfb-ng

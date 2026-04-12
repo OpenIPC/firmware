@@ -1,0 +1,18 @@
+#!/bin/sh
+MODULE=/lib/modules/5.10.160/rockchip
+
+modprobe mis5001
+modprobe ov2740
+modprobe sc3336
+
+modprobe video_rkcif
+modprobe video_rkisp
+modprobe phy-rockchip-csi2-dphy-hw
+modprobe phy-rockchip-csi2-dphy
+
+echo 1 > /sys/module/video_rkcif/parameters/clr_unready_dev
+echo 1 > /sys/module/video_rkisp/parameters/clr_unready_dev
+
+modprobe rga3
+insmod $MODULE/mpp_vcodec.ko
+insmod $MODULE/rockit.ko

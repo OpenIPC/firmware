@@ -1,0 +1,12 @@
+config BR2_PACKAGE_VTUND_OPENIPC
+	bool "vtund-openipc"
+	depends on BR2_USE_MMU # fork()
+	help
+	  Tool for easily creating Virtual Tunnels over TCP/IP networks
+	  with traffic shaping, compression, and encryption.
+
+	  It supports IP, PPP, SLIP, Ethernet and other tunnel types.
+
+	  No LZO/SSL/ZLIB version
+
+	  http://vtun.sourceforge.net/

@@ -1,0 +1,37 @@
+#!/bin/sh
+
+case "$1" in
+	start)
+		time=$(grep TIME_STAMP /etc/os-release | cut -d= -f2)
+		if [ $time -gt $(date +%s) ]; then
+			date -s @$time
+		fi
+
+		if [ ! -e /etc/custom.ok ] && [ -e /usr/share/openipc/customizer.sh ]; then
+			echo "Run customizer script..."
+			sh /usr/share/openipc/customizer.sh
+			touch /etc/custom.ok
+		fi
+
+		if [ ! -e /etc/network.ok ] && [ -e /usr/share/openipc/wireless.sh ]; then
+			echo "Run wireless script..."
+			sh /usr/share/openipc/wireless.sh
+			touch /etc/network.ok
+		fi
+
+		if [ -e /usr/share/openipc/muxes.sh ]; then
+			echo "Run custom muxes & gpios preset script..."
+			sh /usr/share/openipc/muxes.sh
+		fi
+
+		check_mac
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
+		;;
+esac

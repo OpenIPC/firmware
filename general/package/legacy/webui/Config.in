@@ -1,0 +1,6 @@
+config BR2_PACKAGE_WEBUI
+	bool "webui"
+	select BR2_PACKAGE_HASERL
+	help
+	  Simple web interface based on httpd and haserl.
+	  https://openipc.org

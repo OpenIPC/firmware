@@ -1,0 +1,7 @@
+# Allowlist for audit-vendor-abi.py
+# Format: <package-name>/files/<path-to-binary>:<symbol>
+# Lines starting with # are comments.
+#
+# Entries here suppress findings for symbols that are known to be
+# handled by compatibility shims or otherwise confirmed safe.
+# Only add entries after verifying the shim actually covers the call.

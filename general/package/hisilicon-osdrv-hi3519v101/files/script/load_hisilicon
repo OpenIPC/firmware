@@ -1,0 +1,947 @@
+#!/bin/sh
+#
+# This is part of OpenIPC.org project | 2022.01.07
+#
+#set -x
+# SoC detect
+chipid=$(ipcinfo --chip-name)
+
+# MMZ config
+mem_start=0x80000000 # phy mem start
+
+mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+mem_total=${mem_total:=64}
+
+os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
+os_mem_size=${os_mem_size:=32}
+
+# Sensor config
+# SNS_TYPE=$(awk -F '=' '$1=="sensor"{print $2}' RS=" " /proc/cmdline)
+SNS_TYPE0=$(fw_printenv -n sensor)
+SNS_TYPE0=${SNS_TYPE0:=imx385}
+SNS_TYPE1="NULL"
+WORK_MODE="single_pipe"
+
+report_error() {
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+insert_osal() {
+	insmod hi_osal.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
+}
+
+insert_detect() {
+	cd /lib/modules/3.18.20/hisilicon
+	sysconfig
+	insert_osal
+	insmod hi3519v101_base.ko
+	insmod hi3519v101_sys.ko vi_vpss_online=$b_arg_online sensor=$SNS_TYPE0,$SNS_TYPE1 mem_total=$mem_total
+	insert_isp
+	insmod hi_sensor_i2c.ko
+	insmod hi_ssp_sony.ko
+	insert_sns
+}
+
+remove_detect() {
+	rmmod -w hi_ssp_sony
+	rmmod -w hi_sensor_i2c
+	rmmod -w hi3519v101_isp
+	rmmod -w hi3519v101_sys
+	rmmod -w hi3519v101_base
+	rmmod -w hi_osal
+}
+
+insert_audio() {
+	insmod hi3519v101_aio.ko
+	insmod hi3519v101_ai.ko
+	insmod hi3519v101_ao.ko
+	insmod hi3519v101_aenc.ko
+	insmod hi3519v101_adec.ko
+	insmod hi_acodec.ko
+	#insmod hi_tlv320aic31.ko
+}
+
+remove_audio() {
+	rmmod -w hi_acodec
+	#rmmod -w hi_tlv320aic31
+	rmmod -w hi3519v101_adec
+	rmmod -w hi3519v101_aenc
+	rmmod -w hi3519v101_ao
+	rmmod -w hi3519v101_ai
+	rmmod -w hi3519v101_aio
+}
+
+sysconfig() {
+	devmem 0x100503c4 32 0x7
+	devmem 0x100503c0 32 0x11011f
+	devmem 0x100503c4 32 0xc004
+	devmem 0x100503c0 32 0x110113
+	vicap_pin_mux() {
+		#sensor0 pinmux
+		devmem 0x1204017c 32 0x1 #SENSOR0_CLK
+		devmem 0x12040180 32 0x0 #SENSOR0_RSTN
+		devmem 0x12040184 32 0x1 #SENSOR0_HS,from vi0
+		devmem 0x12040188 32 0x1 #SENSOR0_VS,from vi0
+		#sensor0 drive capability
+		devmem 0x12040988 32 0x150 #SENSOR0_CLK
+		devmem 0x1204098c 32 0x170 #SENSOR0_RSTN
+		devmem 0x12040990 32 0x170 #SENSOR0_HS
+		devmem 0x12040994 32 0x170 #SENSOR0_VS
+
+		#sensor1 pinmux
+		devmem 0x12040008 32 0x1 #SENSOR1_CLK
+		devmem 0x1204000c 32 0x0 #SENSOR1_RSTN
+		devmem 0x12040010 32 0x2 #SENSOR1_HS,from vi1
+		devmem 0x12040014 32 0x2 #SENSOR1_VS,from vi1
+		#sensor1 drive capability
+		devmem 0x12040808 32 0x150 #SENSOR1_CLK
+		devmem 0x1204080c 32 0x170 #SENSOR1_RSTN
+		devmem 0x12040810 32 0x170 #SENSOR1_HS
+		devmem 0x12040814 32 0x170 #SENSOR1_VS
+
+		#vi1 pinmux
+		devmem 0x12040030 32 0x1 #VI1_CLK
+		devmem 0x12040028 32 0x1 #VI1_HS
+		devmem 0x1204002c 32 0x1 #VI1_VS
+		devmem 0x12040034 32 0x1 #VI1_DATA0
+		devmem 0x12040038 32 0x1 #VI1_DATA1
+		devmem 0x1204003c 32 0x1 #VI1_DATA2
+		devmem 0x12040040 32 0x1 #VI1_DATA3
+		devmem 0x12040044 32 0x1 #VI1_DATA4
+		devmem 0x12040048 32 0x1 #VI1_DATA5
+		#vi1 drive capability
+		devmem 0x12040830 32 0x170 #VI1_CLK
+		devmem 0x12040828 32 0x170 #VI1_HS
+		devmem 0x1204082c 32 0x170 #VI1_VS
+		devmem 0x12040834 32 0x170 #VI1_DATA0
+		devmem 0x12040838 32 0x170 #VI1_DATA1
+		devmem 0x1204083c 32 0x170 #VI1_DATA2
+		devmem 0x12040840 32 0x170 #VI1_DATA3
+		devmem 0x12040844 32 0x170 #VI1_DATA4
+		devmem 0x12040848 32 0x170 #VI1_DATA5
+
+	}
+	i2c0_pin_mux() {
+		#pinmux
+		devmem 0x12040190 32 0x2 #I2C0_SDA
+		devmem 0x1204018c 32 0x2 #I2C0_SCL
+
+		#drive capability
+		devmem 0x1204099c 32 0x120 #I2C0_SDA
+		devmem 0x12040998 32 0x120 #I2C0_SCL
+	}
+	i2c1_pin_mux() {
+		#pinmux
+		devmem 0x1204001c 32 0x2 #I2C1_SDA
+		devmem 0x12040018 32 0x2 #I2C1_SCL
+
+		#drive capability
+		devmem 0x1204081c 32 0x120 #I2C1_SDA
+		devmem 0x12040818 32 0x120 #I2C1_SCL
+	}
+	#i2c2 -> sil9136 aic31
+	i2c2_pin_mux() {
+		#pinmux
+		devmem 0x1204005c 32 0x1 #I2C2_SDA
+		devmem 0x12040060 32 0x1 #I2C2_SCL
+
+		#drive capability
+		devmem 0x1204085C 32 0x120 #I2C2_SDA
+		devmem 0x12040860 32 0x120 #I2C2_SCL
+	}
+
+	#i2c3 -> adv7179
+	i2c3_pin_mux() {
+		#pinmux
+		devmem 0x12040178 32 0x3 #I2C3_SDA
+		devmem 0x12040160 32 0x3 #I2C3_SCL
+
+		#drive capability
+		devmem 0x12040984 32 0x120 #I2C3_SDA
+		devmem 0x1204096C 32 0x120 #I2C3_SCL
+	}
+	spi0_4wire_pin_mux()
+	{
+		#pinmux
+		devmem 0x1204018c 32 0x1  #SPI0_SCLK
+		devmem 0x12040190 32 0x1  #SPI0_SD0
+		devmem 0x12040194 32 0x1  #SPI0_SDI
+		devmem 0x12040198 32 0x1  #SPI0_CSN
+	
+		#drive capability...
+		devmem 0x12040998 32 0x150  #SPI0_SCLK
+		devmem 0x1204099c 32 0x160  #SPI0_SD0
+		devmem 0x120409a0 32 0x160  #SPI0_SDI
+		devmem 0x120409a4 32 0x160  #SPI0_CSN
+	}
+	spi0_3wire_pin_mux()
+	{
+		#pinmux
+		devmem 0x1204018c 32 0x3    #SPI0_3WIRE_CLK
+		devmem 0x12040190 32 0x3    #SPI0_3WIRE_DATA
+		devmem 0x12040198 32 0x3    #SPI0_3WIRE_CSN
+
+		#drive capability...
+		devmem 0x12040998 32 0x150  #SPI0_3WIRE_CLK
+		devmem 0x1204099c 32 0x160  #SPI0_3WIRE_DATA
+		devmem 0x120409a4 32 0x160  #SPI0_3WIRE_CSN
+	}
+	#spi1 -> vi
+	spi1_pin_mux() {
+		#pinmux
+		devmem 0x12040018 32 0x1 #SPI1_SCLK
+		devmem 0x1204001c 32 0x1 #SPI1_SD0
+		devmem 0x12040020 32 0x1 #SPI1_SDI
+		devmem 0x12040024 32 0x1 #SPI1_CSN
+
+		#drive capability
+		devmem 0x12040818 32 0x150 #SPI1_SCLK
+		devmem 0x1204081C 32 0x160 #SPI1_SD0
+		devmem 0x12040820 32 0x160 #SPI1_SDI
+		devmem 0x12040824 32 0x160 #SPI1_CSN
+	}
+
+	#spi3 -> LCD
+	spi3_pin_mux() {
+		#pinmux
+		devmem 0x12040160 32 0x1 #SPI3_SCLK
+		devmem 0x12040178 32 0x1 #SPI3_SD0
+		devmem 0x12040170 32 0x1 #SPI3_SDI
+		devmem 0x12040174 32 0x1 #SPI3_CSN
+		#drive capability
+		devmem 0x1204096C 32 0x150 #SPI3_SCLK
+		devmem 0x12040984 32 0x160 #SPI3_SD0
+		devmem 0x1204097C 32 0x160 #SPI3_SDI
+		devmem 0x12040980 32 0x160 #SPI3_CSN
+	}
+	#rgmii
+	net_rgmii_pinmux() {
+		#pinmux
+		devmem 0x1204013C 32 0x2
+		devmem 0x12040140 32 0x2
+		devmem 0x12040144 32 0x2
+		devmem 0x12040148 32 0x2
+		devmem 0x1204014C 32 0x2
+		devmem 0x12040150 32 0x2
+		devmem 0x12040154 32 0x2
+		devmem 0x12040158 32 0x2
+		devmem 0x1204015C 32 0x2
+		devmem 0x1204015C 32 0x2
+		devmem 0x12040164 32 0x2
+		devmem 0x12040168 32 0x2
+		devmem 0x1204016C 32 0x2
+		devmem 0x12040170 32 0x2
+		devmem 0x12040174 32 0x2
+		devmem 0x12040178 32 0x2
+
+		#drive capability
+		devmem 0x12040948 32 0x0d0
+		devmem 0x1204094C 32 0x0c0
+		devmem 0x12040950 32 0x0d0
+		devmem 0x12040954 32 0x0d0
+		devmem 0x12040958 32 0x0d0
+		devmem 0x1204095C 32 0x0d0
+		devmem 0x12040960 32 0x130
+		devmem 0x12040964 32 0x130
+		devmem 0x12040968 32 0x130
+		devmem 0x1204096C 32 0x130
+		devmem 0x12040970 32 0x130
+		devmem 0x12040974 32 0x130
+		devmem 0x12040978 32 0x130
+		devmem 0x1204097C 32 0x050
+		devmem 0x12040980 32 0x120
+		devmem 0x12040984 32 0x120
+	}
+
+	if [ ${SNS_TYPE1} != "NULL" ]; then
+		vicap1_pwrdn >/dev/null
+	fi
+	if [ ${WORK_MODE} == "double_pipe" ]; then
+		vicap1_pwrdn >/dev/null
+	fi
+
+	clkcfg() {
+		devmem 0x120100e4 32 0x1ff70000 # I2C0-3/SSP0-3 unreset, ir,enable clk gate
+		devmem 0x1201003c 32 0x31000100 # MIPI VI ISP unreset
+		devmem 0x12010050 32 0x2        # VEDU0 unreset
+		devmem 0x12010058 32 0x2        # VPSS0 unreset
+		devmem 0x12010058 32 0x3        # VPSS0 unreset
+		devmem 0x12010058 32 0x2        # VPSS0 unreset
+		devmem 0x1201005c 32 0x2        # VGS unreset
+		devmem 0x12010060 32 0x2        # JPGE unreset
+		devmem 0x12010064 32 0x2        # TDE unreset
+		devmem 0x1201006c 32 0x2        # IVE unreset
+		devmem 0x12010070 32 0x2        # FD unreset
+		devmem 0x12010074 32 0x2        # GDC unreset
+		devmem 0x1201007C 32 0x2a       # HASH&SAR ADC&CIPHER unreset
+		devmem 0x12010080 32 0x2        # AIAO unreset,clock 1188M
+		devmem 0x12010084 32 0x2        # GZIP unreset
+		devmem 0x120100d8 32 0xa        # ddrt efuse enable clock, unreset
+		devmem 0x120100e0 32 0xa8       # rsa trng klad enable clock, unreset
+		#devmem 0x120100e0 32  0xaa       # rsa trng klad DMA enable clock, unreset
+		devmem 0x12010040 32 0x60
+		devmem 0x12010040 32 0x0 # sensor unreset,unreset the control module with slave-mode
+
+		#VDP_OUT
+
+		#devmem 0x12010044 32  0x00015ff4	# D1@30fps,BT656 CVBS
+
+		#devmem 0x12010044 32  0x00004ff0  # 1080p30 BT1120
+
+		#                 IVE[21:19] GDC[18:16] VGS[15:13] VEDU [12:10] VPSS0[7:5] VI0[2:0]
+		# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M  VI0:300M---0x00494841
+		#devmem 0x1201004c 32  0x00094c21;
+		#                 ISP0 [18:14] ISP1[10:6] VI1[2:0]
+		# SDK config:     ISP0:300M,   ISP1:300M, VI1:300M
+		#devmem 0x12010054 32  0x00004041;
+
+		# configure with different sensor type
+		#devmem 0x12010040 32  0x11;   #226  8 lane sensor clock 72M
+
+		# pcie clk enable
+		devmem 0x120100b0 32 0x000001f0
+	}
+	vi_vpss_online_config() {
+		# -------------vi vpss online open
+		if [ $b_vpss_online -eq 1 ]; then
+			echo "==============vi_vpss_online=============="
+			devmem 0x12030000 32 0x00000204
+
+			# write priority select
+			devmem 0x12030054 32 0x55552356 # each module 4bit  cci       ---        ddrt  ---    ---     gzip   ---    ---
+			devmem 0x12030058 32 0x16554411 # each module 4bit  vicap1    hash       ive   aio    jpge    tde   vicap0  vdp
+			devmem 0x1203005c 32 0x33466314 # each module 4bit  mmc2      A17        fmc   sdio1  sdio0   A7    vpss0   vgs
+			devmem 0x12030060 32 0x46266666 # each module 4bit  gdc       usb3/pcie  vedu  usb2   cipher  dma2  dma1    gsf
+
+			# read priority select
+			devmem 0x12030064 32 0x55552356 # each module 4bit  cci       ---         ddrt  ---    ---     gzip   ---    ---
+			devmem 0x12030068 32 0x06554401 # each module 4bit  vicap1    hash        ive   aio    jpge    tde   vicap0  vdp
+			devmem 0x1203006c 32 0x33466304 # each module 4bit  mmc2      A17         fmc   sdio1  sdio0    A7   vpss0   vgs
+			devmem 0x12030070 32 0x46266666 # each module 4bit  gdc       usb3/pcie   vedu  usb2   cipher  dma2  dma1    gsf
+
+			devmem 0x120641f0 32 0x1 # use pri_map
+			# write timeout select
+			devmem 0x1206409c 32 0x00000040 #
+			devmem 0x120640a0 32 0x00000000 #
+
+			#read timeout select
+			devmem 0x120640ac 32 0x00000040 #
+			devmem 0x120640b0 32 0x00000000 #
+		else
+			echo "==============vi_vpss_offline=============="
+			devmem 0x12030000 32 0x00000004
+
+			# write priority select
+			devmem 0x12030054 32 0x55552366 # each module 4bit  cci       ---        ddrt  ---    ---     gzip   ---    ---
+			devmem 0x12030058 32 0x16556611 # each module 4bit  vicap1    hash       ive   aio    jpge    tde   vicap0  vdp
+			devmem 0x1203005c 32 0x43466445 # each module 4bit  mmc2      A17        fmc   sdio1  sdio0   A7    vpss0   vgs
+			devmem 0x12030060 32 0x56466666 # each module 4bit  gdc       usb3/pcie  vedu  usb2   cipher  dma2  dma1    gsf
+
+			# read priority select
+			devmem 0x12030064 32 0x55552366 # each module 4bit  cci       ---        ddrt  ---    ---     gzip   ---    ---
+			devmem 0x12030068 32 0x06556600 # each module 4bit  vicap1    hash       ive   aio    jpge    tde   vicap0  vdp
+			devmem 0x1203006c 32 0x43466435 # each module 4bit  mmc2      A17        fmc   sdio1  sdio0   A7    vpss0   vgs
+			devmem 0x12030070 32 0x56266666 # each module 4bit  gdc       usb3/pcie  vedu  usb2   cipher  dma2  dma1    gsf
+
+			devmem 0x120641f0 32 0x1 # use pri_map
+			# write timeout select
+			devmem 0x1206409c 32 0x00000040 #
+			devmem 0x120640a0 32 0x00000000 #
+
+			# read timeout select
+			devmem 0x120640ac 32 0x00000040 # each module 8bit
+			devmem 0x120640b0 32 0x00000000 #
+		fi
+	}
+	#########################################################################################
+	ai_config() {
+		devmem 0x120300e0 32 0xd # internal codec: AIO MCLK out, CODEC AIO TX MCLK
+		#devmem 0x120300e0 32  0xe				# external codec: AIC31 AIO MCLK out, CODEC AIO TX MCLK
+	}
+
+	echo "++++++++++++++++++++++++++++++++++++++++++++++"
+	b_vpss_online=1
+
+	if [ $# -ge 1 ]; then
+		b_vpss_online=$1
+	fi
+
+	vicap_pin_mux
+	vi_vpss_online_config
+	ai_config
+	clkcfg
+}
+
+insert_sns() {
+	local tmp=0
+	local tmp1
+	local tmp2
+	if [ ${SNS_TYPE0} != "NULL" ]; then
+		case $SNS_TYPE0 in
+		imx226)
+			tmp=0x11
+			devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#imx226: viu0:600M,isp0:600M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c23
+			devmem 0x12010054 32 0x00024041
+			spi0_4wire_pin_mux
+			insmod hi_ssp_sony.ko
+			;;
+		imx274)
+			tmp=0x11
+			devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#imx274:viu0: 600M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c23
+			devmem 0x12010054 32 0x0004041
+			spi0_4wire_pin_mux
+			insmod hi_ssp_sony.ko
+			;;
+		imx274_mipi | imx334 | imx335)
+			tmp=0x14
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c21
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x14 # sensor0 clk_en, 24MHz
+			i2c0_pin_mux
+			;;
+		imx294)
+			tmp=0x14
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#	viu0:600M,isp0:600M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c23
+			devmem 0x12010054 32 0x00024041
+			devmem 0x12010040 32 0x14 # sensor0 clk_en, 24MHz
+			i2c0_pin_mux
+			;;
+		imx117)
+			tmp=0x11
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c21
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
+			spi0_4wire_pin_mux
+			insmod hi_ssp_sony.ko
+			;;
+		imx265)
+			tmp=0x18
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#imx265:	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c21
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
+			spi0_4wire_pin_mux
+			insmod hi_ssp_sony.ko
+			;;
+		imx377)
+			tmp=0x14
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#viu0:600M,isp0:600M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c23
+			devmem 0x12010054 32 0x00024041
+			devmem 0x12010040 32 0x14 # sensor0 clk_en, 24MHz
+			i2c0_pin_mux
+			;;
+		imx317)
+			tmp=0x11
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c21
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
+			spi0_4wire_pin_mux
+			insmod hi_ssp_sony.ko
+			;;
+		imx290)
+			tmp=0x18
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#imx290:viu0:340M,isp0:214M, viu1:340M,isp1:214M
+			devmem 0x1201004c 32 0x00094c24
+			devmem 0x12010054 32 0x0004
+			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
+			i2c0_pin_mux
+			;;
+		imx327_spi)
+			tmp=0x18
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#imx290:viu0:340M,isp0:214M, viu1:340M,isp1:214M
+			devmem 0x1201004c 32 0x00094c24
+			devmem 0x12010054 32 0x0004
+			# devmem 0x12010040 32 0x11 # sensor0 clk_en, 72MHz
+			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
+			spi0_4wire_pin_mux
+			insmod hi_ssp_sony.ko
+			;;
+		imx327)
+			tmp=0x18
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#imx290:viu0:340M,isp0:214M, viu1:340M,isp1:214M
+			devmem 0x1201004c 32 0x00094c24
+			devmem 0x12010054 32 0x0004
+			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
+			i2c0_pin_mux
+			;;
+		mn34220)
+			tmp=0x18
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c21
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
+			i2c0_pin_mux
+			;;
+		mn34120)
+			tmp=0x12
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c21
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x12 # sensor0 clk_en, 54MHz
+			spi0_3wire_pin_mux
+			insmod hi_ssp_3wire.ko
+			;;
+		ov4689)
+			tmp=0x14
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#ov4689:	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c21
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x14 # sensor0 clk_en, 24MHz
+			i2c0_pin_mux
+			;;
+		sc4210)
+			tmp=0x14
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#ov4689:	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c21
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x1a # sensor0 clk_en, 27MHz
+			i2c0_pin_mux
+			;;
+		imx385_spi_lvds)
+			tmp=0x18
+			devmem 0x12010040 32 0x18
+			devmem 0x12040190 32 0x2
+			devmem 0x1204018c 32 0x2
+			devmem 0x1204099c 32 0x120
+			devmem 0x12040998 32 0x120
+			spi0_4wire_pin_mux
+			insmod hi_ssp_sony.ko
+			;;
+		imx385_i2c_lvds)
+			tmp=0x16
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094421
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x16 # sensor0 clk_en, 74.125MHz
+			i2c0_pin_mux
+			;;
+		imx185 | imx385 | imx178)
+			tmp=0x18
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094421
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x18 # sensor0 clk_en, 37.125MHz
+			i2c0_pin_mux
+			#spi0_4wire_pin_mux;
+			#insmod hi_ssp_sony.ko;
+			;;
+		os08a | os08a10)
+			tmp=0x14
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#os08a10:	viu0: 600M, isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c23
+			devmem 0x12010054 32 0x0004041
+			devmem 0x12010040 32 0x14 # sensor0 clk_en, 24MHz
+			i2c0_pin_mux
+			;;
+		bt1120)
+			# SDK config:     IVE:396M,  GDC:475M,  VGS:500M,  VEDU:600M,   VPSS:300M
+			#	viu0:300M,isp0:300M, viu1:300M,isp1:300M
+			devmem 0x1201004c 32 0x00094c21
+			devmem 0x12010054 32 0x0004041
+			devmem 0x113c6200 32 0x0 #disable dehaze
+			devmem 0x113d1400 32 0x0 #disable acm
+			devmem 0x113c5200 32 0x0 #disable sharpen
+			#devmem 0x20670000 32 0x0;
+			;;
+		*)
+			echo "xxxx Invalid sensor type $SNS_TYPE0 xxxx"
+			report_error
+			;;
+		esac
+	fi
+
+	if [ ${SNS_TYPE1} != "NULL" ]; then
+		case $SNS_TYPE1 in
+		imx290)
+			tmp1=0x1800
+			tmp2=$((tmp + tmp1))
+			devmem 0x12010040 32 $tmp2 # sensor1 clk_en, 37.125MHz
+			i2c1_pin_mux
+			;;
+		ov4689)
+			tmp1=0x1400
+			tmp2=$((tmp + tmp1))
+			devmem 0x12010040 32 $tmp2 # sensor1 clk_en, 24MHz
+			i2c1_pin_mux
+			;;
+		os08a10)
+			tmp1=0x1400
+			tmp2=$((tmp + tmp1))
+			devmem 0x12010040 32 $tmp2 # sensor1 clk_en, 24MHz
+			i2c1_pin_mux
+			;;
+		bt1120)
+			devmem 0x114c6200 32 0x0 #disable dehaze
+			devmem 0x114d1400 32 0x0 #disable acm
+			devmem 0x114c5200 32 0x0 #disable sharpen
+			#devmem 0x20670000 32 0x0;
+			;;
+		*)
+			echo "xxxx Invalid sensor type $SNS_TYPE1 xxxx"
+			report_error
+			;;
+		esac
+	fi
+
+	if [ ${WORK_MODE} != "NULL" ]; then
+		case $WORK_MODE in
+		stitching)
+			devmem 0x12040184 32 0x1 # SENSOR0 HS from VI0 HS
+			devmem 0x12040188 32 0x1 # SENSOR0 VS from VI0 VS
+			devmem 0x12040010 32 0x1 # SENSOR1 HS from VI0 HS
+			devmem 0x12040014 32 0x1 # SENSOR1 VS from VI0 VS
+			;;
+		single_pipe)
+			devmem 0x12040184 32 0x1 # SENSOR0 HS from VI0 HS
+			devmem 0x12040188 32 0x1 # SENSOR0 VS from VI0 VS
+			devmem 0x12040010 32 0x2 # SENSOR1 HS from VI1 HS
+			devmem 0x12040014 32 0x2 # SENSOR1 VS from VI1 VS
+			;;
+		double_pipe)
+			tmp1=$((tmp << 8))
+			tmp2=$((tmp + tmp1))
+			devmem 0x12010040 32 $tmp2 # sensor0 clk + sensor1 clk
+			devmem 0x12040184 32 0x2   # SENSOR0 HS from VI1 HS
+			devmem 0x12040188 32 0x2   # SENSOR0 VS from VI1 VS
+			#devmem 0x12040010 32 0x1;    # SENSOR1 HS from VI0 HS
+			#devmem 0x12040014 32 0x1;    # SENSOR1 VS from VI0 VS
+			devmem 0x1201004c 32 0x00094c21 #double pipe,VI0,ISP0:300M,if inapposite,change it.
+			devmem 0x12010054 32 0x0004041  #double pipe,VI1,ISP1:300M
+			;;
+		*)
+			echo "xxxx Invalid work mode $WORK_MODE xxxx"
+			report_error
+			;;
+		esac
+	fi
+}
+
+remove_sns() {
+	rmmod -w hi_ssp_sony &>/dev/null
+	rmmod -w hi_sensor_spi &>/dev/null
+}
+
+insert_isp() {
+	case $SNS_TYPE0 in
+	imx117)
+		insmod hi3519v101_isp.ko update_pos=1 proc_param=30
+		;;
+	*)
+		insmod hi3519v101_isp.ko proc_param=30
+		;;
+	esac
+}
+
+vicap1_pwrdn() {
+	devmem 0x1201003c 32 0x333303ff
+	devmem 0x120a012c 32 0x3
+	devmem 0x120a012c 32 0x2
+	devmem 0x1201003c 32 0x120003ff
+}
+
+insert_ko() {
+	# sys config
+	sysconfig
+
+	# driver load
+	insert_osal
+	insmod hi3519v101_base.ko
+
+	insmod hi3519v101_sys.ko vi_vpss_online=$b_arg_online sensor=$SNS_TYPE0,$SNS_TYPE1 mem_total=$mem_total
+
+	#insmod hi3519v101_tde.ko
+	insmod hi3519v101_region.ko
+	#insmod hi3519v101_fisheye.ko
+	#insmod hi3519v101_vgs.ko
+
+	insert_isp
+	insmod hi3519v101_viu.ko detect_err_frame=10 delay_line=500
+	insmod hi3519v101_vpss.ko
+	#insmod hi3519v101_vou.ko
+	#insmod hi3519v101_vou.ko detectCycle=0 #close dac detect
+	#insmod hi3519v101_vou.ko transparentTransmit=1 #enable transparentTransmit
+	#insmod hifb.ko video="hifb:vram0_size:1620"     # default pal
+
+	insmod hi3519v101_rc.ko
+	insmod hi3519v101_venc.ko
+	insmod hi3519v101_chnl.ko
+	insmod hi3519v101_vedu.ko
+	insmod hi3519v101_h264e.ko
+	insmod hi3519v101_h265e.ko
+	insmod hi3519v101_jpege.ko
+	#insmod hi3519v101_ive.ko save_power=1
+	insmod hi3519v101_photo.ko
+	#
+	insmod hi_sensor_i2c.ko
+	insmod hi_pwm.ko
+	insmod hi_piris.ko
+
+	insert_audio
+
+	insmod hi_mipi.ko
+	#insmod hi_user.ko
+
+	insert_sns
+
+	devmem 0x12010044 32 0x4ff0
+	devmem 0x12010044 32 0x4
+	devmem 0x12040098 32 0x3
+  	devmem 0x120100DC 32 0x6
+
+	devmem 0x1204008C 32 0x1
+	devmem 0x12040094 32 0x1
+	echo "==== Your input Sensor0 type is $SNS_TYPE0 ===="
+	echo "==== Your input Sensor1 type is $SNS_TYPE1 ===="
+}
+
+remove_ko() {
+	remove_audio
+	remove_sns
+	#rmmod -w hi_user
+	rmmod -w hi_pwm
+	rmmod -w hi_piris
+
+	rmmod -w hi3519v101_photo
+	#rmmod -w hi3519v101_ive
+
+	rmmod -w hi3519v101_rc
+	rmmod -w hi3519v101_jpege
+	rmmod -w hi3519v101_h264e
+	rmmod -w hi3519v101_h265e
+	rmmod -w hi3519v101_vedu
+	rmmod -w hi3519v101_chnl
+	rmmod -w hi3519v101_venc
+
+	#rmmod -w hifb
+	#rmmod -w hi3519v101_vou
+	rmmod -w hi3519v101_vpss
+	rmmod -w hi3519v101_isp
+	rmmod -w hi3519v101_viu
+	rmmod -w hi_mipi
+	#rmmod -w hi3519v101_fisheye
+
+	#rmmod -w hi3519v101_vgs
+	rmmod -w hi3519v101_region
+	#rmmod -w hi3519v101_tde
+
+	rmmod -w hi_sensor_i2c &>/dev/null
+	rmmod -w hi_ssp_3wire.ko &>/dev/null
+
+	rmmod -w hi3519v101_sys
+	rmmod -w hi3519v101_base
+	rmmod -w hi_osal
+}
+
+sys_restore() {
+	####################################################
+	clkcfg.sh >/dev/null
+
+	# system configuration
+	sysctl.sh $b_arg_online # > /dev/null
+	insert_sns
+}
+
+load_usage() {
+	echo "Usage:  ./load3519v101 [-option] [sensor_name]"
+	echo "options:"
+	echo "    -i                       insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a                       remove modules first, then insert modules"
+	echo "    -sensor sensor_name      config sensor type [default: imx274]"
+	echo "    -osmem os_mem_size       config os mem size [unit: M, default: 64]"
+	echo "    -total_mem_size          config total mem size [unit: M, default: 512]"
+	echo "    -offline                 vi/vpss offline"
+	echo "    -h                       help information"
+	echo -e "Available sensors: imx274, imx226, imx290, ov4689 ,os08a10"
+	echo -e "workmode: stitching,single_pipe,double_pipe"
+	echo -e "notes: osmem option can't be used when mmz zone partition is enable\n\n"
+	echo -e "for example online:  ./load3519v101 -a -sensor0 ov4689 -sensor1 ov4689 -osmem 64 -total 512\n"
+	echo -e "            offline: ./load3519v101 -a -sensor0 imx274 -osmem 64 -total 512 -offline\n"
+}
+
+calc_mmz_info() {
+	mmz_start=$(echo "$mem_start $os_mem_size" |
+		awk 'BEGIN { temp = 0; }
+	{
+		temp = $1/1024/1024 + $2;
+	} 
+	END { printf("0x%x00000\n", temp); }')
+
+	mmz_size=$(echo "$mem_total $os_mem_size" |
+		awk 'BEGIN { temp = 0; }
+	{
+		temp = $1 - $2;
+	} 
+	END { printf("%dM\n", temp); }')
+	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+}
+
+######################parse arg###################################
+b_arg_os_mem=0
+b_arg_sensor0=0
+b_arg_sensor1=0
+b_arg_insmod=0
+b_arg_remove=0
+b_arg_online=1
+b_arg_restore=0
+b_arg_mode=0
+b_arg_total_mem=0
+
+for arg in $@; do
+	if [ $b_arg_total_mem -eq 1 ]; then
+		b_arg_total_mem=0
+		mem_total=$arg
+		if [ -z $mem_total ]; then
+			echo "[error] mem_total is null"
+			exit
+		fi
+	fi
+	if [ $b_arg_os_mem -eq 1 ]; then
+		b_arg_os_mem=0
+		os_mem_size=$arg
+
+		if [ -z $os_mem_size ]; then
+			echo "[error] os_mem_size is null"
+			exit
+		fi
+
+		if [ $os_mem_size -ge $mem_total ]; then
+			echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+			exit
+		fi
+	fi
+
+	if [ $b_arg_sensor0 -eq 1 ]; then
+		b_arg_sensor0=0
+		SNS_TYPE0=$arg
+	fi
+	if [ $b_arg_sensor1 -eq 1 ]; then
+		b_arg_sensor1=0
+		SNS_TYPE1=$arg
+	fi
+	if [ $b_arg_mode -eq 1 ]; then
+		b_arg_mode=0
+		WORK_MODE=$arg
+	fi
+
+	case $arg in
+	"-i")
+		b_arg_insmod=1
+		;;
+	"-r")
+		b_arg_remove=1
+		;;
+	"-a")
+		b_arg_insmod=1
+		b_arg_remove=1
+		;;
+	"-h")
+		load_usage
+		;;
+	"-sensor0")
+		b_arg_sensor0=1
+		;;
+	"-sensor")
+		b_arg_sensor0=1
+		;;
+	"-sensor1")
+		b_arg_sensor1=1
+		;;
+	"-osmem")
+		b_arg_os_mem=1
+		;;
+	"-total")
+		b_arg_total_mem=1
+		;;
+	"-restore")
+		b_arg_restore=1
+		;;
+	"-offline")
+		b_arg_online=0
+		;;
+	"-workmode")
+		b_arg_mode=1
+		;;
+	esac
+done
+#######################parse arg end########################
+
+if [ $os_mem_size -ge $mem_total ]; then
+	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+	exit
+fi
+
+calc_mmz_info
+
+#######################Action###############################
+
+if [ $# -lt 1 ]; then
+	load_usage
+	exit 0
+fi
+
+# Sensor config
+# SENSOR=${SENSOR:=imx307}
+#
+
+if [ -n "$SENSOR" ]; then
+	logger -s -p daemon.info -t hisilicon "Manualy set SENSOR as ${SENSOR}"
+else
+	if fw_printenv -n sensor >/dev/null; then
+		SENSOR_ENV=$(fw_printenv -n sensor)
+		export SENSOR=${SENSOR_ENV}
+		logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
+	else
+		insert_detect
+		SENSOR_DETECT=$(ipcinfo --short-sensor)
+		export SENSOR=${SENSOR_DETECT:=unknown}
+		remove_detect
+		logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && logger -s -p daemon.info -t hisilicon "Write detected ${SENSOR} to U-Boot ENV"
+	fi
+fi
+
+if [ $b_arg_remove -eq 1 ]; then
+	remove_ko
+fi
+
+if [ "$SENSOR" = "unknown" ]; then
+	exit 1
+else
+	if [ $b_arg_insmod -eq 1 ]; then
+		cd /lib/modules/3.18.20/hisilicon
+		insert_ko;
+	fi
+fi
+
+if [ $b_arg_restore -eq 1 ]; then
+	sys_restore
+fi

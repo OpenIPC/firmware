@@ -1,0 +1,72 @@
+################################################################################
+#
+# mbedtls-openipc
+#
+################################################################################
+
+MBEDTLS_OPENIPC_VERSION = 2.25.0
+MBEDTLS_OPENIPC_SITE = $(call github,ARMmbed,mbedtls,v$(MBEDTLS_OPENIPC_VERSION))
+MBEDTLS_OPENIPC_CONF_OPTS = \
+	-DENABLE_PROGRAMS=$(if $(BR2_PACKAGE_MBEDTLS_OPENIPC_PROGRAMS),ON,OFF) \
+	-DENABLE_TESTING=OFF
+MBEDTLS_OPENIPC_INSTALL_STAGING = YES
+MBEDTLS_OPENIPC_LICENSE = Apache-2.0
+MBEDTLS_OPENIPC_LICENSE_FILES = apache-2.0.txt
+
+define MBEDTLS_ENABLE_SRTP
+	$(SED) "s://#define MBEDTLS_SSL_DTLS_SRTP:#define MBEDTLS_SSL_DTLS_SRTP:" \
+		$(@D)/include/mbedtls/config.h
+	$(SED) "s:#define MBEDTLS_SSL_CBC_RECORD_SPLITTING://#define MBEDTLS_SSL_CBC_RECORD_SPLITTING:" \
+		$(@D)/include/mbedtls/config.h
+	$(SED) "s:#define MBEDTLS_ECP_DP_SECP224K1_ENABLED://#define MBEDTLS_ECP_DP_SECP224K1_ENABLED:" \
+		$(@D)/include/mbedtls/config.h
+	$(SED) "s:#define MBEDTLS_ECP_DP_SECP256K1_ENABLED://#define MBEDTLS_ECP_DP_SECP256K1_ENABLED:" \
+		$(@D)/include/mbedtls/config.h
+endef
+MBEDTLS_OPENIPC_POST_PATCH_HOOKS += MBEDTLS_ENABLE_SRTP
+ifeq ($(BR2_STATIC_LIBS),y)
+MBEDTLS_OPENIPC_CONF_OPTS += -DLINK_WITH_PTHREAD=ON
+endif
+
+ifeq ($(BR2_STATIC_LIBS),y)
+MBEDTLS_OPENIPC_CONF_OPTS += \
+	-DUSE_SHARED_MBEDTLS_LIBRARY=OFF -DUSE_STATIC_MBEDTLS_LIBRARY=ON
+else ifeq ($(BR2_SHARED_STATIC_LIBS),y)
+MBEDTLS_OPENIPC_CONF_OPTS += \
+	-DUSE_SHARED_MBEDTLS_LIBRARY=ON -DUSE_STATIC_MBEDTLS_LIBRARY=ON
+else ifeq ($(BR2_SHARED_LIBS),y)
+MBEDTLS_OPENIPC_CONF_OPTS += \
+	-DUSE_SHARED_MBEDTLS_LIBRARY=ON -DUSE_STATIC_MBEDTLS_LIBRARY=OFF
+endif
+
+ifeq ($(BR2_PACKAGE_MBEDTLS_OPENIPC_COMPRESSION),y)
+MBEDTLS_OPENIPC_CONF_OPTS += -DENABLE_ZLIB_SUPPORT=ON
+MBEDTLS_OPENIPC_DEPENDENCIES += zlib
+define MBEDTLS_OPENIPC_ENABLE_ZLIB
+	$(SED) "s://#define MBEDTLS_ZLIB_SUPPORT:#define MBEDTLS_ZLIB_SUPPORT:" \
+		$(@D)/include/mbedtls/config.h
+endef
+MBEDTLS_OPENIPC_POST_PATCH_HOOKS += MBEDTLS_ENABLE_ZLIB
+else
+MBEDTLS_OPENIPC_CONF_OPTS += -DENABLE_ZLIB_SUPPORT=OFF
+endif
+
+define MBEDTLS_OPENIPC_DISABLE_ASM
+	$(SED) '/^#define MBEDTLS_AESNI_C/d' \
+		$(@D)/include/mbedtls/config.h
+	$(SED) '/^#define MBEDTLS_HAVE_ASM/d' \
+		$(@D)/include/mbedtls/config.h
+	$(SED) '/^#define MBEDTLS_PADLOCK_C/d' \
+		$(@D)/include/mbedtls/config.h
+endef
+
+# ARM in thumb mode breaks debugging with asm optimizations
+# Microblaze asm optimizations are broken in general
+# MIPS R6 asm is not yet supported
+ifeq ($(BR2_ENABLE_DEBUG)$(BR2_ARM_INSTRUCTIONS_THUMB)$(BR2_ARM_INSTRUCTIONS_THUMB2),yy)
+MBEDTLS_OPENIPC_POST_CONFIGURE_HOOKS += MBEDTLS_OPENIPC_DISABLE_ASM
+else ifeq ($(BR2_microblaze)$(BR2_MIPS_CPU_MIPS32R6)$(BR2_MIPS_CPU_MIPS64R6),y)
+MBEDTLS_OPENIPC_POST_CONFIGURE_HOOKS += MBEDTLS_OPENIPC_DISABLE_ASM
+endif
+
+$(eval $(cmake-package))

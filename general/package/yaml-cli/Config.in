@@ -1,0 +1,7 @@
+config BR2_PACKAGE_YAML_CLI
+	bool "yaml-cli"
+	select BR2_PACKAGE_LIBYAML
+	help
+	  yaml-cli - console configurator for YAML files
+
+	  https://github.com/openipc/yaml-cli/

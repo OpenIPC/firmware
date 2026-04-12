@@ -1,0 +1,87 @@
+--- a/make-linux.mk	2024-09-19 15:35:10.221093737 +0300
++++ b/make-linux.mk	2024-09-19 16:33:05.452310051 +0300
+@@ -26,7 +26,7 @@
+ # otherwise build into binary as done on Mac and Windows.
+ ONE_OBJS+=osdep/PortMapper.o
+ override DEFS+=-DZT_USE_MINIUPNPC
+-MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2..*"' /usr/include/miniupnpc/miniupnpc.h && echo 1)
++MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2..*"' $(STAGING_DIR)/usr/include/miniupnpc/miniupnpc.h && echo 1)
+ #MINIUPNPC_IS_NEW_ENOUGH=$(shell grep -sqr '.*define.*MINIUPNPC_VERSION.*"2.."' /usr/include/miniupnpc/miniupnpc.h && echo 1)
+ ifeq ($(MINIUPNPC_IS_NEW_ENOUGH),1)
+ 	override DEFS+=-DZT_USE_SYSTEM_MINIUPNPC
+@@ -35,7 +35,7 @@
+ 	override DEFS+=-DMINIUPNP_STATICLIB -DMINIUPNPC_SET_SOCKET_TIMEOUT -DMINIUPNPC_GET_SRC_ADDR -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600 -DOS_STRING="\"Linux\"" -DMINIUPNPC_VERSION_STRING="\"2.0\"" -DUPNP_VERSION_STRING="\"UPnP/1.1\"" -DENABLE_STRNATPMPERR
+ 	ONE_OBJS+=ext/miniupnpc/connecthostport.o ext/miniupnpc/igd_desc_parse.o ext/miniupnpc/minisoap.o ext/miniupnpc/minissdpc.o ext/miniupnpc/miniupnpc.o ext/miniupnpc/miniwget.o ext/miniupnpc/minixml.o ext/miniupnpc/portlistingparse.o ext/miniupnpc/receivedata.o ext/miniupnpc/upnpcommands.o ext/miniupnpc/upnpdev.o ext/miniupnpc/upnperrors.o ext/miniupnpc/upnpreplyparse.o
+ endif
+-ifeq ($(wildcard /usr/include/natpmp.h),)
++ifeq ($(wildcard $(STAGING_DIR)/usr/include/natpmp.h),)
+ 	ONE_OBJS+=ext/libnatpmp/natpmp.o ext/libnatpmp/getgateway.o
+ else
+ 	LDLIBS+=-lnatpmp
+@@ -67,11 +67,11 @@
+ 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
+ node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
+ else
+-	CFLAGS?=-O3 -fstack-protector
++	CFLAGS?=-Os
+ 	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+-	CXXFLAGS?=-O3 -fstack-protector
++	CXXFLAGS?=-Os -latomic
+ 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
+-	LDFLAGS?=-pie -Wl,-z,relro,-z,now
++	LDFLAGS=
+ 	ZT_CARGO_FLAGS=--release
+ endif
+ 
+@@ -311,7 +311,7 @@
+ 
+ # Static builds, which are currently done for a number of Linux targets
+ ifeq ($(ZT_STATIC),1)
+-	override LDFLAGS+=-static
++	override LDFLAGS+=-static-libstdc++
+ endif
+ 
+ # For building an official semi-static binary on CentOS 7
+@@ -334,13 +334,13 @@
+ 
+ # ARM32 hell -- use conservative CFLAGS
+ ifeq ($(ZT_ARCHITECTURE),3)
+-	ifeq ($(shell if [ -e /usr/bin/dpkg ]; then dpkg --print-architecture; fi),armel)
+-		override CFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
+-		override CXXFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
++	ifeq ($(FLOATABI),hard)
++		override CFLAGS+=-mfloat-abi=hard -mfpu=vfp -marm -mno-unaligned-access
++		override CXXFLAGS+=-mfloat-abi=hard -mfpu=vfp -marm -fexceptions -mno-unaligned-access
+ 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
+ 	else
+-		override CFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
+-		override CXXFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -fexceptions -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
++		override CFLAGS+=-mfloat-abi=soft -marm -mno-unaligned-access
++		override CXXFLAGS+=-mfloat-abi=soft -marm -fexceptions -mno-unaligned-access
+ 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
+ 	endif
+ endif
+@@ -360,11 +360,11 @@
+ endif
+ 
+ # Position Independence
+-override CFLAGS+=-fPIC -fPIE
+-override CXXFLAGS+=-fPIC -fPIE
++override CFLAGS+=-flto
++override CXXFLAGS+=-flto
+ 
+ # Non-executable stack
+-override LDFLAGS+=-Wl,-z,noexecstack
++override ASFLAGS+=--noexecstack
+ 
+ .PHONY: all
+ all:	one
+@@ -388,7 +388,7 @@
+ $(ONE_OBJS): zeroidc smeeclient
+ 
+ libzerotiercore.a:	FORCE
+-	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++17 -fstack-protector -fPIC" $(CORE_OBJS)
++	make CFLAGS="-Os" CXXFLAGS="-Os -std=c++17" $(CORE_OBJS)
+ 	ar rcs libzerotiercore.a $(CORE_OBJS)
+ 	ranlib libzerotiercore.a
+ 

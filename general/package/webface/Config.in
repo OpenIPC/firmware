@@ -1,0 +1,12 @@
+#
+# Copyright (c) OpenIPC  https://openipc.org  MIT License
+#
+# Config.in — Kconfig entry for the webface package
+#
+
+config BR2_PACKAGE_WEBFACE
+	bool "webface"
+	select BR2_PACKAGE_HASERL
+	help
+	  Example of Cookie-based Session Authentication
+	  https://openipc.org

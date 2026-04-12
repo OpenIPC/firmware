@@ -1,0 +1,178 @@
+#!/bin/sh
+
+insert_sns() {
+    case $SENSOR in
+    sc401ai | sc500ai | sc501ai)
+        devmem 0xf0220000 32 0x00001473
+        devmem 0xF0220004 32 0x10000000
+        devmem 0xF0220008 32 0x00048100
+        devmem 0xF022000C 32 0x0034003e
+        devmem 0xF0220010 32 0x30123860
+        devmem 0xF0220014 32 0x00000000
+        devmem 0xF0220018 32 0x03ff2001
+        devmem 0xF022001C 32 0x00000003
+        devmem 0xF0220020 32 0x00000000
+        devmem 0xF0220024 32 0x00000000
+        devmem 0xF0220028 32 0x000000e2
+        devmem 0xF022002C 32 0x00000000
+        devmem 0xF0220030 32 0x00000005
+        devmem 0xF0220034 32 0x01000000
+        devmem 0xF0220038 32 0x00000000
+        devmem 0xF022003C 32 0x00000000
+
+        insmod nvt_sen_${SENSOR}.ko sen_cfg_path=/etc/sensors/sen_${SENSOR}.cfg
+        ;;
+    *)
+        echo "xxxx Invalid sensor type $SENSOR xxxx"
+        ;;
+    esac
+}
+
+insert_ko() {
+    # System Driver Init
+
+    #modprobe ehci-hcd
+    #modprobe xhci_plat_hcd
+    #modprobe nvt_status
+    #modprobe nvt_pstore
+    #insmod /extra/crypto/cryptodev-linux/cryptodev.ko
+    insmod hdal/kwrap.ko
+    insmod hdal/comm/nvtmem/nvtmem.ko
+    insmod hdal/kdrv_builtin/kdrv_builtin.ko
+
+    insmod hdal/comm/kdrv_comm.ko
+    insmod hdal/kdrv_gfx2d/kdrv_gfx2d.ko
+    insmod hdal/kdrv_videocapture/kdrv_videocapture.ko
+    insmod hdal/kdrv_videoprocess/kdrv_videoprocess.ko
+    insmod hdal/kflow_common/kflow_common.ko
+    insmod hdal/kflow_gfx/videosprite/nvt_videosprite.ko
+    insmod hdal/kflow_videocapture/kflow_videocapture.ko
+    insmod hdal/kflow_videoprocess/kflow_videoprocess.ko
+
+    # rpc
+    #insmod hdal/kdrv_rpc/kdrv_rpc.ko
+
+    #SDE
+
+    # kdrv_gfx2d
+    #insmod hdal/kdrv_gfx2d/kdrv_affine/affine_neon/kdrv_afn_neon.ko
+    #insmod hdal/kdrv_gfx2d/kdrv_affine/kdrv_afn.ko
+    insmod hdal/kflow_gfx/nvt_gfx.ko
+
+    # kdrv_vdoout
+    #insmod hdal/kdrv_videoout/ide/nvt_ide.ko
+    #insmod hdal/kdrv_videoout/mi/nvt_mi.ko
+    #insmod hdal/kdrv_videoout/dsi/nvt_dsi.ko
+    #insmod hdal/kdrv_videoout/display_obj/kdrv_videoout.ko
+
+    # kflow_videoout
+    #insmod hdal/kflow_videoout/unit/kflow_videoout.ko
+
+    # panel device
+    #insmod hdal/display_panel/nvt_dispdev_panel.ko
+    #insmod hdal/display_panel/disp_ifpa_lcd1_wm08001_sn75lvds83b/nvt_dispdev_panel_wm08001_sn75lvds83b.ko
+    #insmod hdal/display_panel/disp_if8b_lcd1_pw35p00_hx8238d/disp_if8b_lcd1_pw35p00.ko
+    #insmod hdal/display_panel/disp_if8b_lcd1_aucn01/disp_if8b_lcd1_aucn01.ko
+    #insmod hdal/display_panel/disp_ifdsi_lcd1_nt35510/nvt_dispdev_panel_nt35510.ko
+    #insmod hdal/kdrv_gfx2d/kdrv_rotation/kdrv_rotation.ko
+    #insmod hdal/kflow_gfx/videosprite/nvt_videosprite.ko
+
+    # ipp test
+    #insmod hdal/kdrv_videoprocess/kdrv_ipp_sim/kdrv_ipp_sim.ko
+
+    # nvt_jpg
+    #insmod /extra/vcodec/jpeg/nvt_jpg.ko
+    #insmod hdal/kdrv_videocodec/jpeg/kdrv_jpg.ko
+
+    # nvt_h26x
+    #insmod /extra/vcodec/h26x/nvt_h26x.ko
+    insmod hdal/kdrv_videocodec/kdrv_h26x.ko
+    insmod hdal/nvt_vencrc/nvt_vencrc.ko
+
+    # isf vdoenc
+    insmod hdal/kflow_videoenc/unit/kflow_videoenc.ko
+
+    # isf vdodec
+    #insmod hdal/kflow_videodec/unit/kflow_videodec.ko
+
+    # audio
+    insmod hdal/kdrv_audioio/audio_common/nvt_audio.ko
+    insmod hdal/kdrv_audioio/kdrv_audio/nvt_kdrv_audio.ko
+    insmod hdal/kflow_audiocapture/unit/kflow_audiocap.ko
+    insmod hdal/kflow_audioout/unit/kflow_audioout.ko
+    insmod hdal/kdrv_audioio/audlib_aac/nvt_audlib_aac.ko
+    insmod hdal/kdrv_audioio/audlib_g711/nvt_audlib_g711.ko
+
+    # isf audenc
+    insmod hdal/kflow_audioenc/unit/kflow_audioenc.ko
+
+    # isf auddec
+    insmod hdal/kflow_audiodec/unit/kflow_audiodec.ko
+
+    # iq, 3a
+    insmod hdal/isp/nvt_isp.ko
+    insmod hdal/ae/nvt_ae.ko
+    insmod hdal/awb/nvt_awb.ko
+    insmod hdal/iq/nvt_iq.ko
+    #insmod hdal/af/nvt_af.ko
+
+    # iq, 3a sample
+    #insmod hdal/samples/sample_nvt_ae.ko
+    #insmod hdal/samples/sample_nvt_af.ko
+    #insmod hdal/samples/sample_nvt_awb.ko
+    #insmod hdal/samples/sample_nvt_iq.ko
+
+    #uvac module
+    #modprobe nvt_usb2dev
+    #modprobe nvt_usb2dev8
+
+    # dsp
+    #insmod hdal/kflow_rpc/nvt_ipc.ko
+    #insmod hdal/dsp/nvt_dsp.ko
+
+    #cv
+    #insmod hdal/kdrv_ive/kdrv_ive.ko
+    #insmod hdal/kdrv_md/kdrv_md.ko
+    #insmod hdal/kdrv_dis/kdrv_dis.ko
+
+    #ai
+    #insmod hdal/kdrv_ai/kdrv_ai.ko
+    #insmod hdal/kdrv_ai/kdrv_ai.ko ai_net_supported_num=1;
+    #insmod hdal/kflow_cnn/kflow_cnn.ko;
+    #insmod hdal/kflow_nue/kflow_nue.ko;
+    #insmod hdal/kflow_nue2/kflow_nue2.ko;
+    #insmod hdal/kflow_cpu/kflow_cpu.ko;
+    #insmod hdal/kflow_dsp/kflow_dsp.ko;
+    #insmod hdal/kflow_ai_net/kflow_ai_net.ko
+    #fb
+    #insmod /kernel/drivers/video/fbdev/core/fb.ko
+    #insmod /kernel/drivers/video/fbdev/core/cfbcopyarea.ko
+    #insmod /kernel/drivers/video/fbdev/core/cfbfillrect.ko
+    #insmod /kernel/drivers/video/fbdev/core/cfbimgblt.ko
+    #insmod hdal/kdrv_videoout/fbdev/nvt_fb.ko
+}
+
+cd /lib/modules/4.19.91/novatek
+insert_ko
+
+# Sensor config
+# SENSOR=${SENSOR:=imx307}
+#
+
+if [ -n "$SENSOR" ]; then
+    logger -s -p daemon.info -t novatek "Manualy set SENSOR as ${SENSOR}"
+else
+    if fw_printenv -n sensor >/dev/null; then
+        SENSOR_ENV=$(fw_printenv -n sensor)
+        export SENSOR=${SENSOR_ENV}
+        logger -s -p daemon.info -t novatek "Get data from environment and set SENSOR as ${SENSOR}"
+    else
+        #insert_ko
+        SENSOR_DETECT=$(ipcinfo --short-sensor)
+        export SENSOR=${SENSOR_DETECT:=unknown}
+        logger -s -p daemon.info -t novatek "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+        fw_setenv sensor $SENSOR && logger -s -p daemon.info -t novatek "Write detected ${SENSOR} to U-Boot ENV"
+    fi
+fi
+
+insert_sns

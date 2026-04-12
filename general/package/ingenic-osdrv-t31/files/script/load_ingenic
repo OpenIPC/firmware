@@ -1,0 +1,230 @@
+#!/bin/sh
+
+KMOD_PATH=/lib/modules/$(uname -r)/ingenic
+SOC=$(ipcinfo -f || fw_printenv -n soc)
+vendor=$(ipcinfo -v)
+
+if [ ! -f /usr/sbin/sensor_cli ]; then
+	ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
+fi
+
+echo 1 >/proc/sys/vm/overcommit_memory
+
+log_vendor() {
+	logger -s -p daemon.info -t ${vendor} "$1"
+}
+
+check_vb() {
+	if [ "$(fw_printenv -n totalmem)" = "64M" ] && [ "$(fw_printenv -n rmem)" = "40M" ]; then
+		log_vendor "Setting osmem, rmem & blkcnt..."
+		fw_setenv osmem 39M && fw_setenv rmem 25M@0x2700000 && cli -s .isp.blkCnt 1 && reboot
+	fi
+}
+
+check_vb
+
+check_return() {
+	if [ $? -ne 0 ]; then
+		echo err: $1
+		echo exit
+		exit
+	fi
+}
+
+SENSOR_EXT_PARAM=""
+
+sync_sensor_param() {
+	STREAMER_RES=$(cli -g .video0.size)
+	STREAMER_FPS=$(cli -g .video0.fps)
+	if [ ! -z "${STREAMER_RES}" ] && [ ! -z "${STREAMER_FPS}" ]; then
+		CUR_SENSOR_RES="$(sensor_cli -g .sensor.width)x$(sensor_cli -g .sensor.height)"
+		if ! [ "${CUR_SENSOR_RES}" = "${STREAMER_RES}" ]; then
+			STREAMER_PARAM="${STREAMER_RES}x${STREAMER_FPS}"
+			RES_LIST=$(sensor_cli -g .sensor.resolutions)
+			for RES in $(echo ${RES_LIST} | tr ',' '\n')
+			do
+				if [ "$(echo ${RES} | cut -d "_" -f1)" = "${STREAMER_PARAM}" ]; then
+					sensor_cli -s .sensor.width $(echo ${STREAMER_PARAM} | cut -d "x" -f1)
+					sensor_cli -s .sensor.height $(echo ${STREAMER_PARAM} | cut -d "x" -f2)
+					SENSOR_EXT_PARAM="sensor_resolution=$(echo ${RES} | cut -d "_" -f2) sensor_max_fps=$(echo ${STREAMER_FPS})"
+				fi
+			done
+		fi
+	fi
+}
+
+lsmod | grep "sinfo" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe sinfo
+	check_return "insmod sinfo"
+fi
+
+if fw_printenv -n sensor >/dev/null; then
+	export SENSOR=$(fw_printenv -n sensor)
+	log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
+else
+	echo 1 >/proc/jz/sinfo/info
+	check_return "start sinfo"
+	SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+	check_return "get sensor type"
+	SENSOR=${SENSOR_INFO#*:}
+	if [ "sensor not found" = "$SENSOR" ]; then
+		unset SENSOR
+		fw_setenv sensor
+	else
+		log_vendor "Get data from sinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && log_vendor "Write detected ${SENSOR} to U-Boot ENV"
+	fi
+fi
+
+sync_sensor_param
+
+case ${SENSOR} in
+"gc2053")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=125000000"
+	SENSOR_PARAM="data_interface=1"
+	;;
+"gc2083")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=200000000"
+	SENSOR_PARAM="shvflip=1"
+	;;
+"gc4653")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=200000000"
+	SENSOR_PARAM=""
+	;;
+"imx307")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=125000000"
+	SENSOR_PARAM=""
+	;;
+"imx327")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=125000000"
+	SENSOR_PARAM=""
+	;;
+"jxf37")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=200000000 isp_memopt=1 isp_day_night_switch_drop_frame_num=1 isp_ch0_pre_dequeue_time=12 isp_ch0_pre_dequeue_interrupt_process=0 isp_ch0_pre_dequeue_valid_lines=540"
+	SENSOR_PARAM="shvflip=1"
+	;;
+"jxf37p")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM=""
+	SENSOR_PARAM=""
+	;;
+"jxh62")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM=""
+	SENSOR_PARAM=""
+	;;
+"jxq03"|"jxq03p")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=150000000"
+	SENSOR_PARAM=""
+	;;
+"jxk04")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=125000000 isp_ch0_pre_dequeue_time=14 isp_ch0_pre_dequeue_interrupt_process=0 isp_ch0_pre_dequeue_valid_lines=540 isp_memopt=1"
+	SENSOR_PARAM="shvflip=1"
+	;;
+"os03b10")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=200000000"
+	SENSOR_PARAM=""
+	;;
+"sc200ai")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=100000000 isp_ch0_pre_dequeue_time=20 isp_ch0_pre_dequeue_interrupt_process=0 isp_memopt=1"
+	SENSOR_PARAM="shvflip=1"
+	;;
+"sc2232")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=125000000"
+	SENSOR_PARAM=""
+	;;
+"sc2335")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=100000000 isp_ch0_pre_dequeue_time=20 isp_ch0_pre_dequeue_interrupt_process=0 isp_memopt=1"
+	SENSOR_PARAM=""
+	;;
+"sc2336")
+	AVPU_PARAM="clk_name=vpll avpu_clk=500000000"
+	ISP_PARAM="isp_clk=200000000 isp_ch0_pre_dequeue_time=13 isp_ch0_pre_dequeue_interrupt_process=0 isp_memopt=1"
+	SENSOR_PARAM="shvflip=1"
+	;;
+"sc3335")
+	AVPU_PARAM="clk_name=mpll avpu_clk=500000000"
+	ISP_PARAM="isp_clk=200000000 isp_memopt=1"
+	SENSOR_PARAM=""
+	;;
+"sc3338")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=150000000"
+	SENSOR_PARAM=""
+	;;
+"sc5235")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=200000000"
+	SENSOR_PARAM=""
+	;;
+"sc4236")
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=150000000"
+	SENSOR_PARAM=""
+	;;
+*)
+	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
+	ISP_PARAM="isp_clk=125000000"
+	SENSOR_PARAM=""
+	break
+	;;
+esac
+
+echo --------------------
+echo "AVPU_PARAM: ${AVPU_PARAM}"
+echo "ISP_PARAM: ${ISP_PARAM}"
+echo "SENSOR: ${SENSOR}"
+echo "SENSOR_PARAM: ${SENSOR_PARAM}"
+echo --------------------
+
+lsmod | grep "avpu" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe avpu ${AVPU_PARAM}
+	check_return "insmod avpu"
+fi
+
+lsmod | grep "tx_isp" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe tx-isp-${SOC} ${ISP_PARAM}
+	check_return "insmod isp drv"
+fi
+
+lsmod | grep ${SENSOR} >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe sensor_${SENSOR}_${SOC} ${SENSOR_PARAM} ${SENSOR_EXT_PARAM}
+	check_return "insmod sensor drv"
+fi
+
+lsmod | grep "audio" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe audio spk_gpio=-1
+	check_return "insmod audio"
+fi
+
+lsmod | grep "gpio" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe gpio
+	check_return "insmod gpio"
+fi
+
+if [ ! -z "$(lsmod | grep "gpio")" ]; then
+	GPIOS=".nightMode.irCutPin1 .nightMode.irCutPin2 .nightMode.irSensorPin .nightMode.backlightPin .audio.speakerPin"
+	for GPIO in $(echo ${GPIOS})
+	do
+		G=$(cli -g ${GPIO})
+		[ ! -z "${G}" ] && echo ${G} > /proc/gpio_claim/gpio
+	done
+fi

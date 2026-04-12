@@ -1,0 +1,7 @@
+iface wg0 inet static
+    address 192.168.99.1
+    netmask 255.255.255.0
+    pre-up modprobe wireguard
+    pre-up ip link add dev wg0 type wireguard
+    pre-up wg setconf wg0 /etc/wireguard.conf
+    post-down ip link del dev wg0

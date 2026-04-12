@@ -1,0 +1,10 @@
+
+Patched by @dimerrr at 2022.11.20
+
+@@ -230,7 +230,7 @@
+        sys_write_reg( 0x200f0000, 0x00000001 );                // 0: GPIO0_4           1: SENSOR_CLK
+        sys_write_reg( 0x200f0004, 0x00000000 );                // 0: SENSOR_RSTN       1: GPIO0_5
+        sys_write_reg( 0x200f0008, 0x00000001 );                // 0: GPIO0_6           1��FLASH_TRIG   2: SFC_EMMC_BOOT_MODE   3��SPI1_CSN1    4:VI_VS
+-       sys_write_reg( 0x200f000c, 0x00000001 );                // 0��GPIO0_7           1��SHUTTER_TRIG 2��SFC_DEVICE_MODE              4: VI_HS
++       sys_write_reg( 0x200f000c, 0x00000000 );                // 0��GPIO0_7           1��SHUTTER_TRIG 2��SFC_DEVICE_MODE              4: VI_HS
+ }

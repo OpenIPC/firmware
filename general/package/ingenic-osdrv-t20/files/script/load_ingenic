@@ -1,0 +1,105 @@
+#!/bin/sh
+
+KMOD_PATH=/lib/modules/$(uname -r)/ingenic
+SOC=$(ipcinfo -f || fw_printenv -n soc)
+vendor=$(ipcinfo -v)
+
+if [ ! -f /usr/sbin/sensor_cli ]; then
+	ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
+fi
+
+echo 1 >/proc/sys/vm/overcommit_memory
+
+log_vendor() {
+	logger -s -p daemon.info -t ${vendor} "$1"
+}
+
+check_return() {
+	if [ $? -ne 0 ]; then
+		echo err: $1
+		echo exit
+		exit
+	fi
+}
+
+SENSOR_EXT_PARAM=""
+
+lsmod | grep "sinfo" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe sinfo.ko
+	check_return "insmod sinfo"
+fi
+
+if fw_printenv -n sensor >/dev/null; then
+	export SENSOR=$(fw_printenv -n sensor)
+	log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
+else
+	echo 1 >/proc/jz/sinfo/info
+	check_return "start sinfo"
+	SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+	check_return "get sensor type"
+	SENSOR=${SENSOR_INFO#*:}
+	if [ "sensor not found" = "$SENSOR" ]; then
+		unset SENSOR
+		fw_setenv sensor
+	else
+		log_vendor "Get data from sinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && log_vendor "Write detected ${SENSOR} to U-Boot ENV"
+	fi
+fi
+
+case ${SENSOR} in
+"jxf22")
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	;;
+"jxf23")
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	;;
+"jxh42")
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	;;
+"sc2135")
+	ISP_PARAM="isp_clk=100000000"
+	SENSOR_PARAM=""
+	;;
+"sc2232")
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	;;
+"sc2235")
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	;;
+*)
+	ISP_PARAM="isp_clk=90000000"
+	SENSOR_PARAM=""
+	break
+	;;
+esac
+
+echo --------------------
+echo "ISP_PARAM: ${ISP_PARAM}"
+echo "SENSOR: ${SENSOR}"
+echo "SENSOR_PARAM: ${SENSOR_PARAM}"
+echo --------------------
+
+lsmod | grep "tx_isp" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe tx-isp-${SOC} ${ISP_PARAM}
+	check_return "insmod isp drv"
+fi
+
+lsmod | grep ${SENSOR} >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe sensor_${SENSOR}_${SOC} ${SENSOR_PARAM} ${SENSOR_EXT_PARAM}
+	check_return "insmod sensor drv"
+fi
+
+lsmod | grep "audio" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe audio spk_gpio=-1
+	check_return "insmod audio"
+fi

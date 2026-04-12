@@ -1,0 +1,323 @@
+#!/bin/sh
+
+config_path=/etc/sensors
+video_frontend=ov2715
+video_system=NTSC
+
+# temporary hax, we need to know resolution before inserting sensor...
+resolution=$(fw_printenv -n resolution)
+resolution=${resolution:=720p}
+
+# Support video_front_end: ov2710, ov2715, ov9712, ov9715, ov9714, ov9732, ov5653
+# Support video_front_end: mt9m034, ar0130, ar0140, ar0330, ar0331, ps5230
+# Support video_front_end: imx222, imx238, imx236, imx238
+
+chipver=$(head -1 /proc/pmu/chipver)
+chipid=$(echo $chipver | cut -c 1-4)
+
+
+if [ "$chipid" != "8136" ] && [ "$chipid" != "8135" ]; then
+    echo "Error! Not support chip version $chipver."
+    exit
+fi
+
+if [ -n "$SENSOR" ]; then
+	logger -s -p daemon.info -t grainmedia "Manualy set SENSOR as ${SENSOR}"
+else
+	if fw_printenv -n sensor >/dev/null; then
+		SENSOR_ENV=$(fw_printenv -n sensor)
+		export SENSOR=${SENSOR_ENV}
+		logger -s -p daemon.info -t grainmedia "Get data from environment and set SENSOR as ${SENSOR}"
+	else
+		SENSOR_DETECT=$(ipcinfo --short-sensor)
+		export SENSOR=${SENSOR_DETECT:=unknown}
+		logger -s -p daemon.info -t grainmedia "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && logger -s -p daemon.info -t grainmedia "Write detected ${SENSOR} to U-Boot ENV"
+	fi
+fi
+
+if [[ "$1" != "" ]] && [[ "$1" != "-i" ]]; then
+    video_frontend=$1
+else
+    video_frontend=${SENSOR}
+fi
+
+if [ "$video_system" == "NTSC" ]; then
+pwr_freq=0
+fps=30
+elif [ "$video_system" == "PAL" ]; then
+pwr_freq=1
+fps=25
+fi
+
+rm -f /etc/sensors/gmlib.cfg
+ln -s /etc/sensors/gmlib_${resolution}.cfg /etc/sensors/gmlib.cfg
+
+cd /lib/modules/3.3.0/grainmedia
+
+insmod frammap.ko || exit 1
+cat /proc/frammap/ddr_info
+
+insmod log.ko mode=0 log_ksize=64 config_path=${config_path}/gmlib_${resolution}.cfg
+insmod ms.ko
+insmod em.ko
+insmod gm2d.ko
+#insmod flcd200-common.ko
+#insmod flcd200-pip.ko output_type=0 fb0_fb1_share=1 # CVBS display
+
+# check if /dev/sar_adc_drv exists, if not, load sar_adc module
+if ! test -e /dev/sar_adc_drv ; then
+    insmod sar_adc.ko run_mode=4                        #run_mode=4 is for CVBS out
+fi
+
+insmod fe_common.ko
+insmod adda308.ko input_mode=0 single_end=1
+insmod ft3dnr200.ko src_yc_swap=1 dst_yc_swap=1 ref_yc_swap=1 config_path=${config_path}
+
+case "$video_frontend" in
+"sc1035" | "sc1045" | "sc1145")
+    codec_max_width=1280
+    codec_max_height=720
+    insmod fisp328.ko cfg_path=/etc/sensors/isp328_${video_frontend}.cfg
+    insmod fisp_algorithm.ko pwr_freq=${pwr_freq}
+    insmod fisp_${video_frontend}.ko sensor_w=${codec_max_width} sensor_h=${codec_max_height} fps=${fps} mirror=1 flip=1
+    ;;
+"sc1135")
+    codec_max_width=1280
+    codec_max_height=960
+    insmod fisp328.ko cfg_path=/etc/sensors/isp328_${video_frontend}.cfg
+    insmod fisp_algorithm.ko pwr_freq=${pwr_freq}
+    insmod fisp_${video_frontend}.ko sensor_w=${codec_max_width} sensor_h=${codec_max_height} fps=${fps} mirror=1 flip=1
+    ;;
+"ov2715" | "ov2710")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov2715.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_ov2715.ko sensor_w=1920 sensor_h=1080 interface=0 fps=30 mirror=1 flip=1
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov2715.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_ov2715.ko sensor_w=1920 sensor_h=1080 interface=0 fps=25 mirror=1 flip=1
+    fi
+    ;;
+"ov9715" | "ov9712" | "ov9710")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov9715.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_ov9715.ko sensor_w=1280 sensor_h=720 fps=30 mirror=1 flip=1
+
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov9715.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_ov9715.ko sensor_w=1280 sensor_h=720 fps=25 mirror=1 flip=1
+    fi
+    ;;
+"ov9732")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov9732.cfg
+        insmod fisp_algorithm.ko pwr_freq=0            
+        insmod fisp_ov9732.ko sensor_w=1280 sensor_h=720 fps=30 mirror=1 flip=1 interface=0
+
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ov9732.cfg
+        insmod fisp_algorithm.ko pwr_freq=1            
+        insmod fisp_ov9732.ko sensor_w=1280 sensor_h=720 fps=25 mirror=1 flip=1 interface=0
+    fi        
+    ;;
+"ps5230")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ps5230.cfg
+        insmod fisp_algorithm.ko pwr_freq=0            
+        insmod fisp_ps5230.ko sensor_w=1920 sensor_h=1080 fps=25 mirror=1 flip=1 interface=0
+        
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ps5230.cfg
+        insmod fisp_algorithm.ko pwr_freq=1            
+        insmod fisp_ps5230.ko sensor_w=1280 sensor_h=720 fps=25 mirror=1 flip=1 interface=0
+    fi        
+    ;;
+"ar0330")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0330.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_ar0330.ko sensor_w=1920 sensor_h=1080 mirror=1 flip=1 interface=1 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0330.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_ar0330.ko sensor_w=1920 sensor_h=1080 mirror=1 flip=1 interface=1 fps=25
+    fi
+    ;;
+"ar0331")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0331.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_ar0331.ko sensor_w=1920 sensor_h=1080 interface=0 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0331.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_ar0331.ko sensor_w=1920 sensor_h=1080 interface=0 fps=25
+    fi
+    ;;
+"mt9m034")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_mt9m034.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_mt9m034.ko sensor_w=1280 sensor_h=720 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_mt9m034.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_mt9m034.ko sensor_w=1280 sensor_h=720 fps=25
+    fi
+    ;;
+"ar0140" | "ar0141")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0140.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_ar0140.ko sensor_w=1280 sensor_h=720 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_ar0140.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_ar0140.ko sensor_w=1280 sensor_h=720 fps=25
+    fi
+    ;;
+"imx238")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx238.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_imx138.ko sensor_w=1280 sensor_h=720 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx238.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_imx138.ko sensor_w=1280 sensor_h=720 fps=25
+    fi
+    ;;
+"imx222")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx222.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_imx122.ko sensor_w=1920 sensor_h=1080 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx222.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_imx122.ko sensor_w=1920 sensor_h=1080 fps=25
+    fi
+    ;;
+"imx236")
+    codec_max_width=1920
+    codec_max_height=1080
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx236.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_imx136.ko sensor_w=1920 sensor_h=1080 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_imx236.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_imx136.ko sensor_w=1920 sensor_h=1080 fps=25
+    fi
+    ;;
+"soih61")
+    codec_max_width=1280
+    codec_max_height=720
+    if [ "$video_system" == "NTSC" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_soih61.cfg
+        insmod fisp_algorithm.ko pwr_freq=0
+        insmod fisp_soih61.ko sensor_w=1280 sensor_h=720 fps=30
+    elif [ "$video_system" == "PAL" ]; then
+        insmod fisp328.ko cfg_path=/etc/sensors/isp328_soih61.cfg
+        insmod fisp_algorithm.ko pwr_freq=1
+        insmod fisp_soih61.ko sensor_w=1280 sensor_h=720 fps=25
+    fi
+    ;;
+*)
+    echo "Invalid argument for video frontend: $video_frontend"
+    exit
+    ;;
+esac
+
+insmod vcap300_common.ko
+insmod vcap0.ko vi_mode=0,1 ext_irq_src=1 sync_time_div=500
+insmod vcap300_isp.ko ch_id=0 range=1
+insmod fmcp_drv.ko mp4_tight_buf=1 config_path=${config_path}
+insmod favc_enc.ko h264e_max_b_frame=0 h264e_one_ref_buf=1 h264e_tight_buf=1 h264e_max_width=$codec_max_width h264e_max_height=$codec_max_height h264e_slice_offset=1 config_path=${config_path}
+insmod favc_rc.ko
+insmod fmjpeg_drv.ko
+
+insmod sw_osg.ko
+insmod fscaler300.ko max_vch_num=1 max_minors=1 temp_width=0 temp_height=0
+insmod osd_dispatch.ko
+insmod codec.ko
+insmod audio_drv.ko audio_ssp_num=0,1 audio_ssp_chan=1,1 bit_clock=400000,400000 sample_rate=8000,8000 audio_out_enable=1,0
+insmod gs.ko
+insmod vpd.ko vpd_dbglevel=0 gmlib_dbglevel=0 quiet=1
+
+echo /tmp >/proc/videograph/dumplog #configure log path
+
+echo 0 >/proc/frammap/free_pages     #should not free DDR1 for performance issue
+echo 1 >/proc/vcap300/vcap0/dbg_mode #need debug mode to detect capture overflow
+echo 0 >/proc/videograph/em/dbglevel
+echo 0 >/proc/videograph/gs/dbglevel
+echo 0 >/proc/videograph/ms/dbglevel
+echo 0 >/proc/videograph/datain/dbglevel
+echo 0 >/proc/videograph/dataout/dbglevel
+echo 0 >/proc/videograph/vpd/dbglevel
+echo 0 >/proc/videograph/gmlib/dbglevel
+
+echo DefaultCfg 2 > /proc/videograph/h264e/param
+echo IPOffset -1 > /proc/videograph/h264e/param
+echo 13 20 > /proc/videograph/favce_rc/dbg
+echo DeltaQPWeight 4 >  /proc/videograph/h264e/param
+echo 43 3 > /proc/videograph/h264e/dbg
+echo 3 > /proc/sys/vm/drop_caches
+echo 4 0 > /proc/vcap300/vcap0/presmooth/ch   #second code stream sharpness drop
+echo 0 1 > /proc/vcap300/vcap0/presmooth/param 
+echo 1 4 > /proc/vcap300/vcap0/presmooth/param 
+echo 2 4 > /proc/vcap300/vcap0/presmooth/param 
+
+echo =========================================================================
+echo "  Video Front End: $video_frontend"
+echo "  Chip Version: $chipver"
+echo =========================================================================
+
+devmem 0x9a1000a0 32 0x87878587
+devmem 0x9a100034 32 0x061f0606
+devmem 0x9a1000c4 32 0x08000f08
+devmem 0x9a1000c8 32 0x061f0606
+devmem 0x9a100030 32 0xDF000f04
+
+devmem 0x90c00044 32 0x00000007
+devmem 0x90c000b4 32 0xFFD374F0 #close SD card and mjpeg
+
+if [ "$chipid" == "8135" ]; then
+    devmem 0x90b00010 32 0x14040000 #close audio
+fi
+
+#devmem 0x96105440 32 0x01500000
+#devmem 0x96105438 32 0x01500000
+#echo 1 0x50 > /proc/3dnr/dma/param
+#echo w ae_en 0 > /proc/isp320/command
+#echo w sen_exp 133 > /proc/isp320/command
+#echo w fps 15 > /proc/isp320/command
+
+# force max CPU performance
+echo performance >/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+#echo 30 > /proc/videograph/ft3dnr/job_pre_callback

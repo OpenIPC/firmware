@@ -1,0 +1,22 @@
+#!/bin/sh
+
+start() {
+	/etc/rc.local
+}
+
+stop() {
+	[ -x /etc/rc.local.stop ] && /etc/rc.local.stop
+}
+
+case "$1" in
+	start|stop)
+		$1
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac
+
+exit $?

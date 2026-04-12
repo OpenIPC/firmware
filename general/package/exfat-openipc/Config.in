@@ -1,0 +1,7 @@
+config BR2_PACKAGE_EXFAT_OPENIPC
+	bool "exfat-openipc"
+	help
+	  exFAT kernel module
+
+comment "exFAT needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL

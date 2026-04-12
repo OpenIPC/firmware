@@ -1,0 +1,49 @@
+#!/bin/sh
+
+
+get_env() {
+  bootargs=$(fw_printenv -n bootargs)
+  mem=$(echo ${bootargs} | awk -F '=' '$1=="mem"{print $2}' RS=' ')
+  console=$(echo ${bootargs} | awk -F '=' '$1=="console"{print $2}' RS=' ')
+  panic=$(echo ${bootargs} | awk -F '=' '$1=="panic"{print $2}' RS=' ')
+  rootfstype=$(echo ${bootargs} | awk -F '=' '$1=="rootfstype"{print $2}' RS=' ')
+  root=$(echo ${bootargs} | awk -F '=' '$1=="root"{print $2}' RS=' ')
+  init=$(echo ${bootargs} | awk -F '=' '$1=="init"{print $2}' RS=' ')
+  mtdparts=$(echo ${bootargs} | awk -F '=' '$1=="mtdparts"{print $2}' RS=' ')
+  osmem=$(fw_printenv -n osmem)
+  totalmem=$(fw_printenv -n totalmem)
+  extras=$(fw_printenv -n extras)
+}
+
+calc_mmz() {
+  mem_start=0x40000000
+  mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+  mem_total=${mem_total:=64}
+  os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
+  os_mem_size=${os_mem_size:=32}
+  mmz_start=$(echo "$mem_start $os_mem_size" | awk 'BEGIN { temp = 0; } { temp = $1/1024/1024 + $2; } END { printf("0x%x00000\n", temp); }')
+  mmz_size=$(echo "$mem_total $os_mem_size" | awk 'BEGIN { temp = 0; } { temp = $1 - $2; } END { printf("%dM\n", temp); }')
+  mmz=anonymous,0,$mmz_start,$mmz_size
+}
+
+
+if [[ "$1" == 'gk' ]]; then
+  echo "Allocator selected as gk..."
+  get_env
+  mem=${osmem:=32M}
+  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=gk ${extras}"
+  echo ${newbootargs}
+  fw_setenv bootargs ${newbootargs}
+  #
+elif [[ "$1" == 'cma'  ]]; then
+  echo "Allocator selected as cma..."
+  get_env
+  calc_mmz
+  mem=${totalmem:=64M}
+  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=cma mmz=${mmz} ${extras}"
+  fw_setenv bootargs ${newbootargs}
+  echo ${newbootargs}
+else
+  echo "NO or WRONG allocator, please select gk or cma."
+  exit 1
+fi

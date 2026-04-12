@@ -1,0 +1,6 @@
+config BR2_PACKAGE_RCJOYSTICK
+	bool "rcjoystick"
+	help
+	  joystick /dev/input/js0 to mavlink rc_channels_override udp 127.0.0.1:14550
+
+	  https://github.com/whoim2/rcjoystick

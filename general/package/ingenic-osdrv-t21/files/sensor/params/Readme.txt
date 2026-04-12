@@ -1,0 +1,20 @@
+FILE                    MD5SUM                              SIZE        GRAB            SOC     FIRMWARE
+
+jxf23-t21.bin           d5a7b0353bfa8eb9534d5c55616294da    121496      @flyrouter      T21N    CamHi
+jxf23-t21.bin           d5a7b0353bfa8eb9534d5c55616294da    121496      @john           T21Z    CamHi
+jxf37-t21.bin           5c29e8b8e787cdd0651dfbd29eba73dc    121496      @metsys1        T21L    CIP-37210v2
+jxf37-t21.bin           5c29e8b8e787cdd0651dfbd29eba73dc    121496      @themactep      T21Z    Shopper+
+os02b10-t21.bin         1f235dd55e9b8f7090ecf92af9d7d6cc    121496      @bob-builder    T21Z    Wansview
+os02g10-t21.bin         bce272b3ebea24bc06eaba34bea042d4    121496      @bob-builder    T21Z    Wansview
+ov2735b-t21.bin         281b998627c0c9a28874756f6870b29b    121496      @bob-builder    T21Z    Wansview
+sc1245a-t21.bin         4f96b724a2de5949e8dfb2f32c0e48ad    121496      @flyrouter      T21N    Jabsco
+sc1345-t21.bin          f8b029431edadfc15518dc5133e3c7b2    121496      @themactep      T21Z    Shoppers
+sc2230-t21.bin          5df9bc15d445a6f31ca146c8f272cdda    121496      @flyrouter      T21N    Jabsco
+sc2232-t21.bin          e42492f8d7184a8b0601fb1a437db9f0    121496      @flyrouter      T21N    Jabsco
+sc2232h-t21.bin         455117e1a0dc83d36a964c798f8eb006    121496      @flyrouter      T21N    CamHi
+sc2232h-t21.bin         455117e1a0dc83d36a964c798f8eb006    121496      @john           T21Z    CamHi
+sc2300-300w-t21.bin     83c2b3d50f8be41086b02887b1471f6a    121496      @themactep      T21Z    Shopper+
+sc2300-t21.bin          83c2b3d50f8be41086b02887b1471f6a    121496      @themactep      T21Z    Shopper+
+sc2332-t21.bin          95ffdfb79328c01760096d8eb9f59b09    121496      @themactep      T21Z    Shopper+
+sc2335-t21.bin          8740c28b83d78712da9c7f11b5ee070a    121496      @flyrouter      T21N    CamHi
+sc2335-t21-2.bin        2e99afac30c1d67b73550ffb72d65b91    121496      @john           T21Z    CamHi

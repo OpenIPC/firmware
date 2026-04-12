@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# Start vdec decoder
+#
+. /etc/vdec.conf
+
+if [ ! -z ${records} ]; then
+    for i in $(seq 1000 9000)
+    do
+        [ ! -f ${records}/video_${i}.${codec} ] && break
+    done
+    extra=$(echo ${extra} -w ${records}/video_${i}.${codec})
+fi
+
+if [ ${osd} = "simple" ]; then
+    osd_variant="--osd "${osd_elements}
+fi
+
+case "$1" in
+  start)
+    echo "Starting vdec decoder service..."
+    vdec -p ${port} -d ${format} -c ${codec} -m ${mode} --mavlink-port ${mavlink_port} ${osd_variant} ${extra} > /dev/null 2>&1 &
+    sleep 3
+    if [ ${osd} = "custom" ]; then
+	osd > /dev/null 2>&1 &
+    fi
+    ;;
+  stop)
+    echo "Stopping vdec decoder service..."
+    kill -9 $(pidof vdec)
+    kill -9 $(pidof osd)
+    ;;
+    *)
+    echo "Usage: $0 {start|stop}"
+    exit 1
+esac

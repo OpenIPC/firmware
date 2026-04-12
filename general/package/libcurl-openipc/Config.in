@@ -1,0 +1,76 @@
+config BR2_PACKAGE_LIBCURL_OPENIPC
+	bool "libcurl-openipc"
+	help
+	  cURL is a tool for getting files from FTP, HTTP, Gopher,
+	  Telnet, and Dict servers, using any of the supported
+	  protocols.
+
+	  http://curl.haxx.se/
+
+if BR2_PACKAGE_LIBCURL_OPENIPC
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_CURL
+	bool "curl binary"
+	help
+	  Install curl binary as well
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_VERBOSE
+	bool "verbose strings"
+	help
+	  Enable verbose text strings
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_PROXY_SUPPORT
+	bool "proxy support"
+	default y
+	help
+	  Enable proxy support.
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_COOKIES_SUPPORT
+	bool "cookies support"
+	default y
+	help
+	  Enable support for cookies.
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_EXTRA_PROTOCOLS_FEATURES
+	bool "enable extra protocols and features"
+	default y
+	help
+	  Enable the following extra protocols and features:
+	  - LDAP / LDAPS
+	  - POP3 / IMAP / SMTP
+	  - Telnet
+	  - TFTP
+	  - RTSP
+	  - SMB / CIFS
+	  - DICT
+	  - Gopher
+
+choice
+	prompt "SSL/TLS library to use"
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_OPENSSL
+	bool "OpenSSL"
+	depends on BR2_PACKAGE_OPENSSL
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_GNUTLS
+	bool "GnuTLS"
+	depends on BR2_PACKAGE_GNUTLS
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_LIBNSS
+	bool "NSS"
+	depends on BR2_PACKAGE_LIBNSS
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_MBEDTLS
+	bool "mbed TLS"
+	depends on BR2_PACKAGE_MBEDTLS_OPENIPC
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_WOLFSSL
+	bool "WolfSSL"
+	depends on BR2_PACKAGE_WOLFSSL
+
+config BR2_PACKAGE_LIBCURL_OPENIPC_TLS_NONE
+	bool "None"
+
+endchoice
+
+endif

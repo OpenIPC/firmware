@@ -1,0 +1,381 @@
+#!/bin/sh
+# Useage: ./load3516a [ -r|-i|-a ] [ sensor ]
+#         -r : rmmod all modules
+#         -i : insmod all modules
+#    default : rmmod all moules and then insmod them
+#
+
+
+# mn34220 imx185 ar0330 ar0230 imx117 ar0237
+# Notes: hi3516d (16bit ddr) can only support sensor which resolution is 3M below
+
+
+
+####################Variables Definition##########################
+
+
+SNS_TYPE=mn34220        # sensor type
+
+mem_total=512;          # 512M, total mem
+mem_start=0x80000000;   # phy mem start
+
+os_mem_size=64;         # 64M, os mem
+mmz_start=0x84000000;   # mmz start addr
+mmz_size=128M;          # 128M, mmz size
+
+##################################################################
+
+report_error()
+{
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+insert_audio()
+{
+	insmod acodec.ko
+	#insmod hidmac.ko
+	insmod hi3516a_aio.ko
+	insmod hi3516a_ai.ko
+	insmod hi3516a_ao.ko
+	insmod hi3516a_aenc.ko
+	insmod hi3516a_adec.ko
+	#insmod extdrv/tlv_320aic31.ko
+	#insmod extdrv/ak7756.ko 
+	echo "insert audio"
+}
+
+remove_audio()
+{
+	#rmmod -w tlv_320aic31.ko
+	#rmmod -w ak7756.ko
+	rmmod -w hi3516a_adec
+	rmmod -w hi3516a_aenc
+	rmmod -w hi3516a_ao
+	rmmod -w hi3516a_ai
+	rmmod -w hi3516a_aio
+	rmmod -w acodec
+	echo "remove audio"
+}
+
+insert_sns()
+{
+	case $SNS_TYPE in			
+		imx123)
+			himm 0x200f0050 0x1;                # spi0_sclk
+			himm 0x200f0054 0x1;                # spi0_sdo
+			himm 0x200f0058 0x1;                # spi0_sdi
+			himm 0x200f005c 0x1;                # spi0_csn
+
+			himm 0x2003002c 0x90007             # sensor unreset, clk 37.125MHz, VI 250MHz
+			himm 0x20030104 0x0;                # VI 250MHz
+			insmod extdrv/sensor_spi.ko
+			;;			
+		imx185)
+			himm 0x200f0050 0x1;                # spi0_sclk
+			himm 0x200f0054 0x1;                # spi0_sdo
+			himm 0x200f0058 0x1;                # spi0_sdi
+			himm 0x200f005c 0x1;                # spi0_csn
+			
+			himm 0x2003002c 0x90007             # sensor unreset, clk 37.125MHz, VI 250MHz
+
+			insmod extdrv/sensor_spi.ko
+			;;
+		imx117)
+			himm 0x200f0050 0x1;                # spi0_sclk
+			himm 0x200f0054 0x1;                # spi0_sdo
+			himm 0x200f0058 0x1;                # spi0_sdi
+			himm 0x200f005c 0x1;                # spi0_csn
+			
+			himm 0x200f00dc 0x1;
+			himm 0x200f00e0 0x1;
+			himm 0x20030038 0x6;
+			
+			himm 0x20131020 0x30de8;
+			himm 0x20131024 0x30de5;
+			himm 0x2013102c 0x5;
+			
+			himm 0x20131060 0xbf;
+			himm 0x20131064 0xbc;
+			himm 0x2013106c 0x5;
+
+			himm 0x2003002c 0x90007             # sensor unreset, clk 37.125MHz, VI 250MHz
+					
+			insmod extdrv/sensor_spi.ko sensor=imx117
+			;;	
+		mn34220)
+			himm 0x200f0050 0x2;                # i2c0_scl
+			himm 0x200f0054 0x2;                # i2c0_sda
+			
+			himm 0x2003002c 0x90007             # sensor unreset, clk 37.125MHz, VI 250MHz
+			;;
+		ar0330)
+			himm 0x200f0050 0x2;                # i2c0_scl
+			himm 0x200f0054 0x2;                # i2c0_sda
+
+			himm 0x2003002c 0xE0007             # sensor unreset, clk 24MHz, VI 250MHz
+			;;
+		ov4689)
+			himm 0x200f0050 0x2;                # i2c0_scl
+			himm 0x200f0054 0x2;                # i2c0_sda
+			himm 0x2003002c 0xE0007             # sensor unreset, clk 24MHz, VI 250MHz
+			himm 0x20030104 0x0;
+			;;
+		ar0230|ar0237)
+			himm 0x200f0050 0x2;                # i2c0_scl
+			himm 0x200f0054 0x2;                # i2c0_sda
+
+			himm 0x2003002c 0xB0007             # sensor unreset, clk 27MHz, VI 250MHz
+			;;
+		bt1120)
+			
+			;;
+		*)
+			echo "xxxx Invalid sensor type $SNS_TYPE xxxx"
+			report_error
+			;;
+	esac
+}
+
+remove_sns()
+{
+	rmmod -w ssp &> /dev/null
+	rmmod -w sensor_spi &> /dev/null
+	rmmod -w ssp_pana &> /dev/null
+}
+
+sys_config()
+{
+	# pinmux configuration
+	sh pinmux_hi3516a.sh > /dev/null
+
+	# clock configuration
+	sh clkcfg_hi3516d.sh > /dev/null
+
+	# system configuration
+	sh sysctl_hi3516a.sh $b_arg_online  > /dev/null
+}
+
+insert_ko()
+{
+	# sys config
+	sys_config;
+
+	# driver load
+	insmod mmz.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
+	insmod hi_media.ko
+	insmod hi3516a_base.ko
+	
+	insmod hi3516a_sys.ko vi_vpss_online=$b_arg_online sensor=$SNS_TYPE mem_total=$mem_total
+	if [[ $? -ne 0 ]]; then 
+		exit;
+	fi  
+
+	insmod hi3516a_tde.ko
+	insmod hi3516a_region.ko
+	insmod hi3516a_vgs.ko
+
+	insmod hi3516a_isp.ko
+	insmod hi3516a_viu.ko detect_err_frame=10;
+	insmod hi3516a_vpss.ko
+	insmod hi3516a_vou.ko lowPowerMode=0
+	#insmod hi3516a_vou.ko detectCycle=0            #close dac detect
+	insmod hifb.ko video="hifb:vram0_size:1620"     # default pal
+
+	insmod hi3516a_rc.ko
+	insmod hi3516a_venc.ko
+	insmod hi3516a_chnl.ko
+	insmod hi3516a_h264e.ko
+	insmod hi3516a_h265e.ko
+	insmod hi3516a_jpege.ko
+	insmod hi3516a_vda.ko
+	insmod hi3516a_ive.ko
+
+	insmod extdrv/sensor_i2c.ko
+	insmod extdrv/pwm.ko
+	insmod extdrv/piris.ko
+	#insmod extdrv/adv_7441.ko
+	insmod extdrv/sil9024.ko norm=12    #1080P@30fps
+
+	echo "==== Your input Sensor type is $SNS_TYPE ===="
+	#insert_sns > /dev/null
+	insert_sns
+
+	insert_audio
+	echo "==== Your input Sensor type is $SNS_TYPE ===="
+
+	insmod hi_mipi.ko
+	#insmod hi3516a_pm.ko
+}
+
+remove_ko()
+{
+	#rmmod -w hi3516a_pm
+	remove_audio
+	remove_sns
+
+	rmmod -w sil9024 &> /dev/null
+	rmmod -w sil9034 &> /dev/null
+	rmmod -w pwm	
+
+	rmmod -w hi3516a_ive
+	rmmod -w hi3516a_vda
+	
+	rmmod -w hi3516a_rc
+	rmmod -w hi3516a_jpege
+	rmmod -w hi3516a_h264e
+	rmmod -w hi3516a_h265e
+	rmmod -w hi3516a_chnl
+	rmmod -w hi3516a_venc
+
+	rmmod -w hifb
+	rmmod -w hi3516a_vou
+	rmmod -w hi3516a_vpss
+	rmmod -w hi3516a_viu
+	rmmod -w hi_mipi
+
+	rmmod -w ssp_ad9020
+	rmmod -w hi3516a_vgs
+	rmmod -w hi3516a_region
+	rmmod -w hi3516a_tde
+
+	rmmod -w sensor_i2c
+	rmmod -w piris
+	rmmod -w hi3516a_isp
+	rmmod -w hi3516a_sys
+	rmmod -w hi3516a_base
+	rmmod -w hi_media
+	rmmod -w mmz
+}
+
+sys_restore()
+{
+	####################################################
+	pinmux_hi3516a.sh > /dev/null
+
+	clkcfg_hi3516a.sh > /dev/null
+
+	# system configuration
+	sysctl_hi3516a.sh $b_arg_online > /dev/null
+
+	insert_sns;
+}
+
+load_usage()
+{
+	echo "Usage:  ./load3516a [-option] [sensor_name]"
+	echo "options:"
+	echo "    -i                       insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a                       remove modules first, then insert modules"
+	echo "    -sensor sensor_name      config sensor type [default: ar0130]"
+	echo "    -osmem os_mem_size       config os mem size [unit: M, default: 64]"
+	echo "    -offline                 vi/vpss offline"
+	echo "    -h                       help information"
+	echo -e "Available sensors: imx185, mn34220, etc"
+	echo -e "notes: osmem option can't be used when mmz zone partition is enable\n\n"
+	echo -e "for example online:   ./load3516a -a -sensor mn34220 -osmem 64\n"
+	echo -e "            offline:  ./load3516a -a -sensor mn34220 -osmem 64 -offline\n\n"
+	echo -e "Notes: hi3516d (16bit ddr) can only support sensor which resolution is 3M below"
+}
+
+calc_mmz_info()
+{
+	mmz_start=`echo "$mem_start $os_mem_size" | 
+	awk 'BEGIN { temp = 0; }
+	{
+		temp = $1/1024/1024 + $2;
+	} 
+	END { printf("0x%x00000\n", temp); }'`
+
+	mmz_size=`echo "$mem_total $os_mem_size" | 
+	awk 'BEGIN { temp = 0; }
+	{
+		temp = $1 - $2;
+	} 
+	END { printf("%dM\n", temp); }'`
+	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+}
+
+
+######################parse arg###################################
+b_arg_os_mem=0
+b_arg_sensor=0
+b_arg_insmod=0
+b_arg_remove=0
+b_arg_online=1
+b_arg_restore=0
+
+for arg in $@
+do
+	if [ $b_arg_os_mem -eq 1 ] ; then
+		b_arg_os_mem=0;
+		os_mem_size=$arg;
+
+		if [ -z $os_mem_size ]; then
+			echo "[error] os_mem_size is null"
+			exit;
+		fi
+
+		if [ $os_mem_size -ge $mem_total ] ; then
+			echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+			exit;
+		fi
+
+		calc_mmz_info;
+	fi
+
+	if [ $b_arg_sensor -eq 1 ] ; then
+		b_arg_sensor=0
+		SNS_TYPE=$arg;
+	fi
+
+	case $arg in
+		"-i")
+			b_arg_insmod=1;
+			;;
+		"-r")
+			b_arg_remove=1;
+			;;
+		"-a")			
+			b_arg_insmod=1;
+			b_arg_remove=1;
+			;;
+		"-h")
+			load_usage;
+			;;
+		"-sensor")
+			b_arg_sensor=1;
+			;;
+		"-osmem")
+			b_arg_os_mem=1;
+			;;
+		"-restore")
+			b_arg_restore=1;
+			;;
+		"-offline")
+			b_arg_online=0;
+			;;
+	esac
+done
+#######################parse arg end########################
+
+#######################Action###############################
+
+if [ $# -lt 1 ]; then
+    load_usage;
+    exit 0;
+fi
+
+if [ $b_arg_remove -eq 1 ]; then
+	remove_ko;
+fi
+
+if [ $b_arg_insmod -eq 1 ]; then
+	insert_ko;
+fi
+
+if [ $b_arg_restore -eq 1 ]; then	
+	sys_restore;
+fi
+

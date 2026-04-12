@@ -1,0 +1,23 @@
+config BR2_OPENIPC_SOC_VENDOR
+	string "SoC vendor"
+
+config BR2_OPENIPC_SOC_MODEL
+	string "SoC model"
+
+config BR2_OPENIPC_SOC_FAMILY
+	string "SoC family"
+
+config BR2_OPENIPC_SNS_MODEL
+	string "Sensor model"
+
+config BR2_OPENIPC_VARIANT
+	string "OpenIPC variant"
+
+config BR2_OPENIPC_FLASH_SIZE
+	string "OpenIPC flash size"
+
+config BR2_OPENIPC_MAJESTIC
+	string "OpenIPC Majestic"
+	default "lite"
+
+source "$BR2_EXTERNAL_GENERAL_PATH/package/Config.in"

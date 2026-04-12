@@ -1,0 +1,12 @@
+config BR2_PACKAGE_HISILICON_OPENSDK
+	bool "hisilicon-opensdk"
+	default n
+	depends on BR2_LINUX_KERNEL
+	help
+	  Opensource Hisilicon SoCs SDK
+
+	  https://github.com/OpenIPC/openhisilicon
+
+comment "HISILICON_OPENSDK needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
+

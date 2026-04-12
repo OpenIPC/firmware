@@ -1,0 +1,58 @@
+--- a/Makefile.in	2008-01-08 01:35:55.000000000 +0300
++++ b/Makefile.in	2021-05-07 22:18:22.310801557 +0300
+@@ -60,10 +60,12 @@
+ vtund: $(OBJS)
+ 	$(CC) $(CFLAGS) -o vtund $(OBJS) $(LFD_OBJS) $(LDFLAGS)
+ 
+-cfg_file.tab.c: cfg_file.y cfg_kwords.h config.h
++cfg_file.tab.h:
+ 	$(YACC) $(YACCFLAGS) -b cfg_file cfg_file.y
+ 
+-cfg_file.lex.c: cfg_file.l cfg_kwords.h config.h
++cfg_file.tab.c: cfg_file.y cfg_kwords.h config.h cfg_file.tab.h
++
++cfg_file.lex.c: cfg_file.l cfg_kwords.h config.h cfg_file.tab.h
+ 	$(LEX) $(LEXFLAGS) cfg_file.l > cfg_file.lex.c 
+ 
+ depend:
+ @@ -74,27 +74,27 @@
+ 
+ distclean: clean
+ 	rm -f $(CONFIGURE_FILES)
+-	rm -f `cat vtun.drivers`	
++	rm -f `cat vtun.drivers`
+ 
+ install_man: 
+-	$(INSTALL) -d -m 755 $(INSTALL_OWNER) $(DESTDIR)$(MAN_DIR)/man8
+-	$(INSTALL) -m 644 $(INSTALL_OWNER) vtund.8 $(DESTDIR)$(MAN_DIR)/man8
+-	$(INSTALL) -d -m 755 $(INSTALL_OWNER) $(DESTDIR)$(MAN_DIR)/man5
+-	$(INSTALL) -m 644 $(INSTALL_OWNER) vtund.conf.5 $(DESTDIR)$(MAN_DIR)/man5
++	$(INSTALL) -d -m 755 $(DESTDIR)$(MAN_DIR)/man8
++	$(INSTALL) -m 644 vtund.8 $(DESTDIR)$(MAN_DIR)/man8
++	$(INSTALL) -d -m 755 $(DESTDIR)$(MAN_DIR)/man5
++	$(INSTALL) -m 644 $vtund.conf.5 $(DESTDIR)$(MAN_DIR)/man5
+ 	rm -f $(DESTDIR)$(MAN_DIR)/man8/vtun.8 
+ 	ln -s vtund.8 $(DESTDIR)$(MAN_DIR)/man8/vtun.8 
+ 
+ install_config: 
+-	$(INSTALL) -d -m 755 $(INSTALL_OWNER) $(DESTDIR)$(ETC_DIR)
++	$(INSTALL) -d -m 755 $(DESTDIR)$(ETC_DIR)
+ 	if [ ! -f $(ETC_DIR)/vtund.conf ]; then \
+-	  $(INSTALL) -m 600 $(INSTALL_OWNER) vtund.conf $(DESTDIR)$(ETC_DIR); \
++	  $(INSTALL) -m 600 vtund.conf $(DESTDIR)$(ETC_DIR); \
+ 	fi
+ 
+-install: vtund install_config install_man
+-	$(INSTALL) -d -m 755 $(INSTALL_OWNER) $(DESTDIR)$(VAR_DIR)/run
+-	$(INSTALL) -d -m 755 $(INSTALL_OWNER) $(DESTDIR)$(STAT_DIR)
+-	$(INSTALL) -d -m 755 $(INSTALL_OWNER) $(DESTDIR)$(LOCK_DIR)
+-	$(INSTALL) -d -m 755 $(INSTALL_OWNER) $(DESTDIR)$(SBIN_DIR)
+-	$(INSTALL) -m 755 $(INSTALL_OWNER) vtund $(DESTDIR)$(SBIN_DIR)
++install: vtund
++	$(INSTALL) -d -m 755 $(DESTDIR)$(VAR_DIR)/run
++	$(INSTALL) -d -m 755 $(DESTDIR)$(STAT_DIR)
++	$(INSTALL) -d -m 755 $(DESTDIR)$(LOCK_DIR)
++	$(INSTALL) -d -m 755 $(DESTDIR)$(SBIN_DIR)
++	$(INSTALL) -m 755 vtund $(DESTDIR)$(SBIN_DIR)
+ 
+ # DO NOT DELETE THIS LINE -- make depend depends on it.

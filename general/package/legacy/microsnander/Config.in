@@ -1,0 +1,9 @@
+config BR2_PACKAGE_MICROSNANDER
+	bool "microsnander"
+	default n
+	depends on BR2_INSTALL_LIBUSB
+	select BR2_PACKAGE_LIBUSB
+	help
+	  tripped down and modified version of Serial Nor/nAND/Eeprom programmeR
+
+	  https://openipc.org

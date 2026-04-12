@@ -1,0 +1,9 @@
+config BR2_PACKAGE_UQMI_OPENIPC
+	bool "uqmi-openipc"
+	select BR2_PACKAGE_JSON_C
+	select BR2_PACKAGE_LIBUBOX
+	help
+	  This command line tool originates from the OpenWrt project
+	  to configure LTE modem in QMI mode for WAN connection.
+
+	  https://git.openwrt.org/project/uqmi.git

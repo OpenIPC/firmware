@@ -1,0 +1,17 @@
+diff -Naur a/networking/httpd.c b/networking/httpd.c
+--- a/networking/httpd.c	2023-07-19 20:00:29.413569385 +0200
++++ b/networking/httpd.c	2023-07-19 20:02:07.024333868 +0200
+@@ -2390,6 +2390,13 @@
+ 		}
+ 		cgi_type = CGI_NORMAL;
+ 	}
++	else if (is_prefixed_with(tptr, "onvif/")) {
++		if (tptr[6] == '\0') {
++			/* protect listing "cgi-bin/" */
++			send_headers_and_exit(HTTP_FORBIDDEN);
++		}
++		cgi_type = CGI_NORMAL;
++	}
+ #endif
+ 
+ 	if (urlp[-1] == '/') {

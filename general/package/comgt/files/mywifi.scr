@@ -1,0 +1,32 @@
+opengt
+  :init
+    set com 115200n81
+    set senddelay 0.05
+    send "AT+CFUN=1^m"
+    waitquiet 1 0.2
+    print "Start time is ",$time(),"\n"
+  :receive_number
+    send "AT+CLIP=1^m"
+    waitquiet 1 0.2
+  :wait_first_ring
+    print "Wait first ring\n"
+    waitfor 10 "RING"
+    if % = -1 goto wait_first_ring
+    if % = 0 goto get_ring_number
+  :get_ring_number
+    print "Get ring number\n"
+    waitfor 2 "+CLIP:"
+    get 1 "," $s
+    if % = -1 goto wait_first_ring
+    if % = 0 goto wait_second_ring
+  :wait_second_ring
+    print "Wait second ring\n"
+    waitfor 10 "RING"
+    if % = -1 goto wait_first_ring
+    if % = 0 goto hangup_modem
+  :hangup_modem
+    print "Hangup modem\n"
+    send "AT+CHUP^m"
+    waitquiet 1 0.2
+    system "logger -r ring"+$s
+    goto wait_first_ring

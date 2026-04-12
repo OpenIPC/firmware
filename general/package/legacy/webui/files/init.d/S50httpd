@@ -1,0 +1,67 @@
+#!/bin/sh
+
+DAEMON="httpd"
+PIDFILE="/var/run/$DAEMON.pid"
+CONFFILE="/etc/httpd.conf"
+HTTPD_ARGS="httpd -p 85 -f -c $CONFFILE -r Authentication"
+
+# shellcheck source=/dev/null
+[ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
+
+if [ "$(fw_printenv -n debug)" ]; then
+	echo "Development mode"
+	sed -i "/^\/cgi-bin:admin:/s/^/#/" $CONFFILE
+else
+	echo "Production mode"
+	sed -i "/^#\/cgi-bin:admin:/s/^#//" $CONFFILE
+fi
+
+# The httpd does not create a pidfile, so pass "-n" in the command line
+# and use "-m" to instruct start-stop-daemon to create one.
+start() {
+	printf 'Starting %s: ' "$DAEMON"
+	[ -f /usr/sbin/$DAEMON ] || echo -en "DISABLED, "
+	# shellcheck disable=SC2086 # we need the word splitting
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" -- $HTTPD_ARGS
+	status=$?
+	if [ "$status" -eq 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+	return "$status"
+}
+
+stop() {
+	printf 'Stopping %s: ' "$DAEMON"
+	[ -f /usr/sbin/$DAEMON ] || echo -en "DISABLED, "
+	start-stop-daemon -K -q -p "$PIDFILE"
+	status=$?
+	if [ "$status" -eq 0 ]; then
+		rm -f "$PIDFILE"
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+	return "$status"
+}
+
+restart() {
+	stop
+	sleep 1
+	start
+}
+
+case "$1" in
+	start|stop|restart)
+		"$1"
+		;;
+
+	reload)
+		restart
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+esac

@@ -1,0 +1,32 @@
+#!/bin/sh
+
+# Set Reset switch GPIO
+GPIO=
+
+[ -z $GPIO ] && echo "GPIO pin for resetd is not set" && echo "[resetd] GPIO undefined in /usr/sbin/resetd" > /dev/kmsg && exit
+
+# Counter for button press until reset
+count=0
+
+# prepare the pin
+if [ ! -d /sys/class/gpio/gpio${GPIO} ]; then
+	echo "${GPIO}" > /sys/class/gpio/export
+	echo "in" > /sys/class/gpio/gpio"${GPIO}"/direction
+fi
+
+# continuously monitor current value of reset switch
+while [ true ]; do
+	if [ "$(cat /sys/class/gpio/gpio"${GPIO}"/value)" -eq 1 ]; then
+		count=0
+	else
+		count=$((count+1))
+
+		# 20 counts =~ 5 seconds @ 0.25 sleep intervals
+		if [ $count -eq 20 ]; then
+			echo 'RESETTING FIRMWARE'
+			firstboot
+		fi
+	fi
+	# This interval uses 1% CPU. Less sleep = more CPU
+	sleep 0.25
+done

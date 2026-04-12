@@ -1,0 +1,27 @@
+--- a/Makefile	2025-03-16 13:50:47.328101721 -0500
++++ b/Makefile	2025-03-16 13:50:44.034101970 -0500
+@@ -4,21 +4,9 @@
+ OBJECTS_O = onvif_simple_server.o device_service.o media_service.o media2_service.o ptz_service.o events_service.o deviceio_service.o fault.o conf.o utils_zlib.o log.o ezxml_wrapper.o ezxml/ezxml.o
+ OBJECTS_N = onvif_notify_server.o conf.o utils.o log.o ezxml_wrapper.o ezxml/ezxml.o
+ OBJECTS_W = wsd_simple_server.o utils.o log.o ezxml_wrapper.o ezxml/ezxml.o
+-ifdef HAVE_WOLFSSL
+-INCLUDE = -DHAVE_WOLFSSL -ffunction-sections -fdata-sections
+-LIBS_O = -Wl,--gc-sections -lwolfssl -lz -lpthread -lrt
+-LIBS_N = -Wl,--gc-sections -lwolfssl -lpthread -lrt
+-else
+-ifdef HAVE_MBEDTLS
+-INCLUDE = -DHAVE_MBEDTLS -ffunction-sections -fdata-sections
+-LIBS_O = -Wl,--gc-sections -lmbedcrypto -lz -lpthread -lrt
+-LIBS_N = -Wl,--gc-sections -lmbedcrypto -lpthread -lrt
+-else
+-INCLUDE = -ffunction-sections -fdata-sections
+-LIBS_O = -Wl,--gc-sections -ltomcrypt -lz -lpthread -lrt
+-LIBS_N = -Wl,--gc-sections -ltomcrypt -lpthread -lrt
+-endif
+-endif
++INCLUDE = -DHAVE_MBEDTLS -ffunction-sections -fdata-sections -lrt
++LIBS_O = -Wl,--gc-sections -lmbedtls -lmbedcrypto -lpthread -lrt
++LIBS_N = -Wl,--gc-sections -lmbedtls -lmbedcrypto -lpthread -lrt
+ LIBS_W = -Wl,--gc-sections
+ 
+ ifdef USE_ZLIB

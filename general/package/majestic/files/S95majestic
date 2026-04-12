@@ -1,0 +1,47 @@
+#!/bin/sh
+
+DAEMON="majestic"
+PIDFILE="/var/run/$DAEMON.pid"
+DAEMON_ARGS="-s"
+
+start() {
+	echo -n "Starting $DAEMON: "
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
+	if [ $? -eq 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+}
+
+stop() {
+	echo -n "Stopping $DAEMON: "
+	start-stop-daemon -K -q -p "$PIDFILE"
+	if [ $? -eq 0 ]; then
+		rm -f "$PIDFILE"
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+}
+
+case "$1" in
+	start|stop)
+		$1
+		;;
+
+	restart)
+		stop
+		sleep 3
+		start
+		;;
+
+	reload)
+		killall -1 "$DAEMON"
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+		;;
+esac

@@ -1,0 +1,44 @@
+#!/bin/sh
+
+DAEMON="dropbear"
+PIDFILE="/var/run/$DAEMON.pid"
+DAEMON_ARGS="-R -B -k -p 22 -K 300"
+
+start() {
+	echo -n "Starting $DAEMON: "
+	umask 077
+	start-stop-daemon -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
+	if [ $? -eq 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+}
+
+stop() {
+	echo -n "Stopping $DAEMON: "
+	start-stop-daemon -K -q -p "$PIDFILE"
+	if [ $? -eq 0 ]; then
+		rm -f "$PIDFILE"
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+}
+
+case "$1" in
+	start|stop)
+		$1
+		;;
+
+	restart|reload)
+		stop
+		sleep 1
+		start
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+		;;
+esac

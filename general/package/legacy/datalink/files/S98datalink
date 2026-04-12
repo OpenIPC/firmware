@@ -1,0 +1,59 @@
+#!/bin/sh
+chip=$(ipcinfo -c)
+fw=$(grep "BUILD_OPTION" "/etc/os-release" | cut -d= -f2)
+
+if [ -e /etc/datalink.conf ]; then
+	. /etc/datalink.conf
+fi
+
+start_lte() {
+	echo "Starting fpv datalink..."
+	if [ "$usb_modem" = "true" ]; then
+		echo "Starting lte modem configuration..."
+	fi
+
+	if [ "$use_zt" = "true" ]; then
+		echo "Starting ZeroTier-One daemon..."
+		zerotier-one -d &
+		if [ ! -f "/var/lib/zerotier-one/networks.d/$zt_netid.conf" ]; then
+			sleep 8
+			zerotier-cli join "$zt_netid" > /dev/null
+			echo "Don't forget to authorize my.zerotier.com!"
+		fi
+	fi
+
+	if [ "$telemetry" = "true" ]; then
+		telemetry start
+	fi
+
+	exit 0
+}
+
+case "$1" in
+	start)
+		if [ -n "$(fw_printenv -n wlandev)" ]; then
+			exit 0
+		fi
+
+		if [ ! -f /etc/system.ok ]; then
+			tweaksys "$chip"
+		fi
+
+		if [ "$fw" = "lte" ]; then
+			start_lte
+		fi
+	
+		echo "Starting wifibroadcast service..."
+		wifibroadcast start
+		;;
+
+	stop)
+		echo "Stopping wifibroadcast service..."
+		wifibroadcast stop
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac

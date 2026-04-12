@@ -1,0 +1,6 @@
+config BR2_PACKAGE_GPIO_MOTORS
+	bool "gpio-motors"
+	help
+	  Control stepper motors via sysfs GPIO. Confirmed working with 24BYJ48 
+	  stepper motors and ULN2803s on GM8136, HI3516CV200, T21, and GK7102 
+	  SOCs and should be portable to any with sysfs GPIO access.

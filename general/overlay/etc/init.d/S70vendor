@@ -1,0 +1,17 @@
+#!/bin/sh
+
+case "$1" in
+	start)
+		echo "Loading vendor modules..."
+		vendor=$(ipcinfo -v)
+		load_"$vendor" -i
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
+		;;
+esac

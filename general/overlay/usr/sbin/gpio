@@ -1,0 +1,105 @@
+#!/bin/sh
+
+help() {
+	echo -e "\n=== GPIO usage ===\n"
+
+	echo -e ">\t gpio <set|clear|toggle|unexport|read> <pin>\n"
+	echo -e "set\t\t = Output HI\nclear\t\t = Output LOW\ntoggle\t\t = Swap HI <> LOW\nunexport\t = Release GPIO pin back to the kernel space\nread\t\t = Read GPIO pin output state\n"
+
+	echo -e "---\n"
+
+	echo -e ">\t gpio search <from pin> <to pin>\n"
+	echo -e "Toggle a range of GPIO pins from HI to LOW"
+	echo -e "gpio search logs to syslog\n"
+
+	echo -e "==================\n"
+}
+
+exp() {
+	if [ ! -d /sys/class/gpio/gpio$1 ]; then
+		[ ! -f /sys/class/gpio/export ] && echo "Error: No export file!" && exit
+		echo $1 > /sys/class/gpio/export
+		[ ! -f /sys/class/gpio/gpio$1/direction ] && echo "Error: No direction file!" && exit
+		echo out > /sys/class/gpio/gpio$1/direction
+	fi
+}
+
+write(){
+	echo $1 > /sys/class/gpio/gpio$2/value
+}
+
+read() {
+	[ ! -f /sys/class/gpio/gpio$1/value ] && echo "Error: GPIO-$1 is not set" && exit
+	echo $(cat /sys/class/gpio/gpio$1/value)
+}
+
+unexport() {
+	if [ -d /sys/class/gpio/gpio$1 ]; then
+		echo $1 > /sys/class/gpio/unexport
+	else
+		echo "GPIO-${1} is not exported."
+	fi
+}
+
+search() {
+	echo -e "Start blink (output) on GPIO range $1 to $2\n"
+	for pin in $(seq $1 $2); do
+		echo "================================="
+		exp ${pin} && echo "  Exported GPIO-${pin} from kernel space" && echo "	Set GPIO-${pin} to OUTPUT mode"
+		write 0 ${pin} && echo "	  Set GPIO-${pin} to LO level" ; sleep 1
+		write 1 ${pin} && echo "	  Set GPIO-${pin} to HI level" ; sleep 1
+		echo in > /sys/class/gpio/gpio${pin}/direction && echo "	Set GPIO-${pin} to INPUT mode"
+		unexport ${pin} && echo "  Unexported GPIO-${pin}"
+		logger HELLO - ${pin}
+	done
+}
+
+if [ -n $1 ] && [ -n $2 ] && [ $2 -eq $2 ]; then
+	case $1 in
+		set)
+			exp $2
+			echo "Setting GPIO-$2 to HI"
+			write 1 $2
+			;;
+
+		clear)
+			exp $2
+			echo "Setting GPIO-$2 to LOW"
+			write 0 $2
+			;;
+
+		toggle)
+			exp $2
+			if [ $(read $2) -eq 0 ]; then
+				echo "Setting GPIO-$2 to HI"
+				write 1 $2
+			else
+				echo "Setting GPIO-$2 to LOW"
+				write 0 $2
+			fi
+			;;
+
+		unexport)
+			unexport $2
+			;;
+
+		read)
+			echo $(read $2)
+			;;
+
+		search)
+			if [ ! -z $3 ] && [ $3 -eq $3 ]; then
+				search $2 $3
+			else
+				echo -e "\n Caution: Toggling single pin. Use <gpio search <from pin> <to pin> to search a range.\n"
+				search $2 $2
+			fi
+			;;
+
+		*)
+			help
+			;;
+	esac
+else
+	help
+fi

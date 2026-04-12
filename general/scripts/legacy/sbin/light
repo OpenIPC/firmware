@@ -1,0 +1,93 @@
+#!/bin/sh
+
+GPIO_RED=
+GPIO_GREEN=
+GPIO_BLUE=
+
+help() {
+	echo -e "\n================= LIGHT usage =================\n"
+	echo -e "Set the colour of the status light\n"
+	echo -e "light <off|red|green|blue|yellow|magenta|cyan|white>\n"
+}
+
+setRed() {
+	if [ -n "$GPIO_RED" ]; then
+		[ $1 -eq 1 ] && gpio set "$GPIO_RED" || gpio clear "$GPIO_RED"
+	else
+		echo "[INFO] Status Lights: Red GPIO undefined in /usr/sbin/light" > /dev/kmsg
+	fi
+}
+
+setGreen() {
+	if [ -n "$GPIO_GREEN" ]; then
+		[ $1 -eq 1 ] && gpio set "$GPIO_GREEN" || gpio clear "$GPIO_GREEN"
+	else
+		echo "[INFO] Status Lights: Green GPIO undefined in /usr/sbin/light" > /dev/kmsg
+	fi
+}
+
+setBlue() {
+	if [ -n "$GPIO_BLUE" ]; then
+		[ $1 -eq 1 ] && gpio set "$GPIO_BLUE" || gpio clear "$GPIO_BLUE"
+	else
+		echo "[INFO] Status Lights: Blue GPIO undefined in /usr/sbin/light" > /dev/kmsg
+	fi
+}
+
+if [ -n $1 ]; then
+	case $1 in
+		off)
+			setRed 0
+			setGreen 0
+			setBlue 0
+			;;
+
+		red)
+			setRed 1
+			setGreen 0
+			setBlue 0
+			;;
+
+		green)
+			setRed 0
+			setGreen 1
+			setBlue 0
+			;;
+
+		blue)
+			setRed 0
+			setGreen 0
+			setBlue 1
+			;;
+
+		yellow)
+			setRed 1
+			setGreen 1
+			setBlue 0
+			;;
+
+		magenta|purple)
+			setRed 1
+			setGreen 0
+			setBlue 1
+			;;
+
+		cyan)
+			setRed 0
+			setGreen 1
+			setBlue 1
+			;;
+
+		white)
+			setRed 1
+			setGreen 1
+			setBlue 1
+			;;
+
+		*)
+			help
+			;;
+	esac
+else
+	help
+fi

@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# OpenIPC.org | v.20220528
+
+set -e
+
+if [ "$1" = "-s" ]; then
+	sysupgrade -n -x
+else
+	sysupgrade -n
+fi

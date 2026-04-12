@@ -1,0 +1,10 @@
+#!/bin/sh
+
+for i in $(ls -r /etc/init.d/S??*); do
+	[ ! -f "$i" ] && continue
+	case "$i" in
+		*)
+			$i stop
+			;;
+	esac
+done

@@ -1,0 +1,119 @@
+#!/bin/sh
+
+soc=$(fw_printenv -n soc) || (>&2 echo "SOC not defined in U-Boot ENV"; exit 1)
+manufacturer=$(fw_printenv -n manufacturer) || (>&2 echo "Manufacturer not defined in U-Boot ENV"; exit 1)
+# devid=$(fw_printenv -n devid) || (>&2 echo "Device ID not defined in U-Boot ENV"; exit 1)
+
+case ${manufacturer} in
+	Anjoy)
+		case ${soc} in
+			ssc335|ssc337|ssc337de)
+				gpio="ircut1=78 ircut2=79 light=61"
+				;;
+		esac
+		;;
+
+	Camhi|Hichip|Xin)
+		case ${soc} in
+			hi3516ev200|gk7205v200)
+				gpio="usb_ena=-9"
+				;;
+			hi3516ev300|gk7205v300)
+				gpio="ircut1=10 ircut2=11 usb_ena=-7"
+				;;
+			hi3518ev200)
+				gpio="ircut1=1 ircut2=2 light=48"
+				;;
+			t31)
+				gpio="ircut1=N ircut2=n light=n"
+				;;
+		esac
+		;;
+
+	Herospeed|Longsee|Cantonk)
+		case ${soc} in
+			hi3516ev200|gk7205v200)
+				gpio="ircut1=12 ircut2=13 irctl=4 alm_in=15 alm_out=14"
+				;;
+			hi3518ev200)
+				gpio="ircut1=64 ircut2=65"
+				;;
+			hi3516av300)
+				gpio="ircut1=5 ircut2=6"
+				;;
+		esac
+		;;
+
+	Jabsco)
+		case ${soc} in
+			hi3516ev200|gk7205v200)
+				gpio="ircut1=52 ircut2=53 irstatus=9"
+				;;
+		esac
+		;;
+
+	Jvt)
+		case ${soc} in
+			hi3516cv200)
+				gpio="ircut1=64 ircut2=65 light=62"
+				;;
+			hi3518ev200)
+				gpio="ircut1=64 ircut2=65 light=47"
+				;;
+		esac
+		;;
+
+	Juan|Sannce)
+		case ${soc} in
+			hi3518ev200)
+				gpio="ircut1=65 ircut2=64 irstatus=-62"
+				;;
+		esac
+		;;
+
+	Tiandy)
+		case ${soc} in
+			hi3518ev200)
+				gpio="ircut1=78 ircut2=79 irctl=37"
+				;;
+		esac
+		;;
+
+	Uniview)
+		case ${soc} in
+			hi3516ev300|gk7205v300)
+				gpio="ircut1=63 ircut2=67 reset="
+				;;
+		esac
+		;;
+
+	Xiongmai)
+		case ${soc} in
+			hi3516ev200|gk7205v200)
+				gpio="ircut1=8 ircut=29 irstatus=15 irctl=16 alm_in=4,53 alm_out=55 eth_act=14 eth_sta=12 reset=0"
+				;;
+			hi3516ev300|gk7205v300)
+				gpio="ircut1=10 ircut2=11 irstatus=66 irctl=52 alm_in=4,67 alm_out=65 eth_act=30 eth_sta=31 reset=0"
+				;;
+			hi3516dv100)
+				gpio="ircut1=14 ircut2=15"
+				;;
+			hi3516cv300)
+				gpio="ircut1=53 ircut2=54 irstatus=64 irctl=66 alm_in=55 alm_out=1 reset=2 usb_ena=63"
+				;;
+			hi3518ev200)
+				gpio="ircut1=33 ircut2=34 alm_in=61 alm_out=35"
+				;;
+		esac
+		;;
+
+	Zenotech|Videopark)
+		case ${soc} in
+			hi3516ev300|gk7205v300)
+				gpio="ircut1=40 ircut2=41 irctl=65"
+				;;
+		esac
+		;;
+esac
+
+echo ${gpio}

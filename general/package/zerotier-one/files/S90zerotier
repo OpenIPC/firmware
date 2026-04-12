@@ -1,0 +1,29 @@
+#!/bin/sh
+
+if [ -e /etc/zerotier.conf ]; then
+	. /etc/zerotier.conf
+fi
+
+case "$1" in
+	start)
+		if [ "$enabled" = "true" ]; then
+			echo "Starting zerotier-one daemon..."
+			modprobe tun
+			zerotier-one -d
+		else
+			echo "Zerotier-One service is disabled in /etc/zerotier.conf."
+			exit 1
+		fi
+		;;
+
+	stop)
+		echo "Stopping zerotier-one daemon..."
+		killall -q zerotier-one
+		rmmod -w tun
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac

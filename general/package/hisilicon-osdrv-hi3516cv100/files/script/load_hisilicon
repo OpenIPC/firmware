@@ -1,0 +1,467 @@
+#!/bin/sh
+#
+# This is part of OpenIPC.org project | 2022.01.07
+#
+
+# MMZ config
+mem_start=0x80000000 # phy mem start
+
+mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+mem_total=${mem_total:=64}
+
+os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
+os_mem_size=${os_mem_size:=32}
+
+# Sensor config
+# SENSOR=$(fw_printenv -n sensor)
+# SENSOR=${SENSOR:=ar0130}
+
+report_error() {
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+insert_osal() {
+	insmod mmz.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
+}
+
+insert_detect() {
+	cd /lib/modules/3.0.8/hisilicon
+	sys_config
+	insert_osal
+	insmod hi3518_base.ko
+	insmod hi3518_sys.ko
+	insmod hi3518_isp.ko
+	insmod hi_i2c.ko
+	SENSOR=imx122 insert_sns
+}
+
+remove_detect() {
+	rmmod -w ssp_sony &>/dev/null
+	rmmod -w ssp_pana &>/dev/null
+	rmmod -w ssp_ad9020 &>/dev/null
+	rmmod -w hi_i2c
+	rmmod -w hi3518_isp
+	rmmod -w hi3518_sys
+	rmmod -w hi3518_base
+	rmmod -w mmz
+}
+
+insert_audio() {
+	insmod acodec.ko
+	insmod hidmac.ko
+	insmod hi3518_sio.ko
+	insmod hi3518_ai.ko
+	insmod hi3518_ao.ko
+	insmod hi3518_aenc.ko
+	insmod hi3518_adec.ko
+	echo "insert audio"
+}
+
+remove_audio() {
+	rmmod -w hi3518_adec
+	rmmod -w hi3518_aenc
+	rmmod -w hi3518_ao
+	rmmod -w hi3518_ai
+	rmmod -w hi3518_sio
+	rmmod -w acodec
+	rmmod -w hidmac
+	echo "remove audio"
+}
+
+insert_sns() {
+	case $SENSOR in
+	ar0130 | 9m034 | po3100k | bf3116 | bg0703)
+		devmem 0x20030030 32 0x5 #Sensor clock 27 MHz
+		insmod ssp_ad9020.ko
+		;;
+	icx692)
+		devmem 0x200f000c 32 32 0x1 #pinmux SPI0
+		devmem 0x200f0010 32 32 0x1 #pinmux SPI0
+		devmem 0x200f0014 32 0x1    #pinmux SPI0
+		insmod ssp_ad9020.ko
+		;;
+	mn34031 | mn34041)
+		devmem 0x200f000c 32 0x1 #pinmux SPI0
+		devmem 0x200f0010 32 0x1 #pinmux SPI0
+		devmem 0x200f0014 32 0x1 #pinmux SPI0
+		devmem 0x20030030 32 0x5 #Sensor clock 27MHz
+		insmod ssp_pana.ko
+		;;
+	imx104 | imx123 | imx138_spi | imx222 | imx225 | imx322 | imx323)
+		devmem 0x200f0000 32 0x1 # pinmux GPIO1_0 [SHUTTER_TRIG]
+		devmem 0x200f007c 32 0x1 # pinmux GPIO1_7 [FLASH_TRIG]
+		devmem 0x200f00b8 32 0 # pinmux [GPIO5_1] USB_PWREN
+		devmem 0x200f0138 32 0 # pinmux [GPIO0_6] SVB_PWM TEMPER_DQ
+		devmem 0x200f00c0 32 0 # GPIO5_3 for Beward DS06
+		devmem 0x200f013c 32 0x1 #pinmux SYS_RSTN_OUT [GPIO0_7] TEMPER_DQ
+		devmem 0x200f000c 32 0x1 #pinmux SPI0
+		devmem 0x200f0010 32 0x1 #pinmux SPI0
+		devmem 0x200f0014 32 0x1 #pinmux SPI0
+		devmem 0x20030030 32 0x6 #Sensor clock 37.125 MHz
+		insmod ssp_sony.ko
+		;;
+	imx122)
+		devmem 0x200f000c 32 0x1 #pinmux SPI0
+		devmem 0x200f0010 32 0x1 #pinmux SPI0
+		devmem 0x200f0014 32 0x1 #pinmux SPI0
+		devmem 0x20030030 32 0x6 #Sensor clock 37.125 MHz
+		devmem 0x200f0124 8 0x0
+		devmem 0x20140400 8 0x2
+		devmem 0x201403fc 8 0x2
+		insmod ssp_sony.ko
+		;;
+	imx138_i2c)
+		devmem 0x20030030 32 0x6 #Sensor clock 37.125 MHz
+		;;
+	ov9712 | ov9732 | soih22 | ov2710 | jxh22 | jxh42)
+		devmem 0x20030030 32 0x1 #Sensor clock 24 MHz
+		insmod ssp_ad9020.ko
+		;;
+	ar0140 | ar0141)
+		devmem 0x20030030 32 0x1
+		;; #Sensor clock 24 MHz
+	mt9p006)
+		devmem 0x20030030 32 0x1  #Sensor clock 24 MHz
+		devmem 0x2003002c 32 0x6a #VI input associated clock phase reversed
+		devmem 0x200f0138 32 0 # pinmux [GPIO0_6] SVB_PWM TEMPER_DQ
+		devmem 0x20140400 32 0x60 # set GPIO 0_6 direction OUTPUT
+		devmem 0x201403FC 32 0xff # set GPIO 0_6 0
+		insmod ssp_ad9020.ko
+		;;
+	hm1375 | ar0330)
+		devmem 0x20030030 32 0x1
+		;; #Sensor clock 24 MHz
+	imx236)
+		devmem 0x20030030 32 0x6 #Sensor clock 37.125 MHz
+		;;
+	sc1035 | sc1135 | sc2135)
+		devmem 0x20030030 32 0x5 #Sensor clock 27 MHz
+		insmod ssp_ad9020.ko
+		;;
+	*)
+		echo "xxxx Invalid sensor type $SENSOR xxxx"
+		report_error
+		;;
+	esac
+}
+
+remove_sns() {
+	rmmod -w hi_i2c &>/dev/null
+	rmmod -w ssp &>/dev/null
+	rmmod -w ssp_sony &>/dev/null
+	rmmod -w ssp_pana &>/dev/null
+	rmmod -w ssp_ad9020 &>/dev/null
+}
+
+sys_config() {
+	# lowpower.sh
+	devmem 0x20050080 32 0x000121a8
+	#USB PHY
+	#devmem 0x20050084 32 0x005d2188
+	#NANDC
+	devmem 0x200300D0 32 0x5
+	devmem 0x200f00c8 32 0x1
+	devmem 0x200f00cc 32 0x1
+	devmem 0x200f00d0 32 0x1
+	devmem 0x200f00d4 32 0x1
+	devmem 0x200f00d8 32 0x1
+	devmem 0x200f00dc 32 0x1
+	devmem 0x200f00e0 32 0x1
+	devmem 0x200f00e4 32 0x1
+	devmem 0x200f00e8 32 0x1
+	devmem 0x200f00ec 32 0x1
+	devmem 0x200f00f4 32 0x1
+	devmem 0x200f00f8 32 0x1
+	#SAR ADC
+	devmem 0x20030080 32 0x1
+	devmem 0x200b0008 32 0x1
+	#PWM
+	devmem 0x20030038 32 0x2
+	#IR
+	devmem 0x20070000 32 0x0
+	devmem 0x200f00c4 32 0x1
+	#UART2
+	devmem 0x200A0030 32 0x0
+	#UART2
+	devmem 0x200f0108 32 0x0
+	devmem 0x200f010c 32 0x0
+	#SPI0 SPI1
+	devmem 0x200C0004 32 0x7F00
+	devmem 0x200E0004 32 0x7F00
+	#spi0
+	devmem 0x200f000c 32 0x0
+	devmem 0x200f0010 32 0x0
+	devmem 0x200f0014 32 0x0
+	#spi1
+	devmem 0x200f0110 32 0x0
+	devmem 0x200f0114 32 0x0
+	devmem 0x200f0118 32 0x0
+	devmem 0x200f011c 32 0x0
+	#AUDIO CODEC LINE IN
+	#devmem 0x20050068 32 0xa8022c2c
+	#devmem 0x2005006c 32 0xf5035a4a
+
+	# PINMUX
+	devmem 0x200f0008 32 0x00000001 # 0:GPIO1_2   /1:SENSOR_CLK
+	#I2C default setting is I2C
+	i2c_type_select() {
+		devmem 0x200f0018 32 0x00000001 # 0:GPIO2_0   / 1:I2C_SDA
+		devmem 0x200f001c 32 0x00000001 # 0:GPIO2_1   / 1:I2C_SCL
+	}
+
+	#I2C default setting is I2C
+	gpio_i2c_type_select() {
+		devmem 0x200f0018 32 0x00000000 # 0:GPIO2_0   / 1:I2C_SDA
+		devmem 0x200f001c 32 0x00000000 # 0:GPIO2_1   / 1:I2C_SCL
+	}
+
+	#MII
+	net_mii_mode() {
+		devmem 0x200f0030 32 0x1
+		devmem 0x200f0034 32 0x1
+		devmem 0x200f0038 32 0x1
+		devmem 0x200f003C 32 0x1
+		devmem 0x200f0040 32 0x1
+		devmem 0x200f0044 32 0x1
+		devmem 0x200f0048 32 0x1
+		devmem 0x200f004C 32 0x1
+		devmem 0x200f0050 32 0x1
+		devmem 0x200f0054 32 0x1
+		devmem 0x200f0058 32 0x1
+		devmem 0x200f005C 32 0x1
+		devmem 0x200f0060 32 0x1
+		devmem 0x200f0064 32 0x1
+		devmem 0x200f0068 32 0x1
+		devmem 0x200f006C 32 0x1
+		#devmem 0x200f0070 32  0x1
+		devmem 0x200f0074 32 0x1
+		devmem 0x200f0078 32 0x1
+	}
+
+	#RMII
+	net_rmii_mode() {
+		devmem 0x200f0030 32 0x1
+		devmem 0x200f0034 32 0x1
+		devmem 0x200f0038 32 0x1
+		#devmem 0x200f003C 32  0x1
+		#devmem 0x200f0040 32  0x1
+		devmem 0x200f0044 32 0x1
+		devmem 0x200f0048 32 0x1
+		devmem 0x200f004C 32 0x1
+		devmem 0x200f0050 32 0x1
+		devmem 0x200f0054 32 0x1
+		devmem 0x200f0058 32 0x1
+		devmem 0x200f005C 32 0x3
+		devmem 0x200f0060 32 0x1
+		devmem 0x200f0064 32 0x1
+		devmem 0x200f0068 32 0x1 #MII_TXER 0x1,GPIO2_6 0x0
+		devmem 0x200f006C 32 0x1 #MII_RXER 0x1,GPIO2_7 0x0
+		#devmem 0x200f0070 32  0x1
+		devmem 0x200f0074 32 0x1
+		devmem 0x200f0078 32 0x1
+	}
+
+	clk_cfg() {
+		devmem 0x2003002c 32 0x2a  # VICAP, ISP unreset & clock enable
+		devmem 0x20030048 32 0x2   # VPSS unreset, code also config
+		devmem 0x20030034 32 0x510 # VDP  unreset & HD clock enable # XM: 0x00000043
+		devmem 0x20030040 32 0x2   # VEDU unreset
+		devmem 0x20030060 32 0x2   # JPEG unreset
+		devmem 0x20030058 32 0x2   # TDE  unreset
+		devmem 0x20030068 32 0x2   # MDU  unreset
+
+		#devmem 0x2003006c 32 0x2  # IVE  unreset
+		#devmem 0x2003008c 32 0x2  # SIO unreset and clock enable,m/f/bclk config in code.
+		#devmem 0x20050068 32 0x58000000 # Audio Codec channel config for power down.
+	}
+	sysctl() {
+		devmem 0x20110150 32 0x03ff6 #DMA1 DMA2
+		devmem 0x20110154 32 0x03ff6 #ETH
+		devmem 0x20110158 32 0x03ff6 #USB
+		devmem 0x2011015C 32 0x03ff6 #CIPHER   0x15C
+		devmem 0x20110160 32 0x03ff6 #SDIO   0X160
+		devmem 0x20110164 32 0x03ff6 #NAND SFC   0X164
+		devmem 0x20110168 32 0x10201 #ARMD  0X168
+		devmem 0x2011016C 32 0x10201 #ARMI  0X16C
+		devmem 0x20110170 32 0x03ff6 #IVE  0X170
+		devmem 0x20110174 32 0x03ff6 #MD, DDR_TEST  0x174
+		devmem 0x20110178 32 0x03ff6 #JPGE #0x178
+		devmem 0x2011017C 32 0x03ff3 #TDE0 0X17C
+		devmem 0x20110180 32 0x03ff4 #VPSS  0X180
+		devmem 0x20110184 32 0x10c82 #VENC  0X184
+		devmem 0x20110188 32 0x10101 #VICAP FPGA
+		#devmem 0x20110188 32 0x10640 #VICAP ESL
+		devmem 0x2011018c 32 0x10100 #VDP
+		devmem 0x20110100 32 0x67 #mddrc order enable mddrc idmap mode select
+		#devmem 0x20050054 32 0x123564 #[2:0] VENC [6:4] VPSS [10:8] TDE [14:12] JPGE [18:16] MD
+		devmem 0x20050038 32 0x3 #DDR0 VICAP VDP
+	}
+	i2c_type_select
+	#net_rmii_mode
+	#net_mii_mode
+	clk_cfg
+}
+insert_ko() {
+	cd /lib/modules/3.0.8/hisilicon
+
+	sys_config
+
+	insert_osal
+
+	insmod hi3518_base.ko
+	insmod hi3518_sys.ko
+	insmod hiuser.ko
+
+	insmod hi3518_tde.ko
+	insmod hi3518_dsu.ko
+
+	insmod hi3518_viu.ko
+	insmod hi3518_isp.ko
+	insmod hi3518_vpss.ko
+	# insmod hi3518_vou.ko
+	# insmod hi3518_vou.ko detectCycle=0 #close dac detect
+	# insmod hifb.ko video="hifb:vram0_size:1620"
+
+	insmod hi3518_venc.ko
+	insmod hi3518_group.ko
+	insmod hi3518_chnl.ko
+	insmod hi3518_h264e.ko
+	insmod hi3518_jpege.ko
+	insmod hi3518_rc.ko
+	insmod hi3518_region.ko
+
+	insmod hi3518_vda.ko
+	insmod hi3518_ive.ko
+
+	insmod hi_i2c.ko
+	#insmod gpioi2c.ko
+	#insmod gpioi2c_ex.ko
+	insmod pwm.ko
+	#insmod sil9024.ko norm=5   #720P@60fps
+
+	insert_sns >/dev/null
+
+	insert_audio
+	echo "==== Your input Sensor type is $SENSOR ===="
+
+	insmod wdt.ko #nodeamon=1
+
+	# system configuration
+	sysctl
+}
+
+remove_ko() {
+	rmmod -w wdt
+	remove_audio
+	remove_sns
+
+	# rmmod -w sil9024 &> /dev/null
+	rmmod -w hi_i2c.ko &>/dev/null
+	rmmod -w pwm
+	#rmmod -w gpioi2c
+
+	rmmod -w hi3518_ive
+	rmmod -w hi3518_vda
+
+	rmmod -w hi3518_region
+	rmmod -w hi3518_rc
+	rmmod -w hi3518_jpege
+	rmmod -w hi3518_h264e
+	rmmod -w hi3518_chnl
+	rmmod -w hi3518_group
+	rmmod -w hi3518_venc
+
+	# rmmod -w hifb
+	# rmmod -w hi3518_vou
+	rmmod -w hi3518_vpss
+	rmmod -w hi3518_isp
+	rmmod -w hi3518_viu
+
+	rmmod -w hi3518_dsu
+	rmmod -w hi3518_tde
+
+	rmmod -w hiuser
+	rmmod -w hi3518_sys
+	rmmod -w hi3518_base
+	rmmod -w mmz
+}
+
+load_usage() {
+	echo "Usage:  ./load3518 [-option] [sensor_name]"
+	echo "options:"
+	echo "  -i sensor_name    insert modules"
+	echo "  -r                remove modules"
+	echo "  -a sensor_name    remove modules first, then insert modules"
+	echo "  -h                help information"
+	echo -e "Available sensors: ar0130, imx104, icx692, ov9715, 9m034, imx122, mt9p006"
+	echo -e "for example: ./load3518 -a ar0130 \n"
+}
+
+calc_mmz_info() {
+	mmz_start=$(echo "$mem_start $os_mem_size" |
+		awk 'BEGIN { temp = 0; }
+	{
+		temp = $1/1024/1024 + $2;
+	}
+	END { printf("0x%x00000\n", temp); }')
+
+	mmz_size=$(echo "$mem_total $os_mem_size" |
+		awk 'BEGIN { temp = 0; }
+	{
+		temp = $1 - $2;
+	}
+	END { printf("%dM\n", temp); }')
+	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+}
+
+if [ $os_mem_size -ge $mem_total ]; then
+	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+	exit
+fi
+
+calc_mmz_info
+
+# Sensor config
+# SENSOR=${SENSOR:=imx307}
+#
+if [ -n "$SENSOR" ]; then
+	logger -s -p daemon.info -t hisilicon "Manualy set SENSOR as ${SENSOR}"
+else
+	if fw_printenv -n sensor >/dev/null; then
+		SENSOR_ENV=$(fw_printenv -n sensor)
+		export SENSOR=${SENSOR_ENV}
+		logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
+	else
+		insert_detect
+		SENSOR_DETECT=$(ipcinfo --short-sensor)
+		export SENSOR=${SENSOR_DETECT:=unknown}
+		remove_detect
+		logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && logger -s -p daemon.info -t hisilicon "Write detected ${SENSOR} to U-Boot ENV"
+	fi
+fi
+
+# load module
+if [ "$SENSOR" = "unknown" ]; then
+	exit 1
+else
+	if [ "$1" = "-i" ]; then
+		cd /lib/modules/3.0.8/hisilicon
+		insert_ko
+	fi
+fi
+
+if [ "$1" = "-r" ]; then
+	remove_ko
+fi
+
+if [ "$1" = "-h" ]; then
+	load_usage
+	exit
+fi
+
+if [ $# -eq 0 ] || [ "$1" = "-a" ]; then
+	remove_ko
+	insert_ko
+fi

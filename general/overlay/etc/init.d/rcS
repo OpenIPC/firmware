@@ -1,0 +1,13 @@
+#!/bin/sh
+export SENSOR=$(fw_printenv -n sensor)
+export UPGRADE=$(fw_printenv -n upgrade)
+export TZ=$(cat /etc/TZ)
+
+for i in /etc/init.d/S??*; do
+	[ ! -f "$i" ] && continue
+	case "$i" in
+		*)
+			$i start
+			;;
+	esac
+done

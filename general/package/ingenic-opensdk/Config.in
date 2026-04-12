@@ -1,0 +1,10 @@
+config BR2_PACKAGE_INGENIC_OPENSDK
+	bool "ingenic-opensdk"
+	default n
+	depends on BR2_LINUX_KERNEL
+	help
+	  Opensource Ingenic SoCs SDK
+
+comment "INGENIC_OPENSDK needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
+
