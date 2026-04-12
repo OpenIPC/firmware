@@ -5,6 +5,7 @@ BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
 BR_CONF = $(TARGET)/openipc_defconfig
 TARGET ?= $(PWD)/output
 export CMAKE_POLICY_VERSION_MINIMUM := 3.5
+export HOST_CFLAGS ?= -O2 -std=gnu11
 
 CONFIG = $(error variable BOARD not defined)
 TIMER := $(shell date +%s)
@@ -102,22 +103,22 @@ ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
 endif
 
 define BUNDLE_SDK
-	$(eval OSDRV_DIR = $(PWD)/general/package/$(OPENIPC_SOC_VENDOR)-osdrv-$(OPENIPC_SOC_FAMILY)/files)
-	$(eval SDK_TGZ = $(shell find $(TARGET)/images -name '*_sdk-buildroot.tar.gz' | head -1))
-	$(eval SDK_TOP = $(shell tar tzf $(SDK_TGZ) | head -1 | cut -d/ -f1))
-	$(eval COMPAT_SRC = $(PWD)/general/package/uclibc-compat/src/uclibc-compat.c)
-	$(eval SDK_CC = $(shell ls $(TARGET)/host/bin/*-gcc 2>/dev/null | head -1))
-	if [ -d "$(OSDRV_DIR)" ] && [ -n "$(SDK_TGZ)" ]; then \
-		rm -rf /tmp/sdk-overlay && mkdir -p /tmp/sdk-overlay/$(SDK_TOP)/sdk; \
-		cp -a $(OSDRV_DIR)/* /tmp/sdk-overlay/$(SDK_TOP)/sdk/; \
-		if [ -f "$(COMPAT_SRC)" ] && [ -n "$(SDK_CC)" ]; then \
-			$(SDK_CC) -shared -Wall -O2 -fPIC \
-				-o /tmp/sdk-overlay/$(SDK_TOP)/sdk/lib/libuclibc-compat.so \
-				$(COMPAT_SRC); \
+	OSDRV_DIR=$(PWD)/general/package/$(BR2_OPENIPC_SOC_VENDOR)-osdrv-$(BR2_OPENIPC_SOC_FAMILY)/files; \
+	SDK_TGZ=$$(find $(TARGET)/images -name '*_sdk-buildroot.tar.gz' | head -1); \
+	COMPAT_SRC=$(PWD)/general/package/uclibc-compat/src/uclibc-compat.c; \
+	SDK_CC=$$(ls $(TARGET)/host/bin/*-gcc 2>/dev/null | head -1); \
+	if [ -d "$$OSDRV_DIR" ] && [ -n "$$SDK_TGZ" ]; then \
+		SDK_TOP=$$(tar tzf $$SDK_TGZ | head -1 | cut -d/ -f1); \
+		rm -rf /tmp/sdk-overlay && mkdir -p /tmp/sdk-overlay/$$SDK_TOP/sdk; \
+		cp -a $$OSDRV_DIR/* /tmp/sdk-overlay/$$SDK_TOP/sdk/; \
+		if [ -f "$$COMPAT_SRC" ] && [ -n "$$SDK_CC" ]; then \
+			$$SDK_CC -shared -Wall -O2 -fPIC \
+				-o /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/libuclibc-compat.so \
+				$$COMPAT_SRC; \
 		fi; \
-		gunzip $(SDK_TGZ) && \
-		tar rf $(SDK_TGZ:.tar.gz=.tar) -C /tmp/sdk-overlay $(SDK_TOP) && \
-		gzip $(SDK_TGZ:.tar.gz=.tar); \
+		gunzip $$SDK_TGZ && \
+		tar rf $${SDK_TGZ%.tar.gz}.tar -C /tmp/sdk-overlay $$SDK_TOP && \
+		gzip $${SDK_TGZ%.tar.gz}.tar; \
 		rm -rf /tmp/sdk-overlay; \
 	fi
 endef
