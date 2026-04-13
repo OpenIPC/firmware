@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = d8b0941
+HISILICON_OPENSDK_VERSION = 2001d3b
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -19,9 +19,12 @@ HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
 HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
 	DISABLE_IST=1 \
 	DISABLE_PM=1 \
-	DISABLE_TDE=1 \
-	DISABLE_VO=1 \
 	CHIPARCH=$(OPENIPC_SOC_FAMILY)
+
+# CV500 has TDE/VO blobs; other platforms don't support them yet
+ifneq ($(OPENIPC_SOC_FAMILY),hi3516cv500)
+HISILICON_OPENSDK_MODULE_MAKE_OPTS += DISABLE_TDE=1 DISABLE_VO=1
+endif
 
 ifeq ($(OPENIPC_SOC_FAMILY),hi3516ev200)
 	HISILICON_OPENSDK_SDK_CODE = 0x3516E200
@@ -60,6 +63,10 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_mipi_rx.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi_mipi_rx.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_mipi_tx.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi_mipi_tx.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_cipher.ko      $(HISILICON_OPENSDK_KMOD_DST)/hi_cipher.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_pwm.ko         $(HISILICON_OPENSDK_KMOD_DST)/hi_pwm.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_piris.ko       $(HISILICON_OPENSDK_KMOD_DST)/hi_piris.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_i2c.ko  $(HISILICON_OPENSDK_KMOD_DST)/hi_sensor_i2c.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_spi.ko  $(HISILICON_OPENSDK_KMOD_DST)/hi_sensor_spi.ko
 	for mod in base sys isp vi vpss venc vedu h264e h265e jpege jpegd rc rgn vgs ive chnl \
 		tde vo hdmi vdec vfmw aio ai ao aenc adec acodec gdc dis nnie wdt; do \
 		[ -f $(@D)/kernel/open_$${mod}.ko ] && \
