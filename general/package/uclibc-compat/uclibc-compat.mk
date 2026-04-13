@@ -15,6 +15,7 @@ endef
 
 define UCLIBC_COMPAT_INSTALL_STAGING_CMDS
 	$(INSTALL) -D -m 0755 $(UCLIBC_COMPAT_PKGDIR)/src/libuclibc-compat.so $(STAGING_DIR)/usr/lib/libuclibc-compat.so
+	$(INSTALL) -D -m 0644 $(UCLIBC_COMPAT_PKGDIR)/src/libuclibc-compat-static.a $(STAGING_DIR)/usr/lib/libuclibc-compat-static.a
 endef
 
 define UCLIBC_COMPAT_INSTALL_TARGET_CMDS

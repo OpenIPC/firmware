@@ -118,6 +118,16 @@ define BUNDLE_SDK
 			$$SDK_CC -shared -Wall -O2 -fPIC \
 				-o /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/libuclibc-compat.so \
 				$$COMPAT_SRC; \
+			COMPAT_STATIC=$(PWD)/general/package/uclibc-compat/src/uclibc-compat-static.c; \
+			if [ -f "$$COMPAT_STATIC" ]; then \
+				SDK_AR=$$(echo $$SDK_CC | sed 's/-gcc$$/-ar/'); \
+				$$SDK_CC -Wall -O2 -fPIC -c \
+					-o /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/uclibc-compat-static.o \
+					$$COMPAT_STATIC; \
+				$$SDK_AR rcs /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/libuclibc-compat-static.a \
+					/tmp/sdk-overlay/$$SDK_TOP/sdk/lib/uclibc-compat-static.o; \
+				rm -f /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/uclibc-compat-static.o; \
+			fi; \
 		fi; \
 		gunzip $$SDK_TGZ && \
 		tar rf $${SDK_TGZ%.tar.gz}.tar -C /tmp/sdk-overlay $$SDK_TOP && \
