@@ -134,11 +134,25 @@ size_t _stdlib_mb_cur_max(void)
 	return 1;
 }
 
-/* __aeabi_d2iz -- ARM EABI double-to-int, missing from musl */
+/* __aeabi_d2iz -- ARM EABI double-to-int, missing from musl.
+ * Cannot use C cast (int)x because GCC emits __aeabi_d2iz for it,
+ * causing infinite recursion.  Implement the conversion manually
+ * by extracting the IEEE 754 double fields. */
 __attribute__((visibility("default")))
 int __aeabi_d2iz(double x)
 {
-	return (int)x;
+	union { double d; unsigned long long u; } u = { .d = x };
+	int sign = (u.u >> 63) ? -1 : 1;
+	int exp = ((u.u >> 52) & 0x7FF) - 1023;
+	if (exp < 0) return 0;
+	if (exp > 30) return sign > 0 ? 0x7FFFFFFF : (int)0x80000000;
+	unsigned long long mantissa = (u.u & 0x000FFFFFFFFFFFFFULL) | 0x0010000000000000ULL;
+	int result;
+	if (exp >= 52)
+		result = (int)(mantissa << (exp - 52));
+	else
+		result = (int)(mantissa >> (52 - exp));
+	return sign * result;
 }
 
 /* ======================================================================
