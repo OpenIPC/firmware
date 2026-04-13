@@ -2,24 +2,18 @@
  * uclibc-compat.c -- ABI compatibility shim for vendor binaries on musl
  *
  * OpenIPC ships vendor .so libraries compiled against uclibc (or old glibc)
- * that must run on musl.  This shim bridges the ABI gaps:
+ * that must run on musl.  This shim provides symbols that are MISSING from
+ * musl -- symbols that vendor binaries import but musl does not export.
  *
- *   - struct stat translation (uclibc stat64=96B vs musl=152B)
- *   - mmap off_t mismatch (uclibc=4B vs musl=8B)
- *   - Missing symbols (__ctype_b, __assert, __fgetc_unlocked, etc.)
- *   - C11 Annex K "safe" functions (memcpy_s, snprintf_s, etc.)
+ * IMPORTANT: This .so must NOT export symbols that musl already provides
+ * (stat, fstat, lstat, mmap, etc).  Doing so would override musl's
+ * implementations process-wide, breaking all code that expects musl's
+ * ABI (64-bit off_t, 152-byte struct stat).
  *
- * HOW TO USE:
- *
- *   Executables that load vendor .so files must link this library
- *   statically (-luclibc-compat) so its symbols appear in the
- *   executable's scope BEFORE musl's.  The dynamic linker then
- *   resolves vendor imports from the executable first.
- *
- * Struct layouts are from:
- *   - uclibc: arch/arm/include/uapi/asm/stat.h (struct stat64)
- *   - musl:   arch/arm/bits/stat.h
- *   - Verified by audit-vendor-abi.py struct probe
+ * For struct-passing functions where the ABI differs (stat, mmap), the
+ * fix must be in the executable via static linking (-luclibc-compat-static),
+ * so the override only affects vendor .so lookups through the executable's
+ * symbol scope, not musl's own internal calls.
  *
  * See: https://github.com/OpenIPC/firmware/issues/1992
  */
@@ -32,111 +26,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/syscall.h>
 
 /* ======================================================================
- * stat/fstat/lstat -- struct stat ABI translation
- *
- * uclibc ARM stat64: 96 bytes (from kernel's struct stat64)
- * musl ARM stat:    152 bytes (from musl's bits/stat.h)
- *
- * We bypass both libc's stat() and go straight to the fstatat64
- * syscall, then translate the kernel's result into uclibc layout.
- * ====================================================================== */
-
-struct uclibc_stat64 {
-	unsigned long long	st_dev;		/*  0 */
-	unsigned char		__pad0[4];	/*  8 */
-	unsigned long		__st_ino;	/* 12 */
-	unsigned int		st_mode;	/* 16 */
-	unsigned int		st_nlink;	/* 20 */
-	unsigned long		st_uid;		/* 24 */
-	unsigned long		st_gid;		/* 28 */
-	unsigned long long	st_rdev;	/* 32 */
-	unsigned char		__pad3[4];	/* 40 */
-	long long		st_size;	/* 44 */
-	unsigned long		st_blksize;	/* 52 */
-	unsigned long long	st_blocks;	/* 56 */
-	unsigned long		st_atime_;	/* 64 */
-	unsigned long		st_atime_nsec;	/* 68 */
-	unsigned long		st_mtime_;	/* 72 */
-	unsigned long		st_mtime_nsec;	/* 76 */
-	unsigned long		st_ctime_;	/* 80 */
-	unsigned long		st_ctime_nsec;	/* 84 */
-	unsigned long long	st_ino;		/* 88 */
-};						/* 96 bytes */
-
-/*
- * The kernel fills struct stat64 (same as uclibc_stat64 above) directly
- * via the fstatat64 syscall.  No translation needed -- the kernel struct
- * IS the uclibc struct.
- */
-
-#ifndef __NR_fstatat64
-#define __NR_fstatat64 327
-#endif
-#ifndef AT_FDCWD
-#define AT_FDCWD (-100)
-#endif
-#ifndef AT_EMPTY_PATH
-#define AT_EMPTY_PATH 0x1000
-#endif
-#ifndef AT_SYMLINK_NOFOLLOW
-#define AT_SYMLINK_NOFOLLOW 0x100
-#endif
-
-__attribute__((visibility("default")))
-int stat(const char *path, void *buf)
-{
-	return syscall(__NR_fstatat64, AT_FDCWD, path, buf, 0);
-}
-
-__attribute__((visibility("default")))
-int lstat(const char *path, void *buf)
-{
-	return syscall(__NR_fstatat64, AT_FDCWD, path, buf, AT_SYMLINK_NOFOLLOW);
-}
-
-__attribute__((visibility("default")))
-int fstat(int fd, void *buf)
-{
-	return syscall(__NR_fstatat64, fd, "", buf, AT_EMPTY_PATH);
-}
-
-/* stat64/fstat64/lstat64 -- same as above, uclibc uses these names */
-__attribute__((visibility("default"))) int stat64(const char *p, void *b)  { return stat(p, b); }
-__attribute__((visibility("default"))) int lstat64(const char *p, void *b) { return lstat(p, b); }
-__attribute__((visibility("default"))) int fstat64(int fd, void *b)        { return fstat(fd, b); }
-
-/* ======================================================================
- * mmap -- off_t width mismatch
- *
- * uclibc: offset is uint32_t (4 bytes, page-aligned)
- * musl:   offset is off_t (8 bytes)
- *
- * On ARM, this changes the calling convention -- the offset argument
- * occupies different registers.  Bypass entirely with raw mmap2 syscall.
- * Same approach as majestic's BROKEN_MMAP.
- * ====================================================================== */
-
-#ifndef SYS_mmap2
-#define SYS_mmap2 192
-#endif
-
-__attribute__((visibility("default")))
-void *mmap(void *addr, size_t len, int prot, int flags, int fd, uint32_t offset)
-{
-	return (void *)syscall(SYS_mmap2, addr, len, prot, flags, fd, offset >> 12);
-}
-
-__attribute__((visibility("default")))
-void *mmap64(void *addr, size_t len, int prot, int flags, int fd, uint32_t offset)
-{
-	return (void *)syscall(SYS_mmap2, addr, len, prot, flags, fd, offset >> 12);
-}
-
-/* ======================================================================
- * Missing uclibc/glibc symbols
+ * Missing uclibc/glibc symbols -- safe to export from .so because
+ * musl does NOT provide these.
  * ====================================================================== */
 
 /*
@@ -145,8 +38,6 @@ void *mmap64(void *addr, size_t len, int prot, int flags, int fd, uint32_t offse
  * Vendor binaries that import __ctype_b will dereference wrong indirection.
  *
  * We provide a global pointer initialized to a static ASCII table.
- * This covers the common case (vendor code doing isdigit/isalpha on
- * file paths and configuration strings).
  */
 static const unsigned short int __uclibc_ctype_b_data[384] = {
 	[0 ... 255] = 0,
