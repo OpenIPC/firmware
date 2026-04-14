@@ -84,6 +84,17 @@ endif
 	@$(BR_MAKE) sdk -j$(shell nproc)
 	@$(call BUNDLE_SDK)
 
+toolchain-asan: defconfig
+ifeq ($(BR2_TOOLCHAIN_EXTERNAL),y)
+	@cp -rf $(PWD)/general/package/gcc $(TARGET)/buildroot-$(BR_VER)/package
+	@$(MAKE) -f $(PWD)/general/toolchain.mk BR_CONF=$(BR_CONF) CONFIG=$(PWD)/$(CONFIG)
+	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
+endif
+	@echo 'BR2_EXTRA_GCC_CONFIG_OPTIONS="--enable-libsanitizer"' >> $(BR_CONF)
+	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
+	@$(BR_MAKE) sdk -j$(shell nproc)
+	@$(call BUNDLE_SDK)
+
 repack:
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
 ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
