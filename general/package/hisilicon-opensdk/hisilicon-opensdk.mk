@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = f99ff3e
+HISILICON_OPENSDK_VERSION = e6e5e08
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -20,6 +20,9 @@ endif
 ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV100),y)
 HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3516cv100
 endif
+ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516AV100),y)
+HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3516av100
+endif
 
 HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
 HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
@@ -31,7 +34,9 @@ HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
 ifneq ($(OPENIPC_SOC_FAMILY),hi3516cv500)
 ifneq ($(OPENIPC_SOC_FAMILY),hi3516cv200)
 ifneq ($(OPENIPC_SOC_FAMILY),hi3516cv100)
+ifneq ($(OPENIPC_SOC_FAMILY),hi3516av100)
 HISILICON_OPENSDK_MODULE_MAKE_OPTS += DISABLE_TDE=1
+endif
 endif
 endif
 HISILICON_OPENSDK_MODULE_MAKE_OPTS += DISABLE_VO=1
@@ -57,9 +62,35 @@ HISILICON_OPENSDK_SENSORS_hi3516cv500 = sony_imx335/libsns_imx335 sony_imx307/li
 
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
+# For hi3516av100: install opensdk .ko to hisilicon/ with vendor names.
+# AV100 (V2A) uses kernel 4.9.37 and hi3516a_* blob naming.
+ifeq ($(OPENIPC_SOC_FAMILY),hi3516av100)
+HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
+define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
+	$(INSTALL) -m 644 $(@D)/kernel/open_mmz.ko           $(HISILICON_OPENSDK_KMOD_DST)/mmz.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_himedia.ko       $(HISILICON_OPENSDK_KMOD_DST)/hi_media.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_mipi_rx.ko       $(HISILICON_OPENSDK_KMOD_DST)/hi_mipi.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_i2c.ko    $(HISILICON_OPENSDK_KMOD_DST)/sensor_i2c.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_spi.ko    $(HISILICON_OPENSDK_KMOD_DST)/sensor_spi.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_hi_user.ko       $(HISILICON_OPENSDK_KMOD_DST)/hiuser.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_rtc.ko           $(HISILICON_OPENSDK_KMOD_DST)/hi_rtc.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_wdt.ko           $(HISILICON_OPENSDK_KMOD_DST)/wdt.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_pwm.ko           $(HISILICON_OPENSDK_KMOD_DST)/pwm.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_acodec.ko        $(HISILICON_OPENSDK_KMOD_DST)/acodec.ko
+	for mod in base sys isp vpss venc h264e h265e jpege rc chnl vgs ive \
+		tde aio ai ao aenc adec; do \
+		[ -f $(@D)/kernel/open_$${mod}.ko ] && \
+			$(INSTALL) -m 644 $(@D)/kernel/open_$${mod}.ko \
+				$(HISILICON_OPENSDK_KMOD_DST)/hi3516a_$${mod}.ko || true; \
+	done
+	$(INSTALL) -m 644 $(@D)/kernel/open_vi.ko      $(HISILICON_OPENSDK_KMOD_DST)/hi3516a_viu.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_rgn.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3516a_region.ko
+endef
+
 # For hi3516cv100: install opensdk .ko to hisilicon/ with vendor names.
 # CV100 uses kernel 3.0.8 and hi3518_* blob naming (not hi3518e_*).
-ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv100)
+else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv100)
 HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/3.0.8/hisilicon
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
@@ -154,7 +185,7 @@ $(eval $(generic-package))
 
 # Must be registered AFTER $(eval $(kernel-module)) so our cleanup runs
 # after the kernel-module hook that populates extra/.
-ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100,$(OPENIPC_SOC_FAMILY)),)
+ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100,$(OPENIPC_SOC_FAMILY)),)
 define HISILICON_OPENSDK_CLEANUP_EXTRA
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
 endef
