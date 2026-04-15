@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = e6e5e08
+HISILICON_OPENSDK_VERSION = 8889317
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -111,6 +111,9 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_vi.ko      $(HISILICON_OPENSDK_KMOD_DST)/hi3518_viu.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_rgn.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3518_region.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_vgs.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3518_dsu.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_ssp_sony.ko    $(HISILICON_OPENSDK_KMOD_DST)/ssp_sony.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_ssp_pana.ko    $(HISILICON_OPENSDK_KMOD_DST)/ssp_pana.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_ssp_ad9020.ko  $(HISILICON_OPENSDK_KMOD_DST)/ssp_ad9020.ko
 endef
 
 # For hi3516cv200: install opensdk .ko to hisilicon/ with vendor names,
