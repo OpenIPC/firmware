@@ -23,6 +23,9 @@ endif
 ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516AV100),y)
 HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3516av100
 endif
+ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3519V101),y)
+HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3519v101
+endif
 
 HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
 HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
@@ -59,12 +62,42 @@ endef
 HISILICON_OPENSDK_SENSORS_hi3516ev200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
 HISILICON_OPENSDK_SENSORS_gk7205v200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
 HISILICON_OPENSDK_SENSORS_hi3516cv500 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 sony_imx415/libsns_imx415
+HISILICON_OPENSDK_SENSORS_hi3519v101 = sony_imx385/libsns_imx385
 
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
+# For hi3519v101: install opensdk .ko to hisilicon/ with vendor names.
+# V3A uses kernel 3.18.20, OSAL-based, hi3519v101_* blob naming, hi_* source naming.
+ifeq ($(OPENIPC_SOC_FAMILY),hi3519v101)
+HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/3.18.20/hisilicon
+define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
+	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
+	$(INSTALL) -m 644 $(@D)/kernel/open_osal.ko          $(HISILICON_OPENSDK_KMOD_DST)/hi_osal.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_sys_config.ko     $(HISILICON_OPENSDK_KMOD_DST)/sys_config.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_mipi_rx.ko        $(HISILICON_OPENSDK_KMOD_DST)/hi_mipi.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_i2c.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi_sensor_i2c.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_spi.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi_sensor_spi.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_hi_user.ko        $(HISILICON_OPENSDK_KMOD_DST)/hi_user.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_pwm.ko            $(HISILICON_OPENSDK_KMOD_DST)/hi_pwm.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_piris.ko          $(HISILICON_OPENSDK_KMOD_DST)/hi_piris.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_acodec.ko         $(HISILICON_OPENSDK_KMOD_DST)/hi_acodec.ko
+	for mod in base sys isp vpss venc vedu h264e h265e jpege rc chnl vgs ive \
+		aio ai ao aenc adec wdt ir rtc fisheye photo pciv pciv_fmw pm; do \
+		[ -f $(@D)/kernel/open_$${mod}.ko ] && \
+			$(INSTALL) -m 644 $(@D)/kernel/open_$${mod}.ko \
+				$(HISILICON_OPENSDK_KMOD_DST)/hi3519v101_$${mod}.ko || true; \
+	done
+	$(INSTALL) -m 644 $(@D)/kernel/open_vi.ko      $(HISILICON_OPENSDK_KMOD_DST)/hi3519v101_viu.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_rgn.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3519v101_region.ko
+endef
+
 # For hi3516av100: install opensdk .ko to hisilicon/ with vendor names.
 # AV100 (V2A) uses kernel 4.9.37 and hi3516a_* blob naming.
-ifeq ($(OPENIPC_SOC_FAMILY),hi3516av100)
+else ifeq ($(OPENIPC_SOC_FAMILY),hi3516av100)
 HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
@@ -188,7 +221,7 @@ $(eval $(generic-package))
 
 # Must be registered AFTER $(eval $(kernel-module)) so our cleanup runs
 # after the kernel-module hook that populates extra/.
-ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100,$(OPENIPC_SOC_FAMILY)),)
+ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101,$(OPENIPC_SOC_FAMILY)),)
 define HISILICON_OPENSDK_CLEANUP_EXTRA
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
 endef
