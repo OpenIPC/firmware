@@ -93,6 +93,12 @@ do_update_rootfs_nand() {
 	[ -z "$ubi_dev" ] || [ -z "$ubi_mtd_num" ] && die "Cannot find UBI MTD partition!"
 	echo "UBI partition: $ubi_dev (mtd$ubi_mtd_num)"
 
+	# NAND rootfs update erases the entire UBI partition (rootfs + rootfs_data).
+	# Overlay data cannot be preserved because re-attaching UBI after nandwrite
+	# causes image_seq mismatch (the autoresize of rootfs_data writes PEBs with
+	# a different sequence number than the original rootfs.ubi image).
+	echo_c 31 "Warning: NAND rootfs update will erase overlay data"
+
 	echo_c 33 "Preparing tmpfs root for NAND upgrade..."
 
 	# Build minimal tmpfs root with busybox + firmware
