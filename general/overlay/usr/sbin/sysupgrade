@@ -44,14 +44,27 @@ do_update_kernel() {
 		fi
 		compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 	fi
-	set_progress flashcp -v "$x" "$kernel_device"
+	if [ "$flash_type" = "nand" ]; then
+		echo "Erasing kernel partition..."
+		flash_eraseall "$kernel_device"
+		echo "Writing kernel..."
+		nandwrite -p "$kernel_device" "$x"
+	else
+		set_progress flashcp -v "$x" "$kernel_device"
+	fi
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
 }
 
 do_update_rootfs() {
 	local x=$1
-	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$soc"
 	echo_c 33 "\nRootFS"
+
+	if [ "$flash_type" = "nand" ]; then
+		do_update_rootfs_nand "$x"
+		return $?
+	fi
+
+	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$soc"
 	echo "Update rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
 	local y=/tmp/rootfs
@@ -68,18 +81,100 @@ do_update_rootfs() {
 	echo_c 32 "RootFS updated to $rootfs_version"
 }
 
+do_update_rootfs_nand() {
+	local x=$1
+	[ -z "$x" ] && x="/tmp/rootfs.ubi.$soc"
+	echo "Update rootfs (NAND) from $x"
+	[ ! -f "$x" ] && die "File $x not found"
+
+	# Determine UBI MTD partition number
+	local ubi_dev=$(get_device "ubi")
+	local ubi_mtd_num=$(echo "$ubi_dev" | grep -o '[0-9]*$')
+	[ -z "$ubi_dev" ] || [ -z "$ubi_mtd_num" ] && die "Cannot find UBI MTD partition!"
+	echo "UBI partition: $ubi_dev (mtd$ubi_mtd_num)"
+
+	echo_c 33 "Preparing tmpfs root for NAND upgrade..."
+
+	# Build minimal tmpfs root with busybox + firmware
+	local nr=/tmp/newroot
+	mkdir -p "$nr"
+	mount -t tmpfs tmpfs "$nr"
+	mkdir -p "$nr/bin" "$nr/lib" "$nr/dev" "$nr/proc" "$nr/tmp" "$nr/oldroot"
+
+	cp /bin/busybox "$nr/bin/busybox"
+	cp /lib/ld-musl-arm*.so.1 "$nr/lib/" 2>/dev/null
+	cp "$x" "$nr/tmp/rootfs.ubi"
+
+	# Bind-mount /dev so all MTD device nodes are available
+	mount --bind /dev "$nr/dev"
+	mount -t proc proc "$nr/proc"
+
+	# Write the flash script to run after pivot
+	cat > "$nr/tmp/flash.sh" << FLASHEOF
+#!/bin/busybox sh
+export PATH=/bin
+busybox --install -s /bin
+
+echo "Unmounting old root filesystems..."
+umount -l /oldroot/overlay 2>/dev/null
+umount -l /oldroot/rom 2>/dev/null
+umount -l /oldroot/tmp 2>/dev/null
+umount -l /oldroot/run 2>/dev/null
+umount -l /oldroot/dev/shm 2>/dev/null
+umount -l /oldroot/dev/pts 2>/dev/null
+umount -l /oldroot/sys 2>/dev/null
+umount -l /oldroot 2>/dev/null
+sleep 1
+
+echo "Detaching UBI from mtd${ubi_mtd_num}..."
+ubidetach -m ${ubi_mtd_num} 2>/dev/null
+sleep 1
+
+echo "Erasing /dev/mtd${ubi_mtd_num}..."
+flash_eraseall /dev/mtd${ubi_mtd_num}
+
+echo "Writing rootfs.ubi to /dev/mtd${ubi_mtd_num}..."
+nandwrite -p /dev/mtd${ubi_mtd_num} /tmp/rootfs.ubi
+
+echo "NAND upgrade complete. Rebooting..."
+sync
+reboot -f
+FLASHEOF
+	chmod +x "$nr/tmp/flash.sh"
+
+	if [ "1" = "$skip_reboot" ]; then
+		echo_c 33 "Note: NAND rootfs update requires immediate reboot. -x flag ignored."
+	fi
+
+	echo_c 33 "Performing pivot_root to tmpfs and flashing NAND..."
+	cd "$nr"
+	pivot_root . oldroot
+	exec /bin/busybox sh /tmp/flash.sh
+}
+
 do_wipe_overlay() {
 	echo_c 33 "\nOverlayFS"
 	echo "Erase overlay partition"
-	[ "$flash_type" = "nand" ] || jffs2="-j"
-	set_progress flash_eraseall $jffs2 "$(get_device "rootfs_data")"
+	if [ "$flash_type" = "nand" ]; then
+		# Truncate the rootfs_data UBI volume without destroying rootfs
+		if [ -e /dev/ubi0_1 ]; then
+			ubiupdatevol /dev/ubi0_1 -t
+		else
+			flash_eraseall "$(get_device "rootfs_data")"
+		fi
+	else
+		set_progress flash_eraseall -j "$(get_device "rootfs_data")"
+	fi
 }
 
 download_firmware() {
-	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
-	build="$soc-nor-$osr"
+	if [ "$flash_type" = "nand" ]; then
+		build="$soc-nand-$osr"
+	else
+		build="$soc-nor-$osr"
+	fi
 	if [ -n "$archive" ]; then
 		[ ! -f "$archive" ] && die "File $archive not found"
 		gzip -d "$archive" -c | tar xf - -C /tmp && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
