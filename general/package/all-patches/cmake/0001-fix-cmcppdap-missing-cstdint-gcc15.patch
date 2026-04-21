@@ -1,0 +1,18 @@
+From: Dmitry Ilyin <6576495+widgetii@users.noreply.github.com>
+Subject: [PATCH] Utilities/cmcppdap: add missing cstdint include for GCC 15
+
+GCC 15 defaults to C++23 where <cstdint> is no longer transitively
+included through other headers. This causes a build failure:
+
+  dap/network.h: error: 'uint32_t' has not been declared
+
+--- a/Utilities/cmcppdap/include/dap/network.h
++++ b/Utilities/cmcppdap/include/dap/network.h
+@@ -17,6 +17,7 @@
+ #define dap_network_h
+
+ #include <memory>
++#include <cstdint>
+
+ #include "dap/io.h"
+
