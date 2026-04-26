@@ -107,6 +107,9 @@ compute_new_bootargs() {
 	echo "$new" | grep -q 'ubi\.block=' || new="$new ubi.block=0,0"
 	# 2048 = NAND subpage size in bytes; matches BR2_TARGET_ROOTFS_UBI_SUBSIZE in HiSilicon NAND defconfigs.
 	echo "$new" | grep -q 'ubi\.mtd=' || new="$new ubi.mtd=${ubi_mtd},2048"
+	# Without init=/init the kernel runs /sbin/init directly and skips the overlayfs pivot,
+	# leaving / on the read-only squashfs.
+	echo "$new" | grep -q 'init=' || new="$new init=/init"
 	[ "$current" = "$new" ] && return 0
 	echo "$new"
 }
@@ -141,8 +144,9 @@ do_update_rootfs_nand() {
 		local keep_paths
 		keep_paths=$(build_keep_list)
 		if [ -n "$keep_paths" ]; then
+			# busybox tar lacks -z; pipe through gzip ourselves.
 			keep_tgz=/tmp/sysupgrade.tgz
-			echo "$keep_paths" | xargs tar -czf "$keep_tgz" 2>/dev/null \
+			echo "$keep_paths" | xargs tar -cf - 2>/dev/null | gzip -c > "$keep_tgz" \
 				|| die "Failed to build user-data tarball"
 			echo "Preserved $(echo "$keep_paths" | wc -l) paths into $keep_tgz ($(stat -c %s "$keep_tgz" 2>/dev/null || echo ?) bytes)"
 		else
@@ -184,6 +188,8 @@ do_update_rootfs_nand() {
 #!/bin/busybox sh
 export PATH=/bin
 busybox --install -s /bin
+# Mirror progress to /dev/console so the UART log captures the post-pivot phase.
+exec > /dev/console 2>&1
 
 echo "Unmounting old root filesystems..."
 for d in overlay rom tmp run dev/shm dev/pts sys; do
@@ -197,6 +203,10 @@ ubidetach -m ${ubi_mtd_num} 2>/dev/null
 sleep 1
 
 if [ "${have_ubiformat}" = 1 ]; then
+	# flash_eraseall first so ubiformat doesn't skip blocks UBI previously marked bad,
+	# which would otherwise retain stale EC headers and image_seq → kernel attach panic.
+	echo "Erasing /dev/mtd${ubi_mtd_num}..."
+	flash_eraseall /dev/mtd${ubi_mtd_num}
 	echo "ubiformat /dev/mtd${ubi_mtd_num} with /tmp/rootfs.ubi..."
 	ubiformat -y -f /tmp/rootfs.ubi /dev/mtd${ubi_mtd_num} || { echo "ubiformat failed"; sleep 5; reboot -f; }
 else
@@ -224,10 +234,18 @@ if [ -f /tmp/sysupgrade.tgz ] && [ "${have_ubiformat}" = 1 ]; then
 	if [ -e /dev/ubi0_1 ]; then
 		mkdir -p /tmp/data
 		if mount -t ubifs ubi0:rootfs_data /tmp/data; then
-			cp /tmp/sysupgrade.tgz /tmp/data/sysupgrade.tgz
+			# Extract directly into the overlayfs upperdir. tar writes files
+			# individually so the busybox shell does not have to create a
+			# single large tarball file in the freshly-mounted UBIFS, which
+			# observed to return EINVAL on this kernel/firmware combination.
+			mkdir -p /tmp/data/root
+			if gzip -dc /tmp/sysupgrade.tgz | tar -xf - -C /tmp/data/root; then
+				echo "User-data preserved into rootfs_data:/root."
+			else
+				echo "Warning: extracting user-data tarball failed; data not preserved."
+			fi
 			sync
 			umount /tmp/data
-			echo "User-data tarball staged in rootfs_data."
 		else
 			echo "Warning: rootfs_data mount failed; user data not preserved."
 		fi
