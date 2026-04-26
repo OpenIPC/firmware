@@ -81,21 +81,6 @@ do_update_rootfs() {
 	echo_c 32 "RootFS updated to $rootfs_version"
 }
 
-build_keep_list() {
-	# Built-in defaults — files users typically customize
-	local defaults="/etc/passwd /etc/shadow /etc/group /etc/dropbear \
-		/etc/network /etc/majestic.yaml /etc/wpa_supplicant.conf \
-		/etc/wireguard.conf /etc/sysctl.conf /etc/ntp.conf \
-		/etc/timezone /etc/localtime /root"
-	local extras=""
-	[ -f /etc/sysupgrade.conf ] && extras="$extras $(grep -v '^[[:space:]]*#' /etc/sysupgrade.conf | grep -v '^[[:space:]]*$')"
-	[ -d /lib/upgrade/keep.d ] && extras="$extras $(cat /lib/upgrade/keep.d/* 2>/dev/null)"
-	# Filter to existing paths so tar doesn't error on missing ones
-	for p in $defaults $extras; do
-		[ -e "$p" ] && echo "$p"
-	done | sort -u
-}
-
 compute_new_bootargs() {
 	# One-shot, idempotent migration from UBIFS-rootfs cmdline to squashfs-on-ubiblock cmdline.
 	# Returns the new bootargs string on stdout; empty if no change is needed.
@@ -115,10 +100,9 @@ compute_new_bootargs() {
 }
 
 do_update_rootfs_nand() {
-	local x=$1
-	[ -z "$x" ] && x="/tmp/rootfs.ubi.$soc"
-	echo "Update rootfs (NAND) from $x"
-	[ ! -f "$x" ] && die "File $x not found"
+	local rootfs_ubi=/tmp/rootfs.ubi.$soc
+	local rootfs_squashfs=/tmp/rootfs.squashfs.$soc
+	local x=${1:-$rootfs_ubi}
 
 	# Determine UBI MTD partition number
 	local ubi_dev=$(get_device "ubi")
@@ -126,38 +110,29 @@ do_update_rootfs_nand() {
 	[ -z "$ubi_dev" ] || [ -z "$ubi_mtd_num" ] && die "Cannot find UBI MTD partition!"
 	echo "UBI partition: $ubi_dev (mtd$ubi_mtd_num)"
 
-	# Detect ubiformat — required for the preserving flow. Pre-this-PR firmware
-	# does not ship mtd-utils (only busybox UBI applets), so when running
-	# sysupgrade on such a camera we fall back to flash_eraseall+nandwrite.
-	# That is destructive but lets the camera get to new firmware; after which
-	# ubiformat is present and subsequent upgrades preserve user data.
-	local have_ubiformat=0
-	command -v ubiformat >/dev/null 2>&1 && have_ubiformat=1
-
-	local preserve=1
-	[ "1" = "$clear_overlay" ] && preserve=0
-	[ "$have_ubiformat" = 0 ] && preserve=0
-
-	local keep_tgz=""
-	if [ "$preserve" = 1 ]; then
-		echo_c 33 "Backing up user data..."
-		local keep_paths
-		keep_paths=$(build_keep_list)
-		if [ -n "$keep_paths" ]; then
-			# busybox tar lacks -z; pipe through gzip ourselves.
-			keep_tgz=/tmp/sysupgrade.tgz
-			echo "$keep_paths" | xargs tar -cf - 2>/dev/null | gzip -c > "$keep_tgz" \
-				|| die "Failed to build user-data tarball"
-			echo "Preserved $(echo "$keep_paths" | wc -l) paths into $keep_tgz ($(stat -c %s "$keep_tgz" 2>/dev/null || echo ?) bytes)"
-		else
-			echo "No user-data paths to preserve"
-		fi
+	# Pick the upgrade strategy:
+	#   updatevol — fastest, preserves rootfs_data by construction. Used when the
+	#               release tarball ships rootfs.squashfs AND the camera is already
+	#               on the SquashFS-on-UBI layout (rootfs_data volume present).
+	#   ubiformat — full UBI MTD rewrite. Required for first-hop migration from
+	#               legacy UBIFS-rootfs firmware to the new layout. Destructive
+	#               to rootfs_data.
+	#   legacy    — flash_eraseall+nandwrite. Only when running on pre-this-PR
+	#               firmware that does not ship mtd-utils. Destructive.
+	local mode
+	if [ -f "$rootfs_squashfs" ] && [ -e /dev/ubi0_1 ] && [ "1" != "$clear_overlay" ]; then
+		mode=updatevol
+		x="$rootfs_squashfs"
+	elif command -v ubiformat >/dev/null 2>&1; then
+		mode=ubiformat
+		[ ! -f "$x" ] && die "File $x not found"
 	else
-		if [ "$have_ubiformat" = 0 ]; then
-			echo_c 33 "ubiformat not available on running firmware — falling back to legacy flash."
-			echo_c 31 "User data will be erased on this upgrade. Subsequent upgrades will preserve it."
-		fi
+		mode=legacy
+		[ ! -f "$x" ] && die "File $x not found"
+		echo_c 31 "ubiformat not available on running firmware — falling back to legacy flash."
+		echo_c 31 "User data will be erased on this upgrade. Subsequent upgrades will preserve it."
 	fi
+	echo "Update rootfs (NAND, $mode) from $x"
 
 	local new_bootargs
 	new_bootargs=$(compute_new_bootargs "$ubi_mtd_num") || die "Cannot read U-Boot bootargs"
@@ -167,19 +142,18 @@ do_update_rootfs_nand() {
 	local nr=/tmp/newroot
 	mkdir -p "$nr"
 	mount -t tmpfs tmpfs "$nr"
-	mkdir -p "$nr/bin" "$nr/lib" "$nr/dev" "$nr/proc" "$nr/tmp" "$nr/tmp/data" "$nr/oldroot" "$nr/etc"
+	mkdir -p "$nr/bin" "$nr/lib" "$nr/dev" "$nr/proc" "$nr/tmp" "$nr/oldroot" "$nr/etc"
 
 	cp /bin/busybox "$nr/bin/busybox"
 	cp /lib/ld-musl-arm*.so.1 "$nr/lib/" 2>/dev/null
-	[ "$have_ubiformat" = 1 ] && cp "$(command -v ubiformat)" "$nr/bin/ubiformat"
+	[ "$mode" = ubiformat ] && cp "$(command -v ubiformat)" "$nr/bin/ubiformat"
 	# fw_setenv (and its dereferenced fw_printenv binary) needed for post-flash bootargs migration
 	if [ -n "$new_bootargs" ]; then
 		fw_bin=$(readlink -f "$(command -v fw_setenv)")
 		[ -n "$fw_bin" ] && cp "$fw_bin" "$nr/bin/fw_setenv"
 		[ -f /etc/fw_env.config ] && cp /etc/fw_env.config "$nr/etc/fw_env.config"
 	fi
-	cp "$x" "$nr/tmp/rootfs.ubi"
-	[ -n "$keep_tgz" ] && [ -f "$keep_tgz" ] && cp "$keep_tgz" "$nr/tmp/sysupgrade.tgz"
+	cp "$x" "$nr/tmp/rootfs.image"
 
 	mount --bind /dev "$nr/dev"
 	mount -t proc proc "$nr/proc"
@@ -202,57 +176,42 @@ echo "Detaching UBI from mtd${ubi_mtd_num}..."
 ubidetach -m ${ubi_mtd_num} 2>/dev/null
 sleep 1
 
-if [ "${have_ubiformat}" = 1 ]; then
-	# flash_eraseall first so ubiformat doesn't skip blocks UBI previously marked bad,
+case "${mode}" in
+updatevol)
+	echo "Re-attaching UBI to update rootfs volume in place..."
+	ubiattach -m ${ubi_mtd_num} || { echo "ubiattach failed"; sleep 5; reboot -f; }
+	for i in 1 2 3 4 5 6 7 8 9 10; do
+		[ -e /dev/ubi0_0 ] && break
+		sleep 1
+	done
+	echo "ubiupdatevol /dev/ubi0_0 with rootfs.squashfs..."
+	ubiupdatevol /dev/ubi0_0 /tmp/rootfs.image \
+		|| { echo "ubiupdatevol failed"; sleep 5; reboot -f; }
+	echo "Rootfs volume updated; rootfs_data left intact."
+	ubidetach -m ${ubi_mtd_num} 2>/dev/null
+	;;
+ubiformat)
+	# flash_eraseall first so ubiformat does not skip blocks UBI previously marked bad,
 	# which would otherwise retain stale EC headers and image_seq → kernel attach panic.
 	echo "Erasing /dev/mtd${ubi_mtd_num}..."
 	flash_eraseall /dev/mtd${ubi_mtd_num}
-	echo "ubiformat /dev/mtd${ubi_mtd_num} with /tmp/rootfs.ubi..."
-	ubiformat -y -f /tmp/rootfs.ubi /dev/mtd${ubi_mtd_num} || { echo "ubiformat failed"; sleep 5; reboot -f; }
-else
+	echo "ubiformat /dev/mtd${ubi_mtd_num} with rootfs.ubi..."
+	ubiformat -y -f /tmp/rootfs.image /dev/mtd${ubi_mtd_num} \
+		|| { echo "ubiformat failed"; sleep 5; reboot -f; }
+	;;
+legacy)
 	echo "Erasing /dev/mtd${ubi_mtd_num}..."
 	flash_eraseall /dev/mtd${ubi_mtd_num}
 	echo "Writing rootfs.ubi to /dev/mtd${ubi_mtd_num}..."
-	nandwrite -p /dev/mtd${ubi_mtd_num} /tmp/rootfs.ubi
-fi
+	nandwrite -p /dev/mtd${ubi_mtd_num} /tmp/rootfs.image
+	;;
+esac
 
-# Migrate U-Boot bootargs only after a successful flash, so a flash failure doesn't
+# Migrate U-Boot bootargs only after a successful flash, so a flash failure does not
 # leave the env pointing at a rootfs that does not exist.
 if [ -n "${new_bootargs}" ] && [ -x /bin/fw_setenv ]; then
 	echo "Updating U-Boot bootargs for SquashFS-on-UBI rootfs..."
 	fw_setenv bootargs "${new_bootargs}" || echo "Warning: fw_setenv failed; manual recovery may be needed."
-fi
-
-if [ -f /tmp/sysupgrade.tgz ] && [ "${have_ubiformat}" = 1 ]; then
-	echo "Re-attaching UBI to drop user-data tarball into rootfs_data..."
-	ubiattach -m ${ubi_mtd_num} 2>/dev/null
-	# autoresize materialises rootfs_data — wait for it
-	for i in 1 2 3 4 5 6 7 8 9 10; do
-		[ -e /dev/ubi0_1 ] && break
-		sleep 1
-	done
-	if [ -e /dev/ubi0_1 ]; then
-		mkdir -p /tmp/data
-		if mount -t ubifs ubi0:rootfs_data /tmp/data; then
-			# Extract directly into the overlayfs upperdir. tar writes files
-			# individually so the busybox shell does not have to create a
-			# single large tarball file in the freshly-mounted UBIFS, which
-			# observed to return EINVAL on this kernel/firmware combination.
-			mkdir -p /tmp/data/root
-			if gzip -dc /tmp/sysupgrade.tgz | tar -xf - -C /tmp/data/root; then
-				echo "User-data preserved into rootfs_data:/root."
-			else
-				echo "Warning: extracting user-data tarball failed; data not preserved."
-			fi
-			sync
-			umount /tmp/data
-		else
-			echo "Warning: rootfs_data mount failed; user data not preserved."
-		fi
-	else
-		echo "Warning: /dev/ubi0_1 did not appear; user data not preserved."
-	fi
-	ubidetach -m ${ubi_mtd_num} 2>/dev/null
 fi
 
 echo "NAND upgrade complete. Rebooting..."

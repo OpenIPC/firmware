@@ -108,7 +108,7 @@ ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
 ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"rockchip" "sigmastar"),)
 	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
 else
-	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand)
+	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand,rootfs.squashfs)
 endif
 endif
 ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
@@ -149,7 +149,7 @@ endef
 define PREPARE_REPACK
 	$(if $(1),$(call CHECK_SIZE,$(1),$(2)))
 	$(if $(3),$(call CHECK_SIZE,$(3),$(4)))
-	$(call REPACK_FIRMWARE,$(1),$(3),$(5))
+	$(call REPACK_FIRMWARE,$(1),$(3),$(5),$(6))
 endef
 
 define CHECK_SIZE
@@ -164,11 +164,14 @@ define REPACK_FIRMWARE
 	cd $(TARGET)/images && if test -e rootfs.tar; then mv -f rootfs.tar rootfs.$(BR2_OPENIPC_SOC_MODEL).tar; fi
 	$(if $(1),cd $(TARGET)/images && if test -e $(1); then mv -f $(1) $(1).$(BR2_OPENIPC_SOC_MODEL); fi)
 	$(if $(2),cd $(TARGET)/images && if test -e $(2); then mv -f $(2) $(2).$(BR2_OPENIPC_SOC_MODEL); fi)
+	$(if $(4),cd $(TARGET)/images && if test ! -e $(4).$(BR2_OPENIPC_SOC_MODEL) && test -e $(4); then cp -f $(4) $(4).$(BR2_OPENIPC_SOC_MODEL); fi)
 	$(if $(1),cd $(TARGET)/images && md5sum $(1).$(BR2_OPENIPC_SOC_MODEL) > $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum)
 	$(if $(2),cd $(TARGET)/images && md5sum $(2).$(BR2_OPENIPC_SOC_MODEL) > $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum)
+	$(if $(4),cd $(TARGET)/images && md5sum $(4).$(BR2_OPENIPC_SOC_MODEL) > $(4).$(BR2_OPENIPC_SOC_MODEL).md5sum)
 	$(if $(1),$(eval KERNEL = $(1).$(BR2_OPENIPC_SOC_MODEL) $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval KERNEL =))
 	$(if $(2),$(eval ROOTFS = $(2).$(BR2_OPENIPC_SOC_MODEL) $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval ROOTFS =))
+	$(if $(4),$(eval EXTRA = $(4).$(BR2_OPENIPC_SOC_MODEL) $(4).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval EXTRA =))
 	$(eval ARCHIVE = openipc.$(BR2_OPENIPC_SOC_MODEL)-$(3)-$(BR2_OPENIPC_VARIANT).tgz)
-	cd $(TARGET)/images && tar -czf $(ARCHIVE) $(KERNEL) $(ROOTFS)
+	cd $(TARGET)/images && tar -czf $(ARCHIVE) $(KERNEL) $(ROOTFS) $(EXTRA)
 	rm -f $(TARGET)/images/*.md5sum
 endef
