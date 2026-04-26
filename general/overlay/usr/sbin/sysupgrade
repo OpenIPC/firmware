@@ -44,14 +44,27 @@ do_update_kernel() {
 		fi
 		compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 	fi
-	set_progress flashcp -v "$x" "$kernel_device"
+	if [ "$flash_type" = "nand" ]; then
+		echo "Erasing kernel partition..."
+		flash_eraseall "$kernel_device"
+		echo "Writing kernel..."
+		nandwrite -p "$kernel_device" "$x"
+	else
+		set_progress flashcp -v "$x" "$kernel_device"
+	fi
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
 }
 
 do_update_rootfs() {
 	local x=$1
-	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$soc"
 	echo_c 33 "\nRootFS"
+
+	if [ "$flash_type" = "nand" ]; then
+		do_update_rootfs_nand "$x"
+		return $?
+	fi
+
+	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$soc"
 	echo "Update rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
 	local y=/tmp/rootfs
@@ -68,18 +81,201 @@ do_update_rootfs() {
 	echo_c 32 "RootFS updated to $rootfs_version"
 }
 
+build_keep_list() {
+	# Built-in defaults — files users typically customize
+	local defaults="/etc/passwd /etc/shadow /etc/group /etc/dropbear \
+		/etc/network /etc/majestic.yaml /etc/wpa_supplicant.conf \
+		/etc/wireguard.conf /etc/sysctl.conf /etc/ntp.conf \
+		/etc/timezone /etc/localtime /root"
+	local extras=""
+	[ -f /etc/sysupgrade.conf ] && extras="$extras $(grep -v '^[[:space:]]*#' /etc/sysupgrade.conf | grep -v '^[[:space:]]*$')"
+	[ -d /lib/upgrade/keep.d ] && extras="$extras $(cat /lib/upgrade/keep.d/* 2>/dev/null)"
+	# Filter to existing paths so tar doesn't error on missing ones
+	for p in $defaults $extras; do
+		[ -e "$p" ] && echo "$p"
+	done | sort -u
+}
+
+compute_new_bootargs() {
+	# One-shot, idempotent migration from UBIFS-rootfs cmdline to squashfs-on-ubiblock cmdline.
+	# Returns the new bootargs string on stdout; empty if no change is needed.
+	# $1 = UBI MTD partition number (e.g., "3"); used to add ubi.mtd= if missing.
+	local current new ubi_mtd=$1
+	current=$(fw_printenv -n bootargs 2>/dev/null) || return 1
+	new=$(echo "$current" | sed -e 's|root=ubi0:rootfs|root=/dev/ubiblock0_0|' \
+				 -e 's|rootfstype=ubifs|rootfstype=squashfs|')
+	echo "$new" | grep -q 'ubi\.block=' || new="$new ubi.block=0,0"
+	# 2048 = NAND subpage size in bytes; matches BR2_TARGET_ROOTFS_UBI_SUBSIZE in HiSilicon NAND defconfigs.
+	echo "$new" | grep -q 'ubi\.mtd=' || new="$new ubi.mtd=${ubi_mtd},2048"
+	[ "$current" = "$new" ] && return 0
+	echo "$new"
+}
+
+do_update_rootfs_nand() {
+	local x=$1
+	[ -z "$x" ] && x="/tmp/rootfs.ubi.$soc"
+	echo "Update rootfs (NAND) from $x"
+	[ ! -f "$x" ] && die "File $x not found"
+
+	# Determine UBI MTD partition number
+	local ubi_dev=$(get_device "ubi")
+	local ubi_mtd_num=$(echo "$ubi_dev" | grep -o '[0-9]*$')
+	[ -z "$ubi_dev" ] || [ -z "$ubi_mtd_num" ] && die "Cannot find UBI MTD partition!"
+	echo "UBI partition: $ubi_dev (mtd$ubi_mtd_num)"
+
+	# Detect ubiformat — required for the preserving flow. Pre-this-PR firmware
+	# does not ship mtd-utils (only busybox UBI applets), so when running
+	# sysupgrade on such a camera we fall back to flash_eraseall+nandwrite.
+	# That is destructive but lets the camera get to new firmware; after which
+	# ubiformat is present and subsequent upgrades preserve user data.
+	local have_ubiformat=0
+	command -v ubiformat >/dev/null 2>&1 && have_ubiformat=1
+
+	local preserve=1
+	[ "1" = "$clear_overlay" ] && preserve=0
+	[ "$have_ubiformat" = 0 ] && preserve=0
+
+	local keep_tgz=""
+	if [ "$preserve" = 1 ]; then
+		echo_c 33 "Backing up user data..."
+		local keep_paths
+		keep_paths=$(build_keep_list)
+		if [ -n "$keep_paths" ]; then
+			keep_tgz=/tmp/sysupgrade.tgz
+			echo "$keep_paths" | xargs tar -czf "$keep_tgz" 2>/dev/null \
+				|| die "Failed to build user-data tarball"
+			echo "Preserved $(echo "$keep_paths" | wc -l) paths into $keep_tgz ($(stat -c %s "$keep_tgz" 2>/dev/null || echo ?) bytes)"
+		else
+			echo "No user-data paths to preserve"
+		fi
+	else
+		if [ "$have_ubiformat" = 0 ]; then
+			echo_c 33 "ubiformat not available on running firmware — falling back to legacy flash."
+			echo_c 31 "User data will be erased on this upgrade. Subsequent upgrades will preserve it."
+		fi
+	fi
+
+	local new_bootargs
+	new_bootargs=$(compute_new_bootargs "$ubi_mtd_num") || die "Cannot read U-Boot bootargs"
+
+	echo_c 33 "Preparing tmpfs root for NAND upgrade..."
+
+	local nr=/tmp/newroot
+	mkdir -p "$nr"
+	mount -t tmpfs tmpfs "$nr"
+	mkdir -p "$nr/bin" "$nr/lib" "$nr/dev" "$nr/proc" "$nr/tmp" "$nr/tmp/data" "$nr/oldroot" "$nr/etc"
+
+	cp /bin/busybox "$nr/bin/busybox"
+	cp /lib/ld-musl-arm*.so.1 "$nr/lib/" 2>/dev/null
+	[ "$have_ubiformat" = 1 ] && cp "$(command -v ubiformat)" "$nr/bin/ubiformat"
+	# fw_setenv (and its dereferenced fw_printenv binary) needed for post-flash bootargs migration
+	if [ -n "$new_bootargs" ]; then
+		fw_bin=$(readlink -f "$(command -v fw_setenv)")
+		[ -n "$fw_bin" ] && cp "$fw_bin" "$nr/bin/fw_setenv"
+		[ -f /etc/fw_env.config ] && cp /etc/fw_env.config "$nr/etc/fw_env.config"
+	fi
+	cp "$x" "$nr/tmp/rootfs.ubi"
+	[ -n "$keep_tgz" ] && [ -f "$keep_tgz" ] && cp "$keep_tgz" "$nr/tmp/sysupgrade.tgz"
+
+	mount --bind /dev "$nr/dev"
+	mount -t proc proc "$nr/proc"
+
+	cat > "$nr/tmp/flash.sh" << FLASHEOF
+#!/bin/busybox sh
+export PATH=/bin
+busybox --install -s /bin
+
+echo "Unmounting old root filesystems..."
+for d in overlay rom tmp run dev/shm dev/pts sys; do
+	umount -l /oldroot/\$d 2>/dev/null
+done
+umount -l /oldroot 2>/dev/null
+sleep 1
+
+echo "Detaching UBI from mtd${ubi_mtd_num}..."
+ubidetach -m ${ubi_mtd_num} 2>/dev/null
+sleep 1
+
+if [ "${have_ubiformat}" = 1 ]; then
+	echo "ubiformat /dev/mtd${ubi_mtd_num} with /tmp/rootfs.ubi..."
+	ubiformat -y -f /tmp/rootfs.ubi /dev/mtd${ubi_mtd_num} || { echo "ubiformat failed"; sleep 5; reboot -f; }
+else
+	echo "Erasing /dev/mtd${ubi_mtd_num}..."
+	flash_eraseall /dev/mtd${ubi_mtd_num}
+	echo "Writing rootfs.ubi to /dev/mtd${ubi_mtd_num}..."
+	nandwrite -p /dev/mtd${ubi_mtd_num} /tmp/rootfs.ubi
+fi
+
+# Migrate U-Boot bootargs only after a successful flash, so a flash failure doesn't
+# leave the env pointing at a rootfs that does not exist.
+if [ -n "${new_bootargs}" ] && [ -x /bin/fw_setenv ]; then
+	echo "Updating U-Boot bootargs for SquashFS-on-UBI rootfs..."
+	fw_setenv bootargs "${new_bootargs}" || echo "Warning: fw_setenv failed; manual recovery may be needed."
+fi
+
+if [ -f /tmp/sysupgrade.tgz ] && [ "${have_ubiformat}" = 1 ]; then
+	echo "Re-attaching UBI to drop user-data tarball into rootfs_data..."
+	ubiattach -m ${ubi_mtd_num} 2>/dev/null
+	# autoresize materialises rootfs_data — wait for it
+	for i in 1 2 3 4 5 6 7 8 9 10; do
+		[ -e /dev/ubi0_1 ] && break
+		sleep 1
+	done
+	if [ -e /dev/ubi0_1 ]; then
+		mkdir -p /tmp/data
+		if mount -t ubifs ubi0:rootfs_data /tmp/data; then
+			cp /tmp/sysupgrade.tgz /tmp/data/sysupgrade.tgz
+			sync
+			umount /tmp/data
+			echo "User-data tarball staged in rootfs_data."
+		else
+			echo "Warning: rootfs_data mount failed; user data not preserved."
+		fi
+	else
+		echo "Warning: /dev/ubi0_1 did not appear; user data not preserved."
+	fi
+	ubidetach -m ${ubi_mtd_num} 2>/dev/null
+fi
+
+echo "NAND upgrade complete. Rebooting..."
+sync
+reboot -f
+FLASHEOF
+	chmod +x "$nr/tmp/flash.sh"
+
+	if [ "1" = "$skip_reboot" ]; then
+		echo_c 33 "Note: NAND rootfs update requires immediate reboot. -x flag ignored."
+	fi
+
+	echo_c 33 "Performing pivot_root to tmpfs and flashing NAND..."
+	cd "$nr"
+	pivot_root . oldroot
+	exec /bin/busybox sh /tmp/flash.sh
+}
+
 do_wipe_overlay() {
 	echo_c 33 "\nOverlayFS"
 	echo "Erase overlay partition"
-	[ "$flash_type" = "nand" ] || jffs2="-j"
-	set_progress flash_eraseall $jffs2 "$(get_device "rootfs_data")"
+	if [ "$flash_type" = "nand" ]; then
+		# Truncate the rootfs_data UBI volume without destroying rootfs
+		if [ -e /dev/ubi0_1 ]; then
+			ubiupdatevol /dev/ubi0_1 -t
+		else
+			flash_eraseall "$(get_device "rootfs_data")"
+		fi
+	else
+		set_progress flash_eraseall -j "$(get_device "rootfs_data")"
+	fi
 }
 
 download_firmware() {
-	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
-	build="$soc-nor-$osr"
+	if [ "$flash_type" = "nand" ]; then
+		build="$soc-nand-$osr"
+	else
+		build="$soc-nor-$osr"
+	fi
 	if [ -n "$archive" ]; then
 		[ ! -f "$archive" ] && die "File $archive not found"
 		gzip -d "$archive" -c | tar xf - -C /tmp && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
