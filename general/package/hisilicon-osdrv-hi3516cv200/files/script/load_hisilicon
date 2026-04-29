@@ -39,14 +39,14 @@ insert_detect() {
 }
 
 remove_detect() {
-        rmmod -w sensor_spi
-        rmmod -w sensor_i2c
-        rmmod -w hi3518e_isp
+        rmmod -w open_sensor_spi
+        rmmod -w open_sensor_i2c
+        rmmod -w open_isp
         rmmod -w hi3518e_sys
         rmmod -w hi3518e_base
-        rmmod -w hi_media
-        rmmod -w mmz
-        rmmod -w sys_config.ko
+        rmmod -w open_himedia
+        rmmod -w open_mmz
+        rmmod -w open_sys_config
 }
 
 insert_audio() {
@@ -72,8 +72,8 @@ remove_audio() {
 }
 
 remove_sns() {
-        rmmod -w sensor_spi &>/dev/null
-        rmmod -w sensor_i2c &>/dev/null
+        rmmod -w open_sensor_spi &>/dev/null
+        rmmod -w open_sensor_i2c &>/dev/null
 }
 
 insert_isp() {
@@ -225,12 +225,12 @@ insert_ko() {
 }
 
 remove_ko() {
-        rmmod -w wdt
-        rmmod -w sys_config.ko
+        rmmod -w open_wdt
+        rmmod -w open_sys_config
         remove_audio
         remove_sns
 
-        rmmod -w pwm
+        rmmod -w open_pwm
 
         rmmod -w hi3518e_ive
 
@@ -244,18 +244,18 @@ remove_ko() {
         #rmmod -w hi3518e_vou
         rmmod -w hi3518e_vpss
         rmmod -w hi3518e_viu
-        rmmod -w hi_mipi
+        rmmod -w open_mipi_rx
 
         rmmod -w hi3518e_vgs
         rmmod -w hi3518e_region
         rmmod -w hi3518e_tde
 
         #rmmod -w piris
-        rmmod -w hi3518e_isp
+        rmmod -w open_isp
         rmmod -w hi3518e_sys
         rmmod -w hi3518e_base
-        rmmod -w hi_media
-        rmmod -w mmz
+        rmmod -w open_himedia
+        rmmod -w open_mmz
 }
 
 load_usage() {
