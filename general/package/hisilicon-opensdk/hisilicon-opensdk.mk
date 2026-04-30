@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = a416f9e
+HISILICON_OPENSDK_VERSION = 9698276
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -78,6 +78,7 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_osal.ko          $(HISILICON_OPENSDK_KMOD_DST)/hi_osal.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_sys_config.ko     $(HISILICON_OPENSDK_KMOD_DST)/sys_config.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_mipi_rx.ko        $(HISILICON_OPENSDK_KMOD_DST)/hi_mipi.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_spi.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi_sensor_spi.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_i2c.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3516cv300_sensor.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_wdt.ko            $(HISILICON_OPENSDK_KMOD_DST)/hi3516cv300_wdt.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_ir.ko             $(HISILICON_OPENSDK_KMOD_DST)/hi3516cv300_ir.ko
