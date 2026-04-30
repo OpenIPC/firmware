@@ -1,0 +1,10 @@
+diff --git a/arch/arm/boot/dts/gk7205v300-demb.dts b/arch/arm/boot/dts/gk7205v300-demb.dts
+--- a/arch/arm/boot/dts/gk7205v300-demb.dts
++++ b/arch/arm/boot/dts/gk7205v300-demb.dts
+@@ -116,6 +116,7 @@
+ &mmc1 {
+ 	status = "okay";
++	broken-cd;
+ };
+ 
+ &gpio_chip0 {
