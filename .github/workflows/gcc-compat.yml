@@ -1,0 +1,45 @@
+name: gcc-compat
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'Makefile'
+      - 'general/package/**/*.mk'
+      - 'general/package/all-patches/**'
+      - '.github/workflows/gcc-compat.yml'
+  schedule:
+    - cron: '0 6 * * 0'
+  workflow_dispatch:
+
+jobs:
+  gcc-compat:
+    name: GCC ${{matrix.gcc}}
+    runs-on: ubuntu-latest
+    container:
+      image: gcc:${{matrix.gcc}}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        gcc:
+          - 12
+          - 13
+          - 14
+          - 15
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y automake autotools-dev bc build-essential cpio \
+            curl file git libncurses-dev libtool lzop make rsync unzip wget \
+            libssl-dev
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Build firmware
+        run: make BOARD=gk7205v200_lite
+        env:
+          FORCE_UNSAFE_CONFIGURE: 1

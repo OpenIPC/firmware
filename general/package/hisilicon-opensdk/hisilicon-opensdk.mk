@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 8889317
+HISILICON_OPENSDK_VERSION = a416f9e
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -254,4 +254,16 @@ define HISILICON_OPENSDK_CLEANUP_EXTRA
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
 endef
 HISILICON_OPENSDK_POST_INSTALL_TARGET_HOOKS += HISILICON_OPENSDK_CLEANUP_EXTRA
+endif
+
+# In per-package mode, target-finalize merges per-package/*/target/ into
+# output/target/ in alphabetical order ($(sort $(PACKAGES))), not dependency
+# order. That makes hisilicon-osdrv-* clobber files we install here, even
+# though HISILICON_OPENSDK_DEPENDENCIES sequences us after osdrv during build.
+# Re-apply our per-package overlay onto the merged target after the rsync.
+ifeq ($(BR2_PACKAGE_HISILICON_OPENSDK)$(BR2_PER_PACKAGE_DIRECTORIES),yy)
+define HISILICON_OPENSDK_FINAL_OVERLAY
+	rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/ $(TARGET_DIR)/
+endef
+TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINAL_OVERLAY
 endif

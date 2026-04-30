@@ -37,9 +37,9 @@ insert_detect() {
 }
 
 remove_detect() {
-	rmmod -w ssp_sony &>/dev/null
-	rmmod -w ssp_pana &>/dev/null
-	rmmod -w ssp_ad9020 &>/dev/null
+	rmmod -w open_ssp_sony &>/dev/null
+	rmmod -w open_ssp_pana &>/dev/null
+	rmmod -w open_ssp_ad9020 &>/dev/null
 	rmmod -w hi_i2c
 	rmmod -w hi3518_isp
 	rmmod -w hi3518_sys
@@ -149,9 +149,9 @@ insert_sns() {
 remove_sns() {
 	rmmod -w hi_i2c &>/dev/null
 	rmmod -w ssp &>/dev/null
-	rmmod -w ssp_sony &>/dev/null
-	rmmod -w ssp_pana &>/dev/null
-	rmmod -w ssp_ad9020 &>/dev/null
+	rmmod -w open_ssp_sony &>/dev/null
+	rmmod -w open_ssp_pana &>/dev/null
+	rmmod -w open_ssp_ad9020 &>/dev/null
 }
 
 sys_config() {

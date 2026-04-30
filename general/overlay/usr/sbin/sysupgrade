@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.48
+scr_version=1.0.49
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -345,6 +345,14 @@ free_resources
 
 [ "1" != "$skip_unmount" ] && check_sdcard
 [ "1" = "$remote_update" ] && download_firmware
+
+# Past this point we erase flash. A controlling-TTY death (SSH session drop,
+# stray Ctrl-C, etc.) must not kill flashcp mid-write — that leaves the rootfs
+# partition partially erased and unbootable. SIG_IGN is inherited across
+# fork+exec, so this also shields the busybox flashcp child. See issue #2024.
+trap '' HUP INT TERM PIPE
+echo_c 37 "\nProtected: flashing continues even if this terminal disconnects."
+
 [ "1" = "$update_kernel" ] && do_update_kernel "$kernel_file"
 [ "1" = "$update_rootfs" ] && do_update_rootfs "$rootfs_file"
 [ "1" = "$clear_overlay" ] && do_wipe_overlay
