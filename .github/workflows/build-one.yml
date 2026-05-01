@@ -53,6 +53,9 @@ jobs:
             echo NANDFW=${NANDFW} >> ${GITHUB_ENV}
           fi
 
+      - name: Verify kernel modules
+        run: sh .github/scripts/check_target_modules.sh
+
       - name: Upload firmware
         uses: softprops/action-gh-release@v2
         with:
