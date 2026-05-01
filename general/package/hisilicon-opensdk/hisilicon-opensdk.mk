@@ -246,25 +246,33 @@ endef
 endif
 
 $(eval $(kernel-module))
-$(eval $(generic-package))
 
-# Must be registered AFTER $(eval $(kernel-module)) so our cleanup runs
-# after the kernel-module hook that populates extra/.
+# Run as a target-finalize hook so it operates on the *merged* $(TARGET_DIR),
+# which is the authoritative tree in both per-package and non-per-package modes.
+#
+# Three things happen here:
+#
+# 1. (per-package mode only) Re-apply our lib/modules/ onto the merged target.
+#    target-finalize merges per-package/*/target/ in $(sort $(PACKAGES)) order,
+#    which is alphabetical, not dependency order. That lets hisilicon-osdrv-*
+#    clobber the hisilicon/<vendor>.ko files we install here, even though
+#    HISILICON_OPENSDK_DEPENDENCIES sequences us after osdrv during build.
+#
+# 2. Wipe the source-named open_*.ko copies the kernel-module install leaves
+#    in extra/. We rename them to vendor names in INSTALL_TARGET_CMDS; the
+#    originals would otherwise be registered in modules.dep by depmod.
+#
+# 3. Re-run depmod. LINUX_RUN_DEPMOD is registered earlier in
+#    TARGET_FINALIZE_HOOKS (linux package is processed before this one), so
+#    it has already executed by the time we get here — we need a second pass
+#    so modules.dep reflects the post-cleanup state.
 ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300,$(OPENIPC_SOC_FAMILY)),)
-define HISILICON_OPENSDK_CLEANUP_EXTRA
+define HISILICON_OPENSDK_FINALIZE_MODULES
+	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
+	$(LINUX_RUN_DEPMOD)
 endef
-HISILICON_OPENSDK_POST_INSTALL_TARGET_HOOKS += HISILICON_OPENSDK_CLEANUP_EXTRA
+HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES
 endif
 
-# In per-package mode, target-finalize merges per-package/*/target/ into
-# output/target/ in alphabetical order ($(sort $(PACKAGES))), not dependency
-# order. That makes hisilicon-osdrv-* clobber files we install here, even
-# though HISILICON_OPENSDK_DEPENDENCIES sequences us after osdrv during build.
-# Re-apply our per-package overlay onto the merged target after the rsync.
-ifeq ($(BR2_PACKAGE_HISILICON_OPENSDK)$(BR2_PER_PACKAGE_DIRECTORIES),yy)
-define HISILICON_OPENSDK_FINAL_OVERLAY
-	rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/ $(TARGET_DIR)/
-endef
-TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINAL_OVERLAY
-endif
+$(eval $(generic-package))
