@@ -174,15 +174,15 @@ insert_sns() {
 
                 devmem 0x2003002c 32 0x94001 # sensor unreset, clk 37.125MHz, VI 99MHz
                 ;;
-        ov2710)
-                # MIPI variant — uses libsns_ov2710_mipi.so via ov2710_i2c_mipi_1080p.ini
+        ov2710_mipi)
+                # MIPI variant — uses libsns_ov2710_mipi.so via ov2710_mipi_1080p.ini
                 devmem 0x200f0040 32 0x2 # I2C0_SCL
                 devmem 0x200f0044 32 0x2 # I2C0_SDA
 
                 devmem 0x2003002c 32 0xc4001 # sensor unreset, clk 24MHz, VI 99MHz
                 ;;
         ov2710_dc)
-                # DVP/parallel variant — uses libsns_ov2710_dc.so via ov2710_i2c_dc_1080p.ini
+                # DVP/parallel variant — uses libsns_ov2710_dc.so via ov2710_dc_1080p.ini
                 devmem 0x200f0040 32 0x2 # I2C0_SCL
                 devmem 0x200f0044 32 0x2 # I2C0_SDA
 
