@@ -29,6 +29,13 @@ jobs:
           path: /tmp/ccache
           key: ${{inputs.platform}}-${{env.CACHE_DATE}}
 
+      - name: Setup dl cache
+        uses: actions/cache@v4
+        with:
+          path: output/dl
+          key: dl-${{env.CACHE_DATE}}
+          restore-keys: dl-
+
       - name: Build firmware
         run: |
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
@@ -38,7 +45,16 @@ jobs:
 
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.ccache
-          make BOARD=${{inputs.platform}}
+
+          for attempt in 1 2 3; do
+            make BOARD=${{inputs.platform}} && break
+            if [ ${attempt} -eq 3 ]; then
+              echo "::error::build failed after ${attempt} attempts"
+              exit 1
+            fi
+            echo "::warning::attempt ${attempt} failed, retrying after $((attempt * 30))s"
+            sleep $((attempt * 30))
+          done
 
           TIME=$(date -d @${SECONDS} +%M:%S)
           echo TIME=${TIME} >> ${GITHUB_ENV}
