@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 9698276
+HISILICON_OPENSDK_VERSION = 8bbfd9c
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -66,6 +66,7 @@ HISILICON_OPENSDK_SENSORS_hi3516ev200 = sony_imx335/libsns_imx335 sony_imx307/li
 HISILICON_OPENSDK_SENSORS_gk7205v200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
 HISILICON_OPENSDK_SENSORS_hi3516cv500 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 sony_imx415/libsns_imx415
 HISILICON_OPENSDK_SENSORS_hi3519v101 = sony_imx385/libsns_imx385
+HISILICON_OPENSDK_SENSORS_hi3516cv200 = omnivision_ov2710/libsns_ov2710
 
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
@@ -183,6 +184,15 @@ endef
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv200)
 HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
+	# OV2710 self-detects MIPI vs DVP from its own .so basename via dladdr,
+	# so one binary covers both PCB wirings (see openhisilicon
+	# libraries/sensor/hi3516cv200/omnivision_ov2710/ov2710_sensor_ctl.c).
+	ln -sf libsns_ov2710.so $(TARGET_DIR)/usr/lib/sensors/libsns_ov2710_mipi.so
+	ln -sf libsns_ov2710.so $(TARGET_DIR)/usr/lib/sensors/libsns_ov2710_dc.so
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	$(INSTALL) -m 644 $(@D)/kernel/open_mmz.ko          $(HISILICON_OPENSDK_KMOD_DST)/mmz.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_himedia.ko       $(HISILICON_OPENSDK_KMOD_DST)/hi_media.ko
