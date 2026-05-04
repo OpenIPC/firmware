@@ -1,0 +1,64 @@
+#!/bin/sh
+
+IFACE="hg0"
+PIDFILE="/var/run/udhcpc.${IFACE}.pid"
+CONF="/etc/hgicf.conf"
+
+load_module() {
+	if ! lsmod | grep -q "^hgicf"; then
+		modprobe hgicf 2>/dev/null || insmod /lib/modules/$(uname -r)/extra/hgicf.ko
+	fi
+}
+
+wait_iface() {
+	local i=0
+	while [ $i -lt 5 ]; do
+		ip link show "${IFACE}" >/dev/null 2>&1 && return 0
+		sleep 1
+		i=$((i + 1))
+	done
+	return 1
+}
+
+start() {
+	echo -n "Starting TXW8301 HaLow (${IFACE}): "
+	load_module
+	if ! wait_iface; then
+		echo "FAIL (interface ${IFACE} not found)"
+		return 1
+	fi
+	ip link set "${IFACE}" up
+	# Run DHCP only if hgicf.conf has dhcpc=1 or conf is absent
+	if [ ! -f "${CONF}" ] || grep -q "^dhcpc=1" "${CONF}"; then
+		udhcpc -b -i "${IFACE}" -p "${PIDFILE}" \
+			-x hostname:$(hostname) -A 3 -T 3 -t 5 -R \
+			>/dev/null 2>&1
+	fi
+	echo "OK"
+}
+
+stop() {
+	echo -n "Stopping TXW8301 HaLow (${IFACE}): "
+	if [ -f "${PIDFILE}" ]; then
+		kill "$(cat ${PIDFILE})" 2>/dev/null
+		rm -f "${PIDFILE}"
+	fi
+	ip link show "${IFACE}" >/dev/null 2>&1 && ip link set "${IFACE}" down
+	rmmod hgicf 2>/dev/null || true
+	echo "OK"
+}
+
+case "$1" in
+	start|stop)
+		$1
+		;;
+	restart)
+		stop
+		sleep 1
+		start
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart}"
+		exit 1
+		;;
+esac
