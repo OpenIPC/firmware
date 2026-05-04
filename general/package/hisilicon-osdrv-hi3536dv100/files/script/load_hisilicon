@@ -8,7 +8,12 @@ mem_start=0x80000000
 mem_total=$(fw_printenv -n totalmem | tr -d 'M')
 mem_total=${mem_total:=64}
 
-os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
+# Prefer kernel cmdline mem=NM -- that's the authoritative kernel/MMZ split.
+# Fall back to U-Boot osmem env only when the kernel was booted without mem=.
+os_mem_size=$(awk 'BEGIN{RS=" "} /^mem=[0-9]+M/{gsub(/^mem=|M.*$/,""); print; exit}' /proc/cmdline)
+if [ -z "$os_mem_size" ]; then
+	os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
+fi
 os_mem_size=${os_mem_size:=32}
 
 mmz_start=0

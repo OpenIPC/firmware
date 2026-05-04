@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = a416f9e
+HISILICON_OPENSDK_VERSION = cd1c21d
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -66,6 +66,25 @@ HISILICON_OPENSDK_SENSORS_hi3516ev200 = sony_imx335/libsns_imx335 sony_imx307/li
 HISILICON_OPENSDK_SENSORS_gk7205v200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
 HISILICON_OPENSDK_SENSORS_hi3516cv500 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 sony_imx415/libsns_imx415
 HISILICON_OPENSDK_SENSORS_hi3519v101 = sony_imx385/libsns_imx385
+HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
+	aptina_9m034/libsns_9m034 \
+	aptina_ar0230/libsns_ar0230 \
+	ar0130/libsns_ar0130 \
+	omnivision_ov2710/libsns_ov2710 \
+	omnivision_ov2718/libsns_ov2718 \
+	omnivision_ov9712/libsns_ov9712 \
+	omnivision_ov9732/libsns_ov9732 \
+	omnivision_ov9750/libsns_ov9750 \
+	omnivision_ov9752/libsns_ov9752 \
+	panasonic_mn34222/libsns_mn34222 \
+	smartsens_sc1135/libsns_sc1135 \
+	smartsens_sc2035/libsns_sc2035 \
+	smartsens_sc2135/libsns_sc2135 \
+	smartsens_sc2235/libsns_sc2235 \
+	soi_jxf22/libsns_jxf22 \
+	soi_jxf23/libsns_jxf23 \
+	soi_jxh42/libsns_jxh42 \
+	sony_imx222/libsns_imx222
 
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
@@ -78,6 +97,7 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_osal.ko          $(HISILICON_OPENSDK_KMOD_DST)/hi_osal.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_sys_config.ko     $(HISILICON_OPENSDK_KMOD_DST)/sys_config.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_mipi_rx.ko        $(HISILICON_OPENSDK_KMOD_DST)/hi_mipi.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_spi.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi_sensor_spi.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_i2c.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3516cv300_sensor.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_wdt.ko            $(HISILICON_OPENSDK_KMOD_DST)/hi3516cv300_wdt.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_ir.ko             $(HISILICON_OPENSDK_KMOD_DST)/hi3516cv300_ir.ko
@@ -182,6 +202,15 @@ endef
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv200)
 HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
+	# OV2710 self-detects MIPI vs DVP from its own .so basename via dladdr,
+	# so one binary covers both PCB wirings (see openhisilicon
+	# libraries/sensor/hi3516cv200/omnivision_ov2710/ov2710_sensor_ctl.c).
+	ln -sf libsns_ov2710.so $(TARGET_DIR)/usr/lib/sensors/libsns_ov2710_mipi.so
+	ln -sf libsns_ov2710.so $(TARGET_DIR)/usr/lib/sensors/libsns_ov2710_dc.so
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	$(INSTALL) -m 644 $(@D)/kernel/open_mmz.ko          $(HISILICON_OPENSDK_KMOD_DST)/mmz.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_himedia.ko       $(HISILICON_OPENSDK_KMOD_DST)/hi_media.ko
@@ -245,25 +274,33 @@ endef
 endif
 
 $(eval $(kernel-module))
-$(eval $(generic-package))
 
-# Must be registered AFTER $(eval $(kernel-module)) so our cleanup runs
-# after the kernel-module hook that populates extra/.
+# Run as a target-finalize hook so it operates on the *merged* $(TARGET_DIR),
+# which is the authoritative tree in both per-package and non-per-package modes.
+#
+# Three things happen here:
+#
+# 1. (per-package mode only) Re-apply our lib/modules/ onto the merged target.
+#    target-finalize merges per-package/*/target/ in $(sort $(PACKAGES)) order,
+#    which is alphabetical, not dependency order. That lets hisilicon-osdrv-*
+#    clobber the hisilicon/<vendor>.ko files we install here, even though
+#    HISILICON_OPENSDK_DEPENDENCIES sequences us after osdrv during build.
+#
+# 2. Wipe the source-named open_*.ko copies the kernel-module install leaves
+#    in extra/. We rename them to vendor names in INSTALL_TARGET_CMDS; the
+#    originals would otherwise be registered in modules.dep by depmod.
+#
+# 3. Re-run depmod. LINUX_RUN_DEPMOD is registered earlier in
+#    TARGET_FINALIZE_HOOKS (linux package is processed before this one), so
+#    it has already executed by the time we get here — we need a second pass
+#    so modules.dep reflects the post-cleanup state.
 ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300,$(OPENIPC_SOC_FAMILY)),)
-define HISILICON_OPENSDK_CLEANUP_EXTRA
+define HISILICON_OPENSDK_FINALIZE_MODULES
+	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
+	$(LINUX_RUN_DEPMOD)
 endef
-HISILICON_OPENSDK_POST_INSTALL_TARGET_HOOKS += HISILICON_OPENSDK_CLEANUP_EXTRA
+HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES
 endif
 
-# In per-package mode, target-finalize merges per-package/*/target/ into
-# output/target/ in alphabetical order ($(sort $(PACKAGES))), not dependency
-# order. That makes hisilicon-osdrv-* clobber files we install here, even
-# though HISILICON_OPENSDK_DEPENDENCIES sequences us after osdrv during build.
-# Re-apply our per-package overlay onto the merged target after the rsync.
-ifeq ($(BR2_PACKAGE_HISILICON_OPENSDK)$(BR2_PER_PACKAGE_DIRECTORIES),yy)
-define HISILICON_OPENSDK_FINAL_OVERLAY
-	rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/ $(TARGET_DIR)/
-endef
-TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINAL_OVERLAY
-endif
+$(eval $(generic-package))
