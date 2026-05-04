@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 45b17cc
+HISILICON_OPENSDK_VERSION = cd1c21d
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -66,7 +66,25 @@ HISILICON_OPENSDK_SENSORS_hi3516ev200 = sony_imx335/libsns_imx335 sony_imx307/li
 HISILICON_OPENSDK_SENSORS_gk7205v200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
 HISILICON_OPENSDK_SENSORS_hi3516cv500 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 sony_imx415/libsns_imx415
 HISILICON_OPENSDK_SENSORS_hi3519v101 = sony_imx385/libsns_imx385
-HISILICON_OPENSDK_SENSORS_hi3516cv200 = omnivision_ov2710/libsns_ov2710
+HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
+	aptina_9m034/libsns_9m034 \
+	aptina_ar0230/libsns_ar0230 \
+	ar0130/libsns_ar0130 \
+	omnivision_ov2710/libsns_ov2710 \
+	omnivision_ov2718/libsns_ov2718 \
+	omnivision_ov9712/libsns_ov9712 \
+	omnivision_ov9732/libsns_ov9732 \
+	omnivision_ov9750/libsns_ov9750 \
+	omnivision_ov9752/libsns_ov9752 \
+	panasonic_mn34222/libsns_mn34222 \
+	smartsens_sc1135/libsns_sc1135 \
+	smartsens_sc2035/libsns_sc2035 \
+	smartsens_sc2135/libsns_sc2135 \
+	smartsens_sc2235/libsns_sc2235 \
+	soi_jxf22/libsns_jxf22 \
+	soi_jxf23/libsns_jxf23 \
+	soi_jxh42/libsns_jxh42 \
+	sony_imx222/libsns_imx222
 
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
