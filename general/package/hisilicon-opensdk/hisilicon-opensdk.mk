@@ -64,7 +64,27 @@ endef
 # Sensor install list per SoC family
 HISILICON_OPENSDK_SENSORS_hi3516ev200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
 HISILICON_OPENSDK_SENSORS_gk7205v200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
-HISILICON_OPENSDK_SENSORS_hi3516cv500 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 sony_imx415/libsns_imx415
+HISILICON_OPENSDK_SENSORS_hi3516cv500 = \
+	galaxycore_gc2053/libsns_gc2053 \
+	omnivision_os04b10/libsns_os04b10 \
+	omnivision_os05a/libsns_os05a \
+	omnivision_os05a_2L/libsns_os05a_2l \
+	omnivision_os08a10/libsns_os08a10 \
+	omnivision_ov12870/libsns_ov12870 \
+	omnivision_ov2775/libsns_ov2775 \
+	omnivision_ov9284/libsns_ov9284 \
+	panasonic_mn34220/libsns_mn34220 \
+	primesensor_ps5260_2L/libsns_ps5260_2l \
+	smart_sc4210/libsns_sc4210 \
+	sony_imx307/libsns_imx307 \
+	sony_imx307_2L/libsns_imx307_2l \
+	sony_imx327/libsns_imx327 \
+	sony_imx327_2L/libsns_imx327_2l \
+	sony_imx335/libsns_imx335 \
+	sony_imx335_ForCar/libsns_imx335_forcar \
+	sony_imx390/libsns_imx390 \
+	sony_imx415/libsns_imx415 \
+	sony_imx458/libsns_imx458
 HISILICON_OPENSDK_SENSORS_hi3519v101 = \
 	omnivision_os05a/libsns_os05a \
 	omnivision_os08a/libsns_os08a \
