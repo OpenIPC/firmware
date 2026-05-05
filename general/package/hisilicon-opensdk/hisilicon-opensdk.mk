@@ -65,7 +65,16 @@ endef
 HISILICON_OPENSDK_SENSORS_hi3516ev200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
 HISILICON_OPENSDK_SENSORS_gk7205v200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
 HISILICON_OPENSDK_SENSORS_hi3516cv500 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 sony_imx415/libsns_imx415
-HISILICON_OPENSDK_SENSORS_hi3519v101 = sony_imx385/libsns_imx385
+HISILICON_OPENSDK_SENSORS_hi3519v101 = \
+	omnivision_os05a/libsns_os05a \
+	omnivision_os08a/libsns_os08a \
+	omnivision_ov4689_slave/libsns_ov4689_slave \
+	sony_imx226/libsns_imx226 \
+	sony_imx274/libsns_imx274 \
+	sony_imx290/libsns_imx290 \
+	sony_imx326/libsns_imx326 \
+	sony_imx327/libsns_imx327 \
+	sony_imx385/libsns_imx385
 HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 	aptina_9m034/libsns_9m034 \
 	aptina_ar0230/libsns_ar0230 \
