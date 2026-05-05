@@ -328,7 +328,16 @@ for arg in $@; do
     esac
 done
 #######################parse arg end########################
-if [ $os_mem_size -ge $mem_total ]; then
+# When CMA is configured as the base allocator (DT reserved-memory with
+# linux,cma-default + reusable), os_mem can equal total_mem because the
+# kernel maps all DDR; the MMZ pool comes from CMA, not from a carved-out
+# raw region. Skip the legacy "raw mmz fits in total - os" check in that
+# case. The check is still meaningful for the legacy hi_osal/raw mmz mode.
+if grep -q '\bcma\b' /proc/cmdline /sys/kernel/debug/cma 2>/dev/null \
+        || [ -d /sys/kernel/mm/cma ] \
+        || awk '/^CmaTotal:/{exit ($2>0)?0:1}' /proc/meminfo; then
+    : # CMA active — total_mem == os_mem is fine
+elif [ $os_mem_size -ge $mem_total ]; then
     echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
     exit
 fi
