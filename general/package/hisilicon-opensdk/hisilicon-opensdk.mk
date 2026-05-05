@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = cd1c21d
+HISILICON_OPENSDK_VERSION = 680085e
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -88,10 +88,15 @@ HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
+# Kernel version from the actual build — no hardcoded fallback.
+# The kernel is always built before opensdk (dependency), so kernel.release exists.
+HISILICON_OPENSDK_KVER = $(shell cat $(BUILD_DIR)/linux-custom/include/config/kernel.release 2>/dev/null)
+HISILICON_OPENSDK_KMOD_BASE = $(TARGET_DIR)/lib/modules/$(HISILICON_OPENSDK_KVER)/hisilicon
+
 # For hi3516cv300: install opensdk .ko to hisilicon/ with vendor names.
 # V3 uses kernel 3.18.20, OSAL-based, hi3516cv300_* naming for both blobs and source drivers.
 ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv300)
-HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/3.18.20/hisilicon
+HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	$(INSTALL) -m 644 $(@D)/kernel/open_osal.ko          $(HISILICON_OPENSDK_KMOD_DST)/hi_osal.ko
@@ -117,7 +122,7 @@ endef
 # For hi3519v101: install opensdk .ko to hisilicon/ with vendor names.
 # V3A uses kernel 3.18.20, OSAL-based, hi3519v101_* blob naming, hi_* source naming.
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3519v101)
-HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/3.18.20/hisilicon
+HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
@@ -146,7 +151,7 @@ endef
 # For hi3516av100: install opensdk .ko to hisilicon/ with vendor names.
 # AV100 (V2A) uses kernel 4.9.37 and hi3516a_* blob naming.
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516av100)
-HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
+HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	$(INSTALL) -m 644 $(@D)/kernel/open_mmz.ko           $(HISILICON_OPENSDK_KMOD_DST)/mmz.ko
@@ -172,7 +177,7 @@ endef
 # For hi3516cv100: install opensdk .ko to hisilicon/ with vendor names.
 # CV100 uses kernel 3.0.8 and hi3518_* blob naming (not hi3518e_*).
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv100)
-HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/3.0.8/hisilicon
+HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	$(INSTALL) -m 644 $(@D)/kernel/open_mmz.ko           $(HISILICON_OPENSDK_KMOD_DST)/mmz.ko
@@ -200,7 +205,7 @@ endef
 # For hi3516cv200: install opensdk .ko to hisilicon/ with vendor names,
 # replacing the osdrv vendor modules.
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv200)
-HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
+HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
@@ -239,7 +244,7 @@ endef
 # replacing the osdrv vendor modules. This avoids doubling disk usage.
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv500)
 HISILICON_OPENSDK_CHIP = hi3516cv500
-HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
+HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
