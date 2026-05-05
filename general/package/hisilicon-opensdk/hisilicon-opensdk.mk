@@ -75,6 +75,16 @@ HISILICON_OPENSDK_SENSORS_hi3519v101 = \
 	sony_imx326/libsns_imx326 \
 	sony_imx327/libsns_imx327 \
 	sony_imx385/libsns_imx385
+HISILICON_OPENSDK_SENSORS_hi3516cv300 = \
+	aptina_ar0237/libsns_ar0237 \
+	jx_f22/libsns_jxf22 \
+	omnivision_ov2718/libsns_ov2718 \
+	omnivision_ov2718_2a/libsns_ov2718_2a \
+	smartsens_sc2235/libsns_sc2235 \
+	sony_imx290/libsns_imx290 \
+	sony_imx307/libsns_imx307 \
+	sony_imx323/libsns_imx323 \
+	sony_imx385/libsns_imx385
 HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 	aptina_9m034/libsns_9m034 \
 	aptina_ar0230/libsns_ar0230 \
@@ -107,6 +117,10 @@ HISILICON_OPENSDK_KMOD_BASE = $(TARGET_DIR)/lib/modules/$(HISILICON_OPENSDK_KVER
 ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv300)
 HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	$(INSTALL) -m 644 $(@D)/kernel/open_osal.ko          $(HISILICON_OPENSDK_KMOD_DST)/hi_osal.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_sys_config.ko     $(HISILICON_OPENSDK_KMOD_DST)/sys_config.ko
