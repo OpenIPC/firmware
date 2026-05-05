@@ -114,7 +114,6 @@ HISILICON_OPENSDK_SENSORS_hi3516av100 = \
 	omnivision_ov5658/libsns_ov5658 \
 	panasonic_mn34220/libsns_mn34220 \
 	panasonic_mn34220_mipi/libsns_mn34220_mipi \
-	smart_sc4236/libsns_sc4236 \
 	sony_imx117/libsns_imx117 \
 	sony_imx123/libsns_imx123 \
 	sony_imx178/libsns_imx178 \
