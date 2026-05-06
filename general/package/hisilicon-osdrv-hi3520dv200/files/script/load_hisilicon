@@ -1,0 +1,239 @@
+#!/bin/sh
+#
+# This is part of OpenIPC.org project
+#
+
+# SoC detect
+mem_start=0x80000000
+mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+mem_total=${mem_total:=256}
+
+os_mem_size=$(awk 'BEGIN{RS=" "} /^mem=[0-9]+M/{gsub(/^mem=|M.*$/,""); print; exit}' /proc/cmdline)
+if [ -n "$os_mem_size" ] && [ "$os_mem_size" -ge "$mem_total" ]; then
+	os_mem_size=""
+fi
+if [ -z "$os_mem_size" ]; then
+	os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
+fi
+os_mem_size=${os_mem_size:=64}
+
+mmz_start=$(printf "0x%x" $((mem_start + os_mem_size * 1024 * 1024)))
+mmz_size=$((mem_total - os_mem_size))M
+
+# DVR pipeline mode: 8d1 (8x D1, default), 4720p, 2x720p, 1x1080p, 1hd_4d1
+SDK_TYPE=$(fw_printenv -n sdktype 2>/dev/null)
+SDK_TYPE=${SDK_TYPE:=8d1}
+
+report_error() {
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+apply_pinmux() {
+	# VI_ADC_CLK and VIU0/VIU1 parallel data buses
+	devmem 0x200f0000 32 0x00000001  # GPIO8_5 -> VI_ADC_CLK
+	devmem 0x200f0004 32 0x00000003  # VIU0 8-bit parallel
+	devmem 0x200f0008 32 0x00000003  # VIU1 8-bit parallel
+
+	# VGA HS/VS
+	devmem 0x200f000c 32 0x00000001
+	devmem 0x200f0010 32 0x00000001
+
+	# AIO (audio I/O)
+	devmem 0x200f0014 32 0x00000000  # AIO_MCLK
+	devmem 0x200f0018 32 0x00000000  # AIO_BCLK_TX
+	devmem 0x200f001c 32 0x00000000  # AIO_WS_TX
+	devmem 0x200f0020 32 0x00000000  # AIO_SD_TX
+	devmem 0x200f0024 32 0x00000000  # AIO_BCLK_RX
+	devmem 0x200f0028 32 0x00000000  # AIO_WS_RX
+	devmem 0x200f002c 32 0x00000000  # AIO_SD_RX
+
+	# SPI
+	devmem 0x200f0030 32 0x00000001  # SPI_SCLK
+	devmem 0x200f0034 32 0x00000001  # SPI_SDO
+	devmem 0x200f0038 32 0x00000001  # SPI_SDI
+	devmem 0x200f003c 32 0x00000001  # SPI_CSN0
+	devmem 0x200f0040 32 0x00000001  # SPI_CSN1
+
+	# I2C
+	devmem 0x200f0044 32 0x00000000  # I2C_SDA
+	devmem 0x200f0048 32 0x00000000  # I2C_SCL
+
+	# HDMI hotplug + CEC + DDC
+	devmem 0x200f0078 32 0x00000001  # HDMI_HOTPLUG
+	devmem 0x200f007c 32 0x00000001  # HDMI_CEC
+	devmem 0x200f0080 32 0x00000001  # HDMI_SDA
+	devmem 0x200f0084 32 0x00000001  # HDMI_SCL
+}
+
+apply_crgctrl() {
+	# VICAP clock divider — varies by pipeline mode
+	case "$SDK_TYPE" in
+	1x1080p)  devmem 0x2003002c 32 0xaa240102 ;;  # 1x1080P, div1
+	2x720p)   devmem 0x2003002c 32 0x00241102 ;;  # 2x720P,  div2 interlace
+	1hd_4d1)  devmem 0x2003002c 32 0x0524f102 ;;  # 1x720P + 4xD1, div2+div4
+	*)        devmem 0x2003002c 32 0x5520ff02 ;;  # 8D1, div4 (default)
+	esac
+
+	devmem 0x20030038 32 0x2          # PWM 3M
+	devmem 0x20030040 32 0x802        # VEDU & SED
+	devmem 0x200300d4 32 0x8          # SCD
+	devmem 0x20030048 32 0x2          # VPSS
+	devmem 0x20030058 32 0x2          # TDE
+	devmem 0x20030060 32 0x2          # JPGE
+	devmem 0x20030064 32 0x2          # JPGD
+	devmem 0x20030068 32 0x2          # MD
+	devmem 0x2003006c 32 0x2          # IVE/VAPU
+	devmem 0x20030070 32 0x2          # VOIE/AENC
+	devmem 0x20030074 32 0x2          # VCMP
+	devmem 0x2003007c 32 0x2          # CIPHER
+
+	# AIO clocks (8K * 256)
+	devmem 0x20030080 32 0x010636ba   # AIP MCLK
+	devmem 0x20030084 32 0x000636ba   # AOP0 MCLK
+	devmem 0x20030088 32 0x000636ba   # AOP1 MCLK
+	devmem 0x2003008c 32 0x00000002   # AIO async clk reset
+	devmem 0x20030090 32 0x00005012   # AIP related clks
+	devmem 0x20030094 32 0x00005012   # AOP0 related clks
+	devmem 0x20030098 32 0x00005012   # AOP1 related clks
+}
+
+apply_sysctl() {
+	# DDR controller priority + timeout per master
+	devmem 0x20110150 32 0x03f06      # ETH
+	devmem 0x20110154 32 0x03f06      # SCD
+	devmem 0x20110158 32 0x03f06      # CIPHER
+	devmem 0x2011015C 32 0x03f06      # SATA
+	devmem 0x20110160 32 0x03f06      # USB / SFC
+	devmem 0x20110168 32 0x03f02      # VPSS
+	devmem 0x2011016C 32 0x03f04      # TDE
+	devmem 0x20110170 32 0x03f04      # VCMP
+	devmem 0x20110174 32 0x03f06      # VOIE
+	devmem 0x20110178 32 0x03f06      # AIO
+	devmem 0x20110180 32 0x03f06      # JPGE / JPGD
+	devmem 0x20110184 32 0x03f06      # MD / DDR_TEST / IVE
+	devmem 0x2011018C 32 0x10200      # VDP
+
+	# A9, VEDU, VICAP — per-mode tuning
+	case "$SDK_TYPE" in
+	4720p)
+		devmem 0x20110164 32 0x03f03  # A9
+		devmem 0x2011017C 32 0x03f02  # VEDU
+		devmem 0x20110188 32 0x11401  # VICAP
+		;;
+	*)
+		devmem 0x20110164 32 0x03f06  # A9
+		devmem 0x2011017C 32 0x10c02  # VEDU
+		devmem 0x20110188 32 0x10101  # VICAP
+		;;
+	esac
+
+	devmem 0x20110100 32 0x6b         # MDDRC order, idmap mode
+	devmem 0x2005003c 32 0x0          # enable MDU not DDRT
+	devmem 0x200500d8 32 0x3          # DDR0 routing for VICAP/VDP
+
+	# Outstanding requests + low-power bits
+	devmem 0x20580000 32 0x0          # vicap lowpower
+	devmem 0x20580004 32 0xf0f00002   # vicap outstanding
+	devmem 0x205CCE00 32 0x00021220   # vdp outstanding & lowpower
+	devmem 0x20600414 32 0x00640033   # vpss outstanding & lowpower
+	devmem 0x206200a4 32 0x3          # vedu outstanding
+	devmem 0x20620020 32 0x0          # vedu lowpower
+	devmem 0x206600a4 32 0x1          # jpege outstanding
+	devmem 0x20660010 32 0x0          # jpege lowpower
+	devmem 0x20670040 32 0x70         # jpgd outstanding
+	devmem 0x206c002c 32 0x7          # vda outstanding
+	devmem 0x20640014 32 0x1          # voie
+}
+
+insert_audio() {
+	insmod hi3520D_sio.ko
+	insmod hi3520D_ai.ko
+	insmod hi3520D_ao.ko
+	insmod hi3520D_aenc.ko
+	insmod hi3520D_adec.ko
+}
+
+remove_audio() {
+	rmmod hi3520D_adec
+	rmmod hi3520D_aenc
+	rmmod hi3520D_ao
+	rmmod hi3520D_ai
+	rmmod hi3520D_sio
+}
+
+insert_ko() {
+	apply_pinmux
+	apply_crgctrl
+
+	insmod mmz.ko mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
+	insmod hiuser.ko
+	insmod hi3520D_base.ko
+	insmod hi3520D_sys.ko
+	insmod hi3520D_tde.ko g_u32TdeTmpBufW=800 g_u32TdeTmpBufH=600
+	insmod hi3520D_dsu.ko
+	insmod hi3520D_venc.ko
+	insmod hi3520D_group.ko
+	insmod hi3520D_chnl.ko
+	insmod hi3520D_h264e.ko
+	insmod hi3520D_rc.ko
+	insmod hi3520D_jpege.ko
+	insmod hi3520D_viu.ko
+	insmod hi3520D_vou.ko
+	insmod hi3520D_vpss.ko
+	insmod hi3520D_ive.ko
+	insmod hi3520D_vda.ko
+	insmod hi3520D_region.ko
+	insmod vcmp.ko
+	insmod hifb.ko video="hifb:vram0_size:8100,vram1_size:1620,vram2_size:1620,vram3_size:32" softcursor="off" u32VcmpBufNum=2
+	insmod hi3520D_vdec.ko
+	insmod hi3520D_vfmw.ko
+	insmod hi3520D_hdmi.ko
+	insmod hi3520D_jpegd.ko
+
+	# External video decoder (NVP6134C, falls back to NVP6114 if 6134C .ko unavailable)
+	insmod gpioi2c.ko
+	if ! insmod nvp6134_ex.ko vdec_mode=1 outmode=3 2>/dev/null; then
+		insmod nvp6114_ex.ko vdec_mode=1 outmode=3
+	fi
+
+	insert_audio
+	apply_sysctl
+}
+
+remove_ko() {
+	remove_audio
+	rmmod nvp6134_ex 2>/dev/null
+	rmmod nvp6114_ex 2>/dev/null
+	rmmod gpioi2c
+	rmmod hi3520D_jpegd
+	rmmod hi3520D_hdmi
+	rmmod hi3520D_vfmw
+	rmmod hi3520D_vdec
+	rmmod hifb
+	rmmod vcmp
+	rmmod hi3520D_region
+	rmmod hi3520D_vda
+	rmmod hi3520D_ive
+	rmmod hi3520D_vpss
+	rmmod hi3520D_vou
+	rmmod hi3520D_viu
+	rmmod hi3520D_jpege
+	rmmod hi3520D_rc
+	rmmod hi3520D_h264e
+	rmmod hi3520D_chnl
+	rmmod hi3520D_group
+	rmmod hi3520D_venc
+	rmmod hi3520D_dsu
+	rmmod hi3520D_tde
+	rmmod hi3520D_sys
+	rmmod hi3520D_base
+	rmmod hiuser
+	rmmod mmz
+}
+
+case "$1" in
+-i) insert_ko ;;
+-r) remove_ko ;;
+*)  remove_ko 2>/dev/null; insert_ko ;;
+esac
