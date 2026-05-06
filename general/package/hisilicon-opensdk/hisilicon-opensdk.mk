@@ -269,10 +269,12 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
 endef
 
-# For hi3516cv500: install opensdk .ko directly to hisilicon/ with vendor names,
-# replacing the osdrv vendor modules. This avoids doubling disk usage.
+# For hi3516cv500: install opensdk .ko directly to hisilicon/ keeping the
+# upstream open_* names. Aligns module naming with hi3516ev200/ev300 so
+# load_hisilicon can drive everything through `modprobe open_*` instead of
+# `insmod` with vendor-renamed filenames. The legacy hi_*/hi3516cv500_*
+# rename was a holdover from when osdrv shipped prebuilt vendor blobs.
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv500)
-HISILICON_OPENSDK_CHIP = hi3516cv500
 HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
@@ -281,23 +283,9 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	)
 	$(INSTALL) -m 644 $(@D)/libraries/isp/libisp.so $(TARGET_DIR)/usr/lib/libisp.so
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
-	$(INSTALL) -m 644 $(@D)/kernel/open_osal.ko       $(HISILICON_OPENSDK_KMOD_DST)/hi_osal.ko
-	$(INSTALL) -m 644 $(@D)/kernel/open_sys_config.ko  $(HISILICON_OPENSDK_KMOD_DST)/sys_config.ko
-	$(INSTALL) -m 644 $(@D)/kernel/open_mipi_rx.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi_mipi_rx.ko
-	$(INSTALL) -m 644 $(@D)/kernel/open_mipi_tx.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi_mipi_tx.ko
-	$(INSTALL) -m 644 $(@D)/kernel/open_cipher.ko      $(HISILICON_OPENSDK_KMOD_DST)/hi_cipher.ko
-	$(INSTALL) -m 644 $(@D)/kernel/open_pwm.ko         $(HISILICON_OPENSDK_KMOD_DST)/hi_pwm.ko
-	$(INSTALL) -m 644 $(@D)/kernel/open_piris.ko       $(HISILICON_OPENSDK_KMOD_DST)/hi_piris.ko
-	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_i2c.ko  $(HISILICON_OPENSDK_KMOD_DST)/hi_sensor_i2c.ko
-	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_spi.ko  $(HISILICON_OPENSDK_KMOD_DST)/hi_sensor_spi.ko
-	for mod in base sys isp vi vpss venc vedu h264e h265e jpege jpegd rc rgn vgs ive chnl \
-		tde vo hdmi vdec vfmw aio ai ao aenc adec acodec gdc dis nnie wdt; do \
-		[ -f $(@D)/kernel/open_$${mod}.ko ] && \
-			$(INSTALL) -m 644 $(@D)/kernel/open_$${mod}.ko \
-				$(HISILICON_OPENSDK_KMOD_DST)/$(HISILICON_OPENSDK_CHIP)_$${mod}.ko || true; \
+	for ko in $(@D)/kernel/open_*.ko; do \
+		$(INSTALL) -m 644 -t $(HISILICON_OPENSDK_KMOD_DST) $${ko}; \
 	done
-	# HWRNG: install verbatim — load_hisilicon insmods it pre-sensor-probe.
-	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
 endef
 
 else

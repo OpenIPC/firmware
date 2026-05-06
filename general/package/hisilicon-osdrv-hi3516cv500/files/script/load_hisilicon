@@ -41,20 +41,20 @@ report_error() {
 insert_osal() {
     MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
     if [ -z "$MMZ" ]; then
-        insmod hi_osal.ko anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+        modprobe open_osal anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
     else
-        insmod cma_osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
+        modprobe open_osal anony=1 mmz_allocator=cma mmz=$MMZ || report_error
     fi
 }
 
 insert_detect() {
     cd /lib/modules/$(uname -r)/hisilicon
     insert_osal
-    insmod sys_config.ko chip=${chipid} sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1, g_cmos_yuv_flag=$YUV_TYPE0
-    insmod hi3516cv500_base.ko
-    insmod hi3516cv500_isp.ko
-    insmod hi_sensor_i2c.ko
-    insmod hi_sensor_spi.ko
+    modprobe open_sys_config chip=${chipid} sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1, g_cmos_yuv_flag=$YUV_TYPE0
+    modprobe open_base
+    modprobe open_isp
+    modprobe open_sensor_i2c
+    modprobe open_sensor_spi
 }
 
 remove_detect() {
@@ -64,16 +64,15 @@ remove_detect() {
     rmmod -w open_base
     rmmod -w open_sys_config
     rmmod -w open_osal &> /dev/null
-    rmmod -w cma_osal &> /dev/null
 }
 
 insert_audio() {
-    insmod hi3516cv500_aio.ko
-    insmod hi3516cv500_ai.ko
-    insmod hi3516cv500_ao.ko
-    insmod hi3516cv500_aenc.ko
-    insmod hi3516cv500_adec.ko
-    insmod hi3516cv500_acodec.ko
+    modprobe open_aio
+    modprobe open_ai
+    modprobe open_ao
+    modprobe open_aenc
+    modprobe open_adec
+    modprobe open_acodec
     #    insmod extdrv/hi_tlv320aic31.ko
     echo "insert audio"
 }
@@ -91,7 +90,7 @@ remove_audio() {
 }
 
 insert_isp() {
-    insmod hi3516cv500_isp.ko
+    modprobe open_isp
 }
 
 insert_gyro() {
@@ -129,65 +128,65 @@ insert_ko() {
     # driver load
     insert_osal
     # sys config
-    insmod sys_config.ko chip=${chipid} sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1, g_cmos_yuv_flag=$YUV_TYPE0
+    modprobe open_sys_config chip=${chipid} sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1, g_cmos_yuv_flag=$YUV_TYPE0
 
     sys_config;
 
-    # insmod hi_tzasc.ko
-    insmod hi3516cv500_base.ko
-    insmod hi3516cv500_sys.ko
-    insmod hi3516cv500_tde.ko
-    insmod hi3516cv500_rgn.ko
-    insmod hi3516cv500_gdc.ko
-    insmod hi3516cv500_vgs.ko
-    insmod hi3516cv500_dis.ko
-    insmod hi3516cv500_vi.ko
+    # modprobe open_tzasc
+    modprobe open_base
+    modprobe open_sys
+    modprobe open_tde
+    modprobe open_rgn
+    modprobe open_gdc
+    modprobe open_vgs
+    modprobe open_dis
+    modprobe open_vi
     insert_isp
-    insmod hi3516cv500_vpss.ko
-    insmod hi3516cv500_vo.ko
-    # insmod hifb.ko video="hifb:vram0_size:1024"     # default fb0:576p
+    modprobe open_vpss
+    modprobe open_vo
+    # modprobe open_hifb video="hifb:vram0_size:1024"     # default fb0:576p
 
-    insmod hi3516cv500_chnl.ko
-    insmod hi3516cv500_vedu.ko
-    insmod hi3516cv500_rc.ko
-    insmod hi3516cv500_venc.ko
-    insmod hi3516cv500_h264e.ko
-    insmod hi3516cv500_h265e.ko
-    insmod hi3516cv500_jpege.ko
+    modprobe open_chnl
+    modprobe open_vedu
+    modprobe open_rc
+    modprobe open_venc
+    modprobe open_h264e
+    modprobe open_h265e
+    modprobe open_jpege
 
-    insmod hi3516cv500_ive.ko save_power=1
-    # insmod hi_ipcm.ko
-    # insmod hi3516cv500_nnie.ko nnie_save_power=1 nnie_max_tskbuf_num=32
-    insmod hi_pwm.ko
-    insmod hi_piris.ko
-    insmod hi_sensor_i2c.ko
-    insmod hi_sensor_spi.ko
+    modprobe open_ive save_power=1
+    # modprobe open_ipcm
+    # modprobe open_nnie nnie_save_power=1 nnie_max_tskbuf_num=32
+    modprobe open_pwm
+    modprobe open_piris
+    modprobe open_sensor_i2c
+    modprobe open_sensor_spi
     # insmod extdrv/hi_sil9136.ko norm=12    #1080P@30fps for umap7p
     # insmod extdrv/mpu_bosch.ko
 
     insert_audio
 
-    insmod hi_mipi_rx.ko
-    # insmod hi_mipi_tx.ko
-    # insmod hi_user.ko
+    modprobe open_mipi_rx
+    # modprobe open_mipi_tx
+    # modprobe open_user
 
     # insert_gyro
-    insmod hi3516cv500_wdt.ko
+    modprobe open_wdt
 }
 
 remove_ko() {
     rmmod -w open_wdt
     # rmmod_gyro
-    # rmmod -w hi_user
+    # rmmod -w open_user
     remove_audio
-    # rmmod -w hi_mipi_tx
+    # rmmod -w open_mipi_tx
     rmmod -w open_mipi_rx
     #rmmod -w hi_sil9136 &> /dev/null
     rmmod -w open_piris
     rmmod -w open_pwm
 
-    # rmmod -w hi3516cv500_nnie nnie_save_power=1 nnie_max_tskbuf_num=32
-    # rmmod -w hi_ipcm
+    # rmmod -w open_nnie nnie_save_power=1 nnie_max_tskbuf_num=32
+    # rmmod -w open_ipcm
     rmmod -w open_ive
     rmmod -w open_rc
     rmmod -w open_jpege
@@ -196,8 +195,8 @@ remove_ko() {
     rmmod -w open_venc
     rmmod -w open_vedu
     rmmod -w open_chnl
-    # rmmod -w hifb
-    # rmmod -w hi3516cv500_vo
+    # rmmod -w open_hifb
+    rmmod -w open_vo
     rmmod -w open_vpss
     rmmod -w open_isp
     rmmod -w open_vi
@@ -213,7 +212,7 @@ remove_ko() {
     # rmmod -w mpu_bosch
     rmmod -w open_sys
     rmmod -w open_base
-    # rmmod -w hi_tzasc
+    # rmmod -w open_tzasc
     rmmod -w open_sys_config
     rmmod -w open_osal
 }
@@ -349,7 +348,7 @@ fi
 # linux,cma-default + reusable), os_mem can equal total_mem because the
 # kernel maps all DDR; the MMZ pool comes from CMA, not from a carved-out
 # raw region. Skip the legacy "raw mmz fits in total - os" check in that
-# case. The check is still meaningful for the legacy hi_osal/raw mmz mode.
+# case. The check is still meaningful for the legacy raw mmz allocator mode.
 if grep -q '\bcma\b' /proc/cmdline /sys/kernel/debug/cma 2>/dev/null \
         || [ -d /sys/kernel/mm/cma ] \
         || awk '/^CmaTotal:/{exit ($2>0)?0:1}' /proc/meminfo; then
