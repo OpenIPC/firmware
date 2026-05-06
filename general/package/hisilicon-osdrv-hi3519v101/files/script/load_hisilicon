@@ -12,9 +12,15 @@ mem_start=0x80000000 # phy mem start
 mem_total=$(fw_printenv -n totalmem | tr -d 'M')
 mem_total=${mem_total:=64}
 
-# Prefer kernel cmdline mem=NM -- that's the authoritative kernel/MMZ split.
-# Fall back to U-Boot osmem env only when the kernel was booted without mem=.
+# Prefer kernel cmdline mem=NM -- that's the authoritative kernel/MMZ split,
+# but only when it's a strict subset of total RAM. With mmz_allocator=cma
+# (V4 CMA layouts), bootargs typically pass mem=<totalmem> with the MMZ
+# chunk CMA-reserved within that range; in that case mem= is no longer an
+# OS/MMZ split and we must fall through to the U-Boot osmem env.
 os_mem_size=$(awk 'BEGIN{RS=" "} /^mem=[0-9]+M/{gsub(/^mem=|M.*$/,""); print; exit}' /proc/cmdline)
+if [ -n "$os_mem_size" ] && [ "$os_mem_size" -ge "$mem_total" ]; then
+	os_mem_size=""
+fi
 if [ -z "$os_mem_size" ]; then
 	os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
 fi
