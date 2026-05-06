@@ -860,6 +860,17 @@ for arg in $@; do
 done
 #######################parse arg end########################
 
+# HWRNG: load before any conditional exit (os_mem mismatch, sensor
+# probe failure, etc.) so entropy is always available to userspace
+# daemons (majestic, dropbear, openssl) that block on getrandom().
+if [ "$b_arg_insmod" = "1" ]; then
+    modprobe open_hwrng 2>/dev/null
+fi
+
+
+
+
+
 if [ $os_mem_size -ge $mem_total ]; then
 	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
 	exit

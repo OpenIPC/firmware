@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 680085e
+HISILICON_OPENSDK_VERSION = a6586f4
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -140,6 +140,8 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	done
 	$(INSTALL) -m 644 $(@D)/kernel/open_vi.ko      $(HISILICON_OPENSDK_KMOD_DST)/hi3516cv300_viu.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_rgn.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3516cv300_region.ko
+	# HWRNG: install verbatim — load_hisilicon insmods it pre-sensor-probe.
+	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
 endef
 
 # For hi3519v101: install opensdk .ko to hisilicon/ with vendor names.
@@ -169,6 +171,8 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	done
 	$(INSTALL) -m 644 $(@D)/kernel/open_vi.ko      $(HISILICON_OPENSDK_KMOD_DST)/hi3519v101_viu.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_rgn.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3519v101_region.ko
+	# HWRNG: install verbatim — load_hisilicon insmods it pre-sensor-probe.
+	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
 endef
 
 # For hi3516av100: install opensdk .ko to hisilicon/ with vendor names.
@@ -261,6 +265,8 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_vi.ko      $(HISILICON_OPENSDK_KMOD_DST)/hi3518e_viu.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_rgn.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3518e_region.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_acodec.ko  $(HISILICON_OPENSDK_KMOD_DST)/acodec.ko
+	# HWRNG: install verbatim — load_hisilicon insmods it pre-sensor-probe.
+	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
 endef
 
 # For hi3516cv500: install opensdk .ko directly to hisilicon/ with vendor names,
@@ -290,6 +296,8 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 			$(INSTALL) -m 644 $(@D)/kernel/open_$${mod}.ko \
 				$(HISILICON_OPENSDK_KMOD_DST)/$(HISILICON_OPENSDK_CHIP)_$${mod}.ko || true; \
 	done
+	# HWRNG: install verbatim — load_hisilicon insmods it pre-sensor-probe.
+	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
 endef
 
 else
