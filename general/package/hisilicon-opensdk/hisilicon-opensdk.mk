@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = a6586f4
+HISILICON_OPENSDK_VERSION = d3df3bb
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -105,6 +105,20 @@ HISILICON_OPENSDK_SENSORS_hi3516cv300 = \
 	sony_imx307/libsns_imx307 \
 	sony_imx323/libsns_imx323 \
 	sony_imx385/libsns_imx385
+HISILICON_OPENSDK_SENSORS_hi3516av100 = \
+	aptina_ar0230/libsns_ar0230 \
+	aptina_ar0237/libsns_ar0237 \
+	aptina_ar0237_dc/libsns_ar0237_dc \
+	aptina_ar0330/libsns_ar0330 \
+	omnivision_ov4689/libsns_ov4689 \
+	omnivision_ov5658/libsns_ov5658 \
+	panasonic_mn34220/libsns_mn34220 \
+	panasonic_mn34220_mipi/libsns_mn34220_mipi \
+	sony_imx117/libsns_imx117 \
+	sony_imx123/libsns_imx123 \
+	sony_imx178/libsns_imx178 \
+	sony_imx178_37M/libsns_imx178_37M \
+	sony_imx185/libsns_imx185
 HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 	aptina_9m034/libsns_9m034 \
 	aptina_ar0230/libsns_ar0230 \
@@ -200,6 +214,10 @@ endef
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516av100)
 HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	$(INSTALL) -m 644 $(@D)/kernel/open_mmz.ko           $(HISILICON_OPENSDK_KMOD_DST)/mmz.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_himedia.ko       $(HISILICON_OPENSDK_KMOD_DST)/hi_media.ko
