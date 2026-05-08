@@ -232,6 +232,8 @@ remove_ko() {
 	rmmod mmz
 }
 
+cd /lib/modules/3.0.8/hisilicon || exit 1
+
 case "$1" in
 -i) insert_ko ;;
 -r) remove_ko ;;
