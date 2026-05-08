@@ -119,6 +119,24 @@ HISILICON_OPENSDK_SENSORS_hi3516av100 = \
 	sony_imx178/libsns_imx178 \
 	sony_imx178_37M/libsns_imx178_37M \
 	sony_imx185/libsns_imx185
+HISILICON_OPENSDK_SENSORS_hi3516cv100 = \
+	aptina_9m034/libsns_9m034 \
+	aptina_ar0130/libsns_ar0130 \
+	aptina_ar0330/libsns_ar0330 \
+	aptina_mt9p006/libsns_mt9p006 \
+	himax_1375/libsns_hm1375 \
+	ov_9712/libsns_ov9712 \
+	ov_9712+/libsns_ov9712_plus \
+	pana34031/libsns_mn34031 \
+	pana34041/libsns_mn34041 \
+	pixelplus_3100k/libsns_po3100k \
+	soi_h22/libsns_h22 \
+	soi_jxh42/libsns_jxh42 \
+	sony_icx692/libsns_icx692 \
+	sony_imx104/libsns_imx104 \
+	sony_imx122/libsns_imx122 \
+	sony_imx138/libsns_imx138 \
+	sony_imx236/libsns_imx236
 HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 	aptina_9m034/libsns_9m034 \
 	aptina_ar0230/libsns_ar0230 \
@@ -244,6 +262,10 @@ endef
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv100)
 HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	$(INSTALL) -m 644 $(@D)/kernel/open_mmz.ko           $(HISILICON_OPENSDK_KMOD_DST)/mmz.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_sensor_i2c.ko    $(HISILICON_OPENSDK_KMOD_DST)/hi_i2c.ko
