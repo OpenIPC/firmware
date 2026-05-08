@@ -5,12 +5,13 @@ BR2_ARM_EABI=y
 BR2_ARM_FPU_NEON_VFPV3=y
 BR2_ARM_INSTRUCTIONS_THUMB2=y
 
-# Toolchain (external glibc, mirroring hi3536dv100 — both run kernel 4.9.37)
+# Toolchain (external glibc + headers 3.0 — vendor MPP for V200 ships only
+# 3.0.8-vermagic .ko's and glibc-linked .so's, so the rootfs has to match)
 BR2_TOOLCHAIN_EXTERNAL=y
 BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
 BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/openipc/firmware/releases/download/$(OPENIPC_TOOLCHAIN).tgz"
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="arm-openipc-linux-gnueabi"
-BR2_TOOLCHAIN_EXTERNAL_HEADERS_4_9=y
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_0=y
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
 # BR2_TOOLCHAIN_EXTERNAL_INET_RPC is not set
 BR2_TOOLCHAIN_EXTERNAL_CXX=y
