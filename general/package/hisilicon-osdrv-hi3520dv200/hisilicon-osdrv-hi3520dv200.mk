@@ -8,6 +8,7 @@ HISILICON_OSDRV_HI3520DV200_VERSION =
 HISILICON_OSDRV_HI3520DV200_SITE =
 HISILICON_OSDRV_HI3520DV200_LICENSE = MIT
 HISILICON_OSDRV_HI3520DV200_LICENSE_FILES = LICENSE
+HISILICON_OSDRV_HI3520DV200_DEPENDENCIES = glibc-compat
 
 # Blob install steps are guarded so the build does not fail before the
 # vendor .ko/.so are dropped under files/kmod and files/lib. The package
