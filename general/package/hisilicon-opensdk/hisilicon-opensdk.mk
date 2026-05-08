@@ -62,8 +62,39 @@ define HISILICON_OPENSDK_BUILD_CMDS
 endef
 
 # Sensor install list per SoC family
-HISILICON_OPENSDK_SENSORS_hi3516ev200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
-HISILICON_OPENSDK_SENSORS_gk7205v200 = sony_imx335/libsns_imx335 sony_imx307/libsns_imx307 soi_h63/libsns_h63
+HISILICON_OPENSDK_SENSORS_hi3516ev200 = \
+	aptina_ar0237/libsns_ar0237 \
+	bt656/libsns_bt656 \
+	galaxycore_gc2053/libsns_gc2053 \
+	galaxycore_gc2053_ForCar/libsns_gc2053_forcar \
+	galaxycore_gc4023/libsns_gc4023 \
+	galaxycore_gc4653_2L/libsns_gc4653_2l \
+	galaxycore_gc5603/libsns_gc5603 \
+	imagedesign_mis2008/libsns_mis2008 \
+	omnivision_os02g10/libsns_os02g10 \
+	omnivision_os05a/libsns_os05a \
+	omnivision_ov2718/libsns_ov2718 \
+	smart_sc2231/libsns_sc2231 \
+	smart_sc2235/libsns_sc2235 \
+	smart_sc223a/libsns_sc223a \
+	smart_sc3235/libsns_sc3235 \
+	smart_sc3335/libsns_sc3335 \
+	smart_sc3336/libsns_sc3336 \
+	smart_sc4236/libsns_sc4236 \
+	smart_sc500ai/libsns_sc500ai \
+	soi_f37/libsns_f37 \
+	soi_h63/libsns_h63 \
+	sony_imx290/libsns_imx290 \
+	sony_imx307/libsns_imx307 \
+	sony_imx307_2L/libsns_imx307_2l \
+	sony_imx327/libsns_imx327 \
+	sony_imx327_2L/libsns_imx327_2l \
+	sony_imx335/libsns_imx335 \
+	sony_imx335_2L/libsns_imx335_2l \
+	sony_imx335_fpv/libsns_imx335_fpv \
+	superpix_sp2305/libsns_sp2305
+
+HISILICON_OPENSDK_SENSORS_gk7205v200 = $(HISILICON_OPENSDK_SENSORS_hi3516ev200)
 HISILICON_OPENSDK_SENSORS_hi3516cv500 = \
 	galaxycore_gc2053/libsns_gc2053 \
 	omnivision_os04b10/libsns_os04b10 \
