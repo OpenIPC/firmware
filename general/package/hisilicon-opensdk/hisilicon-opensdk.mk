@@ -456,6 +456,10 @@ define HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
 		rc rgn sys vedu venc vgs vi vpss; do \
 		rm -f $(TARGET_DIR)/lib/modules/*/extra/open_$${mod}.ko; \
 	done
+	@echo "=== gk7205v200 module footprint ==="
+	@du -ks $(TARGET_DIR)/lib/modules/*/extra/ $(TARGET_DIR)/lib/modules/*/goke/ 2>/dev/null
+	@du -k $(TARGET_DIR)/lib/modules/*/extra/*.ko $(TARGET_DIR)/lib/modules/*/goke/*.ko 2>/dev/null | sort -n
+	@echo "==================================="
 	$(LINUX_RUN_DEPMOD)
 endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
