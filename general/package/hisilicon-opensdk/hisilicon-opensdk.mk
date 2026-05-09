@@ -442,4 +442,23 @@ endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES
 endif
 
+# For gk7205v200: peripherals (osal, isp, mipi_rx, sys_config, sensor_*,
+# pwm, wdt, piris, hwrng, adc) stay in /lib/modules/<kver>/extra/ as
+# open_*.ko — load_goke `modprobe open_<mod>` finds them there. The V4
+# heavy modules are renamed-installed into /lib/modules/<kver>/goke/
+# under their gk7205v200_*.ko names; the source-named copies the
+# kernel-module default install drops in extra/ would otherwise double
+# up disk usage and push the rootfs over the NOR partition. Wipe those.
+ifeq ($(OPENIPC_SOC_FAMILY),gk7205v200)
+define HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
+	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
+	for mod in acodec adec aenc ai aio ao base chnl h264e h265e ive jpege \
+		rc rgn sys vedu venc vgs vi vpss; do \
+		rm -f $(TARGET_DIR)/lib/modules/*/extra/open_$${mod}.ko; \
+	done
+	$(LINUX_RUN_DEPMOD)
+endef
+HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
+endif
+
 $(eval $(generic-package))
