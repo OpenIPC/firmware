@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = d3df3bb
+HISILICON_OPENSDK_VERSION = 370c321
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -379,6 +379,30 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	done
 endef
 
+# For gk7205v200: install opensdk .ko under /lib/modules/<kver>/goke/ with
+# vendor names so the existing load_goke `insmod gk7205v200_<mod>.ko`
+# calls pick up our open_*.ko build instead of the vendor blobs that
+# goke-osdrv-gk7205v200 used to ship. Peripherals (open_osal, open_isp,
+# open_mipi_rx, open_sys_config, open_sensor_i2c, open_sensor_spi,
+# open_pwm, open_wdt, open_piris, open_hwrng, open_adc) are loaded via
+# modprobe and live in /lib/modules/<kver>/extra/ via the default
+# kernel-module install — they don't need a rename, modprobe finds them
+# there.
+else ifeq ($(OPENIPC_SOC_FAMILY),gk7205v200)
+HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/$(HISILICON_OPENSDK_KVER)/goke
+define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
+	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
+	for mod in acodec adec aenc ai aio ao base chnl h264e h265e ive jpege \
+		rc rgn sys vedu venc vgs vi vpss; do \
+		$(INSTALL) -m 644 $(@D)/kernel/open_$${mod}.ko \
+			$(HISILICON_OPENSDK_KMOD_DST)/gk7205v200_$${mod}.ko || exit 1; \
+	done
+endef
+
 else
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
@@ -416,6 +440,25 @@ define HISILICON_OPENSDK_FINALIZE_MODULES
 	$(LINUX_RUN_DEPMOD)
 endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES
+endif
+
+# For gk7205v200: peripherals (osal, isp, mipi_rx, sys_config, sensor_*,
+# pwm, wdt, piris, hwrng, adc) stay in /lib/modules/<kver>/extra/ as
+# open_*.ko — load_goke `modprobe open_<mod>` finds them there. The V4
+# heavy modules are renamed-installed into /lib/modules/<kver>/goke/
+# under their gk7205v200_*.ko names; the source-named copies the
+# kernel-module default install drops in extra/ would otherwise double
+# up disk usage and push the rootfs over the NOR partition. Wipe those.
+ifeq ($(OPENIPC_SOC_FAMILY),gk7205v200)
+define HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
+	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
+	for mod in acodec adec aenc ai aio ao base chnl h264e h265e ive jpege \
+		rc rgn sys vedu venc vgs vi vpss; do \
+		rm -f $(TARGET_DIR)/lib/modules/*/extra/open_$${mod}.ko; \
+	done
+	$(LINUX_RUN_DEPMOD)
+endef
+HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
 endif
 
 $(eval $(generic-package))
