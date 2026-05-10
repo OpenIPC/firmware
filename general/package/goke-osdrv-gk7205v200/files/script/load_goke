@@ -103,7 +103,7 @@ remove_detect() {
 	rmmod -w open_sensor_spi
 	rmmod -w open_sensor_i2c
 	rmmod -w open_isp
-	rmmod -w gk7205v200_base
+	rmmod -w open_base
 	rmmod -w open_osal >/dev/null 2>&1
 	rmmod -w open_sys_config
 }
@@ -119,12 +119,12 @@ insert_audio() {
 }
 
 remove_audio() {
-	rmmod -w gk7205v200_acodec
-	rmmod -w gk7205v200_adec
-	rmmod -w gk7205v200_aenc
-	rmmod -w gk7205v200_ao
-	rmmod -w gk7205v200_ai
-	rmmod -w gk7205v200_aio
+	rmmod -w open_acodec
+	rmmod -w open_adec
+	rmmod -w open_aenc
+	rmmod -w open_ao
+	rmmod -w open_ai
+	rmmod -w open_aio
 	echo "remove audio"
 }
 
@@ -196,33 +196,39 @@ insert_ko() {
 }
 
 remove_ko() {
+	# Module names in the kernel are open_* (set by openhisilicon's wrapper
+	# via PREFIX=open_ in kernel/Kbuild) regardless of the .ko filename on
+	# disk being gk7205v200_*.ko (renamed at install time by hisilicon-opensdk
+	# to satisfy load_goke's insmod-by-filename pattern). insmod uses the
+	# filename, but rmmod takes the in-kernel module name — so this list
+	# must be open_* to match what `lsmod` actually shows.
 	rmmod -w open_wdt
-	# rmmod -w gk7205v200_pm                           # unused on OpenIPC
+	# rmmod -w open_pm                                 # unused on OpenIPC
 	remove_audio
 	rmmod -w open_mipi_rx
 	# rmmod -w open_piris                              # unused on OpenIPC
 	# rmmod -w sil9024 &> /dev/null                    # unused on OpenIPC
-	rmmod -w gk7205v200_ive
-	rmmod -w gk7205v200_rc
-	rmmod -w gk7205v200_jpege
-	rmmod -w gk7205v200_h264e
-	rmmod -w gk7205v200_h265e
-	rmmod -w gk7205v200_venc
-	rmmod -w gk7205v200_vedu
-	rmmod -w gk7205v200_chnl
+	rmmod -w open_ive
+	rmmod -w open_rc
+	rmmod -w open_jpege
+	rmmod -w open_h264e
+	rmmod -w open_h265e
+	rmmod -w open_venc
+	rmmod -w open_vedu
+	rmmod -w open_chnl
 	# rmmod -w gfbg                                    # unused on OpenIPC
-	# rmmod -w gk7205v200_vo                           # unused on OpenIPC
-	rmmod -w gk7205v200_vpss
+	# rmmod -w open_vo                                 # unused on OpenIPC
+	rmmod -w open_vpss
 	rmmod -w open_isp
-	rmmod -w gk7205v200_vi
-	rmmod -w gk7205v200_vgs
-	rmmod -w gk7205v200_rgn
-	# rmmod -w gk7205v200_tde
+	rmmod -w open_vi
+	rmmod -w open_vgs
+	rmmod -w open_rgn
+	# rmmod -w open_tde
 	rmmod -w open_sensor_i2c &>/dev/null
 	rmmod -w open_sensor_spi &>/dev/null
 	rmmod -w open_pwm
-	rmmod -w gk7205v200_sys
-	rmmod -w gk7205v200_base
+	rmmod -w open_sys
+	rmmod -w open_base
 	rmmod -w open_osal
 	rmmod -w open_sys_config
 }
