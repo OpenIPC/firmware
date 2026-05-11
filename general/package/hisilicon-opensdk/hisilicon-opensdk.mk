@@ -462,4 +462,16 @@ endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
 endif
 
+# hi3518ev300_lite ships with a 5 MB rootfs partition that is already at
+# 5120/5120 KB on master — no margin for new sensors. Trim SP2308 (.so + .ini)
+# so this board variant keeps building; other ev200/gk7205v200 variants have
+# room and keep the sensor.
+ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3518ev300/lite)
+define HISILICON_OPENSDK_TRIM_SP2308
+	rm -f $(TARGET_DIR)/usr/lib/sensors/libsns_sp2308.so
+	rm -f $(TARGET_DIR)/etc/sensors/sp2308_i2c_1080p.ini
+endef
+HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_TRIM_SP2308
+endif
+
 $(eval $(generic-package))
