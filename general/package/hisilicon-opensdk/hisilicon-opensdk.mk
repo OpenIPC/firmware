@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 370c321
+HISILICON_OPENSDK_VERSION = 5cf1fc9
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -92,7 +92,8 @@ HISILICON_OPENSDK_SENSORS_hi3516ev200 = \
 	sony_imx335/libsns_imx335 \
 	sony_imx335_2L/libsns_imx335_2l \
 	sony_imx335_fpv/libsns_imx335_fpv \
-	superpix_sp2305/libsns_sp2305
+	superpix_sp2305/libsns_sp2305 \
+	superpix_sp2308/libsns_sp2308
 
 HISILICON_OPENSDK_SENSORS_gk7205v200 = $(HISILICON_OPENSDK_SENSORS_hi3516ev200)
 HISILICON_OPENSDK_SENSORS_hi3516cv500 = \
@@ -459,6 +460,18 @@ define HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
 	$(LINUX_RUN_DEPMOD)
 endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
+endif
+
+# hi3518ev300_lite ships with a 5 MB rootfs partition that is already at
+# 5120/5120 KB on master — no margin for new sensors. Trim SP2308 (.so + .ini)
+# so this board variant keeps building; other ev200/gk7205v200 variants have
+# room and keep the sensor.
+ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3518ev300/lite)
+define HISILICON_OPENSDK_TRIM_SP2308
+	rm -f $(TARGET_DIR)/usr/lib/sensors/libsns_sp2308.so
+	rm -f $(TARGET_DIR)/etc/sensors/sp2308_i2c_1080p.ini
+endef
+HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_TRIM_SP2308
 endif
 
 $(eval $(generic-package))
