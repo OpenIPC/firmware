@@ -24,6 +24,12 @@ define HISILICON_OSDRV_HI3516CV500_INSTALL_COMMON
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/60fps
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/60fps $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/sensor/config/60fps/*.ini
 
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/720p120fps
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/720p120fps $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/sensor/config/720p120fps/*.ini
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/vga200fps
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/vga200fps $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/sensor/config/vga200fps/*.ini
+
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/script/load*
 
