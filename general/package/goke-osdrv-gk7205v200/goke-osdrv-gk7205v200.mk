@@ -31,8 +31,8 @@ define GOKE_OSDRV_GK7205V200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/WDR
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/WDR $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/config/WDR/*.ini
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/60fps
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/60fps $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/config/60fps/*.ini
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/high-fps
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/high-fps $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/config/high-fps/*.ini
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/iq/imx307.ini
