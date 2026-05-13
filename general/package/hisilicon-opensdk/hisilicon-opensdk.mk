@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = b2db4db
+HISILICON_OPENSDK_VERSION = 8b5e47f
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -91,7 +91,6 @@ HISILICON_OPENSDK_SENSORS_hi3516ev200 = \
 	sony_imx327_2L/libsns_imx327_2l \
 	sony_imx335/libsns_imx335 \
 	sony_imx335_2L/libsns_imx335_2l \
-	sony_imx335_fpv/libsns_imx335_fpv \
 	superpix_sp2305/libsns_sp2305 \
 	superpix_sp2308/libsns_sp2308
 
