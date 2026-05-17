@@ -461,6 +461,23 @@ endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
 endif
 
+# ive_neo is built into V4 (ev200 / gk7205v200) by openhisilicon's Kbuild
+# but nothing on V4 actually insmods open_ive_neo.ko — load_hisilicon /
+# load_goke don't reference it, majestic / userspace MPI on V4 doesn't
+# call into it, no init script loads it. The driver is cv500-targeted
+# experimental work that just happens to also compile for V4. Skip the
+# install on V4 so the ~28 KB module doesn't take up NOR partition space
+# on already-tight lite boards like hi3518ev300_lite (5116/5120 KB on
+# master). cv500 builds it via a separate Kbuild include and keeps it.
+ifneq ($(filter $(OPENIPC_SOC_FAMILY),hi3516ev200 gk7205v200),)
+define HISILICON_OPENSDK_SKIP_IVE_NEO_V4
+	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
+	rm -f $(TARGET_DIR)/lib/modules/*/extra/open_ive_neo.ko
+	$(LINUX_RUN_DEPMOD)
+endef
+HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_SKIP_IVE_NEO_V4
+endif
+
 # hi3518ev300_lite ships with a 5 MB rootfs partition that is already at
 # 5120/5120 KB on master — no margin for new sensors. Trim SP2308 (.so + .ini)
 # so this board variant keeps building; other ev200/gk7205v200 variants have
