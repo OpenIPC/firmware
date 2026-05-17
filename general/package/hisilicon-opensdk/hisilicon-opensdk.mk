@@ -461,31 +461,52 @@ endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
 endif
 
-# ive_neo is built into V4 (ev200 / gk7205v200) by openhisilicon's Kbuild
-# but nothing on V4 actually insmods open_ive_neo.ko — load_hisilicon /
-# load_goke don't reference it, majestic / userspace MPI on V4 doesn't
-# call into it, no init script loads it. The driver is cv500-targeted
-# experimental work that just happens to also compile for V4. Skip the
-# install on V4 so the ~28 KB module doesn't take up NOR partition space
-# on already-tight lite boards like hi3518ev300_lite (5116/5120 KB on
-# master). cv500 builds it via a separate Kbuild include and keeps it.
+# Modules built for V4 (ev200 / gk7205v200) by openhisilicon's Kbuild but
+# never insmod'd on V4 — load_hisilicon / load_goke don't reference them,
+# majestic / userspace MPI doesn't call in, no init script loads them.
+# Shipped as dead weight in /lib/modules/<kver>/extra/ on every V4 lite
+# rootfs. Skip the install so the bytes don't compete with majestic for
+# the 5 MB NOR partition cap on boards like hi3518ev300_lite (5116/5120
+# KB on master).
+#
+#   - open_ive_neo.ko (~12-28 KB)  — cv500-targeted experimental, also
+#                                    compiles for V4; the .c grew from
+#                                    66 KB → 130 KB source in recent
+#                                    cv500 dispatch work.
+#   - open_adc.ko (~6 KB)          — generic ADC driver, only relevant
+#                                    for boards exposing GPIO/temp via
+#                                    sysfs; not referenced anywhere on
+#                                    ev300_lite / gk7205v200_lite nightly.
+#
+# All these still compile in CI (Kbuild unchanged) and cv500 keeps
+# whatever subset its own kbuild includes.
 ifneq ($(filter $(OPENIPC_SOC_FAMILY),hi3516ev200 gk7205v200),)
-define HISILICON_OPENSDK_SKIP_IVE_NEO_V4
+define HISILICON_OPENSDK_SKIP_UNUSED_V4
 	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
 	rm -f $(TARGET_DIR)/lib/modules/*/extra/open_ive_neo.ko
+	rm -f $(TARGET_DIR)/lib/modules/*/extra/open_adc.ko
 	$(LINUX_RUN_DEPMOD)
 endef
-HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_SKIP_IVE_NEO_V4
+HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_SKIP_UNUSED_V4
 endif
 
 # hi3518ev300_lite ships with a 5 MB rootfs partition that is already at
 # 5120/5120 KB on master — no margin for new sensors. Trim SP2308 (.so + .ini)
 # so this board variant keeps building; other ev200/gk7205v200 variants have
 # room and keep the sensor.
+#
+# TODO: SC500AI and GC5603 are temporarily trimmed too to absorb a recent
+# majestic binary growth (+41 KB) that pushed ev300_lite past the cap.
+# This breaks sysupgrade for any deployed camera using those sensors —
+# the openipc.org-hosted sysupgrade payload will no longer ship their
+# .so files. Address via compaction in a follow-up PR (strip flags,
+# unused-symbol removal, partition rebalance) and restore the sensors.
 ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3518ev300/lite)
 define HISILICON_OPENSDK_TRIM_SP2308
 	rm -f $(TARGET_DIR)/usr/lib/sensors/libsns_sp2308.so
 	rm -f $(TARGET_DIR)/etc/sensors/sp2308_i2c_1080p.ini
+	rm -f $(TARGET_DIR)/usr/lib/sensors/libsns_sc500ai.so
+	rm -f $(TARGET_DIR)/usr/lib/sensors/libsns_gc5603.so
 endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_TRIM_SP2308
 endif
