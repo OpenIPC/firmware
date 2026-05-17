@@ -117,6 +117,7 @@ endif
 
 define BUNDLE_SDK
 	OSDRV_DIR=$(PWD)/general/package/$(BR2_OPENIPC_SOC_VENDOR)-osdrv-$(BR2_OPENIPC_SOC_FAMILY)/files; \
+	MPP_HEADERS=$(PWD)/general/package/hisilicon-osdrv-hi3516cv100/files/include; \
 	SDK_TGZ=$$(find $(TARGET)/images -name '*_sdk-buildroot.tar.gz' | head -1); \
 	COMPAT_SRC=$(PWD)/general/package/uclibc-compat/src/uclibc-compat.c; \
 	SDK_CC=$$(ls $(TARGET)/host/bin/*-gcc 2>/dev/null | head -1); \
@@ -124,6 +125,10 @@ define BUNDLE_SDK
 		SDK_TOP=$$(tar tzf $$SDK_TGZ | head -1 | cut -d/ -f1); \
 		rm -rf /tmp/sdk-overlay && mkdir -p /tmp/sdk-overlay/$$SDK_TOP/sdk; \
 		cp -a $$OSDRV_DIR/* /tmp/sdk-overlay/$$SDK_TOP/sdk/; \
+		if [ "$(BR2_OPENIPC_SOC_VENDOR)" = "hisilicon" ] && [ ! -d "$$OSDRV_DIR/include" ] && [ -d "$$MPP_HEADERS" ]; then \
+			mkdir -p /tmp/sdk-overlay/$$SDK_TOP/sdk/include; \
+			cp -a $$MPP_HEADERS/. /tmp/sdk-overlay/$$SDK_TOP/sdk/include/; \
+		fi; \
 		if [ -f "$$COMPAT_SRC" ] && [ -n "$$SDK_CC" ]; then \
 			$$SDK_CC -shared -Wall -O2 -fPIC \
 				-o /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/libuclibc-compat.so \
