@@ -57,7 +57,7 @@ insert_osal()
 	if [ -z "$MMZ" ]; then
 		insmod hi_osal.ko anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 	else
-		insmod cma_osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
+		insmod hi_osal.ko anony=1 mmz_allocator=cma mmz=$MMZ || report_error
 	fi
 }
 
