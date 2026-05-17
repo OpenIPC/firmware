@@ -1,0 +1,18 @@
+config BR2_PACKAGE_HIFB_DEMO
+	bool "hifb-demo"
+	depends on BR2_PACKAGE_HISILICON_OSDRV_HI3520DV200
+	help
+	  Standalone demo program for the Hisilicon hifb framebuffer
+	  driver on hi3520dv200. Brings up the MPP system (SAMPLE_COMM_SYS_Init
+	  bootstrap ported from the upstream vendor MPP sample tree), enables
+	  the VO HD device, opens /dev/fb0, mmaps it, and draws SMPTE color
+	  bars plus an animated rectangle so the wired display output (HDMI,
+	  VGA or CVBS depending on board) can be visually verified.
+
+	  Run on the camera as:
+	    LD_PRELOAD=/usr/lib/libjpeg.so:/usr/lib/libVoiceEngine.so:\
+	    /usr/lib/libanr.so:/usr/lib/libaec.so:/usr/lib/libresampler.so:\
+	    /usr/lib/libvqev2.so:/usr/lib/libmem.so:/usr/lib/libtde.so \
+	    hifb_demo
+
+	  https://github.com/OpenIPC/firmware
