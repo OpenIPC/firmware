@@ -119,7 +119,10 @@ define BUNDLE_SDK
 	OSDRV_DIR=$(PWD)/general/package/$(BR2_OPENIPC_SOC_VENDOR)-osdrv-$(BR2_OPENIPC_SOC_FAMILY)/files; \
 	MPP_HEADERS=$(PWD)/general/package/hisilicon-osdrv-hi3516cv100/files/include; \
 	SDK_TGZ=$$(find $(TARGET)/images -name '*_sdk-buildroot.tar.gz' | head -1); \
-	COMPAT_SRC=$(PWD)/general/package/uclibc-compat/src/uclibc-compat.c; \
+	UCLIBC_COMPAT_SRC=$(PWD)/general/package/uclibc-compat/src/uclibc-compat.c; \
+	UCLIBC_COMPAT_STATIC=$(PWD)/general/package/uclibc-compat/src/uclibc-compat-static.c; \
+	GLIBC_COMPAT_SRC=$(PWD)/general/package/glibc-compat/src/glibc-compat.c; \
+	GLIBC_COMPAT_STATIC=$(PWD)/general/package/glibc-compat/src/glibc-compat-static.c; \
 	SDK_CC=$$(ls $(TARGET)/host/bin/*-gcc 2>/dev/null | head -1); \
 	if [ -d "$$OSDRV_DIR" ] && [ -n "$$SDK_TGZ" ]; then \
 		SDK_TOP=$$(tar tzf $$SDK_TGZ | head -1 | cut -d/ -f1); \
@@ -129,19 +132,33 @@ define BUNDLE_SDK
 			mkdir -p /tmp/sdk-overlay/$$SDK_TOP/sdk/include; \
 			cp -a $$MPP_HEADERS/. /tmp/sdk-overlay/$$SDK_TOP/sdk/include/; \
 		fi; \
-		if [ -f "$$COMPAT_SRC" ] && [ -n "$$SDK_CC" ]; then \
-			$$SDK_CC -shared -Wall -O2 -fPIC \
-				-o /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/libuclibc-compat.so \
-				$$COMPAT_SRC; \
-			COMPAT_STATIC=$(PWD)/general/package/uclibc-compat/src/uclibc-compat-static.c; \
-			if [ -f "$$COMPAT_STATIC" ]; then \
-				SDK_AR=$$(echo $$SDK_CC | sed 's/-gcc$$/-ar/'); \
+		if [ -n "$$SDK_CC" ]; then \
+			SDK_AR=$$(echo $$SDK_CC | sed 's/-gcc$$/-ar/'); \
+			if [ -f "$$UCLIBC_COMPAT_SRC" ]; then \
+				$$SDK_CC -shared -Wall -O2 -fPIC \
+					-o /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/libuclibc-compat.so \
+					$$UCLIBC_COMPAT_SRC; \
+			fi; \
+			if [ -f "$$UCLIBC_COMPAT_STATIC" ]; then \
 				$$SDK_CC -Wall -O2 -fPIC -c \
 					-o /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/uclibc-compat-static.o \
-					$$COMPAT_STATIC; \
+					$$UCLIBC_COMPAT_STATIC; \
 				$$SDK_AR rcs /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/libuclibc-compat-static.a \
 					/tmp/sdk-overlay/$$SDK_TOP/sdk/lib/uclibc-compat-static.o; \
 				rm -f /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/uclibc-compat-static.o; \
+			fi; \
+			if [ -f "$$GLIBC_COMPAT_SRC" ]; then \
+				$$SDK_CC -shared -Wall -O2 -fPIC \
+					-o /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/libglibc-compat.so \
+					$$GLIBC_COMPAT_SRC; \
+			fi; \
+			if [ -f "$$GLIBC_COMPAT_STATIC" ]; then \
+				$$SDK_CC -Wall -O2 -fPIC -c \
+					-o /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/glibc-compat-static.o \
+					$$GLIBC_COMPAT_STATIC; \
+				$$SDK_AR rcs /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/libglibc-compat-static.a \
+					/tmp/sdk-overlay/$$SDK_TOP/sdk/lib/glibc-compat-static.o; \
+				rm -f /tmp/sdk-overlay/$$SDK_TOP/sdk/lib/glibc-compat-static.o; \
 			fi; \
 		fi; \
 		gunzip $$SDK_TGZ && \
