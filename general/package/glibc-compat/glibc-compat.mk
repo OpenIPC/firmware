@@ -7,6 +7,7 @@
 GLIBC_COMPAT_VERSION =
 GLIBC_COMPAT_SITE =
 GLIBC_COMPAT_LICENSE = MIT
+GLIBC_COMPAT_INSTALL_STAGING = YES
 
 define GLIBC_COMPAT_BUILD_CMDS
 	$(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(GLIBC_COMPAT_PKGDIR)/src all
@@ -17,6 +18,11 @@ endef
 # pointing all four names at it is enough for the loader to satisfy NEEDED
 # entries; the libglibc-compat.so providing missing symbols is pulled in by
 # the LD_PRELOAD-equivalent NEEDED added to vendor wrapper scripts.
+define GLIBC_COMPAT_INSTALL_STAGING_CMDS
+	$(INSTALL) -D -m 0644 $(GLIBC_COMPAT_PKGDIR)/src/libglibc-compat-static.a \
+		$(STAGING_DIR)/usr/lib/libglibc-compat-static.a
+endef
+
 define GLIBC_COMPAT_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(GLIBC_COMPAT_PKGDIR)/src/libglibc-compat.so \
 		$(TARGET_DIR)/usr/lib/libglibc-compat.so
