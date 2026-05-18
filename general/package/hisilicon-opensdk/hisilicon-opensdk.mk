@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = b128a0c
+HISILICON_OPENSDK_VERSION = 55b72ec
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -28,6 +28,9 @@ HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3519v101
 endif
 ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV300),y)
 HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3516cv300
+endif
+ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3520DV200),y)
+HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3520dv200
 endif
 
 HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
@@ -60,6 +63,16 @@ endif
 define HISILICON_OPENSDK_BUILD_CMDS
 	$(MAKE) $(TARGET_CONFIGURE_OPTS) CHIPARCH=$(OPENIPC_SOC_FAMILY) SDK_CODE=$(HISILICON_OPENSDK_SDK_CODE) -C $(@D)/libraries all
 endef
+
+# hi3520dv200 mirror is kernel-only — no isp/sensor/mpi_neo userspace
+# to compile yet. libraries/Makefile has no SUBDIRS filter for this
+# CHIPARCH, so the default `make all` would try every subdir and fail.
+# Override the build step to a no-op until the userspace mirror lands.
+ifeq ($(OPENIPC_SOC_FAMILY),hi3520dv200)
+define HISILICON_OPENSDK_BUILD_CMDS
+	@:
+endef
+endif
 
 # Sensor install list per SoC family
 HISILICON_OPENSDK_SENSORS_hi3516ev200 = \
@@ -403,6 +416,25 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	done
 endef
 
+else ifeq ($(OPENIPC_SOC_FAMILY),hi3520dv200)
+# hi3520dv200: V2-era 4-channel analog DVR SoC. Kernel 3.0.8. No
+# sensor blobs (NVP6114 analog video decoder kernel module is built
+# from source instead — see open_nvp6134_ex.ko below).
+#
+# Vendor osdrv ships ~30 blobs in /lib/modules/3.0.8/hisilicon/. The
+# initial source mirror only replaces the four that load_hisilicon
+# actually insmods today — minimal blast radius for the first smoke
+# test. The MPP video pipeline (hi3520D_base/sys/viu/vpss/vou/venc/…)
+# stays as vendor blobs because vendor never released V2 MPP source.
+HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/3.0.8/hisilicon
+define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
+	$(INSTALL) -m 644 $(@D)/kernel/open_mmz.ko          $(HISILICON_OPENSDK_KMOD_DST)/mmz.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_hi_user.ko       $(HISILICON_OPENSDK_KMOD_DST)/hiuser.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_gpioi2c.ko       $(HISILICON_OPENSDK_KMOD_DST)/gpioi2c.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_nvp6134_ex.ko    $(HISILICON_OPENSDK_KMOD_DST)/nvp6134_ex.ko
+endef
+
 else
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
@@ -433,7 +465,7 @@ $(eval $(kernel-module))
 #    TARGET_FINALIZE_HOOKS (linux package is processed before this one), so
 #    it has already executed by the time we get here — we need a second pass
 #    so modules.dep reflects the post-cleanup state.
-ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300,$(OPENIPC_SOC_FAMILY)),)
+ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300 hi3520dv200,$(OPENIPC_SOC_FAMILY)),)
 define HISILICON_OPENSDK_FINALIZE_MODULES
 	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
