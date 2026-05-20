@@ -31,7 +31,11 @@ ASSET_RE = re.compile(r"^openipc\.([^.]+)-(nor|nand)-(lite|ultimate|neo)\.tgz$")
 
 
 def gh(*args: str) -> str:
-    return subprocess.check_output(["gh", *args], text=True)
+    # Always pass --repo so we don't depend on a .git in cwd
+    # (the workflow runs the script from a path without .git).
+    return subprocess.check_output(
+        ["gh", *args, "--repo", REPO], text=True
+    )
 
 
 def list_dated_releases() -> list[dict]:
