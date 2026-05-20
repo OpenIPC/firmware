@@ -1,0 +1,50 @@
+name: manifest
+on:
+  workflow_run:
+    workflows: [build]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages-manifest
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate manifest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master (for the script)
+        uses: actions/checkout@v4
+        with:
+          path: master
+
+      - name: Checkout gh-pages (for output)
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: pages
+
+      - name: Generate manifest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 master/.github/scripts/enrich_manifest.py pages
+
+      - name: Publish to gh-pages
+        working-directory: pages
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name  "github-actions[bot]"
+          git add manifest.json manifest.flat
+          if git diff --cached --quiet; then
+            echo "No manifest changes; nothing to commit."
+          else
+            newest=$(jq -r '.channels.nightly // "empty"' manifest.json)
+            git commit -m "manifest: $(date -u +%FT%TZ) — ${newest}"
+            git push
+          fi
