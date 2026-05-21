@@ -1,36 +1,95 @@
 name: image
 on:
-  schedule:
-    - cron: '30 23 * * *'
+  workflow_run:
+    workflows: [build]
+    types: [completed]
   workflow_dispatch:
+    inputs:
+      build_id:
+        description: 'Build ID to assemble (e.g. nightly-20260520-887328c). Default: channels.nightly from manifest.'
+        required: false
 
-env:
-  SIGMASTAR: ssc30kd ssc30kq ssc325 ssc333 ssc335 ssc335de ssc337 ssc337de ssc338q ssc377 ssc377d ssc377de ssc377qe ssc378de ssc378qe
-  INGENIC: t10 t10l t20 t20l t20x t21n t23n t30a t30a1 t30l t30n t30x t31a t31al t31l t31lc t31n t31x
-  ALLWINNER: v851s
-  TAG_NAME: image
+permissions:
+  contents: write
 
 jobs:
   toolchain:
     name: Image
     runs-on: ubuntu-latest
+    # Publish on success AND on partial-failure: see manifest.yml rationale.
+    # A flaky board doesn't deny image assembly for the platforms that did
+    # upload a firmware tgz — firmware_url returns empty for missing ones and
+    # create() skips them.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion)
+    env:
+      SIGMASTAR: ssc30kd ssc30kq ssc325 ssc333 ssc335 ssc335de ssc337 ssc337de ssc338q ssc377 ssc377d ssc377de ssc377qe ssc378de ssc378qe
+      INGENIC: t10 t10l t20 t20l t20x t21n t23n t30a t30a1 t30l t30n t30x t31a t31al t31l t31lc t31n t31x
+      ALLWINNER: v851s
+      MANIFEST_URL: https://openipc.github.io/firmware/manifest.json
+      UBOOT_URL: https://github.com/openipc/firmware/releases/download/latest
+
     steps:
-      - name: Prepare
+      - name: Resolve build_id from manifest
+        id: resolve
+        env:
+          INPUT_BUILD_ID: ${{ inputs.build_id }}
         run: |
-            link=https://github.com/openipc/firmware/releases/download/latest
+          set -eu
+          curl -fsSL "$MANIFEST_URL" -o /tmp/manifest.json
+          if [ -n "$INPUT_BUILD_ID" ]; then
+            BUILD_ID="$INPUT_BUILD_ID"
+          else
+            BUILD_ID=$(jq -r '.channels.nightly // ""' /tmp/manifest.json)
+          fi
+          if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "null" ]; then
+            echo "::error::No build_id resolved (manifest channels.nightly empty? input not given?)"
+            exit 1
+          fi
+          # Sanity check: does the manifest actually know this build?
+          if ! jq -e --arg b "$BUILD_ID" '.builds[] | select(.id==$b)' /tmp/manifest.json >/dev/null; then
+            echo "::error::build_id $BUILD_ID is not present in manifest at $MANIFEST_URL"
+            exit 1
+          fi
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          echo "Assembling images for $BUILD_ID"
+
+      - name: Prepare
+        env:
+          BUILD_ID: ${{ steps.resolve.outputs.build_id }}
+        run: |
+            MANIFEST=/tmp/manifest.json
+
+            # firmware_url <firmware_soc> <variant>
+            #   -> echoes the .nor URL for ${firmware_soc}_${variant} in
+            #      $BUILD_ID, or nothing if the manifest has no such entry.
+            firmware_url() {
+                jq -r --arg b "$BUILD_ID" --arg p "${1}_${2}" \
+                    '.builds[] | select(.id==$b) | .platforms[$p].nor.url // empty' \
+                    "$MANIFEST"
+            }
+
+            # create <uboot_board> <firmware_soc> <variant>
+            #   The two SoC arguments differ for Ingenic: u-boot is per
+            #   board (t31al, t31lc, ...), firmware is per family (t31).
             create() {
               uboot=u-boot-$1-nor.bin
-              firmware=openipc.$2-nor-$3.tgz
               release=target/openipc-$1-nor-$3.bin
 
               mkdir -p output target
-              if ! wget -nv $link/$uboot -O output/$1.bin; then
-                echo -e "Download failed: $link/$uboot\n"
+              if ! wget -nv "$UBOOT_URL/$uboot" -O "output/$1.bin"; then
+                echo -e "Download failed: $UBOOT_URL/$uboot\n"
                 return 0
               fi
 
-              if ! wget -nv $link/$firmware -O output/$2.tgz; then
-                echo -e "Download failed: $link/$firmware\n"
+              url=$(firmware_url "$2" "$3")
+              if [ -z "$url" ]; then
+                echo -e "Skip: no firmware in $BUILD_ID for ${2}_${3}\n"
+                return 0
+              fi
+              if ! wget -nv "$url" -O "output/$2.tgz"; then
+                echo -e "Download failed: $url\n"
                 return 0
               fi
 
@@ -57,6 +116,6 @@ jobs:
       - name: Upload
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{env.TAG_NAME}}
+          tag_name: image
           make_latest: false
           files: target/*.bin
