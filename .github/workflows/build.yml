@@ -16,6 +16,7 @@ jobs:
       head_sha:     ${{ steps.gate.outputs.head_sha }}
       short_sha:    ${{ steps.gate.outputs.short_sha }}
       build_id:     ${{ steps.gate.outputs.build_id }}
+      built_at:     ${{ steps.gate.outputs.built_at }}
     steps:
       - uses: actions/checkout@v4
       - id: gate
@@ -25,6 +26,7 @@ jobs:
           HEAD=$(git rev-parse HEAD)
           SHORT=$(git rev-parse --short HEAD)
           BUILD_ID="nightly-$(date -u +%Y%m%d)-${SHORT}"
+          BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           PREV=$(gh release view nightly --json body -q .body 2>/dev/null \
                   | sed -n 's/^sha=//p' | head -1 || true)
           if [ "${{ github.event_name }}" = "schedule" ] && [ "$PREV" = "$HEAD" ]; then
@@ -37,6 +39,7 @@ jobs:
           echo "head_sha=$HEAD"   >> "$GITHUB_OUTPUT"
           echo "short_sha=$SHORT" >> "$GITHUB_OUTPUT"
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          echo "built_at=$BUILT_AT" >> "$GITHUB_OUTPUT"
 
   buildroot:
     name: Firmware
@@ -285,7 +288,7 @@ jobs:
           body: |
             sha=${{ needs.preflight.outputs.head_sha }}
             short=${{ needs.preflight.outputs.short_sha }}
-            built_at=${{ github.run_started_at }}
+            built_at=${{ needs.preflight.outputs.built_at }}
           files: |
             ${{env.NORFW}}
             ${{env.NANDFW}}
@@ -298,7 +301,7 @@ jobs:
           body: |
             sha=${{ needs.preflight.outputs.head_sha }}
             short=${{ needs.preflight.outputs.short_sha }}
-            built_at=${{ github.run_started_at }}
+            built_at=${{ needs.preflight.outputs.built_at }}
           files: |
             ${{env.NORFW}}
             ${{env.NANDFW}}
