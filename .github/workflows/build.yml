@@ -250,7 +250,11 @@ jobs:
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.ccache
 
-          backoffs="30 60 120 300"
+          # Backoffs give 7 attempts total. The longer tail (600, 1200) covers
+          # the GitHub releases CDN / toolchain mirror flakes that took down
+          # hi3516av100_ultimate on 2026-05-20 (run 26196546684) — 502s
+          # storming for >10 min outlasted the previous 30/60/120/300 budget.
+          backoffs="30 60 120 300 600 1200"
           attempt=1
           for sleep_for in $backoffs ""; do
             make BOARD=${{matrix.platform}} && break
