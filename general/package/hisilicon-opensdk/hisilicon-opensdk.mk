@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 74d8a65
+HISILICON_OPENSDK_VERSION = 7fa06b2
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -299,6 +299,10 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	done
 	$(INSTALL) -m 644 $(@D)/kernel/open_vi.ko      $(HISILICON_OPENSDK_KMOD_DST)/hi3516a_viu.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_rgn.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3516a_region.ko
+	# V2A OSAL shim — only meaningful on neo (kernel 7.0). Gate to neo.
+	[ "$(OPENIPC_VARIANT)" = "neo" ] && \
+		$(INSTALL) -m 644 $(@D)/kernel/open_v2a_shim.ko \
+			$(HISILICON_OPENSDK_KMOD_DST)/v2a_shim.ko || true
 endef
 
 # For hi3516cv100: install opensdk .ko to hisilicon/ with vendor names.
@@ -371,6 +375,12 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_acodec.ko  $(HISILICON_OPENSDK_KMOD_DST)/acodec.ko
 	# HWRNG: install verbatim — load_hisilicon insmods it pre-sensor-probe.
 	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
+	# V2 OSAL shim — only meaningful on neo (kernel 7.0). On lite (4.9)
+	# the module compiles as a no-op so it could ship there too, but
+	# load_hisilicon would still try to insmod it; gate to neo only.
+	[ "$(OPENIPC_VARIANT)" = "neo" ] && \
+		$(INSTALL) -m 644 $(@D)/kernel/open_v2_shim.ko \
+			$(HISILICON_OPENSDK_KMOD_DST)/v2_shim.ko || true
 endef
 
 # For hi3516cv500: install opensdk .ko directly to hisilicon/ keeping the
