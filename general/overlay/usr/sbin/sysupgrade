@@ -1,11 +1,22 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.50
+scr_version=1.0.51
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
-MANIFEST_URL=${MANIFEST_URL:-https://openipc.github.io/firmware/manifest.flat}
+# Route to firmware or builder manifest based on BUILD_OPTION (variant).
+# Mirrors the legacy URL repo selector at download_firmware ("case $osr in
+# lite|ultimate|neo) repo=firmware"). lite/ultimate/neo cameras come from
+# OpenIPC/firmware; everything else (fpv, rubyfpv, apfpv, lte, venc, mini,
+# ...) is built by OpenIPC/builder and indexed in its own manifest.
+_osr=$(grep '^BUILD_OPTION=' /etc/os-release 2>/dev/null | cut -d= -f2)
+case "${_osr:-lite}" in
+	lite|ultimate|neo) _manifest_repo=firmware ;;
+	*)                 _manifest_repo=builder  ;;
+esac
+MANIFEST_URL=${MANIFEST_URL:-https://openipc.github.io/${_manifest_repo}/manifest.flat}
 MANIFEST_CACHE=/tmp/manifest.flat
+unset _osr _manifest_repo
 
 echo_c() {
 	# 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan, 37 white, 38 grey
@@ -109,7 +120,11 @@ download_firmware() {
 			fetch_manifest
 			[ -n "$channel" ] && build_id=$(resolve_channel "$channel")
 			[ -z "$build_id" ] && die "Unknown channel/build"
-			platform="${soc}_${osr}"
+			# Prefer the rich BUILD_PLATFORM (e.g. gk7205v200_fpv_caddx-fly)
+			# when present; fall back to the coarse ${soc}_${osr} for older
+			# firmwares that pre-date the field.
+			platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
+			[ -z "$platform" ] && platform="${soc}_${osr}"
 			url=$(resolve_url "$build_id" "$platform" "nor")
 			[ -z "$url" ] && die "No artifact for $platform in $build_id"
 			echo "Resolved $build_id for $platform"
@@ -396,7 +411,8 @@ print_sysinfo
 if [ "1" = "$list_only" ]; then
 	fetch_manifest
 	osr=$(get_system_build)
-	platform="${soc}_${osr}"
+	platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
+	[ -z "$platform" ] && platform="${soc}_${osr}"
 	here=$(grep '^BUILD_ID=' /etc/os-release | cut -d= -f2)
 	builds=$(awk -v p="$platform" '$2==p && $3=="nor" { print $1 }' "$MANIFEST_CACHE" \
 		| head -n "${list_n:-20}")
