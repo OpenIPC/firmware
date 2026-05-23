@@ -22,6 +22,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "OpenIPC/firmware")
@@ -29,13 +30,38 @@ RETENTION = 90
 TAG_RE = re.compile(r"^nightly-(\d{8})-([0-9a-f]{7})$")
 ASSET_RE = re.compile(r"^openipc\.([^.]+)-(nor|nand)-(lite|ultimate|neo)\.tgz$")
 
+# Retry budget for transient GitHub API failures (HTTP 401 Bad credentials,
+# 5xx, rate-limit) observed on workflow_run-triggered runs 2026-05-23.
+GH_RETRY_DELAYS = (0, 5, 15, 40)  # 4 attempts; last delay before final try
+
 
 def gh(*args: str) -> str:
     # Always pass --repo so we don't depend on a .git in cwd
     # (the workflow runs the script from a path without .git).
-    return subprocess.check_output(
-        ["gh", *args, "--repo", REPO], text=True
+    # Retry on transient failures (the GitHub API/token plane has flaky days);
+    # surface to stderr so failures are visible in the action log.
+    cmd = ["gh", *args, "--repo", REPO]
+    last_exc = None
+    for delay in GH_RETRY_DELAYS:
+        if delay > 0:
+            time.sleep(delay)
+        try:
+            return subprocess.check_output(cmd, text=True, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            last_exc = e
+            err = e.stderr or ""
+            # Permanent failures — don't waste the retry budget.
+            if "release not found" in err.lower() or "not found (HTTP 404)" in err:
+                break
+            sys.stderr.write(
+                f"gh {' '.join(args[:3])}: attempt failed "
+                f"(rc={e.returncode}): {err.strip()[:240]}\n"
+            )
+    sys.stderr.write(
+        f"gh {' '.join(args[:3])}: giving up; "
+        f"final stderr:\n{last_exc.stderr}\n"
     )
+    raise last_exc
 
 
 def list_dated_releases() -> list[dict]:
