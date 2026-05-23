@@ -27,7 +27,7 @@ PROG=$(basename "$0")
 MANIFEST_URL=${OPENIPC_MANIFEST_URL:-https://openipc.github.io/firmware/manifest.json}
 STATE_DIR=${OPENIPC_BISECT_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/openipc/bisect}
 WAIT_BUDGET=${OPENIPC_BISECT_WAIT:-300}   # seconds to wait for a camera to come back
-SSH_OPTS=${OPENIPC_SSH_OPTS:--o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new}
+SSH_OPTS=${OPENIPC_SSH_OPTS:--o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=3}
 
 die() { printf '%s: %s\n' "$PROG" "$*" >&2; exit 1; }
 info() { printf '%s\n' "$*" >&2; }
@@ -146,7 +146,7 @@ pick_next() {
 		.window as $w |
 		(.verdicts // {}) as $v |
 		($w | map(select($v[.] == null))) as $unverified |
-		if ($unverified | length) <= 1 then "" else
+		if ($unverified | length) == 0 then "" else
 			$unverified[($unverified | length / 2 | floor)]
 		end
 	'
@@ -261,6 +261,10 @@ iterate() {
 
 cmd_start() {
 	host=$1; shift
+	# Tolerate user@host (the form most OpenIPC docs use, e.g. root@cam).
+	# The script always SSHes as root because that's the only user on these
+	# cameras; the user@ prefix is a doc convention, not a real choice.
+	host=${host#*@}
 	good_ref=""; bad_ref=""; platform=""
 	while [ $# -gt 0 ]; do
 		case "$1" in
@@ -349,12 +353,15 @@ cmd_verdict() {
 cmd_status() {
 	host=$(resolve_host)
 	state=$(load_state "$host")
-	printf '%s\n' "$state" | jq '
+	wn=$(printf '%s' "$state" | jq -r '.window | length')
+	# jq has no log() — compute ceil(log2(N)) in awk.
+	rounds=$(awk -v n="$wn" 'BEGIN { if (n>1) { r=0; x=n; while (x>1) { r++; x=(x+1)/2 } print r } else print 0 }')
+	printf '%s\n' "$state" | jq --argjson rl "$rounds" '
 		{
 			host, platform, good, bad, current,
 			window_size: (.window | length),
-			verdicts,
-			est_rounds_left: ((.window | length) | (if . > 1 then (log/log(2)) | floor + 1 else 0 end))
+			est_rounds_left: $rl,
+			verdicts
 		}'
 }
 
