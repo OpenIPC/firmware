@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 7fa06b2
+HISILICON_OPENSDK_VERSION = 488a76f
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -335,6 +335,12 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_ssp_sony.ko    $(HISILICON_OPENSDK_KMOD_DST)/ssp_sony.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_ssp_pana.ko    $(HISILICON_OPENSDK_KMOD_DST)/ssp_pana.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_ssp_ad9020.ko  $(HISILICON_OPENSDK_KMOD_DST)/ssp_ad9020.ko
+	# V1 OSAL shim — only meaningful on neo (kernel 7.0). On lite (3.0.8)
+	# the module compiles as a no-op so it could ship there too, but
+	# load_hisilicon would still try to insmod it; gate to neo only.
+	[ "$(OPENIPC_VARIANT)" = "neo" ] && \
+		$(INSTALL) -m 644 $(@D)/kernel/open_v1_shim.ko \
+			$(HISILICON_OPENSDK_KMOD_DST)/v1_shim.ko || true
 endef
 
 # For hi3516cv200: install opensdk .ko to hisilicon/ with vendor names,
