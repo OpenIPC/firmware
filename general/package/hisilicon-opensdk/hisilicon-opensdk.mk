@@ -203,6 +203,32 @@ HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
+# fpv variant on V4 (hi3516ev200 + gk7205v200): restrict to the high-fps
+# Sony sensors only. FPV cameras are permanently paired with one sensor;
+# the other 26 entries in HISILICON_OPENSDK_SENSORS_$(family) are dead
+# weight on the tight 5120 KB NOR rootfs that fpv variants ship on.
+#
+# PR #2054 (2026-05-08) switched 30 sensor .so files from pre-built
+# vendor blobs to source-built, adding ~+160 KB compressed to the rootfs
+# squashfs and pushing hi3516ev200_fpv + hi3516ev300_fpv past the 5120
+# KB cap. Bisect via OpenIPC/builder#94's firmware_ref input isolated
+# #2054 as the cause — see kaeru
+# hi3516ev200-ev300-fpv-rootfs-size-overflow-2026-05-24.
+#
+# Sony IMX307 and IMX335 are the only sensors with high-fps presets
+# validated for fpv so far (PRs #2090, #2091, #2093, #2094). Other
+# sensors can be re-enabled per user request once their high-fps modes
+# are checked and the rootfs has room.
+ifeq ($(OPENIPC_VARIANT),fpv)
+ifneq ($(filter $(OPENIPC_SOC_FAMILY),hi3516ev200 gk7205v200),)
+HISILICON_OPENSDK_SENSORS = \
+	sony_imx307/libsns_imx307 \
+	sony_imx307_2L/libsns_imx307_2l \
+	sony_imx335/libsns_imx335 \
+	sony_imx335_2L/libsns_imx335_2l
+endif
+endif
+
 # Kernel version from the actual build — no hardcoded fallback.
 # The kernel is always built before opensdk (dependency), so kernel.release exists.
 HISILICON_OPENSDK_KVER = $(shell cat $(BUILD_DIR)/linux-custom/include/config/kernel.release 2>/dev/null)
