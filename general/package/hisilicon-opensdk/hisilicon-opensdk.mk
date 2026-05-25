@@ -406,6 +406,13 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_acodec.ko  $(HISILICON_OPENSDK_KMOD_DST)/acodec.ko
 	# HWRNG: install verbatim — load_hisilicon insmods it pre-sensor-probe.
 	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
+	# Frame-timestamp chrdev — open_isp.ko (renamed to hi3518e_isp.ko above)
+	# imports openipc_frame_ts_push from this module since the openhisilicon
+	# bump that wired cv200 ISP_ISR into the openipc_frame_ts chrdev path
+	# (kernel/isp/arch/hi3516cv200/firmware/drv/isp.c). Without it,
+	# `insmod hi3518e_isp.ko` fails with "unknown symbol" and the dependent
+	# sensor_i2c / sensor_spi insmods cascade.
+	$(INSTALL) -m 644 $(@D)/kernel/open_openipc_frame_ts.ko $(HISILICON_OPENSDK_KMOD_DST)/open_openipc_frame_ts.ko
 	# V2 OSAL shim — only meaningful on neo (kernel 7.0). On lite (4.9)
 	# the module compiles as a no-op so it could ship there too, but
 	# load_hisilicon would still try to insmod it; gate to neo only.
