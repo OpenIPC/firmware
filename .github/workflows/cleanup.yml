@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: gh-pages-manifest
@@ -19,6 +20,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Delete releases beyond the 90 newest
+        id: prune
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -29,6 +31,7 @@ jobs:
 
           if [ -z "$to_delete" ]; then
             echo "Nothing to delete; <=90 dated nightlies present."
+            echo "pruned=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -37,8 +40,10 @@ jobs:
             echo "Deleting $tag"
             gh release delete "$tag" --cleanup-tag --yes
           done
+          echo "pruned=true" >> "$GITHUB_OUTPUT"
 
       - name: Refresh manifest
+        if: steps.prune.outputs.pruned == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run manifest.yml
