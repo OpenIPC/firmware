@@ -96,7 +96,6 @@ HISILICON_OPENSDK_SENSORS_hi3516ev200 = \
 	smart_sc4236/libsns_sc4236 \
 	smart_sc500ai/libsns_sc500ai \
 	soi_f37/libsns_f37 \
-	soi_h63/libsns_h63 \
 	sony_imx290/libsns_imx290 \
 	sony_imx307/libsns_imx307 \
 	sony_imx307_2L/libsns_imx307_2l \
