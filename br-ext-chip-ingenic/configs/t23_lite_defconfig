@@ -8,7 +8,7 @@ BR2_MIPS_FP32_MODE_32=y
 BR2_TOOLCHAIN_EXTERNAL=y
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
 BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
-BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/openipc/firmware/releases/download/toolchain/toolchain.ingenic-t31.tgz"
+BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/maxwit-openipc/firmware/releases/download/toolchain/toolchain.ingenic-t31.tgz"
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="mipsel-openipc-linux-musl"
 BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_10=y
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y
@@ -17,7 +17,7 @@ BR2_TOOLCHAIN_EXTERNAL_CXX=y
 # Kernel
 BR2_LINUX_KERNEL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
-BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/openipc/linux/archive/ingenic-t23.tar.gz"
+BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/maxwit-openipc/linux/archive/ingenic-t23.tar.gz"
 BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
 BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/t23.generic.config"
 BR2_LINUX_KERNEL_LZMA=y
