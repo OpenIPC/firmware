@@ -1,9 +1,22 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.49
+scr_version=1.0.51
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
+# Route to firmware or builder manifest based on BUILD_OPTION (variant).
+# Mirrors the legacy URL repo selector at download_firmware ("case $osr in
+# lite|ultimate|neo) repo=firmware"). lite/ultimate/neo cameras come from
+# OpenIPC/firmware; everything else (fpv, rubyfpv, apfpv, lte, venc, mini,
+# ...) is built by OpenIPC/builder and indexed in its own manifest.
+_osr=$(grep '^BUILD_OPTION=' /etc/os-release 2>/dev/null | cut -d= -f2)
+case "${_osr:-lite}" in
+	lite|ultimate|neo) _manifest_repo=firmware ;;
+	*)                 _manifest_repo=builder  ;;
+esac
+MANIFEST_URL=${MANIFEST_URL:-https://openipc.github.io/${_manifest_repo}/manifest.flat}
+MANIFEST_CACHE=/tmp/manifest.flat
+unset _osr _manifest_repo
 
 echo_c() {
 	# 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan, 37 white, 38 grey
@@ -75,6 +88,24 @@ do_wipe_overlay() {
 	set_progress flash_eraseall $jffs2 "$(get_device "rootfs_data")"
 }
 
+fetch_manifest() {
+	[ "$(curl -o /dev/null -s -k -w '%{http_code}\n' "$MANIFEST_URL")" = "000" ] \
+		&& die "Check your network!"
+	curl --connect-timeout 30 -s -k -m 60 -L "$MANIFEST_URL" -o "$MANIFEST_CACHE" \
+		|| die "Cannot fetch manifest $MANIFEST_URL"
+}
+
+# resolve_channel <nightly|latest>  -> echoes a build_id
+resolve_channel() {
+	awk -v c="$1" '$1=="@channel" && $2==c { print $3; exit }' "$MANIFEST_CACHE"
+}
+
+# resolve_url <build_id> <platform> <flash>  -> echoes a URL
+resolve_url() {
+	awk -v b="$1" -v p="$2" -v f="$3" \
+		'$1==b && $2==p && $3==f { print $NF; exit }' "$MANIFEST_CACHE"
+}
+
 download_firmware() {
 	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
@@ -85,6 +116,19 @@ download_firmware() {
 		gzip -d "$archive" -c | tar xf - -C /tmp && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
 	else
 		case "$osr" in lite|ultimate|neo) repo=firmware ;; esac
+		if [ -n "$channel" ] || [ -n "$build_id" ]; then
+			fetch_manifest
+			[ -n "$channel" ] && build_id=$(resolve_channel "$channel")
+			[ -z "$build_id" ] && die "Unknown channel/build"
+			# Prefer the rich BUILD_PLATFORM (e.g. gk7205v200_fpv_caddx-fly)
+			# when present; fall back to the coarse ${soc}_${osr} for older
+			# firmwares that pre-date the field.
+			platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
+			[ -z "$platform" ] && platform="${soc}_${osr}"
+			url=$(resolve_url "$build_id" "$platform" "nor")
+			[ -z "$url" ] && die "No artifact for $platform in $build_id"
+			echo "Resolved $build_id for $platform"
+		fi
 		[ -z "$url" ] && url=$(fw_printenv -n upgrade || echo "https://github.com/OpenIPC/${repo:-builder}/releases/download/latest/openipc.$build.tgz")
 		echo "Download from $url"
 		[ "$(curl -o /dev/null -s -k -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
@@ -131,7 +175,7 @@ sync_time() {
 }
 
 self_update() {
-	if echo "$args" | grep -E "\-(k|r|w|url)" >/dev/null 2>&1; then
+	if echo "$args" | grep -E "\-(k|r|w|url|channel|build)" >/dev/null 2>&1; then
 		sync_time
 		echo -e "\nChecking for sysupgrade update..."
 		curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
@@ -222,11 +266,20 @@ Where:
       --archive=[FILE]  Custom archive to update from (.tgz format).
       --kernel=[FILE]   Update kernel from file (uImage format).
       --rootfs=[FILE]   Update rootfs from file (squashfs format).
+      --channel=[NAME]  Update from a named channel via the manifest
+                        (nightly | latest). Default URL would be used
+                        otherwise.
+      --build=[ID]      Update to a specific dated build via the manifest,
+                        e.g. nightly-20260520-b9d5883.
+      --list-builds[=N] List the last N (default 20) builds available for
+                        this platform; mark the running build with '*'.
   -f, --force_all       Do not validate anything.
   -n, --wipe_overlay    Wipe overlay partition.
   -x, --no_reboot       Do not reboot after updating.
   -z, --no_update       Do not update self.
   -h, --help            Display this help and exit.
+
+Manifest URL: \$MANIFEST_URL (default: $MANIFEST_URL)
 "
 }
 
@@ -285,6 +338,29 @@ for i in "$@"; do
 			shift
 			;;
 
+		--channel=*)
+			update_kernel=1
+			update_rootfs=1
+			remote_update=1
+			channel="${i#*=}"
+			shift
+			;;
+
+		--build=*)
+			update_kernel=1
+			update_rootfs=1
+			remote_update=1
+			build_id="${i#*=}"
+			shift
+			;;
+
+		--list-builds*)
+			list_n="${i#--list-builds=}"
+			[ "$list_n" = "--list-builds" ] && list_n=20
+			list_only=1
+			shift
+			;;
+
 		--archive=*)
 			update_kernel=1
 			update_rootfs=1
@@ -331,6 +407,24 @@ for i in "$@"; do
 done
 
 print_sysinfo
+
+if [ "1" = "$list_only" ]; then
+	fetch_manifest
+	osr=$(get_system_build)
+	platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
+	[ -z "$platform" ] && platform="${soc}_${osr}"
+	here=$(grep '^BUILD_ID=' /etc/os-release | cut -d= -f2)
+	builds=$(awk -v p="$platform" '$2==p && $3=="nor" { print $1 }' "$MANIFEST_CACHE" \
+		| head -n "${list_n:-20}")
+	if [ -z "$builds" ]; then
+		echo_c 33 "\nNo builds available for $platform yet."
+		echo "Manifest: $MANIFEST_URL"
+		exit 0
+	fi
+	echo_c 33 "\nAvailable builds for $platform (newest first):"
+	echo "$builds" | awk -v h="$here" '{ printf "  %s %s\n", ($1==h?"*":" "), $1 }'
+	exit 0
+fi
 
 [ "1" != "$clear_overlay" ] &&
 [ "1" != "$update_kernel" ] &&

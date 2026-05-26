@@ -7,13 +7,48 @@ on:
     - cron: '30 22 * * *'
   workflow_dispatch:
 
-env:
-  TAG_NAME: latest
-
 jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.gate.outputs.should_build }}
+      head_sha:     ${{ steps.gate.outputs.head_sha }}
+      short_sha:    ${{ steps.gate.outputs.short_sha }}
+      build_id:     ${{ steps.gate.outputs.build_id }}
+      built_at:     ${{ steps.gate.outputs.built_at }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          HEAD=$(git rev-parse HEAD)
+          SHORT=$(git rev-parse --short HEAD)
+          BUILD_ID="nightly-$(date -u +%Y%m%d)-${SHORT}"
+          BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          PREV=$(gh release view nightly --json body -q .body 2>/dev/null \
+                  | sed -n 's/^sha=//p' | head -1 || true)
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$PREV" = "$HEAD" ]; then
+            echo "Skip: HEAD ($HEAD) already published as the latest nightly."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Build: $BUILD_ID (event=${{ github.event_name }}, prev=$PREV)"
+            echo "should_build=true"  >> "$GITHUB_OUTPUT"
+          fi
+          echo "head_sha=$HEAD"   >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT" >> "$GITHUB_OUTPUT"
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          echo "built_at=$BUILT_AT" >> "$GITHUB_OUTPUT"
+
   buildroot:
     name: Firmware
+    needs: preflight
+    if: needs.preflight.outputs.should_build == 'true'
     runs-on: ubuntu-latest
+    env:
+      BUILD_ID:  ${{ needs.preflight.outputs.build_id }}
+      BUILD_SHA: ${{ needs.preflight.outputs.head_sha }}
 
     strategy:
       fail-fast: false
@@ -60,15 +95,18 @@ jobs:
 
           # Hisilicon [HI3516AV100]
           - hi3516av100_lite
+          - hi3516av100_neo
           - hi3516dv100_lite
 
           # Hisilicon [HI3516CV100]
           - hi3516cv100_lite
+          - hi3516cv100_neo
           - hi3518cv100_lite
           - hi3518ev100_lite
 
           # Hisilicon [HI3516CV200]
           - hi3516cv200_lite
+          - hi3516cv200_neo
           - hi3518ev200_lite
 
           # Hisilicon [HI3516CV300]
@@ -91,6 +129,7 @@ jobs:
 
           # Hisilicon [HI3519V101]
           - hi3516av200_lite
+          - hi3516av200_neo
           - hi3519v101_lite
 
           # Hisilicon [HI3520DV200]
@@ -215,7 +254,11 @@ jobs:
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.ccache
 
-          backoffs="30 60 120 300"
+          # Backoffs give 7 attempts total. The longer tail (600, 1200) covers
+          # the GitHub releases CDN / toolchain mirror flakes that took down
+          # hi3516av100_ultimate on 2026-05-20 (run 26196546684) — 502s
+          # storming for >10 min outlasted the previous 30/60/120/300 budget.
+          backoffs="30 60 120 300 600 1200"
           attempt=1
           for sleep_for in $backoffs ""; do
             make BOARD=${{matrix.platform}} && break
@@ -244,11 +287,38 @@ jobs:
       - name: Verify kernel modules
         run: sh .github/scripts/check_target_modules.sh
 
-      - name: Upload firmware
+      - name: Upload firmware (dated)
         if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{env.TAG_NAME}}
+          tag_name: ${{ needs.preflight.outputs.build_id }}
+          prerelease: true
+          body: |
+            sha=${{ needs.preflight.outputs.head_sha }}
+            short=${{ needs.preflight.outputs.short_sha }}
+            built_at=${{ needs.preflight.outputs.built_at }}
+          files: |
+            ${{env.NORFW}}
+            ${{env.NANDFW}}
+
+      - name: Upload firmware (rolling nightly)
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          body: |
+            sha=${{ needs.preflight.outputs.head_sha }}
+            short=${{ needs.preflight.outputs.short_sha }}
+            built_at=${{ needs.preflight.outputs.built_at }}
+          files: |
+            ${{env.NORFW}}
+            ${{env.NANDFW}}
+
+      - name: Upload firmware (latest — legacy alias)
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
           files: |
             ${{env.NORFW}}
             ${{env.NANDFW}}
@@ -256,7 +326,7 @@ jobs:
       - name: Send binary
         if: github.event_name != 'pull_request' && env.NORFW
         run: |
-          TG_MSG="Commit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTag: ${TAG_NAME}\nTime: ${TIME}\n\n"
+          TG_MSG="Build: ${BUILD_ID}\nCommit: ${GIT_HASH}\nBranch: ${GIT_BRANCH}\nTime: ${TIME}\n\n"
           TG_ICON="\xE2\x9C\x85 GitHub Actions"
           TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
           TG_TOKEN=${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}

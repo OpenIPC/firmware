@@ -5,18 +5,44 @@ on:
       platform:
         description: 'Platform to build (e.g. hi3516cv100_lite)'
         required: true
-
-env:
-  TAG_NAME: latest
+      commit:
+        description: 'Commit SHA to build (optional; defaults to current branch HEAD). Use this from `git bisect run` or for one-off historic rebuilds.'
+        required: false
 
 jobs:
+  resolve:
+    name: Resolve commit
+    runs-on: ubuntu-latest
+    outputs:
+      ref:       ${{ steps.r.outputs.ref }}
+      short_sha: ${{ steps.r.outputs.short_sha }}
+      tag_name:  ${{ steps.r.outputs.tag_name }}
+    steps:
+      - id: r
+        run: |
+          REF="${{ inputs.commit }}"
+          [ -z "$REF" ] && REF="${{ github.sha }}"
+          SHORT="$(printf '%s' "$REF" | cut -c1-7)"
+          if [ -n "${{ inputs.commit }}" ]; then
+            TAG="nightly-bisect-${SHORT}"
+          else
+            TAG="nightly-bisect-${SHORT}-$(date -u +%Y%m%d%H%M%S)"
+          fi
+          echo "ref=$REF"               >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT"       >> "$GITHUB_OUTPUT"
+          echo "tag_name=$TAG"          >> "$GITHUB_OUTPUT"
+          echo "Building ${{ inputs.platform }} at $REF -> release tag $TAG"
+
   buildroot:
     name: Firmware (${{inputs.platform}})
+    needs: resolve
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
 
       - name: Prepare firmware
         run: |
@@ -37,6 +63,9 @@ jobs:
           restore-keys: dl-
 
       - name: Build firmware
+        env:
+          BUILD_ID:  ${{ needs.resolve.outputs.tag_name }}
+          BUILD_SHA: ${{ needs.resolve.outputs.ref }}
         run: |
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
           export GIT_BRANCH=${GITHUB_REF_NAME}
@@ -46,7 +75,7 @@ jobs:
           mkdir -p /tmp/ccache
           ln -s /tmp/ccache ${HOME}/.ccache
 
-          backoffs="30 60 120 300"
+          backoffs="30 60 120 300 600 1200"
           attempt=1
           for sleep_for in $backoffs ""; do
             make BOARD=${{inputs.platform}} && break
@@ -78,7 +107,13 @@ jobs:
       - name: Upload firmware
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{env.TAG_NAME}}
+          tag_name: ${{ needs.resolve.outputs.tag_name }}
+          prerelease: true
+          body: |
+            sha=${{ needs.resolve.outputs.ref }}
+            short=${{ needs.resolve.outputs.short_sha }}
+            platform=${{ inputs.platform }}
+            one_off=true
           files: |
             ${{env.NORFW}}
             ${{env.NANDFW}}

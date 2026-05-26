@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 55b72ec
+HISILICON_OPENSDK_VERSION = b958db4
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -96,7 +96,6 @@ HISILICON_OPENSDK_SENSORS_hi3516ev200 = \
 	smart_sc4236/libsns_sc4236 \
 	smart_sc500ai/libsns_sc500ai \
 	soi_f37/libsns_f37 \
-	soi_h63/libsns_h63 \
 	sony_imx290/libsns_imx290 \
 	sony_imx307/libsns_imx307 \
 	sony_imx307_2L/libsns_imx307_2l \
@@ -203,6 +202,32 @@ HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
+# fpv variant on V4 (hi3516ev200 + gk7205v200): restrict to the high-fps
+# Sony sensors only. FPV cameras are permanently paired with one sensor;
+# the other 26 entries in HISILICON_OPENSDK_SENSORS_$(family) are dead
+# weight on the tight 5120 KB NOR rootfs that fpv variants ship on.
+#
+# PR #2054 (2026-05-08) switched 30 sensor .so files from pre-built
+# vendor blobs to source-built, adding ~+160 KB compressed to the rootfs
+# squashfs and pushing hi3516ev200_fpv + hi3516ev300_fpv past the 5120
+# KB cap. Bisect via OpenIPC/builder#94's firmware_ref input isolated
+# #2054 as the cause — see kaeru
+# hi3516ev200-ev300-fpv-rootfs-size-overflow-2026-05-24.
+#
+# Sony IMX307 and IMX335 are the only sensors with high-fps presets
+# validated for fpv so far (PRs #2090, #2091, #2093, #2094). Other
+# sensors can be re-enabled per user request once their high-fps modes
+# are checked and the rootfs has room.
+ifeq ($(OPENIPC_VARIANT),fpv)
+ifneq ($(filter $(OPENIPC_SOC_FAMILY),hi3516ev200 gk7205v200),)
+HISILICON_OPENSDK_SENSORS = \
+	sony_imx307/libsns_imx307 \
+	sony_imx307_2L/libsns_imx307_2l \
+	sony_imx335/libsns_imx335 \
+	sony_imx335_2L/libsns_imx335_2l
+endif
+endif
+
 # Kernel version from the actual build — no hardcoded fallback.
 # The kernel is always built before opensdk (dependency), so kernel.release exists.
 HISILICON_OPENSDK_KVER = $(shell cat $(BUILD_DIR)/linux-custom/include/config/kernel.release 2>/dev/null)
@@ -269,6 +294,12 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_rgn.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3519v101_region.ko
 	# HWRNG: install verbatim — load_hisilicon insmods it pre-sensor-probe.
 	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
+	# V3A OSAL shim — only meaningful on neo (kernel 7.0). On lite (3.18)
+	# the module compiles as a no-op so it could ship there too, but
+	# load_hisilicon would still try to insmod it; gate to neo only.
+	[ "$(OPENIPC_VARIANT)" = "neo" ] && \
+		$(INSTALL) -m 644 $(@D)/kernel/open_v3a_shim.ko \
+			$(HISILICON_OPENSDK_KMOD_DST)/v3a_shim.ko || true
 endef
 
 # For hi3516av100: install opensdk .ko to hisilicon/ with vendor names.
@@ -299,6 +330,10 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	done
 	$(INSTALL) -m 644 $(@D)/kernel/open_vi.ko      $(HISILICON_OPENSDK_KMOD_DST)/hi3516a_viu.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_rgn.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3516a_region.ko
+	# V2A OSAL shim — only meaningful on neo (kernel 7.0). Gate to neo.
+	[ "$(OPENIPC_VARIANT)" = "neo" ] && \
+		$(INSTALL) -m 644 $(@D)/kernel/open_v2a_shim.ko \
+			$(HISILICON_OPENSDK_KMOD_DST)/v2a_shim.ko || true
 endef
 
 # For hi3516cv100: install opensdk .ko to hisilicon/ with vendor names.
@@ -331,6 +366,12 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_ssp_sony.ko    $(HISILICON_OPENSDK_KMOD_DST)/ssp_sony.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_ssp_pana.ko    $(HISILICON_OPENSDK_KMOD_DST)/ssp_pana.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_ssp_ad9020.ko  $(HISILICON_OPENSDK_KMOD_DST)/ssp_ad9020.ko
+	# V1 OSAL shim — only meaningful on neo (kernel 7.0). On lite (3.0.8)
+	# the module compiles as a no-op so it could ship there too, but
+	# load_hisilicon would still try to insmod it; gate to neo only.
+	[ "$(OPENIPC_VARIANT)" = "neo" ] && \
+		$(INSTALL) -m 644 $(@D)/kernel/open_v1_shim.ko \
+			$(HISILICON_OPENSDK_KMOD_DST)/v1_shim.ko || true
 endef
 
 # For hi3516cv200: install opensdk .ko to hisilicon/ with vendor names,
@@ -371,6 +412,19 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_acodec.ko  $(HISILICON_OPENSDK_KMOD_DST)/acodec.ko
 	# HWRNG: install verbatim — load_hisilicon insmods it pre-sensor-probe.
 	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
+	# Frame-timestamp chrdev — open_isp.ko (renamed to hi3518e_isp.ko above)
+	# imports openipc_frame_ts_push from this module since the openhisilicon
+	# bump that wired cv200 ISP_ISR into the openipc_frame_ts chrdev path
+	# (kernel/isp/arch/hi3516cv200/firmware/drv/isp.c). Without it,
+	# `insmod hi3518e_isp.ko` fails with "unknown symbol" and the dependent
+	# sensor_i2c / sensor_spi insmods cascade.
+	$(INSTALL) -m 644 $(@D)/kernel/open_openipc_frame_ts.ko $(HISILICON_OPENSDK_KMOD_DST)/open_openipc_frame_ts.ko
+	# V2 OSAL shim — only meaningful on neo (kernel 7.0). On lite (4.9)
+	# the module compiles as a no-op so it could ship there too, but
+	# load_hisilicon would still try to insmod it; gate to neo only.
+	[ "$(OPENIPC_VARIANT)" = "neo" ] && \
+		$(INSTALL) -m 644 $(@D)/kernel/open_v2_shim.ko \
+			$(HISILICON_OPENSDK_KMOD_DST)/v2_shim.ko || true
 endef
 
 # For hi3516cv500: install opensdk .ko directly to hisilicon/ keeping the

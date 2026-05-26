@@ -43,6 +43,7 @@ insert_detect() {
         insmod hi_media.ko
         insmod hi3518e_base.ko
         insmod hi3518e_sys.ko vi_vpss_online=$b_arg_online sensor=unknown mem_total=$mem_total
+        insmod open_openipc_frame_ts.ko
         insert_isp
         insmod sensor_i2c.ko
         insmod sensor_spi.ko
@@ -53,6 +54,7 @@ remove_detect() {
         rmmod -w open_sensor_spi
         rmmod -w open_sensor_i2c
         rmmod -w open_isp
+        rmmod -w open_openipc_frame_ts
         rmmod -w hi3518e_sys
         rmmod -w hi3518e_base
         rmmod -w open_himedia
@@ -232,6 +234,7 @@ insert_ko() {
         insmod hi3518e_region.ko
         insmod hi3518e_vgs.ko
 
+        insmod open_openipc_frame_ts.ko
         insert_isp
         insmod hi3518e_viu.ko detect_err_frame=10
         insmod hi3518e_vpss.ko rfr_frame_comp=1
@@ -285,6 +288,7 @@ remove_ko() {
 
         #rmmod -w piris
         rmmod -w open_isp
+        rmmod -w open_openipc_frame_ts
         rmmod -w hi3518e_sys
         rmmod -w hi3518e_base
         rmmod -w open_himedia
