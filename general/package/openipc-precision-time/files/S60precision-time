@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# OpenIPC precision-time profile.
+# Runs ptp4l in software-timestamping client mode, disciplining
+# CLOCK_REALTIME from the LAN's PTP grandmaster. No phc2sys needed.
+
+DAEMON="ptp4l"
+PIDFILE="/var/run/$DAEMON.pid"
+IFACE="${PTP4L_IFACE:-eth0}"
+CONFIG="${PTP4L_CONFIG:-/etc/ptp4l.conf}"
+DAEMON_ARGS="-f $CONFIG -i $IFACE -S"
+
+start() {
+	echo -n "Starting $DAEMON: "
+	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON" -- $DAEMON_ARGS
+	if [ $? -eq 0 ]; then
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+}
+
+stop() {
+	echo -n "Stopping $DAEMON: "
+	start-stop-daemon -K -q -p "$PIDFILE"
+	if [ $? -eq 0 ]; then
+		rm -f "$PIDFILE"
+		echo "OK"
+	else
+		echo "FAIL"
+	fi
+}
+
+case "$1" in
+	start|stop)
+		$1
+		;;
+	restart)
+		stop
+		sleep 1
+		start
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart}"
+		exit 1
+		;;
+esac
