@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 488a76f
+HISILICON_OPENSDK_VERSION = b958db4
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -294,6 +294,12 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_rgn.ko     $(HISILICON_OPENSDK_KMOD_DST)/hi3519v101_region.ko
 	# HWRNG: install verbatim — load_hisilicon insmods it pre-sensor-probe.
 	$(INSTALL) -m 644 $(@D)/kernel/open_hwrng.ko   $(HISILICON_OPENSDK_KMOD_DST)/open_hwrng.ko
+	# V3A OSAL shim — only meaningful on neo (kernel 7.0). On lite (3.18)
+	# the module compiles as a no-op so it could ship there too, but
+	# load_hisilicon would still try to insmod it; gate to neo only.
+	[ "$(OPENIPC_VARIANT)" = "neo" ] && \
+		$(INSTALL) -m 644 $(@D)/kernel/open_v3a_shim.ko \
+			$(HISILICON_OPENSDK_KMOD_DST)/v3a_shim.ko || true
 endef
 
 # For hi3516av100: install opensdk .ko to hisilicon/ with vendor names.
