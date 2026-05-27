@@ -35,6 +35,10 @@ defconfig: prepare
 	@grep -s '^BR2_GLOBAL_PATCH_DIR=' $(CONFIG) >> $(BR_CONF) || true
 	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
 
+menuconfig: prepare
+	@echo --- $(or $(CONFIG),$(error variable BOARD not found))
+	@$(BR_MAKE) menuconfig
+
 prepare:
 	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
 		wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE); \
