@@ -1,0 +1,26 @@
+#!/bin/sh
+# KC110 pad-pinmux: chip7/8 GPIOs used by pan motor + IR-cut + IR-LED
+# need function=0x1 (per vendor hn_config.sh comments "GPIO8_0", "GPIO8_1").
+# OpenIPC kernel pinctrl leaves them at default (0x0 = alternate peripheral)
+# which makes PL061 GPIODATA writes succeed silently — pad never toggles.
+# Stock-OpenIPC builds (and prior boot residue) can also leave wrong state
+# across soft-reboot, so we force-write here regardless of current value.
+
+start() {
+	# pan motor coils B/C/D (chip7 pin 2/3/4) + IR-LED (chip7 pin 7)
+	devmem 0x200f00e8 32 0x1
+	devmem 0x200f00ec 32 0x1
+	devmem 0x200f00f0 32 0x1
+	devmem 0x200f00fc 32 0x1
+	# IR-cut solenoid (chip8 pin 0) + pan motor coil A (chip8 pin 1)
+	devmem 0x200f0100 32 0x1
+	devmem 0x200f0104 32 0x1
+}
+
+case "$1" in
+	start|"") start ;;
+	stop) ;;
+	restart|reload) start ;;
+	*) echo "usage: $0 {start|stop|restart}"; exit 1 ;;
+esac
+exit 0

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Shim: OpenIPC motor.cgi calls "gpio-motors <pan> <tilt> <speed>"
+# Translate to our ptz binary which knows the correct PL061 mapping.
+pan="${1:-0}"
+tilt="${2:-0}"
+phase="${3:-3}"
+log() { logger -t gpio-motors "$@"; }
+log "called pan=$pan tilt=$tilt phase=$phase"
+[ "$pan" != "0" ] && /usr/bin/ptz pan "$pan" "$phase" 2>&1 | logger -t gpio-motors
+[ "$tilt" != "0" ] && /usr/bin/ptz tilt "$tilt" "$phase" 2>&1 | logger -t gpio-motors
+exit 0

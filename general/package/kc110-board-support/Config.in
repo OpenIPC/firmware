@@ -1,0 +1,28 @@
+config BR2_PACKAGE_KC110_BOARD_SUPPORT
+	bool "kc110-board-support"
+	depends on BR2_arm
+	help
+	  Board support for the TP-Link Kasa KC110 PTZ camera (HiSilicon
+	  Hi3518EV200 + OV2735 MIPI sensor + 24BYJ48 stepper motors via
+	  ULN2803 darlington array).
+
+	  Installs:
+	  - ptz: C binary driving pan/tilt steppers (mmap PL061) and IR-cut /
+	    IR-LED via vendor-base-10 GPIO numbering. Replaces the upstream
+	    gpio-motors sysfs approach which uses different pin numbers.
+	  - gpio-motors: small shell shim that forwards web-GUI calls
+	    (gpio-motors X Y N) to the ptz CLI.
+	  - ir-control.sh: convenience wrapper for IR-LED + IR-cut filter.
+	  - S94pinmux-pan-ir: boot-time init that writes 0x1 to pinmux
+	    registers 0x200f00e8/ec/f0/fc/100/104 for chip7/8 pads. OpenIPC
+	    kernel pinctrl doesn't auto-set this for the KC110's pan + IR-cut
+	    + IR-LED pads (vendor's hn_config.sh writes them explicitly).
+
+	  KC110 GPIO map (vendor base-10 numbering = OpenIPC PL061 pins):
+	    pan:    65 / 60 / 59 / 58   (vendor 81/74/73/72)
+	    tilt:   0 / 1 / 2 / 36      (vendor 0/1/2/44)
+	    ir-cut: 64                  (vendor 80)
+	    ir-led: 63                  (vendor 77)
+
+	  Conflicts with the upstream gpio-motors package — this provides a
+	  drop-in replacement at /usr/bin/gpio-motors that calls ptz.
