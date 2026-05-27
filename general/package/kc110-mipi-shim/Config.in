@@ -1,0 +1,29 @@
+config BR2_PACKAGE_KC110_MIPI_SHIM
+	bool "kc110-mipi-shim"
+	depends on BR2_arm
+	help
+	  LD_PRELOAD shim (libfixmipi.so) that patches majestic's MIPI ioctl
+	  calls in-flight on hi3518ev200/V2A boards with OV2735 sensor.
+
+	  Upstream majestic builds combo_dev_attr_t with raw_data_type=0 and
+	  VIU dev_attr with enIntfMode=DC, both rejected by the hi_mipi kernel
+	  module for MIPI sensors. Without this shim, majestic fails with
+	  "ioctl HI_MIPI_SET_DEV_ATTR failed" → "Cannot init sensor" → no
+	  pipeline. Confirmed broken on opensdk e22d315 and b958db4 (May 2026).
+
+	  The shim intercepts:
+	    HI_MIPI_SET_DEV_ATTR (0x41306d01) → patch raw_data_type=2 (RAW10),
+	      lane_id=[0,1,-1,-1,-1,-1,-1,-1]
+	    VIU_DEV_ATTR_SET (variable ioctl)  → patch enIntfMode=VI_MODE_MIPI=5,
+	      au32CompMask[0]=0xfff00000
+
+	  Activation requires `LD_PRELOAD=/usr/lib/libfixmipi.so` exported in
+	  /etc/init.d/S95majestic — see firmware-overlay/etc/init.d/S95majestic
+	  for the export line. Both files must be present.
+
+	  Long-term fix is an upstream majestic PR that builds combo_dev_attr_t
+	  correctly for MIPI sensors. Remove this package and the LD_PRELOAD
+	  export when that lands.
+
+	  Reference: OVERLAY_INVENTORY.md category D, verified necessary
+	  2026-05-27 by removing both files and confirming majestic fails.
