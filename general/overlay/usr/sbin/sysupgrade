@@ -1,22 +1,31 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.51
+scr_version=1.0.52
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
-# Route to firmware or builder manifest based on BUILD_OPTION (variant).
-# Mirrors the legacy URL repo selector at download_firmware ("case $osr in
-# lite|ultimate|neo) repo=firmware"). lite/ultimate/neo cameras come from
-# OpenIPC/firmware; everything else (fpv, rubyfpv, apfpv, lte, venc, mini,
-# ...) is built by OpenIPC/builder and indexed in its own manifest.
-_osr=$(grep '^BUILD_OPTION=' /etc/os-release 2>/dev/null | cut -d= -f2)
-case "${_osr:-lite}" in
-	lite|ultimate|neo) _manifest_repo=firmware ;;
-	*)                 _manifest_repo=builder  ;;
+# Route to firmware or builder manifest. A stock OpenIPC/firmware build
+# stamps BUILD_PLATFORM=${soc}_${variant} with variant in {lite,ultimate,
+# neo}. Anything else — a per-device override (${soc}_${variant}_${device},
+# two or more underscores) or a non-stock variant (${soc}_fpv etc.) — is
+# built by OpenIPC/builder. Pre-1.0.51 cameras lack BUILD_PLATFORM; fall
+# back to BUILD_OPTION (variant) alone.
+_plat=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
+case "$_plat" in
+	*_*_*)                            _manifest_repo=builder  ;;
+	*_lite|*_ultimate|*_neo)          _manifest_repo=firmware ;;
+	?*)                               _manifest_repo=builder  ;;
+	*)
+		_osr=$(grep '^BUILD_OPTION=' /etc/os-release 2>/dev/null | cut -d= -f2)
+		case "${_osr:-lite}" in
+			lite|ultimate|neo) _manifest_repo=firmware ;;
+			*)                 _manifest_repo=builder  ;;
+		esac
+		;;
 esac
 MANIFEST_URL=${MANIFEST_URL:-https://openipc.github.io/${_manifest_repo}/manifest.flat}
 MANIFEST_CACHE=/tmp/manifest.flat
-unset _osr _manifest_repo
+unset _osr _plat _manifest_repo
 
 echo_c() {
 	# 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan, 37 white, 38 grey
