@@ -15,6 +15,10 @@ concurrency:
 jobs:
   generate:
     name: Generate manifest
+    # Run after nightly (schedule) or operator dispatch only — PR builds do
+    # not upload to any release, so re-emitting the manifest after each PR
+    # build is wasted compute (and noisily triggers gh-pages deploys).
+    #
     # Publish on success AND on partial-failure: one flaky board (e.g. a
     # transient toolchain 502) should not deny manifest updates for the 90+
     # platforms that did upload artifacts. enrich_manifest.py reads whatever
@@ -22,7 +26,9 @@ jobs:
     # up with fewer platforms in its `platforms` map.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion)
+      ((github.event.workflow_run.event == 'schedule' ||
+        github.event.workflow_run.event == 'workflow_dispatch') &&
+       contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout master (for the script)
