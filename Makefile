@@ -95,6 +95,9 @@ endif
 	@$(call BUNDLE_SDK)
 
 repack:
+ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
+	@$(call PREPARE_REPACK,firmware.bin,8192,,,nor)
+else
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
 ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
 	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.squashfs,8192,nor)
@@ -113,6 +116,7 @@ endif
 endif
 ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
 	@$(call PREPARE_REPACK,uImage,16384,,,initramfs)
+endif
 endif
 
 size-report:
