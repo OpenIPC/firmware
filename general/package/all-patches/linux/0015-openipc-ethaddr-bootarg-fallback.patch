@@ -1,0 +1,59 @@
+--- a/drivers/net/ethernet/Kconfig
++++ b/drivers/net/ethernet/Kconfig
+@@ -17,6 +17,13 @@
+ config SUNGEM_PHY
+ 	tristate
+ 
++config OPENIPC_ETHADDR
++	bool "OpenIPC ethaddr bootarg fallback"
++	help
++	  Parse the ethaddr= boot argument during early boot and expose it
++	  through arch_get_platform_mac_address(). This is intended as a
++	  board-wide fallback for OpenIPC builds only.
++
+ source "drivers/net/ethernet/3com/Kconfig"
+ source "drivers/net/ethernet/adaptec/Kconfig"
+ source "drivers/net/ethernet/aeroflex/Kconfig"
+
+--- a/drivers/net/ethernet/Makefile
++++ b/drivers/net/ethernet/Makefile
+@@ -63,6 +63,7 @@
+ obj-$(CONFIG_LPC_ENET) += nxp/
+ obj-$(CONFIG_NET_VENDOR_OKI) += oki-semi/
+ obj-$(CONFIG_ETHOC) += ethoc.o
++obj-$(CONFIG_OPENIPC_ETHADDR) += openipc_ethaddr.o
+ obj-$(CONFIG_NET_PACKET_ENGINE) += packetengines/
+ obj-$(CONFIG_NET_VENDOR_PASEMI) += pasemi/
+ obj-$(CONFIG_NET_VENDOR_QLOGIC) += qlogic/
+
+--- a/drivers/net/ethernet/openipc_ethaddr.c
++++ b/drivers/net/ethernet/openipc_ethaddr.c
+@@ -0,0 +1,28 @@
++// SPDX-License-Identifier: GPL-2.0-or-later
++#include <linux/etherdevice.h>
++#include <linux/init.h>
++
++static u8 openipc_ethaddr[ETH_ALEN];
++static bool openipc_ethaddr_valid;
++
++static int __init openipc_early_ethaddr(char *str)
++{
++	u8 mac[ETH_ALEN];
++
++	if (!str || !mac_pton(str, mac))
++		return 0;
++
++	ether_addr_copy(openipc_ethaddr, mac);
++	openipc_ethaddr_valid = true;
++
++	return 0;
++}
++early_param("ethaddr", openipc_early_ethaddr);
++
++unsigned char *arch_get_platform_mac_address(void)
++{
++	if (!openipc_ethaddr_valid)
++		return NULL;
++
++	return openipc_ethaddr;
++}
