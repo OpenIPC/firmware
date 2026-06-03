@@ -288,6 +288,15 @@ jobs:
       - name: Verify kernel modules
         run: sh .github/scripts/check_target_modules.sh
 
+      - name: Build size report
+        run: |
+          make BOARD=${{matrix.platform}} size-report || \
+            echo "::warning::size-report failed for ${{matrix.platform}}"
+          SIZES=$(find output/images -name 'sizes.*.json' | head -1)
+          if [ -e "$SIZES" ]; then
+            echo "SIZES=$SIZES" >> ${GITHUB_ENV}
+          fi
+
       - name: Upload firmware (dated)
         if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
@@ -301,6 +310,7 @@ jobs:
           files: |
             ${{env.NORFW}}
             ${{env.NANDFW}}
+            ${{env.SIZES}}
 
       - name: Upload firmware (rolling nightly)
         if: github.event_name != 'pull_request'
@@ -314,6 +324,7 @@ jobs:
           files: |
             ${{env.NORFW}}
             ${{env.NANDFW}}
+            ${{env.SIZES}}
 
       - name: Upload firmware (latest — legacy alias)
         if: github.event_name != 'pull_request'
@@ -323,6 +334,7 @@ jobs:
           files: |
             ${{env.NORFW}}
             ${{env.NANDFW}}
+            ${{env.SIZES}}
 
       - name: Send binary
         if: github.event_name != 'pull_request' && env.NORFW
