@@ -69,7 +69,11 @@ audit-abi:
 
 deps:
 	sudo apt-get install -y automake autotools-dev bc build-essential cpio \
-		curl file fzf git libncurses-dev libtool lzop make rsync unzip wget libssl-dev
+		curl file fzf git libncurses-dev libtool lzop make rsync unzip wget libssl-dev \
+		python3 python3-pip
+	# kconfiglib is the only non-stdlib dep added by general/scripts/kconfig_graph.py;
+	# install with --break-system-packages on PEP 668 distros (Ubuntu 24.04+, Debian 12+).
+	python3 -m pip install --user --break-system-packages kconfiglib
 
 timer:
 	@echo - Build time: $(shell date -d @$(shell expr $(shell date +%s) - $(TIMER)) -u +%M:%S)
@@ -130,6 +134,16 @@ size-report:
 	BR2_TARGET_ROOTFS_SQUASHFS=$(BR2_TARGET_ROOTFS_SQUASHFS) \
 	BR2_TARGET_ROOTFS_UBI=$(BR2_TARGET_ROOTFS_UBI) \
 	python3 $(PWD)/general/scripts/size_report.py
+
+kconfig-graph:
+	@TARGET_DIR=$(TARGET)/target \
+	BR2_OUTPUT_DIR=$(TARGET) \
+	IMAGES_DIR=$(TARGET)/images \
+	OPENIPC_SOC_MODEL=$(BR2_OPENIPC_SOC_MODEL) \
+	OPENIPC_VARIANT=$(BR2_OPENIPC_VARIANT) \
+	BR_VER=$(BR_VER) \
+	PWD=$(PWD) \
+	python3 $(PWD)/general/scripts/kconfig_graph.py
 
 define BUNDLE_SDK
 	OSDRV_DIR=$(PWD)/general/package/$(BR2_OPENIPC_SOC_VENDOR)-osdrv-$(BR2_OPENIPC_SOC_FAMILY)/files; \
