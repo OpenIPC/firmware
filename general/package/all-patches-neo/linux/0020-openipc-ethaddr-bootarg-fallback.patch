@@ -22,7 +22,7 @@
  obj-$(CONFIG_NET_VENDOR_OKI) += oki-semi/
  obj-$(CONFIG_ETHOC) += ethoc.o
 +obj-$(CONFIG_OPENIPC_ETHADDR) += openipc_ethaddr.o
- obj-$(CONFIG_NET_PACKET_ENGINE) += packetengines/
+ obj-$(CONFIG_NET_VENDOR_PACKET_ENGINES) += packetengines/
  obj-$(CONFIG_NET_VENDOR_PASEMI) += pasemi/
  obj-$(CONFIG_NET_VENDOR_QLOGIC) += qlogic/
 
@@ -31,6 +31,7 @@
 @@ -0,0 +1,29 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +#include <linux/etherdevice.h>
++#include <linux/hex.h>
 +#include <linux/init.h>
 +
 +static u8 openipc_ethaddr[ETH_ALEN];

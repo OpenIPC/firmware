@@ -21,6 +21,9 @@ CONFIG := $(shell find br-ext-*/configs/*_defconfig | grep -m1 $(BOARD))
 include $(CONFIG)
 endif
 
+# Get the last override for a Buildroot string setting from a .config-style file.
+get-br2-var = awk '/^[[:space:]]*$(1)[[:space:]]*=/ { sub(/^[^=]*=[[:space:]]*/, ""); gsub(/^"|"$$/, ""); value = $$0 } END { gsub(/^[[:space:]]+/, "", value); gsub(/[[:space:]]+$$/, "", value); print value }' "$(2)"
+
 all: build repack timer
 
 build: defconfig
@@ -29,10 +32,41 @@ build: defconfig
 br-%: defconfig
 	@$(BR_MAKE) $(subst br-,,$@) -j$(shell nproc)
 
+linux-patch-check: defconfig
+	@echo "--- validating linux patch stack for $(or $(BOARD),$(CONFIG))"
+	@echo "--- removing extracted kernel trees"
+	@rm -rf $(TARGET)/build/linux-custom $(TARGET)/build/linux-headers-custom
+	@$(BR_MAKE) linux-patch -j1
+
 defconfig: prepare
-	@echo --- $(or $(CONFIG),$(error variable BOARD not found))
 	@cat $(CONFIG) $(PWD)/general/openipc.fragment > $(BR_CONF)
-	@grep -s '^BR2_GLOBAL_PATCH_DIR=' $(CONFIG) >> $(BR_CONF) || true
+	@BR2_GLOBAL_PATCH_DIR="$$($(call get-br2-var,BR2_GLOBAL_PATCH_DIR,$(CONFIG)))"; \
+	if [ -z "$$BR2_GLOBAL_PATCH_DIR" ]; then \
+		BR2_GLOBAL_PATCH_DIR="$$($(call get-br2-var,BR2_GLOBAL_PATCH_DIR,$(BR_CONF)))"; \
+	fi; \
+	BR2_EXTERNAL_LITERAL='$$(BR2_EXTERNAL)'; \
+	VENDOR_DIR="$$(dirname "$(CONFIG)")/.."; \
+	SOC_FAMILY="$$($(call get-br2-var,BR2_OPENIPC_SOC_FAMILY,$(BR_CONF)))"; \
+	KERNEL_CONFIG_FILE="$$($(call get-br2-var,BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE,$(BR_CONF)))"; \
+	KERNEL_CONFIG_FILE="$$(printf '%s\n' "$$KERNEL_CONFIG_FILE" | awk -v vendor="$$VENDOR_DIR" -v family="$$SOC_FAMILY" '{ gsub(/\$$\(EXTERNAL_VENDOR\)/, vendor); gsub(/\$$\(OPENIPC_SOC_FAMILY\)/, family); print }')"; \
+	EXTRA_PATCH_DIRS=""; \
+	if [ -f "$$KERNEL_CONFIG_FILE" ]; then \
+		if rg -q '^CONFIG_(GOKE_FEMAC|XMEDIA_FEMAC)=[ym]$$' "$$KERNEL_CONFIG_FILE"; then \
+			EXTRA_PATCH_DIRS="$$EXTRA_PATCH_DIRS $$BR2_EXTERNAL_LITERAL/package/all-patches/linux-drivers/goke-femac"; \
+		fi; \
+		if rg -q '^CONFIG_HISI_FEMAC=[ym]$$' "$$KERNEL_CONFIG_FILE"; then \
+			EXTRA_PATCH_DIRS="$$EXTRA_PATCH_DIRS $$BR2_EXTERNAL_LITERAL/package/all-patches/linux-drivers/hisi-femac"; \
+		fi; \
+		if rg -q '^CONFIG_HISI_HIGMAC=[ym]$$' "$$KERNEL_CONFIG_FILE"; then \
+			EXTRA_PATCH_DIRS="$$EXTRA_PATCH_DIRS $$BR2_EXTERNAL_LITERAL/package/all-patches/linux-drivers/hisi-higmac"; \
+		fi; \
+	fi; \
+	EXTRA_PATCH_DIRS="$$(printf '%s\n' "$$EXTRA_PATCH_DIRS" | sed 's/^[[:space:]]*//; s/[[:space:]]*$$//')"; \
+	if [ -n "$$EXTRA_PATCH_DIRS" ]; then \
+		BR2_GLOBAL_PATCH_DIR="$$BR2_GLOBAL_PATCH_DIR $$EXTRA_PATCH_DIRS"; \
+	fi; \
+	sed -i '/^BR2_GLOBAL_PATCH_DIR=/d' $(BR_CONF); \
+	echo "BR2_GLOBAL_PATCH_DIR=\"$$BR2_GLOBAL_PATCH_DIR\"" >> $(BR_CONF)
 	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
 
 prepare:
@@ -44,6 +78,7 @@ help:
 	@printf "BR-OpenIPC usage:\n \
 	- make list - show available device configurations\n \
 	- make deps - install build dependencies\n \
+	- make BOARD=<target> linux-patch-check - validate only the kernel patch stack\n \
 	- make clean - remove defconfig and target folder\n \
 	- make package - list available packages\n \
 	- make distclean - remove buildroot and output folder\n \

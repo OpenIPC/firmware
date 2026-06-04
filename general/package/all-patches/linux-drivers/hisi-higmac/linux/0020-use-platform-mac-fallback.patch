@@ -1,0 +1,12 @@
+--- a/drivers/net/ethernet/hisilicon/hisi_higmac.c
++++ b/drivers/net/ethernet/hisilicon/hisi_higmac.c
+@@ -899,8 +899,7 @@
+ 		return dev_err_probe(dev, PTR_ERR(priv->macif_rst),
+ 				     "macif_reset\n");
+ 
+-	ret = of_get_ethdev_address(np, ndev);
+-	if (ret) {
++	if (eth_platform_get_mac_address(dev, ndev->dev_addr)) {
+ 		eth_hw_addr_random(ndev);
+ 		dev_info(dev, "no MAC in DT, using random %pM\n",
+ 			 ndev->dev_addr);
