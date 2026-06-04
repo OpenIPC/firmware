@@ -29,7 +29,6 @@ REPO = os.environ.get("GITHUB_REPOSITORY", "OpenIPC/firmware")
 RETENTION = 90
 TAG_RE = re.compile(r"^nightly-(\d{8})-([0-9a-f]{7})$")
 ASSET_RE = re.compile(r"^openipc\.([^.]+)-(nor|nand)-(lite|ultimate|neo)\.tgz$")
-SIZES_RE = re.compile(r"^sizes\.([^.]+)-(lite|ultimate|neo)\.json$")
 
 # Retry budget for transient GitHub API failures (HTTP 401 Bad credentials,
 # 5xx, rate-limit) observed on workflow_run-triggered runs 2026-05-23.
@@ -126,20 +125,13 @@ def main() -> None:
         platforms: dict[str, dict[str, dict]] = {}
         for a in info.get("assets") or []:
             parsed = parse_asset(a["name"])
-            if parsed:
-                platform, flash = parsed
-                platforms.setdefault(platform, {})[flash] = {
-                    "url": a["url"],
-                    "size": a["size"],
-                }
+            if not parsed:
                 continue
-            m = SIZES_RE.match(a["name"])
-            if m:
-                soc, variant = m.groups()
-                platforms.setdefault(f"{soc}_{variant}", {})["sizes"] = {
-                    "url": a["url"],
-                    "size": a["size"],
-                }
+            platform, flash = parsed
+            platforms.setdefault(platform, {})[flash] = {
+                "url": a["url"],
+                "size": a["size"],
+            }
         builds.append({
             "id": info["tagName"],
             "sha": sha,
@@ -162,19 +154,11 @@ def main() -> None:
         "# OpenIPC firmware build index",
         f"# generated_at={now}",
         "# columns: build_id platform flash size url",
-        "# also: @sizes <build_id> <platform> <size> <url>  (per-platform size report sidecar)",
     ]
     for b in builds:
         for platform, flashes in sorted(b["platforms"].items()):
             for flash, info in sorted(flashes.items()):
-                if flash == "sizes":
-                    continue
                 lines.append(f"{b['id']} {platform} {flash} {info['size']} {info['url']}")
-            sizes = flashes.get("sizes")
-            if sizes:
-                lines.append(
-                    f"@sizes {b['id']} {platform} {sizes['size']} {sizes['url']}"
-                )
     lines.append("# channels")
     for ch, target in manifest["channels"].items():
         lines.append(f"@channel {ch} {target}")
