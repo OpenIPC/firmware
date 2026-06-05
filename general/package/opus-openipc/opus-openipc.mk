@@ -14,6 +14,23 @@ OPUS_OPENIPC_INSTALL_STAGING = YES
 
 OPUS_OPENIPC_CFLAGS = $(TARGET_CFLAGS)
 
+# Optional HiSilicon ot_opus_* shim. Drops src/ot_opus_shim.c into the
+# tree, edits Makefile.am to add it to libopus_la_SOURCES, and turns on
+# autoreconf so Makefile.in picks up the change. Only enabled when the
+# closed vendor userspace on the target requires the ot_opus_* surface
+# (Hi3516CV6xx). Off by default, so other SoCs neither pull host
+# autotools deps nor pay the 6 dead symbols.
+ifeq ($(BR2_PACKAGE_OPUS_OPENIPC_HISI_SHIM),y)
+OPUS_OPENIPC_AUTORECONF = YES
+define OPUS_OPENIPC_ADD_HISI_SHIM
+	mkdir -p $(@D)/src
+	cp $(OPUS_OPENIPC_PKGDIR)/src/ot_opus_shim.c $(@D)/src/ot_opus_shim.c
+	$(SED) 's|^libopus_la_SOURCES = \$$(CELT_SOURCES) \$$(SILK_SOURCES) \$$(OPUS_SOURCES)$$|& src/ot_opus_shim.c|' \
+		$(@D)/Makefile.am
+endef
+OPUS_OPENIPC_POST_EXTRACT_HOOKS += OPUS_OPENIPC_ADD_HISI_SHIM
+endif
+
 ifeq ($(BR2_TOOLCHAIN_HAS_GCC_BUG_85180),y)
 OPUS_OPENIPC_CFLAGS += -O0
 endif
