@@ -50,6 +50,15 @@ HISILICON_OSDRV_HI3516CV6XX_MPP_LIBS = \
 	libvqe_aec.so libvqe_agc.so libvqe_anr.so libvqe_eq.so \
 	libvqe_hpf.so libvqe_hs.so libvqe_record.so libvqe_res.so libvqe_talkv2.so
 
+# Sensor .so blobs shipped from vendor flash where the openhisilicon
+# V5 SDK has no source mirror. Extracted from the original CV608 DEMO
+# board flash (Hi3516CV610_MPP_V1.0.1.0 B040, Sep 2024). Source-built
+# sensors (gc4023, os04d10, sc4336p, sc450ai, sc500ai, sc431hai) come
+# from hisilicon-opensdk and are not duplicated here.
+HISILICON_OSDRV_HI3516CV6XX_SENSOR_BLOBS = \
+	libsns_imx307.so \
+	libsns_os02m10.so
+
 define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
@@ -59,6 +68,17 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	$(foreach lib,$(HISILICON_OSDRV_HI3516CV6XX_MPP_LIBS), \
 		$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/lib/$(lib) ; \
 	)
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach lib,$(HISILICON_OSDRV_HI3516CV6XX_SENSOR_BLOBS), \
+		$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/$(lib) ; \
+	)
+
+	# ipctool's i2c probe reports the OmniVision OS02M10 chip ID
+	# (0x5302) as "SP2308" (rebadged SuperPix marker — same silicon).
+	# Symlink so devices whose u-boot env still carries that legacy
+	# name resolve to the correct driver without a manual fix.
+	ln -sf libsns_os02m10.so $(TARGET_DIR)/usr/lib/sensors/libsns_sp2308.so
 
 endef
 
