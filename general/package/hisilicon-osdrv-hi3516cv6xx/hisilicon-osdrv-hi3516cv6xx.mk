@@ -15,10 +15,15 @@
 # V5 source mirror exists. The install list below is the transitive
 # NEEDED closure of the majestic binary against the vendor lib set
 # (computed via readelf -d), with libopus.so excluded because
-# BR2_PACKAGE_OPUS_OPENIPC builds a source equivalent. The 13 libs not
-# in the closure (libss_mpi_aibnr/bla/cipher/devstat/km/otp/smartae/
-# syskol/uvc, libss_bcd, libmbedtls_harden_adapt, libsvp_aicpu,
-# libvqe_common) save ~660 KB and are intentionally omitted.
+# BR2_PACKAGE_OPUS_OPENIPC + BR2_PACKAGE_OPUS_OPENIPC_HISI_SHIM build
+# an open equivalent that covers both the standard opus_* API and the
+# 6 HiSi-only ot_opus_* extensions used by libss_mpi_audio_adp.so (the
+# shim source lives in general/package/opus-openipc/src/ot_opus_shim.c
+# and is baked into libopus.so by the package's gated POST_EXTRACT
+# hook). The 13 libs not in the closure (libss_mpi_aibnr/bla/cipher/
+# devstat/km/otp/smartae/syskol/uvc, libss_bcd,
+# libmbedtls_harden_adapt, libsvp_aicpu, libvqe_common) save ~660 KB
+# and are intentionally omitted.
 #
 ################################################################################
 

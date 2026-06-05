@@ -23,4 +23,21 @@ config BR2_PACKAGE_OPUS_OPENIPC_FIXED_POINT
 	  Compile without floating point operations (for machines
 	  without a fast enough FPU).
 
+config BR2_PACKAGE_OPUS_OPENIPC_HISI_SHIM
+	bool "bake in HiSilicon ot_opus_* shim"
+	help
+	  Add an open-source implementation of the 6 ot_opus_*
+	  wrapper functions (ot_opusenc_create/_destroy/_process_frame
+	  + ot_opusdec_* counterparts) to libopus.so.
+
+	  The HiSilicon Hi3516CV6xx (V5) vendor MPP audio adapter
+	  libss_mpi_audio_adp.so resolves these symbols at runtime
+	  against the closed vendor libopus.so. Enabling this option
+	  lets us drop the vendor blob and ship a single open libopus
+	  that satisfies both the standard libopus.so.0 SONAME and the
+	  vendor binary's unversioned libopus.so DT_NEEDED.
+
+	  Only needed on SoC families whose closed userspace expects
+	  the ot_opus_* surface. Leave off otherwise.
+
 endif
