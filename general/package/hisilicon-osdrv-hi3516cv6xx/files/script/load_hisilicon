@@ -34,7 +34,9 @@ report_error() {
 	exit 1
 }
 
-set_allocator(){}
+set_allocator() {
+	fw_setenv mmz_allocator "$1" >/dev/null 2>&1
+}
 
 check_allocator() {
 	allocator=$(grep mmz_allocator /proc/cmdline)
@@ -48,126 +50,154 @@ check_allocator() {
 }
 
 insert_osal() {
-	# check_allocator
-	modprobe ot_osal proc_show=${DEBUG}
+	check_allocator
+	modprobe open_osal proc_show=${DEBUG}
 
 	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
 	if [ -z "$MMZ" ]; then
-		modprobe ot_mmz anony=1 mmz_allocator=ot mmz=anonymous,0,$mmz_start,$mmz_size mem_process_isolation=$((1 - DEBUG)) || report_error
+		modprobe open_mmz anony=1 mmz_allocator=ot mmz=anonymous,0,$mmz_start,$mmz_size mem_process_isolation=$((1 - DEBUG)) || report_error
 	else
-		modprobe ot_mmz anony=1 mmz_allocator=cma mmz=$MMZ mem_process_isolation=$((1 - DEBUG)) || report_error
+		modprobe open_mmz anony=1 mmz_allocator=cma mmz=$MMZ mem_process_isolation=$((1 - DEBUG)) || report_error
 	fi
 }
 
 function insert_audio()
 {
-	modprobe ot_aio
-	modprobe ot_ai
-	modprobe ot_ao
-	modprobe ot_aenc
-	modprobe ot_adec
-	modprobe ot_acodec
+	modprobe open_aio
+	modprobe open_ai
+	modprobe open_ao
+	modprobe open_aenc
+	modprobe open_adec
+	modprobe open_acodec
 }
 
 function remove_audio()
 {
-	rmmod ot_acodec
-	rmmod ot_adec
-	rmmod ot_aenc
-	rmmod ot_ao
-	rmmod ot_ai
-	rmmod ot_aio
+	rmmod open_acodec
+	rmmod open_adec
+	rmmod open_aenc
+	rmmod open_ao
+	rmmod open_ai
+	rmmod open_aio
 }
 
 function insert_security_subsys()
 {
-	modprobe ot_cipher
-	modprobe ot_km
+	# open_cipher and open_km are V5 closed-source security blobs not yet
+	# in the openhisilicon set — modprobe will return non-zero if missing.
+	# Run best-effort so the rest of the MPP pipeline still comes up.
+	modprobe open_cipher 2>/dev/null
+	modprobe open_km 2>/dev/null
 }
 
 function remove_security_subsys()
 {
-	rmmod ot_km
-	rmmod ot_cipher
+	rmmod open_km 2>/dev/null
+	rmmod open_cipher 2>/dev/null
+}
+
+function insert_detect()
+{
+	# Minimal module set sufficient for `ipcinfo --short-sensor` probe.
+	# Mirrors ev200's insert_detect() — avoids paying the full MPP
+	# bring-up cost during sensor auto-detect (~3 sec vs ~15 sec).
+	modprobe open_sys_config sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1 board=$BOARD ir_auto=$IR_AUTO
+	insert_osal
+	modprobe open_base logmpp_show=${DEBUG}
+	modprobe open_isp
+	modprobe open_sensor_i2c
+	modprobe open_sensor_spi 2>/dev/null
+}
+
+function remove_detect()
+{
+	rmmod open_sensor_spi 2>/dev/null
+	rmmod open_sensor_i2c 2>/dev/null
+	rmmod open_isp
+	rmmod open_base
+	rmmod open_mmz
+	rmmod open_osal
+	rmmod open_sys_config
 }
 
 insert_ko() {
 	# sys config
-	modprobe sys_config sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1 board=$BOARD ir_auto=$IR_AUTO
+	modprobe open_sys_config sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1 board=$BOARD ir_auto=$IR_AUTO
 	# driver load
 	insert_osal
-	modprobe ot_base logmpp_show=${DEBUG}
-	modprobe ot_vb
-	modprobe ot_vca
-	modprobe ot_sys profile=$SYS_PROFILE
-	modprobe ot_rgn
-	modprobe ot_vpp
-	modprobe ot_vgs
-	modprobe ot_vpss
-	modprobe ot_vi
-	modprobe ot_isp
-	modprobe ot_chnl
-	modprobe ot_rc
-	modprobe ot_venc g_venc_max_chn_num=8
-	modprobe ot_h264e
-	modprobe ot_h265e
+	modprobe open_base logmpp_show=${DEBUG}
+	modprobe open_vb
+	modprobe open_vca
+	modprobe open_sys profile=$SYS_PROFILE
+	modprobe open_rgn
+	modprobe open_vpp
+	modprobe open_vgs
+	modprobe open_vpss
+	modprobe open_vi
+	modprobe open_isp
+	modprobe open_chnl
+	modprobe open_rc
+	modprobe open_venc g_venc_max_chn_num=8
+	modprobe open_h264e
+	modprobe open_h265e
 
-	case ${socmodel} in 20g|00s|00g) modprobe ot_svac3e ;; esac
-	# modprobe ot_svac3e
-	modprobe ot_jpege
-	modprobe ot_svp_npu
-	modprobe ot_ive save_power=1
-	# modprobe ot_pwm
-	# modprobe ot_piris
-	modprobe ot_sensor_i2c
-	# modprobe extdrv/ot_sensor_spi
+	case ${socmodel} in 20g|00s|00g) modprobe open_svac3e ;; esac
+	# modprobe open_svac3e
+	modprobe open_jpege
+	modprobe open_svp_npu
+	modprobe open_ive save_power=1
+	modprobe open_pwm
+	modprobe open_piris
+	modprobe open_sensor_i2c
+	modprobe open_sensor_spi 2>/dev/null
 
 	insert_audio
-	modprobe ot_mipi_rx
-	# modprobe ot_user
-	case ${socmodel} in 20s|20g|00s|00g) modprobe ot_aiisp ;; esac
-	# modprobe ot_aiisp
-	# modprobe ot_uvc
-	modprobe ot_pm
+	modprobe open_mipi_rx
+	# modprobe open_user
+	case ${socmodel} in 20s|20g|00s|00g) modprobe open_aiisp ;; esac
+	# modprobe open_uvc
+	modprobe open_pm
+	modprobe open_wdt
 	insert_security_subsys
 }
 
 remove_ko() {
 	remove_security_subsys
-	rmmod ot_pm
-	# rmmod ot_uvc
-	rmmod ot_aiisp &> /dev/null
-	# rmmod ot_user
-	rmmod ot_mipi_rx
+	rmmod open_wdt 2>/dev/null
+	rmmod open_pm
+	# rmmod open_uvc
+	rmmod open_aiisp &> /dev/null
+	# rmmod open_user
+	rmmod open_mipi_rx
 
 	remove_audio
-	#rmmod ot_sensor_spi &> /dev/null
-	rmmod ot_sensor_i2c &> /dev/null
-	# rmmod ot_piris
-	# rmmod ot_pwm
-	rmmod ot_ive
-	rmmod ot_svp_npu
-	rmmod ot_jpege
-	rmmod ot_h265e
-	rmmod ot_svac3e &> /dev/null
-	rmmod ot_h264e
-	rmmod ot_venc
-	rmmod ot_rc
-	rmmod ot_chnl
-	rmmod ot_vpss
-	rmmod ot_isp
-	rmmod ot_vi
-	rmmod ot_vgs
-	rmmod ot_vpp
-	rmmod ot_rgn
-	rmmod ot_sys
-	rmmod ot_vca
-	rmmod ot_vb
-	rmmod ot_base
-	rmmod ot_mmz
-	rmmod ot_osal
+	rmmod open_sensor_spi &> /dev/null
+	rmmod open_sensor_i2c &> /dev/null
+	rmmod open_piris 2>/dev/null
+	rmmod open_pwm 2>/dev/null
+	rmmod open_ive
+	rmmod open_svp_npu
+	rmmod open_jpege
+	rmmod open_h265e
+	rmmod open_svac3e &> /dev/null
+	rmmod open_h264e
+	rmmod open_venc
+	rmmod open_rc
+	rmmod open_chnl
+	rmmod open_vpss
+	rmmod open_isp
+	rmmod open_vi
+	rmmod open_vgs
+	rmmod open_vpp
+	rmmod open_rgn
+	rmmod open_sys
+	rmmod open_vca
+	rmmod open_vb
+	rmmod open_base
+	rmmod open_mmz
+	rmmod open_osal
 
-	rmmod sys_config
+	rmmod open_sys_config
 }
 
 load_usage()
@@ -221,6 +251,9 @@ function parse_arg()
 		if [ $b_arg_sensor0 -eq 1 ] ; then
 			b_arg_sensor0=0;
 			SNS_TYPE0=$arg;
+			# Mirror ev200: explicit sensor flag also seeds SENSOR
+			# so the auto-detect probe path is skipped.
+			export SENSOR=$arg
 		fi
 		if [ $b_arg_sensor1 -eq 1 ] ; then
 			b_arg_sensor1=0;
@@ -324,10 +357,10 @@ else
 		export SENSOR=${SENSOR_ENV}
 		logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
 	else
-		insert_ko
+		insert_detect
 		SENSOR_DETECT=$(ipcinfo --short-sensor)
 		export SENSOR=${SENSOR_DETECT:=unknown}
-		remove_ko
+		remove_detect
 		logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"
 		fw_setenv sensor $SENSOR && logger -s -p daemon.info -t hisilicon "Write detected ${SENSOR} to U-Boot ENV"
 	fi
