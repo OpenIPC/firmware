@@ -1,0 +1,25 @@
+Provide a fallback NLM_F_DUMP_INTR define for toolchains whose
+linux/netlink.h kernel UAPI headers predate kernel 3.16 (which is when
+the flag was added in commit 1d4c8c29c7df). The cv6xx (V5) musl
+toolchain shipped under openipc/firmware releases is built against a
+pre-3.16 UAPI snapshot, so wireguard-tools 1.0.20210914 fails to compile
+against it with "NLM_F_DUMP_INTR undeclared". The kernel-side value is
+0x10 and has been stable since its introduction; defining it locally
+when the system header omits it is safe across all targets.
+
+Signed-off-by: OpenIPC <noreply@openipc.org>
+
+diff -urN a/src/netlink.h b/src/netlink.h
+--- a/src/netlink.h
++++ b/src/netlink.h
+@@ -21,6 +21,10 @@
+ #include <linux/netlink.h>
+ #include <linux/genetlink.h>
+ 
++#ifndef NLM_F_DUMP_INTR
++#define NLM_F_DUMP_INTR 0x10
++#endif
++
+ #define MNL_SOCKET_AUTOPID 0
+ #define MNL_ALIGNTO 4
+ #define MNL_ALIGN(len) (((len)+MNL_ALIGNTO-1) & ~(MNL_ALIGNTO-1))
