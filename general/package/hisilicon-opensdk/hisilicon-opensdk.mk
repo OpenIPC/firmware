@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 31a5e9f0
+HISILICON_OPENSDK_VERSION = b1c4dae5
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -32,6 +32,9 @@ endif
 ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3520DV200),y)
 HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3520dv200
 endif
+ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV6XX),y)
+HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3516cv6xx
+endif
 
 HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
 HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
@@ -51,12 +54,25 @@ endif
 HISILICON_OPENSDK_MODULE_MAKE_OPTS += DISABLE_VO=1
 endif
 
+# V5 (hi3516cv6xx) is encode-only — no VO, no HDMI, no TDE, no NNIE, no
+# VDEC, no VEDU, no JPEGD, no GDC, no DIS, no MIPI_TX, no HIFB. These
+# blobs simply don't exist in the CV610 SDK. The per-SoC .kbuild already
+# omits the obj-m lines, but the shared Kbuild fallback path
+# (kernel/Kbuild's `else` branch) gates on DISABLE_* macros — match those
+# guards so any shared per-block Kbuild fragments that get pulled in via
+# include() stay disabled.
+ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv6xx)
+HISILICON_OPENSDK_MODULE_MAKE_OPTS += DISABLE_VO=1 DISABLE_TDE=1
+endif
+
 ifeq ($(OPENIPC_SOC_FAMILY),hi3516ev200)
 	HISILICON_OPENSDK_SDK_CODE = 0x3516E200
 else ifeq ($(OPENIPC_SOC_FAMILY),gk7205v200)
 	HISILICON_OPENSDK_SDK_CODE = 0x7205200
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv500)
 	HISILICON_OPENSDK_SDK_CODE = 0x3516C500
+else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv6xx)
+	HISILICON_OPENSDK_SDK_CODE = 0x3516C610
 endif
 
 # for userspace libraries
@@ -73,6 +89,13 @@ define HISILICON_OPENSDK_BUILD_CMDS
 	@:
 endef
 endif
+
+# hi3516cv6xx (V5) builds the 6 sensor drivers from source. The MPP
+# userspace libraries (libss_mpi_*.so, libvqe_*.so, libsvp_*.so etc.)
+# don't have a source mirror yet and continue to ship prebuilt from
+# hisilicon-osdrv-hi3516cv6xx. The default BUILD_CMDS runs
+# `make -C libraries all` which the libraries/Makefile filters down
+# to ./sensor/hi3516cv6xx/% for this CHIPARCH.
 
 # Sensor install list per SoC family
 HISILICON_OPENSDK_SENSORS_hi3516ev200 = \
@@ -199,6 +222,13 @@ HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 	soi_jxf23/libsns_jxf23 \
 	soi_jxh42/libsns_jxh42 \
 	sony_imx222/libsns_imx222
+HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
+	galaxycore_gc4023/libsns_gc4023 \
+	omnivision_os04d10/libsns_os04d10 \
+	smart_sc431hai/libsns_sc431hai \
+	smart_sc4336p/libsns_sc4336p \
+	smart_sc450ai/libsns_sc450ai \
+	smart_sc500ai/libsns_sc500ai
 
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
@@ -470,6 +500,24 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	done
 endef
 
+# For hi3516cv6xx: V5 — install opensdk .ko directly to hisilicon/ keeping
+# the open_* names. load_hisilicon (rewritten) drives `modprobe open_*`.
+# Sensor .so files built from source under libraries/sensor/hi3516cv6xx/
+# get installed to /usr/lib/sensors/, overwriting any prebuilt vendor
+# copies that hisilicon-osdrv-hi3516cv6xx may also have installed.
+else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv6xx)
+HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
+define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
+	for ko in $(@D)/kernel/open_*.ko; do \
+		[ -f $${ko} ] && $(INSTALL) -m 644 -t $(HISILICON_OPENSDK_KMOD_DST) $${ko} || true; \
+	done
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
+endef
+
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3520dv200)
 # hi3520dv200: V2-era 4-channel analog DVR SoC. Kernel 3.0.8. No
 # sensor blobs (NVP6114 analog video decoder kernel module is built
@@ -519,7 +567,7 @@ $(eval $(kernel-module))
 #    TARGET_FINALIZE_HOOKS (linux package is processed before this one), so
 #    it has already executed by the time we get here — we need a second pass
 #    so modules.dep reflects the post-cleanup state.
-ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300 hi3520dv200,$(OPENIPC_SOC_FAMILY)),)
+ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300 hi3520dv200 hi3516cv6xx,$(OPENIPC_SOC_FAMILY)),)
 define HISILICON_OPENSDK_FINALIZE_MODULES
 	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
