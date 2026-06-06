@@ -1,3 +1,9 @@
+# NOTE: gk7205v210 is firmware-identical to gk7205v200 (same SOC_FAMILY, kernel,
+# osdrv). It is intentionally excluded from CI (.github/workflows/build.yml) and
+# served by the gk7205v200 image via gk7205v200's BR2_OPENIPC_SOC_ALIASES
+# (on-device sysupgrade resolves gk7205v210 -> gk7205v200). Kept here so
+# `make BOARD=gk7205v210_lite` still works.
+
 # Architecture
 BR2_arm=y
 BR2_cortex_a7=y
