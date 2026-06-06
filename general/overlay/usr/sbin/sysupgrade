@@ -107,35 +107,40 @@ do_update_rootfs() {
 do_update_firmware() {
 	# A combined image bundles the FIT kernel (DTB magic d00dfeed) and the
 	# rootfs squashfs in one blob — the rootfs packed right after the FIT at a
-	# 64K-aligned offset (see the cv6xx board post-image.sh). If the flash
-	# exposes a dedicated combined "firmware" partition, write the whole blob
-	# there so the kernel/rootfs boundary can float with the FIT size.
-	# Otherwise slice it at the FIT boundary and reuse the existing split
-	# kernel/rootfs partitions.
+	# 64K-aligned offset (see the cv6xx board post-image.sh).
+	#
+	# Prefer the traditional NON-overlapping split: slice the blob at the FIT
+	# boundary and write the FIT to the kernel partition and the rootfs to the
+	# rootfs partition (each flashcp stays within its own partition and U-Boot
+	# reads them from those fixed offsets). Only when the flash has no separate
+	# kernel/rootfs partitions — a pure combined layout — fall back to a single
+	# whole-blob write to the "firmware" partition (which on cv6xx overlaps
+	# kernel+rootfs and is meant for whole-image programming).
 	local x=/tmp/firmware.bin.$model
 	echo_c 33 "\nFirmware (combined image)"
 	echo "Update firmware from $x"
 	[ ! -f "$x" ] && die "File $x not found"
 
-	local fw_dev=$(get_device "firmware")
-	if [ "$fw_dev" != "/dev/" ]; then
-		echo "Combined partition $fw_dev"
-		set_progress flashcp -v "$x" "$fw_dev"
-		echo_c 32 "Firmware updated"
+	if [ "$(get_device "kernel")" != "/dev/" ] && [ "$(get_device "rootfs")" != "/dev/" ]; then
+		# Split at the FIT totalsize (header bytes 4-7, big-endian), rounded up
+		# to the 64K erase block, then hand each slice to the split flow.
+		local hex=$(xxd -p -l 4 -s 4 "$x" 2>/dev/null)
+		local fitsz=$((0x${hex:-0}))
+		[ "$fitsz" -gt 0 ] || die "Not a FIT combined image: $x"
+		local blocks=$(((fitsz + 65535) / 65536))
+		echo "Split combined image: FIT ${fitsz}B -> kernel, remainder -> rootfs"
+		dd if="$x" bs=65536 count="$blocks" of=/tmp/uImage.$model 2>/dev/null
+		dd if="$x" bs=65536 skip="$blocks" of=/tmp/rootfs.squashfs.$model 2>/dev/null
+		do_update_kernel "/tmp/uImage.$model"
+		do_update_rootfs "/tmp/rootfs.squashfs.$model"
 		return 0
 	fi
 
-	# Split at the FIT totalsize (header bytes 4-7, big-endian), rounded up to
-	# the 64K erase block, then hand each slice to the split flow.
-	local hex=$(xxd -p -l 4 -s 4 "$x" 2>/dev/null)
-	local fitsz=$((0x${hex:-0}))
-	[ "$fitsz" -gt 0 ] || die "Not a FIT combined image: $x"
-	local blocks=$(((fitsz + 65535) / 65536))
-	echo "Split combined image: FIT ${fitsz}B -> kernel, remainder -> rootfs"
-	dd if="$x" bs=65536 count="$blocks" of=/tmp/uImage.$model 2>/dev/null
-	dd if="$x" bs=65536 skip="$blocks" of=/tmp/rootfs.squashfs.$model 2>/dev/null
-	do_update_kernel "/tmp/uImage.$model"
-	do_update_rootfs "/tmp/rootfs.squashfs.$model"
+	local fw_dev=$(get_device "firmware")
+	[ "$fw_dev" = "/dev/" ] && die "No kernel/rootfs or firmware partition to flash"
+	echo "Combined partition $fw_dev"
+	set_progress flashcp -v "$x" "$fw_dev" || die "flashcp to $fw_dev failed"
+	echo_c 32 "Firmware updated"
 }
 
 do_wipe_overlay() {
