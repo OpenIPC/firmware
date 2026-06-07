@@ -28,31 +28,32 @@
 
 --- a/drivers/net/ethernet/openipc_ethaddr.c
 +++ b/drivers/net/ethernet/openipc_ethaddr.c
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,34 @@
 +// SPDX-License-Identifier: GPL-2.0-or-later
 +#include <linux/etherdevice.h>
 +#include <linux/init.h>
++#include <linux/hex.h>
 +
 +static u8 openipc_ethaddr[ETH_ALEN];
 +static const char * const default_mac = "00:00:23:34:45:66";
-+    
++	
 +static int __init openipc_early_ethaddr(char *str)
 +{
 +	u8 mac[ETH_ALEN];
 +
 +	if (!str)
 +		return 0;
-+    
-+    if (!mac_pton(str, mac)) {
-+        pr_warn("openipc_ethaddr: invalid ethaddr bootarg '%s'\n", str);
-+        return 0;
-+    }
-+    
-+    // Ignore default MAC for openipc u-boot
-+    if (!strncmp(str, default_mac, 17))
-+        pr_warn("openipc_ethaddr: ignoring default ethaddr '%s'\n", default_mac);
-+    else
-+        ether_addr_copy(openipc_ethaddr, mac);
++	
++	if (!mac_pton(str, mac)) {
++		pr_warn("openipc_ethaddr: invalid ethaddr bootarg '%s'\n", str);
++		return 0;
++	}
++	
++	// Ignore default MAC for openipc u-boot
++	if (!strncmp(str, default_mac, 17))
++		pr_warn("openipc_ethaddr: ignoring default ethaddr '%s'\n", default_mac);
++	else
++		ether_addr_copy(openipc_ethaddr, mac);
 +
 +	return 0;
 +}

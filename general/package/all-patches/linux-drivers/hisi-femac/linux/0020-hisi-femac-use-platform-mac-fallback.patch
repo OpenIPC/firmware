@@ -1,0 +1,12 @@
+--- a/drivers/net/ethernet/hisilicon/hisi_femac.c
++++ b/drivers/net/ethernet/hisilicon/hisi_femac.c
+@@ -842,8 +842,7 @@
+ 			   (unsigned long)phy->phy_id,
+ 			   phy_modes(phy->interface));
+ 
+-	ret = of_get_ethdev_address(node, ndev);
+-	if (ret) {
++	if (eth_platform_get_mac_address(dev, ndev->dev_addr)) {
+ 		eth_hw_addr_random(ndev);
+ 		dev_warn(dev, "using random MAC address %pM\n",
+ 			 ndev->dev_addr);
