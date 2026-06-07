@@ -368,3 +368,27 @@ jobs:
           TG_CHANNEL=${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
           HTTP=$(curl -s -o /dev/null -w %{http_code} https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
           echo Telegram response: ${HTTP}
+
+  # Single umbrella status check that reflects the whole build matrix, so the
+  # branch-protection required-checks list does not need one hardcoded
+  # "Firmware (<board>)" context per board (adding/removing a board no longer
+  # requires a settings change). Make "CI Gate" the required check on master
+  # instead of the per-board contexts.
+  ci-gate:
+    name: CI Gate
+    needs: [preflight, buildroot]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require preflight + firmware matrix to succeed
+        run: |
+          echo "preflight=${{ needs.preflight.result }} buildroot=${{ needs.buildroot.result }}"
+          if [ "${{ needs.preflight.result }}" != "success" ]; then
+            echo "::error::preflight did not succeed"; exit 1
+          fi
+          # On pull_request, preflight always sets should_build=true so the
+          # matrix runs; 'skipped' only happens on a scheduled no-op build.
+          case "${{ needs.buildroot.result }}" in
+            success|skipped) echo "firmware matrix OK (${{ needs.buildroot.result }})" ;;
+            *) echo "::error::firmware matrix result=${{ needs.buildroot.result }}"; exit 1 ;;
+          esac
