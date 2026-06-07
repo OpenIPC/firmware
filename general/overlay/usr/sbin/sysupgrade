@@ -326,7 +326,11 @@ get_kernel_version() {
 	[ "$(xxd -p -l 4 "$1" 2>/dev/null)" = "d00dfeed" ] && { echo "n/a (FIT)"; return; }
 	local ts=$(xxd -l 4 -s 8 -p "$1" 2>/dev/null | xargs)
 	[ -n "$ts" ] || { echo "n/a"; return; }
-	date "+%H:%M:%S %Y-%m-%d" @$((0x$ts))
+	# Display the epoch via `-d @SECONDS`. A bare positional `@SECONDS` is
+	# treated by busybox as a clock-SET request ("date: can't set date") and
+	# yields nothing, which would make compare_versions see two empty strings
+	# and wrongly skip the kernel update.
+	date -d @$((0x$ts)) "+%H:%M:%S %Y-%m-%d"
 }
 
 get_system_info() {
@@ -336,8 +340,8 @@ get_system_info() {
 	# SOC_MODEL contains '_'). This decouples one published image (e.g. the
 	# single cv6xx build) from the per-die id a camera reports via
 	# fw_printenv/ipcinfo. soc is kept for display and as the pre-1.0.51
-	# fallback; fw_printenv is no longer fatal (it also fails under QEMU) as
-	# long as BUILD_PLATFORM is present.
+	# fallback; fw_printenv is no longer fatal (it returns nothing when the
+	# U-Boot env partition is empty/unwritten) as long as BUILD_PLATFORM is set.
 	model=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2 | cut -d_ -f1)
 	soc=$(fw_printenv -n soc 2>/dev/null)
 	[ -z "$model" ] && model="$soc"
