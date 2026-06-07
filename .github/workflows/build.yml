@@ -151,7 +151,8 @@ jobs:
           # Goke [GK7205V200]
           - gk7202v300_lite
           - gk7205v200_lite
-          - gk7205v210_lite
+          # gk7205v210 is firmware-identical to gk7205v200 — built once and
+          # served via gk7205v200's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
           - gk7205v300_lite
           - gk7605v100_lite
 
@@ -182,7 +183,8 @@ jobs:
           # Xiongmai
           - xm510_lite
           - xm530_lite
-          - xm550_lite
+          # xm550 is firmware-identical to xm530 — built once and served via
+          # xm530's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
 
           # Ultimate
           - ssc333_ultimate

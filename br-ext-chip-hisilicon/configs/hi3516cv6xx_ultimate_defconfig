@@ -2,6 +2,11 @@
 BR2_OPENIPC_SOC_VENDOR="hisilicon"
 BR2_OPENIPC_SOC_MODEL="hi3516cv6xx"
 BR2_OPENIPC_SOC_FAMILY="hi3516cv6xx"
+# One cv6xx image serves dies that report distinct ids (hi3516cv610,
+# hi3516cv608) via fw_printenv/ipcinfo. Upgrade identity comes from
+# BUILD_PLATFORM=hi3516cv6xx_ultimate; these aliases are a defensive route
+# for any image/camera that still surfaces the per-die id.
+BR2_OPENIPC_SOC_ALIASES="hi3516cv610 hi3516cv608"
 BR2_OPENIPC_VARIANT="ultimate"
 BR2_OPENIPC_FLASH_SIZE="16"
 # OPENIPC_MAJESTIC defaults to "lite" — only the "lite" flavor of the

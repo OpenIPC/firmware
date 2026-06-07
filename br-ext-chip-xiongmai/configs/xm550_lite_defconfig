@@ -1,3 +1,8 @@
+# NOTE: xm550 is firmware-identical to xm530 (same SOC_FAMILY, kernel, osdrv).
+# It is intentionally excluded from CI (.github/workflows/build.yml) and served
+# by the xm530 image via xm530's BR2_OPENIPC_SOC_ALIASES (on-device sysupgrade
+# resolves xm550 -> xm530). Kept here so `make BOARD=xm550_lite` still works.
+
 # Architecture
 BR2_arm=y
 BR2_cortex_a5=y
