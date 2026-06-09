@@ -18,6 +18,7 @@ endif
 define MAJESTIC_WEBUI_INSTALL
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr
 	cp -r $(@D)/sbin $(TARGET_DIR)/usr
+	[ -d $(@D)/bin ] && cp -r $(@D)/bin $(TARGET_DIR)/usr || true
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/var
 	cp -r $(@D)/www $(TARGET_DIR)/var
