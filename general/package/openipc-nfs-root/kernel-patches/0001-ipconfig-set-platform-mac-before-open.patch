@@ -1,0 +1,46 @@
+--- a/net/ipv4/ipconfig.c
++++ b/net/ipv4/ipconfig.c
+@@ -41,6 +41,7 @@
+ #include <linux/inet.h>
+ #include <linux/inetdevice.h>
+ #include <linux/netdevice.h>
++#include <linux/etherdevice.h>
+ #include <linux/if_arp.h>
+ #include <linux/skbuff.h>
+ #include <linux/ip.h>
+@@ -65,6 +66,7 @@
+ #include <net/checksum.h>
+ #include <asm/processor.h>
+ 
++
+ #if defined(CONFIG_IP_PNP_DHCP)
+ #define IPCONFIG_DHCP
+ #endif
+@@ -205,6 +207,8 @@
+ 	struct net_device *dev;
+ 	unsigned short oflags;
+ 	unsigned long start, next_msg;
++	bool first_mac_done = false;
++	u8 mac[ETH_ALEN];
+ 
+ 	last = &ic_first_dev;
+ 	rtnl_lock();
+@@ -230,6 +234,18 @@
+ 			able &= ic_proto_enabled;
+ 			if (ic_proto_enabled && !able)
+ 				continue;
++
++			/* Set MAC address from device tree or bootargs */
++			if (!first_mac_done &&
++				(able & IC_BOOTP) &&
++				(dev->type == ARPHRD_ETHER) &&
++				dev->dev.parent &&
++				!eth_platform_get_mac_address(dev->dev.parent, mac)) {
++				ether_addr_copy(dev->dev_addr, mac);
++				first_mac_done = true;
++				pr_info("openipc_ethaddr: Override %s MAC to %pM for NFS root\n",
++						dev->name, dev->dev_addr);
++			}
+ 			oflags = dev->flags;
+ 			if (dev_change_flags(dev, oflags | IFF_UP) < 0) {
+ 				pr_err("IP-Config: Failed to open %s\n",

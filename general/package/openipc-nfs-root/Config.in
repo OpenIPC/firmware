@@ -1,0 +1,22 @@
+config BR2_PACKAGE_OPENIPC_NFS_ROOT
+	bool "OpenIPC NFS root"
+	select BR2_LINUX_KERNEL_EXT_OPENIPC_NFS_ROOT
+	help
+	  NFS-root-specific files and scripts for OpenIPC builds.
+
+	  When enabled, the post-build flow replaces /init with an NFS
+	  aware init script that mounts a writable tmpfs overlay on top
+	  of a readonly NFS root.
+
+	  Add any NFS-only init scripts, helper files, or deployment
+	  hooks here as the workflow is fleshed out.
+
+if BR2_PACKAGE_OPENIPC_NFS_ROOT
+
+config BR2_PACKAGE_OPENIPC_NFS_ROOT_TMPFS_SIZE
+	string "tmpfs size"
+	default "16M"
+	help
+	  Size passed to the tmpfs mount used for the writable overlay.
+
+endif

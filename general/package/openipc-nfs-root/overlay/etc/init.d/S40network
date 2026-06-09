@@ -1,0 +1,64 @@
+#!/bin/sh
+dev=$(fw_printenv -n wlandev)
+mac=$(fw_printenv -n wlanmac)
+net=$(fw_printenv -n netaddr_fallback)
+eth=$(fw_printenv -n ethaddr)
+
+set_wireless() {
+	path=/etc/wireless
+	if $path/usb "$dev" || $path/sdio "$dev"; then
+		[ -n "$mac" ] && ip link set dev wlan0 address "$mac"
+		ifup wlan0
+	elif $path/modem "$dev"; then
+		ifup usb0
+		ifup eth1
+	fi
+	[ -e /sys/class/net/eth0 ] && ifconfig eth0 "${net:-192.168.2.10}" hw ether "${eth:-00:00:23:34:45:66}" up
+}
+
+start() {
+	echo "Starting network..."
+	if [ -n "$dev" ]; then
+		set_wireless
+	else
+		if grep -qw 'root=/dev/nfs' /proc/cmdline; then
+			echo "<6>nfs-root: NFS root detected, leaving eth0/lo as configured by kernel" > /dev/kmsg
+			IP=$(ip route | sed -n 's/^default via \([0-9.]*\) .*/\1/p')
+			echo "<6>nfs-root: Using default gateway (${IP?}) for NTP and DNS..." > /dev/kmsg
+			echo "nameserver ${IP}" > /etc/resolv.conf
+			echo "server ${IP} iburst" > /etc/ntp.conf
+		else
+			ip addr show dev lo | grep -q 'inet 127.0.0.1/' || ifup lo
+			ifup eth0
+		fi
+	fi
+}
+
+stop() {
+	echo "Stopping network..."
+	ifdown -f lo
+	ifdown -f wlan0
+	ifdown -f usb0
+	ifdown -f eth1
+	if grep -qw 'root=/dev/nfs' /proc/cmdline; then
+		echo "<6>NFS root detected, leaving eth0 up during shutdown" > /dev/kmsg
+	else
+		ifdown -f eth0
+	fi
+}
+
+case "$1" in
+	start|stop)
+		$1
+		;;
+
+	restart|reload)
+		stop
+		start
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+		;;
+esac

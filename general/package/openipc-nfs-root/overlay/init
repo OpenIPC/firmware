@@ -1,0 +1,36 @@
+#!/bin/sh
+
+on_exit() {
+	mountpoint -q /proc && umount /proc
+	exec /sbin/init "$*"
+}
+
+trap on_exit EXIT
+
+mount -t proc proc /proc || exit 1
+grep -q overlay /proc/filesystems || exit 1
+
+if ! mount -t tmpfs -o mode=0755,size=@TMPFS_SIZE@ tmpfs /overlay; then
+	echo "Cannot mount tmpfs overlay."
+	exit 1
+fi
+
+if grep -q overlayfs /proc/filesystems; then
+	if ! mount -t overlayfs overlayfs -o lowerdir=/,upperdir=/overlay,ro /mnt; then
+		umount /overlay
+		exit 1
+	fi
+else
+	overlay_rootdir=/overlay/root
+	overlay_workdir=/overlay/work
+	mkdir -p $overlay_rootdir $overlay_workdir
+	if ! mount -t overlay overlay -o lowerdir=/,upperdir=$overlay_rootdir,workdir=$overlay_workdir /mnt; then
+		umount /overlay
+		exit 1
+	fi
+fi
+
+pivot_root /mnt /mnt/rom
+mount -o noatime,move /rom/proc /proc
+mount -o noatime,move /rom/dev /dev
+mount -o noatime,move /rom/overlay /overlay

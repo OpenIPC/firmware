@@ -39,6 +39,14 @@ prepare:
 	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
 		wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE); \
 		mkdir -p $(TARGET); tar -xf $(BR_FILE) -C $(TARGET); fi
+	@if test -f $(TARGET)/buildroot-$(BR_VER)/linux/Config.in; then \
+		sed -i '/source "$$(BR2_EXTERNAL_GENERAL_PATH)\/linux\/Config.ext.in"/d' \
+			$(TARGET)/buildroot-$(BR_VER)/linux/Config.in; \
+		grep -qF 'source "$$BR2_EXTERNAL_GENERAL_PATH/linux/Config.ext.in"' \
+			$(TARGET)/buildroot-$(BR_VER)/linux/Config.in || \
+		sed -i '/source "linux\/Config.ext.in"/a source "$$BR2_EXTERNAL_GENERAL_PATH/linux/Config.ext.in"' \
+			$(TARGET)/buildroot-$(BR_VER)/linux/Config.in; \
+	fi
 
 help:
 	@printf "BR-OpenIPC usage:\n \
