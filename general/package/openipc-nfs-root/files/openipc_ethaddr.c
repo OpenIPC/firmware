@@ -31,7 +31,7 @@ static int __init openipc_early_ethaddr(char *str)
 
 	if (ether_addr_equal(mac, default_mac))
 		pr_warn("openipc_ethaddr: ignoring default ethaddr '%s'\n",
-				default_mac);
+			str);
 	else
 		ether_addr_copy(openipc_ethaddr, mac);
 
