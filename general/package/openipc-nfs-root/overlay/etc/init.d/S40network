@@ -16,19 +16,20 @@ set_wireless() {
 	[ -e /sys/class/net/eth0 ] && ifconfig eth0 "${net:-192.168.2.10}" hw ether "${eth:-00:00:23:34:45:66}" up
 }
 
+is_nfs_root() {
+    grep -qw 'root=/dev/nfs' /proc/cmdline
+}
+
 start() {
 	echo "Starting network..."
 	if [ -n "$dev" ]; then
+		ifup lo
 		set_wireless
 	else
-		if grep -qw 'root=/dev/nfs' /proc/cmdline; then
-			echo "<6>nfs-root: NFS root detected, leaving eth0/lo as configured by kernel" > /dev/kmsg
-			IP=$(ip route | sed -n 's/^default via \([0-9.]*\) .*/\1/p')
-			echo "<6>nfs-root: Using default gateway (${IP?}) for NTP and DNS..." > /dev/kmsg
-			echo "nameserver ${IP}" > /etc/resolv.conf
-			echo "server ${IP} iburst" > /etc/ntp.conf
+		if is_nfs_root; then
+			echo "nfs-root: NFS root detected, leaving eth0/lo as configured by kernel"
 		else
-			ip addr show dev lo | grep -q 'inet 127.0.0.1/' || ifup lo
+			ifup lo
 			ifup eth0
 		fi
 	fi
@@ -36,12 +37,12 @@ start() {
 
 stop() {
 	echo "Stopping network..."
-	ifdown -f lo
+	ifdown lo
 	ifdown -f wlan0
 	ifdown -f usb0
 	ifdown -f eth1
-	if grep -qw 'root=/dev/nfs' /proc/cmdline; then
-		echo "<6>NFS root detected, leaving eth0 up during shutdown" > /dev/kmsg
+	if is_nfs_root; then
+		echo "NFS root detected, leaving eth0 up during shutdown"
 	else
 		ifdown -f eth0
 	fi

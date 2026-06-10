@@ -14,6 +14,7 @@ OPENIPC_NFS_ROOT_LICENSE = MIT
 define OPENIPC_NFS_ROOT_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/files/rootfs-setup $(TARGET_DIR)/usr/sbin/rootfs-setup
 	$(INSTALL) -D -m 0755 $(@D)/files/set-hostname-from-cmdline $(TARGET_DIR)/usr/sbin/set-hostname-from-cmdline
+	$(INSTALL) -D -m 0755 $(@D)/files/S45setupenv $(TARGET_DIR)/etc/init.d/S45setupenv
 endef
 
 $(eval $(generic-package))

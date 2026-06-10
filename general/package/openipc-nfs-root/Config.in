@@ -17,6 +17,23 @@ config BR2_PACKAGE_OPENIPC_NFS_ROOT_TMPFS_SIZE
 	string "tmpfs size"
 	default "16M"
 	help
-	  Size passed to the tmpfs mount used for the writable overlay.
+	  Size passed to the tmpfs mount used for the writable overlay
+	  when NFS root is mounted in readonly mode.
+
+config BR2_PACKAGE_OPENIPC_NFS_ROOT_PASSWD
+	string "root password"
+	default "12345"
+	help
+	  Root password to be set during boot. Useful for immutable rootfs.
+
+config BR2_PACKAGE_OPENIPC_NFS_ROOT_TIMEZONE
+	string "IANA timezone"
+	default ""
+	help
+	  IANA timezone name used to derive a POSIX TZ rule at build time,
+	  for example: America/Denver or Europe/Berlin.
+
+	  When left empty, the build attempts to detect the timezone from the
+	  build host and derives the POSIX TZ rule from that zone.
 
 endif
