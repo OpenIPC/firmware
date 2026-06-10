@@ -1,0 +1,376 @@
+#!/bin/sh
+#
+# This is part of OpenIPC.org project | 2026.03.01
+#
+
+SNS_TYPE0=sc4336p;
+SNS_TYPE1=sc4336p;
+SYS_PROFILE=0
+IR_AUTO=0
+DEBUG=1
+BOARD=dmeb_qfn; # dmeb_qfn dmeb_bga
+
+# SoC detect
+chipid=$(ipcinfo --chip-name)
+socmodel=$(fw_printenv -n socmodel)
+
+# Memory config
+mem_start=$(grep "System RAM" /proc/iomem | awk -F'[- :]' '{print "0x"$1}')
+
+mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+mem_total=${mem_total:=64}
+
+os_mem_size=$(awk 'BEGIN{RS=" "} /^mem=[0-9]+M/{gsub(/^mem=|M.*$/,""); print; exit}' /proc/cmdline)
+if [ -n "$os_mem_size" ] && [ "$os_mem_size" -ge "$mem_total" ]; then
+	os_mem_size=""
+fi
+if [ -z "$os_mem_size" ]; then
+	os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
+fi
+os_mem_size=${os_mem_size:=32}
+
+report_error() {
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+set_allocator() {
+	fw_setenv mmz_allocator "$1" >/dev/null 2>&1
+}
+
+check_allocator() {
+	allocator=$(grep mmz_allocator /proc/cmdline)
+	if [ -z "${allocator}" ]; then
+		if [ ${mem_total} -ge 128 ]; then
+			set_allocator cma
+		else
+			set_allocator ot
+		fi
+	fi
+}
+
+insert_osal() {
+	check_allocator
+	modprobe open_osal proc_show=${DEBUG}
+
+	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
+	if [ -z "$MMZ" ]; then
+		modprobe open_mmz anony=1 mmz_allocator=ot mmz=anonymous,0,$mmz_start,$mmz_size mem_process_isolation=$((1 - DEBUG)) || report_error
+	else
+		modprobe open_mmz anony=1 mmz_allocator=cma mmz=$MMZ mem_process_isolation=$((1 - DEBUG)) || report_error
+	fi
+}
+
+function insert_audio()
+{
+	modprobe open_aio
+	modprobe open_ai
+	modprobe open_ao
+	modprobe open_aenc
+	modprobe open_adec
+	modprobe open_acodec
+}
+
+function remove_audio()
+{
+	rmmod open_acodec
+	rmmod open_adec
+	rmmod open_aenc
+	rmmod open_ao
+	rmmod open_ai
+	rmmod open_aio
+}
+
+function insert_security_subsys()
+{
+	# open_cipher and open_km are V5 closed-source security blobs not yet
+	# in the openhisilicon set — modprobe will return non-zero if missing.
+	# Run best-effort so the rest of the MPP pipeline still comes up.
+	modprobe open_cipher 2>/dev/null
+	modprobe open_km 2>/dev/null
+}
+
+function remove_security_subsys()
+{
+	rmmod open_km 2>/dev/null
+	rmmod open_cipher 2>/dev/null
+}
+
+function insert_detect()
+{
+	# Minimal module set sufficient for `ipcinfo --short-sensor` probe.
+	# Mirrors ev200's insert_detect() — avoids paying the full MPP
+	# bring-up cost during sensor auto-detect (~3 sec vs ~15 sec).
+	modprobe open_sys_config sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1 board=$BOARD ir_auto=$IR_AUTO
+	insert_osal
+	modprobe open_base logmpp_show=${DEBUG}
+	modprobe open_isp
+	modprobe open_sensor_i2c
+	modprobe open_sensor_spi 2>/dev/null
+}
+
+function remove_detect()
+{
+	rmmod open_sensor_spi 2>/dev/null
+	rmmod open_sensor_i2c 2>/dev/null
+	rmmod open_isp
+	rmmod open_base
+	rmmod open_mmz
+	rmmod open_osal
+	rmmod open_sys_config
+}
+
+insert_ko() {
+	# sys config
+	modprobe open_sys_config sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1 board=$BOARD ir_auto=$IR_AUTO
+	# driver load
+	insert_osal
+	modprobe open_base logmpp_show=${DEBUG}
+	modprobe open_vb
+	modprobe open_vca
+	modprobe open_sys profile=$SYS_PROFILE
+	modprobe open_rgn
+	modprobe open_vpp
+	modprobe open_vgs
+	modprobe open_vpss
+	modprobe open_vi
+	modprobe open_isp
+	modprobe open_chnl
+	modprobe open_rc
+	modprobe open_venc g_venc_max_chn_num=8
+	modprobe open_h264e
+	modprobe open_h265e
+
+	case ${socmodel} in 20g|00s|00g) modprobe open_svac3e ;; esac
+	# modprobe open_svac3e
+	modprobe open_jpege
+	modprobe open_svp_npu
+	modprobe open_ive save_power=1
+	modprobe open_pwm
+	modprobe open_piris
+	modprobe open_sensor_i2c
+	modprobe open_sensor_spi 2>/dev/null
+
+	insert_audio
+	modprobe open_mipi_rx
+	# modprobe open_user
+	case ${socmodel} in 20s|20g|00s|00g) modprobe open_aiisp ;; esac
+	# modprobe open_uvc
+	modprobe open_pm
+	modprobe open_wdt
+	insert_security_subsys
+}
+
+remove_ko() {
+	remove_security_subsys
+	rmmod open_wdt 2>/dev/null
+	rmmod open_pm
+	# rmmod open_uvc
+	rmmod open_aiisp &> /dev/null
+	# rmmod open_user
+	rmmod open_mipi_rx
+
+	remove_audio
+	rmmod open_sensor_spi &> /dev/null
+	rmmod open_sensor_i2c &> /dev/null
+	rmmod open_piris 2>/dev/null
+	rmmod open_pwm 2>/dev/null
+	rmmod open_ive
+	rmmod open_svp_npu
+	rmmod open_jpege
+	rmmod open_h265e
+	rmmod open_svac3e &> /dev/null
+	rmmod open_h264e
+	rmmod open_venc
+	rmmod open_rc
+	rmmod open_chnl
+	rmmod open_vpss
+	rmmod open_isp
+	rmmod open_vi
+	rmmod open_vgs
+	rmmod open_vpp
+	rmmod open_rgn
+	rmmod open_sys
+	rmmod open_vca
+	rmmod open_vb
+	rmmod open_base
+	rmmod open_mmz
+	rmmod open_osal
+
+	rmmod open_sys_config
+}
+
+load_usage()
+{
+	echo "Usage:  $0 [-option] [-sensor0~1] "
+	echo "options:"
+	echo "    -i                       insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a                       remove modules first, then insert modules"
+	echo "    -sensor0~1 sensor_name   config sensor type    [default: sc4336p]"
+	echo "    -mmz_start               config MMZ start addr [default: 0x42000000]"
+	echo "    -mmz_size                config MMZ mem size [unit: M, default: 96M]"
+	echo "    -ir_auto                 config ir_auto enable [default: 0]"
+	echo "    -profile                 config sys_profile [default: 0]"
+	echo "    -h                       help information"
+	echo -e "Available sensors:sc4336p gc4023 sc450ai sc500ai sc431hai os04d10 imx307 os02m10 bt1120/bt656/bt601"
+	echo -e "for example: $0 -i -sensor0 sc4336p -sensor1 sc4336p -mmz_start 0x42000000 -mmz_size 96M -ir_auto 1\n"
+}
+
+calc_mmz_info() {
+	mmz_start=$(echo "$mem_start $os_mem_size" |
+		awk 'BEGIN { temp = 0; }
+		{
+				temp = $1/1024/1024 + $2;
+		}
+		END { printf("0x%x00000\n", temp); }')
+
+	mmz_size=$(echo "$mem_total $os_mem_size" |
+		awk 'BEGIN { temp = 0; }
+		{
+				temp = $1 - $2;
+		}
+		END { printf("%dM\n", temp); }')
+	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+}
+
+b_arg_modprobe=0
+b_arg_remove=0
+function parse_arg()
+{
+	######################parse arg###################################
+	b_arg_sensor0=0
+	b_arg_sensor1=0
+	b_arg_mmz_start=0
+	b_arg_mmz_size=0
+	b_arg_ir_auto=0
+	b_arg_profile=0
+
+	for arg in $@
+	do
+		if [ $b_arg_sensor0 -eq 1 ] ; then
+			b_arg_sensor0=0;
+			SNS_TYPE0=$arg;
+			# Mirror ev200: explicit sensor flag also seeds SENSOR
+			# so the auto-detect probe path is skipped.
+			export SENSOR=$arg
+		fi
+		if [ $b_arg_sensor1 -eq 1 ] ; then
+			b_arg_sensor1=0;
+			SNS_TYPE1=$arg;
+		fi
+
+		if [ $b_arg_ir_auto -eq 1 ] ; then
+			b_arg_ir_auto=0;
+			IR_AUTO=$arg;
+		fi
+
+		if [ $b_arg_mmz_start -eq 1 ] ; then
+			b_arg_mmz_start=0;
+			mmz_start=$arg;
+
+			if [ -z $mmz_start ]; then
+				echo "[error] mmz_start is null"
+				exit;
+			fi
+		fi
+
+		if [ $b_arg_mmz_size -eq 1 ] ; then
+			b_arg_mmz_size=0;
+			mmz_size=$arg;
+
+			if [ -z $mmz_size ]; then
+				echo "[error] mmz_size is null"
+				exit;
+			fi
+		fi
+
+		if [ $b_arg_profile -eq 1 ] ; then
+			b_arg_profile=0;
+			SYS_PROFILE=$arg;
+		fi
+
+		case $arg in
+			"-i")
+				b_arg_modprobe=1;
+				;;
+			"-r")
+				b_arg_remove=1;
+				;;
+			"-a")
+				b_arg_modprobe=1;
+				b_arg_remove=1;
+				;;
+			"-h")
+				load_usage;
+				;;
+			"-sensor0")
+				b_arg_sensor0=1;
+				;;
+			"-sensor")
+				b_arg_sensor0=1;
+				;;
+			"-sensor1")
+				b_arg_sensor1=1;
+				;;
+			"-ir_auto")
+				b_arg_ir_auto=1;
+				;;
+			"-mmz_size")
+				b_arg_mmz_size=1;
+				;;
+			"-mmz_start")
+				b_arg_mmz_start=1;
+				;;
+			"-profile")
+				b_arg_profile=1;
+				;;
+		esac
+	done
+	#######################parse arg end########################
+}
+
+if [ $# -lt 1 ]; then
+	load_usage;
+	exit 0;
+fi
+
+parse_arg $@
+
+#######################Action###############################
+if [ $b_arg_remove -eq 1 ]; then
+	remove_ko;
+fi
+#######################parse arg end########################
+if [ $os_mem_size -ge $mem_total ]; then
+	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+	exit
+fi
+
+calc_mmz_info
+
+if [ -n "$SENSOR" ]; then
+	logger -s -p daemon.info -t hisilicon "Manualy set SENSOR as ${SENSOR}"
+else
+	if fw_printenv -n sensor >/dev/null; then
+		SENSOR_ENV=$(fw_printenv -n sensor)
+		export SENSOR=${SENSOR_ENV}
+		logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
+	else
+		insert_detect
+		SENSOR_DETECT=$(ipcinfo --short-sensor)
+		export SENSOR=${SENSOR_DETECT:=unknown}
+		remove_detect
+		logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && logger -s -p daemon.info -t hisilicon "Write detected ${SENSOR} to U-Boot ENV"
+	fi
+fi
+
+if [ "$SENSOR" = "unknown" ]; then
+	exit 1
+else
+	if [ $b_arg_modprobe -eq 1 ]; then
+		cd /lib/modules/$(uname -r)/hisilicon
+		insert_ko
+	fi
+fi

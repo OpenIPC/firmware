@@ -120,6 +120,9 @@ jobs:
           - hi3516cv500_lite
           - hi3516dv300_lite
 
+          # Hisilicon [HI3516CV6XX]
+          - hi3516cv6xx_ultimate
+
           # Hisilicon [HI3516EV200]
           - hi3516dv200_lite
           - hi3516ev200_lite
@@ -148,7 +151,8 @@ jobs:
           # Goke [GK7205V200]
           - gk7202v300_lite
           - gk7205v200_lite
-          - gk7205v210_lite
+          # gk7205v210 is firmware-identical to gk7205v200 — built once and
+          # served via gk7205v200's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
           - gk7205v300_lite
           - gk7605v100_lite
 
@@ -179,7 +183,8 @@ jobs:
           # Xiongmai
           - xm510_lite
           - xm530_lite
-          - xm550_lite
+          # xm550 is firmware-identical to xm530 — built once and served via
+          # xm530's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
 
           # Ultimate
           - ssc333_ultimate
@@ -202,6 +207,7 @@ jobs:
           - hi3516ev300_ultimate
           - hi3518ev300_ultimate
           - hi3516av200_ultimate
+          - gk7202v300_ultimate
           - gk7205v200_ultimate
           - gk7205v300_ultimate
 
@@ -287,41 +293,45 @@ jobs:
       - name: Verify kernel modules
         run: sh .github/scripts/check_target_modules.sh
 
-      - name: Upload firmware (dated)
-        if: github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.preflight.outputs.build_id }}
-          prerelease: true
-          body: |
-            sha=${{ needs.preflight.outputs.head_sha }}
-            short=${{ needs.preflight.outputs.short_sha }}
-            built_at=${{ needs.preflight.outputs.built_at }}
-          files: |
-            ${{env.NORFW}}
-            ${{env.NANDFW}}
+      - name: Build size report
+        run: |
+          make BOARD=${{matrix.platform}} size-report || \
+            echo "::warning::size-report failed for ${{matrix.platform}}"
+          SIZES=$(find output/images -name 'sizes.*.json' | head -1)
+          if [ -e "$SIZES" ]; then
+            echo "SIZES=$SIZES" >> ${GITHUB_ENV}
+          fi
 
-      - name: Upload firmware (rolling nightly)
-        if: github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: nightly
-          body: |
-            sha=${{ needs.preflight.outputs.head_sha }}
-            short=${{ needs.preflight.outputs.short_sha }}
-            built_at=${{ needs.preflight.outputs.built_at }}
-          files: |
-            ${{env.NORFW}}
-            ${{env.NANDFW}}
+      - name: Build kconfig graph
+        run: |
+          python3 -m pip install --user --break-system-packages kconfiglib || \
+            { echo "::warning::kconfiglib install failed for ${{matrix.platform}}"; exit 0; }
+          make BOARD=${{matrix.platform}} kconfig-graph || \
+            { echo "::warning::kconfig-graph failed for ${{matrix.platform}}"; exit 0; }
+          KCONFIG=$(find output/images -name 'kconfig-graph.*.json' | head -1)
+          KHELP=$(find output/images -name 'kconfig-help.*.json' | head -1)
+          if [ -e "$KCONFIG" ]; then echo "KCONFIG=$KCONFIG" >> ${GITHUB_ENV}; fi
+          if [ -e "$KHELP" ]; then echo "KHELP=$KHELP" >> ${GITHUB_ENV}; fi
 
-      - name: Upload firmware (latest — legacy alias)
+      # Hand the firmware + sidecars to the single `publish` job instead of
+      # uploading to releases from here. ~90 matrix jobs all deleting and
+      # re-uploading assets on the SAME shared `nightly`/`latest` releases at
+      # once made the GitHub releases API return HTTP 500 ("Server Error") —
+      # e.g. run 27108181857, where every build succeeded but 14 jobs went red
+      # in their upload step. Consolidating every release write into one job
+      # removes the concurrent-writer contention.
+      - name: Upload build artifacts
         if: github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v2
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: latest
-          files: |
-            ${{env.NORFW}}
-            ${{env.NANDFW}}
+          name: fw-${{ matrix.platform }}
+          if-no-files-found: ignore
+          retention-days: 1
+          path: |
+            output/images/openipc*.tgz
+            output/images/sizes.*.json
+            output/images/kconfig-graph.*.json
+            output/images/kconfig-help.*.json
 
       - name: Send binary
         if: github.event_name != 'pull_request' && env.NORFW
@@ -333,3 +343,101 @@ jobs:
           TG_CHANNEL=${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
           HTTP=$(curl -s -o /dev/null -w %{http_code} https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
           echo Telegram response: ${HTTP}
+
+  # All release writes happen here, once, so only a SINGLE job ever touches the
+  # shared `nightly`/`latest` releases (and the per-run dated release). The old
+  # design had every matrix job upload to these releases, so ~90 jobs raced to
+  # delete/re-upload assets on the same release and the GitHub releases API
+  # returned HTTP 500 ("Server Error") under that concurrency — run
+  # 27108181857 built fine on every board yet went red on 14 upload steps.
+  #
+  # Best-effort by design: publish whatever boards produced, even if some
+  # failed (matches enrich_manifest.py, which indexes whatever assets exist).
+  # Never runs on PRs (no artifacts) or on a scheduled no-op (buildroot skipped).
+  publish:
+    name: Publish releases
+    needs: [preflight, buildroot]
+    if: >-
+      github.event_name != 'pull_request' &&
+      needs.preflight.outputs.should_build == 'true' &&
+      contains(fromJSON('["success", "failure"]'), needs.buildroot.result)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: fw-*
+          path: dist
+          merge-multiple: true
+
+      - name: Collect assets
+        id: collect
+        run: |
+          mkdir -p dist
+          count=$(find dist -type f | wc -l)
+          echo "Collected ${count} asset(s):"
+          ls -la dist || true
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish firmware (dated)
+        if: steps.collect.outputs.count != '0'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.preflight.outputs.build_id }}
+          prerelease: true
+          body: |
+            sha=${{ needs.preflight.outputs.head_sha }}
+            short=${{ needs.preflight.outputs.short_sha }}
+            built_at=${{ needs.preflight.outputs.built_at }}
+          files: dist/*
+
+      - name: Publish firmware (rolling nightly)
+        if: steps.collect.outputs.count != '0'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          body: |
+            sha=${{ needs.preflight.outputs.head_sha }}
+            short=${{ needs.preflight.outputs.short_sha }}
+            built_at=${{ needs.preflight.outputs.built_at }}
+          files: dist/*
+
+      - name: Publish firmware (latest — legacy alias)
+        if: steps.collect.outputs.count != '0'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          files: dist/*
+
+  # Single umbrella status check that reflects the whole build matrix, so the
+  # branch-protection required-checks list does not need one hardcoded
+  # "Firmware (<board>)" context per board (adding/removing a board no longer
+  # requires a settings change). Make "CI Gate" the required check on master
+  # instead of the per-board contexts.
+  ci-gate:
+    name: CI Gate
+    needs: [preflight, buildroot, publish]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require preflight + firmware matrix to succeed
+        run: |
+          echo "preflight=${{ needs.preflight.result }} buildroot=${{ needs.buildroot.result }} publish=${{ needs.publish.result }}"
+          if [ "${{ needs.preflight.result }}" != "success" ]; then
+            echo "::error::preflight did not succeed"; exit 1
+          fi
+          # On pull_request, preflight always sets should_build=true so the
+          # matrix runs; 'skipped' only happens on a scheduled no-op build.
+          case "${{ needs.buildroot.result }}" in
+            success|skipped) echo "firmware matrix OK (${{ needs.buildroot.result }})" ;;
+            *) echo "::error::firmware matrix result=${{ needs.buildroot.result }}"; exit 1 ;;
+          esac
+          # publish is skipped on PRs and on scheduled no-ops; only a real
+          # failure of the single release-writer should fail the gate.
+          case "${{ needs.publish.result }}" in
+            success|skipped) echo "publish OK (${{ needs.publish.result }})" ;;
+            *) echo "::error::publish result=${{ needs.publish.result }}"; exit 1 ;;
+          esac
