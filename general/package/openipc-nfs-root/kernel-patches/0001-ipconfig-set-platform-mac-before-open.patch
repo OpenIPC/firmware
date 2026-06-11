@@ -38,7 +38,7 @@
 +				!eth_platform_get_mac_address(dev->dev.parent, mac)) {
 +				ether_addr_copy(dev->dev_addr, mac);
 +				first_mac_done = true;
-+				pr_info("openipc_ethaddr: Override %s MAC to %pM for NFS root\n",
++				pr_info("openipc: Overriding %s MAC from bootargs/DT %pM\n",
 +						dev->name, dev->dev_addr);
 +			}
  			oflags = dev->flags;
