@@ -107,6 +107,13 @@ endif
 	@$(call BUNDLE_SDK)
 
 repack:
+ifeq ($(BR2_PACKAGE_OPENIPC_NFS_ROOT),y)
+ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
+	@$(call PREPARE_REPACK,zboot.img,16384,,,nfs-root)
+else
+	@$(call PREPARE_REPACK,uImage,16384,,,nfs-root)
+endif
+else
 ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3516cv6xx")
 	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
 else ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
@@ -130,6 +137,7 @@ endif
 endif
 ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
 	@$(call PREPARE_REPACK,uImage,16384,,,initramfs)
+endif
 endif
 endif
 

@@ -84,6 +84,12 @@ OPENIPC_NFS_ROOT_TMPFS_SIZE="$(read_kconfig_string BR2_PACKAGE_OPENIPC_NFS_ROOT_
 OPENIPC_NFS_ROOT_PASSWD="$(read_kconfig_string BR2_PACKAGE_OPENIPC_NFS_ROOT_PASSWD)"
 [ -n "${OPENIPC_NFS_ROOT_PASSWD}" ] || OPENIPC_NFS_ROOT_PASSWD="12345"
 
+OPENIPC_NFS_ROOT_NTP_SERVER="$(read_kconfig_string BR2_PACKAGE_OPENIPC_NFS_ROOT_NTP_SERVER)"
+[ -n "${OPENIPC_NFS_ROOT_NTP_SERVER}" ] || OPENIPC_NFS_ROOT_NTP_SERVER=""
+
+OPENIPC_NFS_ROOT_DNS_SERVER="$(read_kconfig_string BR2_PACKAGE_OPENIPC_NFS_ROOT_DNS_SERVER)"
+[ -n "${OPENIPC_NFS_ROOT_DNS_SERVER}" ] || OPENIPC_NFS_ROOT_DNS_SERVER=""
+
 OPENIPC_NFS_ROOT_TIMEZONE="$(read_kconfig_string BR2_PACKAGE_OPENIPC_NFS_ROOT_TIMEZONE)"
 if [ -z "${OPENIPC_NFS_ROOT_TIMEZONE}" ]; then
 	OPENIPC_NFS_ROOT_TIMEZONE="$(detect_host_timezone)"
@@ -102,6 +108,14 @@ fi
 
 if [ -f "${TARGET_DIR}/etc/init.d/S45setupenv" ]; then
 	sed -i "s/@ROOTFS_PASSWD@/${OPENIPC_NFS_ROOT_PASSWD}/" "${TARGET_DIR}/etc/init.d/S45setupenv"
+fi
+
+if [ -f "${TARGET_DIR}/etc/init.d/S45setupenv" ]; then
+	sed -i "s/@NTP_SERVER@/${OPENIPC_NFS_ROOT_NTP_SERVER}/" "${TARGET_DIR}/etc/init.d/S45setupenv"
+fi
+
+if [ -f "${TARGET_DIR}/etc/init.d/S45setupenv" ]; then
+	sed -i "s/@DNS_SERVER@/${OPENIPC_NFS_ROOT_DNS_SERVER}/" "${TARGET_DIR}/etc/init.d/S45setupenv"
 fi
 
 if [ -d "${TARGET_DIR}/etc" ]; then

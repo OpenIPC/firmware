@@ -37,9 +37,20 @@ setup_ssh_key() {
 
 setup_dns_ntp() {
     IP=$(ip route | sed -n 's/^default via \([0-9.]*\) .*/\1/p')
-    echo "nfs-root: Using default gateway (${IP?}) for NTP and DNS."
-    echo "nameserver ${IP}" > /etc/resolv.conf
-    echo "server ${IP} iburst" > /etc/ntp.conf
+    if [ -n "@NTP_SERVER@" ]; then
+        echo "server @NTP_SERVER@ iburst" > /etc/ntp.conf
+        echo "nfs-root: Using @NTP_SERVER@ for NTP."
+    else
+        echo "server ${IP} iburst" > /etc/ntp.conf
+        echo "nfs-root: Using default gateway (${IP?}) for NTP."
+    fi
+    if [ -n "@DNS_SERVER@" ]; then
+        echo "nameserver @DNS_SERVER@" > /etc/resolv.conf
+        echo "nfs-root: Using @DNS_SERVER@ for DNS."
+    else
+        echo "nameserver ${IP}" > /etc/resolv.conf
+        echo "nfs-root: Using default gateway (${IP?}) for DNS."
+    fi
 }
 
 case "$1" in
