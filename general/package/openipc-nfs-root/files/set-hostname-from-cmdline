@@ -6,16 +6,15 @@ cmdline=$(cat /proc/cmdline)
 hostname_arg=$(printf ' %s\n' "$cmdline" | sed -n 's/.*[[:space:]]hostname=\([^[:space:]]*\).*/\1/p')
 
 if [ -n "$hostname_arg" ]; then
-   hostname "$hostname_arg"
-   echo "$hostname_arg" > /etc/hostname
+	hostname "$hostname_arg"
+	echo "$hostname_arg" > /etc/hostname
 
-   if [ -w /etc/hosts ]; then
-   {
-        echo "127.0.0.1 localhost"
-        echo "127.0.1.1 $hostname_arg"
-   } > /etc/hosts
-   fi
+	if [ -w /etc/hosts ]; then
+	{
+		echo "127.0.0.1 localhost"
+		echo "127.0.1.1 $hostname_arg"
+	} > /etc/hosts
+	fi
 fi
-
 
 exit 0

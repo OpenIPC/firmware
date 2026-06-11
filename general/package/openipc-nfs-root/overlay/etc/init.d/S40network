@@ -17,7 +17,7 @@ set_wireless() {
 }
 
 is_nfs_root() {
-    grep -qw 'root=/dev/nfs' /proc/cmdline
+	grep -q 'root=/dev/nfs' /proc/cmdline
 }
 
 start() {

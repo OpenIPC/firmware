@@ -40,16 +40,16 @@ config BR2_PACKAGE_OPENIPC_NFS_ROOT_NTP_SERVER
 	string "NTP server"
 	default ""
 	help
-      Static NTP server to use.
-      
+	  Static NTP server to use.
+
 	  When left empty, the build uses the default route fo the NTP server.
 
 config BR2_PACKAGE_OPENIPC_NFS_ROOT_DNS_SERVER
 	string "DNS server"
 	default ""
 	help
-      Static DNS server to use.
-      
+	  Static DNS server to use.
+
 	  When left empty, the build uses the default route fo the DNS server.
 
 endif

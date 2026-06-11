@@ -39,11 +39,11 @@ while [ $# -gt 0 ]; do
 			DNS=$2
 			shift 2
 			;;
-        --pkgs)
+		--pkgs)
 			[ $# -ge 2 ] || usage
 			PKGS=$2
 			shift 2
-			;;            
+			;;
 		--help|-h)
 			usage
 			;;
@@ -108,7 +108,7 @@ fi
 
 # Add additional packages for nfs build
 if [ -n "$PKGS" ] && [ -f "$PKGS" ]; then
-    cat "$PKGS" >> "$FRAGMENT"
+	cat "$PKGS" >> "$FRAGMENT"
 fi
 
 # Note: Must pass BR2_PACKAGE_OPENIPC_NFS_ROOT=y on cmdline
