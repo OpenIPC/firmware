@@ -3,18 +3,14 @@
 # Customize environment for NFS boot
 #
 
-#!/bin/sh
-
-
-# Setup NFS password
 setup_root_passwd() {
-    shadow_hash="$(awk -F: '$1=="root"{print $2}' /etc/shadow)"
-    salt="$(printf '%s\n' "$shadow_hash" | cut -d'$' -f3)"
-    test_hash="$(mkpasswd -m md5 -S "$salt" "@ROOTFS_PASSWD@")"
-    if [ ! "$test_hash" = "$shadow_hash" ]; then
-        echo "root:@ROOTFS_PASSWD@" | chpasswd 2>/dev/null
-        echo "nfs-root: Updated root password."
-    fi
+	shadow_hash="$(awk -F: '$1=="root"{print $2}' /etc/shadow)"
+	salt="$(printf '%s\n' "$shadow_hash" | cut -d'$' -f3)"
+	test_hash="$(mkpasswd -m md5 -S "$salt" "@ROOTFS_PASSWD@")"
+	if [ ! "$test_hash" = "$shadow_hash" ]; then
+		echo "root:@ROOTFS_PASSWD@" | chpasswd 2>/dev/null
+		echo "nfs-root: Updated root password."
+	fi
 }
 
 setup_ssh_key() {
@@ -36,38 +32,38 @@ setup_ssh_key() {
 }
 
 setup_dns_ntp() {
-    IP=$(ip route | sed -n 's/^default via \([0-9.]*\) .*/\1/p')
-    if [ -n "@NTP_SERVER@" ]; then
-        echo "server @NTP_SERVER@ iburst" > /etc/ntp.conf
-        echo "nfs-root: Using @NTP_SERVER@ for NTP."
-    else
-        echo "server ${IP} iburst" > /etc/ntp.conf
-        echo "nfs-root: Using default gateway (${IP?}) for NTP."
-    fi
-    if [ -n "@DNS_SERVER@" ]; then
-        echo "nameserver @DNS_SERVER@" > /etc/resolv.conf
-        echo "nfs-root: Using @DNS_SERVER@ for DNS."
-    else
-        echo "nameserver ${IP}" > /etc/resolv.conf
-        echo "nfs-root: Using default gateway (${IP?}) for DNS."
-    fi
+	IP=$(ip route | sed -n 's/^default via \([0-9.]*\) .*/\1/p')
+	if [ -n "@NTP_SERVER@" ]; then
+		echo "server @NTP_SERVER@ iburst" > /etc/ntp.conf
+		echo "nfs-root: Using @NTP_SERVER@ for NTP."
+	else
+		echo "server ${IP} iburst" > /etc/ntp.conf
+		echo "nfs-root: Using default gateway (${IP?}) for NTP."
+	fi
+	if [ -n "@DNS_SERVER@" ]; then
+		echo "nameserver @DNS_SERVER@" > /etc/resolv.conf
+		echo "nfs-root: Using @DNS_SERVER@ for DNS."
+	else
+		echo "nameserver ${IP}" > /etc/resolv.conf
+		echo "nfs-root: Using default gateway (${IP?}) for DNS."
+	fi
 }
 
 case "$1" in
-    start)
-        # Only run if booting from nfs root
-        if grep -qw 'root=/dev/nfs' /proc/cmdline; then
-            setup_root_passwd
-            setup_dns_ntp
-            setup_ssh_key
-        fi
-        ;;
+	start)
+		if grep -q 'root=/dev/nfs' /proc/cmdline && [ ! -f '/etc/firstboot' ]; then
+			setup_root_passwd
+			setup_dns_ntp
+			setup_ssh_key
+			touch /etc/firstboot
+		fi
+		;;
 
-    stop)
-        ;;
+	stop)
+		;;
 
-    *)
-        echo "Usage: $0 {start}"
-        exit 1
-        ;;
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
+		;;
 esac
