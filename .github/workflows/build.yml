@@ -382,35 +382,98 @@ jobs:
           ls -la dist || true
           echo "count=${count}" >> "$GITHUB_OUTPUT"
 
-      - name: Publish firmware (dated)
+      # Drive the release writes ourselves instead of softprops/action-gh-release.
+      # That action uploads assets CONCURRENTLY with no throttle/retry knob, so
+      # firing ~390 asset writes at three releases tripped GitHub's per-actor
+      # secondary rate limit — run 27314054079's "dated" step died after
+      # uploading 350/393 assets with "You have exceeded a secondary rate limit".
+      # Here every asset is uploaded one at a time, paced under the per-minute
+      # mutation ceiling, with exponential backoff so a transient 403/secondary
+      # limit is retried rather than failing the nightly. This is the third
+      # iteration of the publish design: per-job uploads raced to HTTP 500 →
+      # single-job concurrent uploads tripped the secondary limit → single-job
+      # paced uploads (here). The single-writer property that fixed the 500s is
+      # preserved; only the within-job upload rate changed.
+      - name: Publish releases (paced, retry-aware)
         if: steps.collect.outputs.count != '0'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.preflight.outputs.build_id }}
-          prerelease: true
-          body: |
-            sha=${{ needs.preflight.outputs.head_sha }}
-            short=${{ needs.preflight.outputs.short_sha }}
-            built_at=${{ needs.preflight.outputs.built_at }}
-          files: dist/*
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_ID: ${{ needs.preflight.outputs.build_id }}
+          HEAD_SHA: ${{ needs.preflight.outputs.head_sha }}
+          SHORT_SHA: ${{ needs.preflight.outputs.short_sha }}
+          BUILT_AT: ${{ needs.preflight.outputs.built_at }}
+        run: |
+          set -euo pipefail
 
-      - name: Publish firmware (rolling nightly)
-        if: steps.collect.outputs.count != '0'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: nightly
-          body: |
-            sha=${{ needs.preflight.outputs.head_sha }}
-            short=${{ needs.preflight.outputs.short_sha }}
-            built_at=${{ needs.preflight.outputs.built_at }}
-          files: dist/*
+          # Retry any gh invocation with exponential backoff. Covers the 403 /
+          # 429 secondary-rate-limit response per GitHub's own guidance (pause,
+          # back off, retry) — the asset uploads are the calls that hit it.
+          gh_retry() {
+            local n=0 max=6 delay=15
+            until "$@"; do
+              n=$((n + 1))
+              if [ "$n" -ge "$max" ]; then
+                echo "::error::gh failed after ${max} attempts: $*"
+                return 1
+              fi
+              echo "::warning::gh attempt ${n} failed, sleeping ${delay}s before retry"
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
 
-      - name: Publish firmware (latest — legacy alias)
-        if: steps.collect.outputs.count != '0'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          files: dist/*
+          # Create the release at the built commit if it does not exist yet.
+          ensure_release() { # <tag> [extra gh release create args...]
+            local tag="$1"; shift
+            if ! gh release view "$tag" >/dev/null 2>&1; then
+              gh_retry gh release create "$tag" --target "$HEAD_SHA" --notes "$NOTES" "$@"
+            fi
+          }
+
+          # Upload one asset at a time, pacing ~1/s to stay under the per-minute
+          # content-mutation ceiling that triggers the secondary rate limit.
+          upload_paced() { # <tag> <file>...
+            local tag="$1"; shift
+            local total=$# i=0
+            for f in "$@"; do
+              i=$((i + 1))
+              echo "[${tag}] (${i}/${total}) ${f##*/}"
+              gh_retry gh release upload "$tag" "$f" --clobber
+              sleep 1
+            done
+          }
+
+          NOTES=$(printf 'sha=%s\nshort=%s\nbuilt_at=%s\n' "$HEAD_SHA" "$SHORT_SHA" "$BUILT_AT")
+
+          # Full asset set (firmware images + sizes/kconfig sidecars) → dated.
+          mapfile -t DATED < <(find dist -maxdepth 1 -type f | sort)
+          # nightly/latest are firmware-delivery aliases for flashers, so ship
+          # only the firmware images there — re-uploading the small JSON sidecars
+          # to two more releases is pure rate-limit cost for no consumer.
+          mapfile -t IMAGES < <(find dist -maxdepth 1 -type f -name 'openipc*.tgz' | sort)
+
+          # --- dated: immutable per-build history ---
+          ensure_release "$BUILD_ID" --prerelease --title "$BUILD_ID"
+          upload_paced "$BUILD_ID" "${DATED[@]}"
+          # Completion marker, uploaded LAST: its presence is the single downstream
+          # signal that the dated release finished publishing. firmware-explorer's
+          # prebuild gates ingestion on it so a rate-limit-truncated release is
+          # never indexed as a complete build.
+          printf '{"build_id":"%s","expected_assets":%s,"head_sha":"%s","built_at":"%s"}\n' \
+            "$BUILD_ID" "${#DATED[@]}" "$HEAD_SHA" "$BUILT_AT" > dist/_manifest.json
+          gh_retry gh release upload "$BUILD_ID" dist/_manifest.json --clobber
+
+          # --- rolling nightly: move tag + body to this build, refresh images ---
+          ensure_release nightly
+          gh_retry gh release edit nightly --notes "$NOTES"
+          gh_retry gh api -X PATCH "repos/${GH_REPO}/git/refs/tags/nightly" -f sha="$HEAD_SHA" -F force=true
+          upload_paced nightly "${IMAGES[@]}"
+
+          # --- latest: legacy alias ---
+          ensure_release latest
+          gh_retry gh api -X PATCH "repos/${GH_REPO}/git/refs/tags/latest" -f sha="$HEAD_SHA" -F force=true
+          upload_paced latest "${IMAGES[@]}"
 
   # Single umbrella status check that reflects the whole build matrix, so the
   # branch-protection required-checks list does not need one hardcoded
