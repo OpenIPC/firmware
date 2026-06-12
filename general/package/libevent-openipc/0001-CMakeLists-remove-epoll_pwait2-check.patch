@@ -1,10 +1,12 @@
---- a/CMakeLists.txt	2022-10-22 23:24:40.000000000 +0300
-+++ b/CMakeLists.txt	2022-12-07 13:41:29.700608817 +0300
-@@ -518,7 +518,6 @@
-         select
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ce39de94..0f229024 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -544,7 +544,6 @@ else()
          epoll_create
          epoll_create1
--        epoll_pwait2
          epoll_ctl
+-        epoll_pwait2
          eventfd
-         poll
+         fcntl
+         getegid

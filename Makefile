@@ -69,7 +69,11 @@ audit-abi:
 
 deps:
 	sudo apt-get install -y automake autotools-dev bc build-essential cpio \
-		curl file fzf git libncurses-dev libtool lzop make rsync unzip wget libssl-dev
+		curl file fzf git libncurses-dev libtool lzop make rsync unzip wget libssl-dev \
+		python3 python3-pip
+	# kconfiglib is the only non-stdlib dep added by general/scripts/kconfig_graph.py;
+	# install with --break-system-packages on PEP 668 distros (Ubuntu 24.04+, Debian 12+).
+	python3 -m pip install --user --break-system-packages kconfiglib
 
 timer:
 	@echo - Build time: $(shell date -d @$(shell expr $(shell date +%s) - $(TIMER)) -u +%M:%S)
@@ -95,6 +99,11 @@ endif
 	@$(call BUNDLE_SDK)
 
 repack:
+ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3516cv6xx")
+	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
+else ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
+	@$(call PREPARE_REPACK,firmware.bin,8192,,,nor)
+else
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
 ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
 	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.squashfs,8192,nor)
@@ -114,6 +123,29 @@ endif
 ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
 	@$(call PREPARE_REPACK,uImage,16384,,,initramfs)
 endif
+endif
+
+size-report:
+	@TARGET_DIR=$(TARGET)/target \
+	BR2_OUTPUT_DIR=$(TARGET) \
+	IMAGES_DIR=$(TARGET)/images \
+	OPENIPC_SOC_MODEL=$(BR2_OPENIPC_SOC_MODEL) \
+	OPENIPC_VARIANT=$(BR2_OPENIPC_VARIANT) \
+	BR2_OPENIPC_FLASH_SIZE=$(BR2_OPENIPC_FLASH_SIZE) \
+	BR2_OPENIPC_SOC_VENDOR=$(BR2_OPENIPC_SOC_VENDOR) \
+	BR2_TARGET_ROOTFS_SQUASHFS=$(BR2_TARGET_ROOTFS_SQUASHFS) \
+	BR2_TARGET_ROOTFS_UBI=$(BR2_TARGET_ROOTFS_UBI) \
+	python3 $(PWD)/general/scripts/size_report.py
+
+kconfig-graph:
+	@TARGET_DIR=$(TARGET)/target \
+	BR2_OUTPUT_DIR=$(TARGET) \
+	IMAGES_DIR=$(TARGET)/images \
+	OPENIPC_SOC_MODEL=$(BR2_OPENIPC_SOC_MODEL) \
+	OPENIPC_VARIANT=$(BR2_OPENIPC_VARIANT) \
+	BR_VER=$(BR_VER) \
+	PWD=$(PWD) \
+	python3 $(PWD)/general/scripts/kconfig_graph.py
 
 define BUNDLE_SDK
 	OSDRV_DIR=$(PWD)/general/package/$(BR2_OPENIPC_SOC_VENDOR)-osdrv-$(BR2_OPENIPC_SOC_FAMILY)/files; \
