@@ -2,19 +2,28 @@
 set -eu
 
 usage() {
-	echo "Usage: $0 <defconfig> [--passwd <password>] [--tz <iana-timezone>] [--ntp <ntp server>] [--dns <dns server>] [--pkgs <br package file>]" >&2
+	printf '%s\n' \
+		   "Usage: $0 <defconfig> [optional args]" \
+		   '  Optional args:' \
+		   '  --passwd	  Plaintext or hash ($1$...)' \
+		   '  --tz		  iana-timezone (Europe/Berlin)' \
+		   '  --ntp		  NTP server' \
+		   '  --dns		  DNS server' \
+		   '  --hostname  fallback hostname' \
+		   '  --pkgs	  File with additional buildroot pkgs'
 	exit 1
 }
 
 [ $# -ge 1 ] || usage
 
+FRAGMENT=general/openipc.fragment
+FRAGMENT_BAK=
 BOARD=
 PASSWD=
 TIMEZONE=
-FRAGMENT=general/openipc.fragment
-FRAGMENT_BAK=
 NTP=
 DNS=
+HOSTNAME=
 PKGS=
 
 while [ $# -gt 0 ]; do
@@ -23,6 +32,13 @@ while [ $# -gt 0 ]; do
 			[ $# -ge 2 ] || usage
 			PASSWD=$2
 			shift 2
+			case "$PASSWD" in
+				'$'[0-9]'$'*)
+					;;
+				*)
+					PASSWD=$(mkpasswd -5 "$PASSWD")
+					;;
+			esac
 			;;
 		--tz)
 			[ $# -ge 2 ] || usage
@@ -37,6 +53,11 @@ while [ $# -gt 0 ]; do
 		--dns)
 			[ $# -ge 2 ] || usage
 			DNS=$2
+			shift 2
+			;;
+		--hostname)
+			[ $# -ge 2 ] || usage
+			HOSTNAME=$2
 			shift 2
 			;;
 		--pkgs)
@@ -103,6 +124,12 @@ fi
 if [ -n "$DNS" ]; then
 	cat >> "$FRAGMENT" <<EOF
 BR2_PACKAGE_OPENIPC_NFS_ROOT_DNS_SERVER="$DNS"
+EOF
+fi
+
+if [ -n "$HOSTNAME" ]; then
+	cat >> "$FRAGMENT" <<EOF
+BR2_PACKAGE_OPENIPC_NFS_ROOT_HOSTNAME="$HOSTNAME"
 EOF
 fi
 

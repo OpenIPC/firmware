@@ -14,17 +14,18 @@ config BR2_PACKAGE_OPENIPC_NFS_ROOT
 if BR2_PACKAGE_OPENIPC_NFS_ROOT
 
 config BR2_PACKAGE_OPENIPC_NFS_ROOT_TMPFS_SIZE
-	string "tmpfs size"
+	string "TMPFS size"
 	default "16M"
 	help
 	  Size passed to the tmpfs mount used for the writable overlay
 	  when NFS root is mounted in readonly mode.
 
 config BR2_PACKAGE_OPENIPC_NFS_ROOT_PASSWD
-	string "root password"
+	string "Root password"
 	default "12345"
 	help
 	  Root password to be set during boot. Useful for immutable rootfs.
+	  Can be plaintext or a password hash.
 
 config BR2_PACKAGE_OPENIPC_NFS_ROOT_TIMEZONE
 	string "IANA timezone"
@@ -51,5 +52,14 @@ config BR2_PACKAGE_OPENIPC_NFS_ROOT_DNS_SERVER
 	  Static DNS server to use.
 
 	  When left empty, the build uses the default route fo the DNS server.
+
+config BR2_PACKAGE_OPENIPC_NFS_ROOT_HOSTNAME
+	string "Hostname"
+	default ""
+	help
+	  Fallback hostname.
+
+	  If server supplied hostname and uboot env hostname don't exist then
+	  use this hostname.
 
 endif
