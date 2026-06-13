@@ -171,13 +171,15 @@ setup_dns_ntp_hostname() {
 
 case "$1" in
 	start)
-		if grep -q 'root=/dev/nfs' /proc/cmdline && [ ! -f '/etc/firstboot' ]; then
-			setup_root_passwd
+		if grep -q 'root=/dev/nfs' /proc/cmdline; then
 			setup_dns_ntp_hostname
-			if grep -Eq '(^| )ro( |$)' /proc/cmdline; then
-				setup_ssh_key
+			if [ ! -f '/etc/firstboot' ]; then
+				setup_root_passwd
+				if grep -Eq '(^| )ro( |$)' /proc/cmdline; then
+					setup_ssh_key
+				fi
+				touch /etc/firstboot
 			fi
-			touch /etc/firstboot
 		fi
 		;;
 
