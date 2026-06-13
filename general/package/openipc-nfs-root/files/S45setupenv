@@ -6,8 +6,10 @@
 dhcp_fetch_dns_ntp() {
 	iface="$1"
 	hostname="$2"
-	out="${3:-/tmp/udhcpc.env.$$}"
-	hook="/tmp/udhcpc-hook.$$"
+	state_dir="/var/run/udhcpc"
+	mkdir -p "$state_dir"
+	out="${3:-${state_dir}/udhcpc.env.$$}"
+	hook="${state_dir}/udhcpc-hook.$$"
 
 	[ -n "$iface" ] || return 2
 
@@ -24,6 +26,10 @@ case "$1" in
 			echo "router='$router'"
 			echo "hostname='$hostname'"
 			echo "domain='$domain'"
+			echo "search='$search'"
+			echo "lease='$lease'"
+			echo "event='$1'"
+			echo "updated_at='$(date '+%Y-%m-%d %H:%M:%S %Z')'"
 		} > "$UDHCPC_CAPTURE"
 		exit 0
 		;;
@@ -36,28 +42,30 @@ EOF
 	chmod +x "$hook" || return 1
 
 	UDHCPC_CAPTURE="$out" \
-	udhcpc -i "$iface" -n -q \
+	udhcpc -i "$iface" -b -T 1 -t 5 \
 		-s "$hook" \
 		-O ntpsrv \
 		-O dns \
 		-O hostname \
 		-O domain \
-		-F "$hostname" \
+		-O search \
+		-O lease \
+		-x "hostname:${hostname}" \
+		-p "/var/run/udhcpc.${iface}.pid" \
 		>/dev/null 2>&1
 
 	rc=$?
-	rm -f "$hook"
 
 	[ $rc -eq 0 ] || return $rc
 	[ -s "$out" ] || return 1
 
 	. "$out"
-	#rm -f "$out"
 
 	DHCP_NTP="$ntpsrv"
 	DHCP_DNS="$dns"
 	DHCP_HOSTNAME="$hostname"
 	DHCP_DOMAIN="$domain"
+	DHCP_SEARCH="$search"
 	return 0
 }
 
@@ -114,21 +122,32 @@ setup_dns_ntp_hostname() {
 	DEFAULT_HOSTNAME=$(cat /etc/hostname)
 	HOSTNAME="${UBOOT_HOSTNAME:-${BUILD_HOSTNAME:-$DEFAULT_HOSTNAME}}"
 
-	# If kernel IP autoconf used DHCP try getting missing variable not exposed
-	if grep -q '^#PROTO: DHCP$' /proc/net/pnp; then
+	# If kernel used IP autoconf (DHCP) we must launch udhcpc
+	# to manage future leases. In addition we pass our choice for
+	# hostname and store the response to see if it was accepted.
+	if grep -q '^#PROTO: MANUAL$' /proc/net/pnp; then
+		IP_CIDR="$(ip -o -4 addr show dev eth0 scope global | awk '{print $4; exit}')"
+		echo "nfs-root: Using static IP $IP_CIDR"
+	else
 		if ! dhcp_fetch_dns_ntp eth0 $HOSTNAME; then
-			echo "nfs-root: DHCP request failed."
+			echo "nfs-root: Warning: DHCP request failed."
 		fi
 	fi
+
+	# Update hostname if DHCP server didn't honor the change
+	HOSTNAME="${DHCP_HOSTNAME:-$HOSTNAME}"
 	NTP="${BUILD_NTP:-$DHCP_NTP}"
 	DNS="${BUILD_DNS:-${UBOOT_DNS:-$DHCP_DNS}}"
-	HOSTNAME="${DHCP_HOSTNAME:-$HOSTNAME}"
 	if [ -n "$NTP" ]; then
 		echo "server ${NTP} iburst" > /etc/ntp.conf
 		echo "nfs-root: Using ${NTP} for NTP."
 	fi
 	if [ -n "$DNS" ]; then
-		echo "nameserver ${DNS}" > /etc/resolv.conf
+		echo -n "" > /etc/resolv.conf
+		if [ -n "$DHCP_SEARCH" ]; then
+			echo "search $DHCP_SEARCH" >> /etc/resolv.conf
+		fi
+		echo "nameserver ${DNS}" >> /etc/resolv.conf
 		echo "nfs-root: Using ${DNS} for DNS."
 	fi
 
@@ -141,7 +160,7 @@ setup_dns_ntp_hostname() {
 	if [ -w /etc/hosts ]; then
 	{
 		echo "127.0.0.1 localhost"
-		echo "127.0.1.1 $HOSTNAME $FQDN"
+		echo "127.0.1.1 $FQDN $HOSTNAME"
 	} > /etc/hosts
 	fi
 
