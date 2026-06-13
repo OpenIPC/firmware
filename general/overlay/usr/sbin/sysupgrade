@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.52
+scr_version=1.0.53
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -40,9 +40,13 @@ die() {
 }
 
 check_soc() {
+	# Validate the downloaded image's stamped SoC ($1 = kernel-header ksoc or
+	# rootfs hostname) against the BUILD identity $model, NOT the chip's
+	# self-report. One published image (e.g. hi3516cv6xx) legitimately serves
+	# dies that report a different id (hi3516cv610/608) via fw_printenv/ipcinfo.
 	[ "1" = "$skip_soc" ] && echo "Skip SoC validation" && return 0
-	[ "$1" = "$soc" ] && echo "SoC OK" && return 0
-	die "Wrong SoC!"
+	[ "$1" = "$model" ] && echo "SoC OK" && return 0
+	die "Wrong SoC! (image '$1' != build '$model')"
 }
 
 compare_versions() {
@@ -54,17 +58,27 @@ compare_versions() {
 do_update_kernel() {
 	local x=$1
 	if [ -z "$x" ]; then
-		[ "$vendor" = "rockchip" ] && x="/tmp/zboot.img.$soc" || x="/tmp/uImage.$soc"
+		[ "$vendor" = "rockchip" ] && x="/tmp/zboot.img.$model" || x="/tmp/uImage.$model"
 	fi
 	echo_c 33 "\nKernel"
 	echo "Update kernel from $x"
 	[ ! -f "$x" ] && die "File $x not found"
 	if [ "1" != "$skip_soc" ]; then
-		local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
-		if [ "$vendor" != "ingenic" ] && [ "$vendor" != "rockchip" ]; then
-			check_soc "$ksoc"
+		# A FIT image (DTB magic d00dfeed, e.g. the cv6xx kernel) carries
+		# neither a uImage SoC name at offset 32 nor a uImage timestamp at
+		# offset 8: the legacy probes would misfire (ksoc garbage -> false
+		# "Wrong SoC!"; identical bogus values -> false "Same version", kernel
+		# silently skipped). For a FIT, rely on the rootfs hostname SoC check
+		# and always reflash.
+		if [ "$(xxd -p -l 4 "$x" 2>/dev/null)" = "d00dfeed" ]; then
+			echo "FIT kernel detected, skipping uImage SoC/version probe"
+		else
+			local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
+			if [ "$vendor" != "ingenic" ] && [ "$vendor" != "rockchip" ]; then
+				check_soc "$ksoc"
+			fi
+			compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 		fi
-		compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 	fi
 	set_progress flashcp -v "$x" "$kernel_device"
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
@@ -72,7 +86,7 @@ do_update_kernel() {
 
 do_update_rootfs() {
 	local x=$1
-	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$soc"
+	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$model"
 	echo_c 33 "\nRootFS"
 	echo "Update rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
@@ -88,6 +102,45 @@ do_update_rootfs() {
 	fi
 	set_progress flashcp -v "$x" "$(get_device "rootfs")"
 	echo_c 32 "RootFS updated to $rootfs_version"
+}
+
+do_update_firmware() {
+	# A combined image bundles the FIT kernel (DTB magic d00dfeed) and the
+	# rootfs squashfs in one blob — the rootfs packed right after the FIT at a
+	# 64K-aligned offset (see the cv6xx board post-image.sh).
+	#
+	# Prefer the traditional NON-overlapping split: slice the blob at the FIT
+	# boundary and write the FIT to the kernel partition and the rootfs to the
+	# rootfs partition (each flashcp stays within its own partition and U-Boot
+	# reads them from those fixed offsets). Only when the flash has no separate
+	# kernel/rootfs partitions — a pure combined layout — fall back to a single
+	# whole-blob write to the "firmware" partition (which on cv6xx overlaps
+	# kernel+rootfs and is meant for whole-image programming).
+	local x=/tmp/firmware.bin.$model
+	echo_c 33 "\nFirmware (combined image)"
+	echo "Update firmware from $x"
+	[ ! -f "$x" ] && die "File $x not found"
+
+	if [ "$(get_device "kernel")" != "/dev/" ] && [ "$(get_device "rootfs")" != "/dev/" ]; then
+		# Split at the FIT totalsize (header bytes 4-7, big-endian), rounded up
+		# to the 64K erase block, then hand each slice to the split flow.
+		local hex=$(xxd -p -l 4 -s 4 "$x" 2>/dev/null)
+		local fitsz=$((0x${hex:-0}))
+		[ "$fitsz" -gt 0 ] || die "Not a FIT combined image: $x"
+		local blocks=$(((fitsz + 65535) / 65536))
+		echo "Split combined image: FIT ${fitsz}B -> kernel, remainder -> rootfs"
+		dd if="$x" bs=65536 count="$blocks" of=/tmp/uImage.$model 2>/dev/null
+		dd if="$x" bs=65536 skip="$blocks" of=/tmp/rootfs.squashfs.$model 2>/dev/null
+		do_update_kernel "/tmp/uImage.$model"
+		do_update_rootfs "/tmp/rootfs.squashfs.$model"
+		return 0
+	fi
+
+	local fw_dev=$(get_device "firmware")
+	[ "$fw_dev" = "/dev/" ] && die "No kernel/rootfs or firmware partition to flash"
+	echo "Combined partition $fw_dev"
+	set_progress flashcp -v "$x" "$fw_dev" || die "flashcp to $fw_dev failed"
+	echo_c 32 "Firmware updated"
 }
 
 do_wipe_overlay() {
@@ -115,11 +168,34 @@ resolve_url() {
 		'$1==b && $2==p && $3==f { print $NF; exit }' "$MANIFEST_CACHE"
 }
 
+# Rewrite $model from a retired/shared SoC id to the canonical model an
+# OpenIPC image is actually published under, so the download name, manifest
+# key, extracted artifact names and SoC check all reference an image that
+# exists. Two sources, in order: (1) the manifest's @alias records (chip ->
+# model) when a manifest has been fetched — authoritative, extended by
+# defconfig BR2_OPENIPC_SOC_ALIASES; (2) a tiny static net for the known
+# retired SoCs so offline / SD-card / --archive migrations resolve with no
+# network at all. Idempotent and a no-op for canonical models.
+resolve_model_alias() {
+	local m=""
+	[ -s "$MANIFEST_CACHE" ] && m=$(awk -v c="$model" \
+		'$1=="@alias" && $2==c { print $3; exit }' "$MANIFEST_CACHE")
+	[ -z "$m" ] && case "$model" in
+		xm550)      m=xm530 ;;
+		gk7205v210) m=gk7205v200 ;;
+	esac
+	[ -n "$m" ] && [ "$m" != "$model" ] && {
+		echo_c 36 "SoC alias: $model -> $m (shared platform)"
+		model="$m"
+	}
+	return 0
+}
+
 download_firmware() {
 	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
-	build="$soc-nor-$osr"
+	build="$model-nor-$osr"
 	if [ -n "$archive" ]; then
 		[ ! -f "$archive" ] && die "File $archive not found"
 		gzip -d "$archive" -c | tar xf - -C /tmp && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
@@ -127,13 +203,14 @@ download_firmware() {
 		case "$osr" in lite|ultimate|neo) repo=firmware ;; esac
 		if [ -n "$channel" ] || [ -n "$build_id" ]; then
 			fetch_manifest
+			resolve_model_alias
 			[ -n "$channel" ] && build_id=$(resolve_channel "$channel")
 			[ -z "$build_id" ] && die "Unknown channel/build"
-			# Prefer the rich BUILD_PLATFORM (e.g. gk7205v200_fpv_caddx-fly)
-			# when present; fall back to the coarse ${soc}_${osr} for older
-			# firmwares that pre-date the field.
+			# Rewrite only the leading SoC token of BUILD_PLATFORM to the
+			# canonical $model (preserving any rich _variant_device suffix used
+			# by builder); fall back to ${model}_${osr} for pre-1.0.51 images.
 			platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
-			[ -z "$platform" ] && platform="${soc}_${osr}"
+			if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
 			url=$(resolve_url "$build_id" "$platform" "nor")
 			[ -z "$url" ] && die "No artifact for $platform in $build_id"
 			echo "Resolved $build_id for $platform"
@@ -146,12 +223,19 @@ download_firmware() {
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 	fi
+	# Combined image (FIT kernel + rootfs packed in one blob, e.g. cv6xx):
+	# flashed as a unit by do_update_firmware instead of the split path.
+	[ -f "/tmp/firmware.bin.$model" ] && image_combined=1
 }
 
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
-	killall -q -3 majestic
-	sleep 1
+	# --web: majestic freed its own video pipeline and is streaming this log
+	# over /ws/upgrade; keep it alive until just before the flash (see below).
+	if [ "1" != "$web_update" ]; then
+		killall -q -3 majestic
+		sleep 1
+	fi
 	/etc/init.d/S99rc.local stop
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
@@ -186,6 +270,9 @@ sync_time() {
 self_update() {
 	if echo "$args" | grep -E "\-(k|r|w|url|channel|build)" >/dev/null 2>&1; then
 		sync_time
+		# The WebUI flow must not re-exec a freshly downloaded sysupgrade: a
+		# pre-patch master copy would reject --web. Time is synced; carry on.
+		[ "1" = "$web_update" ] && return
 		echo -e "\nChecking for sysupgrade update..."
 		curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
 		if [ -f /tmp/sysupgrade ] && grep -q "#!/bin/sh" /tmp/sysupgrade; then
@@ -239,13 +326,36 @@ get_device() {
 }
 
 get_kernel_version() {
-	date "+%H:%M:%S %Y-%m-%d" @$((0x$(xxd -l 4 -s 8 -p "$1" | xargs)))
+	# A FIT image (DTB magic d00dfeed) has no uImage timestamp at offset 8;
+	# the legacy read would print a bogus 1970 date. Used for display and, on
+	# split-layout boards, the kernel compare — keep it honest for both.
+	[ -e "$1" ] || { echo "n/a"; return; }
+	[ "$(xxd -p -l 4 "$1" 2>/dev/null)" = "d00dfeed" ] && { echo "n/a (FIT)"; return; }
+	local ts=$(xxd -l 4 -s 8 -p "$1" 2>/dev/null | xargs)
+	[ -n "$ts" ] || { echo "n/a"; return; }
+	# Display the epoch via `-d @SECONDS`. A bare positional `@SECONDS` is
+	# treated by busybox as a clock-SET request ("date: can't set date") and
+	# yields nothing, which would make compare_versions see two empty strings
+	# and wrongly skip the kernel update.
+	date -d @$((0x$ts)) "+%H:%M:%S %Y-%m-%d"
 }
 
 get_system_info() {
 	vendor=$(ipcinfo -v)
-	soc=$(fw_printenv -n soc) || die "SoC is not defined in U-Boot environment"
+	# Upgrade identity is the BUILD platform, not the chip. BUILD_PLATFORM is
+	# ${soc}_${variant}[_${device}]; the SoC model is its leading token (no
+	# SOC_MODEL contains '_'). This decouples one published image (e.g. the
+	# single cv6xx build) from the per-die id a camera reports via
+	# fw_printenv/ipcinfo. soc is kept for display and as the pre-1.0.51
+	# fallback; fw_printenv is no longer fatal (it returns nothing when the
+	# U-Boot env partition is empty/unwritten) as long as BUILD_PLATFORM is set.
+	model=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2 | cut -d_ -f1)
+	soc=$(fw_printenv -n soc 2>/dev/null)
+	[ -z "$model" ] && model="$soc"
+	[ -z "$model" ] && die "Cannot determine SoC: no BUILD_PLATFORM and no U-Boot 'soc'"
+	resolve_model_alias
 	kernel_device=$(get_device "kernel")
+	[ "$kernel_device" = "/dev/" ] && kernel_device=$(get_device "firmware")
 	kernel_version=$(get_kernel_version "$kernel_device")
 	system_version=$(get_system_version "")
 	flash_type=$(ipcinfo -F)
@@ -262,7 +372,7 @@ get_system_build() {
 print_sysinfo() {
 	get_system_info
 	echo_c 33 "OpenIPC System Updater v$scr_version"
-	echo_c 36 "\nVendor\t$vendor\nSoC\t$soc\nKernel\t$kernel_version\nRootFS\t$system_version"
+	echo_c 36 "\nVendor\t$vendor\nSoC\t$soc\nModel\t$model\nKernel\t$kernel_version\nRootFS\t$system_version"
 }
 
 print_usage() {
@@ -286,6 +396,8 @@ Where:
   -n, --wipe_overlay    Wipe overlay partition.
   -x, --no_reboot       Do not reboot after updating.
   -z, --no_update       Do not update self.
+      --web             Invoked by the WebUI: keep majestic alive to stream
+                        progress over /ws/upgrade, stop it only before flashing.
   -h, --help            Display this help and exit.
 
 Manifest URL: \$MANIFEST_URL (default: $MANIFEST_URL)
@@ -406,6 +518,14 @@ for i in "$@"; do
 			shift
 			;;
 
+		--web)
+			# Invoked by majestic's /ws/upgrade: majestic has already freed its
+			# own video pipeline and is streaming this log over the WebSocket, so
+			# don't kill it up front — stop it only just before the flash.
+			web_update=1
+			shift
+			;;
+
 		*)
 			print_sysinfo
 			echo_c 37 "\nUnknown option: $1"
@@ -419,9 +539,10 @@ print_sysinfo
 
 if [ "1" = "$list_only" ]; then
 	fetch_manifest
+	resolve_model_alias
 	osr=$(get_system_build)
 	platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
-	[ -z "$platform" ] && platform="${soc}_${osr}"
+	if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
 	here=$(grep '^BUILD_ID=' /etc/os-release | cut -d= -f2)
 	builds=$(awk -v p="$platform" '$2==p && $3=="nor" { print $1 }' "$MANIFEST_CACHE" \
 		| head -n "${list_n:-20}")
@@ -456,8 +577,23 @@ free_resources
 trap '' HUP INT TERM PIPE
 echo_c 37 "\nProtected: flashing continues even if this terminal disconnects."
 
-[ "1" = "$update_kernel" ] && do_update_kernel "$kernel_file"
-[ "1" = "$update_rootfs" ] && do_update_rootfs "$rootfs_file"
+# --web: stop majestic now (the web server that streamed progress until here).
+# The browser switches to "rebooting" when its /ws/upgrade socket closes; this
+# detached sysupgrade keeps flashing (setsid + the trap above) and reboots.
+if [ "1" = "$web_update" ]; then
+	echo_c 37 "Stopping web server before flashing"
+	killall -q -3 majestic
+	sleep 1
+fi
+
+if [ "1" = "$image_combined" ]; then
+	# One blob covers both kernel and rootfs; any of -k/-r/--url/--channel
+	# maps to a single combined write.
+	{ [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && do_update_firmware
+else
+	[ "1" = "$update_kernel" ] && do_update_kernel "$kernel_file"
+	[ "1" = "$update_rootfs" ] && do_update_rootfs "$rootfs_file"
+fi
 [ "1" = "$clear_overlay" ] && do_wipe_overlay
 
 reboot_system
