@@ -187,8 +187,11 @@ insert_sns() {
 
                 devmem 0x2003002c 32 0x94001 # sensor unreset, clk 37.125MHz, VI 99MHz
                 ;;
-        ov2710_mipi)
-                # MIPI variant — uses libsns_ov2710_mipi.so via ov2710_mipi_1080p.ini
+        ov2710_mipi | ov2735_i2c_1080p | ov2735)
+                # MIPI variant. OV2710 uses libsns_ov2710_mipi.so via
+                # ov2710_mipi_1080p.ini; OV2735 uses libsns_ov2735.so via
+                # ov2735_i2c_1080p.ini. Both share the same MIPI pinmux +
+                # clock — sensor differentiation happens in libsns / .ini.
                 devmem 0x200f0040 32 0x2 # I2C0_SCL
                 devmem 0x200f0044 32 0x2 # I2C0_SDA
 
