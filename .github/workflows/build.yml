@@ -250,6 +250,20 @@ jobs:
           key: dl-${{env.CACHE_DATE}}
           restore-keys: dl-
 
+      - name: Refresh moving-ref package downloads
+        run: |
+          # Packages pinned to a moving ref (VERSION = HEAD / branch) download as
+          # <pkg>-<ref>.tar.gz — a constant filename. The dl cache key is the month
+          # (date +%m) and actions/cache only saves on a key miss, so that snapshot
+          # is frozen for weeks; buildroot then keeps reusing the stale tarball and
+          # the nightly silently ships an old version. This is what desynced
+          # majestic-webui from majestic (blanking every settings field label).
+          # Drop those archives so buildroot re-fetches the current ref each run.
+          # Content-addressed packages (S3 / semver / SHA pins) keep their cache.
+          find output/dl -type f \
+            \( -name '*-HEAD.tar.gz' -o -name '*-master.tar.gz' -o -name '*-main.tar.gz' \) \
+            -print -delete 2>/dev/null || true
+
       - name: Build firmware
         run: |
           export GIT_HASH=$(git rev-parse --short ${GITHUB_SHA})
