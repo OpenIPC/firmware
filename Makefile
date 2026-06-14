@@ -21,7 +21,11 @@ CONFIG := $(shell find br-ext-*/configs/*_defconfig | grep -m1 $(BOARD))
 include $(CONFIG)
 endif
 
-all: build repack timer
+ifneq ($(filter repack,$(MAKECMDGOALS)),)
+-include $(BR_CONF)
+endif
+
+all: repack-final timer
 
 build: defconfig
 	@$(BR_MAKE) all -j$(shell nproc)
@@ -105,6 +109,9 @@ endif
 	@$(BR_MAKE) BR2_DEFCONFIG=$(BR_CONF) defconfig
 	@$(BR_MAKE) sdk -j$(shell nproc)
 	@$(call BUNDLE_SDK)
+
+repack-final: build
+	@$(MAKE) --no-print-directory BOARD=$(BOARD) TARGET=$(TARGET) repack
 
 repack:
 ifeq ($(BR2_PACKAGE_OPENIPC_NFS_ROOT),y)
