@@ -259,9 +259,11 @@ jobs:
           # the nightly silently ships an old version. This is what desynced
           # majestic-webui from majestic (blanking every settings field label).
           # Drop those archives so buildroot re-fetches the current ref each run.
-          # Content-addressed packages (S3 / semver / SHA pins) keep their cache.
+          # Also covers rolling release assets named <pkg>-dist.tar.gz (e.g. the
+          # pre-minified majestic-webui dist). Content-addressed packages
+          # (S3 / semver / SHA pins) keep their cache.
           find output/dl -type f \
-            \( -name '*-HEAD.tar.gz' -o -name '*-master.tar.gz' -o -name '*-main.tar.gz' \) \
+            \( -name '*-HEAD.tar.gz' -o -name '*-master.tar.gz' -o -name '*-main.tar.gz' -o -name '*-dist.tar.gz' \) \
             -print -delete 2>/dev/null || true
 
       - name: Build firmware
