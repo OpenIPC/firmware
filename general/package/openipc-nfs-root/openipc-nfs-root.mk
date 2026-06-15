@@ -13,6 +13,9 @@ OPENIPC_NFS_ROOT_LICENSE = MIT
 
 define OPENIPC_NFS_ROOT_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/files/S45setupenv $(TARGET_DIR)/etc/init.d/S45setupenv
+	$(INSTALL) -D -m 0755 $(@D)/files/S39netprofiles $(TARGET_DIR)/etc/init.d/S39netprofiles
+	$(INSTALL) -D -m 0444 $(@D)/files/interfaces $(TARGET_DIR)/etc/network/profiles/interfaces-nfs-root
+	$(INSTALL) -D -m 0444 $(@D)/files/eth0 $(TARGET_DIR)/etc/network/profiles/eth0-nfs-root
 endef
 
 $(eval $(generic-package))
