@@ -10,7 +10,12 @@ trap on_exit EXIT
 mount -t proc proc /proc || exit 1
 grep -q overlay /proc/filesystems || exit 1
 
-if ! grep -q 'root=.*nfs\|mmcblk\|ram' /proc/cmdline; then
+is_flash_root=true
+is_nfs_root=false
+grep -q 'root=.*nfs\|mmcblk\|ram' /proc/cmdline && is_flash_root=false
+grep -q 'root=.*nfs' /proc/cmdline && is_nfs_root=true
+
+if $is_flash_root; then
 	if grep -q ubifs /proc/cmdline; then
 		mount -t ubifs ubi0:rootfs_data /overlay
 	else
@@ -27,7 +32,16 @@ if ! grep -q 'root=.*nfs\|mmcblk\|ram' /proc/cmdline; then
 			fi
 		fi
 	fi
+elif $is_nfs_root && grep -q ' ro ' /proc/cmdline; then
+	TMPFS_SIZE='@TMPFS_SIZE@'
+	TMPFS_SIZE="${TMPFS_SIZE:-16M}"
+	if ! mount -t tmpfs -o mode=0755,size=${TMPFS_SIZE} tmpfs /overlay; then
+		echo "Cannot mount tmpfs overlay."
+		exit 1
+	fi
+fi
 
+if $is_flash_root || $is_nfs_root; then
 	if grep -q overlayfs /proc/filesystems; then
 		if ! mount -t overlayfs overlayfs -o lowerdir=/,upperdir=/overlay,ro /mnt; then
 			umount /overlay
