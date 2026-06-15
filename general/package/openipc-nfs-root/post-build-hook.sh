@@ -106,6 +106,7 @@ fi
 
 OPENIPC_NFS_ROOT_TZ_POSIX="$(extract_posix_tz "${OPENIPC_NFS_ROOT_TIMEZONE}")"
 
+# Note: delimiter '|' chosen over '/' due to password hash collisions for OPENIPC_NFS_ROOT_PASSWD
 if [ -f "${TARGET_DIR}/init" ]; then
 	sed -i "s|@TMPFS_SIZE@|${OPENIPC_NFS_ROOT_TMPFS_SIZE}|" "${TARGET_DIR}/init"
 fi
