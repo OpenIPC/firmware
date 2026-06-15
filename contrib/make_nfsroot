@@ -138,13 +138,7 @@ if [ -n "$PKGS" ] && [ -f "$PKGS" ]; then
 	cat "$PKGS" >> "$FRAGMENT"
 fi
 
-# Note: Must pass BR2_PACKAGE_OPENIPC_NFS_ROOT=y on cmdline
-# only to satisfy Makefile repack rules.
-set -- \
-	BOARD="$BOARD" \
-	BR2_PACKAGE_OPENIPC_NFS_ROOT=y
-
-make "$@" || exit 1
+make BOARD="$BOARD" || exit 1
 
 KERNEL=$(find output/images/ -regextype posix-extended -iregex '.*/(uimage|zimage).*')
 ROOTFS=$(find output/images/ -name '*.tar')
