@@ -27,6 +27,7 @@ config BR2_PACKAGE_OPENIPC_NFS_ROOT_PASSWD
 	help
 	  Root password to be set during boot. Useful for immutable rootfs.
 	  Can be plaintext or a password hash.
+	  Note: Should set password for production env. Default is 12345
 
 config BR2_PACKAGE_OPENIPC_NFS_ROOT_TIMEZONE
 	string "IANA timezone"
