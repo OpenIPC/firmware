@@ -3,6 +3,8 @@
 # Customize environment for NFS boot
 #
 
+ETH_IFACE="eth0"
+
 dhcp_fetch_dns_ntp() {
 	iface="$1"
 	hostname="$2"
@@ -126,11 +128,13 @@ setup_dns_ntp_hostname() {
 	# to manage future leases. In addition we pass our choice for
 	# hostname and store the response to see if it was accepted.
 	if grep -q '^#PROTO: MANUAL$' /proc/net/pnp; then
-		IP_CIDR="$(ip -o -4 addr show dev eth0 scope global | awk '{print $4; exit}')"
+		IP_CIDR="$(ip -o -4 addr show dev $ETH_IFACE scope global | awk '{print $4; exit}')"
 		echo "nfs-root: Using static IP $IP_CIDR"
 	else
-		if ! dhcp_fetch_dns_ntp eth0 $HOSTNAME; then
-			echo "nfs-root: Warning: DHCP request failed."
+		if dhcp_fetch_dns_ntp $ETH_IFACE $HOSTNAME; then
+			echo "nfs-root: Started dhcpc for lease renewal."
+		else
+			echo "nfs-root: Warning: dhcpc start failed."
 		fi
 	fi
 
@@ -141,6 +145,8 @@ setup_dns_ntp_hostname() {
 	if [ -n "$NTP" ]; then
 		echo "server ${NTP} iburst" > /etc/ntp.conf
 		echo "nfs-root: Using ${NTP} for NTP."
+	else
+        	echo "nfs-root: Using system default for NTP."
 	fi
 	if [ -n "$DNS" ]; then
 		echo -n "" > /etc/resolv.conf
@@ -149,6 +155,8 @@ setup_dns_ntp_hostname() {
 		fi
 		echo "nameserver ${DNS}" >> /etc/resolv.conf
 		echo "nfs-root: Using ${DNS} for DNS."
+	else
+		echo "nfs-root: Using system default for DNS."
 	fi
 
 	if [ -n "$DHCP_DOMAIN" ]; then
@@ -166,7 +174,7 @@ setup_dns_ntp_hostname() {
 
 	# Set the hostname
 	/bin/hostname -F /etc/hostname >/dev/null 2>&1
-	echo "nfs-root: Configured hostname to $HOSTNAME"
+	echo "nfs-root: Configured hostname to $HOSTNAME."
 }
 
 case "$1" in
