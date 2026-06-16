@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SN=$(fw_printenv -n SN)
+SN=$(ipcinfo -i)
 if [ ! -z "$SN" ]; then
     setnetwork -h IPC-$SN
 fi
