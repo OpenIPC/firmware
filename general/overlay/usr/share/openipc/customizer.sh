@@ -2,7 +2,11 @@
 
 SN=$(ipcinfo -i)
 if [ ! -z "$SN" ]; then
-    setnetwork -h IPC-$SN
+    HOSTNAME="IPC-$SN"
+	hostname "$HOSTNAME"
+	echo "$HOSTNAME" > /etc/hostname
+	echo "127.0.0.1 localhost" > /etc/hosts
+	echo "127.0.1.1 ${HOSTNAME}" >> /etc/hosts
 fi
 
 wled_pin=$(gpiofind wled_pin | awk '{print $2}')
