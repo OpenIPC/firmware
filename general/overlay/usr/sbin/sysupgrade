@@ -230,8 +230,12 @@ download_firmware() {
 
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
-	killall -q -3 majestic
-	sleep 1
+	# --web: majestic freed its own video pipeline and is streaming this log
+	# over /ws/upgrade; keep it alive until just before the flash (see below).
+	if [ "1" != "$web_update" ]; then
+		killall -q -3 majestic
+		sleep 1
+	fi
 	/etc/init.d/S99rc.local stop
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
@@ -266,6 +270,9 @@ sync_time() {
 self_update() {
 	if echo "$args" | grep -E "\-(k|r|w|url|channel|build)" >/dev/null 2>&1; then
 		sync_time
+		# The WebUI flow must not re-exec a freshly downloaded sysupgrade: a
+		# pre-patch master copy would reject --web. Time is synced; carry on.
+		[ "1" = "$web_update" ] && return
 		echo -e "\nChecking for sysupgrade update..."
 		curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
 		if [ -f /tmp/sysupgrade ] && grep -q "#!/bin/sh" /tmp/sysupgrade; then
@@ -389,6 +396,8 @@ Where:
   -n, --wipe_overlay    Wipe overlay partition.
   -x, --no_reboot       Do not reboot after updating.
   -z, --no_update       Do not update self.
+      --web             Invoked by the WebUI: keep majestic alive to stream
+                        progress over /ws/upgrade, stop it only before flashing.
   -h, --help            Display this help and exit.
 
 Manifest URL: \$MANIFEST_URL (default: $MANIFEST_URL)
@@ -509,6 +518,14 @@ for i in "$@"; do
 			shift
 			;;
 
+		--web)
+			# Invoked by majestic's /ws/upgrade: majestic has already freed its
+			# own video pipeline and is streaming this log over the WebSocket, so
+			# don't kill it up front — stop it only just before the flash.
+			web_update=1
+			shift
+			;;
+
 		*)
 			print_sysinfo
 			echo_c 37 "\nUnknown option: $1"
@@ -559,6 +576,15 @@ free_resources
 # fork+exec, so this also shields the busybox flashcp child. See issue #2024.
 trap '' HUP INT TERM PIPE
 echo_c 37 "\nProtected: flashing continues even if this terminal disconnects."
+
+# --web: stop majestic now (the web server that streamed progress until here).
+# The browser switches to "rebooting" when its /ws/upgrade socket closes; this
+# detached sysupgrade keeps flashing (setsid + the trap above) and reboots.
+if [ "1" = "$web_update" ]; then
+	echo_c 37 "Stopping web server before flashing"
+	killall -q -3 majestic
+	sleep 1
+fi
 
 if [ "1" = "$image_combined" ]; then
 	# One blob covers both kernel and rootfs; any of -k/-r/--url/--channel
