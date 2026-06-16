@@ -1,0 +1,7 @@
+config BR2_PACKAGE_GPIOD_MOTORS
+	bool "gpiod-motors"
+	select BR2_PACKAGE_LIBGPIOD
+	help
+	  Control stepper motors via libgpiod. Confirmed working with 24BYJ48
+	  stepper motors and ULN2803s on GM8136, HI3516CV200, T21, and GK7102
+	  SOCs and should be portable to any with sysfs GPIO access.
