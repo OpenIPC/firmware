@@ -283,7 +283,7 @@ jobs:
           backoffs="30 60 120 300 600 1200"
           attempt=1
           for sleep_for in $backoffs ""; do
-            make BOARD=${{matrix.platform}} && break
+            make BOARD=${{matrix.platform}} defconfig && make BOARD=${{matrix.platform}} && break
             if [ -z "$sleep_for" ]; then
               echo "::error::build failed after ${attempt} attempts"
               exit 1
