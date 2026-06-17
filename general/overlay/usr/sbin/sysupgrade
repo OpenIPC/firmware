@@ -216,6 +216,7 @@ download_firmware() {
 			echo "Resolved $build_id for $platform"
 		fi
 		[ -z "$url" ] && url=$(fw_printenv -n upgrade || echo "https://github.com/OpenIPC/${repo:-builder}/releases/download/latest/openipc.$build.tgz")
+		[ "${url%\.tgz}.tgz" != "$url" ] && url="${url}/openipc.$build.tgz"
 		echo "Download from $url"
 		[ "$(curl -o /dev/null -s -k -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
 		curl --connect-timeout 30 -s -k -m 120 -L "$url" -s -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
