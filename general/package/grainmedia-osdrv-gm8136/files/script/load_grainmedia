@@ -68,6 +68,8 @@ insmod gm2d.ko
 # check if /dev/sar_adc_drv exists, if not, load sar_adc module
 if ! test -e /dev/sar_adc_drv ; then
     insmod sar_adc.ko run_mode=4                        #run_mode=4 is for CVBS out
+elif test -w /sys/module/sar_adc_drv/parameters/run_mode; then
+    echo 4 > /sys/module/sar_adc_drv/parameters/run_mode
 fi
 
 insmod fe_common.ko
@@ -304,8 +306,9 @@ devmem 0x9a1000c4 32 0x08000f08
 devmem 0x9a1000c8 32 0x061f0606
 devmem 0x9a100030 32 0xDF000f04
 
-devmem 0x90c00044 32 0x00000007
-devmem 0x90c000b4 32 0xFFD374F0 #close SD card and mjpeg
+// uncomment below to disable jpeg
+#devmem 0x90c00044 32 0x00000007
+#devmem 0x90c000b4 32 0xFFD374F0 #close SD card and mjpeg
 
 if [ "$chipid" == "8135" ]; then
     devmem 0x90b00010 32 0x14040000 #close audio
