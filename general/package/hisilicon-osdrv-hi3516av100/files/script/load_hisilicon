@@ -292,6 +292,7 @@ insert_ko() {
         insmod hi3516a_h264e.ko H264eMiniBufMode=1
         insmod hi3516a_h265e.ko H265eMiniBufMode=1
         insmod hi3516a_jpege.ko
+        insmod hi3516a_vda.ko
         #insmod hi3516a_ive.ko save_power=0
         #insmod hi3516a_ive.ko
 
@@ -315,6 +316,7 @@ remove_ko() {
         rmmod -w pwm
         #rmmod -w piris
         #rmmod -w hi3516a_ive
+        rmmod -w hi3516a_vda
 
         rmmod -w hi3516a_rc
         rmmod -w hi3516a_jpege
