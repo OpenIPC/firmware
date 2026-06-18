@@ -1,0 +1,19 @@
+config BR2_PACKAGE_GPIOSTEP_OPENIPC
+	bool "gpiostep-openipc"
+	depends on BR2_LINUX_KERNEL
+	help
+	  In-kernel GPIO half-step pan/tilt stepper driver plus a small
+	  userspace CLI (gpiostep-ctl). A clean reimplementation of the
+	  vendor gpioStep/motor behaviour seen on Goke GK7205V510 PTZ
+	  cameras: two 4-wire stepper coils driven over GPIO from kernel
+	  context (steadier timing, lower CPU than the userspace
+	  gpio-motors tool).
+
+	  Pin map defaults to the GK7205V510 (NC-IPTC2200_DL) layout and is
+	  overridable via module params, e.g.
+	  insmod gpiostep.ko pan_gpios=3,4,72,73 tilt_gpios=69,59,58,57
+
+	  https://openipc.org
+
+comment "gpiostep-openipc needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
