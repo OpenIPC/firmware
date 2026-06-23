@@ -8,6 +8,9 @@ ERASEBLOCK_SIZE=$((64 * 1024))
 
 
 cp ${BINARIES_DIR}/hi35*.dtb ${BINARIES_DIR}/fdt.dtb
+# Compress the arm64 Image so the FIT + squashfs fit the 16 MiB NOR. U-Boot
+# decompresses it at boot (CONFIG_FIT + CONFIG_GZIP).
+gzip -9 -c ${BINARIES_DIR}/Image > ${BINARIES_DIR}/Image.gz
 cp ${BOARD_DIR}/${ITS_SOURCE} ${BINARIES_DIR}/
 mkimage -f ${BINARIES_DIR}/${ITS_SOURCE} ${BINARIES_DIR}/fitImage
 
