@@ -21,11 +21,11 @@
 
 		linux_kernel {
 			description = "Linux";
-			data = /incbin/("Image");
+			data = /incbin/("Image.gz");
 			type = "kernel";
 			arch = "arm64";
 			os = "Linux";
-			compression = "none";
+			compression = "gzip";
 			load = <0x40080000>;
 			entry = <0x40080000>;
 		};
