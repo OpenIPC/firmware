@@ -63,8 +63,10 @@ BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
 BR2_PACKAGE_AWS_WEBRTC=y
 BR2_PACKAGE_DROPBEAR_OPENIPC=y
 BR2_PACKAGE_EXFAT_OPENIPC=y
-# majestic, divinus and hisilicon-opensdk have no aarch64 DV500 build yet and
-# are left off; the MPP userspace .so ship via hisilicon-osdrv-hi3519dv500.
+# majestic and divinus have no aarch64 DV500 build yet and are left off.
+# hisilicon-opensdk builds the open_*.ko kernel modules + sensor .so from
+# source; hisilicon-osdrv-hi3519dv500 ships the closed MPP userspace .so.
+BR2_PACKAGE_HISILICON_OPENSDK=y
 BR2_PACKAGE_HISILICON_OSDRV_HI3519DV500=y
 BR2_PACKAGE_IPCTOOL=y
 BR2_PACKAGE_JSONFILTER=y
