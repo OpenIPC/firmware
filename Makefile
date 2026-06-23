@@ -101,6 +101,8 @@ endif
 repack:
 ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3516cv6xx")
 	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
+else ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3519dv500")
+	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
 else ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
 	@$(call PREPARE_REPACK,firmware.bin,8192,,,nor)
 else
