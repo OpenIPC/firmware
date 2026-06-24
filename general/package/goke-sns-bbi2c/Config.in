@@ -1,0 +1,17 @@
+config BR2_PACKAGE_GOKE_SNS_BBI2C
+	bool "goke-sns-bbi2c"
+	depends on BR2_PACKAGE_GOKE_OSDRV_GK7205V200
+	help
+	  Bit-bang (GPIO) i2c sensor bring-up for gk7205v200 boards whose
+	  image sensor is wired to GPIO pins instead of the SoC hardware
+	  i2c controller (e.g. CP Plus CP-UNC-TA21L2C / Dahua-OEM cameras
+	  with a SmartSens SC223A, chip-id 0xcb3e).
+
+	  Builds a small kernel module that registers a software i2c
+	  adapter on GPIO7_2 (SDA) / GPIO7_3 (SCL), drives the sensor
+	  reset/enable line (GPIO8_7) high, sets the 27 MHz MCLK and holds
+	  the MIPI-RX reference clock stable, and ships an init script that
+	  points majestic's libsns at the bit-bang bus.
+
+	  Addresses the "sensor i2c never ACKs" class of devices:
+	  OpenIPC/firmware issues #1930 and #1404.

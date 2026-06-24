@@ -1,0 +1,47 @@
+#!/bin/sh
+# SC223A bit-bang-i2c sensor bring-up for gk7205v200 boards (e.g. CP Plus
+# CP-UNC-TA21L2C) where the sensor is wired to GPIO, not the hardware i2c bus.
+#
+# This board's sensor is electrically on a software GPIO i2c bus
+# (SDA=GPIO7_2, SCL=GPIO7_3) with reset/enable on GPIO8_7 -- so the stock
+# hardware-i2c sensor probe never ACKs. The goke_sns_bbi2c module registers a
+# bit-bang i2c adapter (/dev/i2c-3) and enables the sensor; this script then
+# points majestic's libsns (which opens /dev/i2c-0) at that bus and streams.
+#
+# This replaces the generic majestic autostart for this board.
+
+SENSOR=sc223a
+KO=/lib/modules/$(uname -r)/extra/goke_sns_bbi2c.ko
+
+start() {
+	[ -f "$KO" ] || { echo "goke_sns_bbi2c.ko not found, skipping"; exit 0; }
+	(
+		sleep 2
+		insmod "$KO" 2>/dev/null
+		# the first i2c xfer after insmod can NAK; retry to wake the sensor
+		i=0
+		while [ $i -lt 8 ]; do
+			i2ctransfer -y 3 w2@0x30 0x31 0x07 r1 >/dev/null 2>&1 && break
+			i=$((i + 1))
+		done
+		load_goke -a -sensor "$SENSOR" -board demo
+		# majestic's libsns opens /dev/i2c-0; route it to the bit-bang bus (i2c-3)
+		rm -f /dev/i2c-0
+		mknod /dev/i2c-0 c 89 3
+		devmem 0x120100f0 32 0x19      # 27 MHz sensor MCLK
+		devmem 0x120100f4 32 0x10340   # MIPI-RX streaming clock (kept stable by the module)
+		SENSOR="$SENSOR" majestic >/var/log/majestic.log 2>&1 &
+	) &
+}
+
+stop() {
+	killall majestic 2>/dev/null
+}
+
+case "$1" in
+	start | "") start ;;
+	stop) stop ;;
+	restart) stop; sleep 2; start ;;
+	*) echo "usage: $0 {start|stop|restart}"; exit 1 ;;
+esac
+exit 0
