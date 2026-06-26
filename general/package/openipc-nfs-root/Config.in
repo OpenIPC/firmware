@@ -1,0 +1,67 @@
+config BR2_PACKAGE_OPENIPC_NFS_ROOT
+	bool "OpenIPC NFS root"
+	depends on BR2_LINUX_KERNEL
+	select BR2_LINUX_KERNEL_EXT_OPENIPC_NFS_ROOT
+	help
+	  NFS-root-specific files and scripts for OpenIPC builds.
+
+	  When enabled, the post-build flow replaces /init with an NFS
+	  aware init script that mounts a writable tmpfs overlay on top
+	  of a readonly NFS root.
+
+	  Add any NFS-only init scripts, helper files, or deployment
+	  hooks here as the workflow is fleshed out.
+
+if BR2_PACKAGE_OPENIPC_NFS_ROOT
+
+config BR2_PACKAGE_OPENIPC_NFS_ROOT_TMPFS_SIZE
+	string "TMPFS size"
+	default "16M"
+	help
+	  Size passed to the tmpfs mount used for the writable overlay
+	  when NFS root is mounted in readonly mode.
+
+config BR2_PACKAGE_OPENIPC_NFS_ROOT_PASSWD
+	string "Root password"
+	default "12345"
+	help
+	  Root password to be set during boot. Useful for immutable rootfs.
+	  Can be plaintext or a password hash.
+	  Note: Should set password for production env. Default is 12345
+
+config BR2_PACKAGE_OPENIPC_NFS_ROOT_TIMEZONE
+	string "IANA timezone"
+	default ""
+	help
+	  IANA timezone name used to derive a POSIX TZ rule at build time,
+	  for example: America/Denver or Europe/Berlin.
+
+	  When left empty, the build attempts to detect the timezone from the
+	  build host and derives the POSIX TZ rule from that zone.
+
+config BR2_PACKAGE_OPENIPC_NFS_ROOT_NTP_SERVER
+	string "NTP server"
+	default ""
+	help
+	  Static NTP server to use.
+
+	  When left empty, the build uses the default route fo the NTP server.
+
+config BR2_PACKAGE_OPENIPC_NFS_ROOT_DNS_SERVER
+	string "DNS server"
+	default ""
+	help
+	  Static DNS server to use.
+
+	  When left empty, the build uses the default route fo the DNS server.
+
+config BR2_PACKAGE_OPENIPC_NFS_ROOT_HOSTNAME
+	string "Hostname"
+	default ""
+	help
+	  Fallback hostname.
+
+	  If server supplied hostname and uboot env hostname don't exist then
+	  use this hostname.
+
+endif

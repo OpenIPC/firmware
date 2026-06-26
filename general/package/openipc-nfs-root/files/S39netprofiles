@@ -1,0 +1,34 @@
+#!/bin/sh
+#
+# Install network profiles for nfs root
+#
+
+install_net_profiles() {
+	# Backup original profiles
+	if [ ! -f /etc/network/profiles/eth0 ]; then
+		cp /etc/network/interfaces.d/eth0 /etc/network/profiles/eth0
+	fi
+	if [ ! -f /etc/network/profiles/interfaces ]; then
+		cp /etc/network/interfaces /etc/network/profiles/interfaces
+	fi
+
+	# Install no-op profiles for nfs root
+	cp /etc/network/profiles/eth0-nfs-root /etc/network/interfaces.d/eth0
+	cp /etc/network/profiles/interfaces-nfs-root /etc/network/interfaces
+}
+
+case "$1" in
+	start)
+		if grep -q 'root=/dev/nfs' /proc/cmdline; then
+			install_net_profiles
+		fi
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
+		;;
+esac
