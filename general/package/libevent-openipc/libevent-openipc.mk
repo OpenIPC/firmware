@@ -54,8 +54,13 @@ else
 LIBEVENT_OPENIPC_CONF_OPTS += -DEVENT__DISABLE_MBEDTLS=ON
 endif
 
+# BROKEN_MMAP forces a raw syscall(SYS_mmap2,...) workaround (patch 0002) for
+# 32-bit musl. SYS_mmap2 is 32-bit-ARM-only (aarch64 has SYS_mmap), and aarch64
+# musl mmap() works fine, so only apply it on 32-bit targets.
 ifeq ($(BR2_TOOLCHAIN_USES_MUSL),y)
+ifneq ($(BR2_aarch64),y)
 LIBEVENT_OPENIPC_CONF_OPTS += -DCMAKE_C_FLAGS="$(TARGET_CFLAGS) -DBROKEN_MMAP=1"
+endif
 endif
 
 LIBEVENT_OPENIPC_POST_INSTALL_TARGET_HOOKS += LIBEVENT_OPENIPC_DELETE_UNUSED

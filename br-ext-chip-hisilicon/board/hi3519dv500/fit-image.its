@@ -1,0 +1,43 @@
+/dts-v1/;
+
+/*
+ * aarch64 FIT for Hi3519DV500/Hi3516DV500. DDR base 0x40000000; the kernel
+ * loads at the standard arm64 0x80000 text offset.
+ */
+
+/ {
+	description = "Linux Kernel";
+	#address-cells = <1>;
+
+	images {
+		fdt-1 {
+			description = "dtb";
+			data = /incbin/("fdt.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			load = <0x40000000>;
+		};
+
+		linux_kernel {
+			description = "Linux";
+			data = /incbin/("Image.gz");
+			type = "kernel";
+			arch = "arm64";
+			os = "Linux";
+			compression = "gzip";
+			load = <0x40080000>;
+			entry = <0x40080000>;
+		};
+	};
+
+	configurations {
+		default = "config-1";
+		config-1 {
+			description = "Linux";
+			kernel = "linux_kernel";
+			fdt = "fdt-1";
+			loadables = "linux_kernel", "fdt-1";
+		};
+	};
+};
