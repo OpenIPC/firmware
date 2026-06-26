@@ -119,7 +119,8 @@ setup_dns_ntp_hostname() {
 	BUILD_DNS='@DNS_SERVER@'
 
 	# Hostname ordering: SERVER supplied > UBOOT variable > static build > default overlay
-	UBOOT_HOSTNAME=$(printf ' %s\n' "$cmdline" | sed -n 's/.*[[:space:]]hostname=\([^[:space:]]*\).*/\1/p')
+	CMDLINE=$(cat /proc/cmdline)
+	UBOOT_HOSTNAME=$(printf ' %s\n' "$CMDLINE" | sed -n 's/.*[[:space:]]hostname=\([^[:space:]]*\).*/\1/p')
 	UBOOT_DNS="$(awk '/^nameserver / { print $2; exit }' /proc/net/pnp)"
 	DEFAULT_HOSTNAME=$(cat /etc/hostname)
 	HOSTNAME="${UBOOT_HOSTNAME:-${BUILD_HOSTNAME:-$DEFAULT_HOSTNAME}}"

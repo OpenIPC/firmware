@@ -5,10 +5,10 @@
 
 install_net_profiles() {
 	# Backup original profiles
-	if [ ! -f /etc/network/profile/eth0 ]; then
+	if [ ! -f /etc/network/profiles/eth0 ]; then
 		cp /etc/network/interfaces.d/eth0 /etc/network/profiles/eth0
 	fi
-	if [ ! -f /etc/network/profile/interfaces ]; then
+	if [ ! -f /etc/network/profiles/interfaces ]; then
 		cp /etc/network/interfaces /etc/network/profiles/interfaces
 	fi
 
