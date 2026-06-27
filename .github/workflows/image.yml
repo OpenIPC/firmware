@@ -164,13 +164,21 @@ jobs:
             # cv608 is a single DDR2-64M part. firmware partition @ 0x50000.
             # The 20s/00s u-boots are picked per DDR (their 20g/00g siblings
             # carry the same DDR table, differing only in the socmodel env tag).
-            # Hi3519DV500 is intentionally omitted: its NOR boot path is not yet
-            # wired in u-boot (empty MTDPARTS, bootcmd "bootm <ram>").
             for variant in ultimate; do
               create_hisi boot-hi3516cv610-10b-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr2-64m  320
               create_hisi boot-hi3516cv610-20s-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr3-128m 320
               create_hisi boot-hi3516cv610-00s-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr3-512m 320
               create_hisi boot-hi3516cv608-nor.bin     hi3516cv6xx "$variant" hi3516cv608           320
+            done
+
+            # HiSilicon Hi3519DV500 (aarch64 V5). Same scheme: a single shared
+            # kernel+rootfs blob (firmware.bin.hi3519dv500) plus a per-binning
+            # u-boot whose baked DDR reg table differs by board layout — dmeb
+            # (6-layer) and dmebpro (4-layer flyby), both DDR4-2666 2 GB. NOR
+            # layout (16 MiB): u-boot @0, env @0x80000, firmware @0xC0000 = 768 KiB.
+            for variant in ultimate; do
+              create_hisi boot-hi3519dv500-dmeb-nor.bin    hi3519dv500 "$variant" hi3519dv500-dmeb    768
+              create_hisi boot-hi3519dv500-dmebpro-nor.bin hi3519dv500 "$variant" hi3519dv500-dmebpro 768
             done
 
       - name: Upload
