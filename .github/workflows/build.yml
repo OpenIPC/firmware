@@ -255,18 +255,20 @@ jobs:
 
       - name: Refresh moving-ref package downloads
         run: |
-          # Packages pinned to a moving ref (VERSION = HEAD / branch) download as
-          # <pkg>-<ref>.tar.gz — a constant filename. The dl cache key is the month
-          # (date +%m) and actions/cache only saves on a key miss, so that snapshot
-          # is frozen for weeks; buildroot then keeps reusing the stale tarball and
-          # the nightly silently ships an old version. This is what desynced
-          # majestic-webui from majestic (blanking every settings field label).
-          # Drop those archives so buildroot re-fetches the current ref each run.
-          # Also covers rolling release assets named <pkg>-dist.tar.gz (e.g. the
-          # pre-minified majestic-webui dist). Content-addressed packages
-          # (S3 / semver / SHA pins) keep their cache.
-          find output/dl -type f \
-            \( -name '*-HEAD.tar.gz' -o -name '*-master.tar.gz' -o -name '*-main.tar.gz' -o -name '*-dist.tar.gz' \) \
+          # Packages pinned to a moving ref keep a constant download filename. The dl
+          # cache key is the month (date +%m) and actions/cache only saves on a key
+          # miss, so that snapshot is frozen for weeks; buildroot then keeps reusing the
+          # stale tarball and the nightly silently ships an old version. This is what
+          # desynced majestic-webui from majestic (blanking settings labels; later a t31
+          # lite image shipped a pre-x-groups majestic vs the current webui — "No
+          # settings groups in schema"). Drop both naming forms so buildroot re-fetches:
+          #   - dash:  <pkg>-<ref>.tar.gz   e.g. majestic-webui-dist.tar.gz
+          #   - dot:   <pkg>.<ref>.tar.bz2  e.g. majestic.t31.lite.master.tar.bz2
+          # The dot form is majestic's S3 tarball — it LOOKS S3-pinned but is a moving
+          # `master` build re-uploaded every majestic CI run, with no .hash to force a
+          # refetch. Only genuinely content-addressed tarballs (semver / SHA) keep cache.
+          find output/dl -type f -regextype posix-extended \
+            -regex '.*[-.](HEAD|master|main|dist)\.tar\.(gz|bz2|xz)' \
             -print -delete 2>/dev/null || true
 
       - name: Build firmware
