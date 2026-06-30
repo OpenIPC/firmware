@@ -1,0 +1,25 @@
+menuconfig BR2_PACKAGE_CANAAN_K230_SDK
+	bool "canaan k230 sdk"
+	default n
+	help
+	  canaan k230 SoCs SDK
+
+	  https://github.com/kendryte/k230_linux_sdk/
+
+if  BR2_PACKAGE_CANAAN_K230_SDK
+config BR2_PACKAGE_CANAAN_K230_SDK_BUILD_FROM_SRC
+	bool "k230 sdk build from source"
+	default n
+	help
+	  canaan k230 SoCs SDK
+
+	  https://github.com/kendryte/k230_linux_sdk/
+
+config BR2_PACKAGE_CANAAN_K230_SDK_CONF
+	string "k230 sdk config"
+	default "k230_canmv_01studio_defconfig"
+	help
+	  canaan k230 SoCs SDK
+
+	  https://github.com/kendryte/k230_linux_sdk/
+endif
