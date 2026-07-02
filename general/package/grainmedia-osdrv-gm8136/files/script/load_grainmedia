@@ -65,11 +65,15 @@ insmod gm2d.ko
 #insmod flcd200-common.ko
 #insmod flcd200-pip.ko output_type=0 fb0_fb1_share=1 # CVBS display
 
+#run_mode=0 | #run_mode=7 is for all
+#run_mode=0x01 is for Keypad, analog read, etc
+#run_mode=0x02 is for battery voltage
+#run_mode=0x04 is for CVBS detection
 # check if /dev/sar_adc_drv exists, if not, load sar_adc module
 if ! test -e /dev/sar_adc_drv ; then
-    insmod sar_adc.ko run_mode=4                        #run_mode=4 is for CVBS out
+    insmod sar_adc.ko run_mode=1
 elif test -w /sys/module/sar_adc_drv/parameters/run_mode; then
-    echo 4 > /sys/module/sar_adc_drv/parameters/run_mode
+    echo 1 > /sys/module/sar_adc_drv/parameters/run_mode
 fi
 
 insmod fe_common.ko
