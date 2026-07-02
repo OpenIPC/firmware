@@ -1,6 +1,8 @@
 #!/bin/bash
 DATE=$(date +%y.%m.%d)
 FILE=${TARGET_DIR}/usr/lib/os-release
+LATE_OVERLAY_LIST="${BR2_EXTERNAL_GENERAL_PATH}/scripts/late-overlays.list"
+LATE_POST_BUILD_HOOKS="${BR2_EXTERNAL_GENERAL_PATH}/scripts/late-post-build-hooks.list"
 
 echo OPENIPC_VERSION=${DATE:0:1}.${DATE:1} >> ${FILE}
 date +GITHUB_VERSION="\"${GIT_BRANCH-local}+${GIT_HASH-build}, %Y-%m-%d"\" >> ${FILE}
@@ -23,4 +25,36 @@ fi
 LIST="${BR2_EXTERNAL_GENERAL_PATH}/scripts/excludes/${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}.list"
 if [ -f ${LIST} ]; then
 	xargs -a ${LIST} -I % rm -f ${TARGET_DIR}%
+fi
+
+if [ -f "${LATE_OVERLAY_LIST}" ]; then
+	while IFS=: read -r symbol overlay_relpath; do
+		[ -n "${symbol}" ] || continue
+		case "${symbol}" in
+			\#*) continue ;;
+		esac
+
+		if grep -q "^${symbol}=y" "${BR2_CONFIG}"; then
+			overlay_dir="${BR2_EXTERNAL_GENERAL_PATH}/${overlay_relpath}"
+			if [ -d "${overlay_dir}" ]; then
+				rsync -a "${overlay_dir}/" "${TARGET_DIR}/"
+			fi
+		fi
+	done < "${LATE_OVERLAY_LIST}"
+fi
+
+if [ -f "${LATE_POST_BUILD_HOOKS}" ]; then
+	while IFS=: read -r symbol hook_relpath; do
+		[ -n "${symbol}" ] || continue
+		case "${symbol}" in
+			\#*) continue ;;
+		esac
+
+		if grep -q "^${symbol}=y" "${BR2_CONFIG}"; then
+			hook_script="${BR2_EXTERNAL_GENERAL_PATH}/${hook_relpath}"
+			if [ -x "${hook_script}" ]; then
+				"${hook_script}" "${TARGET_DIR}"
+			fi
+		fi
+	done < "${LATE_POST_BUILD_HOOKS}"
 fi

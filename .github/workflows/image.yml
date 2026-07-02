@@ -109,6 +109,44 @@ jobs:
               echo -e "Created: $release\n"
             }
 
+            # create_hisi <uboot_artifact> <firmware_soc> <variant> <release_tag> <fw_off_kib>
+            #   HiSilicon V4/V5: u-boot is published per DDR binning (the
+            #   boot-ROM DDR init table is baked into each boot image), and the
+            #   firmware .tgz holds a single pre-packed kernel+rootfs blob
+            #   (firmware.bin.<soc>) flashed at the SoC's firmware-partition
+            #   offset. So assemble one full NOR image per DDR binning:
+            #   u-boot at 0, firmware.bin at <fw_off_kib>.
+            create_hisi() {
+              local uboot="$1" soc="$2" variant="$3" tag="$4" off="$5"
+              local release="target/openipc-${tag}-nor-${variant}.bin"
+
+              mkdir -p output target
+              if ! wget -nv "$UBOOT_URL/$uboot" -O "output/$uboot"; then
+                echo -e "Download failed: $UBOOT_URL/$uboot\n"
+                return 0
+              fi
+
+              url=$(firmware_url "$soc" "$variant")
+              if [ -z "$url" ]; then
+                echo -e "Skip: no firmware in $BUILD_ID for ${soc}_${variant}\n"
+                return 0
+              fi
+              if ! wget -nv "$url" -O "output/$soc.tgz"; then
+                echo -e "Download failed: $url\n"
+                return 0
+              fi
+
+              tar -xf "output/$soc.tgz" -C output
+              # 16 MiB NOR, erased (0xff); u-boot at 0, firmware.bin at its
+              # partition offset (cv6xx MTDPARTS: firmware @ 0x50000 = 320 KiB).
+              dd if=/dev/zero bs=1K count=16384 status=none | tr '\000' '\377' > "$release"
+              dd if="output/$uboot" of="$release" bs=1K seek=0 conv=notrunc status=none
+              dd if="output/firmware.bin.$soc" of="$release" bs=1K seek="$off" conv=notrunc status=none
+              rm -rf output
+
+              echo -e "Created: $release\n"
+            }
+
             for soc in $SIGMASTAR $ALLWINNER; do
               create $soc $soc lite
               create $soc $soc ultimate
@@ -117,6 +155,30 @@ jobs:
             for soc in $INGENIC; do
               create $soc ${soc:0:3} lite
               create $soc ${soc:0:3} ultimate
+            done
+
+            # HiSilicon Hi3516CV610/CV608 (cv6xx family). The kernel+rootfs blob
+            # is identical across DDR variants; only the per-binning u-boot (DDR
+            # init table) differs, so emit one full image per DDR topology.
+            # cv610 spans three topologies (DDR2-64M / DDR3-128M / DDR3-512M);
+            # cv608 is a single DDR2-64M part. firmware partition @ 0x50000.
+            # The 20s/00s u-boots are picked per DDR (their 20g/00g siblings
+            # carry the same DDR table, differing only in the socmodel env tag).
+            for variant in ultimate; do
+              create_hisi boot-hi3516cv610-10b-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr2-64m  320
+              create_hisi boot-hi3516cv610-20s-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr3-128m 320
+              create_hisi boot-hi3516cv610-00s-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr3-512m 320
+              create_hisi boot-hi3516cv608-nor.bin     hi3516cv6xx "$variant" hi3516cv608           320
+            done
+
+            # HiSilicon Hi3519DV500 (aarch64 V5). Same scheme: a single shared
+            # kernel+rootfs blob (firmware.bin.hi3519dv500) plus a per-binning
+            # u-boot whose baked DDR reg table differs by board layout — dmeb
+            # (6-layer) and dmebpro (4-layer flyby), both DDR4-2666 2 GB. NOR
+            # layout (16 MiB): u-boot @0, env @0x80000, firmware @0xC0000 = 768 KiB.
+            for variant in ultimate; do
+              create_hisi boot-hi3519dv500-dmeb-nor.bin    hi3519dv500 "$variant" hi3519dv500-dmeb    768
+              create_hisi boot-hi3519dv500-dmebpro-nor.bin hi3519dv500 "$variant" hi3519dv500-dmebpro 768
             done
 
       - name: Upload

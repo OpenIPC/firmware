@@ -27,6 +27,9 @@ jobs:
           - hi3516cv300_lite
           - hi3516cv500_lite
           - hi3516cv6xx_ultimate
+          # aarch64 musl toolchain, built from a decoupled toolchain-only
+          # config (see configs/hi3519dv500_toolchain_defconfig).
+          - hi3519dv500_toolchain
           - hi3516ev200_lite
           - hi3519v101_lite
           - hi3520dv200_lite

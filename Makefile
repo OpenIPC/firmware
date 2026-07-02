@@ -21,7 +21,11 @@ CONFIG := $(shell find br-ext-*/configs/*_defconfig | grep -m1 $(BOARD))
 include $(CONFIG)
 endif
 
-all: build repack timer
+ifneq ($(filter repack,$(MAKECMDGOALS)),)
+-include $(BR_CONF)
+endif
+
+all: repack-final timer
 
 build: defconfig
 	@$(BR_MAKE) all -j$(shell nproc)
@@ -39,6 +43,14 @@ prepare:
 	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
 		wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE); \
 		mkdir -p $(TARGET); tar -xf $(BR_FILE) -C $(TARGET); fi
+	@if test -f $(TARGET)/buildroot-$(BR_VER)/linux/Config.in; then \
+		sed -i '/source "$$(BR2_EXTERNAL_GENERAL_PATH)\/linux\/Config.ext.in"/d' \
+			$(TARGET)/buildroot-$(BR_VER)/linux/Config.in; \
+		grep -qF 'source "$$BR2_EXTERNAL_GENERAL_PATH/linux/Config.ext.in"' \
+			$(TARGET)/buildroot-$(BR_VER)/linux/Config.in || \
+		sed -i '/source "linux\/Config.ext.in"/a source "$$BR2_EXTERNAL_GENERAL_PATH/linux/Config.ext.in"' \
+			$(TARGET)/buildroot-$(BR_VER)/linux/Config.in; \
+	fi
 
 help:
 	@printf "BR-OpenIPC usage:\n \
@@ -98,8 +110,20 @@ endif
 	@$(BR_MAKE) sdk -j$(shell nproc)
 	@$(call BUNDLE_SDK)
 
+repack-final: build
+	@$(MAKE) --no-print-directory BOARD=$(BOARD) TARGET=$(TARGET) repack
+
 repack:
+ifeq ($(BR2_PACKAGE_OPENIPC_NFS_ROOT),y)
+ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
+	@$(call PREPARE_REPACK,zboot.img,16384,,,nfs-root)
+else
+	@$(call PREPARE_REPACK,uImage,16384,,,nfs-root)
+endif
+else
 ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3516cv6xx")
+	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
+else ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3519dv500")
 	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
 else ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
 	@$(call PREPARE_REPACK,firmware.bin,8192,,,nor)
@@ -122,6 +146,7 @@ endif
 endif
 ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
 	@$(call PREPARE_REPACK,uImage,16384,,,initramfs)
+endif
 endif
 endif
 

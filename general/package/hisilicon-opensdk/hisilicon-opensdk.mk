@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = b1c4dae5
+HISILICON_OPENSDK_VERSION = ff20187b
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -34,6 +34,9 @@ HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3520dv200
 endif
 ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV6XX),y)
 HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3516cv6xx
+endif
+ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3519DV500),y)
+HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3519dv500
 endif
 
 HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
@@ -73,6 +76,8 @@ else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv500)
 	HISILICON_OPENSDK_SDK_CODE = 0x3516C500
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv6xx)
 	HISILICON_OPENSDK_SDK_CODE = 0x3516C610
+else ifeq ($(OPENIPC_SOC_FAMILY),hi3519dv500)
+	HISILICON_OPENSDK_SDK_CODE = 0x3519D500
 endif
 
 # for userspace libraries
@@ -229,6 +234,15 @@ HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
 	smart_sc4336p/libsns_sc4336p \
 	smart_sc450ai/libsns_sc450ai \
 	smart_sc500ai/libsns_sc500ai
+HISILICON_OPENSDK_SENSORS_hi3519dv500 = \
+	gst_412c/libsns_gst412c \
+	omnivision_os04a10/libsns_os04a10 \
+	omnivision_os04a10_slave/libsns_os04a10_slave \
+	omnivision_os08a20/libsns_os08a20 \
+	smart_sc450ai/libsns_sc450ai \
+	smart_sc850sl/libsns_sc850sl \
+	sony_imx347_slave/libsns_imx347_slave \
+	sony_imx515/libsns_imx515
 
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
@@ -518,6 +532,21 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	)
 endef
 
+# hi3519dv500: V5 aarch64 — same as cv6xx, install open_*.ko verbatim
+# (load_hisilicon drives `modprobe open_*`) + the source-built sensor .so.
+else ifeq ($(OPENIPC_SOC_FAMILY),hi3519dv500)
+HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
+define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
+	for ko in $(@D)/kernel/open_*.ko; do \
+		[ -f $${ko} ] && $(INSTALL) -m 644 -t $(HISILICON_OPENSDK_KMOD_DST) $${ko} || true; \
+	done
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/$(OPENIPC_SOC_FAMILY)/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
+endef
+
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3520dv200)
 # hi3520dv200: V2-era 4-channel analog DVR SoC. Kernel 3.0.8. No
 # sensor blobs (NVP6114 analog video decoder kernel module is built
@@ -567,7 +596,7 @@ $(eval $(kernel-module))
 #    TARGET_FINALIZE_HOOKS (linux package is processed before this one), so
 #    it has already executed by the time we get here — we need a second pass
 #    so modules.dep reflects the post-cleanup state.
-ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300 hi3520dv200 hi3516cv6xx,$(OPENIPC_SOC_FAMILY)),)
+ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300 hi3520dv200 hi3516cv6xx hi3519dv500,$(OPENIPC_SOC_FAMILY)),)
 define HISILICON_OPENSDK_FINALIZE_MODULES
 	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
