@@ -1,0 +1,38 @@
+#!/bin/sh
+# FH8626V100 media bring-up — the EXACT sequence from the vendor /bak/sensor.sh
+# (see camera/backup/bak/sensor.sh). GPIO13 = sensor reset. ARC coprocessor
+# firmware loads via rtvbus (NOT xbus_rpc like fh8852v200). DMA/mmz pool base is
+# 0xA0000000 + mem(MB); on this unit mem=37M -> 0xA2500000, 19M (our isp_init.txt
+# DMA addrs, e.g. 0xa2510000, land exactly here).
+
+set_gpio()
+{
+    if [ ! -d "/sys/class/gpio/GPIO$1" ]; then
+        echo $1 > /sys/class/gpio/export
+        echo out > /sys/class/gpio/GPIO$1/direction
+    fi
+    echo $2 > /sys/class/gpio/GPIO$1/value
+}
+
+mem_num=$(sed -n 's/.*mem=\([0-9]\+\)M.*/\1/p' /proc/cmdline)
+[ -z "$mem_num" ] && mem_num=37
+mem_offset=$(printf '0x%X' $(( mem_num * 1024 * 1024 + 0xA0000000 )))
+
+cd /lib/modules/4.9.129/fullhan
+
+insmod vmm.ko mmz=anonymous,0,$mem_offset,$(( 56 - mem_num ))M anony=1
+
+set_gpio 13 0                                    # sensor reset low
+insmod rtvbus.ko ra=0xa3e00000 rs=65536 fn=rtthread_arc_FH8626V100.bin fa=0xa3f00000
+set_gpio 13 1                                    # sensor reset high
+
+insmod media_process.ko
+insmod isp.ko
+insmod enc.ko
+insmod jpeg.ko
+insmod bgm.ko
+insmod vbus_ac.ko
+
+# sp1405 sensor detect + tuning: /bak/sensordetect writes /tmp/<sensor>; the day/
+# night/whitelight tuning hex ship in /etc/sensors (osdrv installs sensor/params/*).
+# majestic (or our grabber) loads the matching profile for the ISP.
