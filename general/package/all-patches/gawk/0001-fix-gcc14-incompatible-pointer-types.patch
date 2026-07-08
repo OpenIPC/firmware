@@ -1,0 +1,25 @@
+Fix incompatible-pointer-types errors that became errors in GCC 14+.
+
+The K&R-style empty-arg cast '(ssize_t(*)())' is incompatible with the typed
+function pointer field in newer compilers. Use the full prototype instead.
+
+--- a/io.c
++++ b/io.c
+@@ -3386,7 +3386,7 @@
+ 
+ 	iop->public.fd = fd;
+ 	iop->public.name = name;
+-	iop->public.read_func = ( ssize_t(*)() ) read;
++	iop->public.read_func = (ssize_t (*)(int, void *, size_t)) read;
+ 	iop->valid = false;
+ 	iop->errcode = errno_val;
+ 
+@@ -4446,7 +4446,7 @@
+ 		tmout = read_default_timeout;	/* initialized from env. variable in init_io() */
+ 
+ 	/* overwrite read routine only if an extension has not done so */
+-	if ((iop->public.read_func == ( ssize_t(*)() ) read) && tmout > 0)
++	if ((iop->public.read_func == (ssize_t (*)(int, void *, size_t)) read) && tmout > 0)
+ 		iop->public.read_func = read_with_timeout;
+ 
+ 	return tmout;

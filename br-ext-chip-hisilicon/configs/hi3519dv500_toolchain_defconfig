@@ -1,0 +1,38 @@
+# OpenIPC
+#
+# TOOLCHAIN-ONLY config for Hi3519DV500/Hi3516DV500 (aarch64 Cortex-A55).
+#
+# Bootstraps the aarch64 musl toolchain published as
+# toolchain.hisilicon-hi3519dv500.tgz (consumed by hi3519dv500_ultimate),
+# DECOUPLED from the firmware package set.
+#
+# Why a separate config: `make toolchain` runs buildroot `make sdk`, which
+# builds `world` (the full firmware) before packaging the SDK. This config
+# builds only the cross toolchain + a busybox rootfs, yielding the same
+# aarch64-openipc-linux-musl toolchain the firmware consumes without pulling in
+# the full package set. Used only by .github/workflows/toolchain.yml — it is
+# not a flashable board and is never added to build.yml.
+#
+BR2_OPENIPC_SOC_VENDOR="hisilicon"
+BR2_OPENIPC_SOC_MODEL="hi3519dv500"
+BR2_OPENIPC_SOC_FAMILY="hi3519dv500"
+
+# Architecture (aarch64 Cortex-A55 — V5/SS626)
+BR2_aarch64=y
+BR2_cortex_a55=y
+
+# Toolchain — aarch64 musl. general/toolchain.mk flips EXTERNAL -> BUILDROOT
+# (vendor "openipc") and emits aarch64-openipc-linux-musl with musl + C++ +
+# 5.10 kernel headers, gcc 13. Same block as hi3519dv500_ultimate so the
+# produced toolchain matches byte-for-byte what the firmware expects.
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
+BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/openipc/firmware/releases/download/$(OPENIPC_TOOLCHAIN).tgz"
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="aarch64-openipc-linux-musl"
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_5_10=y
+# This config builds no kernel, so the BR2_KERNEL_HEADERS choice would fall
+# back to its newest-series default (6.6). Pin it to 5.10 to match the target.
+BR2_KERNEL_HEADERS_5_10=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y
+BR2_GCC_VERSION_13_X=y
+BR2_TOOLCHAIN_EXTERNAL_CXX=y

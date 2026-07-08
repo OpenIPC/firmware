@@ -17,44 +17,31 @@ define HISILICON_OSDRV_HI3516CV300_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/sensor/iq/*.ini
 	ln -sf imx323.ini $(TARGET_DIR)/etc/sensors/iq/default.ini
 
+	# osdrv installs only the prebuilt vendor .ko's that opensdk does NOT
+	# build for cv300. Every module listed below is loaded by the active
+	# (non-commented) paths in files/script/load_hisilicon and has no
+	# equivalent in openhisilicon's cv300 build:
+	#   - hi3516cv300_vou.ko — VO subsystem; opensdk sets DISABLE_VO=1 for cv300
+	#   - hi_piris.ko        — P-iris driver; not in openhisilicon cv300 kbuild
+	# The rest (hi_adv7179, hi_cipher, hi_sample_ist, hi_ssp_*,
+	# hi_tlv320aic31, virtualhifb) are installed for board-specific paths
+	# that load_hisilicon leaves commented out by default — they survive
+	# here as opt-in extras until each grows an open replacement or is
+	# pruned from load_hisilicon.
+	# All other open-replaced blobs (base/sys/isp/vpss/venc/... + hi_osal/
+	# sys_config/hi_mipi/hi_acodec/hi_sensor_spi) used to be installed here
+	# too, then immediately overwritten by hisilicon-opensdk at install
+	# time. Modern OpenIPC builds pair osdrv with opensdk on every cv300
+	# board, so the double-install was pure dead weight; removed.
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.18.20/hisilicon
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_adec.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_aenc.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_ai.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_aio.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_ao.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_base.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_chnl.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_h264e.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_h265e.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_ir.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_isp.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_ive.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_jpege.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_pwm.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_rc.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_region.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_rtc.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_sensor.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_sys.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_vedu.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_venc.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_vgs.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_viu.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_vou.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_vpss.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi3516cv300_wdt.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi_acodec.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi_adv7179.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi_cipher.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi_mipi.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi_osal.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi_piris.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi_sample_ist.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi_ssp_ili9341v_6bit.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi_ssp_ota5182.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/hi_tlv320aic31.ko
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/sys_config.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.20/hisilicon $(HISILICON_OSDRV_HI3516CV300_PKGDIR)/files/kmod/virtualhifb.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin

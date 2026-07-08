@@ -1,0 +1,7 @@
+# no-op profile for nfs root
+# lo configured by early kernel (ipconfig.c)
+iface lo inet manual
+    up true
+    down true
+
+source-dir /etc/network/interfaces.d

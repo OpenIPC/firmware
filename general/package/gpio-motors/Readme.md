@@ -16,6 +16,14 @@ First, the GPIOs responsible for Horizontal rotation are added, and next then th
 fw_setenv gpio_motors '52 53 56 57 69 70 59 58'
 ```
 
+#### GK7205V510, NC-IPTC2200_DL (Goke gk7205v500 family)
+```
+fw_setenv gpio_motors '3 4 72 73 69 59 58 57'
+```
+Pan (roll) on GPIOs `3 4 72 73`, tilt (pitch) on GPIOs `69 59 58 57`, derived from the
+vendor `/proc/devcfg` motor map. If motion is rough or a phase is reversed, try the vendor
+coil order `[0,2,1,3]`: `fw_setenv gpio_motors '3 72 4 73 69 58 59 57'`.
+
 #### GM8136, Faleemi
 ```
 fw_setenv gpio_motors '51 52 53 54 55 28 29 30'

@@ -1,0 +1,49 @@
+name: cleanup
+on:
+  schedule:
+    - cron: '0 5 * * 1'  # Mondays 05:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: gh-pages-manifest
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    name: Prune old nightly releases
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Delete releases beyond the 90 newest
+        id: prune
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          to_delete=$(gh release list --limit 200 --json tagName,createdAt \
+            | jq -r '[ .[] | select(.tagName | test("^nightly-[0-9]{8}-[0-9a-f]{7}$")) ]
+                     | sort_by(.createdAt) | reverse | .[90:] | .[].tagName')
+
+          if [ -z "$to_delete" ]; then
+            echo "Nothing to delete; <=90 dated nightlies present."
+            echo "pruned=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "$to_delete" | while read -r tag; do
+            [ -z "$tag" ] && continue
+            echo "Deleting $tag"
+            gh release delete "$tag" --cleanup-tag --yes
+          done
+          echo "pruned=true" >> "$GITHUB_OUTPUT"
+
+      - name: Refresh manifest
+        if: steps.prune.outputs.pruned == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run manifest.yml

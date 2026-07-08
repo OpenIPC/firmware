@@ -1,0 +1,428 @@
+#!/bin/sh
+# openipc-bisect — host-side bisect driver for OpenIPC firmware nightlies.
+#
+# State lives on the workstation, never on the camera, so a brick (UART
+# recovery needed) cannot lose progress: recover the camera by any means
+# and resume the loop. See the kaeru note `sysupgrade-manifest-client-
+# verified-2026-05-20` for the underlying camera-side flag set.
+#
+# Subcommands:
+#   start <host> [--good=<id|sha>] [--bad=<id|sha>] [--platform=<id>]
+#   good       — mark current build as good; flash next median
+#   bad        — mark current build as bad;  flash next median
+#   skip       — exclude current build (inconclusive); pick next
+#   status     — window, verdicts, remaining steps (~log2 N)
+#   reset      — restore camera to channel=nightly, clear state
+#   resume     — re-attach to an in-flight bisect after host restart
+#
+# Dependencies on host: sh, jq, ssh, curl, awk. No new rootfs deps on the
+# camera — relies on sysupgrade 1.0.50 (#2114) being installed.
+#
+# Bisect against a single host at a time. To bisect multiple cameras
+# concurrently, set OPENIPC_BISECT_HOST explicitly per shell.
+
+set -eu
+
+PROG=$(basename "$0")
+MANIFEST_URL=${OPENIPC_MANIFEST_URL:-https://openipc.github.io/firmware/manifest.json}
+STATE_DIR=${OPENIPC_BISECT_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/openipc/bisect}
+WAIT_BUDGET=${OPENIPC_BISECT_WAIT:-300}   # seconds to wait for a camera to come back
+SSH_OPTS=${OPENIPC_SSH_OPTS:--o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15 -o ServerAliveCountMax=3}
+
+die() { printf '%s: %s\n' "$PROG" "$*" >&2; exit 1; }
+info() { printf '%s\n' "$*" >&2; }
+
+require() {
+	for cmd in "$@"; do
+		command -v "$cmd" >/dev/null 2>&1 || die "missing dependency: $cmd"
+	done
+}
+
+state_path() {
+	host=$1
+	mkdir -p "$STATE_DIR"
+	printf '%s/%s.json\n' "$STATE_DIR" "$host"
+}
+
+current_host() {
+	# Pick the only in-flight bisect, or fail if there's ambiguity.
+	[ -d "$STATE_DIR" ] || die "no in-flight bisect (run '$PROG start <host>' first)"
+	# shellcheck disable=SC2012
+	files=$(ls -1 "$STATE_DIR"/*.json 2>/dev/null || true)
+	count=$(printf '%s\n' "$files" | grep -c . || true)
+	[ "$count" -eq 0 ] && die "no in-flight bisect"
+	if [ "$count" -gt 1 ]; then
+		die "multiple in-flight bisects; set OPENIPC_BISECT_HOST=<host> to pick one"
+	fi
+	# Strip dir + .json
+	host=$(printf '%s\n' "$files" | sed -e "s|^$STATE_DIR/||" -e 's|\.json$||')
+	printf '%s\n' "$host"
+}
+
+resolve_host() {
+	[ -n "${OPENIPC_BISECT_HOST:-}" ] && { printf '%s\n' "$OPENIPC_BISECT_HOST"; return; }
+	current_host
+}
+
+fetch_manifest() {
+	# Cache for the duration of one command invocation.
+	[ -z "${_MANIFEST_CACHE:-}" ] && {
+		_MANIFEST_CACHE=$(curl -fsSL "$MANIFEST_URL") \
+			|| die "cannot fetch $MANIFEST_URL"
+	}
+	printf '%s' "$_MANIFEST_CACHE"
+}
+
+# remote_platform <host> -> echoes "<soc>_<variant>"
+remote_platform() {
+	host=$1
+	# shellcheck disable=SC2086
+	ssh $SSH_OPTS "root@$host" '
+		soc=$(fw_printenv -n soc 2>/dev/null || true)
+		variant=$(grep ^BUILD_OPTION= /etc/os-release | cut -d= -f2)
+		[ -z "$soc" ] && exit 11
+		[ -z "$variant" ] && exit 12
+		printf "%s_%s\n" "$soc" "$variant"
+	' 2>/dev/null || die "ssh root@$host: cannot detect platform (soc/variant)"
+}
+
+# remote_build_id <host> -> echoes the running BUILD_ID, or empty if none
+remote_build_id() {
+	host=$1
+	# shellcheck disable=SC2086
+	ssh $SSH_OPTS "root@$host" "grep '^BUILD_ID=' /etc/os-release | cut -d= -f2" 2>/dev/null || true
+}
+
+# normalize_ref <window> <ref>  -> echoes a build_id from the window
+# Accepts: exact build_id, short sha (matches build_id's -<short> suffix),
+# full sha (matches manifest's .sha field — extracts the build_id), or
+# 'channels.nightly' / 'channels.latest' keywords.
+normalize_ref() {
+	manifest=$1; ref=$2
+	case "$ref" in
+		channels.*)
+			channel=${ref#channels.}
+			printf '%s' "$manifest" | jq -r ".channels.$channel"
+			return ;;
+		nightly-[0-9]*-*)
+			printf '%s\n' "$ref"
+			return ;;
+	esac
+	# Try full SHA match in manifest, then short suffix on tag
+	got=$(printf '%s' "$manifest" \
+		| jq -r --arg r "$ref" \
+			'.builds[] | select(.sha==$r or (.id|endswith("-"+$r))) | .id' \
+		| head -1)
+	[ -z "$got" ] && die "cannot resolve '$ref' to a build_id in the manifest"
+	printf '%s\n' "$got"
+}
+
+# builds_for_platform <manifest> <platform>  -> newline list, OLDEST first
+builds_for_platform() {
+	manifest=$1; platform=$2
+	# manifest.builds is sorted newest-first by enrich_manifest.py — reverse it
+	printf '%s' "$manifest" | jq -r --arg p "$platform" \
+		'[.builds[] | select(.platforms[$p]) | .id] | reverse | .[]'
+}
+
+# load_state <host>  -> writes JSON to stdout
+load_state() {
+	host=$1
+	sp=$(state_path "$host")
+	[ -f "$sp" ] || die "no bisect state for $host (run '$PROG start $host ...')"
+	cat "$sp"
+}
+
+save_state() {
+	host=$1; json=$2
+	sp=$(state_path "$host")
+	printf '%s\n' "$json" > "$sp"
+}
+
+# pick_next <state> -> echoes next build_id to test, or empty string if done
+pick_next() {
+	state=$1
+	printf '%s' "$state" | jq -r '
+		.window as $w |
+		(.verdicts // {}) as $v |
+		($w | map(select($v[.] == null))) as $unverified |
+		if ($unverified | length) == 0 then "" else
+			$unverified[($unverified | length / 2 | floor)]
+		end
+	'
+}
+
+# narrow <state> <verdict_for_current>  -> echoes updated state
+narrow() {
+	state=$1; verdict=$2
+	cur=$(printf '%s' "$state" | jq -r .current)
+	# Update verdicts map
+	state=$(printf '%s' "$state" | jq --arg c "$cur" --arg v "$verdict" \
+		'.verdicts[$c] = $v')
+
+	# Trim window:
+	#   good  → drop everything older than current (inclusive)
+	#   bad   → drop everything newer than current (inclusive); current is the
+	#           latest known-bad, becomes new upper bound
+	#   skip  → just remove current from the window
+	case "$verdict" in
+		good)
+			state=$(printf '%s' "$state" | jq --arg c "$cur" '
+				.good = $c |
+				(.window | index($c)) as $i |
+				.window = (if $i == null then .window else .window[($i+1):] end)
+			') ;;
+		bad)
+			state=$(printf '%s' "$state" | jq --arg c "$cur" '
+				.bad = $c |
+				(.window | index($c)) as $i |
+				.window = (if $i == null then .window else .window[:$i] end)
+			') ;;
+		skip)
+			state=$(printf '%s' "$state" | jq --arg c "$cur" '
+				.window = (.window | map(select(. != $c)))
+			') ;;
+	esac
+	printf '%s\n' "$state"
+}
+
+remote_flash() {
+	host=$1; build_id=$2
+	info "→ ssh root@$host sysupgrade --build=$build_id"
+	# shellcheck disable=SC2086
+	ssh $SSH_OPTS "root@$host" "sysupgrade --build=$build_id" || {
+		info "sysupgrade exited non-zero (camera may reboot anyway); proceeding to wait"
+	}
+}
+
+wait_for_camera() {
+	host=$1; budget=${2:-$WAIT_BUDGET}
+	info "Waiting up to ${budget}s for $host to come back…"
+	deadline=$(( $(date +%s) + budget ))
+	while [ "$(date +%s)" -lt "$deadline" ]; do
+		# shellcheck disable=SC2086
+		if ssh $SSH_OPTS -o BatchMode=yes "root@$host" true 2>/dev/null; then
+			info "$host is back."
+			return 0
+		fi
+		sleep 10
+	done
+	info "TIMEOUT — $host did not come back within ${budget}s."
+	info "If the camera is bricked, recover via UART/TFTP (kaeru ref 'uart-recovery-via-uboot-tftp-recipe')"
+	info "then mark this iteration with '$PROG bad' (or '$PROG skip' if inconclusive)."
+	return 1
+}
+
+# Iterate one round: read state, pick next, flash, wait, prompt for verdict.
+# Returns 0 if more rounds remain, 1 if bisect is complete.
+iterate() {
+	host=$1
+	state=$(load_state "$host")
+	next=$(pick_next "$state")
+	if [ -z "$next" ]; then
+		# Window narrowed to ≤1 candidate; bisect is complete.
+		remaining=$(printf '%s' "$state" | jq -r '.window // [] | length')
+		culprit=$(printf '%s' "$state" | jq -r '.window // [] | .[0] // empty')
+		if [ -n "$culprit" ]; then
+			info "Bisect complete. First bad build: $culprit"
+		else
+			info "Bisect complete; window empty. No single culprit isolated."
+		fi
+		return 1
+	fi
+	state=$(printf '%s' "$state" | jq --arg c "$next" '.current = $c')
+	save_state "$host" "$state"
+
+	good=$(printf '%s' "$state" | jq -r .good)
+	bad=$(printf '%s' "$state" | jq -r .bad)
+	window_n=$(printf '%s' "$state" | jq -r '.window | length')
+	info ""
+	info "═══ iteration ═══"
+	info "host:     $host"
+	info "good:     $good"
+	info "bad:      $bad"
+	info "window:   $window_n build(s) remaining (~$(echo "$window_n" | awk '{print int(log($1)/log(2))+1}') round(s) left)"
+	info "testing:  $next"
+	info ""
+
+	remote_flash "$host" "$next"
+	if ! wait_for_camera "$host"; then
+		info "Run '$PROG bad' (likely) or '$PROG skip' after recovery."
+		return 2
+	fi
+	info ""
+	info "$host is back on $next."
+	info "Test the feature you're bisecting, then run:"
+	info "    $PROG good    # this build is OK"
+	info "    $PROG bad     # this build is broken"
+	info "    $PROG skip    # inconclusive (build error, network etc.)"
+	return 0
+}
+
+cmd_start() {
+	host=$1; shift
+	# Tolerate user@host (the form most OpenIPC docs use, e.g. root@cam).
+	# The script always SSHes as root because that's the only user on these
+	# cameras; the user@ prefix is a doc convention, not a real choice.
+	host=${host#*@}
+	good_ref=""; bad_ref=""; platform=""
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			--good=*)     good_ref=${1#*=} ;;
+			--bad=*)      bad_ref=${1#*=}  ;;
+			--platform=*) platform=${1#*=} ;;
+			*) die "unknown option: $1" ;;
+		esac
+		shift
+	done
+
+	[ -f "$(state_path "$host")" ] && die "bisect already in progress for $host. Run '$PROG reset' first."
+
+	manifest=$(fetch_manifest)
+	[ -z "$platform" ] && platform=$(remote_platform "$host")
+	info "Platform: $platform"
+
+	[ -z "$bad_ref" ] && bad_ref="channels.nightly"
+	bad_id=$(normalize_ref "$manifest" "$bad_ref")
+	info "Bad:      $bad_id"
+
+	# Window for this platform, oldest-first
+	all_builds=$(builds_for_platform "$manifest" "$platform")
+	[ -z "$all_builds" ] && die "no builds for platform $platform in manifest"
+	echo "$all_builds" | grep -q "^$bad_id$" \
+		|| die "bad build $bad_id has no $platform artifact"
+
+	if [ -z "$good_ref" ]; then
+		good_id=$(echo "$all_builds" | head -1)
+		info "Good:     $good_id (defaulted to oldest in manifest)"
+	else
+		good_id=$(normalize_ref "$manifest" "$good_ref")
+		info "Good:     $good_id"
+	fi
+	echo "$all_builds" | grep -q "^$good_id$" \
+		|| die "good build $good_id has no $platform artifact"
+
+	# Slice the window: [good_id, ..., bad_id] inclusive
+	window=$(echo "$all_builds" | awk -v g="$good_id" -v b="$bad_id" '
+		$0==g { on=1 }
+		on    { print }
+		$0==b { exit }
+	')
+	window_n=$(echo "$window" | grep -c . || true)
+	[ "$window_n" -lt 2 ] && die "window too narrow: $window_n build(s) between good and bad"
+
+	# Build the initial state JSON
+	state=$(jq -n \
+		--arg host "$host" \
+		--arg platform "$platform" \
+		--arg good "$good_id" \
+		--arg bad "$bad_id" \
+		--arg manifest "$MANIFEST_URL" \
+		--argjson window "$(echo "$window" | jq -R . | jq -s .)" \
+		'{
+			schema: 1,
+			host: $host,
+			platform: $platform,
+			manifest: $manifest,
+			good: $good,
+			bad: $bad,
+			window: $window,
+			verdicts: {($good): "good", ($bad): "bad"},
+			current: null,
+			started_at: (now | todate)
+		}')
+	save_state "$host" "$state"
+
+	info "Bisect window: $window_n builds. ~$(echo "$window_n" | awk '{printf "%d", int(log($1)/log(2))+1}') round(s) to converge."
+
+	iterate "$host"
+}
+
+cmd_verdict() {
+	verdict=$1
+	host=$(resolve_host)
+	state=$(load_state "$host")
+	cur=$(printf '%s' "$state" | jq -r .current)
+	[ -z "$cur" ] || [ "$cur" = "null" ] && die "no current build to mark (state was reset?)"
+	info "Marking $cur as $verdict on $host."
+	state=$(narrow "$state" "$verdict")
+	save_state "$host" "$state"
+	iterate "$host"
+}
+
+cmd_status() {
+	host=$(resolve_host)
+	state=$(load_state "$host")
+	wn=$(printf '%s' "$state" | jq -r '.window | length')
+	# jq has no log() — compute ceil(log2(N)) in awk.
+	rounds=$(awk -v n="$wn" 'BEGIN { if (n>1) { r=0; x=n; while (x>1) { r++; x=(x+1)/2 } print r } else print 0 }')
+	printf '%s\n' "$state" | jq --argjson rl "$rounds" '
+		{
+			host, platform, good, bad, current,
+			window_size: (.window | length),
+			est_rounds_left: $rl,
+			verdicts
+		}'
+}
+
+cmd_reset() {
+	host=$(resolve_host)
+	info "Restoring $host to channels.nightly and clearing state…"
+	# shellcheck disable=SC2086
+	ssh $SSH_OPTS "root@$host" "sysupgrade --channel=nightly" || \
+		info "warn: sysupgrade --channel=nightly exited non-zero"
+	wait_for_camera "$host" || info "warn: camera did not return; state cleared anyway"
+	rm -f "$(state_path "$host")"
+	info "Done. State cleared."
+}
+
+cmd_resume() {
+	host=$(resolve_host)
+	state=$(load_state "$host")
+	cur=$(printf '%s' "$state" | jq -r .current)
+	info "Resuming bisect for $host. Last candidate: ${cur:-<none>}."
+	if [ -n "$cur" ] && [ "$cur" != "null" ]; then
+		# We may have crashed before the user gave a verdict — just wait + prompt.
+		info "If the camera is up on $cur, give your verdict:"
+		info "    $PROG good | bad | skip"
+		exit 0
+	fi
+	iterate "$host"
+}
+
+usage() {
+	cat >&2 <<EOF
+Usage: $PROG <command> [args]
+
+Commands:
+  start <host> [--good=<id|sha>] [--bad=<id|sha>] [--platform=<id>]
+  good | bad | skip       mark current candidate and flash the next
+  status                  show window, verdicts, rounds remaining
+  reset                   restore camera to channel=nightly, clear state
+  resume                  re-attach to an in-flight bisect
+
+Env vars:
+  OPENIPC_BISECT_HOST     override implicit host when multiple bisects exist
+  OPENIPC_BISECT_STATE    state dir (default: \$XDG_STATE_HOME/openipc/bisect)
+  OPENIPC_BISECT_WAIT     seconds to wait for camera reboot (default: 300)
+  OPENIPC_MANIFEST_URL    override manifest URL
+  OPENIPC_SSH_OPTS        extra ssh options
+EOF
+	exit 64
+}
+
+require jq curl ssh
+
+[ $# -lt 1 ] && usage
+sub=$1; shift
+case "$sub" in
+	start)   [ $# -lt 1 ] && usage; cmd_start "$@" ;;
+	good)    cmd_verdict good ;;
+	bad)     cmd_verdict bad ;;
+	skip)    cmd_verdict skip ;;
+	status)  cmd_status ;;
+	reset)   cmd_reset ;;
+	resume)  cmd_resume ;;
+	-h|--help|help) usage ;;
+	*) die "unknown subcommand: $sub (try '$PROG help')" ;;
+esac

@@ -65,9 +65,15 @@ insmod gm2d.ko
 #insmod flcd200-common.ko
 #insmod flcd200-pip.ko output_type=0 fb0_fb1_share=1 # CVBS display
 
+#run_mode=0 | #run_mode=7 is for all
+#run_mode=0x01 is for Keypad, analog read, etc
+#run_mode=0x02 is for battery voltage
+#run_mode=0x04 is for CVBS detection
 # check if /dev/sar_adc_drv exists, if not, load sar_adc module
 if ! test -e /dev/sar_adc_drv ; then
-    insmod sar_adc.ko run_mode=4                        #run_mode=4 is for CVBS out
+    insmod sar_adc.ko run_mode=1
+elif test -w /sys/module/sar_adc_drv/parameters/run_mode; then
+    echo 1 > /sys/module/sar_adc_drv/parameters/run_mode
 fi
 
 insmod fe_common.ko
@@ -304,8 +310,9 @@ devmem 0x9a1000c4 32 0x08000f08
 devmem 0x9a1000c8 32 0x061f0606
 devmem 0x9a100030 32 0xDF000f04
 
-devmem 0x90c00044 32 0x00000007
-devmem 0x90c000b4 32 0xFFD374F0 #close SD card and mjpeg
+# uncomment below to disable jpeg
+#devmem 0x90c00044 32 0x00000007
+#devmem 0x90c000b4 32 0xFFD374F0 #close SD card and mjpeg
 
 if [ "$chipid" == "8135" ]; then
     devmem 0x90b00010 32 0x14040000 #close audio

@@ -4,6 +4,16 @@ config BR2_OPENIPC_SOC_VENDOR
 config BR2_OPENIPC_SOC_MODEL
 	string "SoC model"
 
+config BR2_OPENIPC_SOC_ALIASES
+	string "Interchangeable SoC ids served by this image"
+	help
+	  Space-separated retired/hardware-compatible SoC ids that this build's
+	  SOC_MODEL also serves (e.g. "hi3516cv610 hi3516cv608" on the cv6xx
+	  image, or "xm550" on the xm530 image). Read by
+	  .github/scripts/enrich_manifest.py to emit @alias records so on-device
+	  sysupgrade routes a camera still reporting the old id to the image
+	  actually published under SOC_MODEL.
+
 config BR2_OPENIPC_SOC_FAMILY
 	string "SoC family"
 

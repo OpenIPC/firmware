@@ -1,0 +1,17 @@
+name: shell-tests
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  load-hisilicon-parsing:
+    name: load_hisilicon os_mem_size derivation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/test_load_hisilicon.sh

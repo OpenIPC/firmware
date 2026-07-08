@@ -1,0 +1,106 @@
+libsanitizer: guard musl-incompatible headers and structs
+
+musl libc headers conflict with kernel headers (struct sysinfo,
+linux/if_ppp.h, linux/sysctl.h).  Guard these with SANITIZER_GLIBC
+and provide zero-value fallbacks so libsanitizer builds on musl.
+
+These changes are harmless when libsanitizer is disabled (the patched
+files are only compiled when --enable-libsanitizer is active).
+
+Signed-off-by: Dmitry Ilyin <6576495+widgetii@users.noreply.github.com>
+
+--- a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cpp	2026-04-13 23:37:27.004985453 +0300
++++ b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.cpp	2026-04-13 23:37:27.022582860 +0300
+@@ -69,7 +69,9 @@
+ #include <malloc.h>
+ #include <mntent.h>
+ #include <netinet/ether.h>
++#if SANITIZER_GLIBC
+ #include <sys/sysinfo.h>
++#endif
+ #include <sys/vt.h>
+ #include <linux/cdrom.h>
+ #include <linux/fd.h>
+@@ -80,7 +82,9 @@
+ #include <linux/input.h>
+ #include <linux/ioctl.h>
+ #include <linux/soundcard.h>
++#if SANITIZER_GLIBC
+ #include <linux/sysctl.h>
++#endif
+ #include <linux/utsname.h>
+ #include <linux/posix_types.h>
+ #include <net/if_arp.h>
+@@ -126,9 +130,11 @@
+ #endif
+ #include <scsi/scsi.h>
+ #else
++#if SANITIZER_GLIBC
+ #include <linux/if_ppp.h>
+ #include <linux/kd.h>
+ #include <linux/ppp_defs.h>
++#endif
+ #endif  // SANITIZER_GLIBC
+ 
+ #if SANITIZER_ANDROID
+@@ -244,7 +250,11 @@
+ 
+ #  if SANITIZER_LINUX
+   unsigned struct_epoll_event_sz = sizeof(struct epoll_event);
++#if SANITIZER_GLIBC
+   unsigned struct_sysinfo_sz = sizeof(struct sysinfo);
++#else
++  unsigned struct_sysinfo_sz = 0;
++#endif
+   unsigned __user_cap_header_struct_sz =
+       sizeof(struct __user_cap_header_struct);
+   unsigned __user_cap_data_struct_sz = sizeof(struct __user_cap_data_struct);
+@@ -518,7 +528,11 @@
+   unsigned struct_unimapinit_sz = sizeof(struct unimapinit);
+ 
+   unsigned struct_audio_buf_info_sz = sizeof(struct audio_buf_info);
++#if SANITIZER_GLIBC
+   unsigned struct_ppp_stats_sz = sizeof(struct ppp_stats);
++#else
++  unsigned struct_ppp_stats_sz = 0;
++#endif
+ #endif  // SANITIZER_GLIBC
+ 
+ #if !SANITIZER_ANDROID && !SANITIZER_APPLE
+@@ -678,6 +692,7 @@
+   unsigned IOCTL_HDIO_SET_NOWERR = HDIO_SET_NOWERR;
+   unsigned IOCTL_HDIO_SET_UNMASKINTR = HDIO_SET_UNMASKINTR;
+   unsigned IOCTL_MTIOCPOS = MTIOCPOS;
++#if SANITIZER_GLIBC
+   unsigned IOCTL_PPPIOCGASYNCMAP = PPPIOCGASYNCMAP;
+   unsigned IOCTL_PPPIOCGDEBUG = PPPIOCGDEBUG;
+   unsigned IOCTL_PPPIOCGFLAGS = PPPIOCGFLAGS;
+@@ -689,6 +704,19 @@
+   unsigned IOCTL_PPPIOCSMAXCID = PPPIOCSMAXCID;
+   unsigned IOCTL_PPPIOCSMRU = PPPIOCSMRU;
+   unsigned IOCTL_PPPIOCSXASYNCMAP = PPPIOCSXASYNCMAP;
++#else
++  unsigned IOCTL_PPPIOCGASYNCMAP = 0;
++  unsigned IOCTL_PPPIOCGDEBUG = 0;
++  unsigned IOCTL_PPPIOCGFLAGS = 0;
++  unsigned IOCTL_PPPIOCGUNIT = 0;
++  unsigned IOCTL_PPPIOCGXASYNCMAP = 0;
++  unsigned IOCTL_PPPIOCSASYNCMAP = 0;
++  unsigned IOCTL_PPPIOCSDEBUG = 0;
++  unsigned IOCTL_PPPIOCSFLAGS = 0;
++  unsigned IOCTL_PPPIOCSMAXCID = 0;
++  unsigned IOCTL_PPPIOCSMRU = 0;
++  unsigned IOCTL_PPPIOCSXASYNCMAP = 0;
++#endif
+   unsigned IOCTL_SIOCADDRT = SIOCADDRT;
+   unsigned IOCTL_SIOCDARP = SIOCDARP;
+   unsigned IOCTL_SIOCDELRT = SIOCDELRT;
+@@ -1122,7 +1150,7 @@
+ CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_restorer);
+ #endif
+ 
+-#if SANITIZER_LINUX
++#if SANITIZER_GLIBC
+ CHECK_TYPE_SIZE(__sysctl_args);
+ CHECK_SIZE_AND_OFFSET(__sysctl_args, name);
+ CHECK_SIZE_AND_OFFSET(__sysctl_args, nlen);

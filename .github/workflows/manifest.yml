@@ -1,0 +1,63 @@
+name: manifest
+on:
+  workflow_run:
+    workflows: [build]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages-manifest
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    name: Generate manifest
+    # Run after nightly (schedule) or operator dispatch only — PR builds do
+    # not upload to any release, so re-emitting the manifest after each PR
+    # build is wasted compute (and noisily triggers gh-pages deploys).
+    #
+    # Publish on success AND on partial-failure: one flaky board (e.g. a
+    # transient toolchain 502) should not deny manifest updates for the 90+
+    # platforms that did upload artifacts. enrich_manifest.py reads whatever
+    # assets actually exist on the release, so a partial release just shows
+    # up with fewer platforms in its `platforms` map.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      ((github.event.workflow_run.event == 'schedule' ||
+        github.event.workflow_run.event == 'workflow_dispatch') &&
+       contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master (for the script)
+        uses: actions/checkout@v4
+        with:
+          path: master
+
+      - name: Checkout gh-pages (for output)
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: pages
+
+      - name: Generate manifest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 master/.github/scripts/enrich_manifest.py pages
+
+      - name: Publish to gh-pages
+        working-directory: pages
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name  "github-actions[bot]"
+          git add manifest.json manifest.flat
+          if git diff --cached --quiet; then
+            echo "No manifest changes; nothing to commit."
+          else
+            newest=$(jq -r '.channels.nightly // "empty"' manifest.json)
+            git commit -m "manifest: $(date -u +%FT%TZ) — ${newest}"
+            git push
+          fi

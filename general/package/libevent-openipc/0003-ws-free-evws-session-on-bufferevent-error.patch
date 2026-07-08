@@ -1,0 +1,26 @@
+ws: free the evws session on a bufferevent error, not only on EOF
+
+ws_evhttp_error_cb() only handled BEV_EVENT_EOF, so an abrupt peer reset
+or write failure (a browser tab closed without a close frame, a client that
+RSTs mid-stream) never reached evws_connection_free(), and the user close
+callback never fired -- leaking whatever per-connection resources the owner
+had attached. Handle BEV_EVENT_ERROR too, mirroring close_event_cb().
+
+Upstream libevent has the same gap (libevent/libevent master).
+
+--- a/ws.c
++++ b/ws.c
+@@ -367,6 +367,13 @@
+ 	/* when client just disappears after connection (wscat closed by Cmd+Q) */
+ 	if (what & BEV_EVENT_EOF) {
+ 		close_after_write_cb(bufev, arg);
++	} else if (what & BEV_EVENT_ERROR) {
++		/* Abrupt reset or write failure (e.g. a browser tab closed without a
++		 * WebSocket close frame, or a peer that RST mid-stream): there is
++		 * nothing left to flush, so free the session now. Otherwise
++		 * evws_connection_free() -- and the user close callback it invokes --
++		 * never runs, and the owner leaks its per-connection resources. */
++		evws_connection_free(arg);
+ 	}
+ }
+ 

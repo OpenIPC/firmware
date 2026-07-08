@@ -1,0 +1,53 @@
+--- a/net/ipv4/ipconfig.c
++++ b/net/ipv4/ipconfig.c
+@@ -41,6 +41,8 @@
+ #include <linux/inet.h>
+ #include <linux/inetdevice.h>
+ #include <linux/netdevice.h>
++#include <linux/etherdevice.h>
++#include <linux/version.h>
+ #include <linux/if_arp.h>
+ #include <linux/skbuff.h>
+ #include <linux/ip.h>
+@@ -173,6 +175,13 @@
+ static int ic_dhcp_msgtype __initdata;	/* DHCP msg type received */
+ #endif
+ 
++// Provide correct copy mechanism for older kernel
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 17, 0)
++static inline void eth_hw_addr_set(struct net_device *dev, const u8 *addr)
++{
++    ether_addr_copy(dev->dev_addr, addr);
++}
++#endif
+ 
+ /*
+  *	Network devices
+@@ -205,6 +214,8 @@
+ 	struct net_device *dev;
+ 	unsigned short oflags;
+ 	unsigned long start, next_msg;
++	bool first_mac_done = false;
++	u8 mac[ETH_ALEN];
+ 
+ 	last = &ic_first_dev;
+ 	rtnl_lock();
+@@ -230,6 +241,18 @@
+ 			able &= ic_proto_enabled;
+ 			if (ic_proto_enabled && !able)
+ 				continue;
++
++			/* Set MAC address from device tree or bootargs */
++			if (!first_mac_done &&
++				(able & IC_BOOTP) &&
++				(dev->type == ARPHRD_ETHER) &&
++				dev->dev.parent &&
++				!eth_platform_get_mac_address(dev->dev.parent, mac)) {
++				eth_hw_addr_set(dev, mac);
++				first_mac_done = true;
++				pr_info("openipc: Overriding %s MAC from bootargs/DT %pM\n",
++						dev->name, dev->dev_addr);
++			}
+ 			oflags = dev->flags;
+ 			if (dev_change_flags(dev, oflags | IFF_UP) < 0) {
+ 				pr_err("IP-Config: Failed to open %s\n",

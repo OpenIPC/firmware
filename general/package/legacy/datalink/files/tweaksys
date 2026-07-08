@@ -109,7 +109,7 @@ case "$1" in
 		# set custom config
 		if [ "$chip" = "gk7205v200" ] && [ "$sensor" = "imx307" ]; then
 			echo "switch to custom sensor config"
-			#cli -s .isp.sensorConfig /etc/sensors/60fps/720p_imx307_i2c_2l.ini
+			#cli -s .isp.sensorConfig /etc/sensors/high-fps/imx307_1280x720_60fps.ini
 		fi
 
 		# force set totalmem size

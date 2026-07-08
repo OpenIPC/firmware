@@ -1,0 +1,12 @@
+config BR2_PACKAGE_GLIBC_COMPAT
+	bool "glibc-compat"
+	depends on BR2_TOOLCHAIN_USES_MUSL
+	help
+	  ABI shim for vendor binaries linked against libc.so.6 (glibc) that
+	  must run on a musl rootfs. Provides a libglibc-compat.so with the
+	  glibc-only entry points (__xstat, __isoc99_sscanf, ...) that musl
+	  does not export, plus rootfs symlinks for libc.so.6 / libm.so.6 /
+	  ld-linux.so.3 -> musl libc.
+
+	  Used by Hi3520DV200 (vendor MPP for V200 only ships glibc-linked
+	  .so, while glibc cannot run on the SoC's 3.0.8 kernel).

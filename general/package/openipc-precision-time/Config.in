@@ -1,0 +1,29 @@
+config BR2_PACKAGE_OPENIPC_PRECISION_TIME
+	bool "OpenIPC precision-time profile (PTP)"
+	select BR2_PACKAGE_LINUXPTP
+	help
+	  Opinionated time-synchronization stack for OpenIPC cameras
+	  used in multi-camera fusion, robotics, photogrammetry, and
+	  scientific instrumentation. Enables linuxptp (software-stamping
+	  ptp4l disciplining CLOCK_REALTIME) and installs a ready-to-run
+	  /etc/ptp4l.conf plus the precision-time init script.
+
+	  Pair with chrony or busybox ntpd if you also want a coarse
+	  NTP fallback when PTP is not reachable. Enable
+	  BR2_PACKAGE_CHRONY separately if needed.
+
+	  The camera's existing /dev/openipc-frame-ts chrdev samples
+	  CLOCK_REALTIME in the sensor frame-start IRQ; with this stack
+	  enabled and a local PTP grandmaster on the LAN, frame
+	  timestamps anchor to sub-millisecond precision instead of the
+	  ~3-5 ms NTP baseline.
+
+	  Hardware caveat: HiSilicon FE-MAC PHYs do not support hardware
+	  timestamping. This package configures linuxptp for software
+	  timestamping only. Expected precision on a quiet switched LAN
+	  is ~100 us to 1 ms.
+
+	  Requires a kernel built with CONFIG_PREEMPT,
+	  CONFIG_HIGH_RES_TIMERS, CONFIG_HZ_1000, and CONFIG_PTP_1588_CLOCK.
+	  The hi3516ev300_neo kernel config ships these by default; other
+	  boards need verification.

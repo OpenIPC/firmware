@@ -1,0 +1,38 @@
+/dts-v1/;
+
+/ {
+	description = "Linux Kernel";
+	#address-cells = <1>;
+
+	images {
+		fdt-1 {
+			description = "dtb";
+			data = /incbin/("fdt.dtb");
+			type = "flat_dt";
+			arch = "arm";
+			compression = "none";
+			load = <0x40000000>;
+		};
+
+		linux_kernel {
+			description = "Linux";
+			data = /incbin/("zImage");
+			type = "kernel";
+			arch = "arm";
+			os = "Linux";
+			compression = "none";
+			load = <0x40018000>;
+			entry = <0x40018000>;
+		};
+	};
+
+	configurations {
+		default = "config-1";
+		config-1 {
+			description = "Linux";
+			kernel = "linux_kernel";
+			fdt = "fdt-1";
+			loadables = "linux_kernel", "fdt-1";
+		};
+	};
+};

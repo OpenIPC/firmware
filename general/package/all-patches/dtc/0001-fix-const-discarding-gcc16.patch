@@ -1,0 +1,48 @@
+From: OpenIPC <dev@openipc.org>
+Subject: [PATCH] Fix const-discarding-qualifier errors with GCC 16
+
+Starting with GCC 15 and especially GCC 16 + recent glibc, the _Generic
+wrappers for memchr() / strchr() / strrchr() return a const-qualified
+pointer when the input argument is const-qualified. With dtc's default
+-Werror, this turns previously-silent assignments into hard build errors:
+
+  libfdt/fdt_overlay.c:446: assignment discards 'const' qualifier from
+    pointer target type [-Werror=discarded-qualifiers]
+  fdtput.c:235: assignment discards 'const' qualifier from pointer target
+    type [-Werror=discarded-qualifiers]
+
+In fdt_overlay.c the local 'sep' is only read through (used for pointer
+arithmetic and dereferences for the ':' check, never to write), so it can
+be retyped to const char* without functional change. 'endptr' is split
+out as its own declaration so strtoul() still has a non-const char**
+output parameter.
+
+In fdtput.c::create_node() the function actually writes through the
+returned pointer ('*p = \'\\0\';'), which means the const on the
+'node_name' parameter has always been a lie about effects on the caller.
+The function is called with argv elements (plain char*) only, so drop
+the const from the parameter to match the actual semantics.
+
+--- a/libfdt/fdt_overlay.c
++++ b/libfdt/fdt_overlay.c
+@@ -432,7 +432,8 @@ static int overlay_fixup_phandle(void *fdt, void *fdto, int symbols_off,
+ 		const char *fixup_str = value;
+ 		uint32_t path_len, name_len;
+ 		uint32_t fixup_len;
+-		char *sep, *endptr;
++		const char *sep;
++		char *endptr;
+ 		int poffset, ret;
+
+ 		fixup_end = memchr(value, '\0', len);
+--- a/fdtput.c
++++ b/fdtput.c
+@@ -227,7 +227,7 @@ static int store_key_value(char **blob, const char *node_name,
+  * @param node_name	Name of node to create
+  * @return new node offset if found, or -1 on failure
+  */
+-static int create_node(char **blob, const char *node_name)
++static int create_node(char **blob, char *node_name)
+ {
+ 	int node = 0;
+ 	char *p;

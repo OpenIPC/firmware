@@ -1,0 +1,42 @@
+From: OpenIPC <dev@openipc.org>
+Subject: [PATCH] Source/cmake.cxx: gate cmGlobalGhsMultiGenerator include behind CMAKE_BOOTSTRAP
+
+The single reference to cmGlobalGhsMultiGenerator in cmake.cxx (line 3014,
+'this->Generators.push_back(cmGlobalGhsMultiGenerator::NewFactory());')
+is already wrapped in '#if !defined(CMAKE_BOOTSTRAP)', so the GHS generator
+is intentionally excluded from the bootstrap cmake build.
+
+The matching '#include "cmGlobalGhsMultiGenerator.h"' on line 132, however,
+is only gated by host OS, not by CMAKE_BOOTSTRAP. GCC <= 15 + glibc didn't
+care because the inline 'NewFactory()' was never ODR-used, so the
+'cmGlobalGeneratorSimpleFactory<cmGlobalGhsMultiGenerator>' template
+specialization never got emitted. Under GCC 16 the template specialization
+is emitted anyway (more aggressive vague-linkage emission / speculative
+devirtualization), and host-cmake's bootstrap link fails:
+
+  cmake.cxx:(.text+0xbfee): undefined reference to
+    'cmGlobalGhsMultiGenerator::cmGlobalGhsMultiGenerator(cmake*)'
+  cmake.cxx:(.text+0xce91): undefined reference to
+    'cmGlobalGhsMultiGenerator::GetDocumentation()'
+
+because cmGlobalGhsMultiGenerator.cxx is (correctly) not in the bootstrap
+source list.
+
+Wrap the include in the same CMAKE_BOOTSTRAP guard as the use site — same
+pattern as the existing cmGlobalXCodeGenerator block just below. The
+non-bootstrap host-cmake build is unaffected.
+
+--- a/Source/cmake.cxx
++++ b/Source/cmake.cxx
+@@ -128,9 +128,11 @@
+
+ // NOTE: the __linux__ macro is predefined on Android host too, but
+ // main CMakeLists.txt filters out this generator by host name.
++#if !defined(CMAKE_BOOTSTRAP)
+ #if (defined(__linux__) && !defined(__ANDROID__)) || defined(_WIN32)
+ #  include "cmGlobalGhsMultiGenerator.h"
+ #endif
++#endif
+
+ #if defined(__APPLE__)
+ #  if !defined(CMAKE_BOOTSTRAP)

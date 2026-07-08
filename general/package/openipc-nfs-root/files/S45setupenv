@@ -1,0 +1,202 @@
+#!/bin/sh
+#
+# Customize environment for NFS boot
+#
+
+ETH_IFACE="eth0"
+
+dhcp_fetch_dns_ntp() {
+	iface="$1"
+	hostname="$2"
+	state_dir="/var/run/udhcpc"
+	mkdir -p "$state_dir"
+	out="${3:-${state_dir}/udhcpc.env.$$}"
+	hook="${state_dir}/udhcpc-hook.$$"
+
+	[ -n "$iface" ] || return 2
+
+cat > "$hook" <<'EOF'
+#!/bin/sh
+case "$1" in
+	bound|renew)
+		{
+			echo "dns='$dns'"
+			echo "ntpsrv='$ntpsrv'"
+			echo "serverid='$serverid'"
+			echo "ip='$ip'"
+			echo "subnet='$subnet'"
+			echo "router='$router'"
+			echo "hostname='$hostname'"
+			echo "domain='$domain'"
+			echo "search='$search'"
+			echo "lease='$lease'"
+			echo "event='$1'"
+			echo "updated_at='$(date '+%Y-%m-%d %H:%M:%S %Z')'"
+		} > "$UDHCPC_CAPTURE"
+		exit 0
+		;;
+	*)
+		exit 0
+		;;
+esac
+EOF
+
+	chmod +x "$hook" || return 1
+
+	UDHCPC_CAPTURE="$out" \
+	udhcpc -i "$iface" -b -T 1 -t 5 \
+		-s "$hook" \
+		-O ntpsrv \
+		-O dns \
+		-O hostname \
+		-O domain \
+		-O search \
+		-O lease \
+		-x "hostname:${hostname}" \
+		-p "/var/run/udhcpc.${iface}.pid" \
+		>/dev/null 2>&1
+
+	rc=$?
+
+	[ $rc -eq 0 ] || return $rc
+	[ -s "$out" ] || return 1
+
+	. "$out"
+
+	DHCP_NTP="$ntpsrv"
+	DHCP_DNS="$dns"
+	DHCP_HOSTNAME="$hostname"
+	DHCP_DOMAIN="$domain"
+	DHCP_SEARCH="$search"
+	return 0
+}
+
+is_hash() {
+	case "$1" in
+		'$1$'*)	 return 0 ;;  # md5-crypt
+		'$5$'*)	 return 0 ;;  # sha256-crypt
+		'$6$'*)	 return 0 ;;  # sha512-crypt
+		*)	 return 1 ;;  # plaintext
+	esac
+}
+
+setup_root_passwd() {
+	shadow_hash="$(awk -F: '$1=="root"{print $2}' /etc/shadow)"
+	if is_hash '@ROOTFS_PASSWD@'; then
+		hash='@ROOTFS_PASSWD@'
+	else
+		salt="$(printf '%s\n' "$shadow_hash" | cut -d'$' -f3)"
+		hash="$(mkpasswd -m md5 -S "$salt" '@ROOTFS_PASSWD@')"
+	fi
+	if [ ! "$hash" = "$shadow_hash" ]; then
+		printf '%s\n' "root:$hash" | chpasswd -e 2>/dev/null
+		echo "nfs-root: Updated root password."
+	fi
+}
+
+setup_ssh_key() {
+	if fw_printenv >/dev/null 2>&1; then
+		if ! fw_printenv ssh_key >/dev/null 2>&1; then
+			echo "nfs-root: Generating SSH key and saving to uboot env."
+			tmp="$(mktemp -u /tmp/dropbearkey.XXXXXX)" || exit 1
+			trap 'rm -f "$tmp"' EXIT
+
+			dropbearkey -t ed25519 -f "$tmp" >/dev/null 2>&1 || exit 1
+			SSH_KEY=$(cat "$tmp" | base64 -w 0)
+			fw_setenv ssh_key $SSH_KEY || exit 1
+		fi
+		echo "nfs-root: Loading SSH key from uboot env."
+		fw_printenv -n ssh_key 2>/dev/null | base64 -d > /etc/dropbear/dropbear_ed25519_host_key || exit 1
+	else
+		echo "nfs-root: fw_setenv inaccessible, SSH key will not be saved."
+	fi
+}
+
+setup_dns_ntp_hostname() {
+	# Compile time variables
+	BUILD_HOSTNAME='@HOSTNAME@'
+	BUILD_NTP='@NTP_SERVER@'
+	BUILD_DNS='@DNS_SERVER@'
+
+	# Hostname ordering: SERVER supplied > UBOOT variable > static build > default overlay
+	CMDLINE=$(cat /proc/cmdline)
+	UBOOT_HOSTNAME=$(printf ' %s\n' "$CMDLINE" | sed -n 's/.*[[:space:]]hostname=\([^[:space:]]*\).*/\1/p')
+	UBOOT_DNS="$(awk '/^nameserver / { print $2; exit }' /proc/net/pnp)"
+	DEFAULT_HOSTNAME=$(cat /etc/hostname)
+	HOSTNAME="${UBOOT_HOSTNAME:-${BUILD_HOSTNAME:-$DEFAULT_HOSTNAME}}"
+
+	# If kernel used IP autoconf (DHCP) we must launch udhcpc
+	# to manage future leases. In addition we pass our choice for
+	# hostname and store the response to see if it was accepted.
+	if grep -q '^#PROTO: MANUAL$' /proc/net/pnp; then
+		IP_CIDR="$(ip -o -4 addr show dev $ETH_IFACE scope global | awk '{print $4; exit}')"
+		echo "nfs-root: Using static IP $IP_CIDR"
+	else
+		if dhcp_fetch_dns_ntp $ETH_IFACE $HOSTNAME; then
+			echo "nfs-root: Started dhcpc for lease renewal."
+		else
+			echo "nfs-root: Warning: dhcpc start failed."
+		fi
+	fi
+
+	# Update hostname if DHCP server didn't honor the change
+	HOSTNAME="${DHCP_HOSTNAME:-$HOSTNAME}"
+	NTP="${BUILD_NTP:-$DHCP_NTP}"
+	DNS="${BUILD_DNS:-${UBOOT_DNS:-$DHCP_DNS}}"
+	if [ -n "$NTP" ]; then
+		echo "server ${NTP} iburst" > /etc/ntp.conf
+		echo "nfs-root: Using ${NTP} for NTP."
+	else
+        	echo "nfs-root: Using system default for NTP."
+	fi
+	if [ -n "$DNS" ]; then
+		echo -n "" > /etc/resolv.conf
+		if [ -n "$DHCP_SEARCH" ]; then
+			echo "search $DHCP_SEARCH" >> /etc/resolv.conf
+		fi
+		echo "nameserver ${DNS}" >> /etc/resolv.conf
+		echo "nfs-root: Using ${DNS} for DNS."
+	else
+		echo "nfs-root: Using system default for DNS."
+	fi
+
+	if [ -n "$DHCP_DOMAIN" ]; then
+		FQDN="${HOSTNAME}.${DHCP_DOMAIN}"
+	else
+		FQDN=""
+	fi
+	echo "${HOSTNAME}" > /etc/hostname
+	if [ -w /etc/hosts ]; then
+	{
+		echo "127.0.0.1 localhost"
+		echo "127.0.1.1 $FQDN $HOSTNAME"
+	} > /etc/hosts
+	fi
+
+	# Set the hostname
+	/bin/hostname -F /etc/hostname >/dev/null 2>&1
+	echo "nfs-root: Configured hostname to $HOSTNAME."
+}
+
+case "$1" in
+	start)
+		if grep -q 'root=/dev/nfs' /proc/cmdline; then
+			setup_dns_ntp_hostname
+			if [ ! -f '/etc/firstboot' ]; then
+				setup_root_passwd
+				if grep -Eq '(^| )ro( |$)' /proc/cmdline; then
+					setup_ssh_key
+				fi
+				touch /etc/firstboot
+			fi
+		fi
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
+		;;
+esac

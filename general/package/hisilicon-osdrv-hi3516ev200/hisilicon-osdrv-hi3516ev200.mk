@@ -16,6 +16,9 @@ define HISILICON_OSDRV_HI3516EV200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/WDR
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/WDR $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/sensor/config/WDR/*.ini
 
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/high-fps
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/high-fps $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/sensor/config/high-fps/*.ini
+
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/sensor/iq/imx307.ini
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/sensor/iq/imx335.ini

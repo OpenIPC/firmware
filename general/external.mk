@@ -1,5 +1,6 @@
 export OPENIPC_SOC_VENDOR := $(call qstrip,$(BR2_OPENIPC_SOC_VENDOR))
 export OPENIPC_SOC_MODEL := $(call qstrip,$(BR2_OPENIPC_SOC_MODEL))
+export OPENIPC_SOC_ALIASES := $(call qstrip,$(BR2_OPENIPC_SOC_ALIASES))
 export OPENIPC_SOC_FAMILY := $(call qstrip,$(BR2_OPENIPC_SOC_FAMILY))
 export OPENIPC_SNS_MODEL := $(call qstrip,$(BR2_OPENIPC_SNS_MODEL))
 export OPENIPC_VARIANT := $(call qstrip,$(BR2_OPENIPC_VARIANT))
