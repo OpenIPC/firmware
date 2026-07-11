@@ -1,9 +1,11 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.53
+scr_version=1.0.54
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
+# Seconds the rootfs verify-mount may take before it is treated as unmountable.
+mount_wait=${mount_wait:-45}
 # Route to firmware or builder manifest. A stock OpenIPC/firmware build
 # stamps BUILD_PLATFORM=${soc}_${variant} with variant in {lite,ultimate,
 # neo}. Anything else — a per-device override (${soc}_${variant}_${device},
@@ -84,24 +86,74 @@ do_update_kernel() {
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
 }
 
+# mount, bounded. The verify-mount does not always fail on a rootfs the running
+# kernel cannot read — it can block indefinitely. Nothing is printed between the
+# mount and the flash write, so an unbounded mount that wedges is indistinguishable
+# from a dead tool: the upgrade stops forever with no error, taking any GUI driving
+# it down too. Never let the pre-flight check outlive the flash it guards.
+mount_rootfs() {
+	if command -v timeout >/dev/null 2>&1; then
+		timeout "$mount_wait" mount "$1" "$2" 2>/dev/null
+	else
+		mount "$1" "$2" 2>/dev/null
+	fi
+}
+
+# Read the candidate rootfs's SoC stamp and version by loop-mounting it.
+#
+# This is a PRE-FLIGHT CHECK ONLY: the image is written with flashcp, which writes
+# the partition raw and never needs the mount. So it must run BEFORE anything is
+# written to flash, and it must not reject an image that would have flashed fine.
+verify_rootfs() {
+	local x=$1
+	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$model"
+	[ ! -f "$x" ] && die "File $x not found"
+
+	local y=/tmp/rootfs
+	local loop=
+	rootfs_version=
+
+	if mkdir -p "$y" && loop=$(losetup -f) && losetup "$loop" "$x" 2>/dev/null \
+		&& mount_rootfs "$loop" "$y"; then
+		rootfs_version=$(get_system_version "$y")
+		check_soc "$(head -1 $y/etc/hostname | cut -d- -f2)"
+		compare_versions "$system_version" "$rootfs_version" && exit_update=1
+		umount "$y"
+	else
+		# Unmountable is not a defect in the image. It means the RUNNING kernel
+		# lacks the squashfs decompressor the NEW image uses (commonly XZ) — a
+		# property of the kernel being replaced, and irrelevant the moment the new
+		# one boots. Aborting here rejects a perfectly good image, so warn instead.
+		echo_c 33 "\nCannot mount $x to verify it."
+		echo_c 33 "The running kernel likely lacks its squashfs decompressor; the image itself may be fine."
+
+		# The SoC is also stamped in the uImage header and validated with no mount
+		# at all, so a kernel flashed in this same run still guards against a
+		# wrong-SoC image. Flashing the rootfs alone leaves no SoC evidence — and
+		# writing an unverified rootfs for a foreign SoC bricks the device, so that
+		# is the one case worth refusing.
+		if [ "1" != "$update_kernel" ] && [ "1" != "$skip_soc" ]; then
+			losetup -d "$loop" 2>/dev/null
+			rm -rf "$y"
+			die "Cannot verify the SoC of an unmountable rootfs. Flash the matching kernel in the same run, or pass --skip_soc."
+		fi
+		echo_c 33 "Skipping the rootfs version/SoC pre-check; SoC is validated from the kernel image."
+	fi
+
+	[ -n "$loop" ] && losetup -d "$loop" 2>/dev/null
+	rm -rf "$y"
+	return 0
+}
+
 do_update_rootfs() {
 	local x=$1
 	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$model"
 	echo_c 33 "\nRootFS"
 	echo "Update rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
-	local y=/tmp/rootfs
-	if mkdir -p "$y" && loop=$(losetup -f) && losetup "$loop" "$x" && mount "$loop" "$y"; then
-		rootfs_version=$(get_system_version "$y")
-		check_soc "$(head -1 $y/etc/hostname | cut -d- -f2)"
-		compare_versions "$system_version" "$rootfs_version" && exit_update=1
-		umount "$y" && rm -rf "$y" && losetup -d "$loop"
-		[ "1" = "$exit_update" ] && return 0
-	else
-		die "Unable to mount $y!"
-	fi
+	[ "1" = "$exit_update" ] && return 0
 	set_progress flashcp -v "$x" "$(get_device "rootfs")"
-	echo_c 32 "RootFS updated to $rootfs_version"
+	echo_c 32 "RootFS updated to ${rootfs_version:-unknown}"
 }
 
 do_update_firmware() {
@@ -131,6 +183,7 @@ do_update_firmware() {
 		echo "Split combined image: FIT ${fitsz}B -> kernel, remainder -> rootfs"
 		dd if="$x" bs=65536 count="$blocks" of=/tmp/uImage.$model 2>/dev/null
 		dd if="$x" bs=65536 skip="$blocks" of=/tmp/rootfs.squashfs.$model 2>/dev/null
+		verify_rootfs "/tmp/rootfs.squashfs.$model"
 		do_update_kernel "/tmp/uImage.$model"
 		do_update_rootfs "/tmp/rootfs.squashfs.$model"
 		return 0
@@ -591,6 +644,12 @@ if [ "1" = "$image_combined" ]; then
 	# maps to a single combined write.
 	{ [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && do_update_firmware
 else
+	# Verify the rootfs BEFORE the first write. The kernel is flashed first, and
+	# this check used to live inside do_update_rootfs — so a rootfs that failed
+	# verification was only ever discovered once the kernel had already been
+	# committed, leaving a half-upgraded device: new kernel, old rootfs, and no
+	# way back except a manual flash. Checking first means a failure costs nothing.
+	[ "1" = "$update_rootfs" ] && verify_rootfs "$rootfs_file"
 	[ "1" = "$update_kernel" ] && do_update_kernel "$kernel_file"
 	[ "1" = "$update_rootfs" ] && do_update_rootfs "$rootfs_file"
 fi
