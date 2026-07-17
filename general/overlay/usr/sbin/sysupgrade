@@ -86,17 +86,50 @@ do_update_kernel() {
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
 }
 
-# mount, bounded. The verify-mount does not always fail on a rootfs the running
-# kernel cannot read — it can block indefinitely. Nothing is printed between the
-# mount and the flash write, so an unbounded mount that wedges is indistinguishable
-# from a dead tool: the upgrade stops forever with no error, taking any GUI driving
-# it down too. Never let the pre-flight check outlive the flash it guards.
+# mount, bounded, read-only. The verify-mount does not always fail on a rootfs the
+# running kernel cannot read — it can block. Nothing is printed between the mount
+# and the flash write, so an unbounded mount that wedges is indistinguishable from
+# a dead tool: the upgrade stops with no error, taking any GUI driving it down too.
+#
+# Best-effort, not a guarantee: timeout sends TERM and then waits to reap, so a
+# mount stuck in uninterruptible sleep still outlives it. It bounds the realistic
+# failures — a slow loop/probe, or a decompressor the kernel lacks — which is what
+# strands upgrades in practice.
+#
+# -t squashfs skips kernel fs autoprobing of what may be a garbage file; the error
+# text is returned rather than discarded, so the caller can print it.
 mount_rootfs() {
 	if command -v timeout >/dev/null 2>&1; then
-		timeout "$mount_wait" mount "$1" "$2" 2>/dev/null
+		timeout "$mount_wait" mount -t squashfs -o ro "$1" "$2" 2>&1
 	else
-		mount "$1" "$2" 2>/dev/null
+		mount -t squashfs -o ro "$1" "$2" 2>&1
 	fi
+}
+
+# Whether a kernel flashed in this same run validates the SoC with no mount, and
+# so can stand in for the rootfs hostname check. do_update_kernel probes the SoC
+# out of a legacy uImage header and hands it to check_soc — but a FIT image (magic
+# d00dfeed) carries no such field, and check_soc is skipped outright for ingenic
+# and rockchip. In those cases a kernel in the run proves nothing about the SoC.
+# $1 = "kernel_follows" when the caller flashes a kernel unconditionally right
+# after verifying (do_update_firmware's split path, where update_kernel is unset
+# on a plain `sysupgrade -r`).
+soc_guarded_by_kernel() {
+	local k=
+	if [ "kernel_follows" = "$1" ]; then
+		k="/tmp/uImage.$model"
+	elif [ "1" = "$update_kernel" ]; then
+		k="$kernel_file"
+		[ -z "$k" ] && k="/tmp/uImage.$model"
+	else
+		return 1
+	fi
+	[ -f "$k" ] || return 1
+	# Mirrors do_update_kernel's own skips.
+	[ "$vendor" = "ingenic" ] && return 1
+	[ "$vendor" = "rockchip" ] && return 1
+	[ "$(xxd -p -l 4 "$k" 2>/dev/null)" = "d00dfeed" ] && return 1
+	return 0
 }
 
 # Read the candidate rootfs's SoC stamp and version by loop-mounting it.
@@ -107,37 +140,51 @@ mount_rootfs() {
 verify_rootfs() {
 	local x=$1
 	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$model"
+	echo_c 33 "\nVerify"
+	echo "Verifying rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
 
 	local y=/tmp/rootfs
 	local loop=
+	local err=
 	rootfs_version=
 
-	if mkdir -p "$y" && loop=$(losetup -f) && losetup "$loop" "$x" 2>/dev/null \
-		&& mount_rootfs "$loop" "$y"; then
+	if mkdir -p "$y" && loop=$(losetup -f) && err=$(losetup "$loop" "$x" 2>&1) \
+		&& err=$(mount_rootfs "$loop" "$y"); then
 		rootfs_version=$(get_system_version "$y")
 		check_soc "$(head -1 $y/etc/hostname | cut -d- -f2)"
 		compare_versions "$system_version" "$rootfs_version" && exit_update=1
 		umount "$y"
 	else
-		# Unmountable is not a defect in the image. It means the RUNNING kernel
-		# lacks the squashfs decompressor the NEW image uses (commonly XZ) — a
-		# property of the kernel being replaced, and irrelevant the moment the new
-		# one boots. Aborting here rejects a perfectly good image, so warn instead.
+		# Unmountable is not a defect in the image. It usually means the RUNNING
+		# kernel lacks the squashfs decompressor the NEW image uses (commonly XZ) —
+		# a property of the kernel being replaced, and irrelevant the moment the new
+		# one boots. flashcp writes the partition raw and never needs the mount, so
+		# aborting here rejects an image that would have flashed fine.
 		echo_c 33 "\nCannot mount $x to verify it."
-		echo_c 33 "The running kernel likely lacks its squashfs decompressor; the image itself may be fine."
+		[ -n "$err" ] && echo_c 33 "  $err"
+		echo_c 33 "The running kernel may lack its squashfs decompressor; the image itself may be fine."
 
-		# The SoC is also stamped in the uImage header and validated with no mount
-		# at all, so a kernel flashed in this same run still guards against a
-		# wrong-SoC image. Flashing the rootfs alone leaves no SoC evidence — and
-		# writing an unverified rootfs for a foreign SoC bricks the device, so that
-		# is the one case worth refusing.
-		if [ "1" != "$update_kernel" ] && [ "1" != "$skip_soc" ]; then
+		# The rootfs hostname is one of two SoC witnesses. The other is the uImage
+		# header of a kernel flashed in this same run, which check_soc reads with no
+		# mount — but that witness does not always exist (FIT kernels carry no SoC
+		# field; check_soc is skipped for ingenic/rockchip), so it cannot simply be
+		# assumed. With no witness at all, a downloaded artifact is still pinned to
+		# $model by the name it must have to be found (rootfs.squashfs.$model, md5
+		# verified), while a hand-picked --rootfs= file is pinned by nothing — and
+		# writing an unverified rootfs for a foreign SoC bricks the device. That is
+		# the case worth refusing, and refusing costs nothing here: no flash yet.
+		if [ "1" = "$skip_soc" ]; then
+			echo_c 33 "Skipping the rootfs version/SoC pre-check (SoC validation disabled)."
+		elif soc_guarded_by_kernel "$2"; then
+			echo_c 33 "Skipping the rootfs version/SoC pre-check; the SoC is validated from the kernel image header instead."
+		elif [ "1" = "$remote_update" ]; then
+			echo_c 33 "Skipping the rootfs version/SoC pre-check; the image is pinned to '$model' by its artifact name."
+		else
 			losetup -d "$loop" 2>/dev/null
 			rm -rf "$y"
-			die "Cannot verify the SoC of an unmountable rootfs. Flash the matching kernel in the same run, or pass --skip_soc."
+			die "Cannot verify the SoC of an unmountable rootfs, and no kernel in this run carries a SoC to check it against. Flash the matching kernel in the same run, or pass --force_soc."
 		fi
-		echo_c 33 "Skipping the rootfs version/SoC pre-check; SoC is validated from the kernel image."
 	fi
 
 	[ -n "$loop" ] && losetup -d "$loop" 2>/dev/null
@@ -183,7 +230,11 @@ do_update_firmware() {
 		echo "Split combined image: FIT ${fitsz}B -> kernel, remainder -> rootfs"
 		dd if="$x" bs=65536 count="$blocks" of=/tmp/uImage.$model 2>/dev/null
 		dd if="$x" bs=65536 skip="$blocks" of=/tmp/rootfs.squashfs.$model 2>/dev/null
-		verify_rootfs "/tmp/rootfs.squashfs.$model"
+		# kernel_follows: the kernel is flashed unconditionally on the next line,
+		# whether or not update_kernel is set (a plain `sysupgrade -r` reaches here
+		# with it unset). Tell verify_rootfs so it weighs the same SoC evidence as
+		# --url/--channel do, instead of refusing with advice that is a no-op here.
+		verify_rootfs "/tmp/rootfs.squashfs.$model" kernel_follows
 		do_update_kernel "/tmp/uImage.$model"
 		do_update_rootfs "/tmp/rootfs.squashfs.$model"
 		return 0
