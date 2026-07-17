@@ -172,6 +172,29 @@ make_fit() {
 
 make_rootfs() { dd if=/dev/zero bs=1k count=8 of="$1" 2>/dev/null; }
 
+# A combined image (cv6xx): the FIT and the rootfs squashfs in one blob, rootfs
+# packed after the FIT at a 64K-aligned offset. do_update_firmware splits it on
+# the FIT totalsize (header bytes 4..7, big-endian) — one 64K block here.
+make_combined() {
+    printf '\xd0\x0d\xfe\xed' > "$1"                        # FIT magic
+    printf '\x00\x01\x00\x00' >> "$1"                       # totalsize 0x10000
+    dd if=/dev/zero bs=1 count=65528 >> "$1" 2>/dev/null    # rest of the FIT
+    dd if=/dev/zero bs=1k count=8 >> "$1" 2>/dev/null       # rootfs remainder
+}
+
+# Pack $1.. into a .tgz at $SB/tmp/fw.tgz the way download_firmware expects
+# (artifact names + an md5sum manifest beside them).
+make_archive() {
+    local stage="$SB/stage"
+    rm -rf "$stage"; mkdir -p "$stage"
+    local names="" f
+    for f in "$@"; do cp "$f" "$stage/"; names="$names $(basename "$f")"; done
+    # List the names explicitly rather than globbing: the manifest must not end
+    # up checksumming itself.
+    (cd "$stage" && md5sum $names > openipc.md5sum)
+    (cd "$stage" && tar cf - . | gzip > "$SB/tmp/fw.tgz")
+}
+
 # --- runner ----------------------------------------------------------------
 # run <name> -- <args...>; sets $OUT (combined output) and $RC.
 OUT=""; RC=0
@@ -324,17 +347,46 @@ fi
 # ...but a downloaded artifact is pinned to $model by the name it must have to
 # be found at all, so the same evidence gap must not refuse a real upgrade.
 reset_env
-stage="$SB/stage"; rm -rf "$stage"; mkdir -p "$stage"
-make_fit "$stage/uImage.ssc338q"
-make_rootfs "$stage/rootfs.squashfs.ssc338q"
-(cd "$stage" && md5sum uImage.ssc338q rootfs.squashfs.ssc338q > openipc.md5sum)
-(cd "$stage" && tar cf - . | gzip > "$SB/tmp/fw.tgz")
+make_fit "$SB/tmp/uImage.ssc338q"
+make_archive "$SB/tmp/uImage.ssc338q" "$SB/tmp/rootfs.squashfs.ssc338q"
 STUB_MOUNT=fail
 run -z --archive="$SB/tmp/fw.tgz"
 if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && flashed /dev/mtd3; then
     ok "mount fails, FIT kernel, downloaded archive -> proceeds (name-pinned)"
 else
     bad "name-pinned archive should not be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# --- the combined image (cv6xx: FIT + rootfs in one blob) -------------------
+# do_update_firmware splits the blob and writes the two partitions separately.
+# Master verified the rootfs only after the FIT had been committed, so this path
+# carried the same half-flash as the split path -- unreported until review.
+reset_env
+make_combined "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/firmware.bin.ssc338q"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && flashed /dev/mtd3; then
+    ok "combined image, mount ok -> split, kernel and rootfs both flashed"
+else
+    bad "combined image -> expected both flashed, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+v=$(at "Verifying rootfs from"); k=$(at "Update kernel from")
+if [ -n "$v" ] && [ -n "$k" ] && [ "$v" -lt "$k" ]; then
+    ok "combined image: rootfs is verified BEFORE the FIT is flashed"
+else
+    bad "combined path must verify before the FIT write -- verify@${v:-none} kernel@${k:-none}"
+fi
+
+# The combined half-flash itself: a foreign image must cost nothing.
+reset_env
+make_combined "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/firmware.bin.ssc338q"
+STUB_IMG_SOC=gk7205v300
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && nothing_wrote; then
+    ok "combined image, wrong SoC -> refused, FIT never written"
+else
+    bad "combined + wrong SoC -> expected refusal with no write, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
 
 # --- transcript ------------------------------------------------------------
