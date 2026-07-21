@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.54
+scr_version=1.0.55
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -322,7 +322,11 @@ download_firmware() {
 		[ -z "$url" ] && url=$(fw_printenv -n upgrade || echo "https://github.com/OpenIPC/${repo:-builder}/releases/download/latest/openipc.$build.tgz")
 		echo "Download from $url"
 		[ "$(curl -o /dev/null -s -k -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
-		curl --connect-timeout 30 -s -k -m 120 -L "$url" -s -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+		# Show a transfer bar so the (silent, up-to-2-min) download doesn't look
+		# stuck — over /ws/upgrade this also gives the WebUI something to stream
+		# (issue #120). `-s` (silent_update) opts back out for a quiet console run.
+		[ "1" = "$silent_update" ] && dl_meter=-s || dl_meter=-#
+		curl --connect-timeout 30 $dl_meter -k -m 120 -L "$url" -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	fi
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
@@ -367,7 +371,14 @@ set_progress() {
 
 sync_time() {
 	echo_c 37 "\nSynchronizing time"
-	ntpd -Nnq
+	# Bound the sync: with no reachable NTP server `ntpd -q` can block for
+	# minutes and strand the upgrade at this step (WebUI issue #120). Everything
+	# after this fetches over `curl -k`, so an unsynced clock is not fatal.
+	if command -v timeout >/dev/null 2>&1; then
+		timeout 30 ntpd -Nnq
+	else
+		ntpd -Nnq
+	fi
 	echo_c 33 "$(date)"
 }
 
