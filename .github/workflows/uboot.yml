@@ -2,6 +2,9 @@ name: uboot
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   toolchain:
     name: Uboot
