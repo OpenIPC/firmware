@@ -37,6 +37,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
+          make_latest: false
           files: |
             u-boot-*/output/*-nor.bin
             u-boot-*/output/*-nand.bin
