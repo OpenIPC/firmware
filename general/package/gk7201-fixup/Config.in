@@ -1,0 +1,23 @@
+config BR2_PACKAGE_GK7201_FIXUP
+	bool "gk7201-fixup"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Runtime fixups for the GK7201V200 (XiongMai xm72010200) die, where an
+	  Apr-2023 libxmedia userspace runs on Sep-2023 vendor kernel modules.
+
+	  gk7201_fixup.ko (kernel):
+	    - suppresses the orphaned ISP-FE interrupt that otherwise storms irq39
+	    - builds the VPSS group-0 contexts the VI-VPSS online bind leaves
+	      missing (the early-line VI IRQ would Oops on them)
+	    - clears the stale h264 encoder channel context so VENC chn0 creates
+
+	  libgk_shim.so (LD_PRELOAD for Majestic):
+	    - opens the SetVIVPSSMode gate the Sep-2023 xm_sys keeps shut
+	    - answers the two libxmedia liveness probes the new drivers reject
+	    - accepts the VPSS group create the online bind already performed
+
+	  Enabled automatically by load_goke -> load_xm on this SoC; the shim is
+	  activated from /etc/default/majestic only when /dev/vpss_ctx_fix exists.
+
+comment "gk7201-fixup needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL

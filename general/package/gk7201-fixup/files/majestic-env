@@ -1,0 +1,22 @@
+# Sourced by /etc/init.d/S95majestic before starting the daemon.
+#
+# On the GK7201V200 (XiongMai xm72010200) die, Majestic runs against an Apr-2023
+# libxmedia userspace on top of Sep-2023 vendor kernel modules. Three API-skew
+# points need bridging in userspace; libgk_shim.so does all three (see
+# gk_shim.c). Its kernel counterpart is gk7201_fixup.ko, which creates
+# /dev/vpss_ctx_fix - so that node is the exact, self-guarding signal that this
+# board needs the shim. Every other board leaves LD_PRELOAD untouched.
+if [ -e /dev/vpss_ctx_fix ] && [ -f /usr/lib/libgk_shim.so ]; then
+	export LD_PRELOAD=/usr/lib/libgk_shim.so
+
+	# Stop majestic with SIGKILL on this board, and release the hardware watchdog
+	# afterwards. Not a shortcut - the vendor MPP teardown path here is simply broken.
+	# Its own application never exits, so SYS_Exit was never exercised, and a graceful
+	# stop walks into a chain of use-after-frees: VPSS_DestroyGrp/VpssCleanPicQueue,
+	# RgnNotify waking freed regions, VB_DestroyPool indexed with a pointer. Each one
+	# Oopses, kills majestic mid-teardown and leaves the camera dead until a reboot.
+	# Skipping the teardown is safe here: majestic re-initialises the whole pipeline on
+	# the next start, and gk7201_fixup rebuilds the VPSS contexts and clears the stale
+	# encoder channel contexts every time it does. Measured both ways on hardware.
+	MAJESTIC_HARD_STOP=1
+fi
