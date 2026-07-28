@@ -1,0 +1,70 @@
+#!/bin/sh
+# IR-cut filter control for the GK7201V200 (XiongMai xm72010200) board.
+#
+# The filter is a LATCHING solenoid: it is flipped by a short pulse on one of two pins and
+# then holds its position with no current. So both pins must go back to 0 afterwards -
+# leaving one high would cook the coil. This is the same shape as the vendor's own
+# ircut_demo for the GK7205V200 (see ../../goke-osdrv-gk7205v200/files/script/ircut_demo),
+# which is where the pulse-then-release sequence comes from.
+#
+# PIN NUMBERING: the SoC has PL061 GPIO blocks at 0x120b0000, 0x120b1000, ... and Linux
+# numbers them 8 per block, so GPIO<group>_<pin> == group * 8 + pin.
+#   IRCUT_A=13 -> GPIO1_5      IRCUT_B=15 -> GPIO1_7
+# These two came from the vendor firmware on this camera. They are NOT yet confirmed against
+# a working filter: on the bench the mechanism did not click under the vendor firmware
+# either, which points at the filter being physically disconnected while the lens assembly
+# is out of its housing. Re-check after reassembly, and if they are wrong, the only thing to
+# change is the two numbers below (or pass them in the environment).
+#
+# The pads must be muxed to GPIO first; load_xm does that with
+#   devmem 0x120C0010 32 0x1e02
+#   devmem 0x120C0014 32 0x1e02
+# VERIFIED on hardware 2026-07-26: both registers read back 0x00001E02, and writing
+# /sys/class/gpio/gpio13/value and gpio15/value makes the levels stick. So the control path
+# from here to the pins is confirmed working; anything still wrong is on the other side of
+# the connector.
+#
+# Majestic drives the filter itself once it knows the pins:
+#   cli -s .nightMode.irCutPin1 13
+#   cli -s .nightMode.irCutPin2 15
+# This script exists to test the wiring by hand, and to flip the filter from a script or
+# from a night-mode hook without going through majestic.
+
+IRCUT_A=${IRCUT_A:-13}
+IRCUT_B=${IRCUT_B:-15}
+PULSE_MS=${PULSE_MS:-1000}
+
+gpio_out() {
+	# $1 = gpio number. Exporting an already-exported pin fails harmlessly.
+	[ -d "/sys/class/gpio/gpio$1" ] || echo "$1" > /sys/class/gpio/export 2>/dev/null
+	echo out > "/sys/class/gpio/gpio$1/direction" 2>/dev/null
+}
+
+pulse() {
+	# $1 = pin to drive high, $2 = the other pin
+	gpio_out "$IRCUT_A"
+	gpio_out "$IRCUT_B"
+	echo 0 > "/sys/class/gpio/gpio$2/value"
+	echo 1 > "/sys/class/gpio/gpio$1/value"
+	usleep $((PULSE_MS * 1000))
+	# release BOTH - the filter latches, the coil must not stay energised
+	echo 0 > "/sys/class/gpio/gpio$1/value"
+	echo 0 > "/sys/class/gpio/gpio$2/value"
+}
+
+case "$1" in
+	day|on|0)
+		# filter IN: blocks IR, correct colours in daylight
+		pulse "$IRCUT_A" "$IRCUT_B"
+		;;
+	night|off|1)
+		# filter OUT: lets IR through so the IR LEDs are useful
+		pulse "$IRCUT_B" "$IRCUT_A"
+		;;
+	*)
+		echo "usage: $0 {day|night}    (aliases: on/off, 0/1)"
+		echo "pins: IRCUT_A=$IRCUT_A IRCUT_B=$IRCUT_B  pulse=${PULSE_MS}ms"
+		echo "override with e.g.: IRCUT_A=9 IRCUT_B=11 $0 day"
+		exit 1
+		;;
+esac

@@ -155,4 +155,102 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 
 endef
 
+# ---------------------------------------------------------------------------
+# GK7201V200 (XiongMai xm72010200)
+#
+# This die is served by the gk7205v500 family but not by its module set. The stock
+# Apr-2023 xm_*.ko above bring it up as far as the ISP and then stop: VEDU CreateChn
+# fails with F008FFFF and the VI->VPSS online link never starts, so there is no
+# picture at all. The camera's own factory firmware carries a Sep-2023 build of the
+# same vendor MPP, for chip id xm72010200, which drives this silicon correctly - same
+# vermagic, so it loads on the same kernel. Those modules are in
+# files/kmod.gk7201v200/; see the PROVENANCE.md there for where they came from and how
+# to re-extract them.
+#
+# Everything below is confined to this hook and to BR2_OPENIPC_SOC_MODEL, so
+# gk7205v500_lite, gk7205v500_ultimate and gk7205v510_lite are byte-for-byte unaffected.
+# The Sep-2023 modules against the Apr-2023 userspace above is a real API skew; the
+# gk7201-fixup package bridges it.
+ifeq ($(BR2_OPENIPC_SOC_MODEL),"gk7201v200")
+define GOKE_OSDRV_GK7205V500_GK7201V200_INSTALL
+	# Exactly the modules load_xm insmods, and no others - the directory holds the whole
+	# vendor set, but shipping the unused half would cost 144 KB of a 8 MB rootfs.
+	# Two of the stock list are deliberately dropped by the rm above: xm_wdt.ko, which
+	# hardcodes the wrong interrupt on this kernel and would reset the board every 60 s
+	# (the SP805 driver handles the watchdog instead, see kernel patch 0902), and
+	# xm_tde.ko, which nothing here loads. xm_isp_pwm.ko is not shipped either: load_xm
+	# tries it with "|| true" for boards with a DC iris, and this one has none, so it has
+	# never been exercised.
+	rm -f $(TARGET_DIR)/lib/modules/4.9.37/goke/xm_*.ko
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/goke \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_acodec.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_adc.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_adec.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_aenc.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_ai.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_aio.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_ao.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_base.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_chnl.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_h264e.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_h265e.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_isp.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_isp_sensor_i2c.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_isp_sensor_spi.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_ive.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_jpege.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_mipi_rx.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_osal.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_pdm.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_pm.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_rc.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_rgn.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_sysconfig.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_sys.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_vedu.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_venc.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_vgs.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_vi.ko \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/xm_vpss.ko
+
+	# sinit.ko: the vendor's sensor-init helper, loaded between the two MCLK pokes in
+	# load_xm. Nothing else in this package has an extdrv/ directory.
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.37/goke/extdrv
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/goke/extdrv \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod.gk7201v200/extdrv/sinit.ko
+
+	# Audio VQE. libxmedia_api.so resolves these at runtime; without them the audio
+	# path in the Sep-2023 stack does not come up. Left out of the list above because
+	# no other board in this family needs them.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_3a.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_common.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_eq.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_gain.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_hpf.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_res.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_talkv2.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_wnr.so
+
+	# libhi_* facades: Majestic links the HiSilicon MPI names, this vendor stack exports
+	# the xmedia ones. Six thin forwarding libraries close that gap; see
+	# gen_xmedia_shim.sh for how they are generated.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_mpi.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_ae.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_awb.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_isp.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_ive.so \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_md.so
+
+	# SC2336P IQ data and the IR-cut helper for this board.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/iq/sc2336p.bin
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin \
+		$(GOKE_OSDRV_GK7205V500_PKGDIR)/files/script/ircut_gk7201v200
+endef
+GOKE_OSDRV_GK7205V500_POST_INSTALL_TARGET_HOOKS += GOKE_OSDRV_GK7205V500_GK7201V200_INSTALL
+endif
+
 $(eval $(generic-package))

@@ -1,0 +1,206 @@
+#!/bin/sh
+# load_xm.sh — load the VENDOR-native GK7201V200 (xm72010200) MPP kernel modules
+# under OpenIPC, replacing load_goke. Derived verbatim from the stock firmware's
+# /mnt/mtd/ipc/modules/load sequence for chip xm72010200 + sensor sc2336.
+#
+# Rationale: the gk7205v200-built OpenIPC modules bring the SoC up to the ISP but
+# fail VEDU CreateChn (F008FFFF) and never start the VI->VPSS online link on the
+# 7201 die. The vendor xm_*.ko (vermagic 4.9.37, MPP V1.0.1.0 B020 — ABI-matches
+# OpenIPC libmpi) drive this exact silicon correctly.
+#
+# Prereqs on target:
+#   - vendor xm_*.ko in $MOD_DIR (below), extdrv/sinit.ko present
+#   - busybox 'devmem' available (replaces vendor 'gkmm')
+#   - kernel bootargs 'mem=32M' (OpenIPC default) tile perfectly with the MMZ below:
+#         mem=32M   (OS 0x40000000..0x42000000 = 32M, MMZ 0x42000000..0x44000000 = 32M)
+#     RAM is 64M (0x40000000..0x44000000). The vendor used mem=47M + 17M MMZ, which under
+#     OpenIPC's mem=32M left 0x42000000..0x42F00000 (15M) unused. We reclaim it: MMZ starts
+#     at 0x42000000 for a 32M pool - needed so h264(1080p) + MJPEG + VB all fit (17M NOMEMs).
+#   - Majestic sensor handling: let the vendor sensor path own the sensor
+#     (xm_isp_sensor_i2c + conf/sc2336p.bin); see NOTE at end.
+
+set -e
+MOD_DIR=/lib/modules/4.9.37/goke
+CONF_DIR=/etc/sensors                  # where sc2336p.bin is placed
+
+CHIP_TYPE=xm72010200
+SNS_TYPE0=sc2336
+YUV_TYPE0=0                            # 0 = raw
+BOARD=demo
+
+# --- MMZ: reclaim the 15M gap OpenIPC's mem=32M leaves below the vendor pool ---
+# vendor was 0x42F00000/17M (assumed mem=47M). Under mem=32M we start at 0x42000000 -> 32M.
+MMZ_START=0x42000000
+MMZ_SIZE=32M
+
+cd "$MOD_DIR"
+
+reg() { devmem "$1" 32 "$2"; }        # reg <phys_addr> <value>  (== vendor 'gkmm')
+
+echo "load_xm: chip=$CHIP_TYPE sensor=$SNS_TYPE0 mmz=$MMZ_START/$MMZ_SIZE"
+
+# --- core: osal (with MMZ) + sysconfig (chip + sensor) ---
+insmod xm_osal.ko mmz_allocator=xmedia mmz=anonymous,0,${MMZ_START},${MMZ_SIZE}
+insmod xm_sysconfig.ko chip=${CHIP_TYPE} sensors=${SNS_TYPE0} g_cmos_yuv_flag=${YUV_TYPE0} board=${BOARD}
+
+# --- sensor pinmux / MCLK (vendor 'gkmm' writes; sensor assumed present) ---
+reg 0x112C002C 0x1000
+reg 0x120100F0 0x0D
+insmod extdrv/sinit.ko 2>/dev/null || true
+reg 0x120100F0 0x19          # vendor sets this once a sensor is detected
+
+# --- media stack (exact vendor order) ---
+insmod xm_base.ko
+insmod xm_sys.ko
+insmod xm_rgn.ko
+insmod xm_pm.ko    2>/dev/null || true
+insmod xm_vgs.ko
+insmod xm_vi.ko
+insmod xm_isp.ko
+insmod xm_vpss.ko
+insmod xm_chnl.ko
+insmod xm_vedu.ko            # <-- the native H.264/H.265 encoder for this die
+insmod xm_rc.ko
+insmod xm_venc.ko
+insmod xm_h264e.ko
+insmod xm_h265e.ko
+insmod xm_jpege.ko
+insmod xm_ive.ko save_power=0 max_node_num=20
+insmod xm_isp_pwm.ko          2>/dev/null || true
+insmod xm_isp_sensor_i2c.ko
+insmod xm_isp_sensor_spi.ko   2>/dev/null || true
+insmod xm_mipi_rx.ko
+insmod xm_pdm.ko              2>/dev/null || true
+
+# --- audio: LAST, exactly like the vendor (its insert_audio runs at the end of insert_ko).
+# --- These depend on osal/base/sys; loading them first is what produced the pile of
+# --- "Unknown symbol" errors in dmesg.
+insmod xm_aio.ko
+insmod xm_ai.ko
+insmod xm_ao.ko
+insmod xm_aenc.ko
+insmod xm_adec.ko
+insmod xm_acodec.ko
+
+# --- GK7201V200 runtime fixups (gk7201_fixup.c + gk_shim.c; each hw-proven) ---
+# VI/sensor clock pokes (vendor did these as u-boot mw.l; idempotent).
+reg 0x120101b8 0x00003803
+reg 0x120101bc 0x00803282
+reg 0x120101f4 0x32010000
+reg 0x1201022c 0x01010000
+
+# One fixup module for the Apr-2023-userspace / Sep-2023-kernel skew:
+#   1) ISP int storm suppressor  2) VPSS grp0 context builder (+ /dev/vpss_ctx_fix)
+#   3) h264e stale-ctx clearer. Bases from sysfs (kallsyms-by-name Oopses this kernel).
+# Buildroot's kernel-module infra installs to .../extra; a hand-copied one may sit
+# next to the vendor modules. Take whichever exists.
+FIXUP_KO=
+for d in /lib/modules/4.9.37/extra "$MOD_DIR"; do
+	[ -f "$d/gk7201_fixup.ko" ] && { FIXUP_KO="$d/gk7201_fixup.ko"; break; }
+done
+if [ -n "$FIXUP_KO" ]; then
+	Ti=$(cat /sys/module/xm_isp/sections/.text)
+	Bi=$(cat /sys/module/xm_isp/sections/.bss)    # g_SwitchMode/g_UseBothalf, for the AE log
+	Tv=$(cat /sys/module/xm_vpss/sections/.text)
+	Bv=$(cat /sys/module/xm_vpss/sections/.bss)
+	Bh=$(cat /sys/module/xm_h264e/sections/.bss)
+	# The other two encoders keep the same kind of 16-entry channel-context table.
+	Th5=$(cat /sys/module/xm_h265e/sections/.bss)
+	Tjp=$(cat /sys/module/xm_jpege/sections/.bss)
+	Trb=$(cat /sys/module/xm_rgn/sections/.bss)   # g_apstRgnCtrl leftovers
+	# Extra module args, e.g. FIXUP_ARGS="isp_int=1" or "chipid=0x...". This kernel is
+	# built without CONFIG_MODULE_UNLOAD, so rmmod always fails with ENOSYS and a module
+	# can only be re-parameterised by rebooting - hence an override file on the writable
+	# overlay rather than a rebuild for every experiment.
+	FIXUP_ARGS=
+	[ -r /etc/default/gk7201-fixup ] && . /etc/default/gk7201-fixup
+	insmod "$FIXUP_KO" a_isp_text=$Ti a_isp_bss=$Bi a_vpss_text=$Tv a_vpss_bss=$Bv \
+		a_h264e_bss=$Bh \
+		a_h265e_bss=$Th5 a_jpege_bss=$Tjp a_rgn_bss=$Trb $FIXUP_ARGS
+	mdev -s      # /dev/vpss_ctx_fix
+else
+	echo "load_xm: WARNING gk7201_fixup.ko not found - video will not work" >&2
+fi
+
+# --- LSADC. The vendor's load_media.sh loads this right after its module load and BEFORE
+# --- the pad writes below (its boot log: "lsadc init ok", then the 0x120C writes).
+insmod xm_adc.ko
+
+# --- Watchdog. NOT the vendor xm_wdt: it hardcodes Linux irq 37 at all four of its irq
+# --- call sites (osal_request_irq / enable_irq / disable_irq / osal_free_irq) instead of
+# --- taking the interrupt from its own device-tree node, and irq 37 is not the watchdog on
+# --- this kernel. The dog then never gets fed and the board resets every ~60s with no
+# --- message. Upstream's own load_goke carries "# modprobe xm_wdt # temporarily disabled"
+# --- for the same reason.
+# --- The block at 0x12030000 is a stock ARM PrimeCell SP805 - PeriphID 0x00141805 and
+# --- PCellID 0xb105f00d read straight off this silicon - so the in-tree sp805_wdt driver
+# --- drives it directly once the DT node says so (kernel patch 0902). No vendor blob.
+modprobe sp805_wdt 2>/dev/null || true
+mdev -s                      # /dev/watchdog
+
+# --- Do NOT start busybox's watchdog feeder here: majestic owns /dev/watchdog and feeds it
+# --- only while frames are healthy, so it catches a hung video pipeline and not merely a hung
+# --- box. Only one process can hold the device, and a feeder started here would take it first.
+# --- This works ONLY because libgk_shim.so translates majestic's keepalive ioctl - it issues
+# --- the undirected _IO('W',5) = 0x5705 which mainline's watchdog core rejects; see fix 4 in
+# --- gk_shim.c. Without that translation majestic never feeds, while watchdog_open() has
+# --- already armed the hardware, and the camera REBOOT-LOOPS once per timeout. Measured both
+# --- ways on hardware. If you ever run with GK_SHIM_OFF=1 or GK_WDT_OFF=1, set
+# --- `cli -s .watchdog.enabled false` first or the board will reboot on a timer.
+# --- All load_xm owes majestic is the device node, which the modprobe above provides.
+# --- load_xm runs at S70vendor, majestic at S95.
+if [ ! -c /dev/watchdog ]; then
+	echo "load_xm: WARNING no /dev/watchdog - majestic will run without the reset net" >&2
+fi
+
+# --- pad config for the peripherals (verbatim from the vendor's load_media.sh, which
+# --- runs these right after its module load; the comments are the vendor's own) ---
+reg 0x120C0000 0x1001        # ADC       (light sensor input)
+reg 0x120C0010 0x1e02        # Audio Out
+reg 0x120C0014 0x1e02        # IRCut     (without this the IR-cut GPIOs drive nothing)
+#
+# BOARD GPIO MAP, read out of the vendor image. The factory firmware carries one small
+# extdrv/*.ko per peripheral, each a plain pin toggler, so disassembling init_module gives the
+# pin straight from its gpio_request(N). Recorded here because it is the piece of knowledge the
+# next person on this SoC would otherwise have to re-derive. Only pins 9 and 20/45 are used by
+# this port; the rest is reference.
+#    4        rled.ko       red status LED. load_drv.sh runs `rledctrl 0` at boot when an analog
+#                           light sensor is fitted - you switch a status LED off so it cannot
+#                           pollute the sensor, not something you would do to an illuminator.
+#    9        wifien.ko     wifi enable, ACTIVE LOW. Confirmed on hardware: without pulling it
+#                           the radio never appears on the USB bus. See /etc/wireless/usb.
+#    12       audioout.ko   audio-out enable (speaker amplifier)
+#    13, 15   ircut.ko      IR-cut H-bridge, both high = idle. All pulse timing is in userspace;
+#                           majestic's nightMode.irCutPin1/irCutPin2.
+#    14       wled.ko       white LED / floodlight
+#    20, 45   sinit.ko      sensor init - driven at boot by this script
+#    50       reset.ko      RESET BUTTON, active low. MEASURED on hardware: idle 1, pressed 0.
+#                           An INPUT: never drive it, and do not use the `gpio` helper, whose
+#                           export writes "out" to direction. Read it through sysfs with
+#                           direction forced to "in". No configuration needed, the pad is
+#                           already correct at reset and nothing claims the pin.
+#    55       rs485.ko      RS485 direction
+#    69       relay.ko      relay switching the IR ILLUMINATOR PANEL. A SoC pin cannot source the
+#                           current an IR LED panel draws, so the GPIO drives a relay and the
+#                           panel hangs off it - which makes majestic's backlightPin 69, NOT 4.
+# Everything except the three pads above is assumed to be GPIO at reset; if a pin does not
+# respond, suspect the mux first. An empty connector on the PCB proves nothing: this firmware
+# and board serve several models, and the vendor's load_drv.sh loads relay, rs485, extalarm and
+# motorpt unconditionally on cameras that have none of them.
+# NOTE: majestic must run with LD_PRELOAD=/usr/lib/libgk_shim.so (quiet by default;
+# GK_SHIM_VERBOSE=1 for diagnostics). No env is needed at all - the shim has no tunables
+# left that matter: quick-flag raise, OP_CREATEGRP grp0, one probe answer, create-EXIST->0
+# and the watchdog ioctl translation, all unconditional. /etc/default/majestic sets the
+# LD_PRELOAD and nothing else.
+
+echo "load_xm: done. /dev nodes:"; ls -1 /dev | grep -iE 'sys|venc|vpss|vi$|isp|mipi|region' || true
+
+# NOTE (Majestic integration — resolve on-device):
+#   Majestic normally loads its own libsns_*.so and configures VI. Here the sensor
+#   must be driven by the vendor path with conf/sc2336p.bin (NOT Majestic's .bin
+#   loader). Two options to try:
+#     1) point Majestic at the vendor bin:  cli -s .isp.sensorConfig ${CONF_DIR}/sc2336p.bin
+#     2) if Majestic's sensor init conflicts with the vendor modules, disable
+#        Majestic's sensor bring-up and let xm_isp_sensor_i2c + sc2336p.bin own it.
+#   After load: start Majestic, then check  /proc/umap/vpss (RecvPic0 should climb)
+#   and the Majestic log (VENC chn 0 should create — no F008FFFF).

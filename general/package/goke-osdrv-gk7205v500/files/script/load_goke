@@ -9,6 +9,15 @@ board=demo
 # SoC detect
 chipid=$(ipcinfo --chip-name)
 
+# The GK7201V200 (XiongMai xm72010200) die is not driven correctly by the modules
+# and sequence below: VEDU CreateChn fails (F008FFFF) and the VI->VPSS online link
+# never starts. It needs the vendor-native xm_*.ko load order, its own MMZ layout
+# and a fixup module. All of that is self-contained in load_xm, so hand over here
+# rather than threading a second variant through every branch of this script.
+if [ "${chipid}" = "gk7201v200" ] && command -v load_xm >/dev/null 2>&1; then
+	exec load_xm "$@"
+fi
+
 # Memory config
 mem_start=0x40000000 # phy mem start
 
