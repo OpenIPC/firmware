@@ -1,11 +1,13 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.55
+scr_version=1.0.56
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
 # Seconds the rootfs verify-mount may take before it is treated as unmountable.
 mount_wait=${mount_wait:-45}
+# Seconds the operator gets to Ctrl-C out of a run that will force a reboot.
+abort_wait=${abort_wait:-5}
 # Route to firmware or builder manifest. A stock OpenIPC/firmware build
 # stamps BUILD_PLATFORM=${soc}_${variant} with variant in {lite,ultimate,
 # neo}. Anything else — a per-device override (${soc}_${variant}_${device},
@@ -199,6 +201,7 @@ do_update_rootfs() {
 	echo "Update rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
 	[ "1" = "$exit_update" ] && return 0
+	mark_live_flash_dirty
 	set_progress flashcp -v "$x" "$(get_device "rootfs")"
 	echo_c 32 "RootFS updated to ${rootfs_version:-unknown}"
 }
@@ -243,6 +246,7 @@ do_update_firmware() {
 	local fw_dev=$(get_device "firmware")
 	[ "$fw_dev" = "/dev/" ] && die "No kernel/rootfs or firmware partition to flash"
 	echo "Combined partition $fw_dev"
+	mark_live_flash_dirty
 	set_progress flashcp -v "$x" "$fw_dev" || die "flashcp to $fw_dev failed"
 	echo_c 32 "Firmware updated"
 }
@@ -251,6 +255,7 @@ do_wipe_overlay() {
 	echo_c 33 "\nOverlayFS"
 	echo "Erase overlay partition"
 	[ "$flash_type" = "nand" ] || jffs2="-j"
+	mark_live_flash_dirty
 	set_progress flash_eraseall $jffs2 "$(get_device "rootfs_data")"
 }
 
@@ -440,6 +445,17 @@ get_device() {
 	echo -n "/dev/$(grep "\"$1\"" /proc/mtd | cut -d: -f1)"
 }
 
+# Record that a write is about to land on flash that backs the RUNNING
+# filesystem, so reboot_system knows --no_reboot can no longer be honoured.
+#
+# Called BEFORE the write, not after: flashcp erases the partition before it
+# writes, so an interrupted or failed write is exactly as fatal as a completed
+# one — and do_update_firmware's `|| die` reaches reboot_system by that path.
+mark_live_flash_dirty() {
+	[ "1" = "$root_on_flash" ] && live_flash_dirty=1
+	return 0
+}
+
 get_kernel_version() {
 	# A FIT image (DTB magic d00dfeed) has no uImage timestamp at offset 8;
 	# the legacy read would print a bogus 1970 date. Used for display and, on
@@ -474,6 +490,21 @@ get_system_info() {
 	kernel_version=$(get_kernel_version "$kernel_device")
 	system_version=$(get_system_version "")
 	flash_type=$(ipcinfo -F)
+	# 1 when the running filesystem is served from the flash this run may
+	# rewrite. init(1) mounts the rw overlay from "rootfs_data" and pivots onto
+	# the squashfs the kernel booted from, so on a flash root BOTH partitions
+	# this script erases are backing the live mount.
+	#
+	# Only a `root=` naming something that is NOT flash proves the safe case, so
+	# the test is anchored to that token. general/overlay/init greps for a bare
+	# `mmcblk`/`ram` anywhere in the line — harmless when the answer only picks a
+	# mount type, but here a stray substring (an mtdparts label, an allocator
+	# name) would certify a flash-root camera as safe and brick it. Anything not
+	# positively proven to live elsewhere — NAND `root=ubi0:rootfs`, an
+	# unreadable /proc/cmdline — counts as flash, which at worst costs a reboot.
+	root_on_flash=1
+	grep -qE '(^|[[:space:]])root=(/dev/)?(nfs|mmcblk|ram)' /proc/cmdline 2>/dev/null \
+		&& root_on_flash=0
 }
 
 get_system_version() {
@@ -509,7 +540,9 @@ Where:
                         this platform; mark the running build with '*'.
   -f, --force_all       Do not validate anything.
   -n, --wipe_overlay    Wipe overlay partition.
-  -x, --no_reboot       Do not reboot after updating.
+  -x, --no_reboot       Do not reboot after updating. Ignored when the update
+                        rewrites the flash the camera is running from, which
+                        no running system survives.
   -z, --no_update       Do not update self.
       --web             Invoked by the WebUI: keep majestic alive to stream
                         progress over /ws/upgrade, stop it only before flashing.
@@ -520,16 +553,31 @@ Manifest URL: \$MANIFEST_URL (default: $MANIFEST_URL)
 }
 
 reboot_system() {
-	if [ "1" = "$skip_reboot" ]; then
+	# Nothing landed on flash the running system is served from: -x is safe to
+	# honour. Return rather than exit, so the caller owns the status — the main
+	# path falls through to `exit 0` (a deliberate --no_reboot run is a success,
+	# it used to report failure) while die() keeps its own `exit 1`.
+	if [ "1" = "$skip_reboot" ] && [ "1" != "$live_flash_dirty" ]; then
 		echo_c 33 "\nYou asked me not to reboot, so I won't."
 		echo_c 31 "Although a reboot is required to apply the changes."
 		echo_c 37 "Please reboot the camera manually whenever possible."
 		rm $LOCK_FILE
-		exit 1
-	else
-		echo_c 37 "\nUnconditional reboot"
-		busybox reboot -d 1 -f
+		return 0
 	fi
+	if [ "1" = "$skip_reboot" ]; then
+		# -x cannot be honoured here. The flash this camera runs from has been
+		# rewritten under the running kernel, so the live filesystem is already
+		# inconsistent: reads miss the cache free_resources() dropped and come
+		# back as the new image at stale offsets. There is no "reboot it later" —
+		# the shell that would issue the reboot is one of the things that stops
+		# working, which is how issue #2231 was reported: the camera still
+		# answered ping, but no login succeeded and only a power cycle recovered
+		# it. Reboot now, while we still can.
+		echo_c 31 "\n--no_reboot ignored: the flash this camera runs from was rewritten."
+		echo_c 31 "The running filesystem cannot survive that; only a reboot applies it."
+	fi
+	echo_c 37 "\nUnconditional reboot"
+	busybox reboot -d 1 -f
 }
 
 for i in "$@"; do
@@ -684,6 +732,22 @@ free_resources
 
 [ "1" != "$skip_unmount" ] && check_sdcard
 [ "1" = "$remote_update" ] && download_firmware
+
+# -x cannot be honoured for a write that lands on the flash this camera runs
+# from (see reboot_system). Say so before the first write rather than after it:
+# the trap below takes Ctrl-C away, deliberately, for the rest of the run, so
+# this is the last moment an operator who truly cannot afford a reboot can get
+# out. image_combined is only known once download_firmware has run, and it is
+# what covers a plain `-k` against a combined image (that writes the rootfs
+# with update_rootfs unset).
+if [ "1" = "$skip_reboot" ] && [ "1" = "$root_on_flash" ] &&
+	{ [ "1" = "$update_rootfs" ] || [ "1" = "$image_combined" ] || [ "1" = "$clear_overlay" ]; }; then
+	echo_c 31 "\nNOTICE: -x was requested, but this run rewrites the flash this camera"
+	echo_c 31 "is running from. -x cannot be honoured for that: the running filesystem"
+	echo_c 31 "does not survive it. The camera will be rebooted once flashing is done."
+	echo_c 37 "Press Ctrl-C now to abort. Continuing in $abort_wait seconds..."
+	sleep "$abort_wait"
+fi
 
 # Past this point we erase flash. A controlling-TTY death (SSH session drop,
 # stray Ctrl-C, etc.) must not kill flashcp mid-write — that leaves the rootfs
