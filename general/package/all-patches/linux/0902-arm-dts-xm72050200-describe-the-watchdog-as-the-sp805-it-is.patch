@@ -1,0 +1,46 @@
+ARM: dts: xm72050200: describe the watchdog as the SP805 it actually is
+
+The block at 0x12030000 is a stock ARM PrimeCell SP805. Read back from a
+GK7201V200 (xm72010200) camera:
+
+    0x12030fe0..0xfec  05 18 14 00   PeriphID = 0x00141805
+    0x12030ff0..0xffc  0d f0 05 b1   PCellID  = 0xb105f00d
+
+which is exactly the id/mask that drivers/watchdog/sp805_wdt.c matches on
+(.id = 0x00141805, .mask = 0x00ffffff). The in-tree driver therefore binds
+to this hardware as-is and gives a working /dev/watchdog.
+
+The node was previously described with the vendor-private "xmedia,wdg"
+binding, which no in-tree driver knows. It existed only for the out-of-tree
+xm_wdt.ko, and that module cannot work on this kernel anyway: it hardcodes
+Linux irq 37 at all four of its irq call sites (osal_request_irq, enable_irq,
+disable_irq, osal_free_irq) instead of taking the interrupt from this node,
+and irq 37 is not the watchdog here. It reads the device tree only to ioremap
+the registers.
+
+Nothing else loses its watchdog by this change. The other consumer of this
+block on the family, openhisilicon's open_wdt, does not use the device tree
+at all - it has a hardcoded "#define WDT_BASE 0x12030000" and osal_ioremap(),
+with no compatible string and no interrupt.
+
+The clocks the AMBA bus and the driver need are already present in this file
+and are wired the same way for the SP804 dual timers on the same SoC:
+clk_3m feeds the PrimeCell counters and clk_apb is the APB bus clock.
+
+--- a/arch/arm/boot/dts/xm72050200.dtsi
++++ b/arch/arm/boot/dts/xm72050200.dtsi
+@@ -512,11 +512,11 @@
+ 		};
+ 
+ 		wdg: wdg@0x12030000 {
+-			compatible = "xmedia,wdg";
++			compatible = "arm,sp805", "arm,primecell";
+ 			reg = <0x12030000 0x1000>;
+-			reg-names = "wdg";
+ 			interrupts = <0 2 4>;
+-			interrupt-names = "wdg";
++			clocks = <&clk_3m>, <&clk_apb>;
++			clock-names = "wdog_clk", "apb_pclk";
+ 		};
+ 	};
+ 
