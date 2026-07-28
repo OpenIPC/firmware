@@ -4,8 +4,47 @@ DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
 DAEMON_ARGS="-s"
 
+# Optional per-board environment (e.g. an LD_PRELOAD shim for an SoC whose vendor userspace and
+# kernel modules are out of sync). Absent on most boards.
+#
+# It may set MAJESTIC_HARD_STOP=1, which changes two things and only for the board that asks:
+#   - stop() kills the daemon instead of asking it to exit, for SoCs whose vendor MPP teardown
+#     path is broken and Oopses the kernel on a graceful stop;
+#   - because a killed daemon never releases the hardware watchdog it opened, the watchdog is
+#     released afterwards (see wdt_release).
+# Everything below behaves exactly as before when it is unset.
+[ -r /etc/default/majestic ] && . /etc/default/majestic
+
+# Release the hardware watchdog if a previous majestic left it armed.
+#
+# Majestic arms it merely by opening /dev/watchdog - the kernel's watchdog_open() calls
+# watchdog_start() - but never writes the magic 'V' that lets the kernel stop it again, and it
+# cannot, because a hard stop kills it. On release the kernel even gives the dog one last ping,
+# so it survives with a full timeout. Left alone it then reboots the board one timeout later
+# with nobody feeding it, and `cli -s .watchdog.enabled false` would need a reboot to take
+# effect. Opening the node re-arms it, the 'V' sets the magic-close flag, and the close then
+# really stops it.
+# $1 = how many 100 ms tries: after a kill the device is only free once the dead process has
+# been reaped, while on the start path it is either free already or still held by a running
+# instance, where one attempt is enough.
+wdt_release() {
+	local tries="$1" i=0
+
+	[ "1" = "$MAJESTIC_HARD_STOP" ] || return 0
+	[ -c /dev/watchdog ] || return 0
+	while [ $i -lt "$tries" ]; do
+		printf V > /dev/watchdog 2>/dev/null && return 0
+		i=$((i + 1))
+		usleep 100000
+	done
+	return 0
+}
+
 start() {
 	echo -n "Starting $DAEMON: "
+	# A previous instance may have been killed from outside this script, leaving the dog
+	# armed; majestic re-arms it a moment later if it is still enabled.
+	wdt_release 1
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
 	if [ $? -eq 0 ]; then
 		echo "OK"
@@ -16,9 +55,11 @@ start() {
 
 stop() {
 	echo -n "Stopping $DAEMON: "
-	start-stop-daemon -K -q -p "$PIDFILE"
+	[ "1" = "$MAJESTIC_HARD_STOP" ] && sig="-s KILL" || sig=""
+	start-stop-daemon -K $sig -q -p "$PIDFILE"
 	if [ $? -eq 0 ]; then
 		rm -f "$PIDFILE"
+		wdt_release 20
 		echo "OK"
 	else
 		echo "FAIL"
