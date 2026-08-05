@@ -4,7 +4,7 @@ case "$1" in
 	start)
 		echo "Loading vendor modules..."
 		vendor=$(ipcinfo -v)
-		load_"$vendor" -i
+		load_"$vendor" -i -s imx662
 		;;
 
 	stop)
