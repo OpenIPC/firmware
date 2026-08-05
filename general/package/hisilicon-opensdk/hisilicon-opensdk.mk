@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = ff20187b
+HISILICON_OPENSDK_SITE = $(call github,diegok3,openhisilicon,$(HISILICON_OPENSDK_VERSION))
+HISILICON_OPENSDK_VERSION = 6c46247
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -233,7 +233,8 @@ HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
 	smart_sc431hai/libsns_sc431hai \
 	smart_sc4336p/libsns_sc4336p \
 	smart_sc450ai/libsns_sc450ai \
-	smart_sc500ai/libsns_sc500ai
+	smart_sc500ai/libsns_sc500ai \
+	sony_imx662/libsns_imx662
 HISILICON_OPENSDK_SENSORS_hi3519dv500 = \
 	gst_412c/libsns_gst412c \
 	omnivision_os04a10/libsns_os04a10 \
