@@ -62,8 +62,10 @@ wireguard_watchdog_install_cron() {
 }
 
 start() {
- echo "Enabling WireGuard Watchdog"
- wireguard_watchdog_install_cron || exit 1
+ if [ -n "$(fw_printenv -n wg_privkey 2>/dev/null)" ]; then
+  echo "Enabling WireGuard Watchdog"
+  wireguard_watchdog_install_cron || exit 1
+ fi
 }
 
 stop() {
