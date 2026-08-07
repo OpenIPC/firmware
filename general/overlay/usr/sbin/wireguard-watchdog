@@ -1,0 +1,149 @@
+#!/bin/sh
+
+wireguard_enabled="true"
+wireguard_watchdog="true"
+
+WIREGUARD_INTERFACE="wg0"
+LOCK_DIR="/run/wireguard-watchdog.lock"
+STATE_FILE="/run/wireguard-watchdog.state"
+
+acquire_lock() {
+ if mkdir "$LOCK_DIR" 2>/dev/null; then
+  trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT INT TERM
+  return 0
+ fi
+ exit 0
+}
+
+load_state() {
+ zero_handshake_since=0
+ [ -r "$STATE_FILE" ] && . "$STATE_FILE"
+}
+
+save_state() {
+ local tmp_file
+ tmp_file=$(mktemp) || return 1
+ {
+  printf 'zero_handshake_since=%s\n' "${zero_handshake_since:-0}"
+ } >"$tmp_file"
+ cp "$tmp_file" "$STATE_FILE"
+ rm -f "$tmp_file"
+}
+
+log_watchdog() {
+ logger -t wireguard-watchdog "$1"
+}
+
+restart_wireguard() {
+ local reason="$1"
+ log_watchdog "$reason; restarting $WIREGUARD_INTERFACE"
+ zero_handshake_since=0
+ save_state
+ /etc/init.d/S98wireguard restart >/dev/null 2>&1
+}
+
+watchdog_interval_seconds() {
+ local cron_line minutes=2
+ 
+ cron_line=$(grep "wireguard-watchdog" /run/cron/crontabs/root 2>/dev/null)
+ if [ -n "$cron_line" ]; then
+  minutes=$(echo "$cron_line" | awk '{print $1}' | tr -d '*/')
+ fi
+
+ case "$minutes" in
+  '' | *[!0-9]* | 0) minutes=2 ;;
+ esac
+ [ "$minutes" -gt 59 ] && minutes=59
+
+ echo $((minutes * 60))
+}
+
+watchdog_stale_seconds() {
+ local derived interval keepalive
+
+ interval=$(watchdog_interval_seconds)
+ keepalive=$(wg show "$WIREGUARD_INTERFACE" persistent-keepalive 2>/dev/null | awk '{print $2}' | head -n 1)
+ 
+ case "$keepalive" in
+  '' | *[!0-9]*) keepalive=0 ;;
+ esac
+
+ if [ "$keepalive" -gt 0 ]; then
+  derived=$((keepalive * 6))
+ else
+  derived=0
+ fi
+
+ [ "$derived" -lt 180 ] && derived=180
+ [ "$derived" -lt $((interval * 2)) ] && derived=$((interval * 2))
+ echo "$derived"
+}
+
+latest_handshake_epoch() {
+ local latest peer ts
+ latest=0
+ while read -r peer ts; do
+  [ -n "$peer" ] || continue
+  case "$ts" in
+   '' | *[!0-9]*) ts=0 ;;
+  esac
+  [ "$ts" -gt "$latest" ] && latest=$ts
+ done <<EOF
+$(wg show "$WIREGUARD_INTERFACE" latest-handshakes 2>/dev/null)
+EOF
+ echo "$latest"
+}
+
+has_wireguard_peers() {
+ wg show "$WIREGUARD_INTERFACE" peers 2>/dev/null | grep -q .
+}
+
+main() {
+ local now latest stale_threshold handshake_age
+
+ acquire_lock
+
+ [ "true" = "$wireguard_enabled" ] || exit 0
+ [ "true" = "$wireguard_watchdog" ] || exit 0
+
+ load_state
+
+ if ! ip link show "$WIREGUARD_INTERFACE" 2>/dev/null | grep -q 'UP'; then
+  restart_wireguard "WireGuard interface $WIREGUARD_INTERFACE is down or missing"
+  exit $?
+ fi
+
+ if ! has_wireguard_peers; then
+  restart_wireguard "WireGuard interface $WIREGUARD_INTERFACE has no peers"
+  exit $?
+ fi
+
+ stale_threshold=$(watchdog_stale_seconds)
+ latest=$(latest_handshake_epoch)
+
+ if [ "$latest" -eq 0 ]; then
+  now=$(date +%s)
+  if [ "${zero_handshake_since:-0}" -eq 0 ]; then
+   zero_handshake_since=$now
+   save_state
+   exit 0
+  fi
+
+  if [ $((now - zero_handshake_since)) -ge "$stale_threshold" ]; then
+   restart_wireguard "WireGuard has not completed a handshake for ${stale_threshold}s"
+   exit $?
+  fi
+  exit 0
+ fi
+
+ zero_handshake_since=0
+ save_state
+
+ now=$(date +%s)
+ handshake_age=$((now - latest))
+ if [ "$handshake_age" -gt "$stale_threshold" ]; then
+  restart_wireguard "WireGuard handshake is stale (${handshake_age}s > ${stale_threshold}s)"
+ fi
+}
+
+main "$@"
