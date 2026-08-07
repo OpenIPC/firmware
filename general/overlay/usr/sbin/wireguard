@@ -17,7 +17,7 @@ WG_PRESHARED_KEY="$(fw_printenv -n wg_sharkey)"
   [ -n "$WG_PRESHARED_KEY" ] && echo "PresharedKey = $WG_PRESHARED_KEY"
   echo "AllowedIPs = $(fw_printenv -n wg_allowed)"
   echo "#"
-) >>/tmp/wireguard.conf
+) > /tmp/wireguard.conf
 wg setconf wg0 /tmp/wireguard.conf || { echo "Error: Failed to apply wireguard configuration." >&2; exit 1; }
 wg_address="$(fw_printenv -n wg_address)"
 if [ -z "$wg_address" ]; then
