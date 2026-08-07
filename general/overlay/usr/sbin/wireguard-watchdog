@@ -39,7 +39,7 @@ restart_wireguard() {
  log_watchdog "$reason; restarting $WIREGUARD_INTERFACE"
  zero_handshake_since=0
  save_state
- /etc/init.d/S98wireguard restart >/dev/null 2>&1
+ /etc/init.d/S98wireguard start >/dev/null 2>&1
 }
 
 watchdog_interval_seconds() {
