@@ -1,5 +1,11 @@
 #!/bin/sh
 
+# rcS exports TZ once at boot, so a later edit to /etc/TZ is shadowed by the
+# stale value inherited through majestic's own children (web UI, sysupgrade).
+# Re-read it here so a restart picks up the new zone without a reboot.
+# musl never reads /etc/TZ itself; it uses $TZ, else /etc/localtime.
+[ -r /etc/TZ ] && export TZ=$(cat /etc/TZ)
+
 DAEMON="majestic"
 PIDFILE="/var/run/$DAEMON.pid"
 DAEMON_ARGS="-s"
