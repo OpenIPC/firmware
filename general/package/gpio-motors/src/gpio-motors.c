@@ -140,17 +140,27 @@ void gpio_config() {
  * trade, and longer delays still go to usleep so we do not spin needlessly.
  */
 void delay_us(long us) {
+	if (us <= 0) {
+		return;
+	}
+
 	if (us >= 10000) {
 		usleep(us);
 		return;
 	}
 
 	struct timespec start, now;
-	clock_gettime(CLOCK_MONOTONIC, &start);
-	long target = us * 1000;
+	if (clock_gettime(CLOCK_MONOTONIC, &start) != 0) {
+		usleep(us);
+		return;
+	}
+
+	/* 64-bit on purpose: a 32-bit long overflows after ~2.1s of elapsed
+	 * time, which a preemption in the middle of the spin can reach */
+	long long target = (long long)us * 1000;
 	for (;;) {
 		clock_gettime(CLOCK_MONOTONIC, &now);
-		long elapsed = (now.tv_sec - start.tv_sec) * 1000000000L + (now.tv_nsec - start.tv_nsec);
+		long long elapsed = (long long)(now.tv_sec - start.tv_sec) * 1000000000LL + (now.tv_nsec - start.tv_nsec);
 		if (elapsed >= target) {
 			return;
 		}
@@ -195,7 +205,12 @@ int main(int argc, char *argv[]) {
 
 	int pan_steps = atoi(argv[1]);
 	int tilt_steps = atoi(argv[2]);
-	int delay = atoi(argv[3]) * 1000;
+	int delay_ms = atoi(argv[3]);
+	if (delay_ms < 0) {
+		fprintf(stderr, "delay must be >= 0\n");
+		return 1;
+	}
+	int delay = delay_ms * 1000;
 
 	gpio_config();
 	for (int i = 0; i < 4; i++) {
