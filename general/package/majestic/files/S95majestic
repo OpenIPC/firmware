@@ -14,15 +14,23 @@ start() {
 	fi
 }
 
+# Stop by pidfile, then verify the daemon is actually gone. majestic's own
+# watchdog restarts it with a new pid that start-stop-daemon knows nothing
+# about, so the pidfile goes stale; -K on a stale pidfile kills nothing, and
+# "restart" then starts a SECOND majestic next to the running one - both
+# fighting over the encoder, with config edits silently never loaded. killall
+# matches by name, which is the one identity that cannot go stale.
 stop() {
 	echo -n "Stopping $DAEMON: "
 	start-stop-daemon -K -q -p "$PIDFILE"
-	if [ $? -eq 0 ]; then
-		rm -f "$PIDFILE"
-		echo "OK"
-	else
-		echo "FAIL"
+	sleep 1
+	if pidof "$DAEMON" > /dev/null 2>&1; then
+		killall "$DAEMON" 2> /dev/null
+		sleep 2
+		killall -9 "$DAEMON" 2> /dev/null
 	fi
+	rm -f "$PIDFILE"
+	echo "OK"
 }
 
 case "$1" in
