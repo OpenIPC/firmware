@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 int PAN_PINS[4];
@@ -128,6 +129,34 @@ void gpio_config() {
 	pclose(fp);
 }
 
+/*
+ * usleep() cannot deliver sub-tick delays on the kernels these cameras run:
+ * they are HZ=100 with no high-resolution timers, so every sleep rounds up to
+ * a 10ms tick. usleep(1500) waits ~10ms, and 8 micro-steps x 10ms puts a hard
+ * ~80ms floor under every step no matter how small the requested delay is
+ * (measured on Hi3518EV200: 200 steps took 33s at delay 15 and still 18s at
+ * delay 4). Spin on CLOCK_MONOTONIC for anything below a tick instead; moves
+ * are short and bounded, so burning the CPU for their duration is a fair
+ * trade, and longer delays still go to usleep so we do not spin needlessly.
+ */
+void delay_us(long us) {
+	if (us >= 10000) {
+		usleep(us);
+		return;
+	}
+
+	struct timespec start, now;
+	clock_gettime(CLOCK_MONOTONIC, &start);
+	long target = us * 1000;
+	for (;;) {
+		clock_gettime(CLOCK_MONOTONIC, &now);
+		long elapsed = (now.tv_sec - start.tv_sec) * 1000000000L + (now.tv_nsec - start.tv_nsec);
+		if (elapsed >= target) {
+			return;
+		}
+	}
+}
+
 void axis_run(const int pins[4], int level, int steps, int delay) {
 	int remaining = abs(steps);
 	if (remaining == 0) {
@@ -146,7 +175,7 @@ void axis_run(const int pins[4], int level, int steps, int delay) {
 			gpio_set(pins[i], seq[micro][i]);
 		}
 
-		usleep(delay);
+		delay_us(delay);
 		if (++micro >= 8) {
 			micro = 0;
 			--remaining;
