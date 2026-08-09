@@ -28,6 +28,11 @@ stop() {
 		killall "$DAEMON" 2> /dev/null
 		sleep 2
 		killall -9 "$DAEMON" 2> /dev/null
+		sleep 1
+	fi
+	if pidof "$DAEMON" > /dev/null 2>&1; then
+		echo "FAIL"
+		return 1
 	fi
 	rm -f "$PIDFILE"
 	echo "OK"
@@ -39,7 +44,7 @@ case "$1" in
 		;;
 
 	restart)
-		stop
+		stop || exit 1
 		sleep 3
 		start
 		;;
