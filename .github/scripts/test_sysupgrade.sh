@@ -64,6 +64,7 @@ sed -e 's|grep "GITHUB_VERSION" "$1/etc/os-release"|grep "GITHUB_VERSION" "${1:-
     -e "s|/proc/cmdline|@SB@/proc/cmdline|g" \
     -e "s|/proc/sys/vm/drop_caches|@SB@/tmp/drop_caches|g" \
     -e "s|/etc/init.d/|@SB@/etc/init.d/|g" \
+    -e "s|/bin/busybox|@SB@/bin/busybox|g" \
     -e "s|@OSRELEASE@|/etc/os-release|g" \
     -e "s|@SB@|$SB|g" \
     "$SRC" > "$SB/sysupgrade"
@@ -110,6 +111,10 @@ stub killall    'exit 0'
 stub ntpd       'exit 0'
 stub curl       'exit 0'
 stub umount     'exit 0'
+# Logs so ordering can be asserted, and fails by default: an unprivileged test
+# host cannot really pivot, and the fallback is the safety property that matters
+# most here (a camera that cannot build a ramfs must still upgrade).
+stub pivot_root 'echo "pivot_root $*" >> "$FLASH_LOG"; exit ${STUB_PIVOT_RC:-1}'
 stub losetup    'case "$1" in -f) echo /dev/loop0;; *) exit 0;; esac'
 
 # download_firmware runs `md5sum -s -c`. -s (silent) is a busybox extension; GNU
@@ -150,6 +155,15 @@ exit 0'
 stub mount '
 [ $# -eq 0 ] && exit 0
 target=${!#}
+# STUB_MOUNT models the VERIFY-mount (a squashfs image over a loop device). The
+# ramfs pivot mounts tmpfs and relocates existing mounts; those are a different
+# operation and must not inherit the fault being injected, or the hang case
+# wedges before the code under test is even reached.
+for a in "$@"; do
+    case "$a" in
+        move|tmpfs|--move|-M) exit 0 ;;
+    esac
+done
 case "${STUB_MOUNT:-ok}" in
     ok)
         mkdir -p "$target/etc"
@@ -225,7 +239,8 @@ run() {
     : > "$SB/tmp/flash.log"
     OUT=$(cd "$SB" && env PATH="$SB/bin:$PATH" \
         HASERLVER=1 FLASH_LOG="$SB/tmp/flash.log" mount_wait="${MOUNT_WAIT:-3}" \
-        abort_wait=0 \
+        abort_wait=0 RAM_ROOT="$SB/ram" \
+        STUB_PIVOT_RC="${STUB_PIVOT_RC:-1}" \
         STUB_MOUNT="${STUB_MOUNT:-ok}" STUB_VENDOR="${STUB_VENDOR:-sigmastar}" \
         STUB_SOC="${STUB_SOC:-ssc338q}" \
         STUB_IMG_SOC="${STUB_IMG_SOC:-ssc338q}" \
@@ -245,7 +260,8 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
-    unset STUB_FLASHCP_FAIL
+    unset STUB_FLASHCP_FAIL STUB_PIVOT_RC
+    rm -rf "$SB/ram"
     rm -f "$SB"/tmp/*.ssc338q "$SB"/tmp/firmware.bin.* "$SB"/tmp/*.tgz "$SB"/tmp/*.md5sum
     make_uimage "$SB/tmp/uImage.ssc338q" ssc338q
     make_rootfs "$SB/tmp/rootfs.squashfs.ssc338q"
@@ -736,13 +752,59 @@ fi
 
 # ---------------------------------------------------------------------------
 echo
+echo "=== Part 1e: flashing from a ramfs (majestic-webui issue #120) ==="
+
+# flashcp rewrites the partition backing the live squashfs, so from the first
+# write onwards any rootfs page that is not resident reads back as the new image
+# at a stale offset. The reboot is a fork+exec of busybox FROM that partition, so
+# on a small camera it fails with EIO and the box never reboots -- it just stops,
+# needing a power cycle. Everything after the first write therefore has to run
+# from RAM.
+reset_env
+run -z --kernel="$K" --rootfs="$R"
+pline=$(grep -n "pivot_root" "$SB/tmp/flash.log" | head -1 | cut -d: -f1)
+fline=$(grep -n "flashcp"    "$SB/tmp/flash.log" | head -1 | cut -d: -f1)
+if [ -n "$pline" ] && [ -n "$fline" ] && [ "$pline" -lt "$fline" ]; then
+    ok "the ramfs pivot is attempted before the first write"
+else
+    bad "pivot must be attempted before any write (pivot=$pline first-write=$fline)"
+fi
+
+# ...but a camera that cannot build one must still upgrade. The pivot_root stub
+# fails by default, so this run took the fallback.
+if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && flashed /dev/mtd3 && rebooted; then
+    ok "a failed pivot falls back to flashing in place"
+else
+    bad "failed pivot -> expected both flashed and a reboot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# The fallback path is the one that still has to reboot off the rewritten rootfs,
+# so it lines up the least fragile reboot it can rather than assuming busybox
+# will still be readable.
+if printf '%s' "$OUT" | grep -q "Reboot path:"; then
+    ok "the fallback reports which reboot primitive it will use"
+else
+    bad "the in-place fallback must prepare (and name) a reboot primitive"
+fi
+
+# The escape hatch for board bring-up.
+reset_env
+run -z --kernel="$K" --rootfs="$R" --no_ramfs
+if ! grep -q "pivot_root" "$SB/tmp/flash.log" && flashed /dev/mtd3 && rebooted; then
+    ok "--no_ramfs skips the pivot and flashes in place"
+else
+    bad "--no_ramfs -> expected no pivot but a normal flash, log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# ---------------------------------------------------------------------------
+echo
 echo "=== Part 2: invariants in $SRC ==="
 
 # An option named in a user-facing message must exist in the parser.
 # --connect-timeout and --speed-limit/--speed-time are curl's, not ours.
 for opt in $(grep -oE '\-\-[a-z_]+' "$SRC" | sort -u); do
     case "$opt" in
-        --force_*|--wipe_overlay|--no_reboot|--no_update|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--connect*|--speed*) continue ;;
+        --force_*|--wipe_overlay|--no_reboot|--no_update|--no_ramfs|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--connect*|--speed*) continue ;;
     esac
     bad "message references '$opt', which the option parser does not accept"
 done
@@ -779,6 +841,56 @@ grep -q -- '--speed-limit' "$SRC" \
 grep -qE 'curl[^|]*-m 120' "$SRC" \
     && bad "-m 120 is back: any link under ~60 KB/s can never finish a ~7 MB image" \
     || ok "no total-time cap tight enough to fail a slow link"
+
+# A pivot without a re-exec is theatre: pivot_root changes what paths resolve to,
+# but the running shell keeps its text mapped from the old squashfs inode, which
+# is the very thing that has to stop being true.
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q '^\s*exec ' \
+    && ok "enter_ramfs re-execs (pivot alone leaves the shell on the old rootfs)" \
+    || bad "enter_ramfs must exec after pivoting, or the shell stays mapped to the flash"
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'chroot' \
+    && ok "enter_ramfs chroots (pivot_root alone does not move this process's root)" \
+    || bad "enter_ramfs must chroot after pivot_root"
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'ldd ' \
+    && ok "enter_ramfs stages the shared libraries busybox needs" \
+    || bad "busybox is dynamically linked; staging it without its libs gives an unrunnable ramfs"
+for m in /dev /proc /tmp; do
+    awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q "mount -o move $m" \
+        && ok "enter_ramfs carries $m into the new root" \
+        || bad "enter_ramfs must move $m across, or the flash phase loses it"
+done
+case "$(grep -m1 '^RAM_ROOT=' "$SRC")" in
+    *'/tmp'*) bad "RAM_ROOT must not live under /tmp -- /tmp is moved into it" ;;
+    *)        ok  "RAM_ROOT is outside /tmp" ;;
+esac
+grep -q '_ramfs_phase' "$SRC" \
+    && ok "the second phase has an entry point" \
+    || bad "the re-exec'd process has no way to skip to the flash"
+# busybox dispatches on argv[0]; without symlinks the new root has no tools.
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'ln -sf busybox' \
+    && ok "enter_ramfs installs busybox applet symlinks" \
+    || bad "without applet symlinks the pivoted root cannot run od/cut/grep/flashcp"
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'for applet in sh flashcp reboot' \
+    && ok "enter_ramfs refuses to pivot into a root missing the essentials" \
+    || bad "enter_ramfs must verify the staged root can actually flash and reboot"
+# After the pivot the old system is behind /mnt, so exiting without a reboot
+# leaves exactly the corpse this change exists to prevent.
+awk '/^die\(\)/,/^}/' "$SRC" | grep -q '_ramfs_phase' \
+    && ok "die() reboots unconditionally once we are in the ramfs" \
+    || bad "a die() inside the ramfs must reboot; there is no system left to return to"
+# The WebUI keeps majestic alive on purpose: it is the server streaming the log,
+# and SIGQUIT to a majestic already in upgrade mode is a use-after-free
+# (widgetii/majestic#288). The only legitimate one left is free_resources'
+# non---web kill, which frees video memory for the download.
+if [ "$(grep -c 'killall -q -3 majestic' "$SRC")" = "1" ] &&
+    awk '/^free_resources\(\)/,/^}/' "$SRC" | grep -q 'killall -q -3 majestic'; then
+    ok "the only SIGQUIT at majestic is free_resources' non---web one"
+else
+    bad "a SIGQUIT at majestic outside free_resources -- in upgrade mode that is a use-after-free"
+fi
+grep -q "Stopping web server before flashing" "$SRC" \
+    && bad "the pre-flash 'stop the web server' step is back; --web exists to keep it serving" \
+    || ok "no pre-flash stop of the web server"
 
 grep -q -- '--skip_soc' "$SRC" \
     && bad "'--skip_soc' is not an option (the parser takes --force_soc)" \

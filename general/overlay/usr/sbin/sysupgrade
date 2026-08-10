@@ -4,6 +4,10 @@ scr_version=1.0.57
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
+# Where the flash phase is moved to before it starts writing. Deliberately not
+# under /tmp: /tmp is moved into it, and a mount cannot be relocated under
+# itself. See enter_ramfs.
+RAM_ROOT=${RAM_ROOT:-/ram}
 # Seconds the rootfs verify-mount may take before it is treated as unmountable.
 mount_wait=${mount_wait:-45}
 # Seconds the operator gets to Ctrl-C out of a run that will force a reboot.
@@ -52,7 +56,12 @@ die() {
 	#
 	# The caller sees a non-zero exit either way; what changes is that a failure
 	# before the first write now leaves the camera exactly as it found it.
-	if [ "1" = "$flash_touched" ]; then
+	# Once we have pivoted there is no sane system left to hand back: the mount
+	# namespace belongs to the ramfs, so the services, /etc and the rootfs the
+	# operator would return to are all behind /mnt. Exiting without rebooting
+	# from there is the corpse state this whole change exists to avoid, so any
+	# failure in the second phase reboots regardless of what was written.
+	if [ "1" = "$flash_touched" ] || [ "1" = "$_ramfs_phase" ]; then
 		reboot_system
 	else
 		restore_resources
@@ -439,11 +448,158 @@ restore_resources() {
 	return 0
 }
 
+# Everything from the first flash write onwards runs on borrowed time.
+#
+# flashcp rewrites the MTD partition that backs the mounted squashfs rootfs, and
+# the page cache is not invalidated by that (the write goes to the raw /dev/mtdN
+# character device, behind the block layer's back). So the running system keeps
+# working for exactly as long as the pages it needs stay RESIDENT. Any page that
+# has to be faulted back in after the write reads the NEW image at the OLD
+# offset: garbage, or EIO. free_resources() has already dropped the page cache to
+# make room for the download, so on a small camera the eviction is likely rather
+# than theoretical.
+#
+# That is what kills the reboot. `busybox reboot` is a fork+exec of an 867 KB
+# binary that lives on the partition just overwritten, so on a 64 MB board it
+# fails with EIO and the camera never reboots -- it sits there with a corrupt
+# live filesystem until somebody power-cycles it. Reported as
+# OpenIPC/majestic-webui#120; the same mechanism was described for the -x path in
+# #2231, where forcing a reboot fixed the symptom without removing the hazard.
+#
+# Reproduced deterministically without touching MTD: copy the rootfs squashfs to
+# tmpfs, loop-mount it, exec a binary from it (fine), overwrite the backing file
+# (fine -- pages still cached), then drop caches and exec again: I/O error.
+#
+# Two defences, prepared BEFORE the first write while the rootfs is still whole:
+safe_bb=
+safe_sysrq=
+
+prepare_safe_reboot() {
+	# 1. sysrq. `read`, `[` and `echo` are shell builtins, so triggering a reboot
+	#    this way forks nothing, execs nothing and maps nothing -- it is the only
+	#    reboot the flash cannot defeat. Not universal though: some kernel configs
+	#    build without CONFIG_MAGIC_SYSRQ, hence the fallback below.
+	if [ -w /proc/sysrq-trigger ]; then
+		local v=
+		read v < /proc/sys/kernel/sysrq 2>/dev/null
+		# 1 means "everything enabled"; otherwise it is a bitmask and 0x80 is the
+		# bit that allows reboot/poweroff.
+		if [ "1" = "$v" ]; then
+			safe_sysrq=1
+		elif [ -n "$v" ] && [ "$v" -gt 0 ] 2>/dev/null &&
+			[ $((v & 128)) -ne 0 ] 2>/dev/null; then
+			safe_sysrq=1
+		fi
+	fi
+
+	# 2. A copy of busybox in tmpfs is RAM-backed, so exec'ing it never reads the
+	#    flash. Used for the post-write applets too, not just the reboot.
+	if cp /bin/busybox /tmp/busybox 2>/dev/null && chmod +x /tmp/busybox 2>/dev/null; then
+		safe_bb=/tmp/busybox
+	fi
+
+	echo_c 34 "Reboot path: ${safe_sysrq:+sysrq }${safe_bb:+tmpfs-busybox }${safe_sysrq:-${safe_bb:-rootfs-busybox (no fallback available)}}"
+	return 0
+}
+
+# Move the whole flashing phase into a RAM filesystem and re-exec there, so that
+# nothing it needs afterwards lives on the partition it is about to overwrite.
+#
+# pivot_root on its own is not enough: it changes what paths resolve to, but the
+# already-running shell keeps its text mapped from the old squashfs inode. The
+# re-exec is what actually gets us off the doomed partition, which is why this
+# ends in `exec` and why the caller treats a return as failure.
+#
+# On success this never returns. On any failure it returns and the caller
+# flashes in place, exactly as before — a camera that cannot build a ramfs is
+# still better off upgrading than not.
+enter_ramfs() {
+	[ "1" = "$skip_ramfs" ] && return 1
+	command -v pivot_root >/dev/null 2>&1 || return 1
+
+	echo_c 37 "\nMoving the flash phase into RAM"
+
+	# Not under /tmp: /tmp is moved into the new root below, and a mount point
+	# cannot be moved underneath itself.
+	mkdir -p "$RAM_ROOT" 2>/dev/null || return 1
+	mount -t tmpfs -o size=16m tmpfs "$RAM_ROOT" 2>/dev/null || return 1
+	mkdir -p "$RAM_ROOT/bin" "$RAM_ROOT/lib" "$RAM_ROOT/dev" "$RAM_ROOT/proc" \
+		"$RAM_ROOT/tmp" "$RAM_ROOT/sys" "$RAM_ROOT/mnt" 2>/dev/null || return 1
+
+	# busybox is dynamically linked here, so the loader and every library it
+	# names have to come too, or the re-exec dies with the rootfs still mapped.
+	cp /bin/busybox "$RAM_ROOT/bin/" 2>/dev/null || return 1
+	local lib
+	for lib in $(ldd /bin/busybox 2>/dev/null | grep -oE '/[^ ]*\.so[^ ]*'); do
+		[ -f "$lib" ] && cp "$lib" "$RAM_ROOT/lib/" 2>/dev/null
+	done
+	# busybox dispatches on argv[0], so without symlinks every tool the flash
+	# phase reaches for -- od, xxd, cut, grep, losetup, flashcp -- is simply "not
+	# found" once we are in the new root. The first hardware run pivoted
+	# perfectly and then could not find a single one of them.
+	local applet
+	for applet in $("$RAM_ROOT/bin/busybox" --list 2>/dev/null); do
+		ln -sf busybox "$RAM_ROOT/bin/$applet" 2>/dev/null
+	done
+	# --list is a build option; fall back to what the flash phase actually uses.
+	for applet in sh ash awk basename cat cut dd flash_eraseall flashcp grep \
+		head ln losetup ls mkdir mount od printf reboot rm sed sleep sync \
+		tail timeout umount xxd; do
+		[ -e "$RAM_ROOT/bin/$applet" ] || ln -sf busybox "$RAM_ROOT/bin/$applet" 2>/dev/null
+	done
+	# If the essentials are not there, the ramfs is worse than useless: better to
+	# hand back to the in-place path than to pivot into a root with no tools.
+	for applet in sh flashcp reboot; do
+		[ -e "$RAM_ROOT/bin/$applet" ] || return 1
+	done
+	cp "$0" "$RAM_ROOT/sysupgrade" 2>/dev/null || return 1
+	chmod +x "$RAM_ROOT/sysupgrade" 2>/dev/null
+
+	# Carry over the mounts the flash still needs: /dev for the MTD nodes, /proc
+	# for get_device and sysrq, /tmp for the unpacked images. Moving rather than
+	# binding leaves nothing pointing back into the old root.
+	mount -o move /dev "$RAM_ROOT/dev" 2>/dev/null || return 1
+	mount -o move /proc "$RAM_ROOT/proc" 2>/dev/null || return 1
+	mount -o move /tmp "$RAM_ROOT/tmp" 2>/dev/null || return 1
+	mount -o move /sys "$RAM_ROOT/sys" 2>/dev/null
+
+	# State the second phase cannot recompute once the old root is behind it.
+	# NOT _ramfs_phase: that one is set only after the pivot has actually
+	# happened. Setting it here leaks into the fallback, where it would tell
+	# die() to reboot on a failure that never touched flash -- the exact
+	# false-success this script was fixed to stop doing.
+	export model kernel_file rootfs_file kernel_device fw_dev flash_type vendor
+	export update_kernel update_rootfs clear_overlay image_combined exit_update
+	export skip_soc skip_ver skip_reboot skip_md5 web_update silent_update
+	export live_flash_dirty root_on_flash flash_touched services_stopped
+	export kernel_version system_version rootfs_version mount_wait abort_wait
+
+	cd "$RAM_ROOT" || return 1
+	# After this the old root is at ./mnt and still mounted — deliberately: the
+	# MTD partitions are addressed through /dev, not through it.
+	if ! pivot_root . mnt 2>/dev/null; then
+		# Back to where the caller left us: the fallback flashes in place and
+		# must not inherit a working directory inside a half-built ramfs.
+		cd / 2>/dev/null
+		return 1
+	fi
+
+	# Past the pivot there is no way back, so this is where the second phase is
+	# declared -- see the note above the other exports.
+	export _ramfs_phase=1
+
+	# `chroot .` is what actually re-points this process's root; pivot_root only
+	# moved the mounts. Then exec so the shell interpreting the rest is the copy
+	# in RAM, not the one on the flash we are about to erase.
+	exec ./bin/busybox chroot . /bin/busybox ash /sysupgrade
+	return 1
+}
+
 set_progress() {
 	if [ "1" = "$silent_update" ]; then
-		busybox "$@" | awk '{print NR, $1}'
+		"${safe_bb:-busybox}" "$@" | awk '{print NR, $1}'
 	else
-		busybox "$@"
+		"${safe_bb:-busybox}" "$@"
 	fi
 }
 
@@ -629,8 +785,11 @@ Where:
                         rewrites the flash the camera is running from, which
                         no running system survives.
   -z, --no_update       Do not update self.
-      --web             Invoked by the WebUI: keep majestic alive to stream
-                        progress over /ws/upgrade, stop it only before flashing.
+      --no_ramfs        Flash from the rootfs instead of moving into RAM first.
+                        Reinstates the failure this guards against; for board
+                        bring-up only.
+      --web             Invoked by the WebUI: keep majestic alive so it can
+                        stream progress over /ws/upgrade.
   -h, --help            Display this help and exit.
 
 Manifest URL: \$MANIFEST_URL (default: $MANIFEST_URL)
@@ -666,7 +825,44 @@ reboot_system() {
 		echo_c 31 "The running filesystem cannot survive that; only a reboot applies it."
 	fi
 	echo_c 37 "\nUnconditional reboot"
+	# Ordered by how little of the rootfs each one needs. See
+	# prepare_safe_reboot: by now the partition these live on may already read
+	# back as the new image.
+	if [ "1" = "$safe_sysrq" ]; then
+		# Builtins only -- no fork, no exec, no new mapping. `s` syncs (the jffs2
+		# overlay may have dirty pages), `b` reboots immediately. If sysrq is
+		# there but wedged, execution simply continues to the next attempt.
+		echo s > /proc/sysrq-trigger
+		echo b > /proc/sysrq-trigger
+	fi
+	# tmpfs copy first, the rootfs one only as a last resort.
+	[ -n "$safe_bb" ] && "$safe_bb" reboot -d 1 -f
 	busybox reboot -d 1 -f
+}
+
+# Do everything that writes flash, then reboot. A function because it is entered
+# from two places: normally after enter_ramfs has re-exec'd us inside the ramfs,
+# and directly when there is no ramfs to move into.
+flash_and_reboot() {
+if [ "1" = "$image_combined" ]; then
+	# One blob covers both kernel and rootfs; any of -k/-r/--url/--channel
+	# maps to a single combined write.
+	{ [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && do_update_firmware
+else
+	# Verify the rootfs BEFORE the first write. The kernel is flashed first, and
+	# this check used to live inside do_update_rootfs — so a rootfs that failed
+	# verification was only ever discovered once the kernel had already been
+	# committed, leaving a half-upgraded device: new kernel, old rootfs, and no
+	# way back except a manual flash. Checking first means a failure costs nothing.
+	[ "1" = "$update_rootfs" ] && verify_rootfs "$rootfs_file"
+	[ "1" = "$update_kernel" ] && do_update_kernel "$kernel_file"
+	[ "1" = "$update_rootfs" ] && do_update_rootfs "$rootfs_file"
+fi
+[ "1" = "$clear_overlay" ] && do_wipe_overlay
+
+reboot_system
+
+exit 0
 }
 
 for i in "$@"; do
@@ -760,6 +956,14 @@ for i in "$@"; do
 			shift
 			;;
 
+		--no_ramfs)
+			# Escape hatch: flash from the rootfs the old way. For bringing up a
+			# board where the pivot itself is suspect — it gives back the failure
+			# mode this option exists to avoid, so it is not a general-purpose flag.
+			skip_ramfs=1
+			shift
+			;;
+
 		-z | --no_update)
 			skip_selfupdate=1
 			shift
@@ -786,6 +990,16 @@ for i in "$@"; do
 			;;
 	esac
 done
+
+# Second phase of a ramfs upgrade. enter_ramfs re-exec'd us with no arguments
+# inside the new root, so everything before the flash — probing, download,
+# verification, stopping services — has already happened in the process that
+# pivoted us here, and its results arrived in the environment. Go straight to
+# the writes; flash_and_reboot never returns.
+if [ "1" = "$_ramfs_phase" ]; then
+	echo_c 34 "Flashing from RAM (pid $$)"
+	flash_and_reboot
+fi
 
 print_sysinfo
 
@@ -845,31 +1059,8 @@ fi
 trap '' HUP INT TERM PIPE
 echo_c 37 "\nProtected: flashing continues even if this terminal disconnects."
 
-# --web: stop majestic now (the web server that streamed progress until here).
-# The browser switches to "rebooting" when its /ws/upgrade socket closes; this
-# detached sysupgrade keeps flashing (setsid + the trap above) and reboots.
-if [ "1" = "$web_update" ]; then
-	echo_c 37 "Stopping web server before flashing"
-	killall -q -3 majestic
-	sleep 1
-fi
-
-if [ "1" = "$image_combined" ]; then
-	# One blob covers both kernel and rootfs; any of -k/-r/--url/--channel
-	# maps to a single combined write.
-	{ [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && do_update_firmware
-else
-	# Verify the rootfs BEFORE the first write. The kernel is flashed first, and
-	# this check used to live inside do_update_rootfs — so a rootfs that failed
-	# verification was only ever discovered once the kernel had already been
-	# committed, leaving a half-upgraded device: new kernel, old rootfs, and no
-	# way back except a manual flash. Checking first means a failure costs nothing.
-	[ "1" = "$update_rootfs" ] && verify_rootfs "$rootfs_file"
-	[ "1" = "$update_kernel" ] && do_update_kernel "$kernel_file"
-	[ "1" = "$update_rootfs" ] && do_update_rootfs "$rootfs_file"
-fi
-[ "1" = "$clear_overlay" ] && do_wipe_overlay
-
-reboot_system
-
-exit 0
+# On success this never comes back — the rest runs in the re-exec'd process
+# inside the ramfs. If the camera could not give us one, fall back to flashing
+# in place and at least line up the least fragile reboot available.
+enter_ramfs || prepare_safe_reboot
+flash_and_reboot
