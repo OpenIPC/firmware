@@ -522,7 +522,11 @@ enter_ramfs() {
 	# Not under /tmp: /tmp is moved into the new root below, and a mount point
 	# cannot be moved underneath itself.
 	mkdir -p "$RAM_ROOT" 2>/dev/null || return 1
-	mount -t tmpfs -o size=16m tmpfs "$RAM_ROOT" 2>/dev/null || return 1
+	# A cap, not a reservation: the staged root is busybox plus its libraries and
+	# the script, around 1.5 MB. Kept small because the cameras that need this
+	# most have 34 MB of RAM in total, and /tmp (holding the unpacked image) is
+	# a separate mount that does not draw on this budget.
+	mount -t tmpfs -o size=8m tmpfs "$RAM_ROOT" 2>/dev/null || return 1
 	mkdir -p "$RAM_ROOT/bin" "$RAM_ROOT/lib" "$RAM_ROOT/dev" "$RAM_ROOT/proc" \
 		"$RAM_ROOT/tmp" "$RAM_ROOT/sys" "$RAM_ROOT/mnt" 2>/dev/null || return 1
 
