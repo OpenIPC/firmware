@@ -17,6 +17,7 @@ jobs:
       short_sha:    ${{ steps.gate.outputs.short_sha }}
       build_id:     ${{ steps.gate.outputs.build_id }}
       built_at:     ${{ steps.gate.outputs.built_at }}
+      webui_digest: ${{ steps.gate.outputs.webui_digest }}
     steps:
       - uses: actions/checkout@v4
       - id: gate
@@ -27,19 +28,34 @@ jobs:
           SHORT=$(git rev-parse --short HEAD)
           BUILD_ID="nightly-$(date -u +%Y%m%d)-${SHORT}"
           BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          PREV=$(gh release view nightly --json body -q .body 2>/dev/null \
-                  | sed -n 's/^sha=//p' | head -1 || true)
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$PREV" = "$HEAD" ]; then
-            echo "Skip: HEAD ($HEAD) already published as the latest nightly."
+          NOTES_PREV=$(gh release view nightly --json body -q .body 2>/dev/null || true)
+          PREV=$(printf '%s\n' "$NOTES_PREV" | sed -n 's/^sha=//p' | head -1)
+          PREV_WEBUI=$(printf '%s\n' "$NOTES_PREV" | sed -n 's/^webui=//p' | head -1)
+
+          # majestic-webui ships as a rolling `dist` release asset, so a WebUI fix
+          # changes what the nightly would contain without ever moving this repo's
+          # HEAD — on a quiet firmware tree the schedule would skip forever and the
+          # fix would never reach an image. Compare the asset's content digest as
+          # well. It is content-addressed, so a re-upload of identical bytes does
+          # not force a pointless rebuild. An empty value (API hiccup, or an asset
+          # with no digest) falls through to building: stale is worse than spare.
+          WEBUI=$(gh api repos/OpenIPC/majestic-webui/releases/tags/dist \
+                    --jq '.assets[]|select(.name=="majestic-webui-dist.tar.gz")|.digest // empty' \
+                    2>/dev/null || true)
+
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$PREV" = "$HEAD" ] \
+             && [ -n "$WEBUI" ] && [ "$PREV_WEBUI" = "$WEBUI" ]; then
+            echo "Skip: HEAD ($HEAD) already published as the latest nightly, majestic-webui dist unchanged ($WEBUI)."
             echo "should_build=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Build: $BUILD_ID (event=${{ github.event_name }}, prev=$PREV)"
+            echo "Build: $BUILD_ID (event=${{ github.event_name }}, prev=$PREV, webui=$WEBUI, prev_webui=$PREV_WEBUI)"
             echo "should_build=true"  >> "$GITHUB_OUTPUT"
           fi
           echo "head_sha=$HEAD"   >> "$GITHUB_OUTPUT"
           echo "short_sha=$SHORT" >> "$GITHUB_OUTPUT"
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
           echo "built_at=$BUILT_AT" >> "$GITHUB_OUTPUT"
+          echo "webui_digest=$WEBUI" >> "$GITHUB_OUTPUT"
 
   buildroot:
     name: Firmware
@@ -424,6 +440,7 @@ jobs:
           HEAD_SHA: ${{ needs.preflight.outputs.head_sha }}
           SHORT_SHA: ${{ needs.preflight.outputs.short_sha }}
           BUILT_AT: ${{ needs.preflight.outputs.built_at }}
+          WEBUI_DIGEST: ${{ needs.preflight.outputs.webui_digest }}
         run: |
           set -euo pipefail
 
@@ -465,7 +482,13 @@ jobs:
             done
           }
 
+          # `webui=` is what the next preflight diffs against to notice a WebUI-only
+          # change; drop the line rather than record an empty value, so a failed
+          # lookup reads as "unknown" and builds instead of matching a future empty.
           NOTES=$(printf 'sha=%s\nshort=%s\nbuilt_at=%s\n' "$HEAD_SHA" "$SHORT_SHA" "$BUILT_AT")
+          if [ -n "$WEBUI_DIGEST" ]; then
+            NOTES=$(printf '%s\nwebui=%s\n' "$NOTES" "$WEBUI_DIGEST")
+          fi
 
           # Full asset set (firmware images + sizes/kconfig sidecars) → dated.
           mapfile -t DATED < <(find dist -maxdepth 1 -type f | sort)
