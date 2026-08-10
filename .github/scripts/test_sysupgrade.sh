@@ -648,6 +648,37 @@ fi
 # from there must still reboot. The combined-image path is the one that actually
 # reaches die() after a write (`flashcp ... || die`); on the split path a failed
 # flashcp is not fatal at all, which is why this uses a combined image.
+# free_resources() stops syslog/klogd/ntpd/cron before the download, because
+# dropping the page cache is how a small camera finds the RAM to unpack the
+# image. The reboot used to hide that -- everything came back on the way up.
+# Now that a pre-flash failure stays up, it has to be undone explicitly, or a
+# refused upgrade quietly costs the user their logging and their cron jobs.
+reset_env
+STUB_IMG_SOC=gk7205v300
+run -z --rootfs="$R"
+if printf '%s' "$OUT" | grep -q "Restarting the services stopped for the upgrade"; then
+    ok "pre-write refusal restarts what free_resources stopped"
+else
+    bad "pre-write refusal left services down; the camera stays up but degraded"
+fi
+
+# A lock this run did not take belongs to somebody else. die() is reachable
+# before create_lock, so removing the lock unconditionally there would unlink a
+# CONCURRENT sysupgrade's lock and let two upgrades run at once. run() clears
+# the lock first, so plant it afterwards and drive the script directly.
+reset_env
+: > "$SB/tmp/sysupgrade.lock"
+OUT=$(cd "$SB" && env PATH="$SB/bin:$PATH" HASERLVER=1 \
+    FLASH_LOG="$SB/tmp/flash.log" abort_wait=0 STUB_IMG_SOC=gk7205v300 \
+    sh "$SB/sysupgrade" -z --rootfs="$R" 2>&1)
+RC=$?
+if [ -f "$SB/tmp/sysupgrade.lock" ] && [ "$RC" -ne 0 ]; then
+    ok "a lock this run did not create is left alone"
+else
+    bad "a foreign lock was removed (rc=$RC); mutual exclusion is defeated"
+fi
+rm -f "$SB/tmp/sysupgrade.lock"
+
 # The whole-blob layout is the one that reaches die() after a write
 # (`flashcp ... || die`); on the split path a failed flashcp is not fatal at all.
 # Same setup as the -x case above, minus the -x: the default path must reboot
@@ -706,9 +737,15 @@ done
 awk '/^die\(\)/,/^}/' "$SRC" | grep -q 'flash_touched' \
     && ok "die() gates the reboot on whether flash was touched" \
     || bad "die() reboots unconditionally again -- a refused upgrade will read as a successful one"
-awk '/^die\(\)/,/^}/' "$SRC" | grep -q "rm -f \$LOCK_FILE" \
-    && ok "die() releases the lock on the path where it does not reboot" \
-    || bad "die() must remove $LOCK_FILE when it returns instead of rebooting"
+awk '/^die\(\)/,/^}/' "$SRC" | grep -q 'lock_owned.*rm -f \$LOCK_FILE' \
+    && ok "die() releases the lock, but only one this run owns" \
+    || bad "die() must remove \$LOCK_FILE when it does not reboot -- and only if lock_owned"
+awk '/^create_lock\(\)/,/^}/' "$SRC" | grep -q 'lock_owned=1' \
+    && ok "create_lock records ownership" \
+    || bad "create_lock must set lock_owned, or die() can never release its own lock"
+awk '/^die\(\)/,/^}/' "$SRC" | grep -q 'restore_resources' \
+    && ok "die() restarts the services free_resources stopped" \
+    || bad "a pre-flash die() leaves syslog/klogd/ntpd/cron stopped on a camera that stays up"
 grep -q 'mark_flash_touched' "$SRC" \
     && ok "the flash-touched marker exists" \
     || bad "mark_flash_touched is gone; die() cannot tell a pre-write failure apart"

@@ -55,7 +55,12 @@ die() {
 	if [ "1" = "$flash_touched" ]; then
 		reboot_system
 	else
-		rm -f $LOCK_FILE
+		restore_resources
+		# Only ever remove a lock this process owns. die() is reachable before
+		# create_lock has run (get_system_info, called from print_sysinfo, can
+		# raise one), and an unconditional rm there would unlink a CONCURRENT
+		# sysupgrade's lock and let two upgrades run at once.
+		[ "1" = "$lock_owned" ] && rm -f $LOCK_FILE
 	fi
 	exit 1
 }
@@ -382,6 +387,7 @@ free_resources() {
 	/etc/init.d/S49ntpd stop
 	/etc/init.d/S02klogd stop
 	/etc/init.d/S01syslogd stop
+	services_stopped=1
 	sleep 1
 
 	sync
@@ -392,6 +398,35 @@ free_resources() {
 	free -h
 	echo_c 34 "\nProcesses:"
 	ps | grep -v '\['
+}
+
+# Undo free_resources for a run that ends without rebooting.
+#
+# free_resources runs before the download, because dropping the page cache is
+# how a small camera finds the RAM to unpack the image -- so by the time a
+# download or checksum fails, syslog, klogd, ntpd and cron are already stopped.
+# The reboot used to hide that: everything came back on the way up. Now that a
+# pre-flash failure leaves the camera running, it has to be undone explicitly,
+# or a refused upgrade silently costs the user their logging and their cron jobs
+# until somebody power-cycles the camera.
+#
+# Started low-number-first, the reverse of the order they were stopped in.
+restore_resources() {
+	[ "1" = "$services_stopped" ] || return 0
+	echo_c 37 "\nRestarting the services stopped for the upgrade"
+	local s
+	for s in S01syslogd S02klogd S49ntpd S60crond S99rc.local; do
+		[ -x /etc/init.d/$s ] && /etc/init.d/$s start >/dev/null 2>&1
+	done
+	# A non---web run SIGQUITs majestic to free video memory for the download.
+	# Under --web it was left alive to stream this log. Check whether it is
+	# actually gone rather than trusting either of those: the kill is best-effort
+	# (observed ignored on a hi3516av300 build), and starting a second daemon on
+	# top of a live one would be worse than leaving video down.
+	[ -x /etc/init.d/S95majestic ] && ! pidof majestic >/dev/null 2>&1 &&
+		/etc/init.d/S95majestic start >/dev/null 2>&1
+	services_stopped=
+	return 0
 }
 
 set_progress() {
@@ -467,6 +502,8 @@ create_lock() {
 		exit 1
 	fi
 	touch $LOCK_FILE
+	# Ownership, so die() can tell "my lock" from "somebody else's".
+	lock_owned=1
 }
 
 get_device() {
@@ -599,6 +636,10 @@ reboot_system() {
 		echo_c 33 "\nYou asked me not to reboot, so I won't."
 		echo_c 31 "Although a reboot is required to apply the changes."
 		echo_c 37 "Please reboot the camera manually whenever possible."
+		# Same reasoning as die(): this run stays up, so what free_resources
+		# stopped has to come back rather than wait for a reboot that was
+		# explicitly declined.
+		restore_resources
 		rm $LOCK_FILE
 		return 0
 	fi
