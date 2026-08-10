@@ -74,6 +74,10 @@ grep -q '@SB@\|@OSRELEASE@' "$SB/sysupgrade" \
 for s in S99rc.local S60crond S49ntpd S02klogd S01syslogd; do
     printf '#!/bin/sh\nexit 0\n' > "$SB/etc/init.d/$s"; chmod +x "$SB/etc/init.d/$s"
 done
+# This one logs: whether majestic is put back is a behaviour worth asserting,
+# not just a service that had to exist for the script not to trip over it.
+printf '#!/bin/sh\necho "S95majestic $1" >> "$FLASH_LOG"\nexit 0\n' \
+    > "$SB/etc/init.d/S95majestic"; chmod +x "$SB/etc/init.d/S95majestic"
 
 set_mtd() { cat > "$SB/proc/mtd"; }
 
@@ -662,6 +666,17 @@ else
     bad "pre-write refusal left services down; the camera stays up but degraded"
 fi
 
+# majestic must be RESTARTED, not started. free_resources' `killall -3` is not a
+# terminate -- SIGQUIT makes majestic release the SDK and keep serving -- so it
+# is still running, just with no video pipeline and no way back in place. Under
+# --web it is worse: majestic latched itself into upgrade mode and never clears
+# the flag.
+if grep -q "S95majestic restart" "$SB/tmp/flash.log"; then
+    ok "pre-write refusal restarts majestic (a gutted daemon needs more than start)"
+else
+    bad "majestic left running without its SDK; video stays down until a power cycle"
+fi
+
 # A lock this run did not take belongs to somebody else. die() is reachable
 # before create_lock, so removing the lock unconditionally there would unlink a
 # CONCURRENT sysupgrade's lock and let two upgrades run at once. run() clears
@@ -746,6 +761,9 @@ awk '/^create_lock\(\)/,/^}/' "$SRC" | grep -q 'lock_owned=1' \
 awk '/^die\(\)/,/^}/' "$SRC" | grep -q 'restore_resources' \
     && ok "die() restarts the services free_resources stopped" \
     || bad "a pre-flash die() leaves syslog/klogd/ntpd/cron stopped on a camera that stays up"
+awk '/^restore_resources\(\)/,/^}/' "$SRC" | grep -q 'S95majestic restart' \
+    && ok "restore_resources restarts majestic rather than starting it" \
+    || bad "SIGQUIT leaves majestic running without an SDK; 'start' is a no-op, it needs 'restart'"
 grep -q 'mark_flash_touched' "$SRC" \
     && ok "the flash-touched marker exists" \
     || bad "mark_flash_touched is gone; die() cannot tell a pre-write failure apart"
