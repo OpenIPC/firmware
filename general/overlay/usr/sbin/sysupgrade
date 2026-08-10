@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.56
+scr_version=1.0.57
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -39,7 +39,29 @@ echo_c() {
 
 die() {
 	echo_c 31 "$1 Aborting."
-	reboot_system
+	# Only reboot once flash has actually been touched. Past that point the
+	# partition is already erased and rebooting into whatever landed is the
+	# least-bad option; before it, nothing on the camera has changed, so a reboot
+	# fixes nothing and costs plenty:
+	#
+	#   - it destroys /tmp, and with it the log that says what went wrong;
+	#   - to anything watching the camera come back it is indistinguishable from
+	#     a successful upgrade. The WebUI drives this over /ws/upgrade and had no
+	#     other signal, so a download that timed out was reported to the user as
+	#     an update that worked (majestic-webui issue #120).
+	#
+	# The caller sees a non-zero exit either way; what changes is that a failure
+	# before the first write now leaves the camera exactly as it found it.
+	if [ "1" = "$flash_touched" ]; then
+		reboot_system
+	else
+		restore_resources
+		# Only ever remove a lock this process owns. die() is reachable before
+		# create_lock has run (get_system_info, called from print_sysinfo, can
+		# raise one), and an unconditional rm there would unlink a CONCURRENT
+		# sysupgrade's lock and let two upgrades run at once.
+		[ "1" = "$lock_owned" ] && rm -f $LOCK_FILE
+	fi
 	exit 1
 }
 
@@ -84,6 +106,7 @@ do_update_kernel() {
 			compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 		fi
 	fi
+	mark_flash_touched
 	set_progress flashcp -v "$x" "$kernel_device"
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
 }
@@ -331,7 +354,17 @@ download_firmware() {
 		# stuck — over /ws/upgrade this also gives the WebUI something to stream
 		# (issue #120). `-s` (silent_update) opts back out for a quiet console run.
 		[ "1" = "$silent_update" ] && dl_meter=-s || dl_meter=-#
-		curl --connect-timeout 30 $dl_meter -k -m 120 -L "$url" -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+		# Bound the download on THROUGHPUT, not on total time. `-m 120` capped the
+		# whole transfer at two minutes, which is not a timeout but a speed
+		# requirement: a camera on a link slower than ~60 KB/s could never finish
+		# a ~7 MB image, and curl cut it off mid-stream with no hint that slowness
+		# was the reason (majestic-webui issue #120 — the WebUI log froze partway
+		# through the progress bar). --speed-limit/--speed-time instead give up
+		# only once the transfer has genuinely stalled, so a slow-but-progressing
+		# link completes. -m stays as a far outer backstop against a trickle that
+		# never trips the stall check.
+		curl --connect-timeout 30 $dl_meter -k --speed-limit 1024 --speed-time 60 -m 1800 \
+			-L "$url" -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	fi
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
@@ -354,6 +387,7 @@ free_resources() {
 	/etc/init.d/S49ntpd stop
 	/etc/init.d/S02klogd stop
 	/etc/init.d/S01syslogd stop
+	services_stopped=1
 	sleep 1
 
 	sync
@@ -364,6 +398,45 @@ free_resources() {
 	free -h
 	echo_c 34 "\nProcesses:"
 	ps | grep -v '\['
+}
+
+# Undo free_resources for a run that ends without rebooting.
+#
+# free_resources runs before the download, because dropping the page cache is
+# how a small camera finds the RAM to unpack the image -- so by the time a
+# download or checksum fails, syslog, klogd, ntpd and cron are already stopped.
+# The reboot used to hide that: everything came back on the way up. Now that a
+# pre-flash failure leaves the camera running, it has to be undone explicitly,
+# or a refused upgrade silently costs the user their logging and their cron jobs
+# until somebody power-cycles the camera.
+#
+# Started low-number-first, the reverse of the order they were stopped in.
+restore_resources() {
+	[ "1" = "$services_stopped" ] || return 0
+	echo_c 37 "\nRestarting the services stopped for the upgrade"
+	local s
+	for s in S01syslogd S02klogd S49ntpd S60crond S99rc.local; do
+		[ -x /etc/init.d/$s ] && /etc/init.d/$s start >/dev/null 2>&1
+	done
+	# majestic needs restarting, not starting: it is still running, just gutted.
+	#
+	# `killall -3 majestic` above is not a terminate. SIGQUIT is majestic's
+	# "release the SDK and keep serving" signal -- signal_quit_cb calls exit_sdk
+	# and returns, unlike SIGINT/SIGTERM which also break the event loop. So the
+	# process survives with the same pid, no video pipeline, and sdk_state NULL.
+	# Nothing brings that back in place: the SIGHUP reload early-returns on a
+	# NULL sdk_state. Under --web there is no kill at all, but majestic put
+	# ITSELF into upgrade mode before spawning us, and its g_upgrade_in_progress
+	# flag is never cleared -- so that camera would stay video-less and
+	# half-served until somebody power-cycled it.
+	#
+	# Under --web this also drops the /ws/upgrade socket streaming this log.
+	# That is fine: "Aborting." has already gone out, and the browser treats a
+	# close after an abort as final rather than as a reboot.
+	[ -x /etc/init.d/S95majestic ] &&
+		/etc/init.d/S95majestic restart >/dev/null 2>&1
+	services_stopped=
+	return 0
 }
 
 set_progress() {
@@ -439,6 +512,8 @@ create_lock() {
 		exit 1
 	fi
 	touch $LOCK_FILE
+	# Ownership, so die() can tell "my lock" from "somebody else's".
+	lock_owned=1
 }
 
 get_device() {
@@ -452,7 +527,17 @@ get_device() {
 # writes, so an interrupted or failed write is exactly as fatal as a completed
 # one — and do_update_firmware's `|| die` reaches reboot_system by that path.
 mark_live_flash_dirty() {
+	mark_flash_touched
 	[ "1" = "$root_on_flash" ] && live_flash_dirty=1
+	return 0
+}
+
+# Record that flash has been erased or written, so die() knows a reboot is now
+# the least-bad option. Broader than live_flash_dirty: it also covers the kernel
+# partition, which is not mounted (so it never forces a reboot on the success
+# path) but is just as much a point of no return once flashcp has started on it.
+mark_flash_touched() {
+	flash_touched=1
 	return 0
 }
 
@@ -561,6 +646,10 @@ reboot_system() {
 		echo_c 33 "\nYou asked me not to reboot, so I won't."
 		echo_c 31 "Although a reboot is required to apply the changes."
 		echo_c 37 "Please reboot the camera manually whenever possible."
+		# Same reasoning as die(): this run stays up, so what free_resources
+		# stopped has to come back rather than wait for a reboot that was
+		# explicitly declined.
+		restore_resources
 		rm $LOCK_FILE
 		return 0
 	fi

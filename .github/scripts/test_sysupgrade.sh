@@ -74,6 +74,10 @@ grep -q '@SB@\|@OSRELEASE@' "$SB/sysupgrade" \
 for s in S99rc.local S60crond S49ntpd S02klogd S01syslogd; do
     printf '#!/bin/sh\nexit 0\n' > "$SB/etc/init.d/$s"; chmod +x "$SB/etc/init.d/$s"
 done
+# This one logs: whether majestic is put back is a behaviour worth asserting,
+# not just a service that had to exist for the script not to trip over it.
+printf '#!/bin/sh\necho "S95majestic $1" >> "$FLASH_LOG"\nexit 0\n' \
+    > "$SB/etc/init.d/S95majestic"; chmod +x "$SB/etc/init.d/S95majestic"
 
 set_mtd() { cat > "$SB/proc/mtd"; }
 
@@ -609,6 +613,112 @@ else
     bad "-x + pre-write refusal -> expected no write and no reboot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
 
+# ---------------------------------------------------------------------------
+echo
+echo "=== Part 1c: die() before the first write (majestic-webui issue #120) ==="
+
+# The headline case. Without -x, a failure before anything reached flash used to
+# reboot anyway, because die() called reboot_system unconditionally. Over
+# /ws/upgrade that reboot is the ONLY thing the WebUI can observe, so it read a
+# refused upgrade as a successful one and sent the user to a status page showing
+# the version they already had.
+reset_env
+STUB_IMG_SOC=gk7205v300
+run -z --rootfs="$R"
+if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted; then
+    ok "pre-write refusal -> no reboot (nothing changed, so nothing to reboot into)"
+else
+    bad "pre-write refusal -> expected no write and no reboot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# ...and it must say so, because that string is what the WebUI watches for to
+# stop waiting for a reboot that is never coming.
+if printf '%s' "$OUT" | grep -q "Aborting\."; then
+    ok "pre-write refusal still prints 'Aborting.'"
+else
+    bad "pre-write refusal must print 'Aborting.' so a GUI can tell it apart from a flash"
+fi
+
+# The reboot used to double as lock cleanup: /tmp went with it. Now that we stay
+# up, die() has to release the lock itself or the next attempt is refused.
+if [ ! -f "$SB/tmp/sysupgrade.lock" ]; then
+    ok "pre-write refusal releases the lock (a retry is possible)"
+else
+    bad "pre-write refusal left $SB/tmp/sysupgrade.lock behind; the next run would be refused"
+fi
+
+# The other half, and the case the fix must not regress: once flashcp has
+# started, the partition is erased whether or not the write finished, so a die()
+# from there must still reboot. The combined-image path is the one that actually
+# reaches die() after a write (`flashcp ... || die`); on the split path a failed
+# flashcp is not fatal at all, which is why this uses a combined image.
+# free_resources() stops syslog/klogd/ntpd/cron before the download, because
+# dropping the page cache is how a small camera finds the RAM to unpack the
+# image. The reboot used to hide that -- everything came back on the way up.
+# Now that a pre-flash failure stays up, it has to be undone explicitly, or a
+# refused upgrade quietly costs the user their logging and their cron jobs.
+reset_env
+STUB_IMG_SOC=gk7205v300
+run -z --rootfs="$R"
+if printf '%s' "$OUT" | grep -q "Restarting the services stopped for the upgrade"; then
+    ok "pre-write refusal restarts what free_resources stopped"
+else
+    bad "pre-write refusal left services down; the camera stays up but degraded"
+fi
+
+# majestic must be RESTARTED, not started. free_resources' `killall -3` is not a
+# terminate -- SIGQUIT makes majestic release the SDK and keep serving -- so it
+# is still running, just with no video pipeline and no way back in place. Under
+# --web it is worse: majestic latched itself into upgrade mode and never clears
+# the flag.
+if grep -q "S95majestic restart" "$SB/tmp/flash.log"; then
+    ok "pre-write refusal restarts majestic (a gutted daemon needs more than start)"
+else
+    bad "majestic left running without its SDK; video stays down until a power cycle"
+fi
+
+# A lock this run did not take belongs to somebody else. die() is reachable
+# before create_lock, so removing the lock unconditionally there would unlink a
+# CONCURRENT sysupgrade's lock and let two upgrades run at once. run() clears
+# the lock first, so plant it afterwards and drive the script directly.
+reset_env
+: > "$SB/tmp/sysupgrade.lock"
+OUT=$(cd "$SB" && env PATH="$SB/bin:$PATH" HASERLVER=1 \
+    FLASH_LOG="$SB/tmp/flash.log" abort_wait=0 STUB_IMG_SOC=gk7205v300 \
+    sh "$SB/sysupgrade" -z --rootfs="$R" 2>&1)
+RC=$?
+if [ -f "$SB/tmp/sysupgrade.lock" ] && [ "$RC" -ne 0 ]; then
+    ok "a lock this run did not create is left alone"
+else
+    bad "a foreign lock was removed (rc=$RC); mutual exclusion is defeated"
+fi
+rm -f "$SB/tmp/sysupgrade.lock"
+
+# The whole-blob layout is the one that reaches die() after a write
+# (`flashcp ... || die`); on the split path a failed flashcp is not fatal at all.
+# Same setup as the -x case above, minus the -x: the default path must reboot
+# from here for the same reason, and this is what the fix must not regress.
+reset_env
+set_mtd <<'EOF'
+dev:    size   erasesize  name
+mtd0: 00040000 00010000 "boot"
+mtd1: 00010000 00010000 "env"
+mtd2: 00700000 00010000 "firmware"
+EOF
+make_combined "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/firmware.bin.ssc338q"
+STUB_FLASHCP_FAIL=1
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && rebooted; then
+    ok "die() after a write started -> still reboots (partial erase is not survivable)"
+else
+    bad "post-write die -> expected a reboot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# ---------------------------------------------------------------------------
+echo
+echo "=== Part 1d: the default path is untouched by all of the above ==="
+
 # The default path must be untouched by all of the above.
 reset_env
 run -z --kernel="$K" --rootfs="$R"
@@ -629,12 +739,47 @@ echo
 echo "=== Part 2: invariants in $SRC ==="
 
 # An option named in a user-facing message must exist in the parser.
+# --connect-timeout and --speed-limit/--speed-time are curl's, not ours.
 for opt in $(grep -oE '\-\-[a-z_]+' "$SRC" | sort -u); do
     case "$opt" in
-        --force_*|--wipe_overlay|--no_reboot|--no_update|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--connect*) continue ;;
+        --force_*|--wipe_overlay|--no_reboot|--no_update|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--connect*|--speed*) continue ;;
     esac
     bad "message references '$opt', which the option parser does not accept"
 done
+# die() must weigh whether flash was touched, not reboot on reflex. Checked in
+# the source as well as behaviourally, because the behavioural cases can only
+# reach a handful of the ~20 die() call sites.
+awk '/^die\(\)/,/^}/' "$SRC" | grep -q 'flash_touched' \
+    && ok "die() gates the reboot on whether flash was touched" \
+    || bad "die() reboots unconditionally again -- a refused upgrade will read as a successful one"
+awk '/^die\(\)/,/^}/' "$SRC" | grep -q 'lock_owned.*rm -f \$LOCK_FILE' \
+    && ok "die() releases the lock, but only one this run owns" \
+    || bad "die() must remove \$LOCK_FILE when it does not reboot -- and only if lock_owned"
+awk '/^create_lock\(\)/,/^}/' "$SRC" | grep -q 'lock_owned=1' \
+    && ok "create_lock records ownership" \
+    || bad "create_lock must set lock_owned, or die() can never release its own lock"
+awk '/^die\(\)/,/^}/' "$SRC" | grep -q 'restore_resources' \
+    && ok "die() restarts the services free_resources stopped" \
+    || bad "a pre-flash die() leaves syslog/klogd/ntpd/cron stopped on a camera that stays up"
+awk '/^restore_resources\(\)/,/^}/' "$SRC" | grep -q 'S95majestic restart' \
+    && ok "restore_resources restarts majestic rather than starting it" \
+    || bad "SIGQUIT leaves majestic running without an SDK; 'start' is a no-op, it needs 'restart'"
+grep -q 'mark_flash_touched' "$SRC" \
+    && ok "the flash-touched marker exists" \
+    || bad "mark_flash_touched is gone; die() cannot tell a pre-write failure apart"
+awk '/^do_update_kernel\(\)/,/^}/' "$SRC" | grep -q 'mark_flash_touched' \
+    && ok "do_update_kernel marks flash touched (not live-dirty, but still final)" \
+    || bad "do_update_kernel must mark flash touched before its write"
+
+# The download is bounded by throughput, not by total elapsed time: -m 120 was a
+# disguised 60 KB/s floor that no slow camera could meet (majestic-webui #120).
+grep -q -- '--speed-limit' "$SRC" \
+    && ok "the download gives up on a stalled transfer, not on a slow one" \
+    || bad "the download must use --speed-limit/--speed-time, not a total-time cap"
+grep -qE 'curl[^|]*-m 120' "$SRC" \
+    && bad "-m 120 is back: any link under ~60 KB/s can never finish a ~7 MB image" \
+    || ok "no total-time cap tight enough to fail a slow link"
+
 grep -q -- '--skip_soc' "$SRC" \
     && bad "'--skip_soc' is not an option (the parser takes --force_soc)" \
     || ok "no reference to the non-existent --skip_soc"
