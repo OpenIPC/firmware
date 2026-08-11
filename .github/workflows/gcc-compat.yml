@@ -15,6 +15,12 @@ on:
 jobs:
   gcc-compat:
     name: GCC ${{matrix.gcc}}
+    # Same guard rail as build.yml's preflight: run where the minutes are
+    # free or explicitly asked for, skip unattended/billed mirror runs.
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
     runs-on: ubuntu-latest
     container:
       image: gcc:${{matrix.gcc}}
