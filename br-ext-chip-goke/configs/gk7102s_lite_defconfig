@@ -3,6 +3,8 @@ BR2_arm=y
 BR2_arm1176jzf_s=y
 BR2_ARM_EABI=y
 
+BR2_TARGET_OPTIMIZATION="-mno-unaligned-access"
+
 # Toolchain
 BR2_TOOLCHAIN_EXTERNAL=y
 BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
