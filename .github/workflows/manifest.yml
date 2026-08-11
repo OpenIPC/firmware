@@ -24,11 +24,16 @@ jobs:
     # platforms that did upload artifacts. enrich_manifest.py reads whatever
     # assets actually exist on the release, so a partial release just shows
     # up with fewer platforms in its `platforms` map.
+    #
+    # First clause: canonical repo only, since a skipped build still completes
+    # and fires workflow_run on a mirror — see build.yml's preflight.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      ((github.event.workflow_run.event == 'schedule' ||
-        github.event.workflow_run.event == 'workflow_dispatch') &&
-       contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion))
+      (github.repository == 'OpenIPC/firmware' ||
+       github.event_name == 'workflow_dispatch') &&
+      (github.event_name == 'workflow_dispatch' ||
+       ((github.event.workflow_run.event == 'schedule' ||
+         github.event.workflow_run.event == 'workflow_dispatch') &&
+        contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion)))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout master (for the script)
