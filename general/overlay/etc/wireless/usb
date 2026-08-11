@@ -17,11 +17,27 @@ if [ "$1" = "rtl8188eu-generic" ]; then
 	exit 0
 fi
 
-# Generic RTL8188FU
+# GK7102 / GK7102S: Wi-Fi power/reset on GPIO9, chip is RTL8188FTV (0bda:f179)
+if [ "$1" = "rtl8188eu-gk7102" ] || [ "$1" = "rtl8188fu-gk7102" ]; then
+	set_gpio 9 0
+	modprobe 8188fu
+	exit 0
+fi
+
+# GK7102 / GK7102S: mainline rtl8xxxu mac80211 backport (fixes WPA2 4-way handshake)
+if [ "$1" = "rtl8xxxu-gk7102" ]; then
+	set_gpio 9 0
+	modprobe mac80211
+	modprobe rtl8xxxu
+	exit 0
+fi
+
+# Generic RTL8188FU (RTL8188FTV 0bda:f179)
 if [ "$1" = "rtl8188fu-generic" ]; then
 	modprobe 8188fu
 	exit 0
 fi
+
 
 # Generic RTL8733BU
 if [ "$1" = "rtl8733bu-generic" ]; then

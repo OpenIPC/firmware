@@ -8,6 +8,13 @@
 # GPIO1_3 -> GPIO11
 # GPIO1_2 -> GPIO10
 
+# on GK7102 / GK7102S (common Chinese boards):
+# IR-Cut: GPIO44 + GPIO39
+# IR LED: GPIO12 (not pulsed here — use: gpio set/clear 12)
+# Sensor reset: GPIO27
+# SD detect: GPIO55 (input)
+# Wi-Fi power/reset: GPIO9
+
 #(normal mode)
 ir_cut_enable() {
   # pin_mux
@@ -70,8 +77,11 @@ else
   elif [ $1 = "gk7205v300" ]; then
     gpio_0=11
     gpio_1=10
+  elif [ $1 = "gk7102" ] || [ $1 = "gk7102s" ]; then
+    gpio_0=44
+    gpio_1=39
   else
-    echo "wrong chipid: $1, please select: gk7205v200 or gk7205v300."
+    echo "wrong chipid: $1, please select: gk7102, gk7102s, gk7205v200 or gk7205v300."
     exit
   fi
 
