@@ -2,6 +2,9 @@ name: uboot
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   toolchain:
     name: Uboot
@@ -30,10 +33,41 @@ jobs:
           cd u-boot-sigmastar
           bash build.sh
 
+      # softprops/action-gh-release@v2 cannot update the `latest` release: its
+      # updateRelease PATCH re-sends the release's stored target_commitish, which
+      # for `latest` is a frozen commit SHA that diverges from where the tag now
+      # points (build.yml force-moves the `latest` tag every nightly). GitHub
+      # rejects that reconciliation with 403 "Resource not accessible by
+      # integration" even with contents:write. Drive the upload with the gh CLI
+      # instead, the same way build.yml publishes to `latest`.
       - name: Upload
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          files: |
-            u-boot-*/output/*-nor.bin
-            u-boot-*/output/*-nand.bin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(u-boot-*/output/*-nor.bin u-boot-*/output/*-nand.bin)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::no u-boot binaries found to upload"; exit 1
+          fi
+          echo "Uploading ${#files[@]} file(s) to release 'latest':"
+          printf '  %s\n' "${files[@]}"
+
+          gh_retry() { # retry gh through transient 403/429/5xx with backoff
+            local n=0 max=5 delay=10
+            until "$@"; do
+              n=$((n + 1))
+              if [ "$n" -ge "$max" ]; then
+                echo "::error::gh failed after ${max} attempts: $*"; return 1
+              fi
+              echo "::warning::gh attempt ${n} failed, retrying in ${delay}s"
+              sleep "$delay"; delay=$((delay * 2))
+            done
+          }
+
+          gh release view latest >/dev/null 2>&1 || \
+            gh_retry gh release create latest --title latest --notes "U-Boot binaries (nor/nand)"
+          for f in "${files[@]}"; do
+            gh_retry gh release upload latest "$f" --clobber
+          done
