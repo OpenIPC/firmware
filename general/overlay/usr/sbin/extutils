@@ -7,6 +7,10 @@ if echo "$ARCH" | grep -q mips; then
 fi
 
 case "$CMD" in
+	api)
+		curl -G 'http://localhost/api/v1/set' --data-urlencode "$@"
+		;;
+
 	cli)
 		yaml-cli -i /etc/majestic.yaml "$@"
 		;;
