@@ -25,11 +25,13 @@ jobs:
     # upload a firmware tgz — firmware_url returns empty for missing ones and
     # create() skips them.
     #
-    # First clause: canonical repo only, since a skipped build still completes
-    # and fires workflow_run on a mirror — see build.yml's preflight.
+    # First clause: on a mirror the nightly's jobs skip, but the run still
+    # completes and fires workflow_run, so gate the cron-originated path on
+    # the canonical repo too — see build.yml's preflight. Dispatch-driven
+    # reassembly is untouched anywhere.
     if: >-
-      (github.repository == 'OpenIPC/firmware' ||
-       github.event_name == 'workflow_dispatch') &&
+      (github.event.workflow_run.event != 'schedule' ||
+       github.repository == 'OpenIPC/firmware') &&
       (github.event_name == 'workflow_dispatch' ||
        ((github.event.workflow_run.event == 'schedule' ||
          github.event.workflow_run.event == 'workflow_dispatch') &&

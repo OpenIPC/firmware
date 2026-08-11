@@ -16,7 +16,8 @@ jobs:
   gcc-compat:
     name: GCC ${{matrix.gcc}}
     # Canonical repo only on the weekly cron — see build.yml's preflight.
-    if: github.repository == 'OpenIPC/firmware' || github.event_name == 'workflow_dispatch'
+    # PR and dispatch runs are unaffected.
+    if: github.event_name != 'schedule' || github.repository == 'OpenIPC/firmware'
     runs-on: ubuntu-latest
     container:
       image: gcc:${{matrix.gcc}}

@@ -10,13 +10,17 @@ on:
 jobs:
   preflight:
     name: Preflight
-    # Only the canonical repo builds unattended. A clone pushed to a new
+    # Only the canonical repo builds on the cron. A clone pushed to a new
     # repository (a private mirror, an internal re-host) inherits this file
-    # along with its cron, and would run the full platform matrix nightly on
-    # someone else's Actions bill while publishing nightlies nobody reads.
+    # along with its schedule, and would run the full platform matrix nightly
+    # on someone else's Actions bill while publishing nightlies nobody reads.
     # Forks are already covered — GitHub disables scheduled workflows there —
-    # but a fresh repository is not. Manual dispatch still works everywhere.
-    if: github.repository == 'OpenIPC/firmware' || github.event_name == 'workflow_dispatch'
+    # but a fresh repository is not.
+    #
+    # Scoped to the schedule event alone: pull_request and workflow_dispatch
+    # are somebody deliberately asking for a build, and keep working here and
+    # in every mirror.
+    if: github.event_name != 'schedule' || github.repository == 'OpenIPC/firmware'
     runs-on: ubuntu-latest
     outputs:
       should_build: ${{ steps.gate.outputs.should_build }}
