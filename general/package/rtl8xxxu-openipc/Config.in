@@ -1,6 +1,7 @@
 config BR2_PACKAGE_RTL8XXXU_OPENIPC
 	bool "rtl8xxxu-openipc"
 	depends on BR2_LINUX_KERNEL
+	select BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC
 	select BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_RTL_8188FU
 	help
 	  Mainline rtl8xxxu mac80211 driver (RTL8188F backport to
