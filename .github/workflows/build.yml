@@ -545,7 +545,14 @@ jobs:
   ci-gate:
     name: CI Gate
     needs: [preflight, buildroot, publish]
-    if: always()
+    # always() so the gate still reports when a needed job fails -- but not on a
+    # run whose preflight the guard above deliberately skipped, where it would
+    # read preflight=skipped and turn a saved build into a red run. Upstream the
+    # added disjunct is true, so this reduces to always().
+    if: >-
+      always() && (github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private))
     runs-on: ubuntu-latest
     steps:
       - name: Require preflight + firmware matrix to succeed
