@@ -864,6 +864,25 @@ awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'ln -sf busybox' \
 awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'for applet in sh flashcp reboot' \
     && ok "enter_ramfs refuses to pivot into a root missing the essentials" \
     || bad "enter_ramfs must verify the staged root can actually flash and reboot"
+# The fallback is only a fallback if the mounts it needs are still where it left
+# them. Every failure after the first `mount -o move` has to put them back, or a
+# failed pivot strands the running camera with no /dev at all.
+moved=$(awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -c 'mount -o move /')
+unwound=$(awk '/^ramfs_unwind\(\)/,/^}/' "$SRC" | grep -c 'mount -o move "\$RAM_ROOT')
+[ "$moved" -gt 0 ] && [ "$unwound" -ge "$moved" ] \
+    && ok "ramfs_unwind restores every mount enter_ramfs moves ($unwound >= $moved)" \
+    || bad "moves=$moved but only $unwound are restored; a failed pivot would leave them relocated"
+bare=$(awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | awk '/mount -o move \/dev/,0' | grep -c 'return 1' )
+guarded=$(awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | awk '/mount -o move \/dev/,0' | grep -c 'ramfs_unwind')
+[ "$guarded" -ge 1 ] && [ "$bare" -le "$guarded" ] \
+    && ok "no unguarded return between the mount moves and the pivot" \
+    || bad "$bare return(s) after the moves but only $guarded unwind(s)"
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'export remote_update' \
+    && ok "remote_update survives the re-exec (verify_rootfs branches on it)" \
+    || bad "remote_update is not exported; an unmountable rootfs behaves differently in phase 2"
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'lock_owned' \
+    && ok "lock_owned survives the re-exec" \
+    || bad "lock_owned is not exported; die() in phase 2 cannot release its own lock"
 # After the pivot the old system is behind /mnt, so exiting without a reboot
 # leaves exactly the corpse this change exists to prevent.
 awk '/^die\(\)/,/^}/' "$SRC" | grep -q '_ramfs_phase' \

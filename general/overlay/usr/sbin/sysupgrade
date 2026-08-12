@@ -469,6 +469,30 @@ restore_resources() {
 # tmpfs, loop-mount it, exec a binary from it (fine), overwrite the backing file
 # (fine -- pages still cached), then drop caches and exec again: I/O error.
 #
+# Put back everything enter_ramfs moved, for a run that did not make it into the
+# new root.
+#
+# The fallback is supposed to be "upgrade the old way", and the old way needs
+# /dev for the MTD nodes, /proc for get_device, and /tmp for the unpacked image.
+# Returning without these does not degrade to the previous behaviour, it strands
+# the RUNNING camera with no device nodes at all -- worse than the bug the pivot
+# fixes. Moves that never happened fail harmlessly, so this is safe to call from
+# any failure point after the first one.
+ramfs_unwind() {
+	cd / 2>/dev/null
+	mount -o move "$RAM_ROOT/tmp" /tmp 2>/dev/null
+	mount -o move "$RAM_ROOT/proc" /proc 2>/dev/null
+	mount -o move "$RAM_ROOT/dev" /dev 2>/dev/null
+	mount -o move "$RAM_ROOT/sys" /sys 2>/dev/null
+	# Lazy as a fallback: /sys carries submounts (debugfs, configfs) and a
+	# move-back that does not take leaves the tmpfs busy. Observed on an ssc30kq,
+	# where the plain umount left /ram mounted -- harmless on its own, but a
+	# retry would stack a second tmpfs on top of it.
+	umount "$RAM_ROOT" 2>/dev/null || umount -l "$RAM_ROOT" 2>/dev/null
+	echo_c 33 "Could not move into RAM; flashing in place instead."
+	return 1
+}
+
 # Move the whole flashing phase into a RAM filesystem and re-exec there, so that
 # nothing it needs afterwards lives on the partition it is about to overwrite.
 #
@@ -489,6 +513,9 @@ enter_ramfs() {
 	# Not under /tmp: /tmp is moved into the new root below, and a mount point
 	# cannot be moved underneath itself.
 	mkdir -p "$RAM_ROOT" 2>/dev/null || return 1
+	# A previous attempt that could not fully unwind may have left one here;
+	# mounting over it would stack rather than replace.
+	umount "$RAM_ROOT" 2>/dev/null
 	# A cap, not a reservation: the staged root is busybox plus its libraries and
 	# the script, around 1.5 MB. Kept small because the cameras that need this
 	# most have 34 MB of RAM in total, and /tmp (holding the unpacked image) is
@@ -529,9 +556,9 @@ enter_ramfs() {
 	# Carry over the mounts the flash still needs: /dev for the MTD nodes, /proc
 	# for get_device and sysrq, /tmp for the unpacked images. Moving rather than
 	# binding leaves nothing pointing back into the old root.
-	mount -o move /dev "$RAM_ROOT/dev" 2>/dev/null || return 1
-	mount -o move /proc "$RAM_ROOT/proc" 2>/dev/null || return 1
-	mount -o move /tmp "$RAM_ROOT/tmp" 2>/dev/null || return 1
+	mount -o move /dev "$RAM_ROOT/dev" 2>/dev/null || { ramfs_unwind; return 1; }
+	mount -o move /proc "$RAM_ROOT/proc" 2>/dev/null || { ramfs_unwind; return 1; }
+	mount -o move /tmp "$RAM_ROOT/tmp" 2>/dev/null || { ramfs_unwind; return 1; }
 	mount -o move /sys "$RAM_ROOT/sys" 2>/dev/null
 
 	# State the second phase cannot recompute once the old root is behind it.
@@ -543,15 +570,16 @@ enter_ramfs() {
 	export update_kernel update_rootfs clear_overlay image_combined exit_update
 	export skip_soc skip_ver skip_reboot skip_md5 web_update silent_update
 	export live_flash_dirty root_on_flash flash_touched services_stopped
+	# remote_update: verify_rootfs branches on it for an unmountable rootfs.
+	# lock_owned: die() needs it to know the lock is ours to remove.
+	export remote_update lock_owned
 	export kernel_version system_version rootfs_version mount_wait abort_wait
 
-	cd "$RAM_ROOT" || return 1
+	cd "$RAM_ROOT" || { ramfs_unwind; return 1; }
 	# After this the old root is at ./mnt and still mounted — deliberately: the
 	# MTD partitions are addressed through /dev, not through it.
 	if ! pivot_root . mnt 2>/dev/null; then
-		# Back to where the caller left us: the fallback flashes in place and
-		# must not inherit a working directory inside a half-built ramfs.
-		cd / 2>/dev/null
+		ramfs_unwind
 		return 1
 	fi
 
@@ -563,7 +591,14 @@ enter_ramfs() {
 	# moved the mounts. Then exec so the shell interpreting the rest is the copy
 	# in RAM, not the one on the flash we are about to erase.
 	exec ./bin/busybox chroot . /bin/busybox ash /sysupgrade
-	return 1
+
+	# exec only returns on failure, and the old root is behind ./mnt by now, so
+	# there is no system left to hand back to the caller -- returning would send
+	# the fallback off to flash against a root it can no longer see. Nothing has
+	# been written yet, so a reboot simply comes back on the current firmware.
+	echo_c 31 "Cannot exec inside the ramfs; rebooting (nothing was flashed)"
+	./bin/busybox reboot -d 1 -f
+	exit 1
 }
 
 set_progress() {
