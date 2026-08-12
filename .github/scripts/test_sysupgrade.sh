@@ -913,7 +913,7 @@ awk '/^die\(\)/,/^}/' "$SRC" | grep -q '_ramfs_phase' \
     || bad "a die() inside the ramfs must reboot; there is no system left to return to"
 # The WebUI keeps majestic alive on purpose: it is the server streaming the log,
 # and SIGQUIT to a majestic already in upgrade mode is a use-after-free
-# (widgetii/majestic#288). The only legitimate one left is free_resources'
+# (tracked daemon-side). The only legitimate one left is free_resources'
 # non---web kill, which frees video memory for the download.
 if [ "$(grep -c 'killall -q -3 majestic' "$SRC")" = "1" ] &&
     awk '/^free_resources\(\)/,/^}/' "$SRC" | grep -q 'killall -q -3 majestic'; then
