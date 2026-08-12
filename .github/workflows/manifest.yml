@@ -24,11 +24,18 @@ jobs:
     # platforms that did upload artifacts. enrich_manifest.py reads whatever
     # assets actually exist on the release, so a partial release just shows
     # up with fewer platforms in its `platforms` map.
+    #
+    # First clause: on a mirror the nightly's jobs skip, but the run still
+    # completes and fires workflow_run, so gate the cron-originated path on
+    # the canonical repo too — see build.yml's preflight. Dispatch-driven
+    # manifest regeneration is untouched anywhere.
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      ((github.event.workflow_run.event == 'schedule' ||
-        github.event.workflow_run.event == 'workflow_dispatch') &&
-       contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion))
+      (github.event.workflow_run.event != 'schedule' ||
+       github.repository == 'OpenIPC/firmware') &&
+      (github.event_name == 'workflow_dispatch' ||
+       ((github.event.workflow_run.event == 'schedule' ||
+         github.event.workflow_run.event == 'workflow_dispatch') &&
+        contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion)))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout master (for the script)
