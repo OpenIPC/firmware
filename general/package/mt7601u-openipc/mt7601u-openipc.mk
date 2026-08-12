@@ -5,7 +5,7 @@
 ################################################################################
 
 MT7601U_OPENIPC_SITE = $(call github,openipc,mt7601u,$(MT7601U_OPENIPC_VERSION))
-MT7601U_OPENIPC_VERSION = HEAD
+MT7601U_OPENIPC_VERSION = 0ac46553f3190d788b01c15cbeaa14f2951c55a3
 MT7601U_OPENIPC_LICENSE = GPL-2.0
 
 MT7601U_OPENIPC_MODULE_MAKE_OPTS = \
