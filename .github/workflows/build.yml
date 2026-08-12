@@ -10,6 +10,24 @@ on:
 jobs:
   preflight:
     name: Preflight
+    # Guard rail for clones of this repo. A clone pushed to a new repository
+    # (a private mirror, an internal re-host) inherits this file along with
+    # its cron, and the full platform matrix — ~2000 runner-minutes a pass —
+    # then runs on that owner's Actions bill: nightly via the schedule, and
+    # again on every internal PR they open. Forks are partially covered
+    # (GitHub disables scheduled workflows there), a fresh repository is not.
+    #
+    # The line is drawn where the minutes stop being free:
+    #   - canonical repo: everything runs, unchanged
+    #   - workflow_dispatch: an operator explicitly asked; runs anywhere
+    #   - pull_request on a PUBLIC repo: free minutes (contributor PRs here
+    #     run in this repo's context; within-fork PRs are public by
+    #     construction) — runs
+    #   - anything unattended or billed on a non-canonical repo — skips
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
     runs-on: ubuntu-latest
     outputs:
       should_build: ${{ steps.gate.outputs.should_build }}
@@ -527,7 +545,14 @@ jobs:
   ci-gate:
     name: CI Gate
     needs: [preflight, buildroot, publish]
-    if: always()
+    # always() so the gate still reports when a needed job fails -- but not on a
+    # run whose preflight the guard above deliberately skipped, where it would
+    # read preflight=skipped and turn a saved build into a red run. Upstream the
+    # added disjunct is true, so this reduces to always().
+    if: >-
+      always() && (github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private))
     runs-on: ubuntu-latest
     steps:
       - name: Require preflight + firmware matrix to succeed
