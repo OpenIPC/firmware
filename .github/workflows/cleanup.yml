@@ -15,6 +15,9 @@ concurrency:
 jobs:
   prune:
     name: Prune old nightly releases
+    # Canonical repo only on the weekly cron — see build.yml's preflight.
+    # Dispatch runs are unaffected.
+    if: github.event_name != 'schedule' || github.repository == 'OpenIPC/firmware'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
