@@ -62,6 +62,7 @@ sed -e 's|grep "GITHUB_VERSION" "$1/etc/os-release"|grep "GITHUB_VERSION" "${1:-
     -e "s|/etc/os-release|@SB@/etc/os-release|g" \
     -e "s|/proc/mtd|@SB@/proc/mtd|g" \
     -e "s|/proc/cmdline|@SB@/proc/cmdline|g" \
+    -e "s|/proc/mounts|@SB@/proc/mounts|g" \
     -e "s|/proc/sys/vm/drop_caches|@SB@/tmp/drop_caches|g" \
     -e "s|/etc/init.d/|@SB@/etc/init.d/|g" \
     -e "s|/bin/busybox|@SB@/bin/busybox|g" \
@@ -79,6 +80,15 @@ done
 # not just a service that had to exist for the script not to trip over it.
 printf '#!/bin/sh\necho "S95majestic $1" >> "$FLASH_LOG"\nexit 0\n' \
     > "$SB/etc/init.d/S95majestic"; chmod +x "$SB/etc/init.d/S95majestic"
+
+# ramfs_unwind verifies the restore by reading /proc/mounts before it lets the
+# in-place fallback run, and enter_ramfs consults it to decide whether a leftover
+# tmpfs of its own needs clearing. Give the sandbox one that says the mounts are
+# where they should be, so the fallback cases exercise the fallback rather than
+# the emergency "cannot restore, reboot" path. Deliberately no line for $SB/ram:
+# a stale ramfs is the exception, not the default.
+printf 'tmpfs %s/tmp tmpfs rw,relatime 0 0\nproc %s/proc proc rw,relatime 0 0\n' \
+    "$SB" "$SB" > "$SB/proc/mounts"
 
 set_mtd() { cat > "$SB/proc/mtd"; }
 
@@ -883,6 +893,19 @@ awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'export remote_update' \
 awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'lock_owned' \
     && ok "lock_owned survives the re-exec" \
     || bad "lock_owned is not exported; die() in phase 2 cannot release its own lock"
+# Restoring the mounts is attempted, not guaranteed. Handing the in-place path an
+# environment with no /dev or /proc is exactly what ramfs_unwind exists to stop.
+awk '/^ramfs_unwind\(\)/,/^}/' "$SRC" | grep -q '/dev/null.*||.*/proc/mounts\|! -c /dev/null' \
+    && ok "ramfs_unwind checks the restore took before allowing the fallback" \
+    || bad "ramfs_unwind returns without verifying /dev, /proc and /tmp came back"
+awk '/^ramfs_unwind\(\)/,/^}/' "$SRC" | grep -q 'reboot -d 1 -f' \
+    && ok "an unrestorable environment reboots rather than flashing blind" \
+    || bad "if the restore fails there must be no in-place flash"
+# RAM_ROOT is environment-overridable, so the pre-mount cleanup must not be a
+# blind umount of whatever it happens to point at.
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'grep -q "\^tmpfs \$RAM_ROOT tmpfs"' \
+    && ok "the pre-mount cleanup only clears a tmpfs of our own" \
+    || bad "enter_ramfs unmounts \$RAM_ROOT blindly; pointed at real storage that detaches it"
 # After the pivot the old system is behind /mnt, so exiting without a reboot
 # leaves exactly the corpse this change exists to prevent.
 awk '/^die\(\)/,/^}/' "$SRC" | grep -q '_ramfs_phase' \

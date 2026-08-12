@@ -489,6 +489,26 @@ ramfs_unwind() {
 	# where the plain umount left /ram mounted -- harmless on its own, but a
 	# retry would stack a second tmpfs on top of it.
 	umount "$RAM_ROOT" 2>/dev/null || umount -l "$RAM_ROOT" 2>/dev/null
+
+	# Restoring is attempted, not guaranteed, so check it rather than assume it.
+	# Handing the in-place path an environment without /dev or /proc is the very
+	# thing this function exists to prevent: get_device reads /proc/mtd and
+	# flashcp needs the nodes under /dev. Nothing has been written at this point,
+	# so a reboot puts the camera back exactly as it was -- a far better outcome
+	# than flashing blind.
+	#
+	# Deliberately not reboot_system(): -x must not be honoured here, and there
+	# is no state left worth tidying.
+	if [ ! -c /dev/null ] || [ ! -r /proc/mounts ] ||
+		! grep -q " /tmp " /proc/mounts 2>/dev/null; then
+		echo_c 31 "\nCould not restore /dev, /proc or /tmp after a failed pivot."
+		echo_c 31 "Rebooting instead of flashing in a broken environment."
+		echo_c 31 "Nothing was written; the camera comes back on its current firmware."
+		sync
+		busybox reboot -d 1 -f
+		exit 1
+	fi
+
 	echo_c 33 "Could not move into RAM; flashing in place instead."
 	return 1
 }
@@ -514,8 +534,13 @@ enter_ramfs() {
 	# cannot be moved underneath itself.
 	mkdir -p "$RAM_ROOT" 2>/dev/null || return 1
 	# A previous attempt that could not fully unwind may have left one here;
-	# mounting over it would stack rather than replace.
-	umount "$RAM_ROOT" 2>/dev/null
+	# mounting over it would stack rather than replace. Only ever clear a tmpfs
+	# of our own though: RAM_ROOT is overridable from the environment (the test
+	# harness relies on that), and an unconditional umount would happily detach
+	# real storage if it were pointed at some.
+	if grep -q "^tmpfs $RAM_ROOT tmpfs" /proc/mounts 2>/dev/null; then
+		umount "$RAM_ROOT" 2>/dev/null
+	fi
 	# A cap, not a reservation: the staged root is busybox plus its libraries and
 	# the script, around 1.5 MB. Kept small because the cameras that need this
 	# most have 34 MB of RAM in total, and /tmp (holding the unpacked image) is
