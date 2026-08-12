@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +14,10 @@ int SELECT_PIN = -1;
 int PAN_FDS[4] = {-1, -1, -1, -1};
 int TILT_FDS[4] = {-1, -1, -1, -1};
 int SELECT_FD = -1;
+
+/* CLOCK_MONOTONIC resolution, read once in main(): 1ns on kernels with
+ * high-resolution timers, one jiffy (10ms at HZ=100) without them */
+long CLOCK_RES_NS = 0;
 
 int STEP_SEQUENCE[8][4] = {
 	{1, 0, 0, 0}, {1, 1, 0, 0}, {0, 1, 0, 0}, {0, 1, 1, 0},
@@ -151,21 +156,24 @@ void gpio_config() {
 }
 
 /*
- * usleep() cannot deliver sub-tick delays on the kernels these cameras run:
- * they are HZ=100 with no high-resolution timers, so every sleep rounds up to
- * a 10ms tick. usleep(1500) waits ~10ms, and 8 micro-steps x 10ms puts a hard
- * ~80ms floor under every step no matter how small the requested delay is
- * (measured on Hi3518EV200: 200 steps took 33s at delay 15 and still 18s at
- * delay 4). Spin on CLOCK_MONOTONIC for anything below a tick instead; moves
+ * On kernels built without high-resolution timers every sleep rounds up to a
+ * whole tick, so at HZ=100 usleep(1500) waits ~10ms and 8 micro-steps x 10ms
+ * put a hard ~80ms floor under every step no matter how small the requested
+ * delay is (measured on Hi3518EV200: 200 steps took 33s at delay 15 and still
+ * 18s at delay 4). Kernels with hrtimers deliver usleep(1500) in ~1.5ms, and
+ * sleeping is strictly better there. clock_getres() tells the two apart, so
+ * sleep whenever the kernel can honour the delay - or when the delay is at
+ * least a tick, where rounding no longer dominates - and spin on
+ * CLOCK_MONOTONIC only for sub-tick delays on a coarse-timer kernel. Moves
  * are short and bounded, so burning the CPU for their duration is a fair
- * trade, and longer delays still go to usleep so we do not spin needlessly.
+ * trade in that remaining case.
  */
 void delay_us(long us) {
 	if (us <= 0) {
 		return;
 	}
 
-	if (us >= 10000) {
+	if (CLOCK_RES_NS <= 1000000 || us >= CLOCK_RES_NS / 1000) {
 		usleep(us);
 		return;
 	}
@@ -197,7 +205,7 @@ void axis_run(const int pins[4], const int fds[4], int level, int steps, int del
 	const int (*seq)[4] = (steps < 0) ? REVERSE_STEP_SEQUENCE : STEP_SEQUENCE;
 	if (SELECT_PIN != -1) {
 		gpio_set(SELECT_FD, SELECT_PIN, level);
-		usleep(100);
+		delay_us(100);
 	}
 
 	int micro = 0;
@@ -227,11 +235,16 @@ int main(int argc, char *argv[]) {
 	int pan_steps = atoi(argv[1]);
 	int tilt_steps = atoi(argv[2]);
 	int delay_ms = atoi(argv[3]);
-	if (delay_ms < 0) {
-		fprintf(stderr, "delay must be >= 0\n");
+	if (delay_ms < 0 || delay_ms > INT_MAX / 1000) {
+		fprintf(stderr, "delay must be between 0 and %d ms\n", INT_MAX / 1000);
 		return 1;
 	}
 	int delay = delay_ms * 1000;
+
+	struct timespec res;
+	if (clock_getres(CLOCK_MONOTONIC, &res) == 0) {
+		CLOCK_RES_NS = res.tv_sec ? 1000000000L : res.tv_nsec;
+	}
 
 	gpio_config();
 	for (int i = 0; i < 4; i++) {
