@@ -30,18 +30,26 @@ define MAJESTIC_WEBUI_INSTALL
 	cp -r $(@D)/www $(TARGET_DIR)/var
 endef
 
+# -f throughout: which files the WebUI ships is decided in another repo, so a
+# fixup that hard-fails on a missing one turns any deletion there into a broken
+# build here -- for every platform at once, and only visible on the next PR,
+# because master has no push trigger. j/locale_fpv.cgi and p/header_fpv.cgi went
+# in OpenIPC/majestic-webui#141; fpv-wfb.cgi and p/fpv_common.cgi still ship, and
+# are still unwanted in a standard build.
 define MAJESTIC_WEBUI_STANDARD_FIXUP
-	rm $(TARGET_DIR)/var/www/cgi-bin/fpv-wfb.cgi
-	rm $(TARGET_DIR)/var/www/cgi-bin/j/locale_fpv.cgi
-	rm $(TARGET_DIR)/var/www/cgi-bin/p/header_fpv.cgi
-	rm $(TARGET_DIR)/var/www/cgi-bin/p/fpv_common.cgi
+	rm -f $(TARGET_DIR)/var/www/cgi-bin/fpv-wfb.cgi
+	rm -f $(TARGET_DIR)/var/www/cgi-bin/j/locale_fpv.cgi
+	rm -f $(TARGET_DIR)/var/www/cgi-bin/p/header_fpv.cgi
+	rm -f $(TARGET_DIR)/var/www/cgi-bin/p/fpv_common.cgi
 endef
 
+# The two variant overrides this used to install are gone upstream: header_fpv
+# was never included by any page and locale_fpv was never read, so an FPV build
+# already renders the standard header and labels. Moving them is not just
+# unnecessary now, it fails -- mv errors on a missing source even with -f.
 define MAJESTIC_WEBUI_FPV_FIXUP
-	mv -f $(TARGET_DIR)/var/www/cgi-bin/j/locale_fpv.cgi $(TARGET_DIR)/var/www/cgi-bin/j/locale.cgi
-	mv -f $(TARGET_DIR)/var/www/cgi-bin/p/header_fpv.cgi $(TARGET_DIR)/var/www/cgi-bin/p/header.cgi
-	rm $(TARGET_DIR)/usr/sbin/telegram
-	rm $(TARGET_DIR)/usr/sbin/openwall
+	rm -f $(TARGET_DIR)/usr/sbin/telegram
+	rm -f $(TARGET_DIR)/usr/sbin/openwall
 endef
 
 define MAJESTIC_WEBUI_INSTALL_TARGET_CMDS
