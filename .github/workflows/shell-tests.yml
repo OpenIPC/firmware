@@ -33,8 +33,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Parse-check under both shells
-        run: |
-          sh -n general/overlay/usr/sbin/sysupgrade
-          dash -n general/overlay/usr/sbin/sysupgrade
+      # The parse-check that used to live here now runs for every shipped script
+      # in the job below, against the busybox ash the device actually uses. This
+      # step was `sh -n` then `dash -n`, which on ubuntu-latest is the same
+      # check twice (/bin/sh is dash) and neither is the target shell.
       - run: bash .github/scripts/test_sysupgrade.sh
+
+  # Only sysupgrade was ever parse-checked; every other script in the image --
+  # the init scripts, /etc/profile, /init on initramfs boards, the vendor load_*
+  # scripts that insert the SoC drivers -- reached cameras without anything
+  # confirming it even parses. Nothing else covers them: the overlay and the
+  # package install steps copy these files in verbatim, so a green build says
+  # nothing about their syntax.
+  #
+  # Checked against busybox ash only, since that is what executes on the device.
+  # dash would be the wrong bar: the shipped busybox sets ASH_BASH_COMPAT, so
+  # `function name()` is valid in the field, and four scripts that run on real
+  # hardware fail under dash. See the header of test_shell_parse.sh.
+  #
+  # Deliberately syntax-only. A bashism audit (checkbashisms) over the same set
+  # is a much larger change -- `local` alone is used throughout -- and is worth
+  # doing separately rather than smuggling into a coverage PR.
+  shipped-shell-parse:
+    name: shipped shell scripts parse
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install busybox
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq busybox-static
+      - name: Parse every shipped shell script
+        # STRICT=1 so a busybox that failed to install fails the job instead of
+        # skipping every check and still reporting green.
+        env:
+          STRICT: 1
+        run: bash .github/scripts/test_shell_parse.sh
