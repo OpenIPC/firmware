@@ -1,7 +1,9 @@
 #!/bin/sh
 export SENSOR=$(fw_printenv -n sensor)
 export UPGRADE=$(fw_printenv -n upgrade)
-export TZ=$(cat /etc/TZ)
+# Guarded: an empty TZ pins UTC on musl and skips the /etc/localtime fallback
+# that an unset TZ would use, so a missing /etc/TZ must leave TZ alone.
+[ -r /etc/TZ ] && export TZ=$(cat /etc/TZ)
 
 for i in /etc/init.d/S??*; do
 	[ ! -f "$i" ] && continue
