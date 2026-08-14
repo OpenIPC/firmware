@@ -9,8 +9,16 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Same guard build.yml and gcc-compat.yml carry. These two jobs are cheap, but
+  # they are the last billed entry point a clone inherits: on a private mirror
+  # every master sync push and every internal PR runs them on that owner's bill.
+  # Upstream the first disjunct is true, so the condition is a tautology here.
   load-hisilicon-parsing:
     name: load_hisilicon os_mem_size derivation
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,6 +26,10 @@ jobs:
 
   sysupgrade-verify:
     name: sysupgrade rootfs verification
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

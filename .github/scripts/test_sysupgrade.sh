@@ -62,6 +62,7 @@ sed -e 's|grep "GITHUB_VERSION" "$1/etc/os-release"|grep "GITHUB_VERSION" "${1:-
     -e "s|/etc/os-release|@SB@/etc/os-release|g" \
     -e "s|/proc/mtd|@SB@/proc/mtd|g" \
     -e "s|/proc/cmdline|@SB@/proc/cmdline|g" \
+    -e "s|/proc/mounts|@SB@/proc/mounts|g" \
     -e "s|/proc/sys/vm/drop_caches|@SB@/tmp/drop_caches|g" \
     -e "s|/etc/init.d/|@SB@/etc/init.d/|g" \
     -e "s|/bin/busybox|@SB@/bin/busybox|g" \
@@ -79,6 +80,15 @@ done
 # not just a service that had to exist for the script not to trip over it.
 printf '#!/bin/sh\necho "S95majestic $1" >> "$FLASH_LOG"\nexit 0\n' \
     > "$SB/etc/init.d/S95majestic"; chmod +x "$SB/etc/init.d/S95majestic"
+
+# ramfs_unwind verifies the restore by reading /proc/mounts before it lets the
+# in-place fallback run, and enter_ramfs consults it to decide whether a leftover
+# tmpfs of its own needs clearing. Give the sandbox one that says the mounts are
+# where they should be, so the fallback cases exercise the fallback rather than
+# the emergency "cannot restore, reboot" path. Deliberately no line for $SB/ram:
+# a stale ramfs is the exception, not the default.
+printf 'tmpfs %s/tmp tmpfs rw,relatime 0 0\nproc %s/proc proc rw,relatime 0 0\n' \
+    "$SB" "$SB" > "$SB/proc/mounts"
 
 set_mtd() { cat > "$SB/proc/mtd"; }
 
@@ -864,6 +874,38 @@ awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'ln -sf busybox' \
 awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'for applet in sh flashcp reboot' \
     && ok "enter_ramfs refuses to pivot into a root missing the essentials" \
     || bad "enter_ramfs must verify the staged root can actually flash and reboot"
+# The fallback is only a fallback if the mounts it needs are still where it left
+# them. Every failure after the first `mount -o move` has to put them back, or a
+# failed pivot strands the running camera with no /dev at all.
+moved=$(awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -c 'mount -o move /')
+unwound=$(awk '/^ramfs_unwind\(\)/,/^}/' "$SRC" | grep -c 'mount -o move "\$RAM_ROOT')
+[ "$moved" -gt 0 ] && [ "$unwound" -ge "$moved" ] \
+    && ok "ramfs_unwind restores every mount enter_ramfs moves ($unwound >= $moved)" \
+    || bad "moves=$moved but only $unwound are restored; a failed pivot would leave them relocated"
+bare=$(awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | awk '/mount -o move \/dev/,0' | grep -c 'return 1' )
+guarded=$(awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | awk '/mount -o move \/dev/,0' | grep -c 'ramfs_unwind')
+[ "$guarded" -ge 1 ] && [ "$bare" -le "$guarded" ] \
+    && ok "no unguarded return between the mount moves and the pivot" \
+    || bad "$bare return(s) after the moves but only $guarded unwind(s)"
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'export remote_update' \
+    && ok "remote_update survives the re-exec (verify_rootfs branches on it)" \
+    || bad "remote_update is not exported; an unmountable rootfs behaves differently in phase 2"
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'lock_owned' \
+    && ok "lock_owned survives the re-exec" \
+    || bad "lock_owned is not exported; die() in phase 2 cannot release its own lock"
+# Restoring the mounts is attempted, not guaranteed. Handing the in-place path an
+# environment with no /dev or /proc is exactly what ramfs_unwind exists to stop.
+awk '/^ramfs_unwind\(\)/,/^}/' "$SRC" | grep -q '/dev/null.*||.*/proc/mounts\|! -c /dev/null' \
+    && ok "ramfs_unwind checks the restore took before allowing the fallback" \
+    || bad "ramfs_unwind returns without verifying /dev, /proc and /tmp came back"
+awk '/^ramfs_unwind\(\)/,/^}/' "$SRC" | grep -q 'reboot -d 1 -f' \
+    && ok "an unrestorable environment reboots rather than flashing blind" \
+    || bad "if the restore fails there must be no in-place flash"
+# RAM_ROOT is environment-overridable, so the pre-mount cleanup must not be a
+# blind umount of whatever it happens to point at.
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'grep -q "\^tmpfs \$RAM_ROOT tmpfs"' \
+    && ok "the pre-mount cleanup only clears a tmpfs of our own" \
+    || bad "enter_ramfs unmounts \$RAM_ROOT blindly; pointed at real storage that detaches it"
 # After the pivot the old system is behind /mnt, so exiting without a reboot
 # leaves exactly the corpse this change exists to prevent.
 awk '/^die\(\)/,/^}/' "$SRC" | grep -q '_ramfs_phase' \
@@ -871,7 +913,7 @@ awk '/^die\(\)/,/^}/' "$SRC" | grep -q '_ramfs_phase' \
     || bad "a die() inside the ramfs must reboot; there is no system left to return to"
 # The WebUI keeps majestic alive on purpose: it is the server streaming the log,
 # and SIGQUIT to a majestic already in upgrade mode is a use-after-free
-# (widgetii/majestic#288). The only legitimate one left is free_resources'
+# (tracked daemon-side). The only legitimate one left is free_resources'
 # non---web kill, which frees video memory for the download.
 if [ "$(grep -c 'killall -q -3 majestic' "$SRC")" = "1" ] &&
     awk '/^free_resources\(\)/,/^}/' "$SRC" | grep -q 'killall -q -3 majestic'; then
