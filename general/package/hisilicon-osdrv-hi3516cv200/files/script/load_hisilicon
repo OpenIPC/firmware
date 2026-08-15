@@ -187,11 +187,16 @@ insert_sns() {
 
                 devmem 0x2003002c 32 0x94001 # sensor unreset, clk 37.125MHz, VI 99MHz
                 ;;
-        ov2710_mipi | ov2735_i2c_1080p | ov2735)
+        ov2710_mipi | ov2735_i2c_1080p | ov2735 | gc2023_mipi)
                 # MIPI variant. OV2710 uses libsns_ov2710_mipi.so via
                 # ov2710_mipi_1080p.ini; OV2735 uses libsns_ov2735.so via
-                # ov2735_i2c_1080p.ini. Both share the same MIPI pinmux +
+                # ov2735_i2c_1080p.ini. All share the same MIPI pinmux +
                 # clock — sensor differentiation happens in libsns / .ini.
+                # gc2023_mipi is for boards with the GC2023 wired to MIPI
+                # (e.g. VStarcam Hi3518EV200): the plain gc2023 entry in the
+                # first arm above muxes the parallel VI pads, which disables
+                # the MIPI PHY — VI then sees no VSYNC at all (IntCnt=0 in
+                # /proc/umap/vi).
                 devmem 0x200f0040 32 0x2 # I2C0_SCL
                 devmem 0x200f0044 32 0x2 # I2C0_SDA
 
