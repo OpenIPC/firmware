@@ -116,12 +116,48 @@ NO_BUILD_WORKFLOWS = {
     "qodo-gate.yml", "shell-tests.yml", "toolchain.yml", "uboot.yml",
 }
 
-# Same for .github/scripts/. check_target_modules.sh runs inside the build job
-# and ci-matrix.py is this file, so both are absent here and widen.
+# Same for .github/scripts/.
 NO_BUILD_SCRIPTS = {
     "enrich_manifest.py", "test_load_hisilicon.sh", "test_shell_parse.sh",
     "test_sysupgrade.sh",
 }
+
+# CI plumbing: it decides how the build runs but cannot change a byte of what
+# ends up on a camera, so what needs proving is that the steps still work, not
+# that 96 images still come out the same. These get SMOKE_BOARDS.
+#
+# ci-matrix.py is deliberately NOT here. Adding a board is an edit to
+# ALL_BOARDS, and a smoke set would build the 13 boards that were already there
+# and never the new one. It widens like anything else this file has not
+# classified.
+SMOKE_WORKFLOWS = {"build.yml"}
+SMOKE_SCRIPTS = {"check_target_modules.sh"}
+
+# One board per way the build can differ: every architecture, every toolchain
+# tuple, every rootfs shape, every variant and every vendor directory appears at
+# least once. --self-test enforces exactly that, so this list can be re-picked
+# freely as long as the cover still holds -- which is the property that matters,
+# not the particular boards.
+#
+# This is the one place coverage is deliberately traded for runner time: a
+# build.yml edit that breaks only a board outside this set reaches master, and
+# the nightly finds it within a day rather than the PR finding it in half an
+# hour. Everything that can change image content still builds in full.
+SMOKE_BOARDS = [
+    "hi3516ev200_lite",       # HiSilicon V4, the most-built family here
+    "hi3516ev300_ultimate",   # ultimate, and squashfs beside UBI
+    "hi3516av300_neo",        # the neo variant, and the gnueabi toolchain
+    "hi3519dv500_ultimate",   # the only aarch64 board
+    "gk7205v200_lite",        # Goke
+    "ssc338q_lite",           # SigmaStar
+    "t31_lite",               # Ingenic, the only mips
+    "rv1126_lite",            # Rockchip, and UBI with no squashfs
+    "gm8136_lite",            # GrainMedia, the only uclibc toolchain
+    "nt98566_lite",           # Novatek
+    "fh8852v200_lite",        # Fullhan
+    "v851s_lite",             # Allwinner
+    "xm530_lite",             # Xiongmai
+]
 
 # Board directories with no board in ALL_BOARDS. Their defconfigs exist but are
 # not built, so a change there narrows to nothing --- which is correct, and is
@@ -273,7 +309,35 @@ class Tree:
                 "vendor_dir": path[len(self.root) + 1:].split(os.sep)[0],
                 "family": family.group(1) if family else "",
                 "symbols": set(re.findall(r"^(BR2_PACKAGE_[A-Z0-9_]+)=y", body, re.M)),
+                "traits": self._traits(path, body),
             }
+
+    def _traits(self, path, body):
+        """What makes a board different to the build steps, not to a camera.
+
+        SMOKE_BOARDS has to span all of these; --self-test checks that it does.
+        """
+        def string(option):
+            found = re.search(rf'^{option}="([^"]*)"', body, re.M)
+            return found.group(1) if found else "?"
+
+        if re.search(r"^BR2_aarch64=y", body, re.M):
+            architecture = "aarch64"
+        elif re.search(r"^BR2_mips", body, re.M):
+            architecture = "mips"
+        else:
+            architecture = "arm"
+        # UBI vs squashfs decides which images `make repack` emits and so which
+        # of build.yml's `find output/images -name openipc*no{r,and}*` fires.
+        rootfs = ",".join(kind for kind in ("CPIO", "SQUASHFS", "UBI")
+                          if re.search(rf"^BR2_TARGET_ROOTFS_{kind}=y", body, re.M))
+        return {
+            "vendor:" + path[len(self.root) + 1:].split(os.sep)[0][len("br-ext-chip-"):],
+            "arch:" + architecture,
+            "toolchain:" + string("BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX"),
+            "rootfs:" + rootfs,
+            "variant:" + string("BR2_OPENIPC_VARIANT"),
+        }
 
     def _closure(self, seed):
         symbols, packages, growing = set(seed), set(), True
@@ -303,6 +367,7 @@ class Tree:
 
     def _resolve(self):
         self.built = [b for b in ALL_BOARDS if b in self.boards]
+        self.smoke = [b for b in self.built if b in set(SMOKE_BOARDS)]
         for board in self.built:
             self.boards[board]["packages"] = self._closure(self.boards[board]["symbols"])
 
@@ -332,7 +397,7 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False):
     if not changed:
         return _decision(full, True, reason="no file list available")
 
-    boards = set()
+    boards, smoked = set(), False
     for path in changed:
         if DOCS.match(path) or MARKDOWN.match(path) or REVIEW_CONFIG.match(path):
             continue
@@ -342,10 +407,18 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False):
         if workflow:
             if workflow.group(1) in NO_BUILD_WORKFLOWS:
                 continue
+            if workflow.group(1) in SMOKE_WORKFLOWS:
+                boards.update(tree.smoke)
+                smoked = True
+                continue
             return _decision(full, True, reason=f"{path} affects every board")
         script = GITHUB_SCRIPT.match(path)
         if script:
             if script.group(1) in NO_BUILD_SCRIPTS:
+                continue
+            if script.group(1) in SMOKE_SCRIPTS:
+                boards.update(tree.smoke)
+                smoked = True
                 continue
             return _decision(full, True, reason=f"{path} affects every board")
 
@@ -390,7 +463,16 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False):
 
     if not boards:
         return _decision([], False, reason="nothing that reaches a build")
-    return _decision(sorted(boards), True, reason="narrowed to the affected boards")
+    if not smoked:
+        return _decision(sorted(boards), True, reason="narrowed to the affected boards")
+    # Say so out loud. These runs are the one case where a green matrix does not
+    # mean every board was proven, and a log line reading "narrowed to the
+    # affected boards" would misrepresent that.
+    if boards == set(tree.smoke):
+        return _decision(sorted(boards), True,
+                         reason="CI plumbing only: smoke set, not every board")
+    return _decision(sorted(boards), True,
+                     reason="affected boards plus the CI-plumbing smoke set")
 
 
 def _decision(rows, needs_build, reason):
@@ -509,10 +591,45 @@ def self_test():
             problems.append(
                 f"{package} is in NOT_BUILT but the matrix builds it now; drop it")
 
-    # 4. The narrowing must be sound: what is not recognised as one SoC's own
+    # 4. The smoke set has to be real boards, has to be smaller than the thing
+    #    it stands in for, and has to span every way the build can differ --
+    #    otherwise it is not a smoke test, it is a guess.
+    for board in SMOKE_BOARDS:
+        if board not in tree.boards:
+            problems.append(f"{board} is in SMOKE_BOARDS but has no defconfig")
+        elif board not in tree.built:
+            problems.append(f"{board} is in SMOKE_BOARDS but not in ALL_BOARDS")
+    # classify() consults the no-build lists first, so a name in both is dead
+    # config: it reads as "smoke-tested" and builds nothing. Safe, but a lie.
+    for both, where in [(NO_BUILD_WORKFLOWS & SMOKE_WORKFLOWS, "workflow"),
+                        (NO_BUILD_SCRIPTS & SMOKE_SCRIPTS, "script")]:
+        for name in sorted(both):
+            problems.append(
+                f"{name} is both a no-build and a smoke {where}; the no-build "
+                f"list wins and the smoke entry never fires")
+    # A renamed or deleted entry stops matching and silently widens. Harmless,
+    # but it is a list of names that no longer describe anything.
+    for names, directory in [(NO_BUILD_WORKFLOWS | SMOKE_WORKFLOWS, "workflows"),
+                             (NO_BUILD_SCRIPTS | SMOKE_SCRIPTS, "scripts")]:
+        for name in sorted(names):
+            if not os.path.exists(os.path.join(REPO_ROOT, ".github", directory, name)):
+                problems.append(
+                    f".github/{directory}/{name} is classified but does not exist")
+    if len(tree.smoke) >= len(tree.built):
+        problems.append("SMOKE_BOARDS is not smaller than the full matrix")
+    covered = set().union(*(tree.boards[b]["traits"] for b in tree.smoke)) \
+        if tree.smoke else set()
+    for trait in sorted(set().union(*(tree.boards[b]["traits"] for b in tree.built))):
+        if trait not in covered:
+            problems.append(
+                f"no board in SMOKE_BOARDS has {trait}; a CI-plumbing change "
+                f"would go unproven for it")
+
+    # 5. The narrowing must be sound: what is not recognised as one SoC's own
     #    has to come back with the full matrix, and what is has to come back
     #    with exactly the boards that build it.
     full = len(tree.built)
+    smoke = len(tree.smoke)
     cases = [
         # Vendor packages narrow to the families that enable them.
         (["general/package/hisilicon-osdrv-hi3516ev200/files/script/load_hisilicon"],
@@ -553,11 +670,23 @@ def self_test():
          full, "a package no board enables still widens"),
         (["general/package/legacy/datalink/files/tweaksys"], full, "the nested legacy tree"),
         (["br-ext-chip-hisilicon/external.mk"], full, "vendor external tree"),
-        ([".github/workflows/build.yml"], full, "the build workflow itself"),
-        ([".github/scripts/check_target_modules.sh"], full, "runs inside the build job"),
-        ([".github/scripts/ci-matrix.py"], full, "this file"),
+        ([".github/scripts/ci-matrix.py"], full,
+         "this file picks the boards, so it cannot pick fewer for itself"),
         ([".github/workflows/some-new-thing.yml"], full, "an unknown workflow widens"),
         ([".github/scripts/some-new-thing.sh"], full, "an unknown script widens"),
+        # CI plumbing gets the smoke set: it cannot change image content, only
+        # whether the steps still run.
+        ([".github/workflows/build.yml"], smoke, "the build workflow smoke-tests"),
+        ([".github/scripts/check_target_modules.sh"], smoke, "the module check"),
+        ([".github/workflows/build.yml", ".github/workflows/qodo-gate.yml"],
+         smoke, "smoke plus something that never builds"),
+        ([".github/workflows/build.yml", "general/overlay/etc/passwd"],
+         full, "smoke loses to anything that changes an image"),
+        ([".github/workflows/build.yml", ".github/scripts/ci-matrix.py"],
+         full, "smoke loses to the selector itself"),
+        ([".github/workflows/build.yml", "general/package/goke-osdrv-gk7205v200/x"],
+         len(set(tree.smoke) | set(tree.boards_for_package("goke-osdrv-gk7205v200"))),
+         "smoke unions with a narrowed package"),
         (["general/package/hisilicon-osdrv-hi3516ev200/x", "general/overlay/etc/passwd"],
          full, "one shared path widens the whole set"),
         # Nothing that reaches a build.
@@ -593,7 +722,7 @@ def self_test():
         if got != expected:
             problems.append(f"{what}: expected {expected} rows, got {got}")
 
-    # 5. Zero rows and "go build something" must never be emitted together, in
+    # 6. Zero rows and "go build something" must never be emitted together, in
     #    either direction: Actions errors on an empty include list, and a row
     #    list nobody builds is a matrix that silently proves nothing.
     for paths, _, what in cases:
@@ -603,7 +732,7 @@ def self_test():
         if decision["rows"] and not decision["needs_build"]:
             problems.append(f"{what}: rows with needs_build false")
 
-    # 6. Non-PR events and the escape hatch always get everything.
+    # 7. Non-PR events and the escape hatch always get everything.
     for kwargs, what in [({"event": "schedule"}, "schedule"),
                          ({"event": "workflow_dispatch"}, "dispatch"),
                          ({"labels": [FULL_LABEL]}, FULL_LABEL)]:
@@ -612,7 +741,7 @@ def self_test():
     if classify(tree, ["general/package/majestic/majestic.mk"], draft=True)["needs_build"]:
         problems.append("a draft pull request must not build")
 
-    # 7. No workflow may declare a top-level key twice. This is legal YAML ---
+    # 8. No workflow may declare a top-level key twice. This is legal YAML ---
     #    the last one wins, which is why a local lint waves it through --- but
     #    Actions rejects the file outright and the run fails with no jobs at
     #    all. Squash-merging a stacked branch is how one appears: the same block
