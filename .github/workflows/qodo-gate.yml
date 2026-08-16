@@ -45,6 +45,14 @@ on:
     types: [submitted]
   pull_request_review_comment:
     types: [created, deleted]
+  # A clean PR's only proof of review is an ISSUE comment, and without this
+  # trigger nothing re-evaluates the gate when it arrives: the run fired at
+  # `opened` fails (Qodo has not answered yet), the comment lands a minute or
+  # two later, and the check stays red until an unrelated push happens to
+  # re-trigger it. That is precisely how #2269 went green — a follow-up commit,
+  # not the review — which hid the gap on the PR that introduced it.
+  issue_comment:
+    types: [created, edited]
 
 permissions:
   contents: read
@@ -54,11 +62,35 @@ permissions:
 jobs:
   qodo-gate:
     runs-on: ubuntu-latest
+    # Narrow the issue_comment trigger to the single comment that can change
+    # this gate's verdict: Qodo's review. Without all three clauses the job is
+    # an API-heavy workflow holding `actions: write` that any commenter could
+    # run at will, on any PR, as often as they liked — CI noise, and needless
+    # rate-limit exposure on a REQUIRED check.
+    #
+    #   issue.pull_request  — issue_comment fires for plain issues too, and
+    #                         those have no PR to gate.
+    #   comment author      — only the bot's own comment is evidence of review.
+    #                         A human typing /review still works: Qodo answers,
+    #                         and that answer is what triggers this.
+    #   comment body        — the bot also posts "Qodo is busy working" and
+    #                         "PR Summary by Qodo", neither of which means the
+    #                         diff was reviewed. Matching the review header
+    #                         keeps this to one run per review.
+    #
+    # Every other trigger here is PR-only and needs no guard.
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.pull_request &&
+       startsWith(github.event.comment.user.login, 'qodo-free-for-open-source-projects') &&
+       contains(github.event.comment.body, 'Code Review by Qodo'))
     steps:
       - name: Require a Qodo review with all its threads resolved
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
+          # issue_comment carries `issue`, not `pull_request` — for a PR
+          # comment the issue number IS the PR number.
+          PR: ${{ github.event.pull_request.number || github.event.issue.number }}
           REPO_OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
         run: |
@@ -185,10 +217,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          # Empty on issue_comment, which carries no head sha — resolved from
+          # the PR below. This is the trigger that matters most for the sweep:
+          # it is the one that turns a clean PR's earlier red run green.
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number }}
           THIS_RUN: ${{ github.run_id }}
         run: |
           set -u
+          if [ -z "$HEAD_SHA" ]; then
+            if ! HEAD_SHA=$(gh pr view "$PR" --repo "$REPO" --json headRefOid \
+                --jq .headRefOid); then
+              echo "sweep skipped: could not resolve head sha for PR $PR"
+              exit 0
+            fi
+          fi
           # The listing is guarded too, not just the reruns: with an unguarded
           # pipeline a transient list failure would be the step's exit code —
           # exactly the PASS-into-FAIL this step promises not to produce.
