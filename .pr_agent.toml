@@ -1,0 +1,91 @@
+# Qodo code-review configuration.
+#
+# Review standards live in two companion files at the repo root:
+#   best_practices.md            - judgement-based rules, imported as Review Standards
+#   pr_compliance_checklist.yaml - binary hard gates
+#
+# Reference: https://docs.qodo.ai/install-and-configure/configuration-overview/configuration-file
+
+[github_app]
+pr_commands = [
+    "/agentic_describe",
+    "/agentic_review",
+]
+
+[review_agent]
+comments_location_policy = "both"
+
+# 1 = all severities inline, 2 = high+medium, 3 = high only.
+# 2 keeps blast-radius and provenance findings inline without burying the diff in nits.
+inline_comments_severity_threshold = 2
+
+issues_user_guidelines = """
+OpenIPC/firmware is a Buildroot tree that builds images for roughly 90 boards across 13
+SoC vendors. general/overlay/ and general/package/ are shared: one file there reaches
+every camera of a family. Those cameras are installed in places nobody can physically
+reach, there is no staged rollout, and a bad change is discovered only after sysupgrade
+has already written it to flash. Weight findings by blast radius, not by diff size - a
+two-line change to a shared defconfig outranks a hundred lines in a new leaf package.
+
+Prioritise, in order:
+
+1. Device-specific values written into generic configuration. general/overlay/ ships to
+   every camera, and the *-osdrv-*/files/script/load_<vendor> scripts serve a whole SoC
+   family. A sensor, I2C address, GPIO number, or resolution that is true only of the
+   contributor's bench must not become the default for everyone else. This breaks already
+   deployed cameras at upgrade time, which is the worst failure mode this project has.
+
+2. Buildroot defaults replaced instead of extended. BR2_TARGET_OPTIMIZATION and its peers
+   are whole-value assignments: setting one to a single new flag silently drops the -Os
+   -pipe that every package was built with. The symptom is a size and performance
+   regression across the entire image, with nothing in the diff naming it.
+
+3. Provenance. A package SITE must point at an OpenIPC-org repository or a documented
+   upstream, never a contributor's personal fork - a fork is a single point of failure for
+   every board that builds the package, and it can be rewritten or deleted without notice.
+   Version pins must be full 40-character SHAs or tags. Config.in help text must name the
+   URL the .mk actually fetches. Binaries lifted out of a camera's factory firmware are
+   not a source of supply: there is no source, no vendor SDK, and no way to rebuild them
+   for the next kernel.
+
+4. Changes that belong to a different repository. Kernel code and kernel patches belong to
+   OpenIPC/linux. Support for one retail camera model belongs to OpenIPC/builder, under
+   devices/common/br-ext-chip-<vendor>/ - general/overlay/usr/sbin/sysupgrade already
+   encodes this split, routing lite|ultimate|neo to firmware and everything else to
+   builder. Hardware probing and bring-up tools belong to OpenIPC/ipctool. Bugs in the
+   majestic streamer belong to majestic's maintainers. Redirecting a contributor is a
+   normal, useful review outcome; say which repo and why.
+
+5. Monkey-patching in place of a fix. LD_PRELOAD shims are not acceptable anywhere in the
+   OpenIPC tree, in firmware or in builder. Neither is a kernel module that rewrites a
+   vendor blob's memory at runtime, nor a generated facade library checked in as a binary.
+   Each of these is bound to one exact build of one blob and fails silently at the next
+   vendor drop.
+
+6. Claims without evidence. A behaviour change needs a stated symptom and before/after
+   output from real hardware. A test plan whose boxes are unchecked is weaker than no test
+   plan, because it asserts verification that did not happen. A PR that says it was not
+   tested on hardware is not reviewable.
+
+7. Dead code and scope creep. A new source file that no Config.in selects and no .mk
+   builds is not compiled by CI, so nothing proves it even builds. And a diff must do what
+   its title says: a PR adding one sensor has no business repointing a SITE that every
+   board of that vendor consumes.
+
+Do not report: speculation about whether a change was written with AI assistance - judge
+the diff on blast radius, provenance, evidence, and repo ownership, never on writing
+style, comment density, formatting, or phrasing; shell style preferences that busybox ash
+accepts; missing unit tests for vendor driver code that cannot run off-target; or the
+naming of vendor blobs that predate the diff.
+"""
+
+compliance_user_guidelines = """
+Apply pr_compliance_checklist.yaml literally and only to lines the diff adds or changes.
+Do not raise a finding for pre-existing code that the diff merely moves or reindents.
+
+Note especially: a device-specific value added to general/overlay/ or to a shared
+load_<vendor> script fails the blast-radius gate even when it is correct for the board the
+contributor tested, because it changes the default for cameras already in the field. And
+LD_PRELOAD has no sanctioned use in this tree - a majestic bug that appears to need one is
+a majestic issue, not a firmware change.
+"""
