@@ -160,21 +160,23 @@ pr_compliances:
   - title: "Shipped scripts follow tree conventions"
     compliance_label: true
     objective: >
-      Scripts in the image run under busybox ash, not bash, and the tree standardised on
-      modprobe so module dependencies resolve. .github/workflows/shell-tests.yml already
-      parse-checks every shipped script against busybox ash, but it is deliberately
-      syntax-only — a bashism that parses still fails on the device, so review covers it.
+      The tree standardised on modprobe so module dependencies resolve, and on open_*
+      naming for OpenSDK modules that replace vendor-prefixed blobs. Both are mechanical
+      and checkable from the diff.
     success_criteria: >
-      Shell scripts that ship in the image parse under busybox ash and avoid bashisms,
-      load kernel modules with modprobe, and name OpenSDK modules open_* rather than with
-      a vendor-specific prefix. This gate applies only to scripts installed onto a camera
-      — general/overlay/ and general/package/*/files/. Scripts under .github/ and
-      contrib/ run on CI runners or a developer's machine under bash and are out of scope.
+      Shell scripts that ship in the image load kernel modules with modprobe, and OpenSDK
+      modules are named open_* rather than with a vendor-specific prefix. This gate
+      applies only to files installed onto a camera — general/overlay/ and
+      general/package/*/files/. Scripts under .github/ and contrib/ run on CI runners or
+      a developer's machine under bash and are out of scope.
     failure_criteria: >
-      The diff adds bashisms to a script that ships in the image, calls insmod where the
-      surrounding tree uses modprobe, or introduces an OpenSDK module under a
-      vendor-prefixed name such as gk7205v200_* or hi3516ev200_*. Do not raise this for
-      anything under .github/ or contrib/.
+      The diff calls insmod where the surrounding tree uses modprobe, or introduces an
+      OpenSDK module under a vendor-prefixed name such as gk7205v200_* or hi3516ev200_*.
+      Do not raise this for anything under .github/ or contrib/. Do not raise shell
+      portability here: syntax is already enforced by .github/workflows/shell-tests.yml
+      against busybox ash, and "avoid bashisms" is not binary on this target — the shipped
+      busybox sets CONFIG_ASH_BASH_COMPAT=y, so constructs a portability linter would
+      reject are valid in the field. That judgement lives in best_practices.md §7.1.
 
   - title: "Hardware evidence is present and honest"
     compliance_label: true

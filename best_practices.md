@@ -336,7 +336,34 @@ Flag files in the diff that the stated purpose does not explain, especially shar
 
 ---
 
-## 7. Things that must not reach `master`
+## 7. Shipped shell scripts
+
+### 7.1 Portability is judged against busybox ash as built here, not against dash
+
+`.github/workflows/shell-tests.yml` parse-checks every shipped script against busybox
+ash, but only for syntax — `sh -n` does not execute, so a construct that parses can still
+misbehave. That leaves a real gap for review, and it is tempting to close it by demanding
+"no bashisms". Do not.
+
+The target is not a minimal POSIX shell. The shipped busybox is built with
+`CONFIG_ASH_BASH_COMPAT=y` (`general/package/busybox/busybox.config`), so `function
+name()` and similar are valid on the device. Four scripts that work on real hardware —
+both `hi3516cv6xx` and `hi3519dv500` `load_hisilicon`, `msc313e auto_run.sh`, and
+`infinity6e zoom.sh` — are rejected by dash and run fine on cameras. Judging against a
+stricter shell than the target turns working code red.
+
+So raise portability only for constructs busybox ash genuinely lacks — bash arrays
+(`arr=(...)`), `declare`/`typeset`, `${var^^}`/`${var,,}` case conversion, `${!var}`
+indirect expansion, and herestrings (`<<<`) — and say which one you mean and why it
+fails. This is a judgement call, deliberately not a compliance gate.
+
+Flag a genuinely unsupported construct in a script under `general/overlay/` or
+`general/package/*/files/`. Do not flag style, and do not flag anything under `.github/`
+or `contrib/`, which run under bash away from the device.
+
+---
+
+## 8. Things that must not reach `master`
 
 These are hard gates rather than judgement calls; `pr_compliance_checklist.yaml`
 enforces them. Summarised here because they are the most common review findings:
