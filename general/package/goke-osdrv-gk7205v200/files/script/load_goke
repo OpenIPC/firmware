@@ -21,6 +21,22 @@ os_mem_size=${os_mem_size:=32}
 BOARD=demo
 YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 
+# DVP-wired sensor boards -- OPT-IN, set by the device profile.
+#
+# open_sys_config selects MIPI or DVP pad routing from its chip= and
+# g_cmos_yuv_flag= arguments. A board that wires the sensor to the DVP pads
+# needs the DVP path; with the MIPI arguments the i2c controller is muxed to
+# pads that are not connected to the sensor, so every address NACKs and no
+# sensor is ever detected.
+#
+# Keyed off an env var rather than the SoC name on purpose: both wirings exist
+# on gk7202v300, so testing $CHIP_TYPE here would fix DVP boards by breaking
+# every MIPI one. Profiles opt in with `fw_setenv sensor_dvp 1`.
+if [ "$(fw_printenv -n sensor_dvp 2>/dev/null)" = "1" ]; then
+	CHIP_TYPE=gk7205v200
+	YUV_TYPE0=1
+fi
+
 cd /lib/modules/$(uname -r)/goke/
 
 ##################################################################
@@ -165,6 +181,13 @@ insert_ko() {
 		YUV_TYPE0=1
 	fi
 	modprobe open_sys_config chip=$CHIP_TYPE sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
+	# open_sys_config takes MCLK only from its module parameters and defaults to
+	# 27 MHz at this chip=. A sensor init table tuned for 24 MHz (the GC2053
+	# ForCar tables are) then runs against the wrong clock. The ini's MCLK key is
+	# not consulted on this path, so the register is written directly.
+	case "$(fw_printenv -n sensor_mclk 2>/dev/null)" in
+		24) devmem 0x120100F0 32 0x0000000D ;;
+	esac
 	insert_osal
 	insmod gk7205v200_base.ko
 	insmod gk7205v200_sys.ko
