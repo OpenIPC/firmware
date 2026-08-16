@@ -83,9 +83,20 @@ jobs:
             exit 0
           fi
 
-          # Any review by the bot counts — the first pass reviews the whole
-          # diff, and its later in-place updates edit the same review object,
-          # so one review object existing == the PR has been Qodo-reviewed.
+          # Qodo signals a finished review in one of two ways, and a clean PR
+          # only ever produces the second:
+          #
+          #   1. a review OBJECT — created when it has inline comments to hang
+          #      on the diff. Its later in-place updates edit the same object,
+          #      so one existing == the PR has been reviewed.
+          #   2. an issue COMMENT headed "Code Review by Qodo" — which is ALL
+          #      a zero-finding PR gets. Verified on #2269: "Bugs (0), Rule
+          #      violations (0), Requirement gaps (0)", and no review object
+          #      at all.
+          #
+          # Counting only (1) therefore blocks every clean PR forever — the
+          # gate can never go green precisely when there is nothing to fix.
+          #
           # Paginated: a busy PR accumulates well over 100 review objects
           # (every inline reply wraps itself in one), and the bot's first
           # review is the OLDEST — exactly what a last-100 window loses
@@ -96,13 +107,27 @@ jobs:
             --paginate --jq ".[]
               | select(.user.login | startswith(\"$BOT\"))
               | .id" | wc -l)
-          if [ "$reviewed" -eq 0 ]; then
+
+          # Match the review header specifically, NOT merely "a comment by the
+          # bot". Qodo also posts "Qodo is busy working" (a placeholder before
+          # it has read anything), "PR Summary by Qodo" (/describe output, not
+          # a review), and "failed to apply 'local' repo settings" (an error).
+          # Treating any of those as a review would let the gate pass on a PR
+          # the agent never actually reviewed.
+          commented=$(gh api "repos/$REPO_OWNER/$REPO_NAME/issues/$PR/comments" \
+            --paginate --jq ".[]
+              | select(.user.login | startswith(\"$BOT\"))
+              | select(.body | test(\"Code Review by Qodo\"; \"i\"))
+              | .id" | wc -l)
+
+          if [ "$reviewed" -eq 0 ] && [ "$commented" -eq 0 ]; then
             echo "FAIL: no Qodo review on this PR yet — it reviews new PRs"
             echo "automatically within a couple of minutes; comment /review to"
             echo "summon one, then re-run this check once it answers. (Outage?"
             echo "Apply the skip-qodo-gate label.)"
             exit 1
           fi
+          echo "review found: $reviewed review object(s), $commented review comment(s)"
 
           # Unresolved Qodo threads, paginated (a long-lived PR can exceed one
           # 100-thread page; a truncated read must never produce a false pass).
