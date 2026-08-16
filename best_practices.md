@@ -78,19 +78,23 @@ package's sensor list changes no existing board and needs no such scrutiny.
 
 ### 1.3 A toolchain flag lands on every package in the image
 
-`BR2_TARGET_OPTIMIZATION` is appended to `TOOLCHAIN_WRAPPER_OPTS`
-(`buildroot-2023.02.1/toolchain/toolchain-wrapper.mk`), so it is injected into every
-compilation unit the board builds — kernel modules, vendor SDK glue, busybox, majestic,
-all of it. That is a whole-image ABI and codegen change, not a defconfig tweak, and it
-is invisible in a diff that shows one added line per board.
+`BR2_TARGET_OPTIMIZATION` is appended to `TOOLCHAIN_WRAPPER_OPTS` in Buildroot's
+`toolchain/toolchain-wrapper.mk`, so it is baked into the compiler wrapper and reaches
+every compilation unit the board builds — kernel modules, vendor SDK glue, busybox,
+majestic, all of it. That is a whole-image ABI and codegen change, not a defconfig tweak,
+and it is invisible in a diff that shows one added line per board.
+
+(Buildroot is not vendored here. `make` downloads the version in `BR_VER` at the top of
+the `Makefile` into `output-<board>/buildroot-$(BR_VER)/`, so read these files there.)
 
 ```
 # ❌ no symptom named, no size or stability measurement — #2260
 BR2_TARGET_OPTIMIZATION="-mno-unaligned-access"
 ```
 
-Note this string is separate from the `-O` level, which comes from `BR2_OPTIMIZE_*`
-(`buildroot-2023.02.1/package/Makefile.in`); do not claim one clobbers the other.
+Note this string is separate from the `-O` level, which comes from `BR2_OPTIMIZE_*` in
+`package/Makefile.in`; do not claim one clobbers the other. That false finding has
+already been made on a PR here.
 
 Flag any added or changed `BR2_TARGET_OPTIMIZATION`, `BR2_TARGET_LDFLAGS`, or
 `BR2_GLOBAL_PATCH_DIR` without a named symptom and a before/after image-size and

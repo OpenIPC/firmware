@@ -1,0 +1,181 @@
+# Merge gate for the Qodo code-review agent.
+#
+# Mirrors OpenIPC/devourer's qodo-gate.yml, which has already been through the
+# failure modes documented below. Keep the two in sync when either is fixed.
+#
+# Why: branch protection's "require conversation resolution" only blocks
+# unresolved threads that EXIST at merge time. Qodo posts its review a minute
+# or two after the PR opens, so a "merge when CI is green" flow can race past
+# it. This required check stays red until (a) Qodo has reviewed the PR at least
+# once — the first, whole-diff pass is the valuable one — and (b) every review
+# thread Qodo opened is resolved.
+#
+# Deliberately NOT pinned to the current head: requiring a review of every
+# follow-up commit turns each review-response push into a fresh summon, and
+# each re-review re-scans the diff and opens a new batch of ever-smaller
+# findings — an unbounded fix/re-review treadmill. The first review catches
+# the substance; thread resolution keeps each finding accountable (address it
+# or dismiss it with rationale, in the thread, before resolving); follow-up
+# commits are maintainer judgment, exactly as with a human reviewer who does
+# not re-review every fixup. This repo also leaves handle_push_trigger off in
+# .pr_agent.toml for the same reason — re-review on demand with /review.
+#
+# Event-driven: re-evaluates when the PR updates, when a review is submitted,
+# and when someone replies in a review thread. GitHub's workflow parser
+# rejects the documented `pull_request_review_thread` trigger ("Unexpected
+# value" — verified empirically on devourer, zero-job "workflow file issue"
+# run), so plain thread resolution does not auto-retrigger — after resolving
+# the last thread, leave a reply (retriggers); the check reads the live
+# resolution state each run. Escape hatch for a Qodo outage: the
+# `skip-qodo-gate` label passes the check (label changes re-trigger it).
+#
+# A passing run also re-runs this workflow's earlier FAILED runs on the same
+# head commit. Each trigger event creates its own workflow run, and branch
+# protection's rollup counts every run of a required check on the commit — a
+# fresh green run sits beside the stale red ones rather than superseding
+# them, so the PR stays BLOCKED until each red run is re-run by hand. Only a
+# passing run re-runs others and a re-run that passes finds nothing red left,
+# so it converges; if threads are genuinely unresolved the re-runs go red
+# again and the gate still holds.
+name: qodo-gate
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created, deleted]
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
+
+jobs:
+  qodo-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a Qodo review with all its threads resolved
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+        run: |
+          set -euo pipefail
+          BOT='qodo-free-for-open-source-projects'
+
+          json=$(gh api graphql \
+            -F owner="$REPO_OWNER" -F name="$REPO_NAME" -F pr="$PR" \
+            -f query='
+              query($owner: String!, $name: String!, $pr: Int!) {
+                repository(owner: $owner, name: $name) {
+                  pullRequest(number: $pr) {
+                    labels(first: 100) { nodes { name } }
+                  }
+                }
+              }')
+
+          if echo "$json" | jq -e --arg l skip-qodo-gate \
+              '.data.repository.pullRequest.labels.nodes[] | select(.name == $l)' \
+              >/dev/null; then
+            echo "PASS: skip-qodo-gate label set (Qodo outage escape hatch)"
+            exit 0
+          fi
+
+          # Any review by the bot counts — the first pass reviews the whole
+          # diff, and its later in-place updates edit the same review object,
+          # so one review object existing == the PR has been Qodo-reviewed.
+          # Paginated: a busy PR accumulates well over 100 review objects
+          # (every inline reply wraps itself in one), and the bot's first
+          # review is the OLDEST — exactly what a last-100 window loses
+          # first. --paginate applies --jq per page, so emit ids and count
+          # lines. REST spells the bot login with a [bot] suffix, unlike
+          # GraphQL, so match on the prefix.
+          reviewed=$(gh api "repos/$REPO_OWNER/$REPO_NAME/pulls/$PR/reviews" \
+            --paginate --jq ".[]
+              | select(.user.login | startswith(\"$BOT\"))
+              | .id" | wc -l)
+          if [ "$reviewed" -eq 0 ]; then
+            echo "FAIL: no Qodo review on this PR yet — it reviews new PRs"
+            echo "automatically within a couple of minutes; comment /review to"
+            echo "summon one, then re-run this check once it answers. (Outage?"
+            echo "Apply the skip-qodo-gate label.)"
+            exit 1
+          fi
+
+          # Unresolved Qodo threads, paginated (a long-lived PR can exceed one
+          # 100-thread page; a truncated read must never produce a false pass).
+          unresolved=0
+          cursor=""
+          while :; do
+            args=( -F owner="$REPO_OWNER" -F name="$REPO_NAME" -F pr="$PR" )
+            [ -n "$cursor" ] && args+=( -F cursor="$cursor" )
+            page=$(gh api graphql "${args[@]}" \
+              -f query='
+                query($owner: String!, $name: String!, $pr: Int!, $cursor: String) {
+                  repository(owner: $owner, name: $name) {
+                    pullRequest(number: $pr) {
+                      reviewThreads(first: 100, after: $cursor) {
+                        pageInfo { hasNextPage endCursor }
+                        nodes {
+                          isResolved
+                          comments(first: 10) { nodes { author { login } } }
+                        }
+                      }
+                    }
+                  }
+                }')
+            # A thread is Qodo's if ANY of its first comments is by the bot —
+            # first-comment-only attribution loses the thread when the bot's
+            # opening comment is deleted while replies remain (and deletion
+            # re-triggers this check, so that would be a false pass).
+            n=$(echo "$page" | jq --arg b "$BOT" \
+              '[.data.repository.pullRequest.reviewThreads.nodes[]
+                | select(.isResolved | not)
+                | select([.comments.nodes[].author.login] | index($b))] | length')
+            unresolved=$((unresolved + n))
+            more=$(echo "$page" | jq -r \
+              '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
+            [ "$more" = "true" ] || break
+            cursor=$(echo "$page" | jq -r \
+              '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor')
+          done
+
+          if [ "$unresolved" -gt 0 ]; then
+            echo "FAIL: $unresolved unresolved Qodo review thread(s) — address"
+            echo "or explicitly dismiss each finding in its thread, then mark"
+            echo "it resolved. Plain resolution does not auto-retrigger this"
+            echo "check: leave a reply in a thread (retriggers) — the passing"
+            echo "run then sweeps this red run off the commit itself."
+            exit 1
+          fi
+
+          echo "PASS: Qodo review present, all its threads resolved"
+
+      # Sweep stale red runs of this gate off the head commit, so the pass
+      # above is the one the branch-protection rollup sees. Best-effort: a
+      # failed re-run request must not turn a PASS into a FAIL.
+      - name: Re-run this gate's earlier failed runs on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          THIS_RUN: ${{ github.run_id }}
+        run: |
+          set -u
+          # The listing is guarded too, not just the reruns: with an unguarded
+          # pipeline a transient list failure would be the step's exit code —
+          # exactly the PASS-into-FAIL this step promises not to produce.
+          if ! ids=$(gh run list --repo "$REPO" --workflow qodo-gate \
+              --commit "$HEAD_SHA" --json databaseId,conclusion \
+              --jq '.[] | select(.conclusion == "failure") | .databaseId'); then
+            echo "sweep skipped: could not list this workflow's runs"
+            exit 0
+          fi
+          for id in $ids; do
+            [ "$id" = "$THIS_RUN" ] && continue
+            echo "re-running failed qodo-gate run $id"
+            gh run rerun "$id" --repo "$REPO" --failed || true
+          done
+          exit 0

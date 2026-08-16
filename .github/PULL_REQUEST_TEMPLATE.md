@@ -51,6 +51,6 @@ After:
 - [ ] No files specific to a single retail camera model (those go to [OpenIPC/builder](https://github.com/OpenIPC/builder))
 - [ ] No probing or bring-up tooling (that goes to [OpenIPC/ipctool](https://github.com/OpenIPC/ipctool))
 - [ ] Nothing under `general/overlay/` or in a shared `load_<vendor>` script hardcodes a value specific to my board
-- [ ] Package sources come from an OpenIPC repository, pinned to a full 40-character SHA or a tag
+- [ ] Package sources come from an OpenIPC repository, and any version bump keeps at least the specificity of the pin it replaces (a new package should pin a full 40-character SHA)
 - [ ] No `LD_PRELOAD`, and no binaries that cannot be rebuilt from source
 - [ ] New code is selected by a defconfig, so CI actually builds it

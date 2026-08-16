@@ -35,10 +35,13 @@ Prioritise, in order:
    contributor's bench must not become the default for everyone else. This breaks already
    deployed cameras at upgrade time, which is the worst failure mode this project has.
 
-2. Buildroot defaults replaced instead of extended. BR2_TARGET_OPTIMIZATION and its peers
-   are whole-value assignments: setting one to a single new flag silently drops the -Os
-   -pipe that every package was built with. The symptom is a size and performance
-   regression across the entire image, with nothing in the diff naming it.
+2. Toolchain-wide flags added without measurement. BR2_TARGET_OPTIMIZATION is appended to
+   TOOLCHAIN_WRAPPER_OPTS in Buildroot's toolchain/toolchain-wrapper.mk, so it is baked
+   into the compiler wrapper and reaches every compilation unit the board builds. That is
+   a whole-image codegen and ABI change arriving as one added line per defconfig, and it
+   needs a named symptom plus a before/after size and boot check. Do not claim it drops
+   the -O level: that comes independently from BR2_OPTIMIZE_* in package/Makefile.in, and
+   asserting otherwise is a false finding this project has already seen made.
 
 3. Provenance. A package SITE must point at an OpenIPC-org repository or a documented
    upstream, never a contributor's personal fork - a fork is a single point of failure for
