@@ -5,6 +5,21 @@
 #   pr_compliance_checklist.yaml - binary hard gates
 #
 # Reference: https://docs.qodo.ai/install-and-configure/configuration-overview/configuration-file
+#
+# CAUTION - do not name the dynamic linker's library-injection environment
+# variable in this file, in any case, and not inside a longer word either.
+# PR-Agent parses this file with a hardened Dynaconf loader that rejects the
+# directives capable of executing code or reading arbitrary files, and that
+# variable's name ends in one of them. Matching is on the bare token, so the
+# full variable name trips it even though it is only prose in a guideline.
+#
+# The failure mode is silent in the worst way: the agent posts "failed to apply
+# 'local' repo settings / Forbidden directive", then reviews the PR with its
+# stock prompt - so every guideline below is ignored while the review still
+# looks normal. That is exactly what happened on #2268, which added this file.
+#
+# Write such rules in best_practices.md instead. It is plain markdown, is under
+# no such restriction, and already states this one in full in section 4.1.
 
 [github_app]
 pr_commands = [
@@ -59,9 +74,11 @@ Prioritise, in order:
    majestic streamer belong to majestic's maintainers. Redirecting a contributor is a
    normal, useful review outcome; say which repo and why.
 
-5. Monkey-patching in place of a fix. LD_PRELOAD shims are not acceptable anywhere in the
-   OpenIPC tree, in firmware or in builder. Neither is a kernel module that rewrites a
-   vendor blob's memory at runtime, nor a generated facade library checked in as a binary.
+5. Monkey-patching in place of a fix. Dynamic-linker injection shims - a library forced
+   ahead of the real one through the linker's LD_* environment knob, spelled out in
+   best_practices.md section 4.1 - are not acceptable anywhere in the OpenIPC tree, in
+   firmware or in builder. Neither is a kernel module that rewrites a vendor blob's memory
+   at runtime, nor a generated facade library checked in as a binary.
    Each of these is bound to one exact build of one blob and fails silently at the next
    vendor drop.
 
@@ -89,6 +106,7 @@ Do not raise a finding for pre-existing code that the diff merely moves or reind
 Note especially: a device-specific value added to general/overlay/ or to a shared
 load_<vendor> script fails the blast-radius gate even when it is correct for the board the
 contributor tested, because it changes the default for cameras already in the field. And
-LD_PRELOAD has no sanctioned use in this tree - a majestic bug that appears to need one is
-a majestic issue, not a firmware change.
+dynamic-linker injection shims (best_practices.md section 4.1) have no sanctioned use in
+this tree - a majestic bug that appears to need one is a majestic issue, not a firmware
+change.
 """
