@@ -62,9 +62,28 @@ permissions:
 jobs:
   qodo-gate:
     runs-on: ubuntu-latest
-    # issue_comment fires for plain issues too, which have no PR to gate.
-    # Every other trigger here is PR-only, so this is the whole guard.
-    if: github.event_name != 'issue_comment' || github.event.issue.pull_request
+    # Narrow the issue_comment trigger to the single comment that can change
+    # this gate's verdict: Qodo's review. Without all three clauses the job is
+    # an API-heavy workflow holding `actions: write` that any commenter could
+    # run at will, on any PR, as often as they liked — CI noise, and needless
+    # rate-limit exposure on a REQUIRED check.
+    #
+    #   issue.pull_request  — issue_comment fires for plain issues too, and
+    #                         those have no PR to gate.
+    #   comment author      — only the bot's own comment is evidence of review.
+    #                         A human typing /review still works: Qodo answers,
+    #                         and that answer is what triggers this.
+    #   comment body        — the bot also posts "Qodo is busy working" and
+    #                         "PR Summary by Qodo", neither of which means the
+    #                         diff was reviewed. Matching the review header
+    #                         keeps this to one run per review.
+    #
+    # Every other trigger here is PR-only and needs no guard.
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.pull_request &&
+       startsWith(github.event.comment.user.login, 'qodo-free-for-open-source-projects') &&
+       contains(github.event.comment.body, 'Code Review by Qodo'))
     steps:
       - name: Require a Qodo review with all its threads resolved
         env:
