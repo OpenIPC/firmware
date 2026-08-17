@@ -621,8 +621,8 @@ enter_ramfs() {
 	done
 	# --list is a build option; fall back to what the flash phase actually uses.
 	for applet in sh ash awk basename cat cut dd flash_eraseall flashcp grep \
-		head ln losetup ls mkdir mount od printf reboot rm sed sleep sync \
-		tail timeout umount xxd; do
+		head ln losetup ls mkdir mount od printf reboot rm rmdir sed sleep \
+		sync tail timeout umount xxd; do
 		[ -e "$RAM_ROOT/bin/$applet" ] || ln -sf busybox "$RAM_ROOT/bin/$applet" 2>/dev/null
 	done
 	# If the essentials are not there, the ramfs is worse than useless: better to

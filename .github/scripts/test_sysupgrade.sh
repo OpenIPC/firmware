@@ -950,6 +950,13 @@ grep -qF 'rmdir "/mnt$RAM_ROOT"' "$SRC" \
 grep -qE '^case "\$RAM_ROOT" in /\*\)' "$SRC" \
     && ok "a relative RAM_ROOT override is normalised to an absolute path" \
     || bad "RAM_ROOT is used as \"/mnt\$RAM_ROOT\" and matched against /proc/mounts; it must be absolute"
+# That rmdir runs AFTER the pivot, where the applet symlinks are the only tools
+# there are. `busybox --list` is a build option, so on a camera without it the
+# hardcoded fallback list is the whole toolbox -- an applet missing from it is
+# simply "not found", and a cleanup that fails is one that silently did nothing.
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | awk '/for applet in sh ash/,/done/' | grep -qw 'rmdir' \
+    && ok "the fallback applet list stages rmdir for the ramfs phase" \
+    || bad "the ramfs phase runs rmdir, but a busybox without --list would not have that applet"
 awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'export remote_update' \
     && ok "remote_update survives the re-exec (verify_rootfs branches on it)" \
     || bad "remote_update is not exported; an unmountable rootfs behaves differently in phase 2"
