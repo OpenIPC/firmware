@@ -8,6 +8,13 @@ LOCK_FILE=/tmp/sysupgrade.lock
 # under /tmp: /tmp is moved into it, and a mount cannot be relocated under
 # itself. See enter_ramfs.
 RAM_ROOT=${RAM_ROOT:-/ram}
+# Absolute, always. Two things downstream assume it: /proc/mounts records mount
+# points absolutely, so the "is this tmpfs ours" check would never match a
+# relative path; and the second phase reaches this same directory through the
+# old root as "/mnt$RAM_ROOT", which a missing leading slash turns into
+# "/mntram". Both would fail quietly, so normalise an override rather than
+# trusting whoever set it.
+case "$RAM_ROOT" in /*) ;; *) RAM_ROOT="/$RAM_ROOT" ;; esac
 # A writable descriptor on the real /dev/null, opened once while /dev is still
 # certainly the devtmpfs.
 #

@@ -944,6 +944,12 @@ awk '/^ramfs_discard\(\)/,/^}/' "$SRC" | grep -qF '^tmpfs $RAM_ROOT tmpfs' \
 grep -qF 'rmdir "/mnt$RAM_ROOT"' "$SRC" \
     && ok "the ramfs phase reclaims the mount point stranded in the old root" \
     || bad "after the pivot nothing removes the old root's RAM_ROOT"
+# ...and that "/mnt$RAM_ROOT" only names the right directory if RAM_ROOT is
+# absolute. It is overridable from the environment, and a relative one would
+# also defeat the /proc/mounts check, which records mount points absolutely.
+grep -qE '^case "\$RAM_ROOT" in /\*\)' "$SRC" \
+    && ok "a relative RAM_ROOT override is normalised to an absolute path" \
+    || bad "RAM_ROOT is used as \"/mnt\$RAM_ROOT\" and matched against /proc/mounts; it must be absolute"
 awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'export remote_update' \
     && ok "remote_update survives the re-exec (verify_rootfs branches on it)" \
     || bad "remote_update is not exported; an unmountable rootfs behaves differently in phase 2"
