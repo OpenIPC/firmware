@@ -15,8 +15,14 @@ modern musl libc.
 This tool performs two definitive checks (no guessing):
 
   1. SYMBOL CHECK: extracts every imported symbol from vendor .so files and
-     checks whether the actual musl libc.so exports it.  Any symbol the
-     vendor needs but musl doesn't provide will fail at dlopen/startup.
+     checks whether anything in the process image defines it.  A symbol only
+     counts as missing when neither musl NOR a sibling .so shipped in the same
+     package provides it -- HiSilicon and Goke packages ship libsecurec.so,
+     which defines the C11 Annex K family (memcpy_s, snprintf_s, ...) that the
+     other vendor libraries import via DT_NEEDED.  Symbols owned by the
+     compiler runtime (libgcc's __aeabi_*/__divdi3, libstdc++'s __cxa_*) are
+     reported separately: they resolve from whichever executable loads the
+     library, so they are not a libc gap either.
 
   2. STRUCT PROBE: compiles a small C program with the platform's musl
      cross-compiler and runs it under qemu to get exact sizeof/offsetof
@@ -59,6 +65,7 @@ EXIT CODES
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -75,6 +82,8 @@ class BinaryInfo:
     path: str           # absolute path
     rel_path: str       # relative to package dir
     imports: list       # [(binding, symbol), ...]
+    exports: set        # symbols this .so DEFINES (resolvable by siblings)
+    soname: str         # DT_SONAME, or the file basename if unset
     needed: list        # NEEDED entries from .dynamic
     version_reqs: list  # GLIBC_2.x etc version tags
 
@@ -89,6 +98,11 @@ class PackageResult:
     missing_symbols: dict = field(default_factory=lambda: defaultdict(list))
     # maps symbol -> [binary_rel_paths]
     struct_mismatches: list = field(default_factory=list)
+    # symbol -> sorted list of sibling SONAMEs in this package that define it
+    sibling_resolved: dict = field(default_factory=dict)
+    # symbols provided by the compiler runtime the consumer links (libgcc,
+    # libstdc++), not by libc -- never a shim's job
+    toolchain_symbols: dict = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +159,45 @@ LINKER_INTERNALS = {
     "__gmon_start__", "_Jv_RegisterClasses",
     "__deregister_frame_info", "__register_frame_info",
     "_ITM_deregisterTMCloneTable", "_ITM_registerTMCloneTable",
+    "__GNU_EH_FRAME_HDR", "_gp_disp", "__gnu_local_gp",
 }
+
+# Symbols supplied by the compiler runtime rather than by libc.  A vendor .so
+# importing these is not a musl problem: libgcc / libgcc_eh / libstdc++ get
+# linked into whichever executable loads the library.  Reporting them as
+# "missing from musl" is what inflated the counts in issue #1992 -- e.g.
+# rockchip-osdrv-rv11xx imports 15 C++ ABI symbols that libstdc++ provides.
+TOOLCHAIN_RUNTIME_PREFIXES = (
+    "__aeabi_",      # ARM EABI helpers (libgcc)
+    "__cxa_",        # C++ ABI (libstdc++)
+    "_Unwind_",      # unwinder (libgcc_eh)
+    "__gxx_",        # C++ personality routine (libstdc++)
+)
+
+TOOLCHAIN_RUNTIME_SYMBOLS = {
+    # libgcc integer/float helpers
+    "__divdi3", "__udivdi3", "__moddi3", "__umoddi3", "__divdc3",
+    "__floatdisf", "__floatdidf", "__fixdfdi", "__fixunsdfdi",
+    "__popcountsi2", "__popcountdi2", "__clzsi2", "__ctzsi2",
+    # libgcc_eh frame registration
+    "__register_frame_info_bases", "__deregister_frame_info_bases",
+    "__register_frame_info_header_bases",
+    # libstdc++
+    "__dynamic_cast",
+}
+
+
+def is_toolchain_runtime_symbol(sym: str) -> bool:
+    """True if the compiler runtime (libgcc/libstdc++) provides this symbol.
+
+    Note __aeabi_d2iz is deliberately NOT special-cased away here: older
+    Buildroot ARM toolchains have been seen not to emit it, which is why
+    uclibc-compat carries an implementation.  It is still a libgcc symbol,
+    so it is bucketed with the rest and simply not counted as a musl gap.
+    """
+    if sym in TOOLCHAIN_RUNTIME_SYMBOLS:
+        return True
+    return any(sym.startswith(p) for p in TOOLCHAIN_RUNTIME_PREFIXES)
 
 
 # ---------------------------------------------------------------------------
@@ -171,12 +223,34 @@ def is_elf(path: str) -> bool:
         return False
 
 
+def is_exportable(bind: str, vis: str) -> bool:
+    """True if a defined .dynsym entry can actually satisfy another DSO.
+
+    Being defined is not enough.  A LOCAL binding is not visible outside the
+    object and HIDDEN/INTERNAL visibility is not visible to the dynamic
+    linker at all, so neither can resolve a sibling's import.  Counting one
+    as a provider would let a genuinely missing symbol be reported as
+    sibling-resolved.
+
+    In this tree the entries this actually removes are benign -- across the
+    vendor .so sampled, the 366 non-exportable .dynsym entries are 243 LOCAL
+    section symbols (.init, .jcr) and 123 instances of readelf's own header
+    row, which otherwise parses as a symbol literally named "Name".  No
+    HIDDEN entry was observed, and no symbol changed classification when this
+    filter was added.  It is here so that a vendor drop which does carry one
+    cannot quietly mask a real gap.
+    """
+    return bind in ("GLOBAL", "WEAK") and vis in ("DEFAULT", "PROTECTED")
+
+
 def get_musl_exports(libc_path: str) -> set[str]:
     """Get all symbols exported by musl libc.so."""
     out = run_readelf(["--dyn-syms"], libc_path)
     exports = set()
     for line in out.splitlines():
         parts = line.split()
+        if len(parts) >= 8 and not is_exportable(parts[4], parts[5]):
+            continue
         if len(parts) >= 8 and parts[6] != "UND" and parts[7]:
             exports.add(parts[7].split("@")[0])
     return exports
@@ -189,19 +263,24 @@ def parse_binary(path: str, pkg_dir: str) -> BinaryInfo | None:
 
     rel_path = os.path.relpath(path, pkg_dir)
 
-    # Dynamic section for NEEDED
+    # Dynamic section for NEEDED / SONAME
     dyn_out = run_readelf(["-d"], path)
     needed = re.findall(r"NEEDED.*\[(.+?)\]", dyn_out)
+    m_soname = re.search(r"SONAME.*\[(.+?)\]", dyn_out)
+    soname = m_soname.group(1) if m_soname else os.path.basename(path)
 
-    # Dynamic symbols -- undefined imports
+    # Dynamic symbols -- undefined imports and defined exports
     dynsym_out = run_readelf(["--dyn-syms"], path)
     imports = []
+    exports = set()
     for line in dynsym_out.splitlines():
         parts = line.split()
-        if len(parts) >= 8 and parts[6] == "UND" and parts[7]:
-            binding = parts[4]
+        if len(parts) >= 8 and parts[7]:
             sym = parts[7].split("@")[0]
-            imports.append((binding, sym))
+            if parts[6] == "UND":
+                imports.append((parts[4], sym))
+            elif is_exportable(parts[4], parts[5]):
+                exports.add(sym)
 
     # GNU version requirements
     ver_out = run_readelf(["-V"], path)
@@ -211,7 +290,8 @@ def parse_binary(path: str, pkg_dir: str) -> BinaryInfo | None:
 
     return BinaryInfo(
         path=path, rel_path=rel_path,
-        imports=imports, needed=needed, version_reqs=version_reqs,
+        imports=imports, exports=exports, soname=soname,
+        needed=needed, version_reqs=version_reqs,
     )
 
 
@@ -484,6 +564,17 @@ def audit_package(pkg_name: str, pkg_dir: str, musl_exports: set[str],
     result.source_libc = detect_source_libc(result.binaries)
     result.arch = detect_arch(result.binaries[0].path)
 
+    # A symbol is only "missing" if nothing in the process image defines it.
+    # musl is one provider; the sibling .so shipped alongside in the same
+    # package are another.  HiSilicon and Goke packages ship libsecurec.so,
+    # which defines the whole C11 Annex K family (memcpy_s, snprintf_s, ...)
+    # that the other vendor libraries import via DT_NEEDED.  Checking musl
+    # alone reports those as missing and overstates the real gap.
+    sibling_providers = defaultdict(set)
+    for binfo in result.binaries:
+        for sym in binfo.exports:
+            sibling_providers[sym].add(binfo.soname)
+
     # Phase 1: Missing symbols (skip vendor-internal and linker symbols)
     for binfo in result.binaries:
         for binding, sym in binfo.imports:
@@ -492,6 +583,24 @@ def audit_package(pkg_name: str, pkg_dir: str, musl_exports: set[str],
             if is_vendor_symbol(sym):
                 continue
             if binding == "WEAK" and sym in LINKER_INTERNALS:
+                continue
+            if sym in LINKER_INTERNALS:
+                continue
+            if is_toolchain_runtime_symbol(sym):
+                result.toolchain_symbols.setdefault(sym, []).append(binfo.rel_path)
+                continue
+            providers = sibling_providers.get(sym)
+            if providers:
+                # Defined by a sibling in this package.  Flag the case where
+                # the importer does not name that sibling in its own DT_NEEDED
+                # -- it then depends on the provider being pulled into the
+                # process by someone else, which is fragile but not broken.
+                direct = providers & set(binfo.needed)
+                result.sibling_resolved.setdefault(
+                    sym, {"providers": sorted(providers), "indirect": []},
+                )
+                if not direct:
+                    result.sibling_resolved[sym]["indirect"].append(binfo.rel_path)
                 continue
             result.missing_symbols[sym].append(binfo.rel_path)
 
@@ -603,6 +712,32 @@ def print_report(result: PackageResult, quiet: bool) -> None:
             for sym, bins in sorted(other_missing.items()):
                 print(f"    {sym}")
             print()
+
+    # Resolved by a sibling in the same package -- reported so the audit is
+    # not silently dropping them, but these are not a gap to shim.
+    if result.sibling_resolved and not quiet:
+        indirect = {s: d for s, d in result.sibling_resolved.items() if d["indirect"]}
+        print(f"  RESOLVED BY SIBLING VENDOR LIBS "
+              f"({len(result.sibling_resolved)} symbols) -- not a musl gap:")
+        for sym, d in sorted(result.sibling_resolved.items()):
+            print(f"    {sym}  <- {', '.join(d['providers'])}")
+        print()
+        if indirect:
+            print(f"  ...of which {len(indirect)} are imported by a binary that "
+                  f"does not list the provider in its own DT_NEEDED:")
+            for sym, d in sorted(indirect.items()):
+                for b in sorted(set(d["indirect"])):
+                    print(f"    {sym}  <- needed by {b}")
+            print()
+
+    # Compiler-runtime symbols -- provided by libgcc/libstdc++ in whichever
+    # executable loads the library, never by libc.
+    if result.toolchain_symbols and not quiet:
+        print(f"  COMPILER RUNTIME ({len(result.toolchain_symbols)} symbols) -- "
+              f"provided by libgcc/libstdc++, not libc:")
+        for sym in sorted(result.toolchain_symbols):
+            print(f"    {sym}")
+        print()
 
     # Struct mismatches
     if result.struct_mismatches:
@@ -754,39 +889,60 @@ def download_toolchain(soc_vendor: str, soc_family: str, prefix: str) -> Path | 
     tarball_path = TOOLCHAIN_CACHE_DIR / tarball_name
     extract_dir = TOOLCHAIN_CACHE_DIR / f"{soc_vendor}-{soc_family}"
 
-    # Already extracted?
+    # Already extracted?  Only a directory published by the atomic rename
+    # below counts: a half-extracted tree would otherwise be trusted forever.
     if extract_dir.is_dir():
         return extract_dir
 
-    # Already downloaded?
+    # Already downloaded?  Download into a .part file and rename only on
+    # success, so an interrupted run (CI timeout, ^C) cannot leave a truncated
+    # tarball that every later run happily tries to extract.  This matters most
+    # under the CI cache, where one poisoned entry would persist across runs.
     if not tarball_path.exists():
         url = f"{TOOLCHAIN_URL_BASE}/{tarball_name}"
         print(f"  Downloading toolchain: {url}")
+        part_path = tarball_path.with_name(tarball_name + ".part")
         try:
             r = subprocess.run(
-                ["wget", "-q", "-O", str(tarball_path), url],
-                timeout=300,
+                ["wget", "-q", "-O", str(part_path), url],
+                timeout=900,
             )
             if r.returncode != 0:
-                tarball_path.unlink(missing_ok=True)
+                part_path.unlink(missing_ok=True)
                 print(f"  ERROR: download failed", file=sys.stderr)
                 return None
+            part_path.replace(tarball_path)
         except (subprocess.TimeoutExpired, FileNotFoundError):
-            tarball_path.unlink(missing_ok=True)
+            part_path.unlink(missing_ok=True)
             print(f"  ERROR: download failed (timeout or wget not found)", file=sys.stderr)
             return None
 
-    # Extract
+    # Extract into a scratch directory and publish it with a single rename, for
+    # the same reason: a failed tar must not leave a partial tree behind under
+    # the name the "already extracted?" check above trusts.
     print(f"  Extracting toolchain to {extract_dir}")
-    extract_dir.mkdir(parents=True, exist_ok=True)
-    r = subprocess.run(
-        ["tar", "xzf", str(tarball_path), "-C", str(extract_dir), "--strip-components=1"],
-        capture_output=True, timeout=120,
-    )
+    staging_dir = extract_dir.with_name(extract_dir.name + ".partial")
+    shutil.rmtree(staging_dir, ignore_errors=True)
+    staging_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        r = subprocess.run(
+            ["tar", "xzf", str(tarball_path), "-C", str(staging_dir),
+             "--strip-components=1"],
+            capture_output=True, timeout=300,
+        )
+    except subprocess.TimeoutExpired:
+        shutil.rmtree(staging_dir, ignore_errors=True)
+        print(f"  ERROR: extraction timed out", file=sys.stderr)
+        return None
     if r.returncode != 0:
+        shutil.rmtree(staging_dir, ignore_errors=True)
+        # A truncated tarball is the usual cause, and keeping it would make the
+        # failure permanent, so drop it and let the next run fetch it again.
+        tarball_path.unlink(missing_ok=True)
         print(f"  ERROR: extraction failed: {r.stderr.decode()}", file=sys.stderr)
         return None
 
+    staging_dir.replace(extract_dir)
     return extract_dir
 
 

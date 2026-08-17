@@ -1,0 +1,114 @@
+name: vendor-abi
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'general/package/*-osdrv-*/**'
+      # The auditor sweeps general/package/legacy/*-osdrv-* too, so CI has to
+      # watch it or those packages silently lose the check.
+      - 'general/package/legacy/*-osdrv-*/**'
+      - 'general/package/uclibc-compat/**'
+      - 'general/package/glibc-compat/**'
+      - 'general/scripts/audit-vendor-abi.py'
+  # No push trigger, for the same reason shell-tests.yml has none: every commit
+  # on master already ran this on its pull request.
+  workflow_dispatch:
+
+jobs:
+  # Advisory only. hisilicon-osdrv-hi3520dv200 landed in May with a vendor blob
+  # that needed a 32-bit-off_t mmap shim, and nothing in CI noticed -- the gap
+  # was found by hand, months later, on a camera. This job would have printed it
+  # on the pull request. It deliberately does not gate the merge: the audit
+  # downloads a ~100MB toolchain per SoC family from the releases page, so a
+  # rate-limited or reorganised release asset would otherwise block unrelated
+  # work. Read the log, do not trust the checkmark.
+  audit:
+    name: vendor ABI audit (advisory)
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need the base commit to diff against, not just the merge head.
+          fetch-depth: 0
+
+      - name: Work out which osdrv packages this PR touches
+        id: changed
+        run: |
+          # workflow_dispatch has no diff to take, so it always sweeps
+          # everything. Empty output means "audit all packages".
+          pkgs=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            changed=$(git diff --name-only "$base"...HEAD)
+            # A change to the shims or to the auditor itself has no single
+            # owning package, so those also sweep everything.
+            if ! echo "$changed" \
+                | grep -qE '^general/(scripts/audit-vendor-abi\.py|package/(uc|g)libc-compat/)'; then
+              # Keep the legacy/ prefix: the auditor names those packages
+              # "legacy/<name>" and --package resolves the path relative to
+              # general/package, so stripping it would not find them.
+              pkgs=$(echo "$changed" \
+                | grep -oE '^general/package/(legacy/)?[a-z0-9]+-osdrv-[a-z0-9]+' \
+                | sed 's|^general/package/||' | sort -u)
+            fi
+          fi
+          {
+            echo "packages<<EOF"
+            echo "$pkgs"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          if [ -n "$pkgs" ]; then
+            echo "Auditing: $pkgs"
+          else
+            echo "Auditing: all osdrv packages (shim or auditor changed)"
+          fi
+
+      - name: Cache downloaded toolchains
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/openipc-audit-toolchains
+          key: audit-toolchains-${{ runner.os }}-v1
+
+      - name: Run the audit
+        run: |
+          set -o pipefail
+          pkgs="${{ steps.changed.outputs.packages }}"
+          rc=0
+          if [ -z "$pkgs" ]; then
+            python3 general/scripts/audit-vendor-abi.py 2>&1 | tee -a audit.log || rc=$?
+          else
+            for p in $pkgs; do
+              python3 general/scripts/audit-vendor-abi.py --package "$p" 2>&1 \
+                | tee -a audit.log || rc=$?
+            done
+          fi
+          echo "audit exit status: $rc (advisory -- not failing the build)"
+
+      - name: Summarise into the job summary
+        if: always()
+        run: |
+          {
+            echo '## Vendor ABI audit (advisory)'
+            echo
+            echo 'Findings below are informational. A missing symbol means a'
+            echo 'vendor .so imports something neither musl nor a sibling'
+            echo 'vendor library in the same package defines.'
+            echo
+            echo '```'
+            # Keep the summary inside GitHub'\''s 1MB budget.
+            head -c 900000 audit.log 2>/dev/null || echo '(no output)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the full log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor-abi-audit
+          path: audit.log
+          if-no-files-found: ignore
