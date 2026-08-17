@@ -5,6 +5,9 @@ on:
       - master
     paths:
       - 'general/package/*-osdrv-*/**'
+      # The auditor sweeps general/package/legacy/*-osdrv-* too, so CI has to
+      # watch it or those packages silently lose the check.
+      - 'general/package/legacy/*-osdrv-*/**'
       - 'general/package/uclibc-compat/**'
       - 'general/package/glibc-compat/**'
       - 'general/scripts/audit-vendor-abi.py'
@@ -46,8 +49,11 @@ jobs:
             # owning package, so those also sweep everything.
             if ! echo "$changed" \
                 | grep -qE '^general/(scripts/audit-vendor-abi\.py|package/(uc|g)libc-compat/)'; then
+              # Keep the legacy/ prefix: the auditor names those packages
+              # "legacy/<name>" and --package resolves the path relative to
+              # general/package, so stripping it would not find them.
               pkgs=$(echo "$changed" \
-                | grep -oE '^general/package/[a-z0-9]+-osdrv-[a-z0-9]+' \
+                | grep -oE '^general/package/(legacy/)?[a-z0-9]+-osdrv-[a-z0-9]+' \
                 | sed 's|^general/package/||' | sort -u)
             fi
           fi

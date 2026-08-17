@@ -189,21 +189,49 @@ static void __uclibc_compat_init(void)
  * __cmsg_nxthdr -- the out-of-line helper behind CMSG_NXTHDR.  glibc and
  * uclibc emit a call to it; musl expands CMSG_NXTHDR entirely inline and so
  * exports nothing.
+ *
+ * glibc's version walks the buffer with raw pointer arithmetic and trusts
+ * the caller to have obtained cmsg from CMSG_FIRSTHDR.  Ancillary data
+ * ultimately comes from the kernel via recvmsg(), so this one validates the
+ * cursor against the control buffer first and does every bounds test in
+ * size_t offsets: computing `cmsg + CMSG_ALIGN(cmsg_len)` and only then
+ * checking it would already be undefined behaviour for a corrupt length.
  */
 __attribute__((visibility("default")))
 struct cmsghdr *__cmsg_nxthdr(struct msghdr *mhdr, struct cmsghdr *cmsg)
 {
-	if ((size_t)cmsg->cmsg_len < sizeof(struct cmsghdr))
+	if (!mhdr || !cmsg || !mhdr->msg_control)
 		return NULL;
 
-	unsigned char *next = (unsigned char *)cmsg + CMSG_ALIGN(cmsg->cmsg_len);
-	unsigned char *end = (unsigned char *)mhdr->msg_control + mhdr->msg_controllen;
+	unsigned char *base = (unsigned char *)mhdr->msg_control;
+	size_t buflen = mhdr->msg_controllen;
+	unsigned char *cur = (unsigned char *)cmsg;
 
-	if (next + sizeof(struct cmsghdr) > end || next < (unsigned char *)cmsg)
+	/* The cursor itself has to lie inside the control buffer. */
+	if (cur < base || (size_t)(cur - base) > buflen)
 		return NULL;
 
-	struct cmsghdr *nxt = (struct cmsghdr *)next;
-	if (next + CMSG_ALIGN(nxt->cmsg_len) > end)
+	size_t offset = (size_t)(cur - base);
+	size_t remaining = buflen - offset;
+	if (remaining < sizeof(struct cmsghdr))
+		return NULL;
+
+	size_t len = cmsg->cmsg_len;
+	if (len < sizeof(struct cmsghdr) || len > remaining)
+		return NULL;
+
+	/* CMSG_ALIGN can round up past the end, so compare before advancing. */
+	size_t step = CMSG_ALIGN(len);
+	if (step < len || step > remaining)
+		return NULL;
+
+	remaining -= step;
+	if (remaining < sizeof(struct cmsghdr))
+		return NULL;
+
+	struct cmsghdr *nxt = (struct cmsghdr *)(cur + step);
+	size_t nxt_len = nxt->cmsg_len;
+	if (nxt_len < sizeof(struct cmsghdr) || nxt_len > remaining)
 		return NULL;
 
 	return nxt;
@@ -225,21 +253,31 @@ struct cmsghdr *__cmsg_nxthdr(struct msghdr *mhdr, struct cmsghdr *cmsg)
  * is the library failing to load at all.  __pthread_unwind_next is only
  * reached once cancellation is already unwinding, so it terminates the
  * thread the way the caller expects rather than returning.
+ *
+ * The buffer is opaque to us, so it is taken as void * -- except where the
+ * headers already declare these (glibc), which would make a differing
+ * signature a hard error rather than a warning.
  */
+#ifdef __GLIBC__
+typedef __pthread_unwind_buf_t *uclibc_compat_cancel_buf;
+#else
+typedef void *uclibc_compat_cancel_buf;
+#endif
+
 __attribute__((visibility("default")))
-void __pthread_register_cancel(void *buf)
+void __pthread_register_cancel(uclibc_compat_cancel_buf buf)
 {
 	(void)buf;
 }
 
 __attribute__((visibility("default")))
-void __pthread_unregister_cancel(void *buf)
+void __pthread_unregister_cancel(uclibc_compat_cancel_buf buf)
 {
 	(void)buf;
 }
 
 __attribute__((visibility("default"), noreturn))
-void __pthread_unwind_next(void *buf)
+void __pthread_unwind_next(uclibc_compat_cancel_buf buf)
 {
 	(void)buf;
 	pthread_exit(PTHREAD_CANCELED);

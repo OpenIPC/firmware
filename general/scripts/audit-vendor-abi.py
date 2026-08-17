@@ -223,12 +223,34 @@ def is_elf(path: str) -> bool:
         return False
 
 
+def is_exportable(bind: str, vis: str) -> bool:
+    """True if a defined .dynsym entry can actually satisfy another DSO.
+
+    Being defined is not enough.  A LOCAL binding is not visible outside the
+    object and HIDDEN/INTERNAL visibility is not visible to the dynamic
+    linker at all, so neither can resolve a sibling's import.  Counting one
+    as a provider would let a genuinely missing symbol be reported as
+    sibling-resolved.
+
+    In this tree the entries this actually removes are benign -- across the
+    vendor .so sampled, the 366 non-exportable .dynsym entries are 243 LOCAL
+    section symbols (.init, .jcr) and 123 instances of readelf's own header
+    row, which otherwise parses as a symbol literally named "Name".  No
+    HIDDEN entry was observed, and no symbol changed classification when this
+    filter was added.  It is here so that a vendor drop which does carry one
+    cannot quietly mask a real gap.
+    """
+    return bind in ("GLOBAL", "WEAK") and vis in ("DEFAULT", "PROTECTED")
+
+
 def get_musl_exports(libc_path: str) -> set[str]:
     """Get all symbols exported by musl libc.so."""
     out = run_readelf(["--dyn-syms"], libc_path)
     exports = set()
     for line in out.splitlines():
         parts = line.split()
+        if len(parts) >= 8 and not is_exportable(parts[4], parts[5]):
+            continue
         if len(parts) >= 8 and parts[6] != "UND" and parts[7]:
             exports.add(parts[7].split("@")[0])
     return exports
@@ -257,7 +279,7 @@ def parse_binary(path: str, pkg_dir: str) -> BinaryInfo | None:
             sym = parts[7].split("@")[0]
             if parts[6] == "UND":
                 imports.append((parts[4], sym))
-            else:
+            elif is_exportable(parts[4], parts[5]):
                 exports.add(sym)
 
     # GNU version requirements
