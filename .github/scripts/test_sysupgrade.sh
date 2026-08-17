@@ -797,6 +797,24 @@ else
     bad "--no_ramfs -> expected no pivot but a normal flash, log='$(cat "$SB/tmp/flash.log")'"
 fi
 
+# A pivot that did not happen must still hand the old root back as it found it.
+# The shipped rootfs has no /ram, so the directory enter_ramfs makes lands in the
+# overlay's upper layer and stays there: every upgrade since the pivot landed
+# left a stray /overlay/root/ram behind (OpenIPC/majestic-webui#120).
+#
+# rmdir is stubbed rather than left real because this sandbox fakes `mount` --
+# nothing was ever mounted on $SB/ram, so it still holds the staged busybox tree
+# and a real rmdir would rightly refuse to remove it.
+stub rmdir 'echo "rmdir $*" >> "$FLASH_LOG"; exit 0'
+reset_env
+run -z --kernel="$K" --rootfs="$R"
+if grep -q "^rmdir .*/ram$" "$SB/tmp/flash.log"; then
+    ok "a pivot that failed reclaims its ramfs mount point"
+else
+    bad "failed pivot left RAM_ROOT behind, log='$(cat "$SB/tmp/flash.log")'"
+fi
+rm -f "$SB/bin/rmdir"
+
 # ---------------------------------------------------------------------------
 echo
 echo "=== Part 2: invariants in $SRC ==="
@@ -887,6 +905,58 @@ guarded=$(awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | awk '/mount -o move \/dev/,0' |
 [ "$guarded" -ge 1 ] && [ "$bare" -le "$guarded" ] \
     && ok "no unguarded return between the mount moves and the pivot" \
     || bad "$bare return(s) after the moves but only $guarded unwind(s)"
+# A shell redirection CREATES its target. Between the /dev move and the pivot the
+# name /dev/null resolves inside the OLD root, which has no such node -- devtmpfs
+# supplied it, and devtmpfs has just been moved away. So `2>/dev/null` there does
+# not discard the error, it writes a regular file named `null` into that root.
+# The root is an overlay, so the file lands in the upper layer and outlives the
+# upgrade: cameras on four SoCs came back from a clean flash carrying a 0600
+# /overlay/root/dev/null (OpenIPC/majestic-webui#120).
+window=$(awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | awk '/mount -o move \/dev/,/pivot_root/')
+printf '%s\n' "$window" | grep -q '>/dev/null' \
+    && bad "enter_ramfs names /dev/null after moving /dev away -- that CREATES the file" \
+    || ok "nothing between the /dev move and the pivot names /dev/null"
+printf '%s\n' "$window" | grep -q '2>&3' \
+    && ok "the window between the /dev move and the pivot redirects to fd 3" \
+    || bad "post-move redirections must name a descriptor, not a path"
+# ramfs_unwind is reached from inside that same window -- putting /dev back is
+# what it exists for -- so it cannot name /dev/null either.
+awk '/^ramfs_unwind\(\)/,/^}/' "$SRC" | grep -q '>/dev/null' \
+    && bad "ramfs_unwind names /dev/null while /dev may still be moved away" \
+    || ok "ramfs_unwind never names /dev/null in a redirection"
+# ...and the descriptor only means anything if it was opened while /dev was still
+# the devtmpfs, i.e. at the top level, before enter_ramfs can run.
+grep -qE '^[^[:space:]].*exec 3>' "$SRC" \
+    && ok "fd 3 is opened at the top level, while /dev is still the devtmpfs" \
+    || bad "fd 3 must be opened before enter_ramfs starts relocating /dev"
+# The mount point is the other half of the same leak: the shipped rootfs has no
+# /ram, so `mkdir -p "$RAM_ROOT"` writes a directory into the overlay's upper
+# layer, and nothing used to take it back out.
+awk '/^ramfs_discard\(\)/,/^}/' "$SRC" | grep -q 'rmdir' \
+    && ok "ramfs_discard reclaims the mount point enter_ramfs created" \
+    || bad "nothing removes RAM_ROOT; the overlay gains an empty /ram per upgrade"
+awk '/^ramfs_discard\(\)/,/^}/' "$SRC" | grep -q 'rm -rf' \
+    && bad "ramfs_discard must not recursively delete a root the flash may still run from" \
+    || ok "ramfs_discard removes an empty directory only (rmdir, never rm -rf)"
+awk '/^ramfs_discard\(\)/,/^}/' "$SRC" | grep -qF '^tmpfs $RAM_ROOT tmpfs' \
+    && ok "ramfs_discard only detaches a tmpfs of its own" \
+    || bad "RAM_ROOT is overridable; an unconditional umount could detach real storage"
+grep -qF 'rmdir "/mnt$RAM_ROOT"' "$SRC" \
+    && ok "the ramfs phase reclaims the mount point stranded in the old root" \
+    || bad "after the pivot nothing removes the old root's RAM_ROOT"
+# ...and that "/mnt$RAM_ROOT" only names the right directory if RAM_ROOT is
+# absolute. It is overridable from the environment, and a relative one would
+# also defeat the /proc/mounts check, which records mount points absolutely.
+grep -qE '^case "\$RAM_ROOT" in /\*\)' "$SRC" \
+    && ok "a relative RAM_ROOT override is normalised to an absolute path" \
+    || bad "RAM_ROOT is used as \"/mnt\$RAM_ROOT\" and matched against /proc/mounts; it must be absolute"
+# That rmdir runs AFTER the pivot, where the applet symlinks are the only tools
+# there are. `busybox --list` is a build option, so on a camera without it the
+# hardcoded fallback list is the whole toolbox -- an applet missing from it is
+# simply "not found", and a cleanup that fails is one that silently did nothing.
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | awk '/for applet in sh ash/,/done/' | grep -qw 'rmdir' \
+    && ok "the fallback applet list stages rmdir for the ramfs phase" \
+    || bad "the ramfs phase runs rmdir, but a busybox without --list would not have that applet"
 awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'export remote_update' \
     && ok "remote_update survives the re-exec (verify_rootfs branches on it)" \
     || bad "remote_update is not exported; an unmountable rootfs behaves differently in phase 2"
