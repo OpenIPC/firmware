@@ -32,8 +32,14 @@ YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 # Keyed off an env var rather than the SoC name on purpose: both wirings exist
 # on gk7202v300, so testing $CHIP_TYPE here would fix DVP boards by breaking
 # every MIPI one. Profiles opt in with `fw_setenv sensor_dvp 1`.
+# SYSCFG_CHIP is the value handed to open_sys_config's chip= selector, which is
+# NOT the same thing as CHIP_TYPE (the detected SoC). They coincide by default;
+# a DVP board needs the gk7205v200 pad-routing tables while still BEING a
+# gk7202v300. Keeping them separate leaves CHIP_TYPE meaning exactly one thing,
+# so existing and future chip-specific branches are unaffected by this opt-in.
+SYSCFG_CHIP=$CHIP_TYPE
 if [ "$(fw_printenv -n sensor_dvp 2>/dev/null)" = "1" ]; then
-	CHIP_TYPE=gk7205v200
+	SYSCFG_CHIP=gk7205v200
 	YUV_TYPE0=1
 fi
 
@@ -107,7 +113,7 @@ insert_osal() {
 }
 
 insert_detect() {
-	modprobe open_sys_config chip=$CHIP_TYPE sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
+	modprobe open_sys_config chip=$SYSCFG_CHIP sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
 	insert_osal
 	insmod gk7205v200_base.ko
 	modprobe open_isp
@@ -180,13 +186,22 @@ insert_ko() {
 	if [ "$SENSOR" == "bt656" ] || [ "$SENSOR" == "jxf23_dc" ]; then
 		YUV_TYPE0=1
 	fi
-	modprobe open_sys_config chip=$CHIP_TYPE sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
+	modprobe open_sys_config chip=$SYSCFG_CHIP sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=$BOARD
 	# open_sys_config takes MCLK only from its module parameters and defaults to
 	# 27 MHz at this chip=. A sensor init table tuned for 24 MHz (the GC2053
 	# ForCar tables are) then runs against the wrong clock. The ini's MCLK key is
 	# not consulted on this path, so the register is written directly.
+	# A wrong MCLK does not fail loudly — it produces a corrupted or absent
+	# image while every log line still looks healthy. So say something when the
+	# override cannot be applied, rather than continuing silently misconfigured.
 	case "$(fw_printenv -n sensor_mclk 2>/dev/null)" in
-		24) devmem 0x120100F0 32 0x0000000D ;;
+		24)
+			if ! command -v devmem >/dev/null 2>&1; then
+				logger -p daemon.err -t load_goke "sensor_mclk=24 requested but devmem is missing; MCLK left at the chip default"
+			elif ! devmem 0x120100F0 32 0x0000000D; then
+				logger -p daemon.err -t load_goke "sensor_mclk=24: MCLK register write failed; sensor may not produce a usable image"
+			fi
+			;;
 	esac
 	insert_osal
 	insmod gk7205v200_base.ko
