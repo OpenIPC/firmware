@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.57
+scr_version=1.0.58
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -8,6 +8,23 @@ LOCK_FILE=/tmp/sysupgrade.lock
 # under /tmp: /tmp is moved into it, and a mount cannot be relocated under
 # itself. See enter_ramfs.
 RAM_ROOT=${RAM_ROOT:-/ram}
+# A writable descriptor on the real /dev/null, opened once while /dev is still
+# certainly the devtmpfs.
+#
+# enter_ramfs moves /dev out of the old root and then keeps running there for a
+# few more commands. A shell redirection CREATES its target, so a plain
+# `2>/dev/null` in that window discards nothing — it writes a regular file named
+# `null` into the old root's now-empty /dev. That root is an overlay, so the file
+# lands in the upper layer and outlives the upgrade: cameras came back from a
+# perfectly good flash carrying a 0600 /overlay/root/dev/null which shadows the
+# character device on every boot until /init moves devtmpfs back over it
+# (OpenIPC/majestic-webui#120). Reported on four SoCs at once, and absent from
+# every camera old enough to predate the ramfs pivot.
+#
+# A descriptor names the inode, not the path, so it keeps working across the
+# mount move, the pivot and the exec. Guarded and given a fallback because `exec`
+# is a special builtin: a redirection it cannot satisfy takes the script down.
+if [ -c /dev/null ]; then exec 3>/dev/null; else exec 3>&2; fi
 # Seconds the rootfs verify-mount may take before it is treated as unmountable.
 mount_wait=${mount_wait:-45}
 # Seconds the operator gets to Ctrl-C out of a run that will force a reboot.
@@ -448,6 +465,28 @@ restore_resources() {
 	return 0
 }
 
+# Give the old root back its mount point.
+#
+# The shipped rootfs has no /ram, so the `mkdir -p "$RAM_ROOT"` in enter_ramfs
+# writes a new directory into the overlay's upper layer — and nothing ever took
+# it out again, so every upgrade that used the pivot left an empty
+# /overlay/root/ram behind for good (OpenIPC/majestic-webui#120).
+#
+# rmdir, never `rm -rf`: if the tmpfs is somehow still attached — a lazy umount
+# that has not completed, a staged root the flash is still executing from —
+# rmdir fails harmlessly where a recursive delete would pull the floor out from
+# under the flash. An empty directory is all there is to remove.
+ramfs_discard() {
+	# Only ever detach a tmpfs of our own. RAM_ROOT is overridable from the
+	# environment (the test harness relies on that), so an unconditional umount
+	# would happily detach real storage if it were pointed at some — the same
+	# care the stale-mount check in enter_ramfs takes, for the same reason.
+	if grep -q "^tmpfs $RAM_ROOT tmpfs" /proc/mounts 2>&3; then
+		umount "$RAM_ROOT" 2>&3
+	fi
+	rmdir "$RAM_ROOT" 2>&3
+}
+
 # Everything from the first flash write onwards runs on borrowed time.
 #
 # flashcp rewrites the MTD partition that backs the mounted squashfs rootfs, and
@@ -478,17 +517,26 @@ restore_resources() {
 # the RUNNING camera with no device nodes at all -- worse than the bug the pivot
 # fixes. Moves that never happened fail harmlessly, so this is safe to call from
 # any failure point after the first one.
+#
+# Every redirection from here to the end of the function goes to fd 3 rather
+# than to /dev/null by name: this runs precisely when /dev may already have been
+# moved away, which is when writing to that name creates a file instead of
+# discarding output. See the note beside the `exec 3>` at the top.
 ramfs_unwind() {
-	cd / 2>/dev/null
-	mount -o move "$RAM_ROOT/tmp" /tmp 2>/dev/null
-	mount -o move "$RAM_ROOT/proc" /proc 2>/dev/null
-	mount -o move "$RAM_ROOT/dev" /dev 2>/dev/null
-	mount -o move "$RAM_ROOT/sys" /sys 2>/dev/null
+	cd / 2>&3
+	mount -o move "$RAM_ROOT/tmp" /tmp 2>&3
+	mount -o move "$RAM_ROOT/proc" /proc 2>&3
+	mount -o move "$RAM_ROOT/dev" /dev 2>&3
+	mount -o move "$RAM_ROOT/sys" /sys 2>&3
 	# Lazy as a fallback: /sys carries submounts (debugfs, configfs) and a
 	# move-back that does not take leaves the tmpfs busy. Observed on an ssc30kq,
 	# where the plain umount left /ram mounted -- harmless on its own, but a
 	# retry would stack a second tmpfs on top of it.
-	umount "$RAM_ROOT" 2>/dev/null || umount -l "$RAM_ROOT" 2>/dev/null
+	umount "$RAM_ROOT" 2>&3 || umount -l "$RAM_ROOT" 2>&3
+	# The mount point itself is left for the caller to reclaim: every path that
+	# runs this one ends in `return 1` out of enter_ramfs, and that is where
+	# ramfs_discard lives, so removing it here as well would just be a second
+	# owner for the same directory.
 
 	# Restoring is attempted, not guaranteed, so check it rather than assume it.
 	# Handing the in-place path an environment without /dev or /proc is the very
@@ -500,7 +548,7 @@ ramfs_unwind() {
 	# Deliberately not reboot_system(): -x must not be honoured here, and there
 	# is no state left worth tidying.
 	if [ ! -c /dev/null ] || [ ! -r /proc/mounts ] ||
-		! grep -q " /tmp " /proc/mounts 2>/dev/null; then
+		! grep -q " /tmp " /proc/mounts 2>&3; then
 		echo_c 31 "\nCould not restore /dev, /proc or /tmp after a failed pivot."
 		echo_c 31 "Rebooting instead of flashing in a broken environment."
 		echo_c 31 "Nothing was written; the camera comes back on its current firmware."
@@ -581,10 +629,15 @@ enter_ramfs() {
 	# Carry over the mounts the flash still needs: /dev for the MTD nodes, /proc
 	# for get_device and sysrq, /tmp for the unpacked images. Moving rather than
 	# binding leaves nothing pointing back into the old root.
-	mount -o move /dev "$RAM_ROOT/dev" 2>/dev/null || { ramfs_unwind; return 1; }
-	mount -o move /proc "$RAM_ROOT/proc" 2>/dev/null || { ramfs_unwind; return 1; }
-	mount -o move /tmp "$RAM_ROOT/tmp" 2>/dev/null || { ramfs_unwind; return 1; }
-	mount -o move /sys "$RAM_ROOT/sys" 2>/dev/null
+	#
+	# /dev goes first and takes the devtmpfs with it, so from here until the pivot
+	# the name /dev/null resolves inside the old root, where there is no such node
+	# — every redirection below therefore goes to fd 3 instead. See the `exec 3>`
+	# at the top of the script.
+	mount -o move /dev "$RAM_ROOT/dev" 2>&3 || { ramfs_unwind; return 1; }
+	mount -o move /proc "$RAM_ROOT/proc" 2>&3 || { ramfs_unwind; return 1; }
+	mount -o move /tmp "$RAM_ROOT/tmp" 2>&3 || { ramfs_unwind; return 1; }
+	mount -o move /sys "$RAM_ROOT/sys" 2>&3
 
 	# State the second phase cannot recompute once the old root is behind it.
 	# NOT _ramfs_phase: that one is set only after the pivot has actually
@@ -603,7 +656,7 @@ enter_ramfs() {
 	cd "$RAM_ROOT" || { ramfs_unwind; return 1; }
 	# After this the old root is at ./mnt and still mounted — deliberately: the
 	# MTD partitions are addressed through /dev, not through it.
-	if ! pivot_root . mnt 2>/dev/null; then
+	if ! pivot_root . mnt 2>&3; then
 		ramfs_unwind
 		return 1
 	fi
@@ -1017,6 +1070,13 @@ done
 # the writes; flash_and_reboot never returns.
 if [ "1" = "$_ramfs_phase" ]; then
 	echo_c 34 "Flashing from RAM (pid $$)"
+	# pivot_root detached the tmpfs from the old root's $RAM_ROOT and parked that
+	# root at /mnt, so what is left there is the bare mount point enter_ramfs
+	# created — an empty directory in the overlay's upper layer that nothing will
+	# ever read again. Take it back now, while there is still a filesystem under
+	# /mnt to take it from: the first flashcp write is a few lines away and the
+	# old root does not survive it (OpenIPC/majestic-webui#120).
+	rmdir "/mnt$RAM_ROOT" 2>/dev/null
 	flash_and_reboot
 fi
 
@@ -1081,5 +1141,13 @@ echo_c 37 "\nProtected: flashing continues even if this terminal disconnects."
 # On success this never comes back — the rest runs in the re-exec'd process
 # inside the ramfs. A camera that cannot give us one still has to upgrade, so a
 # failure here falls through and flashes in place exactly as before.
-enter_ramfs
+if ! enter_ramfs; then
+	# The pivot did not take, so the in-place flash below needs none of what was
+	# staged for it. enter_ramfs bails out from a dozen places and cannot tidy up
+	# from inside each one, so the single path that means "no pivot" does it:
+	# otherwise a camera that merely FAILED to move into RAM was still left with
+	# the mount point, and on the earliest bail-outs with a tmpfs on it too.
+	# ramfs_unwind may already have done both, in which case this is a no-op.
+	ramfs_discard
+fi
 flash_and_reboot
