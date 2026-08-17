@@ -152,11 +152,25 @@ jobs:
               | select(.body | test(\"Code Review by Qodo\"; \"i\"))
               | .id" | wc -l)
 
+          # Every PR hits this branch once: this run fires at `opened`, before
+          # Qodo has answered. That is not an error state, and the wording
+          # must not read like one — when Qodo's review lands, its comment
+          # re-triggers this gate and the passing run re-runs this failed one,
+          # so the check turns green with no action from anyone (observed
+          # 2-10 minutes on #2273/#2274/#2275, every one via re-run attempt 2).
+          # Only a much longer red deserves a human's attention.
           if [ "$reviewed" -eq 0 ] && [ "$commented" -eq 0 ]; then
-            echo "FAIL: no Qodo review on this PR yet — it reviews new PRs"
-            echo "automatically within a couple of minutes; comment /review to"
-            echo "summon one, then re-run this check once it answers. (Outage?"
-            echo "Apply the skip-qodo-gate label.)"
+            echo "EXPECTED RED: Qodo has not posted its review yet."
+            echo ""
+            echo "This is the normal state right after a PR is opened or updated."
+            echo "No action is needed: when Qodo's review lands (usually within"
+            echo "2-10 minutes), this check re-evaluates and turns green by"
+            echo "itself. You do not need to re-run it."
+            echo ""
+            echo "Still red after ~20 minutes? Then intervene:"
+            echo "  - comment '/review' on the PR to summon Qodo again"
+            echo "  - if Qodo is down, a maintainer can apply the"
+            echo "    'skip-qodo-gate' label, which passes this check"
             exit 1
           fi
           echo "review found: $reviewed review object(s), $commented review comment(s)"
