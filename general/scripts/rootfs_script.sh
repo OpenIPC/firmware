@@ -71,6 +71,7 @@ fi
 STRIPPER="${BR2_EXTERNAL_GENERAL_PATH}/scripts/strip-shell-comments.awk"
 if [ -f "${STRIPPER}" ]; then
 	STRIP_TMP=$(mktemp)
+	STRIP_ERR=$(mktemp)
 	# -type f skips the busybox applet symlinks; writing through `cat` rather
 	# than `mv` keeps each file's own mode and inode.
 	find "${TARGET_DIR}" -type f | while IFS= read -r script; do
@@ -86,7 +87,25 @@ if [ -f "${STRIPPER}" ]; then
 		awk -f "${STRIPPER}" "${script}" > "${STRIP_TMP}" 2>/dev/null || continue
 		# A truncated result means awk gave up half way; keep the original.
 		[ -s "${STRIP_TMP}" ] || continue
-		cat "${STRIP_TMP}" > "${script}"
+
+		# The redirection truncates ${script} before cat writes a byte, so a
+		# failure here -- ENOSPC is the realistic one, on a runner that has just
+		# built a rootfs -- leaves a half-written or empty script in the image.
+		# That is the exact thing this pass must not do: an empty S40network or
+		# load_hisilicon still builds green and bricks the camera quietly. There
+		# is no original left to restore by then, so fail the build instead.
+		if ! cat "${STRIP_TMP}" > "${script}"; then
+			echo "rootfs_script: failed to write stripped ${script}" >&2
+			echo failed > "${STRIP_ERR}"
+			break
+		fi
 	done
-	rm -f "${STRIP_TMP}"
+
+	# `find | while` runs the loop in a subshell, so the failure comes back
+	# through the file rather than through its exit status.
+	if [ -s "${STRIP_ERR}" ]; then
+		rm -f "${STRIP_TMP}" "${STRIP_ERR}"
+		exit 1
+	fi
+	rm -f "${STRIP_TMP}" "${STRIP_ERR}"
 fi
