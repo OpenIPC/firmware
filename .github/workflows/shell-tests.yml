@@ -39,6 +39,17 @@ jobs:
       # check twice (/bin/sh is dash) and neither is the target shell.
       - run: bash .github/scripts/test_sysupgrade.sh
 
+      # The copy in git is not the copy that ships: the build strips whole-line
+      # comments out of it. Run the same suite against that form, so the thing
+      # cameras actually execute is the thing under test. Without this, the
+      # stripper could quietly change behaviour and every check above would
+      # still pass, having tested a file no device ever runs.
+      - name: Re-run against the stripped form that actually ships
+        run: |
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/overlay/usr/sbin/sysupgrade > /tmp/sysupgrade.stripped
+          SRC=/tmp/sysupgrade.stripped bash .github/scripts/test_sysupgrade.sh
+
   # Only sysupgrade was ever parse-checked; every other script in the image --
   # the init scripts, /etc/profile, /init on initramfs boards, the vendor load_*
   # scripts that insert the SoC drivers -- reached cameras without anything
@@ -73,3 +84,11 @@ jobs:
         env:
           STRICT: 1
         run: bash .github/scripts/test_shell_parse.sh
+
+      # The build strips whole-line comments from all of the above before they
+      # are flashed. Parsing only the tree copy would leave that transform --
+      # which rewrites 128 files nobody reads again -- entirely unchecked.
+      - name: Parse them again as the stripper leaves them
+        env:
+          STRICT: 1
+        run: bash .github/scripts/test_strip_shell_comments.sh
