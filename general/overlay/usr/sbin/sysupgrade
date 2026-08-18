@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.59
+scr_version=1.0.60
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -516,7 +516,21 @@ ramfs_discard() {
 	if grep -q "^tmpfs $RAM_ROOT tmpfs" /proc/mounts 2>&3; then
 		umount "$RAM_ROOT" 2>&3
 	fi
-	rmdir "$RAM_ROOT" 2>&3
+	# Only a mount point we created ourselves; enter_ramfs records which.
+	#
+	# A rootfs that ships /ram has it in the read-only lower layer, and rmdir
+	# does not delete one of those -- overlayfs cannot, so it records a WHITEOUT
+	# in the upper layer instead: a 0:0 character device that HIDES the shipped
+	# directory from every later boot. Verified on an overlay mount:
+	#
+	#   mkdir -p ram   (already in lower)  -> upper untouched, 0 entries
+	#   rmdir ram                          -> upper gains  c--------- 0,0 ram
+	#                                         and /ram is gone from the merge
+	#
+	# That is the same class of debris as the /overlay/root/dev/null this script
+	# already goes to lengths to avoid, and strictly worse than the empty
+	# directory the rmdir was added to clean up.
+	[ "1" = "$ram_root_shipped" ] || rmdir "$RAM_ROOT" 2>&3
 }
 
 # Everything from the first flash write onwards runs on borrowed time.
@@ -605,6 +619,10 @@ ramfs_unwind() {
 # flashes in place, exactly as before — a camera that cannot build a ramfs is
 # still better off upgrading than not.
 enter_ramfs() {
+	# Before touching it: is the mount point already part of the image? Recorded
+	# here rather than beside the mkdir below because every early return leads to
+	# ramfs_discard too, and it needs the answer on all of them.
+	[ -d "$RAM_ROOT" ] && ram_root_shipped=1 || ram_root_shipped=
 	[ "1" = "$skip_ramfs" ] && return 1
 	command -v pivot_root >/dev/null 2>&1 || return 1
 
