@@ -482,7 +482,13 @@ restore_resources() {
 	# command-line flag could not carry it either: arguments are parsed by the
 	# INSTALLED script before self_update re-execs, so an older one would reject
 	# it outright.
-	if [ -f "$MAJESTIC_OWNER" ]; then
+	# The marker states an INTENTION, so confirm the process is still there to
+	# act on it. majestic removes the file in leave_upgrade_mode, but a crash
+	# leaves it behind -- and a dead majestic restores nothing, so trusting the
+	# marker alone would turn "we did not need to restart it" into "nobody
+	# restarted it", and the camera stays video-less until a power cycle. That is
+	# strictly worse than the redundant restart this replaces.
+	if [ -f "$MAJESTIC_OWNER" ] && pidof majestic >/dev/null 2>&1; then
 		echo "majestic is restoring itself; leaving it running"
 	elif [ -x /etc/init.d/S95majestic ]; then
 		/etc/init.d/S95majestic restart >/dev/null 2>&1
