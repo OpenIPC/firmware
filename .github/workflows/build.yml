@@ -220,9 +220,17 @@ jobs:
           attempt=1
           buildlog=$(mktemp)
           for sleep_for in $backoffs ""; do
+            # `set +e` around the pipeline, not because the default shell needs
+            # it -- runner logs show `bash -e {0}`, errexit without pipefail, so
+            # this pipeline reports tee's zero and never trips errexit -- but
+            # because that is one `defaults: run: shell: bash` away from being
+            # untrue. Under pipefail a failing make would abort the step right
+            # here, and the whole retry budget below would silently stop
+            # existing. PIPESTATUS[0] is make's own status either way.
+            set +e
             make BOARD=${{matrix.platform}} 2>&1 | tee "${buildlog}"
-            # tee's status is not make's; ask for the one that matters.
             rc=${PIPESTATUS[0]}
+            set -e
             if [ "${rc}" -eq 0 ]; then break; fi
 
             # CHECK_SIZE in the Makefile prints this, and only this, when an
@@ -244,9 +252,14 @@ jobs:
           # Fitting with almost nothing to spare is the state this guard exists
           # for, and it looks exactly like fitting comfortably in a green run.
           # Promote the Makefile's line to an annotation so it outlives the log.
+          # `|| true` because finding nothing here is the good outcome, and a
+          # grep that matches nothing exits 1. Harmless under the current
+          # `bash -e {0}` (the pipeline takes the while loop's zero), fatal the
+          # day anything turns pipefail on -- every comfortably-sized board
+          # would fail its build for having nothing to warn about.
           grep -- '-- headroom warning:' "${buildlog}" | while IFS= read -r line; do
             echo "::warning::${{matrix.platform}}: ${line#-- headroom warning: }"
-          done
+          done || true
           rm -f "${buildlog}"
 
           TIME=$(date -d @${SECONDS} +%M:%S)
