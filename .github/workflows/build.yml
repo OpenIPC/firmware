@@ -207,10 +207,39 @@ jobs:
           # the GitHub releases CDN / toolchain mirror flakes that took down
           # hi3516av100_ultimate on 2026-05-20 (run 26196546684) — 502s
           # storming for >10 min outlasted the previous 30/60/120/300 budget.
+          #
+          # Those backoffs are a bet that the failure is a flake. An image that
+          # does not fit its partition is not one: it will not fit on the sixth
+          # try either. hi3519v101_lite spent 50 minutes proving that on
+          # 2026-08-18 (run 32138368965 — 4KB over a 5120KB cap), 38.5 of them
+          # asleep, and the verdict landed at 14:39 for a PR that had been
+          # merged at 13:14. The budget did not only waste an hour of runner
+          # time, it pushed the answer past the point where anyone was still
+          # looking at it. Deterministic failures stop on the first attempt.
           backoffs="30 60 120 300 600 1200"
           attempt=1
+          buildlog=$(mktemp)
           for sleep_for in $backoffs ""; do
-            make BOARD=${{matrix.platform}} && break
+            # `set +e` around the pipeline, not because the default shell needs
+            # it -- runner logs show `bash -e {0}`, errexit without pipefail, so
+            # this pipeline reports tee's zero and never trips errexit -- but
+            # because that is one `defaults: run: shell: bash` away from being
+            # untrue. Under pipefail a failing make would abort the step right
+            # here, and the whole retry budget below would silently stop
+            # existing. PIPESTATUS[0] is make's own status either way.
+            set +e
+            make BOARD=${{matrix.platform}} 2>&1 | tee "${buildlog}"
+            rc=${PIPESTATUS[0]}
+            set -e
+            if [ "${rc}" -eq 0 ]; then break; fi
+
+            # CHECK_SIZE in the Makefile prints this, and only this, when an
+            # image is larger than the partition it has to live in.
+            if grep -q -- '-- size exceeded by:' "${buildlog}"; then
+              echo "::error::${{matrix.platform}}: $(grep -m1 -o -- '-- size exceeded by:.*' "${buildlog}") — the image does not fit its partition, which retrying cannot change"
+              exit 1
+            fi
+
             if [ -z "$sleep_for" ]; then
               echo "::error::build failed after ${attempt} attempts"
               exit 1
@@ -219,6 +248,19 @@ jobs:
             sleep "$sleep_for"
             attempt=$((attempt + 1))
           done
+
+          # Fitting with almost nothing to spare is the state this guard exists
+          # for, and it looks exactly like fitting comfortably in a green run.
+          # Promote the Makefile's line to an annotation so it outlives the log.
+          # `|| true` because finding nothing here is the good outcome, and a
+          # grep that matches nothing exits 1. Harmless under the current
+          # `bash -e {0}` (the pipeline takes the while loop's zero), fatal the
+          # day anything turns pipefail on -- every comfortably-sized board
+          # would fail its build for having nothing to warn about.
+          grep -- '-- headroom warning:' "${buildlog}" | while IFS= read -r line; do
+            echo "::warning::${{matrix.platform}}: ${line#-- headroom warning: }"
+          done || true
+          rm -f "${buildlog}"
 
           TIME=$(date -d @${SECONDS} +%M:%S)
           echo TIME=${TIME} >> ${GITHUB_ENV}
