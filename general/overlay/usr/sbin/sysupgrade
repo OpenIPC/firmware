@@ -1,9 +1,14 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.58
+scr_version=1.0.59
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
+# Cross-repo contract with majestic. While this exists, majestic is in charge of
+# putting itself back after a failed upgrade and must not be restarted from
+# underneath -- see restore_resources. Written by its enter_upgrade_mode and
+# removed by leave_upgrade_mode; the other side is src/main.c in majestic.
+MAJESTIC_OWNER=/tmp/majestic-upgrade-owner
 # Where the flash phase is moved to before it starts writing. Deliberately not
 # under /tmp: /tmp is moved into it, and a mount cannot be relocated under
 # itself. See enter_ramfs.
@@ -458,16 +463,36 @@ restore_resources() {
 	# and returns, unlike SIGINT/SIGTERM which also break the event loop. So the
 	# process survives with the same pid, no video pipeline, and sdk_state NULL.
 	# Nothing brings that back in place: the SIGHUP reload early-returns on a
-	# NULL sdk_state. Under --web there is no kill at all, but majestic put
-	# ITSELF into upgrade mode before spawning us, and its g_upgrade_in_progress
-	# flag is never cleared -- so that camera would stay video-less and
-	# half-served until somebody power-cycled it.
+	# NULL sdk_state.
 	#
-	# Under --web this also drops the /ws/upgrade socket streaming this log.
-	# That is fine: "Aborting." has already gone out, and the browser treats a
-	# close after an abort as final rather than as a reboot.
-	[ -x /etc/init.d/S95majestic ] &&
+	# Unless majestic says it will do it itself. A majestic new enough to leave
+	# upgrade mode drops $MAJESTIC_OWNER while it holds one: its /ws/upgrade
+	# watcher calls leave_upgrade_mode when we exit without rebooting, and an
+	# orphan watcher covers a browser that closed early. Restarting that one is
+	# not merely redundant, it destroys the end of the transcript -- the SIGTERM
+	# lands between "Aborting." reaching the log and majestic's next read of it,
+	# so the browser is left with a log that stops just short of the reason.
+	# Measured on an hi3516av300: 1285 bytes of 1431 arrived, and the missing 146
+	# were the "File ... not found Aborting." and this very message
+	# (majestic-webui #120).
+	#
+	# Keyed on the file rather than on a version test or a new option, because
+	# self_update pulls this script onto cameras whose majestic predates that
+	# self-restore (2026-08-10) and which do still need the restart. A new
+	# command-line flag could not carry it either: arguments are parsed by the
+	# INSTALLED script before self_update re-execs, so an older one would reject
+	# it outright.
+	# The marker states an INTENTION, so confirm the process is still there to
+	# act on it. majestic removes the file in leave_upgrade_mode, but a crash
+	# leaves it behind -- and a dead majestic restores nothing, so trusting the
+	# marker alone would turn "we did not need to restart it" into "nobody
+	# restarted it", and the camera stays video-less until a power cycle. That is
+	# strictly worse than the redundant restart this replaces.
+	if [ -f "$MAJESTIC_OWNER" ] && pidof majestic >/dev/null 2>&1; then
+		echo "majestic is restoring itself; leaving it running"
+	elif [ -x /etc/init.d/S95majestic ]; then
 		/etc/init.d/S95majestic restart >/dev/null 2>&1
+	fi
 	services_stopped=
 	return 0
 }
