@@ -231,12 +231,20 @@ define PREPARE_REPACK
 	$(call REPACK_FIRMWARE,$(1),$(3),$(5))
 endef
 
+# The headroom line exists because "fits" and "only just fits" read the same in
+# a green build. hi3519v101_lite sat at exactly 5120KB of a 5120KB cap for weeks
+# -- reported, passing, and one 34-line edit from the overflow it hit on
+# 2026-08-18. 32KB is the threshold because what tips these boards is a change
+# to the shared overlay, which is single-digit KB at a time; a board under that
+# is a couple of ordinary commits from red, and a board over it is not.
 define CHECK_SIZE
 	$(eval FILE_SIZE = $(shell expr $(shell stat -c %s $(TARGET)/images/$(1) || echo 0) / 1024))
 	if test $(FILE_SIZE) -eq 0; then exit 1; fi
 	echo - $(1): [$(FILE_SIZE)KB/$(2)KB]
 	if test $(FILE_SIZE) -gt $(2); then \
 		echo -- size exceeded by: $(shell expr $(FILE_SIZE) - $(2))KB; exit 1; fi
+	if test $(shell expr $(2) - $(FILE_SIZE)) -lt 32; then \
+		echo -- headroom warning: $(1) has $(shell expr $(2) - $(FILE_SIZE))KB left of $(2)KB; fi
 endef
 
 define REPACK_FIRMWARE
