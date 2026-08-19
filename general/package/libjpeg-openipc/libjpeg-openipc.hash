@@ -1,0 +1,13 @@
+# There was no hash file here, which is why this package could fetch a tarball
+# whose version did not match the one it declared and nobody noticed. A wrong
+# SOURCE name now fails loudly at download instead of quietly building something
+# else. It also matters that LIBJPEG_OPENIPC_SITE is plain http:// -- with no
+# hash, that download was unverified end to end.
+#
+# Values cross-checked two ways: they are what buildroot records for the same
+# tarball in package/libjpeg/libjpeg.hash, and they are what sha256sum returns
+# for a fresh fetch from www.ijg.org.
+sha256  04705c110cb2469caa79fb71fba3d7bf834914706e9641a4589485c1f832565b  jpegsrc.v9f.tar.gz
+
+# License file, hashed so a silent relicensing upstream is visible too.
+sha256  7c25493a9f64fed34d01445467341bda77bc1cdbeccbe33558659ef173fb9ff2  README
