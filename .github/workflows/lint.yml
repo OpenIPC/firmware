@@ -1,0 +1,68 @@
+name: lint
+on:
+  pull_request:
+    branches:
+      - master
+  # shell-tests.yml deliberately has no push trigger, and its reasoning -- every
+  # commit on master was already checked on its pull request -- holds only while
+  # master has not moved between a PR's last run and its merge. That is exactly
+  # how OpenIPC/builder#121 reached master broken. This job is seconds and is
+  # the only thing between a workflow typo and a nightly that publishes nothing,
+  # so it is not worth being clever about. Kept in its own file rather than as a
+  # fourth job in shell-tests.yml precisely so this trigger does not also start
+  # running the busybox and sysupgrade jobs on every master push.
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/**'
+      - '.github/scripts/lint-workflow-shell.py'
+  workflow_dispatch:
+
+# Reads the tree and reports; writes nothing. Declared rather than inherited so
+# the job keeps the narrow token whatever the repo or org default becomes.
+permissions:
+  contents: read
+
+jobs:
+  # Same guard the jobs in shell-tests.yml and build.yml carry. A clone pushed
+  # to a new repository inherits this file, and on a private mirror every master
+  # sync push would otherwise run on that owner's bill. Upstream the first
+  # disjunct is true, so the condition is a tautology here.
+  workflow-shell:
+    name: workflow run blocks parse
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    # The work takes about a second. The default is six hours, which is how a
+    # step that hangs rather than fails sits there occupying a runner and
+    # telling nobody -- see the apt note below.
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # ubuntu-latest ships PyYAML, so the common path must not touch the
+      # network: an unconditional `apt-get update` here sat for six minutes on
+      # OpenIPC/builder#122's first master push, on a job whose entire argument
+      # for existing is that it answers in seconds. Import first, install only
+      # if that fails -- the dependency is handled rather than assumed, but a
+      # working runner pays nothing for it. apt rather than pip in the fallback
+      # because 24.04 is PEP 668, and it matches the busybox install in
+      # shell-tests.yml.
+      - name: Ensure PyYAML
+        run: |
+          if python3 -c 'import yaml' 2>/dev/null; then
+            echo "PyYAML already present; nothing to install."
+          else
+            echo "PyYAML missing from the runner image; installing."
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq python3-yaml
+          fi
+      # Checks the checker before trusting it. The ${{ }} substitution it has to
+      # do is the kind of thing that breaks by making everything pass, which
+      # would look identical to a clean tree.
+      - name: Check the linter still catches what it should
+        run: python3 .github/scripts/lint-workflow-shell.py --self-test
+      - name: Parse every workflow run block
+        run: python3 .github/scripts/lint-workflow-shell.py
