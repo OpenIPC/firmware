@@ -25,21 +25,26 @@ shellcheck pass over the same blocks is a strictly bigger change (it wants
 per-block disable lists for the ${{ }} substitution below) and is worth doing
 separately rather than smuggling in behind a syntax fix.
 
-DISCOVERY is by structure, not by path: any mapping anywhere in the document
-that has a `run:` key is a step. Hardcoding jobs.*.steps[*] would quietly miss
-anything that moves -- composite actions, reusable workflows, a `defaults`
-refactor -- and silently checking nothing looks exactly like a clean run, which
-is the failure mode this file is here to prevent. Hence the floor check at the
-end.
+DISCOVERY is a mapping with a scalar `run:` that came out of a `steps:`
+sequence -- the schema invariant that makes something a step, and no more than
+that. Hardcoding jobs.*.steps[*] would quietly miss anything that moves, and a
+composite action's `runs: steps:` is covered here by the same rule. Requiring
+the `steps:` parent is not decoration: without it an action input, an env var
+or a matrix field called `run` gets parsed as shell and fails a workflow that
+is fine. Silently checking nothing looks exactly like a clean run, which is the
+failure mode this file exists to prevent, so there is a floor check at the end.
 
 EXPRESSIONS. `${{ ... }}` is not shell and cannot be parsed as shell, so each
-one is replaced with a plain word before the check. That is a real limitation:
-an expression that interpolates to something with shell syntax in it -- a
-matrix value holding `foo && bar`, say -- is checked as the word, not as what
-it expands to. It is the same limitation `bash -n` has with any variable, and
-the substitution keeps the line count identical so reported line numbers still
-point at the right line of the workflow. --self-test asserts the substitution
-did not neuter the check.
+one is replaced with a plain word before the check. Finding where one ends is
+scanned rather than regexed, because `.*?\\}\\}` stops at the first `}}` even
+when it sits inside a string literal -- `${{ fromJSON('{"a": {"b": 1}}') }}`
+gets cut mid-literal and the leftover `') }}` then fails as an unbalanced
+quote. The substitution is still a real limitation: an expression that
+interpolates something with shell syntax in it -- a matrix value holding
+`foo && bar`, say -- is checked as the word, not as what it expands to. It is
+the same limitation `bash -n` has with any variable. Line counts are preserved
+so reported line numbers still point at the right line of the workflow, and
+--self-test asserts the substitution did not neuter the check.
 
 Usage:
     lint-workflow-shell.py               # check .github/workflows/
@@ -48,7 +53,6 @@ Usage:
 """
 
 import glob
-import re
 import subprocess
 import sys
 import tempfile
