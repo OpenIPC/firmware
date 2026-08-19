@@ -170,14 +170,15 @@ UNBUILT_BOARDS = {
 # unknown, and unknown widens. Skipping the matrix for something that does feed
 # the build is the one direction this must never fail in.
 NO_BUILD_WORKFLOWS = {
-    "build-one.yml", "cleanup.yml", "gcc-compat.yml", "image.yml", "manifest.yml",
-    "qodo-gate.yml", "shell-tests.yml", "toolchain.yml", "uboot.yml",
+    "build-one.yml", "cleanup.yml", "gcc-compat.yml", "image.yml", "lint.yml",
+    "manifest.yml", "qodo-gate.yml", "shell-tests.yml", "toolchain.yml",
+    "uboot.yml",
 }
 
 # Same for .github/scripts/.
 NO_BUILD_SCRIPTS = {
-    "enrich_manifest.py", "test_load_hisilicon.sh", "test_shell_parse.sh",
-    "test_sysupgrade.sh",
+    "enrich_manifest.py", "lint-workflow-shell.py", "test_load_hisilicon.sh",
+    "test_shell_parse.sh", "test_sysupgrade.sh",
 }
 
 # CI plumbing: it decides how the build runs but cannot change a byte of what
@@ -781,6 +782,8 @@ def self_test():
         (["CLAUDE.md"], 0, "agent instructions are markdown"),
         ([".github/workflows/qodo-gate.yml"], 0, "review gate never builds"),
         ([".github/scripts/test_sysupgrade.sh"], 0, "shell-tests fixture"),
+        ([".github/workflows/lint.yml"], 0, "the workflow linter never builds"),
+        ([".github/scripts/lint-workflow-shell.py"], 0, "its script"),
         ([".github/PULL_REQUEST_TEMPLATE.md"], 0, "PR template"),
         (["contrib/openipc-bisect/openipc-bisect"], 0, "developer tooling"),
         ([".pr_agent.toml", "docs/architecture.md"], 0, "review config plus docs"),
