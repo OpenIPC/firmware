@@ -179,7 +179,15 @@ video_settings() {
 	cli -s .records.split 1
 	cli -s .records.notime true
 	cli -s .fpv.enabled true
+	# noiseLevel moved onto the channel it configures. 0 is a value here,
+	# not an absence: it turns 3DNR off for latency, so if the key majestic
+	# reads goes unset the ISP default comes back on and nothing says so.
+	# majestic is fetched unpinned from master, so an image can be built
+	# against either side of that rename; an unknown key is ignored, so
+	# writing both is safe. Drop the .fpv line once no supported build
+	# still reads it.
 	cli -s .fpv.noiseLevel 0
+	cli -s .video0.noiseLevel 0
 
 	wifibroadcast cli -s .wireless.mlink 3994
 	wifibroadcast cli -s .wireless.link_control alink
