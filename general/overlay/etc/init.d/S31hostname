@@ -8,6 +8,12 @@
 
 MARK=/etc/hostname.auto
 
+# Keep the /etc/hosts 127.0.1.1 entry in step with the given hostname.
+sync_hosts() {
+	sed -i '/^127\.0\.1\.1/d' /etc/hosts 2>/dev/null
+	printf '127.0.1.1\t%s\n' "$1" >> /etc/hosts
+}
+
 start() {
 	[ -f "$MARK" ] && return 0
 
@@ -22,17 +28,17 @@ start() {
 
 	name="$soc-$sensor"
 
-	# Only adopt while the name is still the factory default; a user who already
-	# renamed the box wins and we freeze without touching it.
-	case "$(cat /etc/hostname 2>/dev/null)" in
+	# A user who already renamed the box wins: freeze without renaming, but keep
+	# /etc/hosts consistent with the name they chose.
+	cur=$(cat /etc/hostname 2>/dev/null)
+	case "$cur" in
 		openipc-*|"$soc"|"") ;;
-		*) touch "$MARK"; return 0 ;;
+		*) sync_hosts "$cur"; touch "$MARK"; return 0 ;;
 	esac
 
 	echo "$name" > /etc/hostname
 	hostname -F /etc/hostname
-	sed -i '/^127\.0\.1\.1/d' /etc/hosts 2>/dev/null
-	printf '127.0.1.1\t%s\n' "$name" >> /etc/hosts
+	sync_hosts "$name"
 	touch "$MARK"
 }
 
