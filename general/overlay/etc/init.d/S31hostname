@@ -1,0 +1,57 @@
+#!/bin/sh
+
+# Name the camera <soc>-<sensor> (e.g. hi3516ev300-imx335) on first boot, once
+# the sensor is known. The SoC and sensor both come from the U-Boot env, which
+# is the only source that is reliable across every vendor (ipcinfo misreports
+# the SoC and cannot see the sensor on Sigmastar). Set once, then frozen by the
+# /etc/hostname.auto marker: editing /etc/hostname afterwards is never clobbered.
+
+MARK=/etc/hostname.auto
+
+# Keep the /etc/hosts 127.0.1.1 entry in step with the given hostname.
+sync_hosts() {
+	sed -i '/^127\.0\.1\.1/d' /etc/hosts 2>/dev/null
+	printf '127.0.1.1\t%s\n' "$1" >> /etc/hosts
+}
+
+start() {
+	[ -f "$MARK" ] && return 0
+
+	soc=$(fw_printenv -n soc 2>/dev/null | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9]//g')
+	sensor=$(fw_printenv -n sensor 2>/dev/null | tr 'A-Z' 'a-z' | sed -e 's/_.*$//' -e 's/[^a-z0-9]//g')
+
+	# No SoC: keep the build default (openipc-<soc>), try again next boot.
+	[ -n "$soc" ] || return 0
+	# Sensor not detected yet (populated by load_<vendor> at S70): freeze only
+	# with the full name, so retry next boot once it has been written to env.
+	[ -n "$sensor" ] || return 0
+
+	name="$soc-$sensor"
+
+	# A user who already renamed the box wins: freeze without renaming, but keep
+	# /etc/hosts consistent with the name they chose.
+	cur=$(cat /etc/hostname 2>/dev/null)
+	case "$cur" in
+		openipc-*|"$soc"|"") ;;
+		*) sync_hosts "$cur"; touch "$MARK"; return 0 ;;
+	esac
+
+	echo "$name" > /etc/hostname
+	hostname -F /etc/hostname
+	sync_hosts "$name"
+	touch "$MARK"
+}
+
+case "$1" in
+	start)
+		start
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start}"
+		exit 1
+		;;
+esac
