@@ -20,8 +20,6 @@
 // send broadcast packets periodically
 #define TIMEOUT 5 // seconds
 
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-
 static int scansec = 0;
 
 const char brpkt[] =
@@ -201,28 +199,28 @@ int scan() {
     }
     enum ConnectStatus netip_conn = netip_connect(host_ip, netip_port);
 
+    // Both Version and BuildDate come straight from an unauthenticated UDP
+    // reply, so every write into this fixed buffer is bounded — issue #2293.
     char verstr[128] = {0};
     if (strlen(version)) {
-      int n_dot = 0, i = 0;
+      int n_dot = 0;
+      size_t len = 0;
       while (*version) {
         if (*version == '.') {
           n_dot++;
           if (n_dot == 4)
             break;
-        } else if (n_dot == 3) {
-          verstr[i++] = *version;
+        } else if (n_dot == 3 && len < sizeof(verstr) - 1) {
+          verstr[len++] = *version;
         }
         version++;
       }
+      verstr[len] = '\0';
 
-      if (strlen(builddt) == 19 && builddt[10] == ' ') {
-        const char *end = builddt + 10;
-        strcat(verstr + strlen(verstr), " (");
-        snprintf(verstr + strlen(verstr),
-                 MIN(sizeof(verstr) - strlen(verstr), end - builddt + 1), "%s",
-                 builddt);
-        strcat(verstr + strlen(verstr), ")");
-      }
+      // Append the date portion "YYYY-MM-DD" of BuildDate. snprintf caps the
+      // write at the space left, so a full verstr can't be pushed past the end.
+      if (strlen(builddt) == 19 && builddt[10] == ' ')
+        snprintf(verstr + len, sizeof(verstr) - len, " (%.10s)", builddt);
     }
 
     printf("%s%s\t%s\t%s %s, %s", color(netip_conn), host_ip, mac,
