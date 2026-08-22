@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.60
+scr_version=1.0.61
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -701,6 +701,10 @@ enter_ramfs() {
 	# remote_update: verify_rootfs branches on it for an unmountable rootfs.
 	# lock_owned: die() needs it to know the lock is ours to remove.
 	export remote_update lock_owned
+	# ram_root_shipped: the second phase reclaims the old root's mount point and
+	# needs the same answer ramfs_discard does. It cannot recompute it -- by then
+	# $RAM_ROOT names a directory in the NEW root, not the one being judged.
+	export ram_root_shipped
 	export kernel_version system_version rootfs_version mount_wait abort_wait
 
 	cd "$RAM_ROOT" || { ramfs_unwind; return 1; }
@@ -1126,7 +1130,17 @@ if [ "1" = "$_ramfs_phase" ]; then
 	# ever read again. Take it back now, while there is still a filesystem under
 	# /mnt to take it from: the first flashcp write is a few lines away and the
 	# old root does not survive it (OpenIPC/majestic-webui#120).
-	rmdir "/mnt$RAM_ROOT" 2>/dev/null
+	#
+	# ...but ONLY one we created. The rootfs now ships /ram (see the mount point
+	# in general/overlay/), so on any current image this directory lives in the
+	# read-only lower layer, and rmdir cannot delete one of those -- overlayfs
+	# records a WHITEOUT in the upper layer instead, which HIDES the shipped
+	# mount point from every later boot. ramfs_discard was given this guard when
+	# /ram started shipping; this line is the same rmdir on the path that
+	# actually runs (a successful pivot never reaches ramfs_discard), and it was
+	# missed -- so the whiteout replaced the stray directory it was meant to fix,
+	# on upgrade and on factory reset alike (@usa-, majestic-webui#120).
+	[ "1" = "$ram_root_shipped" ] || rmdir "/mnt$RAM_ROOT" 2>/dev/null
 	flash_and_reboot
 fi
 

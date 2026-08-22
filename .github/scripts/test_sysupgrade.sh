@@ -944,6 +944,21 @@ awk '/^ramfs_discard\(\)/,/^}/' "$SRC" | grep -qF '^tmpfs $RAM_ROOT tmpfs' \
 grep -qF 'rmdir "/mnt$RAM_ROOT"' "$SRC" \
     && ok "the ramfs phase reclaims the mount point stranded in the old root" \
     || bad "after the pivot nothing removes the old root's RAM_ROOT"
+# ...guarded, because the rootfs SHIPS /ram now. rmdir cannot delete a lower-layer
+# directory, so overlayfs records a whiteout that hides the shipped mount point
+# from every later boot -- which is what a reporter found in /overlay/root after
+# both an upgrade and a factory reset (majestic-webui#120). ramfs_discard got this
+# guard when /ram started shipping; this is the copy on the path that actually
+# runs, since a successful pivot never reaches ramfs_discard.
+grep -qF '[ "1" = "$ram_root_shipped" ] || rmdir "/mnt$RAM_ROOT"' "$SRC" \
+    && ok "the ramfs phase only reclaims a mount point it created (no whiteout)" \
+    || bad "post-pivot rmdir is unguarded; on a rootfs shipping /ram it writes a whiteout"
+# The guard is only worth anything if the value survives the re-exec: the second
+# phase cannot recompute it, because by then $RAM_ROOT names a directory in the
+# NEW root rather than the one being judged.
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -qE '^	export .*\bram_root_shipped\b' \
+    && ok "ram_root_shipped is exported into the ramfs phase" \
+    || bad "ram_root_shipped is not exported; the post-pivot guard always reads empty"
 # ...and that "/mnt$RAM_ROOT" only names the right directory if RAM_ROOT is
 # absolute. It is overridable from the environment, and a relative one would
 # also defeat the /proc/mounts check, which records mount points absolutely.
