@@ -177,8 +177,8 @@ NO_BUILD_WORKFLOWS = {
 
 # Same for .github/scripts/.
 NO_BUILD_SCRIPTS = {
-    "enrich_manifest.py", "lint-workflow-shell.py", "test_load_hisilicon.sh",
-    "test_shell_parse.sh", "test_sysupgrade.sh",
+    "build-summary.py", "enrich_manifest.py", "lint-workflow-shell.py",
+    "test_load_hisilicon.sh", "test_shell_parse.sh", "test_sysupgrade.sh",
 }
 
 # CI plumbing: it decides how the build runs but cannot change a byte of what
