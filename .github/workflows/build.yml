@@ -219,6 +219,32 @@ jobs:
           backoffs="30 60 120 300 600 1200"
           attempt=1
           buildlog=$(mktemp)
+
+          # Name what broke, in a form the summariser can group on. Buildroot
+          # says which package and which phase in exactly one line and nowhere
+          # else:
+          #   make[1]: *** [package/pkg-generic.mk:374: .../majestic-webui-dist/.stamp_target_installed] Error 1
+          # The phase IS the class: .stamp_downloaded is a mirror or a 404 (the
+          # #2036 family), anything after it is real code. The build directory
+          # is <pkg>-<version> and splitting that back apart is ambiguous
+          # (majestic-webui-dist), so it is reported whole.
+          #
+          # Without this an annotation says only "build failed", which is what
+          # made 2026-08-12 (run 31649720825) cost 94 opened job logs to learn
+          # that all 94 boards said the same thing. Last match wins: on a retry
+          # the log holds every attempt, and the one that decided the outcome
+          # is the last. Falls back to this repo's own Makefile target, which
+          # is where repack and CHECK_SIZE fail.
+          classify_failure() { # <logfile>
+            local cause
+            cause=$(sed -n \
+              's|.*\*\*\* \[[^]]*: .*/build/\([^/]*\)/\.stamp_\([a-z_]*\)\].*|\1/\2|p' \
+              "$1" | tail -1)
+            if [ -z "$cause" ]; then
+              cause=$(sed -n 's|^make[^:]*: \*\*\* \[\([^]]*\)\].*|\1|p' "$1" | tail -1)
+            fi
+            echo "${cause:-unclassified}"
+          }
           for sleep_for in $backoffs ""; do
             # `set +e` around the pipeline, not because the default shell needs
             # it -- runner logs show `bash -e {0}`, errexit without pipefail, so
@@ -240,11 +266,16 @@ jobs:
               exit 1
             fi
 
+            cause=$(classify_failure "${buildlog}")
             if [ -z "$sleep_for" ]; then
-              echo "::error::build failed after ${attempt} attempts"
+              echo "::error::${{matrix.platform}}: build failed after ${attempt} attempts — ${cause}"
               exit 1
             fi
-            echo "::warning::attempt ${attempt} failed, retrying after ${sleep_for}s"
+            # Named even on a retry that goes on to succeed. A flake the backoff
+            # absorbs is invisible in a green run, and it is the thing that
+            # predicts the nightly going red again -- the Build summary job
+            # counts these warnings to report it.
+            echo "::warning::${{matrix.platform}}: attempt ${attempt} failed (${cause}), retrying after ${sleep_for}s"
             sleep "$sleep_for"
             attempt=$((attempt + 1))
           done
@@ -508,6 +539,68 @@ jobs:
             upload_paced latest "${IMAGES[@]}"
           fi
 
+  # "The nightly is red" does not say whether one board broke or ninety-four.
+  # On 2026-08-12 (run 31649720825) a majestic-webui fixup did a bare `rm` on
+  # two files upstream had deleted, and 94 of 99 boards failed in the same
+  # place -- which took opening 94 job logs to establish, because the run's
+  # entire output was the word "failure". #2271 asked whether one failing cell
+  # should still fail the run. It should (see ci-gate below); what was missing
+  # was being able to read the run at a glance, and that is this job.
+  #
+  # It also reports what the retry loop absorbs. A board that went green on its
+  # third attempt is invisible in a green run, and the same cause exhausting
+  # its budget is exactly what turns the nightly red -- that was 30% of runs
+  # before #2036.
+  #
+  # REPORTING ONLY. It must never fail the run: a bug here turning a good
+  # nightly red is precisely the mistake #2271 decided not to make. Hence the
+  # `||` below, and hence its deliberate absence from ci-gate's `needs`. What
+  # keeps it honest instead is `build-summary.py --self-test` in lint.yml,
+  # which is a merge gate -- a reworded annotation would otherwise reduce this
+  # to reporting nothing, and reporting nothing looks like a quiet night.
+  #
+  # Not gated on `publish`: this describes the matrix, and waiting for the
+  # release writer would only delay the answer by the length of ~390 paced
+  # uploads.
+  summary:
+    name: Build summary
+    # preflight for the build id in the title, buildroot for the matrix itself.
+    # `select` is not listed: buildroot already depends on it, so a selector
+    # failure skips the matrix and this job with it.
+    needs: [preflight, buildroot]
+    # Same guard as the jobs above. `always()` so it still reports when the
+    # matrix failed -- which is the case it exists for -- but not when there
+    # was nothing to build, where it would have nothing to say.
+    if: >-
+      always() && needs.buildroot.result != 'skipped' &&
+      (github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private))
+    runs-on: ubuntu-latest
+    # Declared rather than inherited, so the token stays narrow whatever the
+    # repo or org default becomes: the run's jobs and the scheduled runs behind
+    # the streaks (actions), the annotations those jobs emitted (checks), and
+    # the checkout (contents). It writes nothing anywhere.
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+    # Roughly 130 API requests and a couple of minutes at worst. The default is
+    # six hours, which is how a step that hangs rather than fails holds a
+    # runner and tells nobody.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Summarise the matrix
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 .github/scripts/build-summary.py \
+            --run-id "${{ github.run_id }}" \
+            --event "${{ github.event_name }}" \
+            --build-id "${{ needs.preflight.outputs.build_id }}" \
+          || echo "::warning::build summary failed; the matrix result stands as reported"
+
   # Single umbrella status check that reflects the whole build matrix, so the
   # branch-protection required-checks list does not need one hardcoded
   # "Firmware (<board>)" context per board (adding/removing a board no longer
@@ -538,10 +631,28 @@ jobs:
           # Check the matrix against what select and preflight actually asked
           # for. Blanket-accepting 'skipped' here would mean a selector bug that
           # narrowed a real change down to nothing reads as a green PR.
+          #
+          # ONE FAILING CELL OUT OF ~99 STILL FAILS THE RUN, and that is a
+          # decision rather than the default it started as -- #2271 asked, and
+          # this is the answer:
+          #
+          #   - The nightly's product is a COMPLETE set of images. A board that
+          #     failed leaves `nightly` and `latest` pointing at yesterday's
+          #     image for it, so whoever flashes that board silently gets stale
+          #     firmware. The run really did not deliver; green would be a lie.
+          #   - The transient classes are already absorbed upstream of here.
+          #     Anything that reaches this line survived seven attempts across
+          #     ~38 minutes of backoff (#2036), which is no longer a blip.
+          #   - This gate serves pull requests too. Relaxing the matrix rule to
+          #     quieten the nightly would relax branch protection with it.
+          #
+          # The real complaint behind #2271 -- that "red" does not say whether
+          # one board or ninety-four broke -- is answered by the Build summary
+          # job above, not by changing the colour here.
           if [ "${{ needs.select.outputs.needs-build }}" = "true" ] && \
              [ "${{ needs.preflight.outputs.should_build }}" = "true" ]; then
             if [ "${{ needs.buildroot.result }}" != "success" ]; then
-              echo "::error::firmware matrix result=${{ needs.buildroot.result }}"; exit 1
+              echo "::error::firmware matrix result=${{ needs.buildroot.result }} — see the Build summary job for the per-board breakdown"; exit 1
             fi
             echo "firmware matrix OK (success)"
           else
