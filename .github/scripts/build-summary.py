@@ -67,8 +67,10 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -143,11 +145,17 @@ class Api:
         self.repo = repo
         self.calls = 0
         self._sleep = sleep
+        # get() runs on up to eight worker threads, and `self.calls += 1` is
+        # load-add-store rather than one atomic step, so concurrent increments
+        # can be lost. An under-reported count is the one wrong answer this
+        # counter must not give: its whole job is to make the API budget
+        # measured rather than assumed.
+        self._counting = threading.Lock()
 
     def get(self, path, params=None):
         url = f"{API}{path}"
         if params:
-            url += "?" + "&".join(f"{k}={v}" for k, v in params.items())
+            url += "?" + urllib.parse.urlencode(params)
         # Six attempts covers a secondary-rate-limit pause; the same shape the
         # publish job's gh_retry uses, for the same reason.
         delay = 5
@@ -157,7 +165,8 @@ class Api:
                 "Accept": "application/vnd.github+json",
                 "X-GitHub-Api-Version": "2022-11-28",
             })
-            self.calls += 1
+            with self._counting:
+                self.calls += 1
             try:
                 with urllib.request.urlopen(request, timeout=30) as response:
                     return json.load(response)
@@ -365,6 +374,18 @@ def streaks(history):
 # Rendering
 # --------------------------------------------------------------------------
 
+def report_title(event, build_id, run_id):
+    """What to head the report with.
+
+    preflight computes build_id as nightly-<date>-<sha> for every event, so on
+    a pull request it names a nightly release that does not exist. Only the
+    events that actually publish one get to use it.
+    """
+    if event in ("schedule", "workflow_dispatch") and build_id:
+        return build_id
+    return f"Build {run_id}"
+
+
 def _board_list(boards, cap=8):
     shown = ", ".join(f"`{b}`" for b in boards[:cap])
     return shown if len(boards) <= cap else f"{shown} +{len(boards) - cap} more"
@@ -393,12 +414,12 @@ def render(results, history, title, calls, notes):
                 "| Cause | Boards | Which |", "|---|---:|---|"]
         groups = defaultdict(list)
         for result in failed:
-            groups[result["cause"] or "unclassified"].append(result["board"])
-        for cause, boards in sorted(groups.items(),
-                                    key=lambda kv: (-len(kv[1]), kv[0])):
-            attempts = {r["attempts"] for r in failed if r["board"] in set(boards)}
-            suffix = (f" (after {max(attempts)} attempts)"
-                      if max(attempts) > 1 else "")
+            groups[result["cause"] or "unclassified"].append(result)
+        for cause, group in sorted(groups.items(),
+                                   key=lambda kv: (-len(kv[1]), kv[0])):
+            attempts = max(result["attempts"] for result in group)
+            suffix = f" (after {attempts} attempts)" if attempts > 1 else ""
+            boards = [result["board"] for result in group]
             out.append(f"| `{cause}`{suffix} | {len(boards)} "
                        f"| {_board_list(boards)} |")
         out.append("")
@@ -588,7 +609,16 @@ def self_test():
     if "All 2 boards built." not in green:
         problems.append("an all-green matrix does not say so")
 
-    # 10. THE DRIFT GATE. Every grammar's anchor must still be a literal in
+    # 10. A pull request's summary must not claim to be a nightly release.
+    if report_title("schedule", "nightly-20260812-1fa881", "7") != "nightly-20260812-1fa881":
+        problems.append("a scheduled run lost its build id")
+    for event in ("pull_request", ""):
+        if report_title(event, "nightly-20260812-1fa881", "7") != "Build 7":
+            problems.append(f"a {event or 'bare'} run was titled as a nightly")
+    if report_title("schedule", "", "7") != "Build 7":
+        problems.append("a missing build id did not fall back to the run id")
+
+    # 11. THE DRIFT GATE. Every grammar's anchor must still be a literal in
     #     build.yml, and build.yml must not have grown an annotation in the
     #     matrix job that nothing here accounts for. A reworded ::error:: is
     #     otherwise indistinguishable, from this side, from a quiet night.
@@ -664,7 +694,7 @@ def main():
     results = collect_run(api, args.run_id, flakes=args.flakes, notes=notes)
     history = collect_history(api, window, notes=notes) if window else []
 
-    title = args.build_id or f"Build {args.run_id}"
+    title = report_title(args.event, args.build_id, args.run_id)
     report = render(results, history, title, api.calls, notes)
 
     failed = sum(1 for r in results if r["conclusion"] != "success")
