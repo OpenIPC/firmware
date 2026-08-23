@@ -17,6 +17,7 @@ on:
     paths:
       - '.github/workflows/**'
       - '.github/scripts/lint-workflow-shell.py'
+      - '.github/scripts/build-summary.py'
   workflow_dispatch:
 
 # Reads the tree and reports; writes nothing. Declared rather than inherited so
@@ -66,3 +67,27 @@ jobs:
         run: python3 .github/scripts/lint-workflow-shell.py --self-test
       - name: Parse every workflow run block
         run: python3 .github/scripts/lint-workflow-shell.py
+
+  # The nightly's Build summary job reads the ::error:: and ::warning::
+  # annotations build.yml emits, and matches them against grammars written down
+  # in build-summary.py. Reword one of those annotations and the summariser
+  # stops recognising it -- it does not crash, it reports nothing, which from
+  # the outside is indistinguishable from a quiet night. --self-test asserts
+  # both directions: every grammar still finds its literal in build.yml, and
+  # build.yml has not grown a matrix-job annotation nothing accounts for.
+  #
+  # Here rather than as a step in the job above so that no existing check
+  # context is renamed -- "workflow run blocks parse" is what branch protection
+  # and every open PR already reference. Stdlib only, so no install step.
+  build-summary:
+    name: build summariser agrees with build.yml
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the annotation grammars still match the workflow
+        run: python3 .github/scripts/build-summary.py --self-test
