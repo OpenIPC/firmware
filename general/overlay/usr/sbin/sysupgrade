@@ -324,6 +324,9 @@ do_update_firmware() {
 # it: "Newly-erased block contained word 0x20031985" (magic 0x1985, nodetype
 # 0x2003 -- the marker `flash_eraseall -j` writes).
 #
+# The same applies to a ubifs overlay on a NAND camera -- a background thread
+# and a live medium being erased under it -- so both spellings are handled below.
+#
 # The overlay cannot be unmounted. It is the upperdir AND workdir of the
 # overlayfs that is still root for init(1), majestic, dropbear and getty, so that
 # superblock holds a reference to this mount for as long as they exist: umount is
@@ -346,9 +349,16 @@ do_update_firmware() {
 # is at /mnt/overlay, and on the in-place fallback it is still at /overlay.
 quiesce_overlay() {
 	local blk=$(get_device "rootfs_data" | sed 's|/dev/mtd|/dev/mtdblock|')
-	local mp=$(awk -v d="$blk" '$1 == d { print $2; exit }' /proc/mounts)
-	# Not mounted (NAND/UBI, or an overlay this camera never mounted): the erase
-	# is unopposed already and there is nothing to quiesce.
+	# Two spellings for the same partition, because init mounts it two ways: a
+	# jffs2 camera gets /dev/mtdblockN, a ubifs one gets ubi0:rootfs_data (see
+	# general/overlay/init). Matching only the first would quietly no-op on every
+	# UBI board, where the race is the same and the cure is the same --
+	# ubifs_remount_ro() stops the background thread and commits, just as
+	# jffs2_remount_fs() stops the GC thread.
+	local mp=$(awk -v d="$blk" '
+		$1 == d || $1 ~ /^ubi[0-9]+:rootfs_data$/ { print $2; exit }' /proc/mounts)
+	# Nothing mounted on it -- an overlay this camera never brought up, or a root
+	# that put its upper layer in tmpfs instead. The erase is unopposed already.
 	[ -n "$mp" ] || return 0
 	sync
 	# A refusal is a warning, not a die: erasing it live is exactly what this

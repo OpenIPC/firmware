@@ -95,8 +95,13 @@ printf '#!/bin/sh\necho "S95majestic $1" >> "$FLASH_LOG"\nexit 0\n' \
 set_mounts() {
     printf 'tmpfs %s/tmp tmpfs rw,relatime 0 0\nproc %s/proc proc rw,relatime 0 0\n' \
         "$SB" "$SB" > "$SB/proc/mounts"
-    [ "no-overlay" = "${1:-}" ] \
-        || printf '/dev/mtdblock4 /overlay jffs2 rw,relatime 0 0\n' >> "$SB/proc/mounts"
+    case "${1:-}" in
+        no-overlay) ;;
+        # What general/overlay/init writes on a NAND camera: the same partition,
+        # spelled as a UBI volume rather than an mtdblock device.
+        ubi) printf 'ubi0:rootfs_data /overlay ubifs rw,relatime 0 0\n' >> "$SB/proc/mounts" ;;
+        *)   printf '/dev/mtdblock4 /overlay jffs2 rw,relatime 0 0\n' >> "$SB/proc/mounts" ;;
+    esac
 }
 set_mounts
 
@@ -665,9 +670,22 @@ else
     bad "a refused remount must not block the erase, rc=$RC out='$OUT'"
 fi
 
-# Nothing to quiesce when the partition carries no mounted filesystem -- a NAND
-# camera whose rootfs_data is UBI, or a root that never mounted an overlay. The
-# lookup must come up empty and step aside rather than remount something else.
+# A NAND camera mounts the very same partition as "ubi0:rootfs_data", not as an
+# mtdblock device (general/overlay/init). A lookup that only knows the block
+# device spelling passes every test above and still no-ops on every UBI board.
+reset_env
+set_mounts ubi
+run -z --wipe_overlay
+if remounted_ro /overlay && erased /dev/mtd4 \
+    && [ "$(logged_at remount)" -lt "$(logged_at flash_eraseall)" ]; then
+    ok "a ubifs overlay is quiesced too (init mounts it as ubi0:rootfs_data)"
+else
+    bad "--wipe_overlay must quiesce a ubifs overlay as well, log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# Nothing to quiesce when the partition carries no mounted filesystem at all --
+# a root that never brought an overlay up, or one whose upper layer is tmpfs.
+# The lookup must come up empty and step aside rather than remount something else.
 reset_env
 set_mounts no-overlay
 run -z --wipe_overlay
