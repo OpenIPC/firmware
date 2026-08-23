@@ -87,8 +87,23 @@ printf '#!/bin/sh\necho "S95majestic $1" >> "$FLASH_LOG"\nexit 0\n' \
 # where they should be, so the fallback cases exercise the fallback rather than
 # the emergency "cannot restore, reboot" path. Deliberately no line for $SB/ram:
 # a stale ramfs is the exception, not the default.
-printf 'tmpfs %s/tmp tmpfs rw,relatime 0 0\nproc %s/proc proc rw,relatime 0 0\n' \
-    "$SB" "$SB" > "$SB/proc/mounts"
+#
+# The jffs2 line is what quiesce_overlay looks itself up in: it maps the
+# rootfs_data partition get_device() reports to the mount point to remount
+# read-only. set_mounts drops it for the "overlay is not mounted at all" case
+# (NAND/UBI, or a root that never mounted one).
+set_mounts() {
+    printf 'tmpfs %s/tmp tmpfs rw,relatime 0 0\nproc %s/proc proc rw,relatime 0 0\n' \
+        "$SB" "$SB" > "$SB/proc/mounts"
+    case "${1:-}" in
+        no-overlay) ;;
+        # What general/overlay/init writes on a NAND camera: the same partition,
+        # spelled as a UBI volume rather than an mtdblock device.
+        ubi) printf 'ubi0:rootfs_data /overlay ubifs rw,relatime 0 0\n' >> "$SB/proc/mounts" ;;
+        *)   printf '/dev/mtdblock4 /overlay jffs2 rw,relatime 0 0\n' >> "$SB/proc/mounts" ;;
+    esac
+}
+set_mounts
 
 set_mtd() { cat > "$SB/proc/mtd"; }
 
@@ -171,6 +186,10 @@ target=${!#}
 # wedges before the code under test is even reached.
 for a in "$@"; do
     case "$a" in
+        # quiesce_overlay remounts the jffs2 read-only before the erase. Log it
+        # so a test can assert both that it happened and that it happened FIRST;
+        # STUB_REMOUNT_RC injects a kernel that refuses.
+        *remount*) echo "remount $*" >> "$FLASH_LOG"; exit "${STUB_REMOUNT_RC:-0}" ;;
         move|tmpfs|--move|-M) exit 0 ;;
     esac
 done
@@ -256,11 +275,17 @@ run() {
         STUB_IMG_SOC="${STUB_IMG_SOC:-ssc338q}" \
         STUB_IMG_VERSION="${STUB_IMG_VERSION:-2026.07.11}" \
         STUB_FLASHCP_FAIL="${STUB_FLASHCP_FAIL:-0}" \
+        STUB_REMOUNT_RC="${STUB_REMOUNT_RC:-0}" \
         sh "$SB/sysupgrade" "$@" 2>&1)
     RC=$?
 }
 flashed()      { grep -q "flashcp .*$1" "$SB/tmp/flash.log"; }
 erased()       { grep -q "flash_eraseall .*$1" "$SB/tmp/flash.log"; }
+remounted_ro() { grep -q "remount .*remount,ro .*$1" "$SB/tmp/flash.log"; }
+# Line number of a phrase in the flash log, for ordering assertions: quiesce
+# before erase is the whole point, and a remount that lands afterwards is a
+# remount of a partition that has already been deleted.
+logged_at()    { grep -n -- "$1" "$SB/tmp/flash.log" | head -1 | cut -d: -f1; }
 nothing_wrote() { ! grep -q "flashcp" "$SB/tmp/flash.log"; }
 # The busybox stub logs a bare "reboot" line, so whether the run rebooted is
 # directly observable -- which is the whole question issue #2231 turns on.
@@ -270,7 +295,8 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
-    unset STUB_FLASHCP_FAIL STUB_PIVOT_RC
+    unset STUB_FLASHCP_FAIL STUB_PIVOT_RC STUB_REMOUNT_RC
+    set_mounts
     rm -rf "$SB/ram"
     rm -f "$SB"/tmp/*.ssc338q "$SB"/tmp/firmware.bin.* "$SB"/tmp/*.tgz "$SB"/tmp/*.md5sum
     make_uimage "$SB/tmp/uImage.ssc338q" ssc338q
@@ -618,6 +644,57 @@ if erased /dev/mtd4 && rebooted; then
 else
     bad "-x + --wipe_overlay -> expected erase and reboot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
+# ...and because it is live, the kernel has to be taken off it first. jffs2's GC
+# thread writes the same medium flash_eraseall is erasing, and both notice: the
+# thread walks a filesystem being deleted under it while jffs2's own erase path
+# reads back blocks holding flash_eraseall's cleanmarkers. remount,ro stops that
+# thread (jffs2_remount_fs does it on the way to ro); umount cannot, because the
+# jffs2 is the upperdir of the overlayfs that is still root for init(1).
+reset_env
+run -z --wipe_overlay
+if remounted_ro /overlay && erased /dev/mtd4 \
+    && [ "$(logged_at remount)" -lt "$(logged_at flash_eraseall)" ]; then
+    ok "--wipe_overlay quiesces the overlay read-only BEFORE erasing it"
+else
+    bad "--wipe_overlay must remount the overlay ro before the erase, log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# A kernel that refuses the remount must not cost the user their reset: erasing
+# it live is what this did before the quiesce existed, so that is the fallback.
+reset_env
+STUB_REMOUNT_RC=1
+run -z --wipe_overlay
+if erased /dev/mtd4 && printf '%s' "$OUT" | grep -q "erasing it live"; then
+    ok "a refused remount warns and still erases (no worse than the old behaviour)"
+else
+    bad "a refused remount must not block the erase, rc=$RC out='$OUT'"
+fi
+
+# A NAND camera mounts the very same partition as "ubi0:rootfs_data", not as an
+# mtdblock device (general/overlay/init). A lookup that only knows the block
+# device spelling passes every test above and still no-ops on every UBI board.
+reset_env
+set_mounts ubi
+run -z --wipe_overlay
+if remounted_ro /overlay && erased /dev/mtd4 \
+    && [ "$(logged_at remount)" -lt "$(logged_at flash_eraseall)" ]; then
+    ok "a ubifs overlay is quiesced too (init mounts it as ubi0:rootfs_data)"
+else
+    bad "--wipe_overlay must quiesce a ubifs overlay as well, log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# Nothing to quiesce when the partition carries no mounted filesystem at all --
+# a root that never brought an overlay up, or one whose upper layer is tmpfs.
+# The lookup must come up empty and step aside rather than remount something else.
+reset_env
+set_mounts no-overlay
+run -z --wipe_overlay
+if erased /dev/mtd4 && ! grep -q remount "$SB/tmp/flash.log"; then
+    ok "an unmounted rootfs_data is erased with no remount attempted"
+else
+    bad "nothing is mounted on rootfs_data; no remount should have been tried, log='$(cat "$SB/tmp/flash.log")'"
+fi
+
 # On a non-flash root init mounts a tmpfs overlay instead, so there is no live
 # upperdir on the partition being erased.
 reset_env
@@ -1064,6 +1141,24 @@ if printf '%s\n' "$rbc" | grep -q 'return 0' && ! printf '%s\n' "$rbc" | grep -q
     ok "reboot_system returns rather than exits (caller owns the status)"
 else
     bad "reboot_system must return on the honoured path so die() keeps its own exit 1"
+fi
+
+# The quiesce is only a quiesce if it precedes the erase, and the mount point has
+# to be looked up rather than assumed: after the pivot the overlay is at
+# /mnt/overlay, on the in-place fallback it is still at /overlay. A hardcoded
+# path would silently remount nothing on one of the two paths.
+wo=$(sed -n '/^do_wipe_overlay()/,/^}/p' "$SRC")
+if printf '%s\n' "$wo" | grep -q 'quiesce_overlay' \
+    && [ "$(printf '%s\n' "$wo" | grep -n quiesce_overlay | head -1 | cut -d: -f1)" \
+       -lt "$(printf '%s\n' "$wo" | grep -n flash_eraseall | head -1 | cut -d: -f1)" ]; then
+    ok "do_wipe_overlay quiesces before it erases"
+else
+    bad "do_wipe_overlay must call quiesce_overlay before flash_eraseall"
+fi
+if sed -n '/^quiesce_overlay()/,/^}/p' "$SRC" | grep -q '/proc/mounts'; then
+    ok "quiesce_overlay looks the mount point up (it moves with the pivot)"
+else
+    bad "quiesce_overlay must read /proc/mounts; the overlay is at /mnt/overlay after the pivot"
 fi
 
 # Every write that lands on flash the camera is running from has to be marked,
