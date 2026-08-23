@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.61
+scr_version=1.0.62
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -312,10 +312,59 @@ do_update_firmware() {
 	echo_c 32 "Firmware updated"
 }
 
+# Stop the kernel writing to the overlay before erasing the medium under it.
+#
+# do_wipe_overlay hands flash_eraseall a partition that is still a mounted, RW
+# jffs2 with its garbage-collect thread running, so two agents end up erasing and
+# writing the same medium at once. Both notice. The GC thread walks a filesystem
+# that is being deleted under it -- "Node header CRC failed ... {ffff,ffff,...}",
+# "Node totlen on flash (0xffffffff) != totlen from node ref", and inodes lost
+# outright to "no data nodes found for ino #20" -- while jffs2's own erase path
+# reads back a block it has just erased and finds someone else's cleanmarker in
+# it: "Newly-erased block contained word 0x20031985" (magic 0x1985, nodetype
+# 0x2003 -- the marker `flash_eraseall -j` writes).
+#
+# The overlay cannot be unmounted. It is the upperdir AND workdir of the
+# overlayfs that is still root for init(1), majestic, dropbear and getty, so that
+# superblock holds a reference to this mount for as long as they exist: umount is
+# EBUSY by construction, and umount -l only detaches it from our namespace while
+# the superblock and the GC thread live on. pivot_root does not help and is not
+# meant to -- it moved THIS script's root off the doomed partition, nobody
+# else's, which is why enter_ramfs leaves the old root mounted at /mnt.
+#
+# Remounting it read-only is enough, and does work: jffs2_remount_fs() stops the
+# garbage-collect thread on the way to ro, which leaves flash_eraseall as the
+# only thing touching the medium. Anything still writing through the overlayfs
+# gets EROFS instead of reaching flash -- the outcome we want a second before a
+# reboot that is going to wipe it anyway.
+#
+# Measured on an hi3516ev300 with an overlay carrying real write history: 3 of 4
+# runs logged jffs2 errors before this, 0 of 5 after. An empty overlay is silent
+# either way, which is why a bench that has just been reset never shows it.
+#
+# The mount point is looked up rather than assumed: after the pivot the overlay
+# is at /mnt/overlay, and on the in-place fallback it is still at /overlay.
+quiesce_overlay() {
+	local blk=$(get_device "rootfs_data" | sed 's|/dev/mtd|/dev/mtdblock|')
+	local mp=$(awk -v d="$blk" '$1 == d { print $2; exit }' /proc/mounts)
+	# Not mounted (NAND/UBI, or an overlay this camera never mounted): the erase
+	# is unopposed already and there is nothing to quiesce.
+	[ -n "$mp" ] || return 0
+	sync
+	# A refusal is a warning, not a die: erasing it live is exactly what this
+	# did before, so falling back to that is never worse than the status quo.
+	if mount -o remount,ro "$mp" 2>&3; then
+		echo "Overlay $mp remounted read-only"
+	else
+		echo_c 33 "Could not remount $mp read-only; erasing it live."
+	fi
+}
+
 do_wipe_overlay() {
 	echo_c 33 "\nOverlayFS"
 	echo "Erase overlay partition"
 	[ "$flash_type" = "nand" ] || jffs2="-j"
+	quiesce_overlay
 	mark_live_flash_dirty
 	set_progress flash_eraseall $jffs2 "$(get_device "rootfs_data")"
 }
