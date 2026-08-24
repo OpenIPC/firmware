@@ -9,6 +9,16 @@ config BR2_PACKAGE_WIFIBROADCAST_NG
 	# WebUI stopped needing it, so the dependency has to be declared where it is
 	# actually used rather than inherited from an unrelated package.
 	select BR2_PACKAGE_JSONFILTER
+	# ...and the same script reads /etc/wfb.yaml with yaml-cli, writes the wlan
+	# adapter into it with yaml-cli-multi, and fetches majestic's config with the
+	# curl binary (not just the library). yaml-cli happened to be on 122 of 125
+	# defconfigs and curl on the same 122, so none of this ever surfaced;
+	# yaml-cli-multi was never guaranteed anywhere and is genuinely absent from a
+	# stock lite image.
+	select BR2_PACKAGE_YAML_CLI
+	select BR2_PACKAGE_YAML_CLI_MULTI
+	select BR2_PACKAGE_LIBCURL_OPENIPC
+	select BR2_PACKAGE_LIBCURL_OPENIPC_CURL
 	help
 	  Long-range packet radio link based on raw WiFi radio.
 	  https://github.com/svpcom/wfb-ng

@@ -1,5 +1,9 @@
 config BR2_PACKAGE_ADAPTIVE_LINK
 	bool "Adaptive link (not enabled by default)"
+	# adaptive-link.mk already lists yaml-cli-multi in _DEPENDENCIES, but that is
+	# build ordering, not Kconfig enablement -- it does not put the binary in the
+	# image. The runtime need has to be a select.
+	select BR2_PACKAGE_YAML_CLI_MULTI
 	help
 	  Controls the bitrate and other link parameters depending on the link quality.
 	  https://github.com/OpenIPC/adaptive-link
