@@ -378,7 +378,23 @@ jobs:
   publish:
     name: Publish releases
     needs: [preflight, buildroot]
+    # The leading status function is load-bearing. A job whose `needs` failed is
+    # skipped by default, and an `if:` lifts that only when it CONTAINS a status
+    # function -- reading `needs.buildroot.result` inside the `contains()` below
+    # does not count. So from #2184, which moved the release writes out of the
+    # matrix jobs and into this one, until this line, any single failing board
+    # skipped this job outright and the whole fleet's nightly went unwritten:
+    # the 2026-08-23 nightly lost all 113 images to one board 4KB over its size
+    # cap, and 2026-08-12 lost them the same way. Before #2184 each board
+    # uploaded from its own matrix job, so a bad board took down only itself;
+    # this restores that property without giving up the single-writer fix.
+    #
+    # `!cancelled()` rather than `always()`: the `contains()` already drops a
+    # cancelled or skipped matrix, but a run cancelled AFTER a green matrix
+    # would still start uploading under `always()`, and a half-written nightly
+    # is the thing this job exists to avoid.
     if: >-
+      !cancelled() &&
       github.event_name != 'pull_request' &&
       needs.preflight.outputs.should_build == 'true' &&
       contains(fromJSON('["success", "failure"]'), needs.buildroot.result)
@@ -428,6 +444,13 @@ jobs:
             fi
           elif [ "${count}" -eq 0 ]; then
             echo "::notice::matrix failed and produced nothing; no release to write"
+          else
+            # The partial case this job was always meant to serve, unreachable
+            # until the `!cancelled()` above. Say so out loud: the boards that
+            # did not build keep their PREVIOUS image on nightly/latest, which
+            # is the right outcome for a flasher but is invisible next to the
+            # freshly-written ones.
+            echo "::warning::partial publish: matrix failed, writing the ${count} asset(s) that did build; nightly and latest keep their previous image for every board that did not build — see the Build summary job for the per-board breakdown"
           fi
 
       # Drive the release writes ourselves instead of softprops/action-gh-release.
