@@ -3,6 +3,12 @@ config BR2_PACKAGE_WIFIBROADCAST_NG
 	select BR2_PACKAGE_IW
 	select BR2_PACKAGE_MAVFWD
 	select BR2_PACKAGE_MSPOSD
+	# files/wifibroadcast reads the video size out of majestic's config with
+	# jsonfilter before handing it to msposd. That used to be satisfied by every
+	# defconfig setting BR2_PACKAGE_JSONFILTER=y for the WebUI's benefit; the
+	# WebUI stopped needing it, so the dependency has to be declared where it is
+	# actually used rather than inherited from an unrelated package.
+	select BR2_PACKAGE_JSONFILTER
 	help
 	  Long-range packet radio link based on raw WiFi radio.
 	  https://github.com/svpcom/wfb-ng
