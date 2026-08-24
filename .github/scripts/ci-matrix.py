@@ -237,12 +237,19 @@ UNBUILT_FAMILIES = {
 # silent narrowing. This list is only ever read by --self-test: changes to these
 # packages widen like any other path that reaches no board of its own, because
 # their .mk and Config.in are included in every build regardless.
+#
+# jsonfilter is the odd one: it was on all 120 defconfigs until majestic-webui
+# stopped calling it (OpenIPC/majestic-webui#177), which was the only thing on a
+# standard camera that did. It stays in the tree because ~97 builder devices and
+# the FPV variants still select it -- wifibroadcast-ng parses `@.video0.size`
+# with it -- so this is a package that left the matrix, not one that left the tree.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x", "atbm-wifi",
     "aura-httpd", "baresip-openipc", "comgt", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "hisilicon-osdrv-hi3536dv100", "i2c-telemetry",
-    "libhv-openipc", "libre-openipc", "libsrt-openipc", "linux-patcher", "matter",
+    "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
+    "linux-patcher", "matter",
     "mavfwd", "mdnsd-openipc", "mini", "mqtt-bot", "msposd", "n3n-openipc", "nabto",
     "netblink", "node-exporter", "ntfy", "onvif-simple-server", "openipc-nfs-root",
     "osd-openipc", "rtl8188eus-openipc", "rtl8192eu-openipc", "rtl8811cu-openipc",
