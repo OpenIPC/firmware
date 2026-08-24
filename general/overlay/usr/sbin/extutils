@@ -50,6 +50,16 @@ case "$CMD" in
 		fi
 		;;
 
+	set_mac)
+		if fw_printenv -n ethaddr >/dev/null 2>&1; then
+			echo "ethaddr: $(fw_printenv -n ethaddr)"
+		else
+			mac=$(od -An -tx1 -N5 /dev/urandom | tr -d ' ' | sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)$/02:\1:\2:\3:\4:\5/')
+			fw_setenv ethaddr "$mac"
+			echo "ethaddr: $mac"
+		fi
+		;;
+
         sysinfo)
 		echo ""
 		echo "Firmware:"
