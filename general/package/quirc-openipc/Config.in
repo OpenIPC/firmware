@@ -1,6 +1,12 @@
 config BR2_PACKAGE_QUIRC_OPENIPC
 	bool "quirc-openipc"
 	select BR2_PACKAGE_LIBJPEG_OPENIPC
+	# files/qrscan.sh plays a confirmation sound through majestic with the curl
+	# BINARY once a QR code resolves, and S97qrscan starts it at boot whenever
+	# wlandev is set. The binary is a sub-option of libcurl-openipc, so both
+	# symbols are needed -- selecting only the sub-option leaves it inert.
+	select BR2_PACKAGE_LIBCURL_OPENIPC
+	select BR2_PACKAGE_LIBCURL_OPENIPC_CURL
 	help
 	  QR codes are a type of high-density matrix barcodes, and quirc is a library for extracting and decoding them from images.
 	  https://github.com/dlbeer/quirc

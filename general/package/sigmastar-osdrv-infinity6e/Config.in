@@ -1,5 +1,10 @@
 config BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY6E
 	bool "sigmastar-osdrv-infinity6e"
 	select BR2_PACKAGE_SIGMASTAR_OSDRV_SENSORS
+	# files/script/* is installed wholesale into /usr/bin, so zoom.sh ships with
+	# the driver modules and reads video0.size out of majestic's config with
+	# yaml-cli nine times over. Satisfied until now only by yaml-cli happening to
+	# be in 122 of 125 defconfigs.
+	select BR2_PACKAGE_YAML_CLI
 	help
 	  Sigmastar infinity6e kernel modules
