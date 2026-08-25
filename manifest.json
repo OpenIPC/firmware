@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "generated_at": "2026-08-24T23:48:59Z",
+  "generated_at": "2026-08-25T23:58:29Z",
   "channels": {
-    "nightly": "nightly-20260824-3720ae8",
-    "latest": "nightly-20260824-3720ae8"
+    "nightly": "nightly-20260825-48bfe16",
+    "latest": "nightly-20260825-48bfe16"
   },
   "aliases": {
     "gk7205v210": "gk7205v200",
@@ -13,6 +13,665 @@
     "xm550": "xm530"
   },
   "builds": [
+    {
+      "id": "nightly-20260825-48bfe16",
+      "sha": "48bfe1631522497bb103e990010108dce005fb54",
+      "short": "48bfe16",
+      "built_at": "2026-08-25T22:51:44Z",
+      "release_url": "https://github.com/OpenIPC/firmware/releases/tag/nightly-20260825-48bfe16",
+      "platforms": {
+        "fh8852v100_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.fh8852v100-nor-lite.tgz",
+            "size": 5691754
+          }
+        },
+        "fh8852v200_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.fh8852v200-nor-lite.tgz",
+            "size": 6045520
+          }
+        },
+        "gk7102_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7102-nor-lite.tgz",
+            "size": 5473085
+          }
+        },
+        "gk7102s_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7102s-nor-lite.tgz",
+            "size": 5462066
+          }
+        },
+        "gk7201v200_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7201v200-nor-lite.tgz",
+            "size": 6466036
+          }
+        },
+        "gk7202v300_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7202v300-nor-lite.tgz",
+            "size": 7059816
+          }
+        },
+        "gk7202v300_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7202v300-nor-ultimate.tgz",
+            "size": 9169610
+          }
+        },
+        "gk7205v200_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7205v200-nor-lite.tgz",
+            "size": 7014442
+          }
+        },
+        "gk7205v200_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7205v200-nor-ultimate.tgz",
+            "size": 8696231
+          }
+        },
+        "gk7205v300_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7205v300-nor-lite.tgz",
+            "size": 7026196
+          }
+        },
+        "gk7205v300_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7205v300-nor-ultimate.tgz",
+            "size": 8707738
+          }
+        },
+        "gk7205v500_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7205v500-nand-ultimate.tgz",
+            "size": 11102120
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7205v500-nor-ultimate.tgz",
+            "size": 8831291
+          }
+        },
+        "gk7205v500_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7205v500-nor-lite.tgz",
+            "size": 6456740
+          }
+        },
+        "gk7205v510_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7205v510-nor-lite.tgz",
+            "size": 6456603
+          }
+        },
+        "gk7605v100_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gk7605v100-nor-lite.tgz",
+            "size": 6994955
+          }
+        },
+        "gm8135_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gm8135-nor-lite.tgz",
+            "size": 6290746
+          }
+        },
+        "gm8136_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.gm8136-nor-lite.tgz",
+            "size": 6290703
+          }
+        },
+        "hi3516av100_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516av100-nand-ultimate.tgz",
+            "size": 10069522
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516av100-nor-ultimate.tgz",
+            "size": 7876602
+          }
+        },
+        "hi3516av100_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516av100-nor-lite.tgz",
+            "size": 6164806
+          }
+        },
+        "hi3516av100_neo": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516av100-nor-neo.tgz",
+            "size": 6453808
+          }
+        },
+        "hi3516av200_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516av200-nand-ultimate.tgz",
+            "size": 10626862
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516av200-nor-ultimate.tgz",
+            "size": 8293017
+          }
+        },
+        "hi3516av200_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516av200-nor-lite.tgz",
+            "size": 6576097
+          }
+        },
+        "hi3516av200_neo": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516av200-nor-neo.tgz",
+            "size": 7871691
+          }
+        },
+        "hi3516av300_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516av300-nor-lite.tgz",
+            "size": 9999179
+          }
+        },
+        "hi3516av300_neo": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516av300-nor-neo.tgz",
+            "size": 10319887
+          }
+        },
+        "hi3516cv100_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516cv100-nor-lite.tgz",
+            "size": 6771559
+          }
+        },
+        "hi3516cv100_neo": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516cv100-nor-neo.tgz",
+            "size": 5977642
+          }
+        },
+        "hi3516cv200_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516cv200-nor-lite.tgz",
+            "size": 6727766
+          }
+        },
+        "hi3516cv200_neo": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516cv200-nor-neo.tgz",
+            "size": 6282752
+          }
+        },
+        "hi3516cv300_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516cv300-nand-ultimate.tgz",
+            "size": 11389388
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516cv300-nor-ultimate.tgz",
+            "size": 8425108
+          }
+        },
+        "hi3516cv300_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516cv300-nor-lite.tgz",
+            "size": 6409049
+          }
+        },
+        "hi3516cv300_neo": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516cv300-nor-neo.tgz",
+            "size": 5969892
+          }
+        },
+        "hi3516cv500_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516cv500-nor-lite.tgz",
+            "size": 10008005
+          }
+        },
+        "hi3516cv6xx_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516cv6xx-nor-ultimate.tgz",
+            "size": 10264192
+          }
+        },
+        "hi3516dv100_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516dv100-nand-ultimate.tgz",
+            "size": 10087308
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516dv100-nor-ultimate.tgz",
+            "size": 7883976
+          }
+        },
+        "hi3516dv100_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516dv100-nor-lite.tgz",
+            "size": 6739506
+          }
+        },
+        "hi3516dv200_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516dv200-nor-lite.tgz",
+            "size": 6557484
+          }
+        },
+        "hi3516dv300_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516dv300-nor-lite.tgz",
+            "size": 9994980
+          }
+        },
+        "hi3516ev100_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516ev100-nor-lite.tgz",
+            "size": 6393273
+          }
+        },
+        "hi3516ev200_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516ev200-nand-ultimate.tgz",
+            "size": 11375653
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516ev200-nor-ultimate.tgz",
+            "size": 8829223
+          }
+        },
+        "hi3516ev200_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516ev200-nor-lite.tgz",
+            "size": 6576777
+          }
+        },
+        "hi3516ev300_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516ev300-nand-ultimate.tgz",
+            "size": 13201733
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516ev300-nor-ultimate.tgz",
+            "size": 10153626
+          }
+        },
+        "hi3516ev300_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516ev300-nor-lite.tgz",
+            "size": 6904370
+          }
+        },
+        "hi3516ev300_neo": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3516ev300-nor-neo.tgz",
+            "size": 6667999
+          }
+        },
+        "hi3518cv100_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3518cv100-nor-lite.tgz",
+            "size": 6771548
+          }
+        },
+        "hi3518ev100_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3518ev100-nor-lite.tgz",
+            "size": 6841864
+          }
+        },
+        "hi3518ev200_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3518ev200-nand-ultimate.tgz",
+            "size": 11840029
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3518ev200-nor-ultimate.tgz",
+            "size": 8799128
+          }
+        },
+        "hi3518ev200_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3518ev200-nor-lite.tgz",
+            "size": 6739185
+          }
+        },
+        "hi3518ev300_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3518ev300-nand-ultimate.tgz",
+            "size": 12501916
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3518ev300-nor-ultimate.tgz",
+            "size": 9644706
+          }
+        },
+        "hi3518ev300_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3518ev300-nor-lite.tgz",
+            "size": 7074250
+          }
+        },
+        "hi3519dv500_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3519dv500-nor-ultimate.tgz",
+            "size": 14758510
+          }
+        },
+        "hi3519v101_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3519v101-nor-lite.tgz",
+            "size": 7025087
+          }
+        },
+        "hi3520dv200_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3520dv200-nor-lite.tgz",
+            "size": 5615345
+          }
+        },
+        "hi3536cv100_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3536cv100-nor-lite.tgz",
+            "size": 4811309
+          }
+        },
+        "hi3536dv100_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.hi3536dv100-nor-lite.tgz",
+            "size": 5977545
+          }
+        },
+        "nt98562_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.nt98562-nor-lite.tgz",
+            "size": 6583295
+          }
+        },
+        "nt98566_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.nt98566-nor-lite.tgz",
+            "size": 6582660
+          }
+        },
+        "rv1103_lite": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.rv1103-nand-lite.tgz",
+            "size": 8083435
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.rv1103-nor-lite.tgz",
+            "size": 8076005
+          }
+        },
+        "rv1106_lite": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.rv1106-nand-lite.tgz",
+            "size": 8083444
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.rv1106-nor-lite.tgz",
+            "size": 8076012
+          }
+        },
+        "rv1109_lite": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.rv1109-nand-lite.tgz",
+            "size": 4481455
+          }
+        },
+        "rv1126_lite": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.rv1126-nand-lite.tgz",
+            "size": 4481434
+          }
+        },
+        "ssc30kd_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc30kd-nor-lite.tgz",
+            "size": 7849893
+          }
+        },
+        "ssc30kd_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc30kd-nor-ultimate.tgz",
+            "size": 9485203
+          }
+        },
+        "ssc30kq_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc30kq-nor-lite.tgz",
+            "size": 7850117
+          }
+        },
+        "ssc30kq_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc30kq-nor-ultimate.tgz",
+            "size": 9485927
+          }
+        },
+        "ssc325_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc325-nor-lite.tgz",
+            "size": 6244568
+          }
+        },
+        "ssc325de_lite": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc325de-nand-lite.tgz",
+            "size": 6678172
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc325de-nor-lite.tgz",
+            "size": 6670422
+          }
+        },
+        "ssc333_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc333-nor-lite.tgz",
+            "size": 6967720
+          }
+        },
+        "ssc333_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc333-nor-ultimate.tgz",
+            "size": 8128794
+          }
+        },
+        "ssc335_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc335-nor-lite.tgz",
+            "size": 6968402
+          }
+        },
+        "ssc335_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc335-nor-ultimate.tgz",
+            "size": 8128575
+          }
+        },
+        "ssc335de_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc335de-nor-lite.tgz",
+            "size": 6968272
+          }
+        },
+        "ssc335de_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc335de-nor-ultimate.tgz",
+            "size": 7794042
+          }
+        },
+        "ssc337_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc337-nor-lite.tgz",
+            "size": 6967856
+          }
+        },
+        "ssc337_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc337-nor-ultimate.tgz",
+            "size": 7794462
+          }
+        },
+        "ssc337de_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc337de-nand-ultimate.tgz",
+            "size": 8231627
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc337de-nor-ultimate.tgz",
+            "size": 8221947
+          }
+        },
+        "ssc337de_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc337de-nor-lite.tgz",
+            "size": 6968325
+          }
+        },
+        "ssc338q_ultimate": {
+          "nand": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc338q-nand-ultimate.tgz",
+            "size": 10087498
+          },
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc338q-nor-ultimate.tgz",
+            "size": 10075946
+          }
+        },
+        "ssc338q_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc338q-nor-lite.tgz",
+            "size": 7850603
+          }
+        },
+        "ssc377_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc377-nor-lite.tgz",
+            "size": 6985438
+          }
+        },
+        "ssc377d_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc377d-nor-lite.tgz",
+            "size": 6985185
+          }
+        },
+        "ssc377de_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc377de-nor-lite.tgz",
+            "size": 6985283
+          }
+        },
+        "ssc377qe_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc377qe-nor-lite.tgz",
+            "size": 6986074
+          }
+        },
+        "ssc378de_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc378de-nor-lite.tgz",
+            "size": 6985416
+          }
+        },
+        "ssc378qe_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.ssc378qe-nor-lite.tgz",
+            "size": 6985403
+          }
+        },
+        "t10_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t10-nor-lite.tgz",
+            "size": 6192108
+          }
+        },
+        "t20_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t20-nor-lite.tgz",
+            "size": 5791606
+          }
+        },
+        "t20_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t20-nor-ultimate.tgz",
+            "size": 8070362
+          }
+        },
+        "t21_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t21-nor-lite.tgz",
+            "size": 5747300
+          }
+        },
+        "t21_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t21-nor-ultimate.tgz",
+            "size": 6499753
+          }
+        },
+        "t23_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t23-nor-lite.tgz",
+            "size": 6049814
+          }
+        },
+        "t30_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t30-nor-lite.tgz",
+            "size": 6420180
+          }
+        },
+        "t31_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t31-nor-lite.tgz",
+            "size": 6715858
+          }
+        },
+        "t31_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t31-nor-ultimate.tgz",
+            "size": 8741639
+          }
+        },
+        "t40_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t40-nor-lite.tgz",
+            "size": 6509107
+          }
+        },
+        "t40_ultimate": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.t40-nor-ultimate.tgz",
+            "size": 7601185
+          }
+        },
+        "v851s_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.v851s-nor-lite.tgz",
+            "size": 6767552
+          }
+        },
+        "xm510_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.xm510-nor-lite.tgz",
+            "size": 3952586
+          }
+        },
+        "xm530_lite": {
+          "nor": {
+            "url": "https://github.com/OpenIPC/firmware/releases/download/nightly-20260825-48bfe16/openipc.xm530-nor-lite.tgz",
+            "size": 5016740
+          }
+        }
+      }
+    },
     {
       "id": "nightly-20260824-3720ae8",
       "sha": "3720ae84b689b3aac8ac9adc081a1e7fec2e7199",
