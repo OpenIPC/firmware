@@ -1,0 +1,65 @@
+libsanitizer: read the mips stack pointer the way PTRACE_GETREGS writes it
+
+Replaces the earlier version of this patch, which took $sp from regs[35]. That
+index is correct for elf_gregset_t -- the core-dump layout, where a six-slot
+header shifts the general registers -- but PTRACE_GETREGS does not write that
+layout. It writes 38 __s64 values, the 32 general registers first and with no
+header, so $sp is 64-bit slot 29, byte 232.
+
+The old index quietly disabled leak detection rather than breaking anything
+visibly: regs[35] on o32 is the high half of $s1, always zero for a 32-bit
+value, so LeakSanitizer received sp = 0 for every suspended thread and fell
+back to scanning whole stacks, dead frames included. Anything a dead frame
+still pointed at counted as reachable. On an Ingenic t31 a three-thread test
+leaking 0x1111 bytes per thread reported nothing at all; with this patch it
+reports all three with symbolised traces.
+
+The offset is measured, not read out of a header: a ptrace probe on the
+camera's 3.10 kernel reports its own $sp and then finds it at byte 232, with
+the dump ending at byte 304 = 38 * 8 and sign extension in every odd 32-bit
+word. That is the second time an assumed constant here was wrong, hence the
+measurement.
+
+Signed-off-by: OpenIPC AI team <ai@openipc.org>
+
+--- a/libsanitizer/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
++++ b/libsanitizer/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
+@@ -505,7 +505,37 @@
+ # if SANITIZER_ANDROID
+ #  define REG_SP regs[EF_R29]
+ # else
+-#  define REG_SP regs[EF_REG29]
++/* PTRACE_GETREGS on mips does not write the layout that glibc's EF_REG29 or
++   the kernel's EF_R29 describe. Both index elf_gregset_t -- the core-dump
++   layout -- whose six-slot header puts $sp at 35. The ptrace request writes
++   something else entirely: arch/mips/kernel/ptrace.c::ptrace_getregs stores 38
++   __s64 values, the 32 general registers first and with no header at all, so
++   $sp is 64-bit slot 29, byte 232, on every mips ABI including o32.
++
++   Measured rather than inferred, on a 3.10 mips32el kernel: the dump ends at
++   byte 304 (38 * 8), every odd 32-bit word carries sign extension, and the
++   traced child's stack pointer appears at byte 232.
++
++   Getting this wrong neither fails to build nor crashes. regs[35] on o32 is
++   the high half of $s1, zero for any 32-bit value, so LeakSanitizer receives
++   sp = 0 for every thread it suspends and falls back to scanning each stack in
++   full, dead frames included. Blocks that only a dead frame still points at
++   are then counted reachable and no leak is reported -- a green run that means
++   nothing. The main thread hides it, because lsan passes the calling thread's
++   stack pointer in directly instead of reading it back through ptrace.
++
++   The width test is __SIZEOF_LONG__ rather than _MIPS_SIM/_ABI64, which come
++   from <sgidefs.h> and so are absent on musl; see the mips-musl-sgidefs patch.
++   n32 has 32-bit longs and lands correctly on the 32-bit arms. musl's struct
++   user starts with unsigned long regs[45+64] = 436 bytes, comfortably more
++   than the 304 the kernel writes. */
++#  if __SIZEOF_LONG__ == 8
++#   define REG_SP regs[29]  /* n64: unsigned long is the slot. */
++#  elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
++#   define REG_SP regs[59]  /* o32/n32 BE: low half of slot 29 is byte 236. */
++#  else
++#   define REG_SP regs[58]  /* o32/n32 LE: low half of slot 29 is byte 232. */
++#  endif
+ # endif
+ 
+ #elif defined(__aarch64__)

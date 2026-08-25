@@ -1,0 +1,97 @@
+libsanitizer: do not re-enter libgcc's unwinder from the allocator
+
+An ASan-instrumented binary hung before main() on mipsel, printing nothing,
+with a single thread blocked forever on a futex. libgcc's DWARF unwinder is not
+re-entrant: _Unwind_Find_FDE takes object_mutex and allocates under it, so
+ASan's malloc interceptor -- which collects a stack trace -- re-enters the
+unwinder from inside the locked region and deadlocks against the lock this same
+thread holds.
+
+Only mips is exposed. sanitizer_stacktrace.h sets SANITIZER_CAN_FAST_UNWIND to
+0 for __mips__, so every allocation unwinds through _Unwind_Backtrace; arm
+unwinds through EHABI, which takes no such lock, and elsewhere
+fast_unwind_on_malloc keeps libgcc off the allocation path entirely.
+
+Two changes. A thread-local guard in UnwindSlow, which is unconditional and
+belongs to whichever tool is running. And a fix to __asan::ScopedUnwinding,
+which guards the same recursion one layer up but cleared its flag on the way
+out instead of restoring it -- so it stopped the first nested allocation and
+let the second, of which libgcc makes several under that lock, straight
+through.
+
+Bisected with ASAN_OPTIONS=malloc_context_size: 2 or less runs, 3 or more
+hangs, which is exactly the threshold at which GET_STACK_TRACE stops
+short-circuiting and calls the unwinder.
+
+Signed-off-by: OpenIPC AI team <ai@openipc.org>
+
+--- a/libsanitizer/asan/asan_stack.cpp
++++ b/libsanitizer/asan/asan_stack.cpp
+@@ -38,8 +38,11 @@
+     }
+   }
+   ~ScopedUnwinding() {
++    // Restore rather than clear. libgcc's unwinder allocates more than once
++    // inside the region where it holds object_mutex, and clearing here let the
++    // second of those allocations unwind again and deadlock against the first.
+     if (thread)
+-      thread->setUnwinding(false);
++      thread->setUnwinding(!can_unwind);
+   }
+ 
+   bool CanUnwind() const { return can_unwind; }
+--- a/libsanitizer/sanitizer_common/sanitizer_unwind_linux_libcdep.cpp
++++ b/libsanitizer/sanitizer_common/sanitizer_unwind_linux_libcdep.cpp
+@@ -89,6 +89,37 @@
+   return UNWIND_CONTINUE;
+ }
+ 
++// libgcc's DWARF unwinder is not re-entrant. _Unwind_Find_FDE takes
++// object_mutex and allocates under it -- a btree node in gcc 12 and later, the
++// sorted FDE array before that -- so an allocator that collects a stack trace
++// re-enters the unwinder from inside the locked region and blocks on a mutex
++// this very thread already holds. A single-threaded deadlock, before main().
++//
++// It bites where the slow unwinder is on the allocation path AND the DWARF
++// unwinder is the one in use. On mips that is always: sanitizer_stacktrace.h
++// sets SANITIZER_CAN_FAST_UNWIND to 0 for __mips__, so every malloc unwinds
++// through _Unwind_Backtrace. arm escapes it by unwinding through EHABI, which
++// takes no such lock, and elsewhere fast_unwind_on_malloc keeps libgcc off the
++// allocation path entirely.
++//
++// __asan::ScopedUnwinding guards the same recursion one layer up, but only
++// when an AsanThread already exists. This guard is unconditional and belongs
++// to whichever tool is running.
++static THREADLOCAL bool in_unwind_slow;
++
++class ScopedSlowUnwinding {
++ public:
++  ScopedSlowUnwinding() : was_unwinding(in_unwind_slow) {
++    in_unwind_slow = true;
++  }
++  ~ScopedSlowUnwinding() { in_unwind_slow = was_unwinding; }
++
++  bool CanUnwind() const { return !was_unwinding; }
++
++ private:
++  const bool was_unwinding;
++};
++
+ }  // namespace
+ 
+ #if SANITIZER_ANDROID
+@@ -125,6 +156,14 @@
+ 
+ void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
+   CHECK_GE(max_depth, 2);
++  ScopedSlowUnwinding unwind_scope;
++  if (!unwind_scope.CanUnwind()) {
++    // Called from inside libgcc's unwinder. Unwinding again would deadlock, so
++    // report the one frame that needs no unwinding at all.
++    size = 1;
++    trace_buffer[0] = pc;
++    return;
++  }
+   size = 0;
+   UnwindTraceArg arg = {this, Min(max_depth + 1, kStackTraceMax)};
+   _Unwind_Backtrace(Unwind_Trace, &arg);

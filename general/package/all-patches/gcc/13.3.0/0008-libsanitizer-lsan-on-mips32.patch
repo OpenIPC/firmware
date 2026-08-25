@@ -1,0 +1,40 @@
+libsanitizer: let LeakSanitizer run on mips32
+
+CAN_SANITIZE_LEAKS was 1 for mips64 -- via the wordsize arm -- and 0 for
+32-bit mips, which fell through to the #else. Nothing in the leak scanner is
+64-bit specific: it needs a stack pointer per suspended thread, which
+sanitizer_stoptheworld_linux_libcdep.cpp supplies for mips, and a
+pointer-aligned sweep of the mapped ranges, which is wordsize-agnostic. The
+exclusion looks like an omission rather than a limitation, so it is lifted and
+tested rather than trusted.
+
+Verified on an Ingenic t31 (mipsel o32, musl 1.2.4, gcc 13.3): a planted leak
+is reported with a symbolised file:line trace, from the main thread and from
+live spawned threads, and a program with no leak reports none. Before this the
+runtime answered "detect_leaks is not supported on this platform".
+
+Needs the ptrace-stack-pointer, unwinder-reentry, thread-descriptor,
+dtv-offset and time-t-abi patches to be useful; on its own it runs, but the
+answers are wrong.
+
+Signed-off-by: OpenIPC AI team <ai@openipc.org>
+
+--- a/libsanitizer/lsan/lsan_common.h
++++ b/libsanitizer/lsan/lsan_common.h
+@@ -42,6 +42,16 @@
+ #  define CAN_SANITIZE_LEAKS 1
+ #elif defined(__arm__) && SANITIZER_LINUX
+ #  define CAN_SANITIZE_LEAKS 1
++#elif defined(__mips__) && SANITIZER_LINUX
++// 32-bit mips. The 64-bit ABIs are already covered by the __mips64 arm of the
++// wordsize test above; this arm is what o32 and n32 fall through to. Nothing
++// in the leak scanner is 64-bit specific -- it needs a stack pointer per
++// suspended thread, which sanitizer_stoptheworld_linux_libcdep.cpp supplies
++// for mips, and a pointer-aligned sweep of the mapped ranges, which is
++// wordsize-agnostic. Verified on an Ingenic t31 (mipsel o32, musl): a planted
++// leak is reported with a symbolised trace, from the main thread and from
++// live spawned threads.
++#  define CAN_SANITIZE_LEAKS 1
+ #elif SANITIZER_RISCV64 && SANITIZER_LINUX
+ #  define CAN_SANITIZE_LEAKS 1
+ #elif SANITIZER_NETBSD || SANITIZER_FUCHSIA

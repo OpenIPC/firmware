@@ -1,0 +1,93 @@
+libsanitizer: apply the mips DTV offset when locating static TLS
+
+CollectStaticTlsBlocks() falls back to calling __tls_get_addr() directly when
+dlpi_tls_data cannot be trusted, which on musl is always, and uses the returned
+pointer as the start of the module's TLS block. On mips and powerpc64 that
+pointer is biased 0x8000 past the block -- glibc's TLS_DTV_OFFSET, which
+sanitizer_tls_get_addr.cpp already knows about and subtracts from the value it
+sees through the interceptor.
+
+Without the same correction LeakSanitizer scanned a TLS range 32 KB past the
+real one, which on mips is unmapped, and the tracer died reading it. Invisible
+on glibc, where g_use_dlpi_tls_data is true and this fallback never runs.
+
+The constant is moved into sanitizer_tls_get_addr.h rather than duplicated, so
+the two callers cannot drift apart.
+
+Signed-off-by: OpenIPC AI team <ai@openipc.org>
+
+--- a/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp
++++ b/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp
+@@ -27,6 +27,7 @@
+ #include "sanitizer_linux.h"
+ #include "sanitizer_placement_new.h"
+ #include "sanitizer_procmaps.h"
++#include "sanitizer_tls_get_addr.h"
+ 
+ #if SANITIZER_NETBSD
+ #define _RTLD_SOURCE  // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+@@ -363,7 +364,13 @@
+             TlsGetOffset(info->dlpi_tls_modid, 0);
+ #else
+     size_t mod_and_off[2] = {info->dlpi_tls_modid, 0};
+-    begin = (uptr)__tls_get_addr(mod_and_off);
++    // Biased by the ABI's DTV offset -- 0x8000 on mips, 0x800 on riscv --
++    // which is what sanitizer_tls_get_addr.cpp already subtracts from the
++    // result it sees through the interceptor. Without it LeakSanitizer is
++    // handed a TLS range 32 KB past the real one, which on mips is unmapped,
++    // and the tracer dies reading it. Invisible on glibc, where
++    // g_use_dlpi_tls_data is true and this fallback never runs.
++    begin = (uptr)__tls_get_addr(mod_and_off) - kDtvOffset;
+ #endif
+   }
+   for (unsigned i = 0; i != info->dlpi_phnum; ++i)
+--- a/libsanitizer/sanitizer_common/sanitizer_tls_get_addr.cpp
++++ b/libsanitizer/sanitizer_common/sanitizer_tls_get_addr.cpp
+@@ -94,20 +94,6 @@
+   }
+ }
+ 
+-#if defined(__powerpc64__) || defined(__mips__)
+-// This is glibc's TLS_DTV_OFFSET:
+-// "Dynamic thread vector pointers point 0x8000 past the start of each
+-//  TLS block." (sysdeps/<arch>/dl-tls.h)
+-static const uptr kDtvOffset = 0x8000;
+-#elif defined(__riscv)
+-// This is glibc's TLS_DTV_OFFSET:
+-// "Dynamic thread vector pointers point 0x800 past the start of each
+-// TLS block." (sysdeps/riscv/dl-tls.h)
+-static const uptr kDtvOffset = 0x800;
+-#else
+-static const uptr kDtvOffset = 0;
+-#endif
+-
+ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
+                                 uptr static_tls_begin, uptr static_tls_end) {
+   if (!common_flags()->intercept_tls_get_addr) return 0;
+--- a/libsanitizer/sanitizer_common/sanitizer_tls_get_addr.h
++++ b/libsanitizer/sanitizer_common/sanitizer_tls_get_addr.h
+@@ -33,6 +33,24 @@
+ 
+ namespace __sanitizer {
+ 
++// The ABI's bias between what __tls_get_addr() returns and where the TLS block
++// it names actually starts. Declared here rather than beside its one user,
++// because CollectStaticTlsBlocks() in sanitizer_linux_libcdep.cpp calls
++// __tls_get_addr() directly and needs the same correction.
++#if defined(__powerpc64__) || defined(__mips__)
++// This is glibc's TLS_DTV_OFFSET:
++// "Dynamic thread vector pointers point 0x8000 past the start of each
++//  TLS block." (sysdeps/<arch>/dl-tls.h)
++static const uptr kDtvOffset = 0x8000;
++#elif defined(__riscv)
++// This is glibc's TLS_DTV_OFFSET:
++// "Dynamic thread vector pointers point 0x800 past the start of each
++// TLS block." (sysdeps/riscv/dl-tls.h)
++static const uptr kDtvOffset = 0x800;
++#else
++static const uptr kDtvOffset = 0;
++#endif
++
+ struct DTLS {
+   // Array of DTLS chunks for the current Thread.
+   // If beg == 0, the chunk is unused.
