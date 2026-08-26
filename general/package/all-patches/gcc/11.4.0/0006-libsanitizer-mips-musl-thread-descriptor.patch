@@ -1,0 +1,36 @@
+libsanitizer: do not apply glibc's thread-descriptor size on musl mips
+
+ThreadDescriptorSizeFallback() returns sizeof(struct pthread) values read off
+particular glibc releases. Every other architecture reaches its value through
+GetLibcVersion(), which answers false on a non-glibc libc and leaves the result
+at 0; the mips arm returned its value unconditionally.
+
+On musl that made GetTls() subtract a 1152-byte thread descriptor that is not
+there, so LeakSanitizer was handed a TLS range beginning in unmapped memory and
+its tracer died on the first byte: "Tracer caught signal 11: addr=...". The
+aarch64 and powerpc64 arms have the same unguarded shape and would fail the
+same way on a musl target; they are left alone here because there is no such
+target to test on.
+
+Signed-off-by: OpenIPC AI team <ai@openipc.org>
+
+--- a/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp
++++ b/libsanitizer/sanitizer_common/sanitizer_linux_libcdep.cpp
+@@ -297,7 +297,16 @@
+   }
+ #elif defined(__mips__)
+   // TODO(sagarthakur): add more values as per different glibc versions.
+-  val = FIRST_32_SECOND_64(1152, 1776);
++  // Only on glibc. Every value in this function is a sizeof(struct pthread)
++  // read off some glibc release, and the branches above reach them through
++  // GetLibcVersion(), which answers false on any other libc and leaves val at
++  // 0. mips reached its value unconditionally, so on musl GetTls() subtracted
++  // a 1152-byte thread descriptor that is not there and handed LeakSanitizer a
++  // TLS range starting in unmapped memory. The tracer then died reading its
++  // first byte -- "Tracer caught signal 11" -- which reads as a broken port
++  // rather than as one wrong constant.
++  if (SANITIZER_GLIBC)
++    val = FIRST_32_SECOND_64(1152, 1776);
+ #elif SANITIZER_RISCV64
+   int major;
+   int minor;

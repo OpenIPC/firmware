@@ -1,0 +1,87 @@
+libsanitizer: stop intercepting time() where time_t is wider than long
+
+musl gave 32-bit targets a 64-bit time_t in 1.2.0. The time() and mktime()
+interceptors declare themselves as returning `long`, which is glibc's width and
+right on every 64-bit target, but on 32-bit musl that makes the interceptor a
+differently-shaped function from the one every caller was compiled against.
+
+The consequence is much worse than a truncated timestamp. On mips o32 the
+caller reads a 64-bit return in $v0/$v1, and the mismatch destroys a
+callee-saved register across the call: a pointer parked in $s0 comes back as
+zero, and the next store through it faults. An application under test died this
+way at a store through a pointer it had held across a localtime() call, several
+frames from anything to do with time, and a five-line time()/localtime()
+program reproduces it. A register-clobber probe pins it down: after time(), $s0 holds
+0x5a5a5a5a in a plain build and 0 under ASan; every other libc call in the
+probe leaves it alone.
+
+Interception is dropped on those targets rather than rewritten, because all it
+buys is the check on time(&t)'s out-parameter, and a width-correct interceptor
+would have to be selected per libc.
+
+Note this is not mips-specific -- 32-bit arm musl builds carry the same
+mismatch, where it corrupts the returned time rather than a register.
+
+Signed-off-by: OpenIPC AI team <ai@openipc.org>
+
+--- a/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc
++++ b/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc
+@@ -1511,6 +1511,9 @@
+   }
+   return res;
+ }
++// See SANITIZER_TIME_T_WIDER_THAN_LONG: mktime() returns time_t, so on 32-bit
++// musl this interceptor is the wrong shape for its callers.
++#if !SANITIZER_TIME_T_WIDER_THAN_LONG
+ INTERCEPTOR(long, mktime, __sanitizer_tm *tm) {
+   void *ctx;
+   COMMON_INTERCEPTOR_ENTER(ctx, mktime, tm);
+@@ -1525,6 +1528,10 @@
+   if (res != -1) unpoison_tm(ctx, tm);
+   return res;
+ }
++#  define INIT_MKTIME COMMON_INTERCEPT_FUNCTION(mktime);
++#else
++#  define INIT_MKTIME
++#endif
+ #define INIT_LOCALTIME_AND_FRIENDS        \
+   COMMON_INTERCEPT_FUNCTION(localtime);   \
+   COMMON_INTERCEPT_FUNCTION(localtime_r); \
+@@ -1534,7 +1541,7 @@
+   COMMON_INTERCEPT_FUNCTION(ctime_r);     \
+   COMMON_INTERCEPT_FUNCTION(asctime);     \
+   COMMON_INTERCEPT_FUNCTION(asctime_r);   \
+-  COMMON_INTERCEPT_FUNCTION(mktime);
++  INIT_MKTIME
+ #else
+ #define INIT_LOCALTIME_AND_FRIENDS
+ #endif  // SANITIZER_INTERCEPT_LOCALTIME_AND_FRIENDS
+--- a/libsanitizer/sanitizer_common/sanitizer_platform_interceptors.h
++++ b/libsanitizer/sanitizer_common/sanitizer_platform_interceptors.h
+@@ -232,7 +232,25 @@
+ #define SANITIZER_INTERCEPT_CLOCK_GETCPUCLOCKID \
+   (SI_LINUX || SI_FREEBSD || SI_NETBSD)
+ #define SANITIZER_INTERCEPT_GETITIMER SI_POSIX
+-#define SANITIZER_INTERCEPT_TIME SI_POSIX
++// musl gave 32-bit targets a 64-bit time_t in 1.2.0. The time() and mktime()
++// interceptors declare themselves as returning `long`, which is glibc's width
++// and is right on every 64-bit target, but on 32-bit musl it makes the
++// interceptor a differently-shaped function from the one every caller was
++// compiled against. On mips o32 the damage is not a truncated result: the
++// caller reads a 64-bit return in $v0/$v1, and the mismatch destroys a
++// callee-saved register across the call, so a pointer the caller had parked in
++// $s0 comes back zero and the next store through it faults -- several frames
++// away from anything to do with time. Interception is dropped rather than
++// rewritten because getting it back costs only the check on time(&t)'s
++// out-parameter.
++#if defined(__linux__) && !SANITIZER_GLIBC && !SANITIZER_ANDROID && \
++    (__SIZEOF_LONG__ == 4)
++#  define SANITIZER_TIME_T_WIDER_THAN_LONG 1
++#else
++#  define SANITIZER_TIME_T_WIDER_THAN_LONG 0
++#endif
++
++#define SANITIZER_INTERCEPT_TIME (SI_POSIX && !SANITIZER_TIME_T_WIDER_THAN_LONG)
+ #define SANITIZER_INTERCEPT_GLOB (SI_GLIBC || SI_SOLARIS)
+ #define SANITIZER_INTERCEPT_GLOB64 SI_GLIBC
+ #define SANITIZER_INTERCEPT___B64_TO SI_LINUX_NOT_ANDROID

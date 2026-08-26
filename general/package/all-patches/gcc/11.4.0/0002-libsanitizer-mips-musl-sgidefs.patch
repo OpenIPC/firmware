@@ -1,0 +1,38 @@
+libsanitizer: define the MIPS ABI constants when musl does not
+
+sanitizer_platform_limits_posix.h picks struct_kernel_stat_sz with
+(_MIPS_SIM == _ABIN32) but includes nothing that defines _ABIN32. glibc ships a
+top-level <sgidefs.h> that gets pulled in transitively; musl does not ship one
+at all, and its asm/sgidefs.h does not define these either. The result on a
+mipsel musl target is seventeen copies of
+
+    error: '_ABIN32' was not declared in this scope
+
+and, because struct_kernel_stat_sz is then not a constant expression, a
+follow-on "non-constant condition for static assertion" in
+sanitizer_platform_limits_linux.cpp.
+
+_MIPS_SIM is predefined by the compiler on MIPS, so only the ABI constants are
+missing. Their values are fixed by the o32/n32/n64 ABI numbering and are the
+same ones glibc's <sgidefs.h> has always used.
+
+Signed-off-by: OpenIPC AI team <ai@openipc.org>
+
+--- a/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
++++ b/libsanitizer/sanitizer_common/sanitizer_platform_limits_posix.h
+@@ -19,6 +19,15 @@
+ #include "sanitizer_internal_defs.h"
+ #include "sanitizer_platform.h"
+ 
++#if defined(__mips__) && !defined(_ABIN32)
++/* musl ships no top-level <sgidefs.h>; glibc does, and the code below assumes
++   it has been pulled in transitively. Values are the fixed o32/n32/n64 ABI
++   numbering. */
++# define _ABIO32 1
++# define _ABIN32 2
++# define _ABI64  3
++#endif
++
+ #if SANITIZER_APPLE
+ #include <sys/cdefs.h>
+ #if !__DARWIN_ONLY_64_BIT_INO_T
