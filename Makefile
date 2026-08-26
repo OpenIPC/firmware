@@ -6,6 +6,18 @@ BR_CONF = $(TARGET)/openipc_defconfig
 TARGET ?= $(PWD)/output
 export CMAKE_POLICY_VERSION_MINIMUM := 3.5
 
+# GCC 15 defaults to -std=gnu23, where an empty parameter list means "takes no
+# arguments" rather than "unspecified". Several host packages Buildroot pins
+# here predate that and their configure probes stop compiling: gmp 6.3.0 fails
+# its compiler test with "too many arguments to function 'g'", which surfaces as
+# the far less helpful "could not find a working compiler" and halts any
+# `make toolchain` on a current distro. Pin the dialect rather than carry a
+# version bump for every affected host package. Applies only to host C builds,
+# is overridable from the environment, and is a no-op on hosts whose GCC still
+# defaults to gnu17.
+HOST_CFLAGS ?= -O2 -std=gnu17
+export HOST_CFLAGS
+
 CONFIG = $(error variable BOARD not defined)
 TIMER := $(shell date +%s)
 
