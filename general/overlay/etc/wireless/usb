@@ -324,4 +324,14 @@ if [ "$1" = "rtl8188fu-t31-aoni-e97vj62" ]; then
   exit 0
 fi
 
+# XM530 AltoBeam ATBM6032 (USB 007a:8888); PDN gpio from the wifipdn env
+# (set per board, e.g. by the builder profile's customizer)
+if [ "$1" = "atbm603x-xm530-usb" ]; then
+	modprobe dwc_otg
+	pdn=$(fw_printenv -n wifipdn)
+	[ -n "$pdn" ] && modprobe wifi_pdn value="$pdn"
+	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
 exit 1
