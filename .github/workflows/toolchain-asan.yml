@@ -1,0 +1,92 @@
+name: toolchain-asan
+on:
+  workflow_dispatch:
+    inputs:
+      family:
+        description: 'SoC family to build the ASan toolchain for'
+        required: true
+        default: ingenic-t31
+        type: choice
+        options:
+          # SoC families, not boards: `make toolname` yields
+          # toolchain.<vendor>-<family>, so one artefact serves every board on
+          # the family and the defconfig below is only where its configuration
+          # is read from. t31_lite and t31_ultimate produce the same toolchain.
+          #
+          # A family is listed only once ASan has been proven end-to-end on real
+          # hardware of that family, with `scripts/asan.sh smoke` in the
+          # majestic repo. Building a toolchain is easy; knowing its sanitizer
+          # actually reports is not, and an unproven entry here would ship a
+          # green run that means nothing.
+          - ingenic-t31
+
+env:
+  TAG_NAME: toolchain-asan
+
+# Declared rather than inherited, the same way lint.yml argues for: the upload
+# step needs to create a release, and nothing else here needs any of it.
+permissions:
+  contents: write
+
+jobs:
+  toolchain-asan:
+    name: ASan toolchain (${{inputs.family}})
+    runs-on: ubuntu-22.04
+    # A gcc built with libsanitizer runs a little over an hour on a runner. The
+    # default is six hours, which is long enough for a step that has hung rather
+    # than failed to hold a runner for most of a working day before saying so.
+    timeout-minutes: 150
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # Deliberately no "skip if the release asset already exists" shortcut,
+      # which is what toolchain.yml does across its thirty-odd boards. The whole
+      # value of this artifact is the libsanitizer patches it carries, and those
+      # change; a run that quietly declined to rebuild would keep serving a
+      # toolchain missing the fix that was the reason for dispatching it.
+      - name: Build toolchain
+        run: |
+          set -eu
+          # Any defconfig on the family will do; the toolchain it produces is
+          # named for the family, not for this board.
+          case "${{inputs.family}}" in
+          ingenic-t31) BOARD=t31_lite ;;
+          *) echo "::error::no defconfig mapped for ${{inputs.family}}"; exit 1 ;;
+          esac
+          NAME=$(make BOARD="${BOARD}" toolname)
+          # Catches a mapping that has drifted from the family it claims to
+          # serve, which would otherwise publish an artefact under a name no
+          # consumer asked for.
+          test "${NAME}" = "toolchain.${{inputs.family}}" || {
+            echo "::error::${BOARD} yields ${NAME}, not toolchain.${{inputs.family}}"
+            exit 1
+          }
+          GCC=${NAME}-asan.tgz
+          make BOARD="${BOARD}" toolchain-asan
+          SDK=$(find output/images -name '*_sdk-buildroot.tar.gz')
+          mv "${SDK}" "${GCC}"
+          echo "GCC=${GCC}" >> ${GITHUB_ENV}
+
+      # A toolchain that builds is not a toolchain that sanitizes. The checks
+      # live in a script rather than here so that whoever builds one by hand --
+      # which is the documented way to add a board -- can run exactly what CI
+      # runs before proposing it.
+      - name: Verify the artifact
+        run: bash general/scripts/verify-asan-toolchain.sh "${GCC}" output
+
+      - name: Upload toolchain
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{env.TAG_NAME}}
+          make_latest: false
+          files: ${{env.GCC}}
+          body: |
+            ASan-enabled OpenIPC toolchains: the stock ones in the `toolchain`
+            release are built without a sanitizer runtime, so there is no
+            `libasan.so` to deploy alongside an instrumented binary.
+
+            Consumed by majestic's `scripts/asan.sh` — see `docs/asan.md` there.
+            Prove the sanitizer works on your board with `scripts/asan.sh smoke`
+            before believing a leak-free `check`.
