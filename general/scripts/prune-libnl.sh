@@ -89,7 +89,15 @@ find "${TARGET_DIR}" -type f ! -path "${LIBDIR}/libnl*" -print0 > "${scan_list}"
 # libraries. Prove the pass can see inside a binary before trusting a negative:
 # every dynamically linked executable here carries libc.so in its dynamic
 # section, musl and uClibc alike.
-if ! xargs -0 -r -a "${scan_list}" grep -qaF -e 'libc.so' </dev/null 2>/dev/null; then
+#
+# "Did anything match" has to come from grep's OUTPUT, not from xargs' exit
+# status. A file list longer than ARG_MAX is split across several grep
+# invocations; `grep -q` exits 1 for every batch that happens to hold no ELF,
+# and xargs reports 123 if any single batch did. Reading that as "the scan is
+# broken" would skip the prune on exactly the large images this exists to help,
+# and skip it silently. Caught in review on #2317.
+libc_seen=$(xargs -0 -r -a "${scan_list}" grep -laF -e 'libc.so' </dev/null 2>/dev/null || true)
+if [ -z "${libc_seen}" ]; then
 	echo "prune-libnl: no libc.so reference found anywhere; scan is not working, not pruning"
 	exit 0
 fi
