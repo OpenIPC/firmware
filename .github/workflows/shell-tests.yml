@@ -65,6 +65,22 @@ jobs:
   # Deliberately syntax-only. A bashism audit (checkbashisms) over the same set
   # is a much larger change -- `local` alone is used throughout -- and is worth
   # doing separately rather than smuggling into a coverage PR.
+  excludes-report:
+    name: excludes lists report what they no longer prune
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # rootfs_script.sh only reaches its excludes step during a board build,
+      # and a stale entry there is invisible by construction -- it removes
+      # nothing and says nothing. This drives the real script against a
+      # synthetic target instead, so the reporting is covered without paying
+      # for a build.
+      - run: bash .github/scripts/test_excludes_report.sh
+
   shipped-shell-parse:
     name: shipped shell scripts parse
     if: >-
