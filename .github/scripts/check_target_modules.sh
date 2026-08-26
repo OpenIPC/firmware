@@ -40,6 +40,7 @@ check_module() {
 }
 
 check_module BR2_PACKAGE_WIREGUARD_LINUX_COMPAT wireguard.ko
+check_module BR2_PACKAGE_XIONGMAI_OSDRV_XM530 sdio0_sd.ko
 
 if [ "$fail" -ne 0 ]; then
 	echo "check_target_modules: regression detected" >&2
