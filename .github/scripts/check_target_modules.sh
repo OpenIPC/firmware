@@ -25,13 +25,13 @@ fi
 
 fail=0
 
-# config-var → expected .ko filename
+# config-var → expected .ko path (relative to lib/modules/<version>/)
 # Add new pairs here when a kernel-module package is introduced.
 check_module() {
 	var="$1"
 	ko="$2"
 	grep -q "^${var}=y" "$CONFIG" || return 0
-	if find "$TARGET_DIR/lib/modules" -name "$ko" | grep -q .; then
+	if find "$TARGET_DIR/lib/modules" -path "*/$ko" | grep -q .; then
 		echo "OK: $ko present (${var}=y)"
 	else
 		echo "MISSING: ${var}=y but $ko not found under $TARGET_DIR/lib/modules/" >&2
@@ -40,6 +40,7 @@ check_module() {
 }
 
 check_module BR2_PACKAGE_WIREGUARD_LINUX_COMPAT wireguard.ko
+check_module BR2_PACKAGE_XIONGMAI_OSDRV_XM530 xiongmai/sdio0_sd.ko
 
 if [ "$fail" -ne 0 ]; then
 	echo "check_target_modules: regression detected" >&2
