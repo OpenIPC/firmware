@@ -11,6 +11,12 @@
 # here, only for the images that select this package. The hook must run after
 # the rootfs overlay is applied, hence late-post-build-hooks.list rather than
 # the package's INSTALL_TARGET_CMDS.
+#
+# Hot-plug is out of scope: the driver loads with detect=0, so sdio0_powerup()
+# leaves GPIO49 (sdio0_detect) unmuxed and need_detect/need_poll are both 0.
+# A card present at boot enumerates; one inserted afterwards is not detected.
+# /etc/modules takes arguments, so "sdio0_sd detect=1" is available if that
+# should change.
 set -eu
 
 TARGET_DIR="${1:?target dir required}"
