@@ -208,9 +208,29 @@ insert_ko() {
 	modprobe open_mipi_rx
 	#	modprobe open_user
 	modprobe open_wdt
+
+	# Cipher engine -> /dev/cipher. majestic's native WebRTC takes AES-CTR
+	# for its SRTP transform from here: measured on an hi3516ev300, 86.0us of
+	# CPU per 1100-byte packet in software against 41.9 through the engine,
+	# because the driver sleeps on its completion interrupt and gives the CPU
+	# back while the block works. See docs/hisi/cipher-engine.md in majestic.
+	#
+	# New here in a way it is not on the other HiSilicon boards: this family
+	# never packaged a cipher module at all, and openhisilicon only started
+	# building one for hi3516ev200 recently. The vendor prebuilt could not
+	# have been used -- it links against hil_mmb_getby_phys_2, which this
+	# tree's osal did not export.
+	#
+	# Last, and after open_osal: modprobe would otherwise pull osal in as a
+	# dependency at whatever point this ran, ahead of insert_osal's own
+	# arguments. Failure is not an error -- an image built before that
+	# openhisilicon bump simply has no module to find, and that must not
+	# abort sensor bring-up.
+	modprobe open_cipher 2>/dev/null
 }
 
 remove_ko() {
+	rmmod -w open_cipher 2>/dev/null
 	rmmod -w open_wdt
 	#	rmmod -w hi_user
 	remove_audio
