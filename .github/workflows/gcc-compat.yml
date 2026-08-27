@@ -1,26 +1,89 @@
+# Does the tree still build on the host compilers people actually have?
+#
+# Five `gcc:N` containers build one board from scratch. What it catches is host
+# toolchain rot -- a Buildroot-pinned host package whose configure stops
+# compiling when a new GCC changes a language default -- which no target build
+# can see, because those run under our own cross toolchains.
+#
+# This is a REQUIRED check, via the GCC Gate job at the bottom, and it is
+# required because it spent 2026-08-26 to 2026-08-27 red on master without
+# anyone noticing: #2311 introduced the breakage and merged with its own five
+# rows red, and nothing ran the workflow again because it only fired on PRs
+# touching these paths. An advisory check that reports a real breakage and is
+# merged over is worse than no check -- it costs the minutes and buys the
+# confidence without earning it.
+#
+# The narrowing therefore happens in the `select` job below, which ALWAYS runs,
+# never in a `paths:` filter on the trigger. This is the same lesson build.yml
+# records: a workflow filtered out by `paths:` does not run at all, so a
+# required check from it would stay pending forever and the PR could never be
+# merged. Off the relevant paths, `select` costs about ten seconds and the gate
+# passes on a skipped matrix.
 name: gcc-compat
 on:
   pull_request:
     branches:
       - master
-    paths:
-      - 'Makefile'
-      - 'general/package/**/*.mk'
-      - 'general/package/all-patches/**'
-      - '.github/workflows/gcc-compat.yml'
   schedule:
     - cron: '0 6 * * 0'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
-  gcc-compat:
-    name: GCC ${{matrix.gcc}}
+  select:
+    name: Select GCC rows
     # Same guard rail as build.yml's preflight: run where the minutes are
     # free or explicitly asked for, skip unattended/billed mirror runs.
     if: >-
       github.repository == 'OpenIPC/firmware' ||
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    outputs:
+      needed: ${{ steps.pick.outputs.needed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: pick
+        name: Can this change reach a host build?
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -eu
+          # The weekly cron and a manual dispatch have no diff to narrow by,
+          # and are the runs whose whole purpose is to catch a GCC that moved
+          # under a tree that did not.
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "$GITHUB_EVENT_NAME: running the full matrix"
+            exit 0
+          fi
+          # Ask for the PR's own file list rather than diffing two SHAs. A
+          # two-dot diff against base.sha also reports whatever landed on master
+          # since the branch point -- which would run five containers because
+          # somebody else touched a .mk -- and a three-dot one needs a merge
+          # base this shallow checkout does not have.
+          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" -q '.[].filename')
+          echo "changed:"; echo "$files" | sed 's/^/  /'
+          # The same set the `paths:` filter used to carry: the top-level
+          # Makefile (host flags, Buildroot version, the prepare: patches), any
+          # package recipe, the global patch dir, and this file.
+          if echo "$files" | grep -qE '^(Makefile$|general/package/.*\.mk$|general/package/all-patches/|\.github/workflows/gcc-compat\.yml$)'; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "-> host builds are reachable; running the matrix"
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "-> nothing here reaches a host build; skipping the matrix"
+          fi
+
+  gcc:
+    name: GCC ${{matrix.gcc}}
+    needs: select
+    if: needs.select.outputs.needed == 'true'
     runs-on: ubuntu-latest
     container:
       image: gcc:${{matrix.gcc}}
@@ -50,3 +113,43 @@ jobs:
         run: make BOARD=gk7205v200_lite
         env:
           FORCE_UNSAFE_CONFIGURE: 1
+
+  # The required context. Branch protection cannot require `GCC 12`..`GCC 16`
+  # directly, because on a PR that does not reach a host build those five never
+  # run and would sit pending forever.
+  gcc-gate:
+    name: GCC Gate
+    needs: [select, gcc]
+    # always() so the gate still reports when a needed job fails -- but not on a
+    # run whose select the guard above deliberately skipped, where it would read
+    # select=skipped and turn a saved build into a red run. Upstream the added
+    # disjunct is true, so this reduces to always().
+    if: >-
+      always() && (github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the host-build matrix to succeed
+        run: |
+          echo "select=${{ needs.select.result }} needed=${{ needs.select.outputs.needed }} matrix=${{ needs.gcc.result }}"
+          if [ "${{ needs.select.result }}" != "success" ]; then
+            echo "::error::GCC row selection did not succeed"; exit 1
+          fi
+          if [ "${{ needs.select.outputs.needed }}" = "true" ]; then
+            # One failing container out of five still fails the run. They build
+            # the same board from the same tree and differ only in the host
+            # compiler, so a single red row IS the finding.
+            if [ "${{ needs.gcc.result }}" != "success" ]; then
+              echo "::error::a host GCC row did not succeed"; exit 1
+            fi
+          else
+            # Not blanket-accepting 'skipped': a selector that decided a change
+            # was irrelevant and then ran the matrix anyway, or one that let a
+            # cancelled matrix through, would otherwise read as green.
+            if [ "${{ needs.gcc.result }}" != "skipped" ]; then
+              echo "::error::matrix reported '${{ needs.gcc.result }}' for a change that does not reach a host build"; exit 1
+            fi
+            echo "no host build reachable from this change"
+          fi
+          echo "GCC Gate: pass"
