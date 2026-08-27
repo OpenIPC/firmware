@@ -15,6 +15,9 @@ export CMAKE_POLICY_VERSION_MINIMUM := 3.5
 # version bump for every affected host package. Applies only to host C builds,
 # is overridable from the environment, and is a no-op on hosts whose GCC still
 # defaults to gnu17.
+#
+# "Applies only to host C builds" is what the prepare: rule below has to make
+# true -- Buildroot appends HOST_CFLAGS to HOST_CXXFLAGS wholesale.
 HOST_CFLAGS ?= -O2 -std=gnu17
 export HOST_CFLAGS
 
@@ -62,6 +65,23 @@ prepare:
 			$(TARGET)/buildroot-$(BR_VER)/linux/Config.in || \
 		sed -i '/source "linux\/Config.ext.in"/a source "$$BR2_EXTERNAL_GENERAL_PATH/linux/Config.ext.in"' \
 			$(TARGET)/buildroot-$(BR_VER)/linux/Config.in; \
+	fi
+	@# Keep the C dialect pinned at the top of this file out of host C++ builds.
+	@# package/Makefile.in does `HOST_CXXFLAGS += $$(HOST_CFLAGS)`, so -std=gnu17
+	@# reaches every host C++ compile, where it is not a C++ dialect at all: g++
+	@# ignores it and prints "command-line option '-std=gnu17' is valid for
+	@# C/ObjC but not for C++". Compilation still succeeds -- what does not is
+	@# CMake, whose cm_check_cxx_feature discards any feature whose try_compile
+	@# output contains the word "warning" (Source/Checks/cm_cxx_features.cmake).
+	@# host-cmake therefore decides the compiler has no std::unique_ptr and
+	@# aborts its own configure, taking every `make BOARD=...` with it.
+	@# Filtering -std= rather than that one value so a C dialect set from the
+	@# environment does not reintroduce this.
+	@if test -f $(TARGET)/buildroot-$(BR_VER)/package/Makefile.in; then \
+		grep -qF 'filter-out -std=%' \
+			$(TARGET)/buildroot-$(BR_VER)/package/Makefile.in || \
+		sed -i 's|^HOST_CXXFLAGS += \$$(HOST_CFLAGS)$$|HOST_CXXFLAGS += $$(filter-out -std=%,$$(HOST_CFLAGS))|' \
+			$(TARGET)/buildroot-$(BR_VER)/package/Makefile.in; \
 	fi
 
 help:
