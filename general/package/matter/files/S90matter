@@ -57,7 +57,7 @@ running() {
 
 start() {
 	echo -n "Starting $NAME: "
-	start-stop-daemon -S -b -x "$DAEMON" -- "$MATTER_RTSP_URL" "$MATTER_PORT"
+	start-stop-daemon -S -b -q -x "$DAEMON" -- "$MATTER_RTSP_URL" "$MATTER_PORT"
 	case $? in
 		0) echo "OK"; return 0 ;;
 		1) echo "OK (already running)"; return 0 ;;
