@@ -137,6 +137,15 @@ jobs:
                     --jq '.assets[]|select(.name=="majestic-webui-dist.tar.gz")|.digest // empty' \
                     2>/dev/null || true)
 
+          # Both branches echo the rendered `nightly` value. The gate compares
+          # a boolean dispatch input against the literal string "true", and
+          # nothing else in this repo compares an *input* that way — every
+          # other `= "true"` here tests a job output, which is a string
+          # already. If the rendering were ever not lowercase `true` the gate
+          # would simply never skip: a full ~2000-runner-minute matrix every
+          # night, green, with nothing to show it had stopped working. Logging
+          # what the gate actually saw is what makes that visible in one line.
+          #
           # Keyed on the `nightly` input rather than on the event name. It
           # used to read `event_name = schedule`, and when the schedule was
           # replaced by a dispatch that condition silently became unreachable —
@@ -145,10 +154,10 @@ jobs:
           # doing it. A hand dispatch still leaves this false and still builds.
           if [ "${{ inputs.nightly }}" = "true" ] && [ "$PREV" = "$HEAD" ] \
              && [ -n "$WEBUI" ] && [ "$PREV_WEBUI" = "$WEBUI" ]; then
-            echo "Skip: HEAD ($HEAD) already published as the latest nightly, majestic-webui dist unchanged ($WEBUI)."
+            echo "Skip: HEAD ($HEAD) already published as the latest nightly, majestic-webui dist unchanged ($WEBUI). (nightly=${{ inputs.nightly }})"
             echo "should_build=false" >> "$GITHUB_OUTPUT"
           else
-            echo "Build: $BUILD_ID (event=${{ github.event_name }}, prev=$PREV, webui=$WEBUI, prev_webui=$PREV_WEBUI)"
+            echo "Build: $BUILD_ID (event=${{ github.event_name }}, nightly=${{ inputs.nightly }}, prev=$PREV, webui=$WEBUI, prev_webui=$PREV_WEBUI)"
             echo "should_build=true"  >> "$GITHUB_OUTPUT"
           fi
           echo "head_sha=$HEAD"   >> "$GITHUB_OUTPUT"
