@@ -82,10 +82,28 @@ Prioritise, in order:
    Each of these is bound to one exact build of one blob and fails silently at the next
    vendor drop.
 
-6. Claims without evidence. A behaviour change needs a stated symptom and before/after
-   output from real hardware. A test plan whose boxes are unchecked is weaker than no test
-   plan, because it asserts verification that did not happen. A PR that says it was not
-   tested on hardware is not reviewable.
+6. Claims without evidence. A change that can alter an image needs a stated symptom and
+   before/after output from real hardware. A test plan whose boxes are unchecked is weaker
+   than no test plan, because it asserts verification that did not happen. Such a PR
+   saying it was not tested on hardware is not reviewable. Scope this to diffs that reach
+   an image. The test is whether the diff can change what the firmware DOES on a camera,
+   not where the file lives and not whether image bytes differ - every build stamps
+   BUILD_SHA, BUILD_ID and a timestamp into /usr/lib/os-release, so by a byte measure
+   every commit qualifies and the gate becomes unsatisfiable again. Where the answer is
+   genuinely unclear, treat it as not exempt. Exempt in
+   practice: documentation, the review configuration, repository metadata, the pull
+   request template, CODEOWNERS, and CI machinery that only selects, lints or tests
+   (ci-matrix.py, the test_ and lint- scripts, check_target_modules.sh, the workflows
+   running them). Those have no camera behaviour to observe, and asking for one invites
+   the invented evidence this rule exists to catch - judge them on the evidence their
+   class admits, a self-test, selector output, a parse run.
+   Three things look exempt and are not: a defconfig CI does not build is still a real
+   image and needs more evidence than one CI builds, since the selector reports zero
+   boards for it either way; a workflow that sets a build input can change image bytes, as
+   build.yml does through BUILD_ID and BUILD_SHA reaching os-release; and the post-build
+   machinery (general/scripts/rootfs_script.sh, late-overlays.list,
+   late-post-build-hooks.list, the excludes lists) rewrites every rootfs the tree builds.
+   Claiming hardware testing that did not happen is a finding whatever the diff touches.
 
 7. Dead code and scope creep. A new source file that no Config.in selects and no .mk
    builds is not compiled by CI, so nothing proves it even builds. And a diff must do what

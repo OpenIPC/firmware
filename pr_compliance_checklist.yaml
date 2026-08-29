@@ -185,10 +185,32 @@ pr_compliances:
       streams. The evidence in the description is therefore part of the change under
       review, and an unchecked box asserts verification that did not happen.
     success_criteria: >
-      A behaviour-changing PR names the symptom and the affected board, and shows
+      A PR that can alter an image names the symptom and the affected board, and shows
       before/after output — logs, dmesg, stream behaviour, or measurements — from a real
-      camera. Any checkbox under a test or verification heading is checked.
+      camera. Any checkbox under a test or verification heading is checked. A PR that
+      cannot reach an image says so plainly and gives the evidence its change class does
+      admit: a self-test, selector output, a parse run.
     failure_criteria: >
       The description leaves checkboxes unchecked under a test or verification heading,
       states the change was not tested on hardware, or hedges with "should work",
-      "untested but", or "in theory" in place of output from a board.
+      "untested but", or "in theory" in place of output from a board — and the diff can
+      change what the firmware does on a camera. Claiming hardware testing that did not happen
+      fails this gate whatever the diff touches.
+      "Can change what the firmware does on a camera" is the entire test, and it is about
+      behaviour, not bytes. Every build stamps the commit SHA, build id and a timestamp
+      into /usr/lib/os-release, so by a byte measure every commit alters every image and
+      this gate would be unsatisfiable again; those provenance stamps do not count. The
+      lists below are examples, not the definition, and a path fitting neither is not
+      exempt — the same fail-safe direction ci-matrix.py takes when an unrecognised path
+      widens the matrix rather than narrowing it.
+      Exempt: documentation; review configuration; repository metadata; the pull request
+      template; CODEOWNERS; and CI machinery that only selects, lints or tests, such as
+      ci-matrix.py, the test_ and lint- scripts, check_target_modules.sh, and the workflows
+      that run them.
+      Not exempt, though they look it. A defconfig CI does not build is still a real
+      image and needs more evidence than one CI builds, not less, because CI supplies none
+      for it — so a zero-board ci-matrix.py result is not proof a diff reaches no image.
+      A workflow that sets a build input changes image bytes. And the post-build machinery
+      — general/scripts/rootfs_script.sh with late-overlays.list,
+      late-post-build-hooks.list and the excludes lists — rewrites every rootfs the tree
+      builds.

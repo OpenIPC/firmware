@@ -304,13 +304,58 @@ discover otherwise.
 Flag any PR description containing unchecked checkboxes under a test or verification
 heading. Ask for the output, not the checkmark.
 
-### 5.3 "Not tested on hardware" is not reviewable
+### 5.3 "Not tested on hardware" is not reviewable — when the change reaches a camera
 
-A PR that states it was never run on a camera cannot be merged, and no amount of code
-reading substitutes. This applies equally to hedges — "should work on", "untested but",
-"in theory this also fixes".
+A PR that changes what an image contains and states it was never run on a camera cannot
+be merged, and no amount of code reading substitutes. This applies equally to hedges —
+"should work on", "untested but", "in theory this also fixes".
 
 Flag and close. The contributor is welcome to reopen with output from a real board.
+
+The rule is scoped to changes that can reach an image, because that is the thing only
+hardware can settle. Documentation, review configuration, repository metadata, and the
+board-selection logic in `ci-matrix.py` alter no image byte, so there is no before and
+after to observe; `#2330` was flagged for saying so, having changed the selector and
+nothing else. Asking for a dmesg paste there does not raise the standard, it invites a
+paste from a board that was not exercising the change — the fabricated evidence §5.2
+exists to catch.
+
+The test is whether the diff can change what the firmware *does* on a camera — not where
+the file lives, and not whether image bytes differ. Bytes are the wrong measure: every
+build stamps `BUILD_SHA`, `BUILD_ID` and a timestamp into `/usr/lib/os-release`, so a
+documentation commit changes bytes in every image too. Those provenance stamps do not
+count. That phrasing is deliberate: three separate attempts to *enumerate* what reaches an
+image each missed something, and each miss was a hole in the gate, while enumerating the
+exempt side instead immediately started demanding camera output for `CODEOWNERS`. A
+property holds where a list does not. Where the property is genuinely unclear, the change
+is not exempt — the same fail-safe direction `ci-matrix.py` takes when an unrecognised
+path widens the matrix instead of narrowing it.
+
+Exempt in practice: documentation, review configuration, repository metadata, the pull
+request template, `CODEOWNERS`, and the CI machinery that only selects, lints or tests.
+
+The misses are worth naming, because they all look exempt and are not:
+
+A zero-board result from `ci-matrix.py --stdin` does **not** mean a diff reaches no image.
+The selector returns zero for every defconfig outside its matrix, and several of those are
+real boards excluded only for build cost — `fh8852v210_lite` is a real lite firmware whose
+entry reads "internal toolchain: builds gcc+musl from source". Editing such a defconfig
+changes a kernel, a rootfs and a shipped image while the selector reports nothing. Those
+boards need *more* evidence than the ones CI builds, not less, because CI supplies none.
+
+A workflow is not automatically exempt. `build.yml` sets `BUILD_ID` and `BUILD_SHA`, which
+`general/scripts/rootfs_script.sh` writes into `/usr/lib/os-release` in every rootfs it
+builds. A workflow that feeds a build input can change image bytes.
+
+Nor is the post-build machinery. `general/scripts/rootfs_script.sh` prunes `libstdc++`,
+applies the excludes lists, and copies in the late overlays named by `late-overlays.list`
+and `late-post-build-hooks.list`; `strip-shell-comments.awk` rewrites every shipped script.
+None of those is a package, a defconfig or an overlay file, and all of them rewrite the
+rootfs of every board that builds.
+
+What an exempt change still owes is the evidence its own class admits — the self-test that
+covers it, the selector output, the parse run — and the honesty half of the rule does not
+move. Claiming hardware testing that did not happen fails whatever the diff touches.
 
 ---
 
