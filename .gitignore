@@ -2,3 +2,13 @@ buildroot-*/
 output/
 buildroot-*
 .DS_Store
+
+# CLAUDE.md tells contributors to give each board its own TARGET=$(PWD)/output-<board>,
+# because a shared output/ carries one board's artifacts into the next board's build.
+# Ignore the whole shape, not just the output/ the Makefile defaults to.
+output-*/
+
+# Per-developer AI assistant overrides. The tracked CLAUDE.md / AGENTS.md is the
+# shared one; these are personal and never belong in a pull request.
+CLAUDE.local.md
+.claude/settings.local.json

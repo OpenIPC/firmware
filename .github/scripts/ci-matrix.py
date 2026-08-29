@@ -280,6 +280,11 @@ MARKDOWN = re.compile(r"^(?!general/|br-ext-chip-).*\.md$")
 # Configuration for the code-review service, which reads these on the PR and
 # never on a build host. Anchored to whole paths for the same reason LICENSE is.
 REVIEW_CONFIG = re.compile(r"^(?:\.pr_agent\.toml|pr_compliance_checklist\.yaml)$")
+# Repository metadata read by git and by editors, never by a build host: no
+# recipe consults either, and .gitignore only decides what is offered to be
+# committed in the first place. Anchored to whole paths for the same reason
+# LICENSE is -- general/.gitignore, if one ever appears, is not this one.
+REPO_META = re.compile(r"^(?:\.gitignore|\.editorconfig)$")
 GITHUB_META = re.compile(r"^\.github/(?:CODEOWNERS|PULL_REQUEST_TEMPLATE\.md|ISSUE_TEMPLATE/)")
 WORKFLOW = re.compile(r"^\.github/workflows/([^/]+)$")
 GITHUB_SCRIPT = re.compile(r"^\.github/scripts/([^/]+)$")
@@ -465,7 +470,8 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False):
 
     boards, smoked = set(), False
     for path in changed:
-        if DOCS.match(path) or MARKDOWN.match(path) or REVIEW_CONFIG.match(path):
+        if DOCS.match(path) or MARKDOWN.match(path) or REVIEW_CONFIG.match(path) \
+                or REPO_META.match(path):
             continue
         if GITHUB_META.match(path):
             continue
@@ -792,6 +798,8 @@ def self_test():
         ([".github/workflows/lint.yml"], 0, "the workflow linter never builds"),
         ([".github/scripts/lint-workflow-shell.py"], 0, "its script"),
         ([".github/PULL_REQUEST_TEMPLATE.md"], 0, "PR template"),
+        ([".gitignore"], 0, "git metadata"),
+        ([".editorconfig"], 0, "editor metadata"),
         (["contrib/openipc-bisect/openipc-bisect"], 0, "developer tooling"),
         ([".pr_agent.toml", "docs/architecture.md"], 0, "review config plus docs"),
         (["best_practices.md",
@@ -808,6 +816,8 @@ def self_test():
          full, "same name under general/ is not the checklist"),
         ([".pr_agent.toml.orig"], full, "a merge leftover is not the config"),
         (["tools/.pr_agent.toml"], full, "same name in a subdirectory is not the config"),
+        (["general/.gitignore"], full, "a .gitignore under general/ is not the root one"),
+        ([".gitignore.bak"], full, "a backup is not the ignore file"),
     ]
     for paths, expected, what in cases:
         got = len(classify(tree, paths)["rows"])
