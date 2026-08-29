@@ -7,9 +7,38 @@ on:
     # PRs, so without ready_for_review a PR opened as a draft would clear the
     # draft flag with no event to build on and sit there unbuilt.
     types: [opened, synchronize, reopened, ready_for_review]
-  schedule:
-    - cron: '30 22 * * *'
+  # There is deliberately no `schedule:` here any more, and adding one back
+  # would undo a fix rather than restore a feature.
+  #
+  # This repository is the middle stage of a three-stage release train —
+  # widgetii/majestic publishes the majestic tarball, this builds the images,
+  # OpenIPC/builder builds from this tree afterwards. Each stage used to be its
+  # own GitHub cron guessing at the previous stage's finish time (17:25, 22:30,
+  # 03:00 UTC). From 2026-08-26 GitHub's dispatcher began delivering scheduled
+  # events hours late and independently per repo — this repo's slot measured
+  # +4h55m, +7h42m and +5h16m on successive nights — which put the train out of
+  # order: on the 08-28 cycle builder ran first, then majestic, then this. Every
+  # run was green, because no stage checks that its inputs are newer than the
+  # ones it used last time.
+  #
+  # The diagnostic, if this is ever doubted: on every late run
+  # `created_at == run_started_at` to the second, so the delay was entirely
+  # upstream of run creation, inside GitHub's dispatcher rather than in any
+  # runner pool, concurrency group or matrix.
+  #
+  # The ordering now lives on the machine that runs majestic's self-hosted
+  # runners, which dispatches each stage and waits for it before starting the
+  # next. See widgetii/majestic docs/ci-runners.md.
   workflow_dispatch:
+    inputs:
+      # Set by that release trigger, and by nothing else. It is the difference
+      # between "the nightly is running" and "a person asked for a build": the
+      # nightly may find nothing changed and skip, whereas someone dispatching
+      # by hand wants the build they asked for. See the preflight gate below.
+      nightly:
+        description: 'Run as the nightly release (skip when nothing changed)'
+        type: boolean
+        default: false
 
 # Cancel a PR's earlier run when a new commit lands on it. The matrix is ~96
 # jobs and there was no group here, so every push started another full matrix
@@ -56,11 +85,13 @@ jobs:
   preflight:
     name: Preflight
     # Guard rail for clones of this repo. A clone pushed to a new repository
-    # (a private mirror, an internal re-host) inherits this file along with
-    # its cron, and the full platform matrix — ~2000 runner-minutes a pass —
-    # then runs on that owner's Actions bill: nightly via the schedule, and
-    # again on every internal PR they open. Forks are partially covered
-    # (GitHub disables scheduled workflows there), a fresh repository is not.
+    # (a private mirror, an internal re-host) inherits this file, and the full
+    # platform matrix — ~2000 runner-minutes a pass — then runs on that owner's
+    # Actions bill on every internal PR they open.
+    #
+    # This used to also have to cover an inherited `cron:`, which fired
+    # unattended and nightly on whoever's bill; that half is gone with the
+    # schedule trigger. The PR half is not, so the guard stays.
     #
     # The line is drawn where the minutes stop being free:
     #   - canonical repo: everything runs, unchanged
@@ -97,7 +128,7 @@ jobs:
 
           # majestic-webui ships as a rolling `dist` release asset, so a WebUI fix
           # changes what the nightly would contain without ever moving this repo's
-          # HEAD — on a quiet firmware tree the schedule would skip forever and the
+          # HEAD — on a quiet firmware tree the nightly would skip forever and the
           # fix would never reach an image. Compare the asset's content digest as
           # well. It is content-addressed, so a re-upload of identical bytes does
           # not force a pointless rebuild. An empty value (API hiccup, or an asset
@@ -106,7 +137,13 @@ jobs:
                     --jq '.assets[]|select(.name=="majestic-webui-dist.tar.gz")|.digest // empty' \
                     2>/dev/null || true)
 
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$PREV" = "$HEAD" ] \
+          # Keyed on the `nightly` input rather than on the event name. It
+          # used to read `event_name = schedule`, and when the schedule was
+          # replaced by a dispatch that condition silently became unreachable —
+          # which would have rebuilt the whole ~2000-runner-minute matrix every
+          # night regardless of whether anything had changed, and gone green
+          # doing it. A hand dispatch still leaves this false and still builds.
+          if [ "${{ inputs.nightly }}" = "true" ] && [ "$PREV" = "$HEAD" ] \
              && [ -n "$WEBUI" ] && [ "$PREV_WEBUI" = "$WEBUI" ]; then
             echo "Skip: HEAD ($HEAD) already published as the latest nightly, majestic-webui dist unchanged ($WEBUI)."
             echo "should_build=false" >> "$GITHUB_OUTPUT"
@@ -374,7 +411,7 @@ jobs:
   #
   # Best-effort by design: publish whatever boards produced, even if some
   # failed (matches enrich_manifest.py, which indexes whatever assets exist).
-  # Never runs on PRs (no artifacts) or on a scheduled no-op (buildroot skipped).
+  # Never runs on PRs (no artifacts) or on a nightly no-op (buildroot skipped).
   publish:
     name: Publish releases
     needs: [preflight, buildroot]
@@ -680,13 +717,13 @@ jobs:
             echo "firmware matrix OK (success)"
           else
             # Nothing in the change reaches a build, the PR is still a draft, or
-            # the schedule found nothing new since the last nightly.
+            # the nightly found nothing new since the last one.
             if [ "${{ needs.buildroot.result }}" != "skipped" ]; then
               echo "::error::firmware matrix ran when it should not have (${{ needs.buildroot.result }})"; exit 1
             fi
             echo "firmware matrix OK (no boards to build)"
           fi
-          # publish is skipped on PRs and on scheduled no-ops; only a real
+          # publish is skipped on PRs and on nightly no-ops; only a real
           # failure of the single release-writer should fail the gate.
           case "${{ needs.publish.result }}" in
             success|skipped) echo "publish OK (${{ needs.publish.result }})" ;;
