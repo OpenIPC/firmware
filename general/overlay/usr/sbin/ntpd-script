@@ -1,0 +1,5 @@
+#!/bin/sh
+# busybox ntpd -S hook (see S49ntpd): called detached with step, stratum,
+# periodic or unsync in $1. Single consumer today; fan out here if more
+# subscribers ever appear rather than chaining -S flags.
+exec fake-hwclock ntp-event "$1"
