@@ -9,7 +9,14 @@ LIBEVENT_OPENIPC_SITE = https://github.com/libevent/libevent
 # Track libevent PR #1867 (EVENT__DISABLE_RPC / EVENT__DISABLE_EVENT_TAGGING /
 # EVENT__DISABLE_WS) while it is in review. Once it lands on master, replace
 # this with the merge commit SHA.
-LIBEVENT_OPENIPC_VERSION = refs/pull/1867/head
+#
+# By commit, not by refs/pull/1867/head. That ref is resolved at download time
+# and the pull request author can rebase it at will -- on 2026-08-29 they did,
+# and every clean build of the 119 defconfigs selecting this package started
+# failing on a patch that no longer applied, with nothing in this tree having
+# changed. Bumping this deliberately keeps that outside our control from
+# becoming an outage.
+LIBEVENT_OPENIPC_VERSION = f934449e087797f9e346cd7ddbf2849aa147df99
 
 LIBEVENT_OPENIPC_INSTALL_STAGING = YES
 LIBEVENT_OPENIPC_LICENSE = BSD-3-Clause, OpenBSD
@@ -27,10 +34,14 @@ define LIBEVENT_OPENIPC_REMOVE_PYSCRIPT
 	rm $(TARGET_DIR)/usr/bin/event_rpcgen.py
 endef
 
+# The build emits both the split libraries -- core, extra, pthreads, mbedtls,
+# which are what everything here links -- and a monolithic libevent-2.2.so that
+# nothing links at all. Delete the monolith by glob rather than by literal
+# soversion: it was removed as libevent-2.2.so.1.0.0 until upstream went to
+# 1.0.1, after which 243KB of orphan rode into every image unnoticed and put
+# hi3516av300_neo 52KB past its 8192KB rootfs cap.
 define LIBEVENT_OPENIPC_DELETE_UNUSED
-	rm -r $(TARGET_DIR)/usr/lib/libevent-2.2.so
-	rm -f $(TARGET_DIR)/usr/lib/libevent-2.2.so.1.0.0
-	rm -f $(TARGET_DIR)/usr/lib/libevent-2.2.so.1
+	rm -f $(TARGET_DIR)/usr/lib/libevent-2.2.so*
 	rm -f $(TARGET_DIR)/usr/lib/libevent.so
 endef
 
