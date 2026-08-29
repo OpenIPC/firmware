@@ -8,6 +8,15 @@ DAEMON="httpd"
 PIDFILE="/var/run/httpd_onvif.pid"
 DAEMON_ARGS="-p $ONVIF_PORT -h $WWW_PATH -c $HTTPD_CONFIG -f"
 
+# This script keeps its pidfile, unlike the other init scripts. The ONVIF
+# server is a second busybox httpd instance living beside the WebUI's own
+# httpd (S50httpd), and the two are told apart only by their arguments -- which
+# start-stop-daemon cannot match on. Matching by name or executable would let
+# this script stop the WebUI's server, so the pidfile stays as the one thing
+# that distinguishes them. -x is added to -K so that a stale pidfile whose pid
+# has been reused can at most signal some other httpd, never an unrelated
+# process; the pidfile can still go stale and let -S start a second copy.
+
 start() {
 	echo -n "Starting ONVIF HTTPD server: "
 
@@ -32,7 +41,7 @@ start() {
 
 stop() {
 	echo -n "Stopping ONVIF HTTPD server: "
-	start-stop-daemon -K -q -p "$PIDFILE"
+	start-stop-daemon -K -q -p "$PIDFILE" -x "$DAEMON"
 	if [ $? -eq 0 ]; then
 		rm -f "$PIDFILE"
 		echo "OK"
