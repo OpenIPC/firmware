@@ -1,0 +1,31 @@
+config BR2_PACKAGE_WAYBEAM
+	bool "waybeam"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	depends on BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY6E
+	depends on !BR2_PACKAGE_MAJESTIC
+	help
+	  Standalone H.265 video encoder and streamer for SigmaStar
+	  Infinity6E (SSC338Q/SSC30KQ). Provides a dual encoder
+	  backend, sensor unlock and an HTTP configuration API.
+
+	  Infinity6C (SSC378QE) is not offered here even though the
+	  encoder has a backend for it: waybeam's I6C backend targets
+	  the 2024-06-18 SigmaStar MI libraries and
+	  sigmastar-osdrv-infinity6c ships 2022-09-07. The pipeline
+	  streams against those, but AE never actuates and the image
+	  is black. I6C returns once the two agree.
+
+	  It is an alternative to the Majestic streamer and cannot be
+	  built alongside it: both drive the same sensor and encoder
+	  hardware, and both rely on the SigmaStar OSDRV MI libraries,
+	  which OSDRV installs only when Majestic is not selected.
+
+	  Installs:
+	    - /usr/bin/waybeam
+	    - /usr/bin/json_cli
+	    - /etc/waybeam.json
+	    - /etc/init.d/S95waybeam
+	    - unlocked imx335/imx415 sensor modules, compiled here
+	      against this board's kernel
+
+	  https://github.com/OpenIPC/waybeam

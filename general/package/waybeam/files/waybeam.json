@@ -1,0 +1,114 @@
+{
+  "system": {
+    "webPort": 80,
+    "overclockLevel": 1,
+    "verbose": false
+  },
+  "sensor": {
+    "index": -1,
+    "mode": -1
+  },
+  "isp": {
+    "sensorBin": "",
+    "aeEngine": "sdk",
+    "aeFps": 15,
+    "gainMax": 0,
+    "awbMode": "auto",
+    "awbCt": 5500,
+    "keepAspect": true
+  },
+  "image": {
+    "mirror": false,
+    "flip": false,
+    "rotate": 0
+  },
+  "video0": {
+    "rcMode": "cbr",
+    "fps": 90,
+    "size": "auto",
+    "bitrate": 2580,
+    "gopSize": 5.0,
+    "qpDelta": -12,
+    "sceneThreshold": 0,
+    "sceneHoldoff": 2,
+    "resilience": "off",
+    "zoomX": 0.5,
+    "zoomY": 0.5,
+    "framing": "off",
+    "stabCropPct": 0,
+    "stabRecenterSpeed": 0,
+    "stabKalmanQ": 0.0,
+    "stabKalmanR": 0.0
+  },
+  "outgoing": {
+    "enabled": true,
+    "server": "udp://192.168.1.10:5600",
+    "streamMode": "rtp",
+    "maxPayloadSize": 1400,
+    "connectedUdp": true,
+    "audioPort": 5601,
+    "sidecarPort": 5602
+  },
+  "discovery": {
+    "enabled": true,
+    "serviceType": "_waybeam-venc._tcp",
+    "name": "",
+    "bareAlias": true
+  },
+  "fpv": {
+    "roiEnabled": false,
+    "roiQp": 0,
+    "roiSteps": 2,
+    "roiCenter": 0.4,
+    "noiseLevel": 0
+  },
+  "audio": {
+    "enabled": false,
+    "sampleRate": 48000,
+    "channels": 1,
+    "codec": "opus",
+    "volume": 80,
+    "mute": false
+  },
+  "imu": {
+    "enabled": false,
+    "i2cDevice": "/dev/i2c-1",
+    "i2cAddr": "0x68",
+    "sampleRateHz": 200,
+    "gyroRangeDps": 1000,
+    "calFile": "/etc/imu.cal",
+    "calSamples": 400
+  },
+  "record": {
+    "enabled": false,
+    "dir": "/mnt/mmcblk0p1",
+    "format": "ts",
+    "mode": "mirror",
+    "maxSeconds": 300,
+    "maxMB": 500,
+    "bitrate": 0,
+    "fps": 0,
+    "gopSize": 0.0,
+    "server": ""
+  },
+  "snapshot": {
+    "enabled": true,
+    "quality": 80,
+    "channel": 7,
+    "width": 0,
+    "height": 0
+  },
+  "debug": {
+    "showOsd": false
+  },
+  "attitude": {
+    "enabled": false,
+    "mountDeg": 0,
+    "invertRoll": false,
+    "invertPitch": false,
+    "axisFwd": "+x",
+    "axisDown": "+z",
+    "trimRollDeg": 0.0,
+    "trimPitchDeg": 0.0
+  }
+}
