@@ -192,6 +192,20 @@ asks for the symptom, the SoC and board, and before/after evidence — paste the
 (`dmesg`, `ipcinfo`, the stream behaviour, the image size). A description of the output is not
 the output.
 
+This applies to any change that can alter what the firmware does on a camera, which is
+nearly all of them. Note it is behaviour, not bytes: every build stamps the commit SHA and
+a timestamp into `/usr/lib/os-release`, so byte equality would make even a typo fix count. The exceptions are documentation, review configuration, repository metadata,
+`CODEOWNERS`, and CI machinery that only selects, lints or tests. The test is what the file
+can change, not where it lives; if that is unclear for your diff, assume it needs a board.
+
+Three things look like exceptions and are not. A zero-board `ci-matrix.py --stdin` result
+does not mean your diff reaches no image: the selector reports zero for every defconfig
+outside its matrix, and some of those are real boards left out for build cost, so editing
+one changes a shipped image with no CI coverage at all. A workflow that feeds a build input
+changes image bytes — `build.yml` sets `BUILD_ID` and `BUILD_SHA`, which land in
+`/usr/lib/os-release` in every rootfs. And the post-build machinery under `general/scripts/`
+rewrites every rootfs the tree builds.
+
 ### Flashing safety
 
 A bad rootfs is discovered after it has been written. Do not flash an untested image onto a

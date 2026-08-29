@@ -12,3 +12,10 @@ output-*/
 # shared one; these are personal and never belong in a pull request.
 CLAUDE.local.md
 .claude/settings.local.json
+
+# Python bytecode, written next to the CI scripts whenever one of them is
+# imported -- by their own tests, or by anything that loads ci-matrix.py. Never
+# committed: it is a binary with no buildable source, and until #2330 an
+# accidental .pyc widened a docs pull request to the full 99-board matrix.
+__pycache__/
+*.pyc
