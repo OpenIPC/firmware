@@ -483,6 +483,11 @@ free_resources() {
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
 	/etc/init.d/S02klogd stop
+	# fake-hwclock writes /etc periodically; left running it would be a live
+	# overlay writer during the erase that quiesce_overlay() exists to fence
+	# off. Its stop also takes a final checkpoint, so the camera comes back
+	# from the post-flash reboot with the freshest time it can have.
+	/etc/init.d/S02fakehwclock stop
 	/etc/init.d/S01syslogd stop
 	services_stopped=1
 	sleep 1
@@ -501,7 +506,8 @@ free_resources() {
 #
 # free_resources runs before the download, because dropping the page cache is
 # how a small camera finds the RAM to unpack the image -- so by the time a
-# download or checksum fails, syslog, klogd, ntpd and cron are already stopped.
+# download or checksum fails, syslog, klogd, ntpd, fake-hwclock and cron are
+# already stopped.
 # The reboot used to hide that: everything came back on the way up. Now that a
 # pre-flash failure leaves the camera running, it has to be undone explicitly,
 # or a refused upgrade silently costs the user their logging and their cron jobs
@@ -512,7 +518,7 @@ restore_resources() {
 	[ "1" = "$services_stopped" ] || return 0
 	echo_c 37 "\nRestarting the services stopped for the upgrade"
 	local s
-	for s in S01syslogd S02klogd S49ntpd S60crond S99rc.local; do
+	for s in S01syslogd S02fakehwclock S02klogd S49ntpd S60crond S99rc.local; do
 		[ -x /etc/init.d/$s ] && /etc/init.d/$s start >/dev/null 2>&1
 	done
 	# majestic needs restarting, not starting: it is still running, just gutted.

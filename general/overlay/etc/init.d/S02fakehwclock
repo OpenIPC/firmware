@@ -26,6 +26,10 @@ start() {
 		return 0
 	fi
 	"$DAEMON" daemon &
+	# The daemon writes this same pid itself, but not before the shell has
+	# forked and re-executed; writing it here too closes the window where a
+	# stop right after this start would find no pidfile and miss the child.
+	echo $! > "$PIDFILE"
 	echo "OK"
 }
 

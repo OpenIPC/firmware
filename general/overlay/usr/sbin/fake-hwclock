@@ -64,25 +64,29 @@ interval() {
 }
 
 # save [periodic] - checkpoint the clock. Serialised with flock because the
-# ntpd hook and the fallback daemon can fire together. Never persists a
-# clock at or below the build stamp (nothing has set it yet, checkpointing
-# it would only launder garbage - same guard Debian's fake-hwclock uses)
-# and never moves the checkpoint backwards.
+# ntpd hook and the fallback daemon can fire together; the lock lives in a
+# subshell so it is released the moment the write is done - an exec-opened
+# descriptor would stay locked in the daemon across its whole next sleep
+# and stall the first-sync checkpoint the hook exists to persist. Never
+# persists a clock at or below the build stamp (nothing has set it yet,
+# checkpointing it would only launder garbage - same guard Debian's
+# fake-hwclock uses) and never moves the checkpoint backwards.
 do_save() {
-	exec 9> "$LOCK"
-	flock 9
-	now=$(date +%s)
-	[ "$now" -gt "$(build_epoch)" ] || return 1
-	last=$(saved_epoch)
-	if [ "$1" = "periodic" ]; then
-		every=$(interval)
-		[ "$every" -gt 0 ] || return 0
-		[ $((now - last)) -ge "$every" ] || return 0
-	fi
-	[ "$now" -gt "$last" ] || return 0
-	echo "$now" > "$FILE"
-	[ -e /dev/rtc0 ] && hwclock -w -u -f /dev/rtc0 2> /dev/null
-	return 0
+	(
+		flock 9
+		now=$(date +%s)
+		[ "$now" -gt "$(build_epoch)" ] || exit 1
+		last=$(saved_epoch)
+		if [ "$1" = "periodic" ]; then
+			every=$(interval)
+			[ "$every" -gt 0 ] || exit 0
+			[ $((now - last)) -ge "$every" ] || exit 0
+		fi
+		[ "$now" -gt "$last" ] || exit 0
+		echo "$now" > "$FILE"
+		[ -e /dev/rtc0 ] && hwclock -w -u -f /dev/rtc0 2> /dev/null
+		exit 0
+	) 9> "$LOCK"
 }
 
 # Forward-only restore, taking the best of three candidates: the checkpoint,
