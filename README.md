@@ -47,6 +47,11 @@ is going to be the most stable, flexible, and open IP Network Camera Framework f
 
 You can make a financial contribution to the project at [Open Collective][contribution].
 
+Before your first patch, read [CLAUDE.md](CLAUDE.md) (also readable as `AGENTS.md`). It explains
+how the tree is put together, which changes belong in this repository and which belong in another
+one, and how to check your work — for you and for any AI assistant you code with. The review
+standards themselves are in [best_practices.md](best_practices.md).
+
 Thank you.
 
 <p align="center">

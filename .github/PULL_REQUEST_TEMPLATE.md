@@ -1,7 +1,8 @@
 <!--
 Review standards for this repository live in best_practices.md and
 pr_compliance_checklist.yaml at the repo root. Reading them first is the fastest
-way to get a PR merged.
+way to get a PR merged. CLAUDE.md (also readable as AGENTS.md) is the shorter
+orientation, and is what an AI assistant loads automatically.
 
 Not every change needs every section — a typo fix does not need an oscilloscope
 trace. But a change that alters what runs on a camera needs all four.
