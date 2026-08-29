@@ -32,14 +32,16 @@ else. Check this first — it costs a minute and can save an evening.
 
 | What you are changing | Where it goes |
 | --- | --- |
-| Kernel code, kernel config defaults, kernel patches | [OpenIPC/linux][linux] |
+| Kernel source and kernel patches | [OpenIPC/linux][linux] |
 | Support for one specific retail camera model | [OpenIPC/builder][builder] |
 | Probing, identification, bring-up tooling | [OpenIPC/ipctool][ipctool] |
 | A bug in the video stream itself | majestic's maintainers, not a shim here |
 | Documentation, device notes, how-tos | [OpenIPC/wiki][wiki], [docs][docs] |
 
 Kernel patches in particular: they go to OpenIPC/linux, never into
-`general/package/all-patches/linux/`.
+`general/package/all-patches/linux/`. The board *kernel config* is the exception that stays
+here — `br-ext-chip-<vendor>/board/<family>/<model>.<variant>.config` belongs to this
+repository, and turning a symbol on for one board is an edit to that file, not a kernel change.
 
 What does belong here: shared packages, SoC-family drivers and load scripts, the root filesystem
 overlay, board defconfigs for a whole SoC or variant, and the build system.
@@ -160,18 +162,22 @@ Summarised from `pr_compliance_checklist.yaml`; the reasoning is in `best_practi
 
 ### Without a camera
 
-Build the board your change affects, then run the same checks CI runs. There is no test
-framework; these are scripts, run them directly from the repository root:
+Build the board your change affects, then run the checks CI runs that need neither a build
+nor a camera. There is no test framework; these are scripts, run them from the repository root:
 
 ```sh
 bash .github/scripts/test_load_hisilicon.sh                   # os_mem_size derivation
 bash .github/scripts/test_sysupgrade.sh                       # sysupgrade rootfs verification
+bash .github/scripts/test_excludes_report.sh                  # excludes lists report stale entries
 STRICT=1 bash .github/scripts/test_shell_parse.sh             # every shipped script parses
 STRICT=1 bash .github/scripts/test_strip_shell_comments.sh    # ...and still parses once stripped
 python3 .github/scripts/ci-matrix.py --self-test              # the selector agrees with the tree
 python3 .github/scripts/lint-workflow-shell.py --self-test    # every workflow run: block parses
 python3 general/scripts/tests/test_kconfig_graph.py           # needs kconfiglib (make deps)
 ```
+
+Two more run only inside CI: `check_target_modules.sh` needs a finished rootfs and says so
+in its own header, and `build-summary.py --self-test` only matters if you edit `build.yml`.
 
 `ci-matrix.py --stdin` tells you which boards your change will build:
 
