@@ -26,7 +26,6 @@
 
 DAEMON=/usr/sbin/matter-server
 NAME=matter-server
-PIDFILE=/var/run/matter-server.pid
 CONFIG=/etc/matter.conf
 
 # Default runtime parameters — override in /etc/matter.conf
@@ -46,43 +45,45 @@ export MATTER_RTSP_URL MATTER_PORT \
        MATTER_VENDOR_NAME MATTER_PRODUCT_NAME MATTER_NODE_LABEL \
        MATTER_HW_VERSION MATTER_SW_VERSION
 
+# Find the daemon by executable, never through a pidfile. Given -p, busybox
+# start-stop-daemon inspects only the pid that file holds and never scans
+# /proc, so the moment that pid is stale it can no longer see the live daemon:
+# -S starts a second copy, and -K without -x signals whatever unrelated process
+# has since reused the pid. A "kill -0 $(cat pidfile)" guard is no better: it
+# reports a reused pid as a live daemon. -x scans every process instead.
+running() {
+	start-stop-daemon -t -K -q -x "$DAEMON"
+}
+
 start() {
 	echo -n "Starting $NAME: "
-	if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-		echo "already running (pid $(cat "$PIDFILE"))"
-		return 0
-	fi
-	start-stop-daemon -S -b -m -p "$PIDFILE" \
-		-x "$DAEMON" -- "$MATTER_RTSP_URL" "$MATTER_PORT"
-	RETVAL=$?
-	if [ $RETVAL -eq 0 ]; then
-		echo "OK"
-	else
-		echo "FAILED"
-	fi
-	return $RETVAL
+	start-stop-daemon -S -b -q -x "$DAEMON" -- "$MATTER_RTSP_URL" "$MATTER_PORT"
+	case $? in
+		0) echo "OK"; return 0 ;;
+		1) echo "OK (already running)"; return 0 ;;
+		*) echo "FAILED"; return 1 ;;
+	esac
 }
 
 stop() {
 	echo -n "Stopping $NAME: "
-	if [ ! -f "$PIDFILE" ]; then
-		echo "not running"
-		return 0
-	fi
-	start-stop-daemon -K -q -p "$PIDFILE"
-	RETVAL=$?
-	rm -f "$PIDFILE"
-	if [ $RETVAL -eq 0 ]; then
-		echo "OK"
-	else
+	start-stop-daemon -K -q -x "$DAEMON"
+	i=0
+	while running && [ $i -lt 10 ]; do
+		i=$((i + 1))
+		sleep 1
+	done
+	if running; then
 		echo "FAILED"
+		return 1
 	fi
-	return $RETVAL
+	rm -f "/var/run/$NAME.pid"
+	echo "OK"
 }
 
 status() {
-	if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-		echo "$NAME is running (pid $(cat "$PIDFILE"))"
+	if running; then
+		echo "$NAME is running (pid $(pidof "$NAME"))"
 		return 0
 	else
 		echo "$NAME is not running"
@@ -93,7 +94,7 @@ status() {
 case "$1" in
 	start)   start   ;;
 	stop)    stop    ;;
-	restart) stop; sleep 1; start ;;
+	restart) stop || exit 1; sleep 1; start ;;
 	status)  status  ;;
 	*)
 		echo "Usage: $0 {start|stop|restart|status}"

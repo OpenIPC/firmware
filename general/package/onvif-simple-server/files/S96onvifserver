@@ -8,6 +8,25 @@ DAEMON="httpd"
 PIDFILE="/var/run/httpd_onvif.pid"
 DAEMON_ARGS="-p $ONVIF_PORT -h $WWW_PATH -c $HTTPD_CONFIG -f"
 
+# start-stop-daemon can match on a name, an executable or a pidfile, but never
+# on arguments -- and arguments are the only thing telling this server apart
+# from the WebUI's own httpd (S50httpd), both being the same busybox binary.
+# Matching by name or executable would let this script stop the WebUI, and a
+# pidfile on its own goes stale and can name a pid the WebUI has since reused.
+# So identify our instance by scanning for the httpd whose command line carries
+# $HTTPD_CONFIG, which cannot name the wrong server. The pidfile is still
+# written, for anyone reading it, but nothing here trusts it.
+onvif_pid() {
+	for p in $(pidof "$DAEMON" 2>/dev/null); do
+		if tr '\0' '\n' < "/proc/$p/cmdline" 2>/dev/null |
+				grep -qxF "$HTTPD_CONFIG"; then
+			echo "$p"
+			return 0
+		fi
+	done
+	return 1
+}
+
 start() {
 	echo -n "Starting ONVIF HTTPD server: "
 
@@ -22,23 +41,41 @@ start() {
 	sed -i "s/^ifs=.*/ifs=$network_interface/" $ONVIF_CONFIG
 	echo -e "A:*\n/cgi-bin*:*\n" > $HTTPD_CONFIG
 
+	if onvif_pid > /dev/null; then
+		echo "OK (already running)"
+		return 0
+	fi
+
+	# Our instance is not running, so any pidfile left over is stale and would
+	# only make -S match a pid the WebUI may have reused. Drop it first, then
+	# let -m write a fresh one.
+	rm -f "$PIDFILE"
 	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
 	if [ $? -eq 0 ]; then
 		echo "OK"
 	else
 		echo "FAIL"
+		return 1
 	fi
 }
 
 stop() {
 	echo -n "Stopping ONVIF HTTPD server: "
-	start-stop-daemon -K -q -p "$PIDFILE"
-	if [ $? -eq 0 ]; then
-		rm -f "$PIDFILE"
-		echo "OK"
-	else
-		echo "FAIL"
+	pid=$(onvif_pid)
+	if [ -n "$pid" ]; then
+		kill "$pid" 2>/dev/null
+		i=0
+		while onvif_pid > /dev/null && [ $i -lt 10 ]; do
+			i=$((i + 1))
+			sleep 1
+		done
 	fi
+	if onvif_pid > /dev/null; then
+		echo "FAIL"
+		return 1
+	fi
+	rm -f "$PIDFILE"
+	echo "OK"
 }
 
 case "$1" in
@@ -47,7 +84,7 @@ case "$1" in
 		;;
 
 	restart)
-		stop
+		stop || exit 1
 		sleep 3
 		start
 		;;

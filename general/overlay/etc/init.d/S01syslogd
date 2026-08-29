@@ -1,7 +1,6 @@
 #!/bin/sh
 
 DAEMON="syslogd"
-PIDFILE="/var/run/$DAEMON.pid"
 
 # Size (KiB) of the in-RAM circular log buffer. Defaults to 64 KiB so stock
 # cameras spend no extra memory; the WebUI (Information > Logs) can raise it by
@@ -10,25 +9,41 @@ SYSLOG_SIZE=64
 [ -r /etc/default/syslogd ] && . /etc/default/syslogd
 DAEMON_ARGS="-n -C${SYSLOG_SIZE:-64} -t"
 
+# Find the daemon by name, never through a pidfile. Given -p, busybox
+# start-stop-daemon inspects only the pid that file holds and never scans
+# /proc, so the moment that pid is stale it can no longer see the live daemon:
+# -S starts a second copy, and -K without -x signals whatever unrelated process
+# has since reused the pid. -x scans every process instead. The name form is
+# required here rather than an absolute path: syslogd is a busybox applet, so
+# /proc/PID/exe points at /bin/busybox and only argv[0] identifies the daemon.
+running() {
+	start-stop-daemon -t -K -q -x "$DAEMON"
+}
+
 start() {
 	echo -n "Starting $DAEMON: "
-	start-stop-daemon -b -m -S -q -p "$PIDFILE" -x "$DAEMON" -- $DAEMON_ARGS
-	if [ $? -eq 0 ]; then
-		echo "OK"
-	else
-		echo "FAIL"
-	fi
+	start-stop-daemon -b -S -q -x "$DAEMON" -- $DAEMON_ARGS
+	case $? in
+		0) echo "OK"; return 0 ;;
+		1) echo "OK (already running)"; return 0 ;;
+		*) echo "FAIL"; return 1 ;;
+	esac
 }
 
 stop() {
 	echo -n "Stopping $DAEMON: "
-	start-stop-daemon -K -q -p "$PIDFILE"
-	if [ $? -eq 0 ]; then
-		rm -f "$PIDFILE"
-		echo "OK"
-	else
+	start-stop-daemon -K -q -x "$DAEMON"
+	i=0
+	while running && [ $i -lt 10 ]; do
+		i=$((i + 1))
+		sleep 1
+	done
+	if running; then
 		echo "FAIL"
+		return 1
 	fi
+	rm -f "/var/run/$DAEMON.pid"
+	echo "OK"
 }
 
 case "$1" in
@@ -37,7 +52,7 @@ case "$1" in
 		;;
 
 	restart|reload)
-		stop
+		stop || exit 1
 		sleep 1
 		start
 		;;

@@ -4,6 +4,15 @@ DAEMON="dropbear"
 PIDFILE="/var/run/$DAEMON.pid"
 DAEMON_ARGS="-R -B -k -p 22 -K 300"
 
+# This script keeps its pidfile, unlike the other init scripts. dropbear forks
+# a child per SSH session, and every one of them shares the listener's name and
+# executable, so matching with -x would make "stop" and "restart" kill all live
+# SSH sessions -- including the one running the command. The pidfile is the
+# only thing that singles out the listener, and here it is trustworthy: there
+# is no -b/-m below, so dropbear daemonises itself and writes the file itself
+# rather than start-stop-daemon guessing at it. -x is added to -K purely as a
+# guard, so that a pid reused after an unclean shutdown cannot be signalled.
+
 start() {
 	echo -n "Starting $DAEMON: "
 	umask 077
@@ -17,7 +26,7 @@ start() {
 
 stop() {
 	echo -n "Stopping $DAEMON: "
-	start-stop-daemon -K -q -p "$PIDFILE"
+	start-stop-daemon -K -q -p "$PIDFILE" -x "$DAEMON"
 	if [ $? -eq 0 ]; then
 		rm -f "$PIDFILE"
 		echo "OK"
