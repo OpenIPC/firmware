@@ -21,7 +21,7 @@ wait_exit() {
 		sleep 0.5
 		i=$((i + 1))
 	done
-	echo "Warning: $DAEMON did not exit in time"
+	return 1
 }
 
 start() {
@@ -45,14 +45,27 @@ start() {
 stop() {
 	echo -n "Stopping $DAEMON: "
 	killall "$DAEMON" "$RESPAWN" "$WATCHDOG" 2>/dev/null
-	wait_exit
-	echo "OK"
+	if wait_exit; then
+		echo "OK"
+		return 0
+	fi
+	# 15s of SIGTERM was not enough. Escalate rather than report a stop that
+	# did not happen: restart would then run start() against a survivor, which
+	# trips the duplicate-instance check and returns 0 having done nothing --
+	# the requested restart silently never happens.
+	killall -9 "$DAEMON" "$RESPAWN" "$WATCHDOG" 2>/dev/null
+	if wait_exit; then
+		echo "OK (forced)"
+		return 0
+	fi
+	echo "FAILED ($DAEMON survived SIGKILL)"
+	return 1
 }
 
 case "$1" in
 	start)   start ;;
 	stop)    stop ;;
-	restart) stop; start ;;
+	restart) stop && start ;;
 	*)
 		echo "Usage: $0 {start|stop|restart}"
 		exit 1
