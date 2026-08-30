@@ -223,17 +223,41 @@ jobs:
           gh api "repos/${GH_REPO}/releases?per_page=10" \
             --jq '.[] | select(.draft and (.tag_name | startswith("ci-release-credential-probe-"))) | .id' \
             2>/dev/null | while read -r stale; do
+              # gh writes its error body to STDOUT, so a failed list feeds this
+              # loop lines of JSON rather than ids. Deleting them is harmless --
+              # the calls just fail -- but logging "removing stranded probe
+              # draft {"status": "401"}" is a confident lie in the log of a step
+              # whose whole job is to be believed. Only act on real ids.
+              case "$stale" in ''|*[!0-9]*) continue ;; esac
               echo "removing stranded probe draft $stale"
               gh api -X DELETE "repos/${GH_REPO}/releases/${stale}" >/dev/null 2>&1 || true
             done || true
 
-          if ! probe_id=$(gh api -X POST "repos/${GH_REPO}/releases" \
-                            -f tag_name="$PROBE_TAG" -f name="$PROBE_TAG" \
-                            -F draft=true --jq .id); then
-            echo "::error::RELEASE_TOKEN cannot create releases in ${GH_REPO}."\
-                 "It needs Contents: read and write."
-            exit 1
-          fi
+          # Retried, because a one-shot POST cannot tell a bad credential from
+          # a bad minute. GitHub answers 403 for secondary rate limiting as
+          # well as for refusal -- the publish step below retries six times for
+          # exactly that reason -- and these repos return 504 on ordinary
+          # release listings often enough to have been seen while writing this.
+          # Reporting a blip as "the token is wrong" would send whoever reads
+          # it to reissue a credential that was never the problem.
+          #
+          # Three attempts rather than the publish step's six: the value here is
+          # failing fast, and 5s + 10s of backoff still absorbs a transient
+          # while keeping a genuine misconfiguration well under a minute.
+          attempt=0
+          until probe_id=$(gh api -X POST "repos/${GH_REPO}/releases" \
+                             -f tag_name="$PROBE_TAG" -f name="$PROBE_TAG" \
+                             -F draft=true --jq .id); do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge 3 ]; then
+              echo "::error::RELEASE_TOKEN could not create a release in"\
+                   "${GH_REPO} after 3 attempts. If this is not a transient API"\
+                   "error, the token needs Contents: read and write."
+              exit 1
+            fi
+            echo "attempt ${attempt} failed, retrying in $((attempt * 5))s"
+            sleep $((attempt * 5))
+          done
           echo "release credential OK"
 
   buildroot:
