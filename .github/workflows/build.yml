@@ -166,6 +166,44 @@ jobs:
           echo "built_at=$BUILT_AT" >> "$GITHUB_OUTPUT"
           echo "webui_digest=$WEBUI" >> "$GITHUB_OUTPUT"
 
+      # Prove the release credential BEFORE the matrix runs.
+      #
+      # On 2026-08-29, run 33273333359 built all 102 boards over two hours and
+      # then died in `Publish releases` with "403 Resource not accessible by
+      # integration". Nothing earlier had any opinion about whether the run
+      # could publish, so the price of that misconfiguration was the entire
+      # matrix, and a night of cameras finding no new firmware behind the
+      # `latest` tag. The failure was invisible until the last job of the run.
+      #
+      # A draft release is not visible to anyone and creates no tag, so this
+      # costs two API calls and turns a two-hour failure into a ten-second one.
+      # Checking the secret is merely non-empty would not have caught that
+      # incident at all: the old token existed and was simply refused.
+      #
+      # Skipped on pull_request, which neither publishes nor has the secret.
+      - name: Prove the release credential can write
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::RELEASE_TOKEN is not set. The matrix would build for"\
+                 "two hours and then fail to publish. See the publish job."
+            exit 1
+          fi
+          probe="ci-release-credential-probe-${{ github.run_id }}"
+          if ! id=$(gh api -X POST "repos/${GH_REPO}/releases" \
+                      -f tag_name="$probe" -f name="$probe" -F draft=true \
+                      --jq .id); then
+            echo "::error::RELEASE_TOKEN cannot create releases in ${GH_REPO}."\
+                 "It needs Contents: read and write."
+            exit 1
+          fi
+          gh api -X DELETE "repos/${GH_REPO}/releases/$id"
+          echo "release credential OK"
+
   buildroot:
     name: Firmware
     needs: [preflight, select]
@@ -514,7 +552,18 @@ jobs:
       - name: Publish releases (paced, retry-aware)
         if: steps.collect.outputs.count != '0'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Not GITHUB_TOKEN. The default token's release-write depends on
+          # who triggered the run: a `schedule:` run executes as the repository's
+          # scheduling identity and could write releases, but a dispatched run
+          # executes as whoever dispatched it, and for an app/OAuth-backed
+          # identity the API answers "403 Resource not accessible by
+          # integration" even though the job declares `contents: write` and the
+          # run log confirms the token was granted it. Since the nightly is now
+          # dispatched by the release trigger rather than fired by cron, the
+          # default token is no longer sufficient here. An explicit credential
+          # also makes publishing independent of who or what starts the run,
+          # which is the property that was quietly missing before.
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           GH_REPO: ${{ github.repository }}
           BUILD_ID: ${{ needs.preflight.outputs.build_id }}
           HEAD_SHA: ${{ needs.preflight.outputs.head_sha }}
