@@ -35,16 +35,24 @@ claimed() {
 
 # Put the stock shell back in /etc/passwd, so the steady state of a claimed
 # camera is the file buildroot shipped and nothing here is in the way of it.
-# Written through a temporary file and copied over the original rather than
-# moved onto it: `cat >` keeps the inode, mode and ownership that a mv would
-# replace with the temporary file's own. Failure is not fatal -- claimed()
-# above already makes this transparent from the next login on.
+# Staged in /etc and renamed into place, so a reader sees either the old file
+# or the new one and never a half-written one. The obvious `cat >/etc/passwd`
+# truncates before it writes: interrupted there -- a power cut, a full overlay
+# -- it leaves an empty account database on a camera that HAS been claimed, and
+# then nothing can authenticate at all. The temporary file has to be in /etc
+# rather than /tmp for the same reason the rename is used: /tmp is a different
+# filesystem, so mv across it would be a copy and truncate the target again.
+# Mode is set before the rename because the new file carries its own, where the
+# old copy-over inherited the original's.
+#
+# Failure is not fatal -- claimed() above already makes this transparent from
+# the next login on -- so every step is guarded and the stray is swept up.
 release() {
-	tmp=/tmp/passwd.$$
+	tmp=/etc/.passwd.claim.$$
 	if awk -F: -v OFS=: -v sh="$SHELL_REAL" \
 		'$1 == "root" { $7 = sh } 1' /etc/passwd >"$tmp" 2>/dev/null &&
 		[ -s "$tmp" ]; then
-		cat "$tmp" >/etc/passwd 2>/dev/null
+		chmod 644 "$tmp" 2>/dev/null && mv -f "$tmp" /etc/passwd 2>/dev/null
 	fi
 	rm -f "$tmp"
 }
@@ -78,17 +86,41 @@ password is used by the web interface, SSH, RTSP and ONVIF.
 
 EOF
 
+# `set_here` records that THIS session's passwd is the one that succeeded, and
+# nothing below settles for less. Reading the shadow file alone cannot answer
+# it: the browser and the other console are claiming the same camera through
+# the same file, so "root has a password now" is also true when somebody else
+# set it -- and the shell at the end of this must not be handed to a session
+# that authenticated with nothing and set nothing. Abandoning passwd three
+# times while the owner claimed the camera from a browser used to end exactly
+# there, because the giving-up test below asked the file rather than the run.
+set_here=
 n=0
 while [ "$n" -lt "$ATTEMPTS" ]; do
 	n=$((n + 1))
-	passwd root && claimed && break
+
+	# Asked before each attempt, because this prompt can sit unanswered for as
+	# long as somebody stands in front of it. Whoever claimed the camera in
+	# that time owns it, and this session does not get to write over their
+	# password. The window that stays open is the one where they claim it while
+	# the password is being typed -- narrowing that further would mean reading
+	# the password here rather than letting passwd do it, and a shell script
+	# that turns off terminal echo has its own ways to go wrong.
+	if claimed; then
+		echo >&2
+		echo "This camera was just set up from somewhere else." >&2
+		echo "Reconnect and sign in with the password that was set." >&2
+		exit 1
+	fi
+
+	if passwd root && claimed; then
+		set_here=1
+		break
+	fi
 	echo "Password was not set." >&2
 done
 
-# Judged on the camera rather than on what passwd said about itself: the
-# question is whether root has a password now, and that is a thing to read
-# back rather than infer from an exit status.
-if ! claimed; then
+if [ -z "$set_here" ]; then
 	echo "Giving up after $ATTEMPTS attempts; the camera is still not set up." >&2
 	sleep 1 # the serial console respawns straight into this; do not spin
 	exit 1
