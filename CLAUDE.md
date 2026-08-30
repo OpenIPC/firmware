@@ -206,6 +206,40 @@ changes image bytes — `build.yml` sets `BUILD_ID` and `BUILD_SHA`, which land 
 `/usr/lib/os-release` in every rootfs. And the post-build machinery under `general/scripts/`
 rewrites every rootfs the tree builds.
 
+### First boot: the camera ships unclaimed
+
+`general/overlay/etc/shadow` gives root an **empty hash field**, not a password. A password
+committed to a public repository is not a credential, and the first-boot journey it produced
+asked the user to type a secret everyone already knows before letting them choose a real one.
+
+Until root has a password the camera is *unclaimed*: majestic streams nothing (RTSP 401, ONVIF
+unauthorized, HTTP 401 everywhere but the setup page) and there is no shell. Setting the
+password claims it. `/etc/shadow` is the only record of the state, read live, so whichever door
+sets the password the other sees it at once. `firstboot` — `sysupgrade -n`, which wipes the
+overlay — returns the camera to unclaimed for free.
+
+The two doors:
+
+- **Browser** — majestic serves `/setup.html` and `POST /setup` without authentication while
+  unclaimed, and 404/403s them the moment there is a password.
+- **SSH or serial** — `general/overlay/usr/sbin/openipc-claim` is root's login shell
+  (`general/overlay/etc/passwd`). It refuses anything non-interactive, runs `passwd`, then puts
+  `/bin/sh` back and steps aside. It is self-disabling — a camera claimed through the browser
+  finds it transparent and repairs `/etc/passwd` on the next login — so a broken gate cannot
+  lock anyone out of a camera that has an owner.
+
+**A login shell must be listed in `/etc/shells`.** dropbear checks it through `getusershell()`
+*before* running it, so an unlisted shell is refused at authentication and the gate never runs —
+and, worse, can never disable itself, because the self-heal happens at login. That file is built
+up by `TARGET_FINALIZE_HOOKS` (busybox appends `/bin/ash`, skeleton-init appends `/bin/sh`) and
+the rootfs overlay is rsynced over the target *after* those hooks, so shipping an
+`overlay/etc/shells` would silently freeze their list. `general/scripts/rootfs_script.sh`
+appends to it instead, which runs after both.
+
+This needs a majestic build carrying `/setup`. An image with the blank shadow and an older
+majestic gives a camera with wide-open RTSP and an unreachable WebUI, so the three repositories
+land in order: majestic, then majestic-webui's `setup.html`, then this.
+
 ### Flashing safety
 
 A bad rootfs is discovered after it has been written. Do not flash an untested image onto a

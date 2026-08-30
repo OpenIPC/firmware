@@ -1,0 +1,133 @@
+#!/bin/sh
+#
+# Root's login shell while the camera is unclaimed.
+#
+# The firmware ships with root's password field in /etc/shadow empty, rather
+# than with a password printed in a public repository for everyone to read. So
+# anyone who can reach a new camera can start a session on it -- dropbear runs
+# with -B, and the serial getty asks for nothing either. What they must not get
+# is a shell: the camera streams nothing and answers nothing until it has an
+# owner, and being able to claim it is not the same as owning it.
+#
+# This is root's login shell rather than a hook in /etc/profile because
+# /etc/profile is read by interactive login shells only. `ssh camera command`,
+# scp and sftp all run <shell> -c ... and would walk straight past it. The
+# login shell is the one place every door goes through: SSH interactive, SSH
+# command, scp/sftp, and the serial console by way of login.
+#
+# It disables itself. The first thing it asks is whether /etc/shadow says the
+# camera has been claimed, so a camera claimed through the web interface finds
+# this transparent on the next login and puts the stock shell back on its way
+# past. /etc/shadow stays the one place that records the state; /etc/passwd is
+# only ever a cache of it, and one that repairs itself. That also means a
+# broken or missing gate can never lock anyone out of a camera that has an
+# owner already.
+
+SHELL_REAL=/bin/sh
+ATTEMPTS=3
+
+# Field 2 of root's shadow line. Empty means no password has been set: not
+# "!" or "*", which are a locked account and very much a decision somebody
+# made, so those read as claimed.
+claimed() {
+	[ -n "$(awk -F: '$1 == "root" { print $2; exit }' /etc/shadow 2>/dev/null)" ]
+}
+
+# Put the stock shell back in /etc/passwd, so the steady state of a claimed
+# camera is the file buildroot shipped and nothing here is in the way of it.
+# Staged in /etc and renamed into place, so a reader sees either the old file
+# or the new one and never a half-written one. The obvious `cat >/etc/passwd`
+# truncates before it writes: interrupted there -- a power cut, a full overlay
+# -- it leaves an empty account database on a camera that HAS been claimed, and
+# then nothing can authenticate at all. The temporary file has to be in /etc
+# rather than /tmp for the same reason the rename is used: /tmp is a different
+# filesystem, so mv across it would be a copy and truncate the target again.
+# Mode is set before the rename because the new file carries its own, where the
+# old copy-over inherited the original's.
+#
+# Failure is not fatal -- claimed() above already makes this transparent from
+# the next login on -- so every step is guarded and the stray is swept up.
+release() {
+	tmp=/etc/.passwd.claim.$$
+	if awk -F: -v OFS=: -v sh="$SHELL_REAL" \
+		'$1 == "root" { $7 = sh } 1' /etc/passwd >"$tmp" 2>/dev/null &&
+		[ -s "$tmp" ]; then
+		chmod 644 "$tmp" 2>/dev/null && mv -f "$tmp" /etc/passwd 2>/dev/null
+	fi
+	rm -f "$tmp"
+}
+
+# Already has an owner: get out of the way. A command execution is passed
+# through as it arrived; an interactive login is started as a login shell, so
+# it reads /etc/profile and looks exactly like the one it replaced.
+if claimed; then
+	release
+	[ "$1" = "-c" ] && exec "$SHELL_REAL" "$@"
+	exec "$SHELL_REAL" -l "$@"
+fi
+
+# No shell before there is a password, and a command execution, an scp or an
+# sftp has no way to be asked for one. Refuse, and say what to do instead --
+# a bare "permission denied" from a camera that has never been touched is the
+# kind of thing people re-flash over.
+if [ "$1" = "-c" ] || [ ! -t 0 ]; then
+	echo "This camera has not been set up yet, so it has no shell to offer." >&2
+	echo "Log in interactively (ssh root@$(hostname), or the serial console)," >&2
+	echo "or open http://$(hostname)/ in a browser, to set a root password." >&2
+	exit 1
+fi
+
+[ -f /etc/openipc_banner ] && cat /etc/openipc_banner
+cat <<'EOF'
+
+This camera has not been set up yet. It streams nothing and answers nothing
+until root has a password -- set one now to finish setting it up. The same
+password is used by the web interface, SSH, RTSP and ONVIF.
+
+EOF
+
+# `set_here` records that THIS session's passwd is the one that succeeded, and
+# nothing below settles for less. Reading the shadow file alone cannot answer
+# it: the browser and the other console are claiming the same camera through
+# the same file, so "root has a password now" is also true when somebody else
+# set it -- and the shell at the end of this must not be handed to a session
+# that authenticated with nothing and set nothing. Abandoning passwd three
+# times while the owner claimed the camera from a browser used to end exactly
+# there, because the giving-up test below asked the file rather than the run.
+set_here=
+n=0
+while [ "$n" -lt "$ATTEMPTS" ]; do
+	n=$((n + 1))
+
+	# Asked before each attempt, because this prompt can sit unanswered for as
+	# long as somebody stands in front of it. Whoever claimed the camera in
+	# that time owns it, and this session does not get to write over their
+	# password. The window that stays open is the one where they claim it while
+	# the password is being typed -- narrowing that further would mean reading
+	# the password here rather than letting passwd do it, and a shell script
+	# that turns off terminal echo has its own ways to go wrong.
+	if claimed; then
+		echo >&2
+		echo "This camera was just set up from somewhere else." >&2
+		echo "Reconnect and sign in with the password that was set." >&2
+		exit 1
+	fi
+
+	if passwd root && claimed; then
+		set_here=1
+		break
+	fi
+	echo "Password was not set." >&2
+done
+
+if [ -z "$set_here" ]; then
+	echo "Giving up after $ATTEMPTS attempts; the camera is still not set up." >&2
+	sleep 1 # the serial console respawns straight into this; do not spin
+	exit 1
+fi
+
+release
+echo
+echo "Done. This camera is set up and streaming again."
+echo
+exec "$SHELL_REAL" -l
