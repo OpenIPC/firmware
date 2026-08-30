@@ -85,6 +85,27 @@ if [ -f "${LATE_POST_BUILD_HOOKS}" ]; then
 	done < "${LATE_POST_BUILD_HOOKS}"
 fi
 
+# Root's login shell on an unclaimed camera is /usr/sbin/openipc-claim (see
+# overlay/etc/passwd), and dropbear checks a login shell against /etc/shells
+# through getusershell() BEFORE it ever runs -- an unlisted shell is rejected at
+# authentication with "Permission denied", so the gate would never get to run
+# and, worse, could never disable itself either: the self-heal that puts /bin/sh
+# back happens at login, and there is no login. Verified on hi3516ev300, where
+# key auth stopped working the moment the shell changed.
+#
+# Appended here rather than shipped as overlay/etc/shells because the file is
+# built up by TARGET_FINALIZE_HOOKS -- busybox adds /bin/ash, skeleton-init
+# adds /bin/sh -- and the overlay is rsynced over the target AFTER those hooks
+# have run. An overlay copy would replace their work with a hardcoded list that
+# goes quietly wrong the next time buildroot changes what it registers. The
+# post-build script runs after both, so appending composes with whatever they
+# decided. Same grep guard buildroot's own hooks use, so a re-run adds nothing.
+CLAIM_SHELL=/usr/sbin/openipc-claim
+if [ -x "${TARGET_DIR}${CLAIM_SHELL}" ]; then
+	grep -qsE "^${CLAIM_SHELL}\$" "${TARGET_DIR}/etc/shells" \
+		|| echo "${CLAIM_SHELL}" >> "${TARGET_DIR}/etc/shells"
+fi
+
 # Comments are worth writing and worth keeping in git; they are not worth
 # flashing. sysupgrade alone had grown to 52KB, 57% of it comment, and on
 # 2026-08-18 it pushed hi3519v101_lite 4KB past its 5120KB rootfs cap -- a board
