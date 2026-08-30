@@ -7,8 +7,11 @@ This package is created and intended for unification and use in all firmware and
 
 #### Basic Example
 ```
-fw_setenv gpio_motors 'H1 H2 H3 H4 V1 V2 V3 V4'
+fw_setenv ptz_gpio 'H1 H2 H3 H4 V1 V2 V3 V4'
 ```
+`ptz_gpio` is the current name for the pin list; `gpio_motors`, used in the
+examples below and on cameras configured before the rename, keeps working as
+a fallback.
 First, the GPIOs responsible for Horizontal rotation are added, and next then the GPIOs responsible for Vertical rotation are added, a total of 8 characters.
 
 #### GK7205V200 (unknown model)

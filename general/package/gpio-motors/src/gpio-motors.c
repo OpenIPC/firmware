@@ -117,7 +117,12 @@ void gpio_set(int fd, int pin, int value) {
 }
 
 void gpio_config() {
-	FILE *fp = popen("fw_printenv -n gpio_motors", "r");
+	/* ptz_gpio is the documented name (majestic-webui#227); gpio_motors is
+	 * every camera configured before the rename, so it stays as the
+	 * fallback. `grep .` turns an empty first answer into a failure so the
+	 * || actually falls through. */
+	FILE *fp = popen(
+		"fw_printenv -n ptz_gpio 2>/dev/null | grep . || fw_printenv -n gpio_motors", "r");
 	if (fp == NULL) {
 		printf("Unable to run fw_printenv\n");
 		exit(EXIT_FAILURE);
@@ -148,7 +153,7 @@ void gpio_config() {
 			exit(EXIT_FAILURE);
 		}
 	} else {
-		printf("Error: Unable to read gpio_motors from fw_printenv\n");
+		printf("Error: Unable to read ptz_gpio or gpio_motors from fw_printenv\n");
 		exit(EXIT_FAILURE);
 	}
 
