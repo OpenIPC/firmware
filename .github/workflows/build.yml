@@ -176,9 +176,25 @@ jobs:
       # `latest` tag. The failure was invisible until the last job of the run.
       #
       # A draft release is not visible to anyone and creates no tag, so this
-      # costs two API calls and turns a two-hour failure into a ten-second one.
-      # Checking the secret is merely non-empty would not have caught that
-      # incident at all: the old token existed and was simply refused.
+      # costs a couple of API calls and turns a two-hour failure into a
+      # ten-second one. Checking the secret is merely non-empty would not have
+      # caught that incident at all: the old token existed and was simply
+      # refused, so the probe has to attempt the write.
+      #
+      # Three details keep the probe from becoming a problem of its own:
+      #
+      #   - The tag carries run_attempt as well as run_id. run_id is stable
+      #     across re-runs, so without the attempt a leftover draft from a
+      #     failed run would collide with its own re-run and report a valid
+      #     credential as broken -- a guard that fails wrongly is worse than no
+      #     guard, because it blocks good runs.
+      #   - Deletion happens from a trap, so an interrupted or cancelled job
+      #     still cleans up rather than leaving the draft behind.
+      #   - A best-effort sweep removes probe drafts stranded by earlier runs,
+      #     because cleanup.yml does not know this tag pattern. It is capped at
+      #     the 10 most recent releases and every failure is swallowed: listing
+      #     100 releases here returns HTTP 504 (each carries hundreds of
+      #     assets), and a housekeeping step must never be what fails a build.
       #
       # Skipped on pull_request, which neither publishes nor has the secret.
       - name: Prove the release credential can write
@@ -186,22 +202,38 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           GH_REPO: ${{ github.repository }}
+          PROBE_TAG: ci-release-credential-probe-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -euo pipefail
+
           if [ -z "${GH_TOKEN:-}" ]; then
             echo "::error::RELEASE_TOKEN is not set. The matrix would build for"\
                  "two hours and then fail to publish. See the publish job."
             exit 1
           fi
-          probe="ci-release-credential-probe-${{ github.run_id }}"
-          if ! id=$(gh api -X POST "repos/${GH_REPO}/releases" \
-                      -f tag_name="$probe" -f name="$probe" -F draft=true \
-                      --jq .id); then
+
+          probe_id=""
+          cleanup() {
+            [ -n "$probe_id" ] || return 0
+            gh api -X DELETE "repos/${GH_REPO}/releases/${probe_id}" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          # Strand-clearing, entirely best effort.
+          gh api "repos/${GH_REPO}/releases?per_page=10" \
+            --jq '.[] | select(.draft and (.tag_name | startswith("ci-release-credential-probe-"))) | .id' \
+            2>/dev/null | while read -r stale; do
+              echo "removing stranded probe draft $stale"
+              gh api -X DELETE "repos/${GH_REPO}/releases/${stale}" >/dev/null 2>&1 || true
+            done || true
+
+          if ! probe_id=$(gh api -X POST "repos/${GH_REPO}/releases" \
+                            -f tag_name="$PROBE_TAG" -f name="$PROBE_TAG" \
+                            -F draft=true --jq .id); then
             echo "::error::RELEASE_TOKEN cannot create releases in ${GH_REPO}."\
                  "It needs Contents: read and write."
             exit 1
           fi
-          gh api -X DELETE "repos/${GH_REPO}/releases/$id"
           echo "release credential OK"
 
   buildroot:
