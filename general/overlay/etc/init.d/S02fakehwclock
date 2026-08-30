@@ -1,0 +1,58 @@
+#!/bin/sh
+DAEMON="fake-hwclock"
+PIDFILE="/var/run/$DAEMON.pid"
+
+# S02 so every later boot message already carries a plausible timestamp;
+# rcK stops it near-last, which makes the shutdown checkpoint the freshest
+# one possible. Restoring before S30customizer is safe: both are
+# forward-only, so whichever of the checkpoint and the build stamp is
+# newer wins.
+#
+# fake-hwclock is a shell script, so the start-stop-daemon name matching
+# the other init scripts use cannot see it: argv[0] is /bin/sh and
+# /proc/PID/exe is busybox (see #2326). The daemon writes its own pidfile
+# instead, and running() re-checks the pid's cmdline before anything
+# trusts it, so a stale file never points a kill at a bystander.
+running() {
+	PID=$(cat "$PIDFILE" 2> /dev/null)
+	[ -n "$PID" ] && grep -q "$DAEMON" "/proc/$PID/cmdline" 2> /dev/null
+}
+
+start() {
+	echo -n "Starting $DAEMON: "
+	"$DAEMON" load
+	if running; then
+		echo "OK (already running)"
+		return 0
+	fi
+	"$DAEMON" daemon &
+	# The daemon writes this same pid itself, but not before the shell has
+	# forked and re-executed; writing it here too closes the window where a
+	# stop right after this start would find no pidfile and miss the child.
+	echo $! > "$PIDFILE"
+	echo "OK"
+}
+
+stop() {
+	echo -n "Stopping $DAEMON: "
+	if running; then
+		kill "$PID"
+		rm -f "$PIDFILE"
+	fi
+	"$DAEMON" save
+	echo "OK"
+}
+
+case "$1" in
+	start | stop)
+		$1
+		;;
+	restart | reload)
+		stop
+		start
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+		;;
+esac

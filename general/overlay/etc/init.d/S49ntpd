@@ -1,7 +1,10 @@
 #!/bin/sh
 
 DAEMON="ntpd"
-DAEMON_ARGS="-n"
+# -S feeds sync events (step, stratum, periodic, unsync) to the software
+# RTC so a fresh sync is checkpointed at once instead of waiting for the
+# next periodic save - see /usr/sbin/fake-hwclock.
+DAEMON_ARGS="-n -S /usr/sbin/ntpd-script"
 
 # Find the daemon by name, never through a pidfile. Given -p, busybox
 # start-stop-daemon inspects only the pid that file holds and never scans

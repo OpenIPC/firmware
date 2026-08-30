@@ -1,0 +1,165 @@
+#!/bin/sh
+# Software RTC for cameras that have no battery-backed clock (#1886).
+# Without it every boot starts at the firmware build stamp, so an offline
+# camera writes each session's recordings over the same timestamps.
+#
+# A checkpoint of the current time is kept in /etc, which lives on the
+# writable overlay - jffs2 on NOR, ubifs on NAND - so every save is a
+# flash write. The save cadence is therefore chosen per medium below:
+# a NOR overlay is a handful of 64 KB erase blocks with ~100k cycles
+# and jffs2 only wear-levels inside that partition, while UBI levels
+# across the whole NAND and eMMC/SD controllers level internally.
+# Hourly is ~9k writes a year; the 5-second loop this replaces was ~6.3M.
+#
+# Restore is forward-only and also takes the newest mtime under /etc as a
+# floor, the way OpenWrt's sysfixtime does: cameras are usually powered
+# off by cutting power, so a shutdown hook cannot be the mechanism, but
+# organic config writes keep advancing that floor for free.
+
+FILE="/etc/fake-hwclock.data"
+LOCK="/var/run/fake-hwclock.lock"
+PIDFILE="/var/run/fake-hwclock.pid"
+
+# Optional override: INTERVAL=<seconds> (0 disables periodic saves).
+[ -r /etc/default/fake-hwclock ] && . /etc/default/fake-hwclock
+
+build_epoch() {
+	epoch=$(grep TIME_STAMP /etc/os-release | cut -d= -f2)
+	case "$epoch" in
+		'' | *[!0-9]*) echo 0 ;;
+		*) echo "$epoch" ;;
+	esac
+}
+
+saved_epoch() {
+	epoch=$(cat "$FILE" 2> /dev/null)
+	case "$epoch" in
+		'' | *[!0-9]*) echo 0 ;;
+		*) echo "$epoch" ;;
+	esac
+}
+
+interval() {
+	if [ -n "$INTERVAL" ]; then
+		echo "$INTERVAL"
+		return
+	fi
+	case "$(awk '$2 == "/overlay" { print $3; exit }' /proc/mounts)" in
+		ubifs)
+			echo 900
+			;;
+		ext4 | f2fs | vfat | exfat)
+			echo 600
+			;;
+		tmpfs)
+			# NFS or RAM root: nothing persists, saving is pointless.
+			echo 0
+			;;
+		*)
+			# jffs2, and anything unrecognised treated as the worst
+			# medium we ship on: a small NOR partition.
+			echo 3600
+			;;
+	esac
+}
+
+# save [periodic] - checkpoint the clock. Serialised with flock because the
+# ntpd hook and the fallback daemon can fire together; the lock lives in a
+# subshell so it is released the moment the write is done - an exec-opened
+# descriptor would stay locked in the daemon across its whole next sleep
+# and stall the first-sync checkpoint the hook exists to persist. Never
+# persists a clock at or below the build stamp (nothing has set it yet,
+# checkpointing it would only launder garbage - same guard Debian's
+# fake-hwclock uses) and never moves the checkpoint backwards.
+do_save() {
+	(
+		flock 9
+		now=$(date +%s)
+		[ "$now" -gt "$(build_epoch)" ] || exit 1
+		last=$(saved_epoch)
+		if [ "$1" = "periodic" ]; then
+			every=$(interval)
+			[ "$every" -gt 0 ] || exit 0
+			[ $((now - last)) -ge "$every" ] || exit 0
+		fi
+		[ "$now" -gt "$last" ] || exit 0
+		echo "$now" > "$FILE"
+		[ -e /dev/rtc0 ] && hwclock -w -u -f /dev/rtc0 2> /dev/null
+		exit 0
+	) 9> "$LOCK"
+}
+
+# Forward-only restore, taking the best of three candidates: the checkpoint,
+# the newest mtime under /etc (one scan covers the checkpoint's own mtime
+# too), and the RTC where the SoC has one. The RTC is read through sysfs
+# rather than applied with hwclock -s: it ticks while the board is powered
+# but usually has no battery, and hwclock -s would happily yank a synced
+# clock backwards to a stale RTC when this runs again on a restart.
+do_load() {
+	best=$(saved_epoch)
+	rtc=$(cat /sys/class/rtc/rtc0/since_epoch 2> /dev/null)
+	case "$rtc" in
+		'' | *[!0-9]*) ;;
+		*) [ "$rtc" -gt "$best" ] && best=$rtc ;;
+	esac
+	newest=$(find /etc -type f -exec date -r {} +%s \; 2> /dev/null | sort -n | tail -1)
+	case "$newest" in
+		'' | *[!0-9]*) ;;
+		*) [ "$newest" -gt "$best" ] && best=$newest ;;
+	esac
+	if [ "$best" -gt "$(date +%s)" ]; then
+		date -s "@$best" > /dev/null 2>&1 &&
+			logger -t fake-hwclock "clock restored to $(date -u '+%Y-%m-%d %H:%M:%S') UTC"
+	fi
+	return 0
+}
+
+# Fallback for cameras ntpd never syncs - the case #1886 was written for.
+# An unsynced busybox ntpd fires no -S events at all, so without this loop
+# an offline camera would checkpoint nothing. A sleep that returns far too
+# late means the clock was stepped under us (first sync, manual date -s):
+# worth checkpointing immediately, the guards in do_save keep it safe.
+do_daemon() {
+	echo $$ > "$PIDFILE"
+	[ "$(interval)" -gt 0 ] || exit 0
+	last=$(date +%s)
+	while :; do
+		sleep 60
+		now=$(date +%s)
+		if [ "$now" -gt $((last + 90)) ] || [ "$now" -lt "$last" ]; then
+			do_save
+		else
+			do_save periodic
+		fi
+		last=$now
+	done
+}
+
+# Invoked by busybox ntpd -S via /usr/sbin/ntpd-script. "stratum" marks the
+# first successful sync and "step" a correction - the highest-value moments
+# to persist. "periodic" comes every 11 minutes while synced and is rate
+# limited by the medium interval. "unsync" carries no better time, skip it.
+do_ntp_event() {
+	case "$1" in
+		step | stratum)
+			do_save
+			;;
+		periodic)
+			do_save periodic
+			;;
+	esac
+	return 0
+}
+
+case "$1" in
+	load | save | daemon)
+		do_$1
+		;;
+	ntp-event)
+		do_ntp_event "$2"
+		;;
+	*)
+		echo "Usage: $0 {load|save|daemon|ntp-event <type>}"
+		exit 1
+		;;
+esac
