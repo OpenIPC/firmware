@@ -21,7 +21,29 @@ detect_sensor() {
 
 set_sensor() {
 	case $SENSOR in
-		gc4653|imx335|imx415|os04a10|sc4336p|sc401ai|sc501ai|sc830ai|sc850sl)
+		imx335)
+			# This driver reads lane_num, and drv_sensor_common.h defaults it
+			# to 2 -- at which point every mode above 30fps silently selects
+			# the 2-lane 30fps table and the camera serves 30fps while its
+			# mode list still advertises 60.
+			#
+			# Four is the default here because four is what the previous
+			# driver used unconditionally (it hardcoded the lane count and
+			# ignored this parameter), so every board that works today is
+			# already running four and keeps doing so. A board actually wired
+			# for two sets sensor_lanes=2 in U-Boot, as with sensor_mclk.
+			lanes="$(fw_printenv -n sensor_lanes 2>/dev/null)"
+			case "$lanes" in
+				2|4) ;;
+				"") lanes=4 ;;
+				*)
+					echo "sensor_lanes=$lanes is not 2 or 4; using 4" | logger -s -t OpenIPC
+					lanes=4
+					;;
+			esac
+			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1 lane_num=$lanes
+			;;
+		gc4653|imx415|os04a10|sc4336p|sc401ai|sc501ai|sc830ai|sc850sl)
 			insmod $MODULE/sensor_${SENSOR}_mipi.ko chmap=1
 			;;
 		gc8613ya|os03a10|os08a10|sc450ai|sc535hai|sc835hai|sp4329)
