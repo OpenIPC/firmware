@@ -116,14 +116,18 @@ GRAMMARS = [
      "-- headroom warning: "),
 ]
 
-# Annotations build.yml emits that are deliberately NOT summarised: they are
-# sidecar-generation hiccups that cost a size report or a kconfig graph and
-# nothing that reaches an image. Listed rather than ignored silently so the
-# floor check below still accounts for every annotation in the job.
+# Annotations build.yml emits that are deliberately NOT summarised: they cost a
+# size report, a kconfig graph or a notification, and nothing that reaches an
+# image. Listed rather than ignored silently so the floor check below still
+# accounts for every annotation in the job.
 IGNORED_ANCHORS = [
     "size-report failed for ",
     "kconfiglib install failed for ",
     "kconfig-graph failed for ",
+    # The image this one announces went to `publish` a step earlier, so an
+    # unsent Telegram notification says nothing about the board and belongs in
+    # no cause bucket. It is a warning precisely so it cannot fail the run.
+    "Telegram upload of ",
 ]
 
 PASS, FAIL, ABSENT = "✓", "✗", "·"
