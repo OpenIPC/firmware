@@ -270,6 +270,31 @@ insert_ko() {
 	modprobe open_mipi_rx
 	# insmod gk7205v200_pm.ko                       # unused on OpenIPC
 	modprobe open_wdt
+
+	# Cipher engine -> /dev/cipher. majestic's native WebRTC takes AES-CTR
+	# for its SRTP transform from here, a burst of packets per ioctl: on a
+	# gk7205v200 with one viewer at 4 Mbit/s that is 20.0% of a core in
+	# software against 15.9% through the engine, and at 50 Mbit/s it is the
+	# difference between holding the configured bitrate at 20 fps and
+	# managing 40 Mbit/s at 11. See docs/hisi/cipher-engine.md in majestic.
+	#
+	# WORTH LOADING ONLY WITH A DRIVER THAT BATCHES. Driven one packet at a
+	# time the same engine saves nothing measurable — the ioctl, the DMA
+	# allocation and the sleep cost about what the AES does — so this line
+	# is paired with the openhisilicon bump that carries the batched
+	# command, not with the one that first built the module.
+	#
+	# Last, and after insert_osal: modprobe would otherwise pull osal in as
+	# a dependency at whatever point this ran, ahead of insert_osal's own
+	# arguments. Failure is not an error -- an image built before that
+	# openhisilicon bump simply has no module to find, and that must not
+	# abort sensor bring-up. Same shape as load_hisilicon's.
+	# `|| true` because this is the LAST statement of insert_ko, which is in
+	# turn the last statement of the script, so its status becomes the exit
+	# status S70vendor reports. Without it an image whose openhisilicon
+	# predates the module loads every driver correctly and still reports
+	# "Loading vendor modules..." as a failure.
+	modprobe open_cipher 2>/dev/null || true
 }
 
 remove_ko() {
@@ -279,6 +304,7 @@ remove_ko() {
 	# to satisfy load_goke's insmod-by-filename pattern). insmod uses the
 	# filename, but rmmod takes the in-kernel module name — so this list
 	# must be open_* to match what `lsmod` actually shows.
+	rmmod -w open_cipher 2>/dev/null
 	rmmod -w open_wdt
 	# rmmod -w open_pm                                 # unused on OpenIPC
 	remove_audio
