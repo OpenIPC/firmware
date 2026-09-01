@@ -1,2 +1,7 @@
 # config-symbol:overlay-relative-path
 BR2_PACKAGE_OPENIPC_NFS_ROOT:package/openipc-nfs-root/overlay
+# The majestic EULA texts (served by majestic at /eula.<lang>.txt, shown by
+# openipc-claim at first login). Shipped this way rather than in the shared
+# overlay so a majestic-free image carries no license for software it does
+# not have -- both gates key on the files' presence.
+BR2_PACKAGE_MAJESTIC:package/majestic/overlay
