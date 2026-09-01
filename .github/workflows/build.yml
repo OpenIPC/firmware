@@ -494,6 +494,30 @@ jobs:
             output/images/kconfig-graph.*.json
             output/images/kconfig-help.*.json
 
+      # A Telegram notification, and nothing else. The image it announces was
+      # handed to the `publish` job by the step above, so whether this call
+      # lands has no bearing on what the nightly ships.
+      #
+      # It could nonetheless fail the whole run, and did. On 2026-08-31 the
+      # gk7202v300_ultimate job died here with curl exit 55 (CURLE_SEND_ERROR,
+      # a transient failure sending the body) under the default `bash -e`,
+      # turning a run that was 99/100 green red. Since #2334 a run's conclusion
+      # gates the release train on the runner host, which dispatches this
+      # workflow, waits for it, and only advances to OpenIPC/builder if it
+      # succeeded -- so one dropped packet to api.telegram.org also cost
+      # builder its entire nightly, and the train does not retry before the
+      # next slot.
+      #
+      # Two things change, because the old line failed on the wrong event. It
+      # died on a transport error, and it ignored an application one: curl
+      # exits 0 for any request that completes, so a 4xx or 5xx from Telegram
+      # printed itself and passed. Now both are retried, and neither can fail
+      # the job. An unsent notification is worth a warning annotation; it is
+      # never worth a red build, still less a lost fleet-wide nightly.
+      #
+      # --max-time bounds each attempt: without it a stalled upload holds the
+      # job open until the job timeout, which is the one failure mode a retry
+      # loop cannot get out of by itself.
       - name: Send binary
         if: github.event_name != 'pull_request' && env.NORFW
         run: |
@@ -502,8 +526,20 @@ jobs:
           TG_HEADER=$(echo -e ${TG_MSG}${TG_ICON})
           TG_TOKEN=${{secrets.TELEGRAM_TOKEN_BOT_OPENIPC}}
           TG_CHANNEL=${{secrets.TELEGRAM_CHANNEL_OPENIPC_DEV}}
-          HTTP=$(curl -s -o /dev/null -w %{http_code} https://api.telegram.org/bot${TG_TOKEN}/sendDocument -F chat_id=${TG_CHANNEL} -F caption="${TG_HEADER}" -F document=@${NORFW})
-          echo Telegram response: ${HTTP}
+          for attempt in 1 2 3; do
+            if [ "${attempt}" -gt 1 ]; then sleep $(( (attempt - 1) * 15 )); fi
+            # `|| HTTP=...` is what keeps a non-zero curl from ending the step
+            # under `bash -e`; $? there is curl's own exit code, so the log
+            # says which transport error it was rather than just "failed".
+            HTTP=$(curl -s -o /dev/null -w %{http_code} --max-time 300 \
+                     "https://api.telegram.org/bot${TG_TOKEN}/sendDocument" \
+                     -F chat_id="${TG_CHANNEL}" \
+                     -F caption="${TG_HEADER}" \
+                     -F document=@"${NORFW}") || HTTP="curl-exit-$?"
+            echo "Telegram response (attempt ${attempt}/3): ${HTTP}"
+            case "${HTTP}" in 2??) exit 0 ;; esac
+          done
+          echo "::warning::Telegram upload of ${NORFW} failed after 3 attempts (last result: ${HTTP}). The image itself is unaffected -- it went to the publish job in the previous step."
 
   # All release writes happen here, once, so only a SINGLE job ever touches the
   # shared `nightly`/`latest` releases (and the per-run dated release). The old
