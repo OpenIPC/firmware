@@ -95,7 +95,11 @@ EOF
 # the build strips whole-line comments out of this file.
 EULA=/usr/share/openipc/eula/eula.en.txt
 eula_shown=
-if [ -r "$EULA" ]; then
+# A regular, non-empty, readable file -- the same criteria majestic's web
+# door gates on -- so a stray overlay directory or a truncated overlay write
+# at this path cannot demand acceptance of a document cat has nothing to
+# show for.
+if [ -f "$EULA" ] && [ -s "$EULA" ] && [ -r "$EULA" ]; then
 	eula_shown=1
 	cat <<'EOF'
 The streaming software on this camera (majestic) is licensed: free forever
