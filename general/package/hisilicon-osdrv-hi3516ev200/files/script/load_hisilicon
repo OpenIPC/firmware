@@ -226,7 +226,12 @@ insert_ko() {
 	# arguments. Failure is not an error -- an image built before that
 	# openhisilicon bump simply has no module to find, and that must not
 	# abort sensor bring-up.
-	modprobe open_cipher 2>/dev/null
+	# `|| true` because this is the LAST statement of insert_ko, which is
+	# in turn the last statement of the script, so its status becomes the
+	# exit status S70vendor reports. Without it an image whose
+	# openhisilicon predates the module loads every driver correctly and
+	# still reports "Loading vendor modules..." as a failure.
+	modprobe open_cipher 2>/dev/null || true
 }
 
 remove_ko() {
