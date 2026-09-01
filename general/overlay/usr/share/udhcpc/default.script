@@ -102,7 +102,44 @@ case "$1" in
 			echo "nameserver $i" >> $RESOLV_CONF
 		done
 
-		ntpd -q -N -n
+		# Step the clock now that there is a route, but never let NTP
+		# hold the boot open. This script runs inside udhcpc, which runs
+		# inside ifup in S40network, so everything after it in rcS -
+		# S49ntpd, dropbear, crond, majestic - waits here: until this
+		# returns the camera has no ssh and no video.
+		#
+		# ntpd -q looks self-limiting and is not. Its alarm(10), re-armed
+		# to alarm(50) once any revents land on a peer socket, covers only
+		# the polling. Name resolution is not covered: add_peers() ->
+		# resolve_peer_hostname() -> getaddrinfo() runs before that alarm
+		# is ever set, and the poll loop re-resolves later on the same
+		# terms. ntp.conf ships four pool.ntp.org names, so a DNS server
+		# that answers slowly or not at all blocks the boot with no bound
+		# on it whatsoever. On an hi3516ev300 with the nameserver
+		# blackholed this line took 41 s: ~31 s resolving the four names
+		# before the alarm exists, then the 10 s the alarm does cover.
+		# openhisilicon CI on a cv500 saw 79 s and was still blocked when
+		# the emulator was killed, init never reaching S49ntpd.
+		#
+		# -k is the part that matters. Plain `timeout 10` sends TERM and
+		# waits, which is no bound against a process wedged in a resolver;
+		# -k escalates to KILL. Same ev300, same blackholed nameserver:
+		# 41 s becomes 10 s. Against a child that ignores TERM outright,
+		# 12 s and rc 137 (KILL); against one that does not, 10 s and
+		# rc 143.
+		#
+		# A reachable server is untouched - -q exits on its own once it
+		# has stepped the clock, measured at 2 s on that ev300, so the cap
+		# is never reached. When nothing answers, S49ntpd's daemon starts
+		# seconds later and keeps trying, so what a capped query costs is
+		# clock accuracy at boot, not the clock.
+		#
+		# CONFIG_TIMEOUT=y in busybox.config, the busybox this overlay
+		# ships beside; busybox-initramfs.config lacks the applet but
+		# builds no rootfs carrying this script, so the `command -v
+		# timeout` fallback sysupgrade's mount_rootfs needs is not needed
+		# here.
+		timeout -k 2 10 ntpd -q -N -n
 		;;
 esac
 
