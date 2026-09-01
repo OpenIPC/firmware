@@ -70,10 +70,22 @@ fi
 # sftp has no way to be asked for one. Refuse, and say what to do instead --
 # a bare "permission denied" from a camera that has never been touched is the
 # kind of thing people re-flash over.
+#
+# The address, not the hostname: a hostname only the camera itself resolves
+# made http://$(hostname)/ go nowhere when pasted into a browser (#2346).
+# SSH_CONNECTION's third field is the address the client actually reached;
+# hostname stays as the no-connection fallback. Brackets on the URL only --
+# a browser needs them around an IPv6 literal, ssh refuses them.
 if [ "$1" = "-c" ] || [ ! -t 0 ]; then
+	set -- $SSH_CONNECTION
+	addr=${3:-$(hostname)}
+	url=$addr
+	case "$url" in
+	*:*) url="[$url]" ;;
+	esac
 	echo "This camera has not been set up yet, so it has no shell to offer." >&2
-	echo "Log in interactively (ssh root@$(hostname), or the serial console)," >&2
-	echo "or open http://$(hostname)/ in a browser, to set a root password." >&2
+	echo "Log in interactively (ssh root@$addr, or the serial console)," >&2
+	echo "or open http://$url/ in a browser, to set a root password." >&2
 	exit 1
 fi
 
