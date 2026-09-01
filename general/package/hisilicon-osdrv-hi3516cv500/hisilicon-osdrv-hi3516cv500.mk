@@ -16,6 +16,15 @@ HISILICON_OSDRV_HI3516CV500_KMOD_DST = $(TARGET_DIR)/lib/modules/$(HISILICON_OSD
 # Common install: sensor configs, load scripts, vendor userspace libs
 # When opensdk is enabled, .ko modules, sensor .so, and libisp.so come
 # from opensdk instead — osdrv only provides what opensdk can't build.
+#
+# libsvpruntime.so (617 KB) and libnnie.so are deliberately not installed:
+# nothing in any shipped cv500-family image links them (DT_NEEDED audit of
+# the 2026-08-31 nightlies: zero consumers, zero dlopen string references),
+# load_hisilicon's open_nnie lines are commented out, and libsvpruntime
+# needs libstdc++, which rootfs_script.sh prunes — so the runtime was not
+# even loadable on most builds. Together they cost ~215 KB of squashfs on
+# every board of the family; hi3516av300_neo sat 12 KB from its cap because
+# of it. An NNIE consumer that ever materialises puts them back here.
 
 define HISILICON_OSDRV_HI3516CV500_INSTALL_COMMON
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
@@ -54,9 +63,7 @@ define HISILICON_OSDRV_HI3516CV500_INSTALL_COMMON
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/lib/libive.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/lib/libmd.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/lib/libmpi.so
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/lib/libnnie.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/lib/libsecurec.so
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/lib/libsvpruntime.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/lib/libtde.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/lib/libupvqe.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV500_PKGDIR)/files/lib/libVoiceEngine.so
