@@ -19,6 +19,7 @@ on:
           # actually reports is not, and an unproven entry here would ship a
           # green run that means nothing.
           - ingenic-t31
+          - hisilicon-hi3516ev200
 
 env:
   TAG_NAME: toolchain-asan
@@ -53,6 +54,10 @@ jobs:
           # named for the family, not for this board.
           case "${{inputs.family}}" in
           ingenic-t31) BOARD=t31_lite ;;
+          # An ev300 defconfig for the ev200 family is not a typo: V4 boards
+          # share one toolchain, `make toolname` names it after the family, and
+          # the guard below is what would catch it if that ever stopped holding.
+          hisilicon-hi3516ev200) BOARD=hi3516ev300_lite ;;
           *) echo "::error::no defconfig mapped for ${{inputs.family}}"; exit 1 ;;
           esac
           NAME=$(make BOARD="${BOARD}" toolname)
