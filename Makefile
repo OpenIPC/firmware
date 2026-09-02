@@ -58,6 +58,17 @@ prepare:
 	@if test ! -e $(TARGET)/buildroot-$(BR_VER); then \
 		wget -c -q $(BR_LINK)/$(BR_VER).tar.gz -O $(BR_FILE); \
 		mkdir -p $(TARGET); tar -xf $(BR_FILE) -C $(TARGET); fi
+	@# The majestic and majestic-webui tarballs are rolling release assets:
+	@# a fixed filename, no hash, refreshed upstream whenever those repos
+	@# publish. Buildroot's dl cache keeps the first copy forever, so a
+	@# from-source build with an old cache pairs a majestic that expects the
+	@# setup page with a webui from before the page existed -- the browser
+	@# door then 404s while SSH works. Expire cached copies after a day;
+	@# fresh ones are kept, offline rebuilds inside that window still work,
+	@# and CI downloads into an empty cache every run and never gets here.
+	@find $(or $(BR2_DL_DIR),$(TARGET)/buildroot-$(BR_VER)/dl) -maxdepth 2 \
+		\( -name 'majestic.*.master.tar.bz2' -o -name 'majestic-webui-dist.tar.gz' \) \
+		-mmin +1440 -delete 2>/dev/null || true
 	@if test -f $(TARGET)/buildroot-$(BR_VER)/linux/Config.in; then \
 		sed -i '/source "$$(BR2_EXTERNAL_GENERAL_PATH)\/linux\/Config.ext.in"/d' \
 			$(TARGET)/buildroot-$(BR_VER)/linux/Config.in; \
