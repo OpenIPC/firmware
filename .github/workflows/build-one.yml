@@ -48,6 +48,10 @@ jobs:
         run: |
           echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
           echo CACHE_DATE=$(date +%m) >> ${GITHUB_ENV}
+          # Same fix, and the same reason, as build.yml's: buildroot's DL_DIR
+          # defaults to output/buildroot-$(BR_VER)/dl, so the output/dl this
+          # workflow caches and prunes never existed. See the comment there.
+          echo "BR2_DL_DIR=${GITHUB_WORKSPACE}/output/dl" >> ${GITHUB_ENV}
 
       - name: Setup ccache
         uses: actions/cache@v4
@@ -76,9 +80,16 @@ jobs:
           # The dot form is majestic's S3 tarball — it LOOKS S3-pinned but is a moving
           # `master` build re-uploaded every majestic CI run, with no .hash to force a
           # refetch. Only genuinely content-addressed tarballs (semver / SHA) keep cache.
-          find output/dl -type f -regextype posix-extended \
-            -regex '.*[-.](HEAD|master|main|dist)\.tar\.(gz|bz2|xz)' \
-            -print -delete 2>/dev/null || true
+          #
+          # Not silenced, for the reason given in build.yml: the suppression is
+          # what let this run against a missing directory unnoticed.
+          if [ -d "${BR2_DL_DIR}" ]; then
+            find "${BR2_DL_DIR}" -type f -regextype posix-extended \
+              -regex '.*[-.](HEAD|master|main|dist)\.tar\.(gz|bz2|xz)' \
+              -print -delete
+          else
+            echo "dl cache is cold (${BR2_DL_DIR} absent) -- nothing to refresh."
+          fi
 
       - name: Build firmware
         env:

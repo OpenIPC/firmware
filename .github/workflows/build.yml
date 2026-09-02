@@ -284,6 +284,22 @@ jobs:
         run: |
           echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
           echo CACHE_DATE=$(date +%m) >> ${GITHUB_ENV}
+          # The dl cache below and the refresh step after it both work on
+          # output/dl. Buildroot did not: DL_DIR defaults to $(TOPDIR)/dl, and
+          # TOPDIR is the source tree the Makefile hands to -C, so downloads
+          # landed in output/buildroot-$(BR_VER)/dl and output/dl never existed.
+          # actions/cache only archives paths that exist, so nothing was ever
+          # saved and nothing ever restored; the refresh find matched nothing.
+          # Both failures were silent, and they cancelled out to "every board
+          # re-downloads every tarball, every run" -- which is also why CI
+          # escaped the stale-tarball trap that bit local builds in #2352.
+          #
+          # Point buildroot at the directory the cache keys on. Buildroot reads
+          # BR2_DL_DIR from the environment ahead of .config, by design ("To
+          # make sure that the environment variable overrides the .config
+          # option, set this before including .config"), and the Makefile's own
+          # expiry from #2352 already prefers $(BR2_DL_DIR) when it is set.
+          echo "BR2_DL_DIR=${GITHUB_WORKSPACE}/output/dl" >> ${GITHUB_ENV}
 
       - name: Setup ccache
         if: github.event_name != 'pull_request'
@@ -329,9 +345,18 @@ jobs:
           # The dot form is majestic's S3 tarball — it LOOKS S3-pinned but is a moving
           # `master` build re-uploaded every majestic CI run, with no .hash to force a
           # refetch. Only genuinely content-addressed tarballs (semver / SHA) keep cache.
-          find output/dl -type f -regextype posix-extended \
-            -regex '.*[-.](HEAD|master|main|dist)\.tar\.(gz|bz2|xz)' \
-            -print -delete 2>/dev/null || true
+          #
+          # Not silenced. `2>/dev/null || true` is how this step reported
+          # nothing for months while pointed at a directory that did not exist;
+          # a cold cache is a legitimate state and now says so out loud, and
+          # anything else is a real error that reaches the log.
+          if [ -d "${BR2_DL_DIR}" ]; then
+            find "${BR2_DL_DIR}" -type f -regextype posix-extended \
+              -regex '.*[-.](HEAD|master|main|dist)\.tar\.(gz|bz2|xz)' \
+              -print -delete
+          else
+            echo "dl cache is cold (${BR2_DL_DIR} absent) -- nothing to refresh."
+          fi
 
       - name: Build firmware
         run: |
