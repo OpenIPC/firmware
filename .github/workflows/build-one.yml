@@ -59,8 +59,14 @@ jobs:
           path: /tmp/ccache
           key: ${{inputs.platform}}-${{env.CACHE_DATE}}
 
-      - name: Setup dl cache
-        uses: actions/cache@v4
+      # Restore-only, deliberately. `dl-<month>` is one key shared with the
+      # whole build.yml matrix, and actions/cache saves only on a key miss, so
+      # whoever writes it first freezes that month's snapshot. This workflow
+      # builds a single board on manual dispatch; letting it win that race would
+      # pin the shared cache to one board's dependencies for the rest of the
+      # month. It consumes the cache, it does not get to define it.
+      - name: Restore dl cache
+        uses: actions/cache/restore@v4
         with:
           path: output/dl
           key: dl-${{env.CACHE_DATE}}
