@@ -91,3 +91,41 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check the annotation grammars still match the workflow
         run: python3 .github/scripts/build-summary.py --self-test
+
+  # Everything above reported advisory contexts, and advisory means a pull
+  # request can merge straight through them. #2351 did: it landed with "build
+  # summariser agrees with build.yml" red, which left master failing its own
+  # drift gate, and every branch cut from master then showed the same red check
+  # until #2353 repaired it. Nothing was broken about the check -- it was simply
+  # not something anyone had to satisfy.
+  #
+  # One umbrella context per workflow, the same shape build.yml's CI Gate uses,
+  # for the same reason given there: branch protection then names a single
+  # stable context, and adding a lint job later needs no settings change to be
+  # covered by it.
+  lint-gate:
+    name: Lint Gate
+    needs: [workflow-shell, build-summary]
+    # always() so the gate still reports when a needed job fails -- but not on a
+    # run whose jobs the guard above deliberately skipped. Upstream the added
+    # disjunct is true, so this reduces to always().
+    if: >-
+      always() && (github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require every lint job to succeed
+        run: |
+          echo "workflow-shell=${{ needs.workflow-shell.result }} build-summary=${{ needs.build-summary.result }}"
+          # 'skipped' is not accepted. Upstream the guard on those jobs is a
+          # tautology, so a skipped one means the guard changed or the job was
+          # dropped from `needs` -- either way this context would go green
+          # having checked nothing, which is the failure it exists to prevent.
+          if [ "${{ needs.workflow-shell.result }}" != "success" ]; then
+            echo "::error::workflow run blocks parse did not succeed"; exit 1
+          fi
+          if [ "${{ needs.build-summary.result }}" != "success" ]; then
+            echo "::error::build summariser drift gate did not succeed"; exit 1
+          fi
