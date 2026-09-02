@@ -108,3 +108,46 @@ jobs:
         env:
           STRICT: 1
         run: bash .github/scripts/test_strip_shell_comments.sh
+
+  # Advisory until now, like lint.yml's jobs, and #2351 showed what that is
+  # worth: it merged with a red lint check and broke master. These four are the
+  # only thing standing between a syntax error in a shipped script and a camera
+  # that runs it, so being able to merge past them is worse here than there.
+  #
+  # One umbrella context, matching build.yml's CI Gate and lint.yml's Lint Gate,
+  # so branch protection names a stable check and a fifth job added below is
+  # covered without a settings change.
+  shell-tests-gate:
+    name: Shell Tests Gate
+    needs:
+      - load-hisilicon-parsing
+      - sysupgrade-verify
+      - excludes-report
+      - shipped-shell-parse
+    # always() so the gate reports when a needed job fails, but not on a run
+    # whose jobs the guard above deliberately skipped. Upstream the added
+    # disjunct is true, so this reduces to always().
+    if: >-
+      always() && (github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require every shell test to succeed
+        run: |
+          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} excludes=${{ needs.excludes-report.result }} shell-parse=${{ needs.shipped-shell-parse.result }}"
+          # 'skipped' is not accepted, for the reason given in lint.yml: a
+          # skipped job would take this context green having checked nothing.
+          if [ "${{ needs.load-hisilicon-parsing.result }}" != "success" ]; then
+            echo "::error::load_hisilicon os_mem_size derivation did not succeed"; exit 1
+          fi
+          if [ "${{ needs.sysupgrade-verify.result }}" != "success" ]; then
+            echo "::error::sysupgrade rootfs verification did not succeed"; exit 1
+          fi
+          if [ "${{ needs.excludes-report.result }}" != "success" ]; then
+            echo "::error::excludes lists report did not succeed"; exit 1
+          fi
+          if [ "${{ needs.shipped-shell-parse.result }}" != "success" ]; then
+            echo "::error::shipped shell scripts parse did not succeed"; exit 1
+          fi
