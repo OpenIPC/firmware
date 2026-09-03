@@ -1,0 +1,11 @@
+config BR2_PACKAGE_MAJESTIC_AF
+	bool "majestic-af"
+	depends on BR2_PACKAGE_MAJESTIC
+	help
+	  Out-of-core autofocus / PTZ engine plugin for majestic, compiled
+	  from source. majestic loads /usr/lib/majestic-af.so at runtime when
+	  autofocus is enabled and the majestic binary exports the plugin HAL
+	  seams; the contrast search, the motorized-lens UART actuator (XiongMai
+	  near-Pelco and standard Pelco-D), and the worker threads live here.
+
+	  https://github.com/OpenIPC/majestic-af
