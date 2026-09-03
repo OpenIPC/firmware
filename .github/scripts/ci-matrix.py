@@ -255,7 +255,7 @@ NOT_BUILT = {
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "hisilicon-osdrv-hi3536dv100", "i2c-telemetry",
     "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
-    "linux-patcher", "majestic-af", "matter",
+    "linux-patcher", "matter",
     "mavfwd", "mdnsd-openipc", "mini", "mqtt-bot", "msposd", "n3n-openipc", "nabto",
     "netblink", "node-exporter", "ntfy", "onvif-simple-server", "openipc-nfs-root",
     "osd-openipc", "rtl8188eus-openipc", "rtl8192eu-openipc", "rtl8811cu-openipc",
