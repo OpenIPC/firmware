@@ -9,6 +9,28 @@ HISILICON_OSDRV_HI3516EV200_SITE =
 HISILICON_OSDRV_HI3516EV200_LICENSE = MIT
 HISILICON_OSDRV_HI3516EV200_LICENSE_FILES = LICENSE
 
+# Voice quality enhancement engines for the microphone capture path
+# (OpenIPC/majestic#287). libupvqe.so is only the framework: it dlopen()s one
+# shared object per DSP stage when HI_MPI_AI_EnableVqe() runs, so an image
+# without these answers that call with 0xa0158041 and
+# "dlopen ... libhive_HPF.so failed", and the microphone is passed through
+# unprocessed however the attributes were set.
+#
+# Only the stages majestic can switch on: the high-pass filter, noise
+# reduction and automatic gain control that make up the 8/16 kHz talk engine,
+# plus the 48 kHz record engine. libhive_AEC.so (echo cancellation) and
+# libhive_EQ.so are not exposed, and the resampler is compiled into
+# libupvqe.so itself (RES_ReSampler_*), so libhive_RES.so is never loaded.
+# libhive_common.so is not a stage but is a NEEDED of AGC and ANR.
+#
+# Ultimate only, matching the flavour majestic compiles VQE into at all:
+# 268 KB that nothing in a lite image would ever dlopen().
+ifeq ($(OPENIPC_MAJESTIC),ultimate)
+HISILICON_OSDRV_HI3516EV200_VQE_LIBS = \
+	libhive_common.so libhive_AGC.so libhive_ANR.so \
+	libhive_HPF.so libhive_record.so
+endif
+
 define HISILICON_OSDRV_HI3516EV200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/sensor/config/*.ini
@@ -52,14 +74,6 @@ define HISILICON_OSDRV_HI3516EV200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/lib_hidrc.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/lib_hiir_auto.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/lib_hildci.so
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libhive_AEC.so
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libhive_AGC.so
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libhive_ANR.so
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libhive_common.so
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libhive_EQ.so
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libhive_HPF.so
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libhive_record.so
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libhive_RES.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libisp.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libive.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libivp.so
@@ -69,6 +83,9 @@ define HISILICON_OSDRV_HI3516EV200_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libtde.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libupvqe.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/libVoiceEngine.so
+	$(foreach lib,$(HISILICON_OSDRV_HI3516EV200_VQE_LIBS), \
+		$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/lib/$(lib) ; \
+	)
 endef
 
 $(eval $(generic-package))
