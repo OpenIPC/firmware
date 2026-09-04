@@ -33,13 +33,17 @@ endef
 # -f throughout: which files the WebUI ships is decided in another repo, so a
 # fixup that hard-fails on a missing one turns any deletion there into a broken
 # build here -- for every platform at once, and only visible on the next PR,
-# because master has no push trigger. j/locale_fpv.cgi and p/header_fpv.cgi went
-# in OpenIPC/majestic-webui#141; fpv-wfb.cgi and p/fpv_common.cgi still ship, and
-# are still unwanted in a standard build.
+# because master has no push trigger.
+#
+# The WebUI renamed every page after the word its menu uses, so the FPV page is
+# wfb.cgi now. Both spellings are listed and both must stay for a while: the
+# dist tarball is a rolling release off that repo's master, so an image built
+# today gets the new name and one rebuilt from an older tag gets the old one,
+# and a standard build must not ship the page either way. j/locale_fpv.cgi and
+# p/header_fpv.cgi went in OpenIPC/majestic-webui#141 and are dropped here.
 define MAJESTIC_WEBUI_STANDARD_FIXUP
+	rm -f $(TARGET_DIR)/var/www/cgi-bin/wfb.cgi
 	rm -f $(TARGET_DIR)/var/www/cgi-bin/fpv-wfb.cgi
-	rm -f $(TARGET_DIR)/var/www/cgi-bin/j/locale_fpv.cgi
-	rm -f $(TARGET_DIR)/var/www/cgi-bin/p/header_fpv.cgi
 	rm -f $(TARGET_DIR)/var/www/cgi-bin/p/fpv_common.cgi
 endef
 
