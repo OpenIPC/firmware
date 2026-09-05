@@ -45,6 +45,28 @@ majestic_write_path() {
 	[ "$other" = 1 ] || echo "$wp"
 }
 
+# The majestic processes that can safely be told to reload.
+#
+# Process existence is not readiness. S95majestic starts it with
+# start-stop-daemon -b, which returns at the fork, so boot carries straight on
+# into the S98 scripts while majestic is still working its way down main()
+# towards the point where it installs a SIGHUP handler. Until it gets there the
+# default action for SIGHUP applies, and that is to terminate -- so a reload
+# asked for in that window does not reload the camera, it takes the streamer
+# away for the rest of the boot. Measured on a hi3516ev200: the process is
+# visible to pidof with SigCgt still 0000000000000000.
+#
+# /proc/<pid>/status answers the question exactly. SigCgt is the caught-signal
+# mask and SIGHUP is signal 1, so it is the lowest bit -- the mask ends in an
+# odd hex digit precisely when the handler is installed.
+majestic_reload_pids() {
+	for pid in $(pidof majestic 2>/dev/null); do
+		case "$(sed -n 's/^SigCgt:[[:space:]]*//p' "/proc/$pid/status" 2>/dev/null)" in
+			*[13579bdfBDF]) echo "$pid" ;;
+		esac
+	done
+}
+
 # A path yaml-cli will happily store and majestic will never read. The tree
 # ships one: t40_lite_movols-mo-805p's customizer.sh says
 # `cli -s .video0.bitrate: 4000`, and the trailing colon is why six of that
@@ -80,12 +102,14 @@ case "$CMD" in
 		# stream nothing for most settings. Repeated signals inside 3s collapse
 		# into one reload, so a burst of writes still reloads once.
 		#
-		# Deliberately conditional on majestic already running: at S30, where
-		# customizer.sh seeds a device's config, it is not, and provisioning must
-		# stay exactly as it was. This is the pattern wifibroadcast already
-		# applies by hand after its own writes.
-		if [ "$rc" = 0 ] && [ -n "$wpath" ] && pidof majestic >/dev/null 2>&1; then
-			killall -1 majestic
+		# Deliberately conditional on majestic being up AND ready to be signalled:
+		# at S30, where customizer.sh seeds a device's config, it is not running at
+		# all, and provisioning must stay exactly as it was. This is the pattern
+		# wifibroadcast already applies by hand after its own writes.
+		if [ "$rc" = 0 ] && [ -n "$wpath" ]; then
+			for pid in $(majestic_reload_pids); do
+				kill -1 "$pid"
+			done
 		fi
 		exit "$rc"
 		;;
