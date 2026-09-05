@@ -178,6 +178,31 @@ pr_compliances:
       busybox sets CONFIG_ASH_BASH_COMPAT=y, so constructs a portability linter would
       reject are valid in the field. That judgement lives in best_practices.md §7.1.
 
+  - title: "cli writes address a real setting, and reloads use SIGHUP"
+    compliance_label: true
+    objective: >
+      `cli -s` cannot fail. yaml-cli stores whatever dotted path it is handed, creating
+      the intermediate mappings as it goes, and exits 0; majestic then ignores a key it
+      does not recognise. A mistyped setting path therefore applies nothing and reports
+      nothing for the life of the device — OpenIPC/builder shipped six of them on
+      t40_lite_movols-mo-805p behind a trailing colon. The reload signal is the same
+      shape of mistake: majestic reloads on SIGHUP and on nothing else.
+    success_criteria: >
+      Every literal path passed to cli/yaml-cli/sensor_cli -s, -g or -d looks like a YAML
+      key path — components of letters, digits, underscore, dot or dash, no trailing
+      separator, no empty component. A path built at runtime, such as `cli -g ".$1"`, is
+      fine and is not judged here. Where a script asks majestic to reload, it does so with
+      SIGHUP — `killall -1 majestic` or `/etc/init.d/S95majestic reload`.
+    failure_criteria: >
+      The diff adds a cli path carrying a stray character — a trailing colon or equals is
+      the shipped case — or an empty component, in general/overlay/ or
+      general/package/*/files/. Or it signals majestic with anything other than SIGHUP:
+      signal 10 is SIGUSR1, which the bundled thread pool catches to park a thread and
+      never resumes, so `killall -10 majestic` reloads nothing. Do not raise this for a
+      path containing a variable or command substitution, for anything under .github/ or
+      contrib/, or for `cli` used against a file other than /etc/majestic.yaml through an
+      explicit -i.
+
   - title: "Hardware evidence is present and honest"
     compliance_label: true
     objective: >
