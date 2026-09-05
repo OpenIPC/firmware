@@ -435,9 +435,18 @@ can therefore take the streamer away for the rest of the boot. `cli -s` asks for
 reload itself, and checks readiness before it does, so a new script should not add its own
 `killall`.
 
-Raise both against files under `general/overlay/` and `general/package/*/files/`. Neither
-is a compliance gate: a dynamic path (`cli -g ".$1"`) is legitimate and undecidable from
-the diff, and there are reasons to signal by hand.
+Raise both against files under `general/overlay/` and anywhere under
+`general/package/` — including nested layouts such as
+`general/package/legacy/datalink/files/`.
+
+The narrow, decidable half of each is a compliance gate ("cli writes address a real
+setting, and reloads use SIGHUP" in `pr_compliance_checklist.yaml`): a literal path with a
+stray character, and a reload asked for with something other than SIGHUP. What stays a
+judgement call here is everything the diff cannot settle — whether a well-formed key is one
+the target build actually declares, whether a path assembled at runtime is right, and
+whether a script has a good reason to signal by hand. Lifecycle signalling is neither:
+sysupgrade's SIGQUIT, and SIGTERM to stop the daemon, are not reload attempts and are not
+in scope for either.
 
 ---
 

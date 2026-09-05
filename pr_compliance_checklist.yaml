@@ -189,19 +189,27 @@ pr_compliances:
       shape of mistake: majestic reloads on SIGHUP and on nothing else.
     success_criteria: >
       Every literal path passed to cli/yaml-cli/sensor_cli -s, -g or -d looks like a YAML
-      key path — components of letters, digits, underscore, dot or dash, no trailing
-      separator, no empty component. A path built at runtime, such as `cli -g ".$1"`, is
-      fine and is not judged here. Where a script asks majestic to reload, it does so with
-      SIGHUP — `killall -1 majestic` or `/etc/init.d/S95majestic reload`.
+      key path. A single leading dot is the conventional spelling and is correct —
+      `.video0.size` is a well-formed two-component path, not one with an empty first
+      component. After that optional dot, each component is letters, digits, underscore or
+      dash, separated by single dots, with no trailing dot. A path built at runtime, such
+      as `cli -g ".$1"`, is fine and is not judged here. Where a script asks majestic to
+      re-read its configuration, it does so with SIGHUP — `killall -1 majestic` or
+      `/etc/init.d/S95majestic reload`.
     failure_criteria: >
       The diff adds a cli path carrying a stray character — a trailing colon or equals is
-      the shipped case — or an empty component, in general/overlay/ or
-      general/package/*/files/. Or it signals majestic with anything other than SIGHUP:
-      signal 10 is SIGUSR1, which the bundled thread pool catches to park a thread and
-      never resumes, so `killall -10 majestic` reloads nothing. Do not raise this for a
-      path containing a variable or command substitution, for anything under .github/ or
-      contrib/, or for `cli` used against a file other than /etc/majestic.yaml through an
-      explicit -i.
+      the shipped case — a doubled dot, or a trailing dot, in general/overlay/ or anywhere
+      under general/package/, including nested layouts such as
+      general/package/legacy/datalink/files/. Or it asks majestic to re-read its
+      configuration with a signal that is not SIGHUP: signal 10 is SIGUSR1, which the
+      bundled thread pool catches to park a thread and never resumes, so
+      `killall -10 majestic` reloads nothing.
+      This is about reload intent only. Lifecycle signalling is untouched and must not be
+      raised: sysupgrade sends SIGQUIT (`killall -q -3 majestic`) to make majestic release
+      the SDK while staying alive, and SIGTERM or SIGKILL to stop it are ordinary. Nor
+      raise it for a path containing a variable or command substitution, for anything
+      under .github/ or contrib/, or for `cli` used against a file other than
+      /etc/majestic.yaml through an explicit -i.
 
   - title: "Hardware evidence is present and honest"
     compliance_label: true
