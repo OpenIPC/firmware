@@ -406,6 +406,48 @@ Flag a genuinely unsupported construct in a script under `general/overlay/` or
 `general/package/*/files/`. Do not flag style, and do not flag anything under `.github/`
 or `contrib/`, which run under bash away from the device.
 
+
+### 7.2 A `cli` setting path is unvalidated, and signalling majestic has one right signal
+
+Two mistakes around `cli` are silent on the camera and cheap to catch in review.
+
+**The path.** `cli -s` writes into `/etc/majestic.yaml` through yaml-cli, which stores
+whatever dotted path it is handed — creating the intermediate mappings as it goes — and
+exits 0. majestic then ignores a key it does not recognise. So a mistyped path applies
+nothing and reports nothing, for the life of the device.
+`OpenIPC/builder`'s `t40_lite_movols-mo-805p` shipped six of them behind a trailing colon
+(`cli -s .video0.bitrate: 4000`), and bitrate, rate-control mode, profile, GOP size, GOP
+mode and OSD size never applied on that camera. Read the path, not just the value:
+every component should look like a YAML key, with no trailing separator and no empty
+component. OpenIPC/builder now lints exactly this in CI.
+
+**The signal.** majestic reloads on `SIGHUP`, which is `killall -1 majestic` or
+`/etc/init.d/S95majestic reload`. `infinity6e`'s `zoom.sh` sends `killall -10` in nine
+places; signal 10 is `SIGUSR1`, which majestic's bundled thread pool catches to park a
+thread and never resumes (OpenIPC/firmware#2365), so those crops were never applied.
+
+And a signal is only safe once majestic can catch it. `S95majestic` starts it with
+`start-stop-daemon -b`, which returns at the fork, so the process is visible to `pidof`
+well before `main()` installs a `SIGHUP` handler — and until then the default action for
+`SIGHUP` is to terminate. Measured on a hi3516ev200, the process appears with `SigCgt`
+still `0000000000000000`. A boot-time script that writes config and signals immediately
+can therefore take the streamer away for the rest of the boot. `cli -s` asks for the
+reload itself, and checks readiness before it does, so a new script should not add its own
+`killall`.
+
+Raise both against files under `general/overlay/` and anywhere under
+`general/package/` — including nested layouts such as
+`general/package/legacy/datalink/files/`.
+
+The narrow, decidable half of each is a compliance gate ("cli writes address a real
+setting, and reloads use SIGHUP" in `pr_compliance_checklist.yaml`): a literal path with a
+stray character, and a reload asked for with something other than SIGHUP. What stays a
+judgement call here is everything the diff cannot settle — whether a well-formed key is one
+the target build actually declares, whether a path assembled at runtime is right, and
+whether a script has a good reason to signal by hand. Lifecycle signalling is neither:
+sysupgrade's SIGQUIT, and SIGTERM to stop the daemon, are not reload attempts and are not
+in scope for either.
+
 ---
 
 ## 8. Things that must not reach `master`
