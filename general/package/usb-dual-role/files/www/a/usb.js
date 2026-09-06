@@ -2,7 +2,7 @@
 //
 // Two owners, two calls, in this order and not the other one:
 //
-//   1. cgi-bin/j/usb.cgi?role=...   the DWC3 role. Releases majestic's hold on
+//   1. /cgi-bin/j/usb.cgi?role=...  the DWC3 role. Releases majestic's hold on
 //                                   the video node, flips the port, and leaves
 //                                   the pipeline down.
 //   2. POST /api/v1/config          the two majestic flags. Saving them is also
@@ -52,10 +52,27 @@
 		if (r) r.checked = true;
 	}
 
+	// Absolute, like every other j/ CGI call in this UI. Relative, it resolved
+	// against the directory of the page asking — which IS /cgi-bin/ — so the
+	// `cgi-bin/` in the path doubled and every request went to
+	// /cgi-bin/cgi-bin/j/usb.cgi and 404'd. The page could never read the port,
+	// and could never change it either (the same URL below).
+	const USB_CGI = '/cgi-bin/j/usb.cgi';
+
+	// null, not { ok: false }, when the request does not complete.
+	//
+	// The same rule config() states below, and for the same reason: the CGI
+	// sends `ok:false, supported:false` for a camera that genuinely has no
+	// switchable port, and folding a 404, a 500 or an unreachable camera into
+	// that same value made the page answer a question about the HARDWARE with
+	// what was really "nobody replied". It printed "this camera may not have a
+	// switchable USB port" at cameras whose port was working perfectly — which
+	// is precisely how the doubled URL above stayed hidden, since the one
+	// symptom it produced read as a statement about the board.
 	function usbStatus() {
-		return rawFetch('cgi-bin/j/usb.cgi', { credentials: 'same-origin' })
-			.then(r => r.ok ? r.json() : { ok: false })
-			.catch(() => ({ ok: false }));
+		return rawFetch(USB_CGI, { credentials: 'same-origin' })
+			.then(r => r.ok ? r.json() : null)
+			.catch(() => null);
 	}
 
 	// null, not {}, when the read fails.
@@ -115,10 +132,23 @@
 		const known = cfg !== null && cfg !== undefined;
 		setActionable(portKnown && known);
 
-		if (!portKnown) {
+		// Three different answers, and they were one. `null` is nobody having
+		// replied, which says nothing about the port; `supported:false` is the
+		// camera saying it has no switchable one; anything else with `ok:false`
+		// is the camera failing to answer a question it does understand.
+		if (st === null) {
 			statusEl.innerHTML = mjNotice('warn',
-				'<b>Cannot read the port</b> &mdash; this camera may not have a ' +
-				'switchable USB port.');
+				'<b>Cannot reach the camera</b> &mdash; the port was not read, ' +
+				'so nothing here describes it. This usually means the daemon ' +
+				'is restarting; try again in a moment.');
+			return;
+		}
+		if (!portKnown) {
+			statusEl.innerHTML = mjNotice('warn', st.supported === false
+				? '<b>No switchable USB port</b> &mdash; this camera\u2019s USB ' +
+					'controller cannot change role, so there is nothing to set here.'
+				: '<b>Cannot read the port</b> &mdash; the camera answered, but ' +
+					'could not say what the port is doing.');
 			return;
 		}
 
@@ -197,7 +227,7 @@
 		apply.disabled = true;
 		text(msg, 'Switching…');
 
-		rawFetch('cgi-bin/j/usb.cgi?role=' + encodeURIComponent(wire),
+		rawFetch(USB_CGI + '?role=' + encodeURIComponent(wire),
 			{ method: 'POST', credentials: 'same-origin' })
 			.then(r => r.ok ? r.json() : { ok: false })
 			.then(st => {
@@ -229,8 +259,13 @@
 				// to make visible -- so it cannot be what "Done." papers over.
 				// Host asks for no such thing: a port with nothing plugged into
 				// it has no node and is working correctly.
+				// st is null when the check-back could not reach the camera,
+				// which is a likely moment for it: the pipeline is being
+				// rebuilt. Unknown is not proof, so it reads as not-yet rather
+				// than throwing on a null and reporting the TypeError as the
+				// reason the switch failed.
 				const pipelineOk = role !== 'device' ||
-					(st.gadget === true && !!st.video);
+					!!(st && st.gadget === true && st.video);
 				text(msg, roleOk && flagsOk && pipelineOk ? 'Done.'
 					: 'Applied, but the camera does not report it yet.');
 			})
