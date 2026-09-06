@@ -58,12 +58,20 @@
 			.catch(() => ({ ok: false }));
 	}
 
+	// null, not {}, when the read fails.
+	//
+	// An empty object is not neutral here: every flag read off it comes back
+	// undefined, which compares as "off", which this page would then print as
+	// a fact and preselect "Nothing" from. Press Apply on that and it writes
+	// both flags false -- turning off a second camera that was working, because
+	// the page could not reach the daemon for a moment. Unknown has to stay
+	// unknown all the way to the screen.
 	function config() {
 		// Not mjConfig(): that memoises, and this page's whole job is to change
 		// the values it would be caching.
 		return apiFetch('/api/v1/config.json', { credentials: 'same-origin' })
-			.then(r => r.ok ? r.json() : {})
-			.catch(() => ({}));
+			.then(r => r.ok ? r.json() : null)
+			.catch(() => null);
 	}
 
 	// The node has to be written along with the flag, not left at whatever it
@@ -101,8 +109,10 @@
 			return;
 		}
 
-		const usbcam = String(mjGet(cfg, 'usbcam.enabled')) === 'true';
-		const gadget = String(mjGet(cfg, 'uvcgadget.enabled')) === 'true';
+		const known = cfg !== null;
+		const usbcam = known && String(mjGet(cfg, 'usbcam.enabled')) === 'true';
+		const gadget = known && String(mjGet(cfg, 'uvcgadget.enabled')) === 'true';
+		const onoff = v => (known ? (v ? 'on' : 'off') : 'cannot tell');
 		const attached = (st.attached || '').trim();
 
 		let rows = '';
@@ -110,13 +120,27 @@
 
 		if (st.role === 'device') {
 			row('Port', 'offered to a computer as a webcam');
-			row('Offering it', st.gadget && gadget ? 'yes' : 'not right now');
+			row('Offering it', known ? (st.gadget && gadget ? 'yes' : 'not right now')
+				: 'cannot tell');
 		} else {
 			row('Port', 'ready for a webcam to be plugged in');
 			row('Plugged in', attached ? esc(attached.split('\n')[0]) : 'nothing');
-			row('Second camera', usbcam ? 'on' : 'off');
+			row('Second camera', onoff(usbcam));
 		}
 		statusEl.innerHTML = rows;
+
+		// Say the settings are unreadable rather than reporting them as off,
+		// and take Apply away: writing a role from a page that cannot read the
+		// current one is how a working camera gets switched off by accident.
+		if (!known) {
+			statusEl.innerHTML += mjNotice('warn',
+				'<b>Cannot read this camera&rsquo;s settings</b> &mdash; the ' +
+				'port is shown above, but what is using it is unknown until ' +
+				'the camera answers again.');
+			if (apply) apply.disabled = true;
+			return;
+		}
+		if (apply) apply.disabled = false;
 
 		// The two states worth saying something about, because in both of them
 		// the camera looks configured and produces nothing.
@@ -135,7 +159,7 @@
 
 	function refresh() {
 		return Promise.all([usbStatus(), config()]).then(([st, cfg]) => {
-			if (st && st.ok && !checked()) {
+			if (st && st.ok && cfg !== null && !checked()) {
 				const usbcam = String(mjGet(cfg, 'usbcam.enabled')) === 'true';
 				const gadget = String(mjGet(cfg, 'uvcgadget.enabled')) === 'true';
 				// The role says what the port can do; the flags say whether
@@ -145,7 +169,7 @@
 					: (usbcam ? 'host' : 'off'));
 			}
 			render(st, cfg);
-			return st;
+			return { st: st, cfg: cfg };
 		});
 	}
 
@@ -172,8 +196,25 @@
 				return setFlags(role, st.video);
 			})
 			.then(saved => {
-				text(msg, saved ? 'Done.' : 'The port changed, the settings did not.');
+				if (!saved)
+					throw new Error('the port changed, but the settings did not save');
+				// Not "Done." yet. A 200 from the config write says the daemon
+				// accepted it, not that the pipeline came back in the new role
+				// -- and the rebuild is exactly the part that can lose a race
+				// with USB enumeration. Ask the camera before claiming.
+				text(msg, 'Applied, checking\u2026');
 				return refresh();
+			})
+			.then(res => {
+				const st = res && res.st, cfg = res && res.cfg;
+				const want = ROLE_KEYS[role] || ROLE_KEYS.off;
+				const roleOk = st && st.ok &&
+					st.role === (role === 'device' ? 'device' : 'host');
+				const flagsOk = cfg !== null && cfg !== undefined &&
+					String(mjGet(cfg, 'usbcam.enabled')) === want.usbcam &&
+					String(mjGet(cfg, 'uvcgadget.enabled')) === want.uvcgadget;
+				text(msg, roleOk && flagsOk ? 'Done.'
+					: 'Applied, but the camera does not report it yet.');
 			})
 			.catch(err => {
 				text(msg, '');
