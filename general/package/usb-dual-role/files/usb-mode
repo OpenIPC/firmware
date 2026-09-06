@@ -1,0 +1,302 @@
+#!/bin/sh
+#
+# Switch the single DWC3 controller between USB host and USB device roles.
+#
+# host   - xHCI drives the port. This is what the usbcam second-camera path
+#          needs (majestic consuming a USB webcam).
+# device - the UVC gadget drives the port, so a PC sees this camera as a
+#          webcam.
+#
+# The two are mutually exclusive: xHCI HCSPARAMS1 reports MaxPorts = 1, so
+# there is one port and one role at a time. Switching does not need a reboot.
+#
+# Why this is more than one echo: dwc3_set_mode() (drivers/usb/dwc3/core.c)
+# only flips GCTL.PRTCAPDIR. It does not stop the host stack or start the
+# gadget stack. Writing the debugfs `mode` file on its own leaves xHCI still
+# bound and its DMA engine still live, pointed at a controller that has been
+# re-aimed underneath it. Unbind first, then flip, then bring the other side
+# up.
+
+set -e
+
+STATE=/etc/usbmode
+GADGET=/sys/kernel/config/usb_gadget/uvc0
+GADGET_SETUP=/usr/sbin/uvc-gadget-setup
+
+die() { echo "usb-mode: $*" >&2; exit 1; }
+
+dwc3_mode_file() {
+	for f in /sys/kernel/debug/*.dwc3/mode; do
+		[ -e "$f" ] && { echo "$f"; return 0; }
+	done
+	return 1
+}
+
+xhci_device() {
+	for d in /sys/bus/platform/drivers/xhci-hcd/*.auto; do
+		[ -e "$d" ] && { basename "$d"; return 0; }
+	done
+	# Not currently bound; fall back to the device that exists on the bus.
+	for d in /sys/bus/platform/devices/xhci-hcd.*.auto; do
+		[ -e "$d" ] && { basename "$d"; return 0; }
+	done
+	return 1
+}
+
+udc_name() {
+	for u in /sys/class/udc/*; do
+		[ -e "$u" ] && { basename "$u"; return 0; }
+	done
+	return 1
+}
+
+# Wait for the USB bus to finish coming up after a bind.
+#
+# Binding xhci-hcd only *starts* host mode. Enumeration, the driver claiming
+# the device and the /dev/video node uvcvideo then creates all happen
+# afterwards and asynchronously, and returning before they finish is not a
+# cosmetic problem: majestic opens its capture node once per pipeline build, so
+# a rebuild that overtakes enumeration logs "second camera disabled" and stays
+# that way until something changes the config again. Measured on gk7205v200 the
+# two events landed in the same second, in the wrong order.
+#
+# Bounded on both halves, and running out of time is not an error: a port with
+# nothing plugged into it never produces a device, which is a perfectly ordinary
+# way to run in host mode.
+nap() { usleep 100000 2>/dev/null || sleep 1; }
+
+# The mirror of settle_bus, for the way back.
+#
+# Composing the gadget while the host-mode devices are still going away is how
+# the gadget ends up on /dev/video1: uvcvideo has not released /dev/video0 yet,
+# so the gadget's node takes the next free minor. majestic names a fixed path,
+# looks for video0, does not find it, and logs "gadget not started" -- a switch
+# that reports success and produces a camera a PC cannot see. Observed on
+# gk7205v200 with a webcam attached; the unbind and the compose landed in the
+# same second.
+#
+# So wait for the bus to empty before composing. Bounded, and a timeout is not
+# an error for the same reason as settle_bus: the port may have had nothing on
+# it to begin with.
+settle_unbind() {
+	_i=0
+	while [ $_i -lt 40 ]; do
+		_any=
+		for _d in /sys/bus/usb/devices/[0-9]-[0-9]*; do
+			case "$_d" in *:*) continue ;; esac
+			if [ -e "$_d" ]; then
+				_any=1
+			fi
+		done
+		if [ -z "$_any" ]; then
+			return 0
+		fi
+		_i=$((_i + 1))
+		nap
+	done
+	return 0
+}
+
+settle_bus() {
+	_i=0
+	while [ $_i -lt 40 ]; do
+		for _d in /sys/bus/usb/devices/[0-9]-[0-9]*; do
+			# Interfaces carry a colon; we want the device they hang off.
+			case "$_d" in *:*) continue ;; esac
+			if [ -e "$_d" ]; then
+				_j=0
+				while [ $_j -lt 30 ]; do
+					for _if in "$_d":*; do
+						if [ -e "$_if/driver" ]; then
+							return 0
+						fi
+					done
+					_j=$((_j + 1))
+					nap
+				done
+				return 0
+			fi
+		done
+		_i=$((_i + 1))
+		nap
+	done
+	return 0
+}
+
+need_debugfs() {
+	mountpoint -q /sys/kernel/debug 2>/dev/null ||
+		mount -t debugfs none /sys/kernel/debug
+	MODE_FILE=$(dwc3_mode_file) ||
+		die "no dwc3 mode file; is CONFIG_USB_DWC3_DUAL_ROLE enabled and debugfs mounted?"
+}
+
+teardown_gadget() {
+	[ -d "$GADGET" ] || return 0
+
+	# Unbind from the UDC first: this drops the D+ pullup so the host sees a
+	# disconnect rather than a device that stops answering.
+	if [ -e "$GADGET/UDC" ] && [ -s "$GADGET/UDC" ]; then
+		echo "" > "$GADGET/UDC" 2>/dev/null || true
+	fi
+
+	# configfs rmdir is strict about ordering: links before the things they
+	# point at, leaves before their parents. ENOTEMPTY here means something
+	# below was missed.
+	rm -f "$GADGET/configs/c.1/uvc.0"
+
+	F="$GADGET/functions/uvc.0"
+	rm -f "$F/control/class/fs/h" "$F/control/class/ss/h"
+	rm -f "$F/streaming/class/fs/h" "$F/streaming/class/hs/h" "$F/streaming/class/ss/h"
+	# uvc-gadget-setup composes whichever single format majestic is set to, so
+	# tear down both possibilities: only one of them exists on any given boot.
+	rm -f "$F/streaming/header/h/f"
+	rmdir "$F/streaming/header/h"      2>/dev/null || true
+	rmdir "$F/streaming/mjpeg/m/f"     2>/dev/null || true
+	rmdir "$F/streaming/mjpeg/m"       2>/dev/null || true
+	rmdir "$F/streaming/framebased/h/f" 2>/dev/null || true
+	rmdir "$F/streaming/framebased/h"  2>/dev/null || true
+	rmdir "$F/control/header/h"        2>/dev/null || true
+
+	# EBUSY here means a userspace process still holds the gadget's
+	# /dev/videoN open -- almost always majestic. Stop it first.
+	if ! rmdir "$F" 2>/dev/null; then
+		die "cannot remove uvc.0 (EBUSY?) -- is majestic still holding /dev/video*? stop it first"
+	fi
+
+	rmdir "$GADGET/configs/c.1/strings/0x409" 2>/dev/null || true
+	rmdir "$GADGET/configs/c.1"               2>/dev/null || true
+	rmdir "$GADGET/strings/0x409"             2>/dev/null || true
+	rmdir "$GADGET"                           2>/dev/null || true
+}
+
+to_device() {
+	need_debugfs
+
+	# Both checks before anything destructive, because the teardown below
+	# cannot be walked back: it unbinds xHCI and re-aims the controller, and a
+	# failure discovered afterwards leaves the port dead in both roles until
+	# someone reboots the camera.
+	#
+	# Selecting this package is a statement about the board, not a guarantee
+	# about the kernel it is running: dwc3 can be built host-only --
+	# CONFIG_USB_DWC3_HOST with _GADGET and _DUAL_ROLE off, which is what
+	# hi3516ev300.neo has -- and then there is no device role to switch to at
+	# all. Without this check that is discovered after the host is already gone.
+	udc_name >/dev/null ||
+		die "no UDC on this board: its dwc3 has no gadget side, so there is no device role to switch to"
+
+	# The gadget's descriptors are composed from majestic's configuration, so
+	# the composer ships with majestic rather than in the shared overlay.
+	[ -x "$GADGET_SETUP" ] ||
+		die "$GADGET_SETUP is missing: the UVC gadget is built from majestic's configuration and ships with it"
+
+	# Start from no gadget, even when we are already in device mode.
+	#
+	# Two things this buys, both of which used to be traps. Re-applying the
+	# role the port is already in is an ordinary thing to do -- it is what
+	# pressing Apply does when nothing was changed -- and binding a gadget that
+	# is already bound is EBUSY, so without this a harmless repeat reported
+	# failure. And the descriptors are composed once from the config: a
+	# resolution or format changed since then does not reach the host until the
+	# gadget is built again, which used to mean knowing to round-trip through
+	# host mode first.
+	#
+	# Safe because tearing down needs the video node free, and it says so
+	# plainly when it is not.
+	teardown_gadget
+
+	if X=$(xhci_device) && [ -e "/sys/bus/platform/drivers/xhci-hcd/$X" ]; then
+		# Unbind only from the host role. Asking xhci_halt() to halt a
+		# controller whose GCTL.PRTCAPDIR is not HOST means halting a host
+		# that was never really running, and it times out:
+		#   xhci-hcd.0.auto: Host not halted after 16000 microseconds.
+		#   xhci-hcd.0.auto: Host controller not halted, aborting reset.
+		# Leaving it un-halted is precisely the live-DMA-engine state this
+		# unbind exists to avoid. On a kernel that settles the role before
+		# registering the host, the core is already in the host role whenever
+		# xHCI is bound and this flip is a no-op; it stays as the cheap
+		# guarantee that the unbind below halts cleanly on one that does not.
+		[ "$(cat "$MODE_FILE")" = host ] || echo host > "$MODE_FILE"
+
+		echo "usb-mode: unbinding host controller $X"
+		echo "$X" > /sys/bus/platform/drivers/xhci-hcd/unbind
+		settle_unbind
+	fi
+
+	echo device > "$MODE_FILE"
+
+	modprobe configfs     2>/dev/null || true
+	modprobe libcomposite 2>/dev/null || true
+	modprobe usb_f_uvc    2>/dev/null || true
+
+	mountpoint -q /sys/kernel/config 2>/dev/null ||
+		mount -t configfs none /sys/kernel/config
+
+	"$GADGET_SETUP"
+
+	UDC=$(udc_name) ||
+		die "no UDC registered -- is dr_mode=\"otg\" in the device tree?"
+	echo "$UDC" > "$GADGET/UDC"
+
+	echo device > "$STATE"
+	echo "usb-mode: device (UVC gadget bound to $UDC)"
+}
+
+to_host() {
+	need_debugfs
+
+	teardown_gadget
+
+	# Remember which role we are leaving: it decides whether an already-bound
+	# host stack has to be re-probed. See below.
+	was=$(cat "$MODE_FILE")
+	echo host > "$MODE_FILE"
+
+	if X=$(xhci_device); then
+		if [ ! -e "/sys/bus/platform/drivers/xhci-hcd/$X" ]; then
+			echo "usb-mode: rebinding host controller $X"
+			echo "$X" > /sys/bus/platform/drivers/xhci-hcd/bind
+			settle_bus
+		elif [ "$was" != host ]; then
+			# Bound, but bound while the core was in another role: it
+			# probed, reset the controller and brought up its root hubs
+			# against a port it was not driving, and it will never report a
+			# connect -- the port powers up and stays at CCS = 0, so lsusb
+			# shows nothing but the root hubs however many devices are
+			# plugged in. Writing MODE_FILE only flips GCTL.PRTCAPDIR; it
+			# does not re-initialise a live xHCI. Making it probe again is
+			# what actually brings the port up.
+			#
+			# A kernel that settles the role before registering the host
+			# never gets here. This is what lets a rootfs carrying this
+			# script recover on one that does not.
+			echo "usb-mode: re-probing host controller $X (was $was)"
+			echo "$X" > /sys/bus/platform/drivers/xhci-hcd/unbind
+			echo "$X" > /sys/bus/platform/drivers/xhci-hcd/bind
+			settle_bus
+		fi
+	fi
+
+	echo host > "$STATE"
+	echo "usb-mode: host"
+}
+
+status() {
+	need_debugfs
+	echo "dwc3 role : $(cat "$MODE_FILE")"
+	echo "persisted : $([ -r "$STATE" ] && cat "$STATE" || echo '(unset, defaults to host)')"
+	echo "udc       : $(udc_name || echo '(none)')"
+	echo "xhci bound: $(xhci_device >/dev/null 2>&1 && \
+		([ -e "/sys/bus/platform/drivers/xhci-hcd/$(xhci_device)" ] && echo yes || echo no) || echo '(no device)')"
+	echo "gadget    : $([ -d "$GADGET" ] && echo "composed, UDC='$(cat "$GADGET/UDC" 2>/dev/null)'" || echo 'not composed')"
+}
+
+case "$1" in
+	device) to_device ;;
+	host)   to_host ;;
+	status) status ;;
+	*)
+		echo "Usage: $0 {host|device|status}"
+		exit 1
+		;;
+esac

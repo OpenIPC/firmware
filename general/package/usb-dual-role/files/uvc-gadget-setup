@@ -1,0 +1,194 @@
+#!/bin/sh
+#
+# Compose the UVC gadget in configfs, advertising exactly the one format and
+# frame size majestic is configured to serve.
+#
+# Advertising a menu is worse than useless here. majestic answers every
+# PROBE/COMMIT with its own bFormatIndex/bFrameIndex, because it has exactly one
+# stream to give -- it cannot switch encoder geometry or codec to follow the
+# host. So anything extra in the descriptors is a resolution or a codec the host
+# is invited to select and will then not receive: ask for MJPEG and H.264
+# arrives (an SPS where a JPEG SOI belongs, which is garbage to every consumer),
+# ask for 1080p and 720p arrives (decoders recover from the SPS, anything
+# trusting the negotiated V4L2 format does not).
+#
+# Re-run this after changing uvcgadget.format/size (usb-mode host && usb-mode
+# device, or a reboot) or the descriptors will describe the previous config.
+#
+# Run after the gadget modules are loaded and configfs is mounted, and BEFORE
+# anything writes the UDC name. `usb-mode device` does both for you.
+#
+# Notes that cost real debugging time, do not "fix" these:
+#
+#  * The streaming group is "framebased", NOT "frame_based". The latter is the
+#    upstream >=5.15 spelling; this 4.9 vendor tree uses framebased. Using the
+#    wrong one fails silently -- mkdir just creates a junk directory that the
+#    gadget ignores, and the host sees no H.264 format.
+#  * control/class has only fs and ss. streaming/class has fs, hs and ss.
+#    Creating control/class/hs fails.
+#  * Attribute file names are camelCase (wWidth, dwFrameInterval, ...), even
+#    though the kernel's C identifiers are snake_case.
+#  * Do NOT try to set streaming_maxpacket / streaming_interval /
+#    streaming_maxburst. uvc_configfs.c's UVCG_OPTS_ATTR macro takes no `aname`
+#    parameter but still calls UVC_ATTR(..., aname), so all three land in
+#    configfs as files literally named "aname" and are unreachable. This is
+#    harmless: uvc_alloc_inst() already defaults them to 1 / 3072 / 15, and
+#    3072 is the USB 2.0 high-speed maximum (3 transactions x 1024 B per
+#    microframe = ~24.5 MB/s isoc ceiling). There is nothing better to set.
+#  * The framebased format's GUID is hardcoded to H.264 by the kernel, so
+#    there is no guidFormat attribute to write for it.
+
+set -e
+
+G=/sys/kernel/config/usb_gadget/uvc0
+YAML=/etc/majestic.yaml
+
+# Read majestic's config, falling back to the same defaults uvcgadget_start()
+# uses so a missing key or a missing `cli` still composes a working gadget.
+cfg() {
+	_v=$(cli -g ".$1" 2>/dev/null) || _v=""
+	case "$_v" in ""|null|"~") echo "$2" ;; *) echo "$_v" ;; esac
+}
+
+# mjpeg, to agree with majestic: uvcgadget_start() treats anything that is not
+# literally "h264" as MJPEG, so a missing key or an unreadable config has to
+# land on MJPEG here too. Defaulting to h264 -- as this did -- meant the
+# descriptors advertised H.264 while majestic served MJPEG, which puts a JPEG
+# SOI where the host is expecting an SPS.
+FORMAT=$(cfg uvcgadget.format mjpeg)
+# majestic's rule, applied once here so every branch below inherits it:
+# uvcgadget_start() takes anything that is not literally "h264" as MJPEG. The
+# opposite reading -- "anything that is not literally mjpeg is H.264", which is
+# what the descriptor branch below used to do on its own -- disagrees with the
+# stream for every typo, every different casing, and every value a newer
+# majestic might learn. The host is then told one codec and sent the other, with
+# no way to tell which of the two is lying.
+case "$FORMAT" in
+	h264) ;;
+	*)    FORMAT=mjpeg ;;
+esac
+SIZE=$(cfg uvcgadget.size 1280x720)
+WIDTH=${SIZE%%x*}
+HEIGHT=${SIZE##*x}
+case "$WIDTH$HEIGHT" in
+	*[!0-9]*|"") WIDTH=1280; HEIGHT=720 ;;
+esac
+
+FPS=$(cfg uvcgadget.fps 30)
+[ "$FPS" -gt 0 ] 2>/dev/null || FPS=30
+
+# MJPEG frames come from the always-on JPEG channel, so the rate that channel
+# runs at is a ceiling on what the gadget can actually deliver. majestic applies
+# that ceiling one-directionally -- it drops the advertised rate to jpeg.fps
+# only when jpeg.fps is the lower of the two -- so match it exactly. Taking
+# jpeg.fps unconditionally, as this did, disagrees with majestic whenever
+# jpeg.fps is the larger: the descriptors would name one rate and the
+# PROBE/COMMIT answer another, and the host has no way to tell which is real.
+if [ "$FORMAT" = "mjpeg" ]; then
+	JPEG_FPS=$(cfg jpeg.fps 5)
+	if [ "$JPEG_FPS" -gt 0 ] 2>/dev/null && [ "$JPEG_FPS" -lt "$FPS" ]; then
+		FPS=$JPEG_FPS
+	fi
+fi
+
+# Frame intervals are in 100 ns units: 10000000 / fps.
+INTERVAL=$((10000000 / FPS))
+
+if [ -d "$G" ]; then
+	echo "uvc-gadget-setup: $G already exists, nothing to do"
+	exit 0
+fi
+
+mkdir -p "$G"
+
+# 0x1d6b/0x0102 is the Linux Foundation vendor ID with the "UVC gadget"
+# product ID used by the in-tree g_webcam example. Fine for a device that is
+# never going to ship a USB-IF certified VID/PID.
+echo 0x1d6b > "$G/idVendor"
+echo 0x0102 > "$G/idProduct"
+
+mkdir -p "$G/strings/0x409"
+echo "OpenIPC" > "$G/strings/0x409/manufacturer"
+# Whatever board this is, not the one it was written on. This ships in the
+# shared overlay, and telling a host it is talking to a gk7205v200 when it is
+# not is worse than telling it less. ipcinfo knows the SoC; when it cannot
+# answer, the shorter name is still true.
+_soc=$(ipcinfo --chip-name 2>/dev/null)
+echo "OpenIPC ${_soc:-camera} UVC" > "$G/strings/0x409/product"
+[ -r /sys/class/net/eth0/address ] &&
+	tr -d ':' < /sys/class/net/eth0/address > "$G/strings/0x409/serialnumber" ||
+	echo "0000" > "$G/strings/0x409/serialnumber"
+
+mkdir -p "$G/configs/c.1/strings/0x409"
+echo "UVC" > "$G/configs/c.1/strings/0x409/configuration"
+# Self-powered: the camera runs off its own PSU, it draws nothing from the host.
+echo 0xc0 > "$G/configs/c.1/bmAttributes"
+echo 0    > "$G/configs/c.1/MaxPower"
+
+mkdir -p "$G/functions/uvc.0"
+F="$G/functions/uvc.0"
+
+# One interval, the one we can sustain. Hosts pick the fastest entry on offer,
+# so a rate we cannot feed is not a harmless extra: the host commits to it,
+# sizes its timing from it, and then reports the shortfall as missing frames.
+#
+# This MUST reach the kernel as a single write(): configfs invokes the
+# attribute's store() once per write() syscall, and each store() replaces the
+# whole list rather than appending. busybox `printf '%s\n%s\n' a b` emits one
+# write() per directive, so it stores only the last value and then fails with
+# EINVAL on the second write. An `echo` of one string is a single write().
+
+# $1 format dir, $2 min bitrate, $3 max bitrate
+add_frame() {
+	_d="$1/f"
+	mkdir -p "$_d"
+	echo "$WIDTH"    > "$_d/wWidth"
+	echo "$HEIGHT"   > "$_d/wHeight"
+	echo "$INTERVAL" > "$_d/dwDefaultFrameInterval"
+	echo "$INTERVAL" > "$_d/dwFrameInterval"
+	echo "$2"        > "$_d/dwMinBitRate"
+	echo "$3"        > "$_d/dwMaxBitRate"
+}
+
+# Bit rates are informational; scale them off the frame area so the numbers stay
+# sane whatever size was configured.
+PIXELS=$((WIDTH * HEIGHT))
+
+if [ "$FORMAT" = "mjpeg" ]; then
+	mkdir -p "$F/streaming/mjpeg/m"
+	add_frame "$F/streaming/mjpeg/m" $((PIXELS * 13)) $((PIXELS * 33))
+	# dwMaxVideoFrameBufferSize is an upper bound the host sizes its buffer
+	# from; w*h*2 is a generous ceiling for JPEG. Undersizing truncates frames.
+	echo $((PIXELS * 2)) > "$F/streaming/mjpeg/m/f/dwMaxVideoFrameBufferSize"
+	STREAM_FORMAT="$F/streaming/mjpeg/m"
+else
+	mkdir -p "$F/streaming/framebased/h"
+	add_frame "$F/streaming/framebased/h" $((PIXELS * 2)) $((PIXELS * 9))
+	# dwBytesPerLine is meaningless for a compressed format; 0 says "variable".
+	echo 0 > "$F/streaming/framebased/h/f/dwBytesPerLine"
+	STREAM_FORMAT="$F/streaming/framebased/h"
+fi
+
+# --- headers and class links -------------------------------------------------
+# Formats link INTO the streaming header; the header links INTO each speed
+# class.
+#
+# Targets must be ABSOLUTE. configfs_symlink() resolves the target with
+# kern_path(), which resolves a relative path against the calling process's
+# CWD -- not against the directory the link lives in. The upstream
+# gadget-testing.txt recipe gets away with relative targets only because it
+# cd's into each directory first. Absolute paths do not care where we are.
+mkdir -p "$F/streaming/header/h"
+ln -s "$STREAM_FORMAT" "$F/streaming/header/h/f"
+
+ln -s "$F/streaming/header/h" "$F/streaming/class/fs/h"
+ln -s "$F/streaming/header/h" "$F/streaming/class/hs/h"
+ln -s "$F/streaming/header/h" "$F/streaming/class/ss/h"
+
+mkdir -p "$F/control/header/h"
+ln -s "$F/control/header/h" "$F/control/class/fs/h"
+ln -s "$F/control/header/h" "$F/control/class/ss/h"
+
+ln -s "$F" "$G/configs/c.1/uvc.0"
+
+echo "uvc-gadget-setup: composed $G ($FORMAT ${WIDTH}x${HEIGHT}@${FPS})"

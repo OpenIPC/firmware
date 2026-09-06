@@ -1,0 +1,19 @@
+config BR2_PACKAGE_USB_DUAL_ROLE
+	bool "USB dual-role (host / UVC gadget) switching"
+	help
+	  Runtime switching of a dual-role DWC3 USB port between host and
+	  device.
+
+	  In host mode a USB webcam plugged into the camera is served as a
+	  second camera; in device mode the camera presents itself to a PC
+	  as an ordinary USB webcam over the UVC gadget. One port, one role
+	  at a time, chosen with usb-mode and remembered in /etc/usbmode.
+
+	  Only useful where the device tree wires dwc3 as dual-role and the
+	  kernel is built with CONFIG_USB_DWC3_DUAL_ROLE. It is a separate
+	  option rather than part of the shared overlay because these images
+	  live at the edge of their flash partitions, and a board that
+	  cannot switch roles should not pay for the scripts that do it.
+
+	  The UVC gadget's descriptors are composed from majestic's
+	  configuration, so device mode wants BR2_PACKAGE_MAJESTIC too.
