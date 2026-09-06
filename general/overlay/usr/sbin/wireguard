@@ -5,12 +5,26 @@ ip link add dev wg0 type wireguard || { echo "Error: Failed to create wg0 interf
 
 WG_PRIVKEY="$(fw_printenv -n wg_privkey)"
 WG_PRESHARED_KEY="$(fw_printenv -n wg_sharkey)"
+ENDPOINT=$(fw_printenv -n wg_endpoint)
+
+case "$ENDPOINT" in
+    [0-9]*)
+        ;;
+    *)
+        HOST="${ENDPOINT%:*}"
+
+        while ! nslookup "$HOST" >/dev/null 2>&1; do
+            sleep 10
+        done
+        ;;
+esac
+
 ( echo "#"
   echo "[Interface]"
   echo "PrivateKey = $WG_PRIVKEY"
   echo
   echo "[Peer]"
-  echo "Endpoint = $(fw_printenv -n wg_endpoint)"
+  echo "Endpoint = $ENDPOINT"
   echo "PersistentKeepalive = $(fw_printenv -n wg_alive)"
   echo "PublicKey = $(fw_printenv -n wg_pubkey)"
   [ -n "$WG_PRESHARED_KEY" ] && echo "PresharedKey = $WG_PRESHARED_KEY"
