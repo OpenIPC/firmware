@@ -937,6 +937,24 @@ printf '%s\n' "$OUT" | grep -q 'NOT be verified' \
     && ok "--insecure announces itself" \
     || bad "--insecure must warn that verification is off, out='$OUT'"
 
+# self_update may only ever consider the copy THIS run fetched. A script left in
+# /tmp by an earlier run (one made with --insecure, say) used to be version-
+# compared and exec'd as root whenever the current fetch failed (Qodo, #2374).
+reset_env
+STUB_CURL_RC=7           # this run's fetch fails
+printf '#!/bin/sh\nscr_version=0.0.0\necho STALE SCRIPT RAN\nexit 42\n' > "$SB/tmp/sysupgrade"
+run -r                   # no -z: self_update runs
+if [ "$RC" -ne 42 ] && nothing_wrote && ! printf '%s\n' "$OUT" | grep -q 'STALE SCRIPT RAN' \
+   && printf '%s\n' "$OUT" | grep -q 'Version checking failed'; then
+    ok "a failed self-update fetch never falls through to a script left by an earlier run"
+else
+    bad "stale /tmp/sysupgrade was consulted after a failed fetch, rc=$RC out='$OUT'"
+fi
+[ -e "$SB/tmp/sysupgrade" ] \
+    && bad "the stale script survived the failed fetch and will be seen by the next run" \
+    || ok "...and the leftover is gone"
+rm -f "$SB/tmp/sysupgrade"
+
 # ---------------------------------------------------------------------------
 echo
 echo "=== Part 2: invariants in $SRC ==="
@@ -1182,6 +1200,9 @@ awk '/^self_update\(\)/,/^}/' "$SRC" | grep -q -- '--proto =https' \
 awk '/^self_update\(\)/,/^}/' "$SRC" | grep -qE 'mv [^ ]*sysupgrade\.part' \
     && ok "self_update stages the download and renames it only when complete" \
     || bad "self_update must not be able to exec a partially downloaded script"
+awk '/^self_update\(\)/,/^}/' "$SRC" | grep -qE 'rm -f [^ ]*/sysupgrade( |$)' \
+    && ok "self_update discards whatever an earlier run left before it fetches" \
+    || bad "self_update must remove any stale /tmp/sysupgrade first, or a failed fetch falls through to it"
 awk '/^probe_url\(\)/,/^}/' "$SRC" | grep -q 'clock_from_http' \
     && ok "a date failure retries once with the clock taken from HTTP, not with -k" \
     || bad "probe_url must fall back to clock_from_http, or an NTP-blocked camera can never upgrade"

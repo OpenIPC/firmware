@@ -886,11 +886,16 @@ self_update() {
 		# verified TLS, https only (no redirect may step down to http), -f so an
 		# error page is not kept, and staged through a rename so a transfer that
 		# died half-way cannot leave a truncated script that still carries the
-		# shebang and a foreign scr_version.
-		curl -s -f -L --proto =https --proto-redir =https $curl_insecure -o /tmp/sysupgrade.part \
+		# shebang and a foreign scr_version. And only the copy THIS run fetched is
+		# ever looked at: whatever an earlier run left behind (one made with
+		# --insecure, say) is removed first, so a failed fetch cannot fall
+		# through to it. Removing the file the running shell may itself have
+		# been exec'd from is fine -- it keeps reading the unlinked inode.
+		rm -f /tmp/sysupgrade /tmp/sysupgrade.part
+		if curl -s -f -L --proto =https --proto-redir =https $curl_insecure -o /tmp/sysupgrade.part \
 			"https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade" \
-			&& mv /tmp/sysupgrade.part /tmp/sysupgrade
-		if [ -f /tmp/sysupgrade ] && grep -q "#!/bin/sh" /tmp/sysupgrade; then
+			&& mv /tmp/sysupgrade.part /tmp/sysupgrade \
+			&& grep -q "#!/bin/sh" /tmp/sysupgrade; then
 			dstv=$(grep scr_version /tmp/sysupgrade | head -1 | cut -f 2 -d '=')
 			if ! [ "$scr_version" = "$dstv" ]; then
 				echo "A new version is available, trying to activate updated script..."
@@ -902,6 +907,7 @@ self_update() {
 				echo "Same version. No update required."
 			fi
 		else
+			rm -f /tmp/sysupgrade.part
 			echo -e "\nVersion checking failed, proceeding with the installed version."
 		fi
 	else
