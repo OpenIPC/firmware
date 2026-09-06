@@ -231,7 +231,22 @@
 			{ method: 'POST', credentials: 'same-origin' })
 			.then(r => r.ok ? r.json() : { ok: false })
 			.then(st => {
-				if (!st.ok)
+				// `error` is the failure, not `ok`. The two answer different
+				// questions and the CGI means both: `ok` says it could read the
+				// port, which stays true after a switch that did not take —
+				// the role and the persisted value are still readable, and
+				// render() below prints them. `error` is usb-mode having
+				// returned nonzero.
+				//
+				// Asking only `ok` let a refused switch through to setFlags(),
+				// which writes majestic's flags for the role that was ASKED
+				// for: the controller stays in the old mode, the video config
+				// moves to the new one, and the camera is left with the two
+				// disagreeing. It could not happen while the URL above was
+				// wrong — the POST 404'd and this threw on the missing page
+				// instead — so fixing that URL is what makes this reachable,
+				// and it belongs in the same change.
+				if (!st.ok || st.error)
 					throw new Error(st.error || 'the port did not change');
 				return setFlags(role, st.video);
 			})
