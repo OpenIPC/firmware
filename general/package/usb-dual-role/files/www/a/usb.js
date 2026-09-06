@@ -101,15 +101,27 @@
 	// its own is not the answer: a port in host mode with nothing plugged into
 	// it and a port with a camera on it are the same role and different
 	// situations, and only one of them is worth doing anything about.
+	// You cannot change what you cannot read. One rule, decided before any of
+	// the early returns below, because there are two ways to be in the dark --
+	// the port endpoint failing and the settings failing -- and an earlier
+	// version only covered the second. With a role already selected from a
+	// refresh that worked, the first left a stale selection armed.
+	function setActionable(ok) {
+		if (apply) apply.disabled = !ok;
+	}
+
 	function render(st, cfg) {
-		if (!st || !st.ok) {
+		const portKnown = !!(st && st.ok);
+		const known = cfg !== null && cfg !== undefined;
+		setActionable(portKnown && known);
+
+		if (!portKnown) {
 			statusEl.innerHTML = mjNotice('warn',
 				'<b>Cannot read the port</b> &mdash; this camera may not have a ' +
 				'switchable USB port.');
 			return;
 		}
 
-		const known = cfg !== null;
 		const usbcam = known && String(mjGet(cfg, 'usbcam.enabled')) === 'true';
 		const gadget = known && String(mjGet(cfg, 'uvcgadget.enabled')) === 'true';
 		const onoff = v => (known ? (v ? 'on' : 'off') : 'cannot tell');
@@ -137,10 +149,8 @@
 				'<b>Cannot read this camera&rsquo;s settings</b> &mdash; the ' +
 				'port is shown above, but what is using it is unknown until ' +
 				'the camera answers again.');
-			if (apply) apply.disabled = true;
 			return;
 		}
-		if (apply) apply.disabled = false;
 
 		// The two states worth saying something about, because in both of them
 		// the camera looks configured and produces nothing.
@@ -213,7 +223,15 @@
 				const flagsOk = cfg !== null && cfg !== undefined &&
 					String(mjGet(cfg, 'usbcam.enabled')) === want.usbcam &&
 					String(mjGet(cfg, 'uvcgadget.enabled')) === want.uvcgadget;
-				text(msg, roleOk && flagsOk ? 'Done.'
+				// The role and the flags agreeing is not the webcam existing.
+				// A device-mode port can sit with the gadget never composed and
+				// no node behind it, which is the failure this page was built
+				// to make visible -- so it cannot be what "Done." papers over.
+				// Host asks for no such thing: a port with nothing plugged into
+				// it has no node and is working correctly.
+				const pipelineOk = role !== 'device' ||
+					(st.gadget === true && !!st.video);
+				text(msg, roleOk && flagsOk && pipelineOk ? 'Done.'
 					: 'Applied, but the camera does not report it yet.');
 			})
 			.catch(err => {
@@ -223,7 +241,11 @@
 					statusEl.innerHTML;
 				return refresh();
 			})
-			.then(() => { apply.disabled = false; });
+			// Deliberately not re-enabling here. Every path above ends in
+			// refresh(), and render() decides from what the camera actually
+			// answered; an unconditional re-enable at the end of the chain
+			// reversed that decision the moment it mattered.
+			;
 	});
 
 	refresh();
