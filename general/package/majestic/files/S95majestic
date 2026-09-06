@@ -21,9 +21,29 @@ running() {
 	start-stop-daemon -t -K -q -x "$DAEMON_PATH"
 }
 
+# Started with SIGHUP ignored, because the disposition survives exec() and a
+# handler does not. majestic's reload signal is SIGHUP, and until it reaches
+# init_libevent() the default action applies -- which is to terminate. That gap
+# is reachable: -b returns at the fork, so boot carries straight on into the S98
+# scripts, and wifibroadcast writes fourteen keys and then signals. Anyone
+# following the wiki's `killall -HUP majestic` by hand can land in it too.
+#
+# It has to be done here rather than inside majestic. The gap that gets hit is
+# not between main() and init_libevent() -- that is sub-millisecond -- it is
+# before main() runs at all, while the dynamic loader maps the vendor
+# libraries: `killall` already matches the name exec() set, and not one
+# instruction of the program has run. No code in the daemon can cover that, but
+# an ignore inherited across exec() covers all of it, and libevent replaces the
+# disposition when it installs the real handler.
+#
+# Measured on a hi3516ev200, 25 `killall -1` fired into the start window:
+# without this the daemon is dead every run; with it, it survives every run.
 start() {
 	echo -n "Starting $DAEMON: "
-	start-stop-daemon -b -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- $DAEMON_ARGS
+	(
+		trap '' HUP
+		start-stop-daemon -b -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- $DAEMON_ARGS
+	)
 	case $? in
 		0) echo "OK"; return 0 ;;
 		1) echo "OK (already running)"; return 0 ;;
