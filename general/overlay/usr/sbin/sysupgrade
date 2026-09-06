@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.62
+scr_version=1.0.63
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -63,6 +63,11 @@ esac
 MANIFEST_URL=${MANIFEST_URL:-https://openipc.github.io/${_manifest_repo}/manifest.flat}
 MANIFEST_CACHE=/tmp/manifest.flat
 unset _osr _plat _manifest_repo
+# Every online fetch verifies the server's certificate against the bundle the
+# image ships at /etc/ssl/certs/ca-certificates.crt (libcurl's built-in default
+# here). --insecure puts -k back for one run, for a private mirror with a
+# self-signed certificate; nothing else ever sets it. GHSA-fjf7-9x3v-6mj6.
+curl_insecure=
 
 echo_c() {
 	# 31 red, 32 green, 33 yellow, 34 blue, 35 magenta, 36 cyan, 37 white, 38 grey
@@ -379,10 +384,58 @@ do_wipe_overlay() {
 	set_progress flash_eraseall $jffs2 "$(get_device "rootfs_data")"
 }
 
+# curl options for one URL. An https URL may redirect (a GitHub release asset
+# does), but never down to plain http: a verified connection that hands the
+# transfer to an unverified one has verified nothing.
+tls_opts() {
+	case "$1" in https://*) echo "--proto-redir =https" ;; esac
+	echo "$curl_insecure"
+}
+
+# The clock is part of certificate verification: a certificate is valid between
+# two dates, and a camera with no RTC boots at its build stamp (or fake-hwclock's
+# last checkpoint), so behind a network that blocks NTP the fetch fails with
+# BADCERT_FUTURE. That failure is what made `-k` look necessary (majestic-webui
+# #44, #121). Take the Date header of a plain-HTTP HEAD instead, as htpdate
+# does, and step the clock FORWARD only: a spoofed header can move the clock
+# ahead, which validates no certificate the bundle does not already trust.
+# Returns 0 only when the clock moved, so the caller knows a retry is worth it.
+clock_from_http() {
+	local hdr now web
+	hdr=$(curl -s -m 15 -I --proto =http "http://${MANIFEST_URL#*://}" 2>/dev/null \
+		| sed -n 's/^[Dd]ate: //p' | tr -d '\r')
+	web=$(TZ=UTC0 date -D '%a, %d %b %Y %H:%M:%S' -d "${hdr% GMT}" +%s 2>/dev/null)
+	now=$(date +%s)
+	[ -n "$web" ] && [ "$web" -gt "$now" ] || return 1
+	date -s "@$web" >/dev/null 2>&1 || return 1
+	echo_c 33 "Clock was behind; set from the HTTP Date header: $(date)"
+}
+
+# Reachability and trust, before anything is downloaded. Kept apart from the
+# download, which streams into tar where curl's exit status is lost in the
+# pipe, and because a certificate failure must not read as "Check your
+# network!" -- the two have different fixes.
+probe_url() {
+	local rc
+	curl --connect-timeout 30 -m 60 -s -o /dev/null $(tls_opts "$1") "$1"
+	rc=$?
+	if [ "$rc" -eq 60 ] && clock_from_http; then
+		curl --connect-timeout 30 -m 60 -s -o /dev/null $(tls_opts "$1") "$1"
+		rc=$?
+	fi
+	case "$rc" in
+		0) ;;
+		60) die "Certificate verification failed for $1
+The clock reads $(date). If that is wrong, fix it first (ntpd -Nnq, or date -s).
+For a private server with a self-signed certificate, add --insecure." ;;
+		77) die "Cannot read the CA bundle /etc/ssl/certs/ca-certificates.crt. Add --insecure to proceed without verification." ;;
+		*) die "Check your network!" ;;
+	esac
+}
+
 fetch_manifest() {
-	[ "$(curl -o /dev/null -s -k -w '%{http_code}\n' "$MANIFEST_URL")" = "000" ] \
-		&& die "Check your network!"
-	curl --connect-timeout 30 -s -k -m 60 -L "$MANIFEST_URL" -o "$MANIFEST_CACHE" \
+	probe_url "$MANIFEST_URL"
+	curl --connect-timeout 30 -s -m 60 -L $(tls_opts "$MANIFEST_URL") "$MANIFEST_URL" -o "$MANIFEST_CACHE" \
 		|| die "Cannot fetch manifest $MANIFEST_URL"
 }
 
@@ -446,7 +499,7 @@ download_firmware() {
 		fi
 		[ -z "$url" ] && url=$(fw_printenv -n upgrade || echo "https://github.com/OpenIPC/${repo:-builder}/releases/download/latest/openipc.$build.tgz")
 		echo "Download from $url"
-		[ "$(curl -o /dev/null -s -k -w '%{http_code}\n' "$url")" = "000" ] && die "Check your network!"
+		probe_url "$url"
 		# Show a transfer bar so the (silent, up-to-2-min) download doesn't look
 		# stuck — over /ws/upgrade this also gives the WebUI something to stream
 		# (issue #120). `-s` (silent_update) opts back out for a quiet console run.
@@ -460,8 +513,8 @@ download_firmware() {
 		# only once the transfer has genuinely stalled, so a slow-but-progressing
 		# link completes. -m stays as a far outer backstop against a trickle that
 		# never trips the stall check.
-		curl --connect-timeout 30 $dl_meter -k --speed-limit 1024 --speed-time 60 -m 1800 \
-			-L "$url" -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+		curl --connect-timeout 30 $dl_meter --speed-limit 1024 --speed-time 60 -m 1800 \
+			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	fi
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
@@ -809,8 +862,11 @@ set_progress() {
 sync_time() {
 	echo_c 37 "\nSynchronizing time"
 	# Bound the sync: with no reachable NTP server `ntpd -q` can block for
-	# minutes and strand the upgrade at this step (WebUI issue #120). Everything
-	# after this fetches over `curl -k`, so an unsynced clock is not fatal.
+	# minutes and strand the upgrade at this step (WebUI issue #120). An
+	# unsynced clock is still not fatal: every fetch after this verifies the
+	# server certificate, and when that fails on the date probe_url falls back
+	# to the HTTP Date header (clock_from_http) rather than to skipping the
+	# verification.
 	if command -v timeout >/dev/null 2>&1; then
 		timeout 30 ntpd -Nnq
 	else
@@ -826,7 +882,14 @@ self_update() {
 		# pre-patch master copy would reject --web. Time is synced; carry on.
 		[ "1" = "$web_update" ] && return
 		echo -e "\nChecking for sysupgrade update..."
-		curl -s -k -L -o /tmp/sysupgrade "https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade"
+		# What lands in /tmp/sysupgrade is exec'd as root a few lines down, so:
+		# verified TLS, https only (no redirect may step down to http), -f so an
+		# error page is not kept, and staged through a rename so a transfer that
+		# died half-way cannot leave a truncated script that still carries the
+		# shebang and a foreign scr_version.
+		curl -s -f -L --proto =https --proto-redir =https $curl_insecure -o /tmp/sysupgrade.part \
+			"https://raw.githubusercontent.com/OpenIPC/firmware/master/general/overlay/usr/sbin/sysupgrade" \
+			&& mv /tmp/sysupgrade.part /tmp/sysupgrade
 		if [ -f /tmp/sysupgrade ] && grep -q "#!/bin/sh" /tmp/sysupgrade; then
 			dstv=$(grep scr_version /tmp/sysupgrade | head -1 | cut -f 2 -d '=')
 			if ! [ "$scr_version" = "$dstv" ]; then
@@ -988,6 +1051,9 @@ Where:
                         rewrites the flash the camera is running from, which
                         no running system survives.
   -z, --no_update       Do not update self.
+      --insecure        Skip TLS certificate verification for this run: a
+                        private mirror with a self-signed certificate. Never
+                        needed for OpenIPC's own servers.
       --no_ramfs        Flash from the rootfs instead of moving into RAM first.
                         Reinstates the failure this guards against; for board
                         bring-up only.
@@ -1157,6 +1223,15 @@ for i in "$@"; do
 
 		-z | --no_update)
 			skip_selfupdate=1
+			shift
+			;;
+
+		--insecure)
+			# Only for a mirror whose certificate the bundle cannot verify. With
+			# this set a man-in-the-middle can hand the camera anything, including
+			# the script self_update execs, so say so where it cannot be missed.
+			curl_insecure=-k
+			echo_c 31 "--insecure: TLS certificates will NOT be verified this run"
 			shift
 			;;
 

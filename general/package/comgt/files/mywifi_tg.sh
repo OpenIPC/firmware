@@ -18,7 +18,7 @@ send() {
   #
   [ -z "${NOMER}" ] && NOMER="anonymouse"
   #
-  curl -k -o - --connect-timeout 30 --max-time 30 -X POST \
+  curl -o - --connect-timeout 30 --max-time 30 -X POST \
     https://api.telegram.org/bot${TOKEN}/sendMessage -d chat_id="${RUPOR}" -d disable_notification="true" -d text="${ALARM} ${NOMER} | ${SDATE}" >/dev/null 2>&1
   #
   logger -t ringer "${STAMP} Received ring from: ${NOMER} - ${MYWIFI}"
