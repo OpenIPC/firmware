@@ -14,6 +14,40 @@
 # Runs after S70vendor so the vendor modules are up first, and after S29debugfs
 # so the role file exists to be read.
 
+# The node of a given kind, once it exists. The gadget's is the one whose sysfs
+# parent is the UDC; anything else is a capture device, which in host mode is
+# the webcam. Bounded, because a port with nothing on it never produces one and
+# that is a perfectly ordinary way to boot.
+video_node() {
+	_i=0
+	while [ $_i -lt 20 ]; do
+		for _v in /sys/class/video4linux/video*; do
+			[ -e "$_v" ] || continue
+			case "$(readlink "$_v" 2>/dev/null)" in
+				*/gadget/*) _kind=gadget ;;
+				*)          _kind=capture ;;
+			esac
+			if [ "$_kind" = "$1" ]; then
+				echo "/dev/${_v##*/}"
+				return 0
+			fi
+		done
+		_i=$((_i + 1))
+		usleep 100000 2>/dev/null || sleep 1
+	done
+	return 1
+}
+
+# Only writes when it differs, so an unchanged camera does not rewrite its
+# configuration on every boot.
+sync_node() {
+	_n=$(video_node "$1") || return 0
+	[ -n "$_n" ] || return 0
+	[ "$(cli -g ".$2" 2>/dev/null)" = "$_n" ] && return 0
+	echo "Pointing $2 at $_n"
+	cli -s ".$2" "$_n"
+}
+
 case "$1" in
 	start)
 		# Selecting the package says the board is meant to switch roles;
@@ -35,6 +69,26 @@ case "$1" in
 		esac
 		echo "Setting USB role to $mode..."
 		/usr/sbin/usb-mode "$mode" || echo "usb-mode $mode failed"
+
+		# Re-point majestic at the node this boot actually produced.
+		#
+		# The number is a per-boot fact and majestic is told a path. A switch
+		# made from the web UI discovers the node it got and saves it, which is
+		# right for that boot and wrong for the next one: a gadget composed
+		# behind a webcam still holding /dev/video0 lands on video1 and is
+		# saved as video1, then comes back on video0 when nothing races it.
+		# majestic opens the saved path, does not find it, and logs "gadget not
+		# started" once -- a webcam a PC enumerates and never receives a frame
+		# from. Measured on gk7205v200 after a reboot in device mode.
+		#
+		# Here is the one place that always runs, knows the role, and runs
+		# before majestic starts, so cli writing the file directly is exactly
+		# right: there is no daemon to ask yet.
+		if [ "$mode" = device ]; then
+			sync_node gadget uvcgadget.device
+		else
+			sync_node capture usbcam.device
+		fi
 		;;
 
 	stop)
