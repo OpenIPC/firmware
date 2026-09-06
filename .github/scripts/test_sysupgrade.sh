@@ -134,7 +134,7 @@ stub ipcinfo    'case "$1" in -v) echo "${STUB_VENDOR:-sigmastar}";; -F) echo no
 stub fw_printenv 'echo "${STUB_SOC:-ssc338q}"'
 stub killall    'exit 0'
 stub ntpd       'exit 0'
-stub curl       'exit 0'
+stub curl       'exit "${STUB_CURL_RC:-0}"'
 stub umount     'exit 0'
 # Logs so ordering can be asserted, and fails by default: an unprivileged test
 # host cannot really pivot, and the fallback is the safety property that matters
@@ -276,6 +276,7 @@ run() {
         STUB_IMG_VERSION="${STUB_IMG_VERSION:-2026.07.11}" \
         STUB_FLASHCP_FAIL="${STUB_FLASHCP_FAIL:-0}" \
         STUB_REMOUNT_RC="${STUB_REMOUNT_RC:-0}" \
+        STUB_CURL_RC="${STUB_CURL_RC:-0}" \
         sh "$SB/sysupgrade" "$@" 2>&1)
     RC=$?
 }
@@ -295,7 +296,7 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
-    unset STUB_FLASHCP_FAIL STUB_PIVOT_RC STUB_REMOUNT_RC
+    unset STUB_FLASHCP_FAIL STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     set_mounts
     rm -rf "$SB/ram"
     rm -f "$SB"/tmp/*.ssc338q "$SB"/tmp/firmware.bin.* "$SB"/tmp/*.tgz "$SB"/tmp/*.md5sum
@@ -892,6 +893,68 @@ else
 fi
 rm -f "$SB/bin/rmdir"
 
+# --- certificate verification (GHSA-fjf7-9x3v-6mj6) ------------------------
+# Every online fetch used to pass -k, so the network could hand the camera any
+# image -- and, through self_update, any script to exec as root. The probe
+# before the download is where a verification failure now surfaces. It must
+# abort before anything is written, and it must say "certificate" rather than
+# "Check your network!", because the two have different fixes. The sandbox's
+# GNU date has no -D, so the HTTP-Date fallback declines here and the failure
+# is final -- which is the path an NTP-blocked camera with no HTTP either sees.
+reset_env
+STUB_CURL_RC=60          # curl: the peer certificate cannot be authenticated
+run -z -r
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s\n' "$OUT" | grep -q 'Certificate verification failed'; then
+    ok "a certificate failure aborts before the download and names the cause"
+else
+    bad "certificate failure -> expected an abort naming the certificate, rc=$RC out='$OUT'"
+fi
+printf '%s\n' "$OUT" | grep -q -- '--insecure' \
+    && ok "...and points at --insecure for a private mirror" \
+    || bad "the certificate message must mention --insecure"
+
+reset_env
+STUB_CURL_RC=77          # curl: the CA bundle cannot be read
+run -z -r
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s\n' "$OUT" | grep -q 'CA bundle'; then
+    ok "an unreadable CA bundle is reported as such"
+else
+    bad "unreadable CA bundle -> expected an abort naming the bundle, rc=$RC out='$OUT'"
+fi
+
+reset_env
+STUB_CURL_RC=7           # curl: failed to connect
+run -z -r
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s\n' "$OUT" | grep -q 'Check your network'; then
+    ok "an unreachable server is still a network problem, not a certificate one"
+else
+    bad "connect failure -> expected 'Check your network', rc=$RC out='$OUT'"
+fi
+
+reset_env
+run -z --insecure -r
+printf '%s\n' "$OUT" | grep -q 'NOT be verified' \
+    && ok "--insecure announces itself" \
+    || bad "--insecure must warn that verification is off, out='$OUT'"
+
+# self_update may only ever consider the copy THIS run fetched. A script left in
+# /tmp by an earlier run (one made with --insecure, say) used to be version-
+# compared and exec'd as root whenever the current fetch failed (Qodo, #2374).
+reset_env
+STUB_CURL_RC=7           # this run's fetch fails
+printf '#!/bin/sh\nscr_version=0.0.0\necho STALE SCRIPT RAN\nexit 42\n' > "$SB/tmp/sysupgrade"
+run -r                   # no -z: self_update runs
+if [ "$RC" -ne 42 ] && nothing_wrote && ! printf '%s\n' "$OUT" | grep -q 'STALE SCRIPT RAN' \
+   && printf '%s\n' "$OUT" | grep -q 'Version checking failed'; then
+    ok "a failed self-update fetch never falls through to a script left by an earlier run"
+else
+    bad "stale /tmp/sysupgrade was consulted after a failed fetch, rc=$RC out='$OUT'"
+fi
+[ -e "$SB/tmp/sysupgrade" ] \
+    && bad "the stale script survived the failed fetch and will be seen by the next run" \
+    || ok "...and the leftover is gone"
+rm -f "$SB/tmp/sysupgrade"
+
 # ---------------------------------------------------------------------------
 echo
 echo "=== Part 2: invariants in $SRC ==="
@@ -900,7 +963,7 @@ echo "=== Part 2: invariants in $SRC ==="
 # --connect-timeout and --speed-limit/--speed-time are curl's, not ours.
 for opt in $(grep -oE '\-\-[a-z_]+' "$SRC" | sort -u); do
     case "$opt" in
-        --force_*|--wipe_overlay|--no_reboot|--no_update|--no_ramfs|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--connect*|--speed*) continue ;;
+        --force_*|--wipe_overlay|--no_reboot|--no_update|--no_ramfs|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--insecure|--connect*|--speed*|--proto*) continue ;;
     esac
     bad "message references '$opt', which the option parser does not accept"
 done
@@ -1121,6 +1184,31 @@ if grep -q '^CONFIG_TIMEOUT=y' general/package/busybox/busybox.config; then
 else
     bad "CONFIG_TIMEOUT was dropped from busybox.config -- the bounded mount degrades"
 fi
+
+# --- certificate verification invariants (GHSA-fjf7-9x3v-6mj6) -------------
+# -k may exist only as the value --insecure assigns to $curl_insecure. A literal
+# -k on a curl line turns verification off for every camera again.
+grep -qE 'curl[^|#]* -k( |$)' "$SRC" \
+    && bad "a curl call passes -k directly: certificate verification is off again" \
+    || ok "no curl call disables certificate verification on its own"
+grep -q '^\s*--insecure)' "$SRC" \
+    && ok "--insecure is the explicit, per-run opt-out" \
+    || bad "--insecure is gone; a private mirror with a self-signed certificate has no way in"
+awk '/^self_update\(\)/,/^}/' "$SRC" | grep -q -- '--proto =https' \
+    && ok "self_update fetches the script it will exec over https only" \
+    || bad "self_update must pin --proto/--proto-redir to https: a redirect to http hands root to the network"
+awk '/^self_update\(\)/,/^}/' "$SRC" | grep -qE 'mv [^ ]*sysupgrade\.part' \
+    && ok "self_update stages the download and renames it only when complete" \
+    || bad "self_update must not be able to exec a partially downloaded script"
+awk '/^self_update\(\)/,/^}/' "$SRC" | grep -qE 'rm -f [^ ]*/sysupgrade( |$)' \
+    && ok "self_update discards whatever an earlier run left before it fetches" \
+    || bad "self_update must remove any stale /tmp/sysupgrade first, or a failed fetch falls through to it"
+awk '/^probe_url\(\)/,/^}/' "$SRC" | grep -q 'clock_from_http' \
+    && ok "a date failure retries once with the clock taken from HTTP, not with -k" \
+    || bad "probe_url must fall back to clock_from_http, or an NTP-blocked camera can never upgrade"
+awk '/^clock_from_http\(\)/,/^}/' "$SRC" | grep -q '"\$web" -gt "\$now"' \
+    && ok "clock_from_http only ever moves the clock forward" \
+    || bad "clock_from_http must be forward-only: a spoofed Date header must not revive an expired certificate"
 
 # --- issue #2231 invariants ------------------------------------------------
 
