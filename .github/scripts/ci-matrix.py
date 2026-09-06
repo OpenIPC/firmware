@@ -249,6 +249,11 @@ UNBUILT_FAMILIES = {
 # sets BR2_PACKAGE_MAJESTIC=y, because both drive the same sensor and encoder.
 # It is selected by the FPV variants in OpenIPC/builder. A mainline defconfig
 # with Majestic off would take it off this list.
+#
+# usb-dual-role is here for the ordinary reason: it needs a device tree that
+# wires dwc3 as dual-role and a kernel built with CONFIG_USB_DWC3_DUAL_ROLE,
+# which no defconfig in ALL_BOARDS has. OpenIPC/builder's gk7205v200_otg_generic
+# selects it. A mainline dual-role defconfig would take it off this list.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x", "atbm-wifi",
     "aura-httpd", "baresip-openipc", "comgt", "f2fs-tools-openipc", "faceter-agent",
@@ -261,7 +266,8 @@ NOT_BUILT = {
     "osd-openipc", "rtl8188eus-openipc", "rtl8192eu-openipc", "rtl8811cu-openipc",
     "rtl8812au", "rtl8812au-openipc", "rtl88x2eu-openipc", "rtw-hostapd", "rubyfpv",
     "siproxd-openipc", "ssv615x-openipc", "ssv635x-openipc", "txw8301-openipc",
-    "uqmi-openipc", "vdec-openipc", "venc-openipc", "w1-ds18b20", "waybeam",
+    "uqmi-openipc", "usb-dual-role", "vdec-openipc", "venc-openipc",
+    "w1-ds18b20", "waybeam",
     "webface",
     "webrtc-audio-processing-openipc", "wifibroadcast-ng", "wq9001", "yaml-cli-multi",
 }

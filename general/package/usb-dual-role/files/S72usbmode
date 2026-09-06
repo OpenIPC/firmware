@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# Force a concrete USB role at boot.
+#
+# On a board whose device tree sets dr_mode = "otg", dwc3 registers both an xHCI
+# host and a UDC, which is what makes runtime role switching possible at all.
+# Such a kernel is expected to settle on the host role before it registers the
+# host -- a dwc3 that probes xHCI while the core still reads OTG comes up unable
+# to drive the port: it runs, powers the port, and never reports a connect.
+#
+# So a working dual-role board boots as a host, and this script exists to apply
+# a persisted "device" choice on top of that.
+#
+# Runs after S70vendor so the vendor modules are up first, and after S29debugfs
+# so the role file exists to be read.
+
+case "$1" in
+	start)
+		# Selecting the package says the board is meant to switch roles;
+		# it does not prove the running kernel can. Leave quietly when
+		# there is no dual-role controller to set a role on, rather than
+		# announcing a failure on every boot for a feature this kernel
+		# was not built with.
+		has_dwc3=
+		for f in /sys/kernel/debug/*.dwc3/mode; do
+			[ -e "$f" ] && has_dwc3=1
+		done
+		[ -n "$has_dwc3" ] || exit 0
+
+		mode=host
+		[ -r /etc/usbmode ] && read -r mode < /etc/usbmode
+		case "$mode" in
+			host|device) ;;
+			*) mode=host ;;
+		esac
+		echo "Setting USB role to $mode..."
+		/usr/sbin/usb-mode "$mode" || echo "usb-mode $mode failed"
+		;;
+
+	stop)
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac
