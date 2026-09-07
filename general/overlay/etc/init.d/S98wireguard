@@ -4,7 +4,7 @@ case "$1" in
 	start)
 		wgc=$(fw_printenv -n wg_privkey)
 		if [ -n "$wgc" ]; then
-			wireguard
+			wireguard &
 		fi
 		;;
 
