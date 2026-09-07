@@ -265,10 +265,28 @@ insert_ko() {
 
         insmod hi_mipi.ko
         insmod wdt.ko #nodeamon=1
+
+        # Cipher engine -> /dev/cipher. This package has always shipped the
+        # module in kmod/ and never inserted it, so the device node never
+        # appeared and userspace that can use the engine silently did without.
+        #
+        # The module is the vendor prebuilt already in kmod/, so it is
+        # hi_cipher rather than an open_* build, and insmod rather than
+        # modprobe like everything else in this script. Its only dependency is
+        # open_mmz, loaded by insert_mmz far above.
+        #
+        # Measured on an hi3518ev200 (27 MB of RAM): 180 kB of MemFree, 72 kB
+        # of MemAvailable, and MMZ untouched -- this is kernel memory.
+        # `|| true` because a camera whose image predates the module in kmod/
+        # has nothing to load, and that must not turn sensor bring-up into a
+        # failure.
+        insmod hi_cipher.ko 2>/dev/null || true
+
         echo "==== Your input Sensor type is $SENSOR ===="
 }
 
 remove_ko() {
+        rmmod -w hi_cipher 2>/dev/null
         rmmod -w open_wdt
         rmmod -w open_sys_config
         remove_audio
