@@ -9,7 +9,7 @@ ENDPOINT=$(fw_printenv -n wg_endpoint)
 [ -n "$ENDPOINT" ] || { echo "Error: wg_endpoint environment variable is not set or empty." >&2; exit 1; }
 HOST="${ENDPOINT%:*}"
 
-if ! echo "$HOST" | grep -qE '^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$'; then
+if ! echo "$HOST" | grep -qE '^\[|^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$'; then
     while ! nslookup "$HOST" >/dev/null 2>&1; do
         sleep 10
     done
