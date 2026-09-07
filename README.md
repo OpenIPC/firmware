@@ -3,7 +3,7 @@
 ## Alternative open firmware for your IP camera
 _(based on Buildroot)_
 
-[![Telegram](https://openipc.org/images/telegram_button.svg)][telegram]
+[![Telegram](https://raw.githubusercontent.com/OpenIPC/.github/refs/heads/main/assets/telegram-button.svg)][telegram]
 
 
 OpenIPC is a rapidly developing open source alternative [firmware][firmware] for 
@@ -63,7 +63,7 @@ Thank you.
 
 
 [firmware]: https://github.com/openipc/firmware
-[logo]: https://openipc.org/assets/openipc-logo-black.svg
+[logo]: https://raw.githubusercontent.com/OpenIPC/.github/refs/heads/main/assets/openipc-logo-black.svg
 [mit]: https://opensource.org/license/mit
 [opencollective]: https://opencollective.com/openipc
 [paypal]: https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS
