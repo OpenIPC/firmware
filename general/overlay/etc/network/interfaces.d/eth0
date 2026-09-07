@@ -1,2 +1,10 @@
+# On rv1106 the vendor u-boot brings eth0 up early (it patches the derived MAC
+# into the DTB's local-mac-address, which the kernel applies), so by the time
+# ifup runs, eth0 is already up. busybox dhcp_up then issues a single
+# "ip link set addr <hwaddress> eth0 up" — which fails with SIOCSIFHWADDR
+# (a live interface's MAC cannot be changed), and ifup aborts before starting
+# udhcpc, leaving the board with no lease. Forcing the interface down in pre-up
+# lets that MAC set succeed; on SoCs where eth0 was already down it is a no-op.
 iface eth0 inet dhcp
+    pre-up ip link set eth0 down
     hwaddress ether $(fw_printenv -n ethaddr || echo 00:00:23:34:45:66)
