@@ -1,21 +1,15 @@
 #!/bin/sh
-PIDFILE="/var/run/wireguard.pid"
-
 case "$1" in
 	start)
 		wgc=$(fw_printenv -n wg_privkey)
 		if [ -n "$wgc" ]; then
-			start-stop-daemon -S -q -b -m -p "$PIDFILE" -x /usr/sbin/wireguard
+			wireguard &
 		fi
 		;;
-
 	stop)
-		start-stop-daemon -K -q -p "$PIDFILE"
-		rm -f "$PIDFILE"
 		;;
-
 	*)
-		echo "Usage: $0 {start|stop}"
+		echo "Usage: $0 {start}"
 		exit 1
 		;;
 esac
