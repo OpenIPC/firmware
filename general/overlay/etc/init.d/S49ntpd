@@ -36,16 +36,27 @@ DAEMON_ARGS="-n -S /usr/sbin/ntpd-script"
 restore_conf() {
 	[ -f "$CONF" ] && return 1
 	[ -f "$ROM_CONF" ] || return 1
-	# Written beside the target and renamed in, so an interrupted boot leaves
-	# either no file - which is what we already had - or the whole list, never
-	# half a hostname that would read as configured and resolve to nothing.
+	tmp="$CONF.$$"
+	# Written beside the target and published as one step, so an interrupted
+	# boot leaves either no file - which is what we already had - or the whole
+	# list, never half a hostname that would read as configured and resolve to
+	# nothing.
+	#
+	# `ln` and not `mv`, because the intent is create-if-absent and link() is
+	# the only primitive that says exactly that: it fails with EEXIST instead
+	# of overwriting. The test above cannot stand in for it - boot is
+	# single-threaded, but this script is run by hand too, and a `restart`
+	# racing a WebUI save that has just written its own list would otherwise
+	# replace it with the defaults. The pid in the temporary name keeps two
+	# such runs off each other as well.
+	#
 	# The mode is set rather than inherited: busybox cp takes the source mode
-	# through open(), so it comes out masked by whatever umask the caller had,
-	# and this script is run by hand as often as it is run by init.
-	if cp "$ROM_CONF" "$CONF.new" && chmod 644 "$CONF.new" && mv "$CONF.new" "$CONF"; then
+	# through open(), so it comes out masked by whatever umask the caller had.
+	if cp "$ROM_CONF" "$tmp" && chmod 644 "$tmp" && ln "$tmp" "$CONF"; then
+		rm -f "$tmp"
 		return 0
 	fi
-	rm -f "$CONF.new"
+	rm -f "$tmp"
 	return 1
 }
 
