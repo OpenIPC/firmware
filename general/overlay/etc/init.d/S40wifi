@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# Power on RTL8188FTV via GPIO 52, load driver, start wpa_supplicant.
+
+case "$1" in
+	start)
+		echo 52 > /sys/class/gpio/export 2>/dev/null
+		echo out > /sys/class/gpio/gpio52/direction
+		echo 1 > /sys/class/gpio/gpio52/value
+		sleep 1
+		modprobe 8188fu
+		wpa_supplicant -B -i wlan0 -c /etc/wireless/wpa_supplicant.conf
+		udhcpc -i wlan0 -b -q
+		;;
+	stop)
+		killall wpa_supplicant 2>/dev/null
+		echo 0 > /sys/class/gpio/gpio52/value
+		;;
+esac
+
+exit 0

@@ -1,0 +1,12 @@
+#!/bin/sh
+#
+# Early-boot LED state: red on, green off.
+# GPIO 0 = green (active low), GPIO 9 = red (active low), GPIO 4 = bottom red (active high).
+
+case "$1" in
+	start | "")
+		gpio set 0; gpio clear 9; gpio clear 4
+		;;
+esac
+
+exit 0
