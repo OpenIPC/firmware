@@ -98,6 +98,13 @@ die() {
 	if [ "1" = "$flash_touched" ] || [ "1" = "$_ramfs_phase" ]; then
 		reboot_system
 	else
+		# Nothing was written, so the camera is unchanged: drop any recovery arm
+		# set before the flash phase, or a boot that never flashed would still be
+		# counted. (A failure AFTER enter_ramfs reboots via the branch above
+		# instead, and S99bootok disarms on the next healthy boot -- bootcount
+		# only advances one per reboot and the limit is several, so no false
+		# escalation.)
+		command -v fw_setenv >/dev/null 2>&1 && fw_setenv upgrade_available 0 2>/dev/null
 		restore_resources
 		# Only ever remove a lock this process owns. die() is reachable before
 		# create_lock has run (get_system_info, called from print_sysinfo, can
@@ -1339,6 +1346,27 @@ if [ "1" = "$skip_reboot" ] && [ "1" = "$root_on_flash" ] &&
 	echo_c 31 "does not survive it. The camera will be rebooted once flashing is done."
 	echo_c 37 "Press Ctrl-C now to abort. Continuing in $abort_wait seconds..."
 	sleep "$abort_wait"
+fi
+
+# Arm the bootloader's boot-count recovery for this flash. If the freshly
+# written image never reaches a healthy userspace, a U-Boot that supports
+# boot-count recovery falls back to reflashing a known-good image instead of
+# rebooting into the broken one for ever; S99bootok disarms this once majestic
+# is up. On an older or vendor-supplied U-Boot with no boot-count logic these
+# are unused environment variables it ignores, so arming is harmless there.
+# Set here, on the still-normal system, before enter_ramfs moves the MTD
+# environment out of reach.
+if command -v fw_setenv >/dev/null 2>&1; then
+	if fw_setenv upgrade_available 1 2>/dev/null && fw_setenv bootcount 0 2>/dev/null; then
+		:
+	else
+		echo_c 33 "Warning: could not arm boot-count recovery (U-Boot env not writable?); the upgrade proceeds without it."
+	fi
+	# A camera that ever ran the pre-verify U-Boot has verify=n saved in flash,
+	# where it still overrides the built-in default; drop the key so the kernel
+	# image is CRC-checked on boot again.
+	fw_setenv verify 2>/dev/null ||
+		echo_c 33 "Warning: could not clear a saved verify=n; a corrupt kernel may not be caught on boot."
 fi
 
 # Past this point we erase flash. A controlling-TTY death (SSH session drop,
