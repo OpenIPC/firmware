@@ -1,0 +1,34 @@
+#!/bin/sh
+# Disarm the bootloader's boot-count recovery once the camera has reached a
+# healthy userspace. sysupgrade sets upgrade_available=1 before a flash; a
+# U-Boot that supports boot-count recovery keeps counting boots until this
+# clears the flag, and reflashes a known-good image if a broken one never gets
+# here. On a U-Boot without boot-count logic the variable is ignored, so this
+# is a no-op beyond one environment read. A normal (unarmed) boot costs a
+# single fw_printenv and writes nothing.
+case "$1" in
+	start|"") ;;
+	*) exit 0 ;;
+esac
+
+command -v fw_printenv >/dev/null 2>&1 || exit 0
+[ "$(fw_printenv -n upgrade_available 2>/dev/null)" = "1" ] || exit 0
+
+# Armed: confirm the new image actually works before disarming. Wait for
+# majestic to come up -- an image built without majestic is healthy the moment
+# it boots this far. If majestic never appears, leave the flag set so U-Boot
+# escalates to recovery on the following boots instead of looping on an image
+# that boots but does not stream. Backgrounded so a slow or failing start never
+# holds up the rest of boot.
+{
+	i=0
+	while [ "$i" -lt 30 ]; do
+		if [ ! -x /usr/bin/majestic ] || pidof majestic >/dev/null 2>&1; then
+			fw_setenv upgrade_available 0 2>/dev/null
+			fw_setenv bootcount 0 2>/dev/null
+			exit 0
+		fi
+		sleep 2
+		i=$((i + 1))
+	done
+} &
