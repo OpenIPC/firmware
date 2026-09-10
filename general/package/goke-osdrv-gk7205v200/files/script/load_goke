@@ -106,17 +106,6 @@ check_allocator() {
 		else
 			set_allocator gk
 		fi
-	elif ! grep -q "ramoops.mem_address" /proc/cmdline; then
-		# Backfill the pstore ramoops region on a camera whose bootargs were
-		# written before pstore existed: set_allocator otherwise only runs when
-		# mmz_allocator is absent, so these cameras would never get it. The
-		# rewrite persists and takes effect on the next reboot (no forced reboot
-		# here); it converges in one cycle and then stops, because both branches
-		# below now add the token. Match the allocator already in use.
-		case "${allocator}" in
-			*mmz_allocator=cma*) set_allocator cma ;;
-			*mmz_allocator=gk*)  set_allocator gk ;;
-		esac
 	fi
 }
 
