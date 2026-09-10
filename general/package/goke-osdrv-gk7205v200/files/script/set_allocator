@@ -1,5 +1,13 @@
 #!/bin/sh
 
+# 128K pstore/ramoops crash-log region: one 64K panic dump + headroom.
+# Console zone 0 (the console is muted on these boards) -- rely on the
+# oops/panic kmsg_dump, which is console-independent.
+RAMOOPS_SIZE=0x20000
+ramoops_args() {   # $1 = physical base address
+  echo "ramoops.mem_address=$1 ramoops.mem_size=${RAMOOPS_SIZE} ramoops.record_size=0x10000 ramoops.console_size=0 ramoops.pmsg_size=0 ramoops.dump_oops=1"
+}
+
 
 get_env() {
   bootargs=$(fw_printenv -n bootargs)
@@ -22,16 +30,36 @@ calc_mmz() {
   os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
   os_mem_size=${os_mem_size:=32}
   mmz_start=$(echo "$mem_start $os_mem_size" | awk 'BEGIN { temp = 0; } { temp = $1/1024/1024 + $2; } END { printf("0x%x00000\n", temp); }')
-  mmz_size=$(echo "$mem_total $os_mem_size" | awk 'BEGIN { temp = 0; } { temp = $1 - $2; } END { printf("%dM\n", temp); }')
+  # Reserve the top 1M of DRAM for ramoops (see below), so the media zone stops
+  # 1M short of the end. mmz is M-granular here, so reserving a whole M keeps it
+  # aligned; a cma board has >=128M, so the loss is negligible.
+  mmz_size=$(echo "$mem_total $os_mem_size" | awk 'BEGIN { temp = 0; } { temp = $1 - $2 - 1; } END { printf("%dM\n", temp); }')
   mmz=anonymous,0,$mmz_start,$mmz_size
+  # ramoops lives in that reserved top megabyte, above both the (reduced) kernel
+  # window and the media zone. cma_mem is the OS size with the same 1M removed,
+  # so the kernel never maps the ramoops region.
+  cma_ramoops_addr=$(printf '0x%08x' $((0x40000000 + (mem_total - 1) * 1024 * 1024)))
+  cma_mem="$((mem_total - 1))M"
 }
 
 
 if [[ "$1" == 'gk' ]]; then
   echo "Allocator selected as gk..."
   get_env
-  mem=${osmem:=32M}
-  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=gk ${extras}"
+  osmem=${osmem:=32M}
+  # Carve 128K off the TOP of the OS window for a ramoops crash-log region
+  # (pstore). It lands above the shrunk kernel window and below mmz_start
+  # (= base + osmem, unchanged), so it touches neither Linux RAM nor the media
+  # (mmz) pool -- the kernel never maps it and the gk allocator never sees it.
+  # kmsg_dump writes here on a panic/oops, so a crash survives the panic=20
+  # reboot even though the console is muted. mem_address MUST equal
+  # base(0x40000000) + (osmem - 128K).
+  osk=$(echo "$osmem" | awk '{ gsub(/[Mm]/,""); printf "%d", $1 * 1024 }')
+  memk=$((osk - 128))
+  raddr=$(printf '0x%08x' $((0x40000000 + memk * 1024)))
+  mem="${memk}K"
+  ramoops=$(ramoops_args "${raddr}")
+  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=gk ${ramoops} ${extras}"
   echo ${newbootargs}
   fw_setenv bootargs ${newbootargs}
   #
@@ -39,8 +67,9 @@ elif [[ "$1" == 'cma'  ]]; then
   echo "Allocator selected as cma..."
   get_env
   calc_mmz
-  mem=${totalmem:=64M}
-  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=cma mmz=${mmz} ${extras}"
+  mem=${cma_mem:=${totalmem:=64M}}
+  ramoops=$(ramoops_args "${cma_ramoops_addr}")
+  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=cma mmz=${mmz} ${ramoops} ${extras}"
   fw_setenv bootargs ${newbootargs}
   echo ${newbootargs}
 else
