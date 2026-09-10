@@ -14,21 +14,36 @@ esac
 command -v fw_printenv >/dev/null 2>&1 || exit 0
 [ "$(fw_printenv -n upgrade_available 2>/dev/null)" = "1" ] || exit 0
 
-# Armed: confirm the new image actually works before disarming. Wait for
-# majestic to come up -- an image built without majestic is healthy the moment
-# it boots this far. If majestic never appears, leave the flag set so U-Boot
-# escalates to recovery on the following boots instead of looping on an image
-# that boots but does not stream. Backgrounded so a slow or failing start never
-# holds up the rest of boot.
+# Armed. Disarm only once the new image is PROVEN healthy -- and prove it,
+# don't just glimpse it: pidof sees majestic the instant S95majestic forks,
+# before the pipeline is up, so a streamer that crashes during startup would
+# look healthy for a moment. Require it to stay up across a sustained window;
+# if it dies the window restarts, and if it never holds we leave the flag armed
+# so U-Boot escalates to recovery instead of looping on an image that boots but
+# does not stream. An image built without majestic is healthy once it boots
+# this far. Backgrounded so nothing here holds up boot.
 {
-	i=0
-	while [ "$i" -lt 30 ]; do
+	need=8       # consecutive good checks (~16s) before trusting the image
+	ok=0
+	tries=0
+	while [ "$tries" -lt 90 ]; do
 		if [ ! -x /usr/bin/majestic ] || pidof majestic >/dev/null 2>&1; then
-			fw_setenv upgrade_available 0 2>/dev/null
-			fw_setenv bootcount 0 2>/dev/null
-			exit 0
+			ok=$((ok + 1))
+			if [ "$ok" -ge "$need" ]; then
+				if fw_setenv upgrade_available 0 2>/dev/null &&
+					fw_setenv bootcount 0 2>/dev/null; then
+					exit 0
+				fi
+				# Environment readable but not writable: say so, or every
+				# healthy boot silently leaves U-Boot counting toward recovery.
+				logger -s -t bootok "healthy but could not clear upgrade_available (U-Boot env not writable) -- bootloader will keep counting" 2>/dev/null
+				exit 0
+			fi
+		else
+			ok=0
 		fi
 		sleep 2
-		i=$((i + 1))
+		tries=$((tries + 1))
 	done
+	logger -s -t bootok "majestic did not stay up; leaving boot-count recovery armed" 2>/dev/null
 } &
