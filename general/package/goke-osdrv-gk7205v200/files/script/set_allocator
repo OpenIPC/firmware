@@ -30,16 +30,33 @@ calc_mmz() {
   os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
   os_mem_size=${os_mem_size:=32}
   mmz_start=$(echo "$mem_start $os_mem_size" | awk 'BEGIN { temp = 0; } { temp = $1/1024/1024 + $2; } END { printf("0x%x00000\n", temp); }')
-  # Reserve the top 1M of DRAM for ramoops (see below), so the media zone stops
-  # 1M short of the end. mmz is M-granular here, so reserving a whole M keeps it
-  # aligned; a cma board has >=128M, so the loss is negligible.
-  mmz_size=$(echo "$mem_total $os_mem_size" | awk 'BEGIN { temp = 0; } { temp = $1 - $2 - 1; } END { printf("%dM\n", temp); }')
+  # ramoops sits in the gap between the media zone and the top of DRAM, and the
+  # gap is a whole 4M for two reasons that are both out of our hands here:
+  #
+  #  * The media zone is a cma region, reserved with dma_declare_contiguous(),
+  #    which rounds the region up to the CMA alignment -- PAGE_SIZE <<
+  #    max(MAX_ORDER-1, pageblock_order), 4M on this kernel -- and rejects a fixed
+  #    region whose rounded end runs past the end of RAM (mm/cma.c:
+  #    "fixed && base + size > highmem_start"). goke's cma.c turns that -EINVAL
+  #    into a panic() from an early initcall, before the console, so a media zone
+  #    that overruns mem= by even 1M hangs the board right after "Starting
+  #    kernel". So the zone has to end on a 4M boundary at or below mem=; dropping
+  #    one 4M step (totalmem-osmem-4, still 4M-aligned since osmem and totalmem
+  #    are 4M multiples) is the smallest that satisfies it.
+  #  * ramoops cannot instead go in the top 128K: U-Boot relocates itself to the
+  #    top of DRAM on every boot (on this board bdinfo shows relocaddr 0x43F20000,
+  #    page tables at 0x43FF0000 -- the top ~1.25M), so a crash log left up there
+  #    is overwritten by the reboot before the kernel can read it back (verified:
+  #    empty /sys/fs/pstore after a panic). Landing it just above the media zone
+  #    keeps it clear of both the kernel's RAM and U-Boot's window.
+  #
+  # So put ramoops at the media zone's end and stop mem= there. On a cma board
+  # (>=128M) the 4M is negligible; gk7205v200 is 64M and never runs cma, so this
+  # branch is only reached by a manual override.
+  mmz_size=$(echo "$mem_total $os_mem_size" | awk 'BEGIN { temp = 0; } { temp = $1 - $2 - 4; } END { printf("%dM\n", temp); }')
   mmz=anonymous,0,$mmz_start,$mmz_size
-  # ramoops lives in that reserved top megabyte, above both the (reduced) kernel
-  # window and the media zone. cma_mem is the OS size with the same 1M removed,
-  # so the kernel never maps the ramoops region.
-  cma_ramoops_addr=$(printf '0x%08x' $((0x40000000 + (mem_total - 1) * 1024 * 1024)))
-  cma_mem="$((mem_total - 1))M"
+  cma_ramoops_addr=$(printf '0x%08x' $(( 0x40000000 + (mem_total - 4) * 1024 * 1024 )))
+  cma_mem="$(( mem_total - 4 ))M"
 }
 
 
