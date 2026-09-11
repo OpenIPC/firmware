@@ -1,0 +1,37 @@
+#!/bin/sh
+# After a crash, preserve the pstore log where the WebUI can offer it to the
+# owner, then free the pstore ring for the next one. pstore itself survives a
+# warm reset but not a cold power-cycle; copying the record into the overlay
+# lets the notice and the download outlive the plug being pulled. The bundle is
+# capped to the latest crash (overwritten each time), so the overlay never grows
+# without bound, and a clean boot -- no records -- writes nothing at all. This is
+# the capture half of the owner-pull crash report (WebUI is the other half); it
+# pairs with the failsafe breadcrumb in rcS and with S99bootok.
+case "$1" in
+	start|"") ;;
+	*) exit 0 ;;
+esac
+
+PSTORE=/sys/fs/pstore
+CRASH=/etc/crash
+
+# Nothing captured last boot -> ordinary boot, leave no trace.
+ls "$PSTORE"/dmesg-* >/dev/null 2>&1 || exit 0
+mkdir -p "$CRASH" 2>/dev/null || exit 0
+
+# busybox tar has no built-in -z here, so compress through gzip and confirm the
+# result is non-empty before trusting it.
+if tar cf - -C "$PSTORE" . 2>/dev/null | gzip > "$CRASH/crash.tar.gz.tmp" 2>/dev/null \
+	&& [ -s "$CRASH/crash.tar.gz.tmp" ]; then
+	mv "$CRASH/crash.tar.gz.tmp" "$CRASH/crash.tar.gz" 2>/dev/null
+	{
+		echo "utc=$(date -u '+%Y-%m-%d %H:%M:%S' 2>/dev/null)"
+		echo "records=$(ls -1 "$PSTORE"/dmesg-* 2>/dev/null | wc -l)"
+		echo "bytes=$(wc -c < "$CRASH/crash.tar.gz" 2>/dev/null)"
+	} > "$CRASH/pending" 2>/dev/null
+	logger -s -t crashlog "preserved pstore crash log to $CRASH/crash.tar.gz" 2>/dev/null
+	rm -f "$PSTORE"/dmesg-* 2>/dev/null
+else
+	rm -f "$CRASH/crash.tar.gz.tmp" 2>/dev/null
+fi
+exit 0

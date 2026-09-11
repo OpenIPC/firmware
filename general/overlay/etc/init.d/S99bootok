@@ -1,27 +1,30 @@
 #!/bin/sh
-# Disarm the bootloader's boot-count recovery once the camera has reached a
-# healthy userspace. sysupgrade sets upgrade_available=1 before a flash; a
-# U-Boot that supports boot-count recovery keeps counting boots until this
-# clears the flag, and reflashes a known-good image if a broken one never gets
-# here. On a U-Boot without boot-count logic the variable is ignored, so this
-# is a no-op beyond one environment read. A normal (unarmed) boot costs a
-# single fw_printenv and writes nothing.
+# Clear the bootloader's boot counter once the camera has reached a healthy
+# userspace. U-Boot increments a counter every boot and, if it is never cleared,
+# boots FAILSAFE (network + SSH only) after bootlimit tries -- so a camera that
+# boots but never streams lands somewhere reachable instead of looping forever.
+#
+# The counter is a single DRAM word (a no-map reserved region at 0x41f20000, see
+# the board DTS), NOT the U-Boot env: we clear it through /dev/mem, writing no
+# flash at all. On a U-Boot/kernel without this the write just lands in spare
+# reserved RAM nobody reads, so it is harmless. A normal boot writes nothing to
+# flash, ever.
 case "$1" in
 	start|"") ;;
 	*) exit 0 ;;
 esac
 
-command -v fw_printenv >/dev/null 2>&1 || exit 0
-[ "$(fw_printenv -n upgrade_available 2>/dev/null)" = "1" ] || exit 0
+command -v devmem >/dev/null 2>&1 || exit 0
+BOOTCOUNT_ADDR=0x41f20000
 
-# Armed. Disarm only once the new image is PROVEN healthy -- and prove it,
-# don't just glimpse it: pidof sees majestic the instant S95majestic forks,
-# before the pipeline is up, so a streamer that crashes during startup would
-# look healthy for a moment. Require it to stay up across a sustained window;
-# if it dies the window restarts, and if it never holds we leave the flag armed
-# so U-Boot escalates to recovery instead of looping on an image that boots but
-# does not stream. An image built without majestic is healthy once it boots
-# this far. Backgrounded so nothing here holds up boot.
+# Clear only once the image is PROVEN healthy -- and prove it, don't just glimpse
+# it: pidof sees majestic the instant S95majestic forks, before the pipeline is
+# up, so a streamer that crashes during startup would look healthy for a moment.
+# Require it to stay up across a sustained window; if it dies the window
+# restarts, and if it never holds we leave the counter so U-Boot escalates to
+# failsafe instead of looping on an image that boots but does not stream. An
+# image built without majestic is healthy once it boots this far. Backgrounded
+# so nothing here holds up boot.
 {
 	need=8       # consecutive good checks (~16s) before trusting the image
 	ok=0
@@ -30,13 +33,7 @@ command -v fw_printenv >/dev/null 2>&1 || exit 0
 		if [ ! -x /usr/bin/majestic ] || pidof majestic >/dev/null 2>&1; then
 			ok=$((ok + 1))
 			if [ "$ok" -ge "$need" ]; then
-				if fw_setenv upgrade_available 0 2>/dev/null &&
-					fw_setenv bootcount 0 2>/dev/null; then
-					exit 0
-				fi
-				# Environment readable but not writable: say so, or every
-				# healthy boot silently leaves U-Boot counting toward recovery.
-				logger -s -t bootok "healthy but could not clear upgrade_available (U-Boot env not writable) -- bootloader will keep counting" 2>/dev/null
+				devmem "$BOOTCOUNT_ADDR" 32 0 2>/dev/null
 				exit 0
 			fi
 		else
@@ -45,5 +42,5 @@ command -v fw_printenv >/dev/null 2>&1 || exit 0
 		sleep 2
 		tries=$((tries + 1))
 	done
-	logger -s -t bootok "majestic did not stay up; leaving boot-count recovery armed" 2>/dev/null
+	logger -s -t bootok "majestic did not stay up; leaving the boot counter for U-Boot to escalate to failsafe" 2>/dev/null
 } &
