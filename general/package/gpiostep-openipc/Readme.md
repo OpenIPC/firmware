@@ -11,9 +11,11 @@ difference: `gpio-motors` writes `/sys/class/gpio` from userspace, whereas
 `gpiostep` does `gpio_set_value()` directly in kernel context, which skips the
 per-write syscall cost. Timing granularity is the same for both: the kernels
 that ship this package have no high-resolution timers, so any sleep rounds up
-to a whole 10ms tick. Delays under a quarter tick therefore busy-wait in
-`gpiostep` (see `step_delay()` in `src/gpiostep.c`); longer ones sleep and
-accept the rounding.
+to a whole 10ms tick. Delays under a quarter tick therefore busy-wait between
+scheduler yields in `gpiostep` (see `step_delay()` in `src/gpiostep.c`); longer
+ones sleep and accept the rounding. The sub-tick pacing holds on an idle core:
+under load the yield after each micro-step can hand the core away for several
+ticks.
 
 ### Load
 
