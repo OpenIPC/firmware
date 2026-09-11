@@ -1,0 +1,21 @@
+#!/bin/sh
+# Mount the pstore filesystem so a kernel crash log that ramoops captured across
+# the reboot (a panic/oops, via kmsg_dump -- independent of the muted console)
+# is readable at /sys/fs/pstore. Without this the records are held in the
+# reserved RAM region but never exposed. Inert on a kernel built without pstore.
+# The backing RAM region is set up in the goke set_allocator (ramoops.* bootargs).
+case "$1" in
+	start)
+		if grep -q pstore /proc/filesystems; then
+			mkdir -p /sys/fs/pstore
+			mountpoint -q /sys/fs/pstore 2>/dev/null ||
+				mount -t pstore pstore /sys/fs/pstore
+		fi
+		;;
+	stop)
+		;;
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac

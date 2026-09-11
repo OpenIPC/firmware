@@ -12,8 +12,12 @@ grep -q overlay /proc/filesystems || exit 1
 
 is_flash_root=true
 is_nfs_root=false
-grep -q 'root=.*nfs\|mmcblk\|ram' /proc/cmdline && is_flash_root=false
-grep -q 'root=.*nfs' /proc/cmdline && is_nfs_root=true
+# Anchor these to the root= value. A bare "ram"/"mmcblk"/"nfs" matched the whole
+# command line, so any unrelated token carrying those letters -- e.g. the
+# "ramoops" crash-log parameters -- was mistaken for a ramdisk/SD/NFS root, the
+# flash overlay was never mounted, and the camera booted read-only and unclaimed.
+grep -qE 'root=[^ ]*(nfs|mmcblk|ram)' /proc/cmdline && is_flash_root=false
+grep -qE 'root=[^ ]*nfs' /proc/cmdline && is_nfs_root=true
 
 if $is_flash_root; then
 	if grep -q ubifs /proc/cmdline; then
