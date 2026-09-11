@@ -240,15 +240,25 @@ UNBUILT_FAMILIES = {
 #
 # jsonfilter is the odd one: it was on all 120 defconfigs until majestic-webui
 # stopped calling it (OpenIPC/majestic-webui#177), which was the only thing on a
-# standard camera that did. It stays in the tree because ~97 builder devices and
-# the FPV variants still select it -- wifibroadcast-ng parses `@.video0.size`
-# with it -- so this is a package that left the matrix, not one that left the tree.
+# standard camera that did. OpenIPC/builder then dropped it from the 95 devices
+# that did not need it either (builder#128), so the ~97 downstream selectors this
+# line used to cite are down to a handful. What holds it in the tree now is the
+# FPV variants: wifibroadcast-ng selects it to parse `@.video0.size`, and
+# builder's apfpv devices set it directly for their own S99msposd. Still a
+# package that left the matrix, not one that left the tree.
 #
 # waybeam is unbuildable by construction here rather than merely unselected: it
 # depends on !BR2_PACKAGE_MAJESTIC, and every sigmastar defconfig in ALL_BOARDS
 # sets BR2_PACKAGE_MAJESTIC=y, because both drive the same sensor and encoder.
-# It is selected by the FPV variants in OpenIPC/builder. A mainline defconfig
-# with Majestic off would take it off this list.
+# The same exclusion holds downstream, so it is selected nowhere at all: every
+# OpenIPC/builder defconfig that selects wifibroadcast-ng also sets
+# BR2_PACKAGE_MAJESTIC=y, and no defconfig in either tree sets
+# BR2_PACKAGE_WAYBEAM=y. The symbol appears only where it is defined, in
+# general/package/waybeam/Config.in, and in this comment. The line this replaces
+# claimed builder's FPV variants selected it, which sent a contributor debugging
+# an FPV OSD fault (#2395) after a waybeam log file that no shipped image
+# writes. A defconfig with Majestic off, mainline or downstream, would take it
+# off this list.
 #
 # usb-dual-role is here for the ordinary reason: it needs a device tree that
 # wires dwc3 as dual-role and a kernel built with CONFIG_USB_DWC3_DUAL_ROLE,
