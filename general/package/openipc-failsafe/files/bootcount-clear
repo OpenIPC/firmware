@@ -1,0 +1,26 @@
+#!/bin/sh
+# Clear the U-Boot DRAM boot counter -- the reserved no-map word the bootloader
+# increments each boot and, once it passes bootlimit, uses to fall into FAILSAFE
+# (network + SSH only). Clearing it through /dev/mem writes no flash at all,
+# unlike an env-backed counter whose per-boot NOR writes wear the chip and can
+# brick the env on a power cut. Callers clear it once the image is proven
+# healthy (S99bootok), on failsafe entry (failsafe-rescue) and before a flash
+# (sysupgrade).
+#
+# The address is not hard-coded: it is the reserved-memory region the board DTS
+# names bootcount@<addr>. A board whose kernel does not reserve the counter has
+# no such node, so this is a safe no-op there and never writes into another
+# platform's physical memory -- the reason this ships as its own package keyed
+# off BR2_PACKAGE_OPENIPC_FAILSAFE rather than from the shared overlay (#2396).
+#
+# Exit status: 0 when there is nothing to clear (no node, or no devmem) or the
+# write succeeded; non-zero only when the counter exists but the write failed,
+# so a caller that must know the counter was actually reset -- S99bootok on a
+# healthy boot -- can report it instead of silently drifting toward failsafe.
+command -v devmem >/dev/null 2>&1 || exit 0
+for node in /sys/firmware/devicetree/base/reserved-memory/bootcount@*; do
+	[ -e "$node" ] || continue
+	devmem "0x${node##*bootcount@}" 32 0 2>/dev/null
+	exit $?
+done
+exit 0
