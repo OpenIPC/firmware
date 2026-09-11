@@ -4,10 +4,11 @@
  *
  * A clean reimplementation of the vendor "gpioStep"/"motor" behaviour observed
  * on Goke GK7205V510 cameras (model NC-IPTC2200_DL): two 4-wire stepper coils
- * driven over GPIO. Unlike the userspace gpio-motors tool (which does
- * open/write/close on /sys/class/gpio per pin per microstep), the stepping here
- * runs entirely in kernel context with direct gpio_set_value(), so timing is
- * far steadier and CPU cost much lower.
+ * driven over GPIO. The stepping runs entirely in kernel context with direct
+ * gpio_set_value(), which avoids the syscall traffic of the userspace
+ * gpio-motors tool. Timing granularity, however, is still bounded by the
+ * tick on kernels without CONFIG_HIGH_RES_TIMERS - which is every kernel
+ * that ships this package - so sub-tick delays busy-wait (see step_delay()).
  *
  * Control is via a misc char device /dev/motorDev and a single ioctl. The pin
  * map defaults to the GK7205V510 layout and is overridable with module params:
@@ -20,9 +21,11 @@
 #include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/gpio.h>
+#include <linux/jiffies.h>
 #include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/sched.h>
 #include <linux/uaccess.h>
 
 #include "gpiostep.h"
@@ -48,6 +51,35 @@ static const int rev_step_seq[8][4] = {
 
 static DEFINE_MUTEX(gpiostep_lock);
 
+/*
+ * usleep_range() runs on hrtimers, but without CONFIG_HIGH_RES_TIMERS those
+ * expire with jiffy granularity, so a sub-tick sleep rounds up to the next
+ * tick (10ms at HZ=100) exactly like a userspace usleep - and every defconfig
+ * that ships this package builds such a kernel. Busy-wait instead while the
+ * requested delay is under a quarter tick, where that rounding would at least
+ * quadruple the step period; from a quarter tick up, sleep and accept the
+ * rounding, since the busy-wait cost grows with the delay while its benefit
+ * shrinks. The cond_resched() keeps a move from monopolising the core: these
+ * kernels are !SMP and !PREEMPT, so without it the encoder would not run at
+ * all until the whole move finished.
+ */
+static void step_delay(int delay_us)
+{
+	if (!IS_ENABLED(CONFIG_HIGH_RES_TIMERS) &&
+	    (unsigned int)delay_us < jiffies_to_usecs(1) / 4) {
+		/* udelay() on ARM is bounded at ~2ms per call; chunk it */
+		while (delay_us > 1000) {
+			udelay(1000);
+			delay_us -= 1000;
+		}
+		udelay(delay_us);
+		cond_resched();
+		return;
+	}
+
+	usleep_range(delay_us, delay_us + (delay_us >> 4) + 1);
+}
+
 static void axis_run(const int pins[4], int steps, int delay_us)
 {
 	const int (*seq)[4] = (steps < 0) ? rev_step_seq : step_seq;
@@ -62,7 +94,7 @@ static void axis_run(const int pins[4], int steps, int delay_us)
 		for (i = 0; i < 4; i++)
 			gpio_set_value(pins[i], seq[micro][i]);
 
-		usleep_range(delay_us, delay_us + (delay_us >> 4) + 1);
+		step_delay(delay_us);
 
 		if (++micro >= 8) {
 			micro = 0;
