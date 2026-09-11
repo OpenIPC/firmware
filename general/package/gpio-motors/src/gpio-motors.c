@@ -166,19 +166,23 @@ void gpio_config() {
  * put a hard ~80ms floor under every step no matter how small the requested
  * delay is (measured on Hi3518EV200: 200 steps took 33s at delay 15 and still
  * 18s at delay 4). Kernels with hrtimers deliver usleep(1500) in ~1.5ms, and
- * sleeping is strictly better there. clock_getres() tells the two apart, so
- * sleep whenever the kernel can honour the delay - or when the delay is at
- * least a tick, where rounding no longer dominates - and spin on
- * CLOCK_MONOTONIC only for sub-tick delays on a coarse-timer kernel. Moves
- * are short and bounded, so burning the CPU for their duration is a fair
- * trade in that remaining case.
+ * sleeping is strictly better there. clock_getres() tells the two apart.
+ *
+ * Spinning is only worth it while the delay is a small fraction of a tick,
+ * because its cost runs opposite to its benefit: the longer the delay, the
+ * longer the core stays pinned and the smaller the rounding error a sleep
+ * would have added. A 9ms delay would hold the core ~14s over a 200-step
+ * move to shave an 11% error, with every clock_gettime a real syscall on
+ * cores that cannot read the arch timer from userspace. So spin on
+ * CLOCK_MONOTONIC only below a quarter tick, where sleeping would at least
+ * quadruple the step period, and sleep everywhere else.
  */
 void delay_us(long us) {
 	if (us <= 0) {
 		return;
 	}
 
-	if (CLOCK_RES_NS <= 1000000 || us >= CLOCK_RES_NS / 1000) {
+	if (CLOCK_RES_NS <= 1000000 || us >= CLOCK_RES_NS / 4000) {
 		usleep(us);
 		return;
 	}
@@ -193,7 +197,10 @@ void delay_us(long us) {
 	 * time, which a preemption in the middle of the spin can reach */
 	long long target = (long long)us * 1000;
 	for (;;) {
-		clock_gettime(CLOCK_MONOTONIC, &now);
+		if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+			usleep(us);
+			return;
+		}
 		long long elapsed = (long long)(now.tv_sec - start.tv_sec) * 1000000000LL + (now.tv_nsec - start.tv_nsec);
 		if (elapsed >= target) {
 			return;
