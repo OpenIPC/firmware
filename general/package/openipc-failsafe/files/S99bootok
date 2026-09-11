@@ -1,0 +1,46 @@
+#!/bin/sh
+# Clear the bootloader's boot counter once the camera has reached a healthy
+# userspace. U-Boot increments a counter every boot and, if it is never cleared,
+# boots FAILSAFE (network + SSH only) after bootlimit tries -- so a camera that
+# boots but never streams lands somewhere reachable instead of looping forever.
+#
+# The counter is a single reserved DRAM word (see bootcount-clear and the board
+# DTS), NOT the U-Boot env: it is cleared through /dev/mem, writing no flash at
+# all. A normal boot writes nothing to flash, ever.
+case "$1" in
+	start|"") ;;
+	*) exit 0 ;;
+esac
+
+command -v bootcount-clear >/dev/null 2>&1 || exit 0
+
+# Clear only once the image is PROVEN healthy -- and prove it, don't just glimpse
+# it: pidof sees majestic the instant S95majestic forks, before the pipeline is
+# up, so a streamer that crashes during startup would look healthy for a moment.
+# Require it to stay up across a sustained window; if it dies the window
+# restarts, and if it never holds we leave the counter so U-Boot escalates to
+# failsafe instead of looping on an image that boots but does not stream. An
+# image built without majestic is healthy once it boots this far. Backgrounded
+# so nothing here holds up boot.
+{
+	need=8       # consecutive good checks (~16s) before trusting the image
+	ok=0
+	tries=0
+	while [ "$tries" -lt 90 ]; do
+		if [ ! -x /usr/bin/majestic ] || pidof majestic >/dev/null 2>&1; then
+			ok=$((ok + 1))
+			if [ "$ok" -ge "$need" ]; then
+				# Report a failed clear rather than swallow it: if the counter
+				# exists but the write did not land, every healthy boot would
+				# otherwise leave U-Boot silently counting toward failsafe.
+				bootcount-clear || logger -s -t bootok "healthy but could not clear the boot counter (devmem write failed) -- U-Boot will keep counting toward failsafe" 2>/dev/null
+				exit 0
+			fi
+		else
+			ok=0
+		fi
+		sleep 2
+		tries=$((tries + 1))
+	done
+	logger -s -t bootok "majestic did not stay up; leaving the boot counter for U-Boot to escalate to failsafe" 2>/dev/null
+} &
