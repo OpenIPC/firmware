@@ -1,0 +1,34 @@
+#!/bin/sh
+# Failsafe rescue mode, run by rcS when the bootloader has appended "failsafe"
+# to the kernel command line after repeated failed boots (it can also be set by
+# hand). Bring up only logging, device nodes, networking and SSH, and skip the
+# SDK (S70vendor), the streamer (S95majestic) and every other service, so
+# nothing that could be crashlooping runs. The overlay stays mounted (see
+# /init), so the camera is still claimed -- SSH auth works -- and its config and
+# /sys/fs/pstore logs are left intact for inspection. Nothing is wiped: a
+# reachable camera to diagnose and fix, instead of one someone must reset blind.
+#
+# Ships only on families that reserve the DRAM boot counter, keyed off
+# BR2_PACKAGE_OPENIPC_FAILSAFE; on any other image the "failsafe" token never
+# appears and this script is absent, so rcS falls through to a normal boot.
+echo "*** FAILSAFE: bringing up network + SSH only, services skipped ***"
+for s in S01syslogd S29pstore S38mdev S31hostname S40network S50dropbear; do
+	[ -x "/etc/init.d/$s" ] && "/etc/init.d/$s" start
+done
+
+# Leave a breadcrumb the WebUI reads on the next normal boot, so a fault that
+# left no pstore panic -- a service that simply never came up -- still shows the
+# owner "this camera recovered from a crash". Overlay-only, no flash.
+mkdir -p /etc/crash 2>/dev/null && \
+	printf 'reason=bootlimit\nutc=%s\n' \
+		"$(date -u '+%Y-%m-%d %H:%M:%S' 2>/dev/null)" \
+		> /etc/crash/failsafe 2>/dev/null
+
+# Reaching failsafe counts as "handled": clear the DRAM boot counter (no flash)
+# so once the operator fixes the fault and reboots, the next boot is a normal
+# one. If they reboot without fixing it, bootlimit more failed boots land back
+# here. A cold power-cycle also clears it.
+bootcount-clear
+
+echo "*** FAILSAFE: ready. SSH in to inspect (pstore, config) and recover. ***"
+exit 0

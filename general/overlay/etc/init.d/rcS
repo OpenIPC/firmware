@@ -5,33 +5,14 @@ export UPGRADE=$(fw_printenv -n upgrade)
 # that an unset TZ would use, so a missing /etc/TZ must leave TZ alone.
 [ -r /etc/TZ ] && export TZ=$(cat /etc/TZ)
 
-# Failsafe rescue mode. The bootloader appends "failsafe" to the kernel command
-# line after repeated failed boots (and it can be set by hand); here we bring up
-# only logging, device nodes, networking and SSH, and skip the SDK (S70vendor),
-# the streamer (S95majestic) and every other service, so nothing that could be
-# crashlooping runs. The overlay is still mounted (see /init), so the camera
-# stays claimed -- SSH auth works -- and its config and /sys/fs/pstore logs are
-# left intact for inspection. Nothing is wiped: a reachable camera to diagnose
-# and fix, instead of an unreachable one someone has to reset "blind".
-if grep -qw failsafe /proc/cmdline 2>/dev/null; then
-	echo "*** FAILSAFE: bringing up network + SSH only, services skipped ***"
-	for s in S01syslogd S29pstore S38mdev S31hostname S40network S50dropbear; do
-		[ -x "/etc/init.d/$s" ] && "/etc/init.d/$s" start
-	done
-	# Leave a breadcrumb the WebUI reads on the next normal boot, so a fault that
-	# left no pstore panic -- a service that simply never came up -- still shows
-	# the owner "this camera recovered from a crash". Overlay-only, no flash.
-	mkdir -p /etc/crash 2>/dev/null && \
-		printf 'reason=bootlimit\nutc=%s\n' \
-			"$(date -u '+%Y-%m-%d %H:%M:%S' 2>/dev/null)" \
-			> /etc/crash/failsafe 2>/dev/null
-
-	# Reaching failsafe counts as "handled": clear the bootloader's DRAM boot
-	# counter (no flash) so once the operator fixes the fault and reboots, the
-	# next boot is a normal one. If they reboot without fixing it, three more
-	# failed boots simply land back here. Cold power-cycle also clears it.
-	command -v devmem >/dev/null 2>&1 && devmem 0x41f20000 32 0 2>/dev/null
-	echo "*** FAILSAFE: ready. SSH in to inspect (pstore, config) and recover. ***"
+# Failsafe rescue: the bootloader appends "failsafe" to the kernel command line
+# after repeated failed boots (it can also be set by hand). The rescue itself
+# ships only on SoC families that reserve the DRAM boot counter -- it is
+# /usr/sbin/failsafe-rescue from package/openipc-failsafe, keyed off
+# BR2_PACKAGE_OPENIPC_FAILSAFE. On any other image the token never appears and
+# the script is absent, so this falls through to a normal boot. See #2396.
+if grep -qw failsafe /proc/cmdline 2>/dev/null && [ -x /usr/sbin/failsafe-rescue ]; then
+	/usr/sbin/failsafe-rescue
 	exit 0
 fi
 

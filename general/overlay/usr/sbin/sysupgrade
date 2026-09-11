@@ -1347,13 +1347,14 @@ fi
 # Clear the bootloader's boot counter so the freshly written image starts with a
 # clean slate: if it never reaches a healthy userspace, U-Boot boots FAILSAFE
 # (network + SSH only) after bootlimit tries instead of looping on a broken
-# image, and S99bootok clears the counter again once majestic is up. The counter
-# is a no-map DRAM word (0x41f20000, see the board DTS) -- this writes no flash,
-# unlike an env-backed counter whose per-boot writes wear NOR and risk a bricked
-# env on a power cut. On a U-Boot/kernel without it the write lands in spare
-# reserved RAM nobody reads. Done on the still-normal system, before enter_ramfs
-# moves things out of reach.
-command -v devmem >/dev/null 2>&1 && devmem 0x41f20000 32 0 2>/dev/null
+# image, and S99bootok clears the counter again once majestic is up.
+# bootcount-clear ships only on families that reserve the counter
+# (package/openipc-failsafe) and reads its address from the board DTS, so it is
+# a safe no-op elsewhere and never writes another platform's memory (#2396); it
+# touches no flash either, unlike an env-backed counter whose per-boot NOR
+# writes wear the chip and risk a bricked env on a power cut. Done on the
+# still-normal system, before enter_ramfs moves things out of reach.
+command -v bootcount-clear >/dev/null 2>&1 && bootcount-clear
 
 # A camera that ever ran the pre-verify U-Boot has verify=n saved in flash,
 # where it still overrides the built-in default; drop the key so the kernel

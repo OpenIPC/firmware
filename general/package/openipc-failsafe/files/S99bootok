@@ -4,18 +4,15 @@
 # boots FAILSAFE (network + SSH only) after bootlimit tries -- so a camera that
 # boots but never streams lands somewhere reachable instead of looping forever.
 #
-# The counter is a single DRAM word (a no-map reserved region at 0x41f20000, see
-# the board DTS), NOT the U-Boot env: we clear it through /dev/mem, writing no
-# flash at all. On a U-Boot/kernel without this the write just lands in spare
-# reserved RAM nobody reads, so it is harmless. A normal boot writes nothing to
-# flash, ever.
+# The counter is a single reserved DRAM word (see bootcount-clear and the board
+# DTS), NOT the U-Boot env: it is cleared through /dev/mem, writing no flash at
+# all. A normal boot writes nothing to flash, ever.
 case "$1" in
 	start|"") ;;
 	*) exit 0 ;;
 esac
 
-command -v devmem >/dev/null 2>&1 || exit 0
-BOOTCOUNT_ADDR=0x41f20000
+command -v bootcount-clear >/dev/null 2>&1 || exit 0
 
 # Clear only once the image is PROVEN healthy -- and prove it, don't just glimpse
 # it: pidof sees majestic the instant S95majestic forks, before the pipeline is
@@ -33,7 +30,10 @@ BOOTCOUNT_ADDR=0x41f20000
 		if [ ! -x /usr/bin/majestic ] || pidof majestic >/dev/null 2>&1; then
 			ok=$((ok + 1))
 			if [ "$ok" -ge "$need" ]; then
-				devmem "$BOOTCOUNT_ADDR" 32 0 2>/dev/null
+				# Report a failed clear rather than swallow it: if the counter
+				# exists but the write did not land, every healthy boot would
+				# otherwise leave U-Boot silently counting toward failsafe.
+				bootcount-clear || logger -s -t bootok "healthy but could not clear the boot counter (devmem write failed) -- U-Boot will keep counting toward failsafe" 2>/dev/null
 				exit 0
 			fi
 		else

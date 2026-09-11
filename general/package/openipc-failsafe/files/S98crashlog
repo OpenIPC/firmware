@@ -6,7 +6,7 @@
 # capped to the latest crash (overwritten each time), so the overlay never grows
 # without bound, and a clean boot -- no records -- writes nothing at all. This is
 # the capture half of the owner-pull crash report (WebUI is the other half); it
-# pairs with the failsafe breadcrumb in rcS and with S99bootok.
+# pairs with the failsafe breadcrumb in failsafe-rescue and with S99bootok.
 case "$1" in
 	start|"") ;;
 	*) exit 0 ;;
@@ -19,11 +19,16 @@ CRASH=/etc/crash
 ls "$PSTORE"/dmesg-* >/dev/null 2>&1 || exit 0
 mkdir -p "$CRASH" 2>/dev/null || exit 0
 
-# busybox tar has no built-in -z here, so compress through gzip and confirm the
-# result is non-empty before trusting it.
-if tar cf - -C "$PSTORE" . 2>/dev/null | gzip > "$CRASH/crash.tar.gz.tmp" 2>/dev/null \
-	&& [ -s "$CRASH/crash.tar.gz.tmp" ]; then
-	mv "$CRASH/crash.tar.gz.tmp" "$CRASH/crash.tar.gz" 2>/dev/null
+# busybox tar has no built-in -z, and piping tar into gzip would hide tar's exit
+# status behind gzip's -- a partial read could then produce a nonempty archive
+# that looks like success. So stage tar to a file and check tar itself, then
+# gzip, then the publish: the pstore records are deleted ONLY once the finished
+# bundle is safely in place. A failed capture must never erase the evidence it
+# exists to keep (#2396 review).
+if tar cf "$CRASH/crash.tar.tmp" -C "$PSTORE" . 2>/dev/null &&
+	gzip -f "$CRASH/crash.tar.tmp" 2>/dev/null &&
+	[ -s "$CRASH/crash.tar.tmp.gz" ] &&
+	mv "$CRASH/crash.tar.tmp.gz" "$CRASH/crash.tar.gz" 2>/dev/null; then
 	{
 		echo "utc=$(date -u '+%Y-%m-%d %H:%M:%S' 2>/dev/null)"
 		echo "records=$(ls -1 "$PSTORE"/dmesg-* 2>/dev/null | wc -l)"
@@ -32,6 +37,7 @@ if tar cf - -C "$PSTORE" . 2>/dev/null | gzip > "$CRASH/crash.tar.gz.tmp" 2>/dev
 	logger -s -t crashlog "preserved pstore crash log to $CRASH/crash.tar.gz" 2>/dev/null
 	rm -f "$PSTORE"/dmesg-* 2>/dev/null
 else
-	rm -f "$CRASH/crash.tar.gz.tmp" 2>/dev/null
+	logger -s -t crashlog "could not preserve the pstore crash log; leaving records in place" 2>/dev/null
+	rm -f "$CRASH/crash.tar.tmp" "$CRASH/crash.tar.tmp.gz" 2>/dev/null
 fi
 exit 0
