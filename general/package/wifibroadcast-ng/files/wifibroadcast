@@ -129,11 +129,63 @@ start_telemetry() {
 			size=$(curl -s localhost/api/v1/config.json | jsonfilter -qe "@.video0.size")
 		fi
 		msposd -b 115200 -c 8 -r "$osd_fps" -m /dev/"$serial" \
-			-o 127.0.0.1:"$port_tx" -z "$size" > /dev/null &
+			-o 127.0.0.1:"$port_tx" -z "$size" -d > /dev/null &
+
+		[ "$router" = "msposd" ] && watch_waybeam_respawn "$osd_fps" "$serial" "$port_tx" "$size"
 
 		sleep 5
 		echo "&L70&F28&G8CPU:&C TEMP:&T\n&B" >/tmp/MSPOSD.msg
 	fi
+}
+
+# msposd needs -d/--osd to actually draw the OSD overlay (MI_RGN_Init) —
+# without it, it runs and parses FC telemetry fine but never renders
+# anything. See github.com/OpenIPC/msposd for the flag.
+#
+# waybeam (the venc/encoder daemon on Star6E SoCs) does an internal
+# cold-restart shortly after its own startup (fork+exec, to lock in a
+# cold-boot FPS re-kick — see src/star6e_pipeline.c in OpenIPC/waybeam),
+# which destroys and recreates its venc channel. msposd binds its OSD
+# region to whatever venc channel exists at its own startup, once, via
+# MI_RGN_Init, and never reattaches — so if msposd starts before this
+# happens (which it always does: this script starts msposd right after
+# S95waybeam returns, which is before waybeam's internal respawn fires),
+# the OSD region is silently destroyed along with the old channel and
+# never comes back. Re-scan /tmp/waybeam.log (whole file each check,
+# since the respawn can complete before we start watching) for the
+# respawn, then wait for its "ISP channel ready" to appear a second time
+# (the real signal the new channel is up, not a guessed delay — it also
+# appears once during the normal pre-respawn boot), then restart msposd
+# so it reattaches. The bounded loops below are a safety net, not the
+# wait mechanism. No-op on SoCs/builds where waybeam doesn't do this
+# respawn (or majestic is in use instead) — /tmp/waybeam.log never gets
+# the marker and this just exits after the timeout.
+watch_waybeam_respawn() {
+	osd_fps="$1"; serial="$2"; port_tx="$3"; size="$4"
+	(
+		elapsed=0
+		while [ "$elapsed" -lt 30 ]; do
+			grep -q "Respawning:" /tmp/waybeam.log 2>/dev/null && break
+			sleep 0.5
+			elapsed=$((elapsed + 1))
+		done
+		grep -q "Respawning:" /tmp/waybeam.log 2>/dev/null || exit 0
+
+		elapsed=0
+		while [ "$elapsed" -lt 20 ]; do
+			[ "$(grep -c "ISP channel ready" /tmp/waybeam.log 2>/dev/null)" -ge 2 ] && break
+			sleep 0.3
+			elapsed=$((elapsed + 1))
+		done
+
+		echo_log "waybeam respawned post-boot, restarting msposd to reattach OSD"
+		killall -q msposd
+		while pidof msposd >/dev/null 2>&1; do
+			sleep 0.2
+		done
+		msposd -b 115200 -c 8 -r "$osd_fps" -m /dev/"$serial" \
+			-o 127.0.0.1:"$port_tx" -z "$size" -d > /dev/null &
+	) &
 }
 
 video_settings() {
