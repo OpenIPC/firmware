@@ -8,7 +8,8 @@
  * gpio_set_value(), which avoids the syscall traffic of the userspace
  * gpio-motors tool. Timing granularity, however, is still bounded by the
  * tick on kernels without CONFIG_HIGH_RES_TIMERS - which is every kernel
- * that ships this package - so sub-tick delays busy-wait (see step_delay()).
+ * that ships this package - so sub-tick delays busy-wait between scheduler
+ * yields (see step_delay()).
  *
  * Control is via a misc char device /dev/motorDev and a single ioctl. The pin
  * map defaults to the GK7205V510 layout and is overridable with module params:
@@ -61,12 +62,21 @@ static DEFINE_MUTEX(gpiostep_lock);
  * rounding, since the busy-wait cost grows with the delay while its benefit
  * shrinks. The cond_resched() keeps a move from monopolising the core: these
  * kernels are !SMP and !PREEMPT, so without it the encoder would not run at
- * all until the whole move finished.
+ * all until the whole move finished. It also means the sub-tick pacing only
+ * holds on an idle core - under load the yield can hand the core away for
+ * several ticks between two micro-steps.
+ *
+ * A zero delay keeps its usleep_range(0, 1). That is an already-expired
+ * hrtimer and returns at once - measured on a Hi3518EV200, 320 micro-steps at
+ * delay 0 finish in under 10ms with either version of this module - so zero
+ * has never had a floor; this just leaves that unchanged rather than sending
+ * it down the busy-wait path, where the guard would be the only thing between
+ * a negative and udelay().
  */
 static void step_delay(int delay_us)
 {
-	if (!IS_ENABLED(CONFIG_HIGH_RES_TIMERS) &&
-	    (unsigned int)delay_us < jiffies_to_usecs(1) / 4) {
+	if (delay_us > 0 && !IS_ENABLED(CONFIG_HIGH_RES_TIMERS) &&
+	    delay_us < (int)(jiffies_to_usecs(1) / 4)) {
 		/* udelay() on ARM is bounded at ~2ms per call; chunk it */
 		while (delay_us > 1000) {
 			udelay(1000);
