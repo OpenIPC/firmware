@@ -107,6 +107,13 @@ if [ "$1" = "mt7601u-hi3516ev200-camhi" ]; then
 	exit 0
 fi
 
+# HI3516EV200 Imou Cue 2
+if [ "$1" = "rtl8188fu-hi3516ev200-imou-cue2" ]; then
+	set_gpio 52 1
+	modprobe 8188fu
+	exit 0
+fi
+
 # HI3516EV300 CamHi
 if [ "$1" = "mt7601u-hi3516ev300-camhi" ]; then
 	devmem 0x100C0080 32 0x530

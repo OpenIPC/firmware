@@ -105,7 +105,7 @@
  	sc2235_write_register(ViPipe, 0x3348, 0x07);
  	sc2235_write_register(ViPipe, 0x3349, 0x80);
  	sc2235_write_register(ViPipe, 0x391b, 0x4d);
-@@ -302,33 +259,63 @@
+@@ -302,33 +259,68 @@
  	sc2235_write_register(ViPipe, 0x3f00, 0x07);
  	sc2235_write_register(ViPipe, 0x3f04, 0x08);
  	sc2235_write_register(ViPipe, 0x3f05, 0x74);
@@ -170,7 +170,12 @@
 +	sc2235_write_register(ViPipe, 0x3039, 0x31);
 +	sc2235_write_register(ViPipe, 0x3237, 0x04);
 +	sc2235_write_register(ViPipe, 0x3238, 0x4c);
- 
++
++	/* 180-degree rotation: mirror + vertical flip at sensor level so
++	 * majestic does not need .image.flip / .image.mirror (which would
++	 * force the VI offline path and break the pipeline). */
++	sc2235_write_register(ViPipe, 0x3221, 0x66);
+
 -	sc2235_write_register(ViPipe, 0x3221, 0x66);
 -	// Platform_Dependent
 -	sc2235_write_register(ViPipe, 0x3d08, 0x01);
