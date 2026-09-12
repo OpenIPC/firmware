@@ -59,6 +59,7 @@ fi
 ) >>/tmp/wireguard.conf
 
 run_cmd "Failed to apply wireguard configuration" wg setconf wg0 /tmp/wireguard.conf
+
 run_cmd "" ip address add dev wg0 "$WG_ADDRESS"
 run_cmd "" ip link set up dev wg0
 
