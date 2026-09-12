@@ -8,10 +8,8 @@ run_cmd() {
 	shift 2
 
 	local output
-	local rc
-
 	output=$("$@" 2>&1)
-	rc=$?
+	local rc=$?
 
 	if [ "$rc" -ne 0 ]; then
 		[ -n "$msg" ] && msg="$msg. "
