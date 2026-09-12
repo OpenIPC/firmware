@@ -20,13 +20,13 @@ run_cmd() {
 	local rc=$?
 
 	if [ "$rc" -ne 0 ]; then
-		if [ -z "$msg" ]; then
-			local symbol
-			[ -z "$output" ] && symbol="." || symbol=":"
-			msg="Command \`$*\` finished with code $rc$symbol"
+		if [ -n "$msg" ]; then
+			logger -p user.err -t "$prog[$$]" "$msg"
 		fi
 
-		logger -p user.err -t "$prog[$$]" "$msg"
+		local symbol
+		[ -z "$output" ] && symbol="." || symbol=":"
+		logger -p user.err -t "$prog[$$]" "Command \`$*\` finished with code $rc$symbol"
 
 		if [ -n "$output" ]; then
 			printf '%s\n' "$output" |
@@ -37,7 +37,9 @@ run_cmd() {
 			echo "$output" >&2
 		fi
 
-		[ "$fatal" = "false" ] && return
+		if [ "$fatal" = "false" ]; then
+			return
+		fi
 
 		exit "$rc"
 	fi
