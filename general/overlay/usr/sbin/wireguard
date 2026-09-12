@@ -28,11 +28,11 @@ run_cmd "Failed to load wireguard module" modprobe wireguard
 run_cmd "Failed to create wg0 interface" ip link add dev wg0 type wireguard
 
 WG_PRIVKEY=$(run_cmd "" fw_printenv -n wg_privkey)
-WG_PRESHARED_KEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
-ENDPOINT=$(run_cmd "" fw_printenv -n wg_endpoint)
-[ -n "$ENDPOINT" ] || { echo "Error: wg_endpoint environment variable is not set or empty." >&2; exit 1; }
+WG_SHARKEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
+WG_ENDPOINT=$(run_cmd "Failed to read wg_endpoint U-Boot environment variable" fw_printenv -n wg_endpoint)
+WG_ADDRESS=$(run_cmd "Failed to read wg_address U-Boot environment variable" fw_printenv -n wg_address)
 
-HOST="${ENDPOINT%:*}"
+HOST="${WG_ENDPOINT%:*}"
 
 if ! echo "$HOST" | grep -qE '^\[|^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$'; then
 	while ! nslookup "$HOST" >/dev/null 2>&1; do
@@ -46,23 +46,16 @@ fi
 	echo "PrivateKey = $WG_PRIVKEY"
 	echo
 	echo "[Peer]"
-	echo "Endpoint = $ENDPOINT"
+	echo "Endpoint = $WG_ENDPOINT"
 	echo "PersistentKeepalive = $(run_cmd "" fw_printenv -n wg_alive)"
 	echo "PublicKey = $(run_cmd "" fw_printenv -n wg_pubkey)"
-	[ -n "$WG_PRESHARED_KEY" ] && echo "PresharedKey = $WG_PRESHARED_KEY"
+	[ -n "$WG_SHARKEY" ] && echo "PresharedKey = $WG_SHARKEY"
 	echo "AllowedIPs = $(run_cmd "" fw_printenv -n wg_allowed)"
 	echo "#"
 ) >>/tmp/wireguard.conf
 
 run_cmd "Failed to apply wireguard configuration" wg setconf wg0 /tmp/wireguard.conf
-
-wg_address=$(run_cmd "" fw_printenv -n wg_address)
-if [ -z "$wg_address" ]; then
-	echo "Error: wg_address environment variable is not set or empty." >&2
-	exit 1
-fi
-
-run_cmd "" ip address add dev wg0 "$wg_address"
+run_cmd "" ip address add dev wg0 "$WG_ADDRESS"
 run_cmd "" ip link set up dev wg0
 
 for i in $(run_cmd "" fw_printenv -n wg_allowed | tr ',' ' '); do
