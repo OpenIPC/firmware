@@ -1,8 +1,7 @@
 #!/bin/sh
 
-RUN_CMD_PROGRAM="${0##*/}"
-
 run_cmd() {
+	local prog="${0##*/}"
 	local msg="$1"
 	local var="$2"
 	shift 2
@@ -14,12 +13,12 @@ run_cmd() {
 	if [ "$rc" -ne 0 ]; then
 		[ -n "$msg" ] && msg="$msg. "
 
-		logger -p user.err -t "$RUN_CMD_PROGRAM[$$]" "Error: ${msg}"
-		logger -p user.err -t "$RUN_CMD_PROGRAM[$$]" "Command \`$*\` finished with code $rc:"
+		logger -p user.err -t "$prog[$$]" "Error: ${msg}"
+		logger -p user.err -t "$prog[$$]" "Command \`$*\` finished with code $rc:"
 
 		printf '%s\n' "$output" |
 		while IFS= read -r line; do
-			logger -p user.err -t "$RUN_CMD_PROGRAM[$$]" "$line"
+			logger -p user.err -t "$prog[$$]" "$line"
 		done
 
 		exit "$rc"
