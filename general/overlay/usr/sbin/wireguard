@@ -28,7 +28,7 @@ run_cmd "Failed to load wireguard module" modprobe wireguard
 run_cmd "Failed to create wg0 interface" ip link add dev wg0 type wireguard
 
 WG_PRIVKEY=$(run_cmd "" fw_printenv -n wg_privkey)
-WG_PRESHARED_KEY=$(run_cmd "" fw_printenv -n wg_sharkey 2>/dev/null || true)
+WG_PRESHARED_KEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
 ENDPOINT=$(run_cmd "" fw_printenv -n wg_endpoint)
 [ -n "$ENDPOINT" ] || { echo "Error: wg_endpoint environment variable is not set or empty." >&2; exit 1; }
 
