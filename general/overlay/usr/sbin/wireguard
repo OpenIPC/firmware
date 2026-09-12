@@ -6,28 +6,46 @@ run_cmd() {
 	local var="$2"
 	shift 2
 
+	local fatal
+
+	if [ "$var" = "--non-fatal" ]; then
+		fatal="false"
+		var=""
+	else
+		fatal="true"
+	fi
+
 	local output
 	output=$("$@" 2>&1)
 	local rc=$?
 
 	if [ "$rc" -ne 0 ]; then
-		[ -n "$msg" ] && msg="$msg. "
+		if [ -n "$msg" ]; then
+			logger -p user.err -t "$prog[$$]" "$msg"
+		elif [ -z "$output" ]; then
+			logger -p user.err -t "$prog[$$]" "Command \`$*\` finished with code $rc."
+		else
+			logger -p user.err -t "$prog[$$]" "Command \`$*\` finished with code $rc:"
 
-		logger -p user.err -t "$prog[$$]" "Error: ${msg}"
-		logger -p user.err -t "$prog[$$]" "Command \`$*\` finished with code $rc:"
+			printf '%s\n' "$output" |
+			while IFS= read -r line; do
+				logger -p user.err -t "$prog[$$]" "$line"
+			done
+		fi
 
-		printf '%s\n' "$output" |
-		while IFS= read -r line; do
-			logger -p user.err -t "$prog[$$]" "$line"
-		done
+		if [ -n "$output" ]; then
+			echo "$output" >&2
+		fi
 
-		exit "$rc"
+		if [ "$fatal" = "true" ]; then
+			exit "$rc"
+		fi	
 	fi
 
 	if [ -n "$var" ]; then
 		eval "$var=\"\$output\""
-	else
-		printf '%s\n' "$output"
+	elif [ -n "$output" ]; then
+		echo "$output"
 	fi
 }
 
@@ -67,9 +85,9 @@ fi
 
 run_cmd "Failed to apply wireguard configuration" "" wg setconf wg0 /tmp/wireguard.conf
 
-run_cmd "" "" ip address add dev wg0 "$WG_ADDRESS"
-run_cmd "" "" ip link set up dev wg0
+run_cmd "" --non-fatal ip address add dev wg0 "$WG_ADDRESS"
+run_cmd "" --non-fatal ip link set up dev wg0
 
 for i in $(echo "$WG_ALLOWED" | tr ',' ' '); do
-	run_cmd "" "" ip -4 route add "$i" dev wg0
+	run_cmd "" --non-fatal ip -4 route add "$i" dev wg0
 done
