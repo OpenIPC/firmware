@@ -1,11 +1,14 @@
 #!/bin/sh
 
-PROGRAM="${0##*/}"
+RUN_CMD_PROGRAM="${0##*/}"
 
 run_cmd() {
-	msg="$1"
-	var="$2"
+	local msg="$1"
+	local var="$2"
 	shift 2
+
+	local output
+	local rc
 
 	output=$("$@" 2>&1)
 	rc=$?
@@ -13,13 +16,12 @@ run_cmd() {
 	if [ "$rc" -ne 0 ]; then
 		[ -n "$msg" ] && msg="$msg. "
 
-		logger -p user.err -t "$PROGRAM[$$]" "Error: ${msg}"
-		logger -p user.err -t "$PROGRAM[$$]" "Command \`$*\` finished with code $rc:"
+		logger -p user.err -t "$RUN_CMD_PROGRAM[$$]" "Error: ${msg}"
+		logger -p user.err -t "$RUN_CMD_PROGRAM[$$]" "Command \`$*\` finished with code $rc:"
 
 		printf '%s\n' "$output" |
-
 		while IFS= read -r line; do
-			logger -p user.err -t "$PROGRAM[$$]" "$line"
+			logger -p user.err -t "$RUN_CMD_PROGRAM[$$]" "$line"
 		done
 
 		exit "$rc"
