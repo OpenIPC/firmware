@@ -4,37 +4,45 @@ PROGRAM="${0##*/}"
 
 run_cmd() {
 	msg="$1"
-	shift
+	var="$2"
+	shift 2
 
 	output=$("$@" 2>&1)
 	rc=$?
 
 	if [ "$rc" -ne 0 ]; then
 		[ -n "$msg" ] && msg="$msg. "
+
 		logger -p user.err -t "$PROGRAM[$$]" "Error: ${msg}"
 		logger -p user.err -t "$PROGRAM[$$]" "Command \`$*\` finished with code $rc:"
+
 		printf '%s\n' "$output" |
+
 		while IFS= read -r line; do
 			logger -p user.err -t "$PROGRAM[$$]" "$line"
 		done
-		kill -s TERM $$ 2>/dev/null
+
 		exit "$rc"
 	fi
 
-	printf '%s\n' "$output"
+	if [ -n "$var" ]; then
+		eval "$var=\"\$output\""
+	else
+		printf '%s\n' "$output"
+	fi
 }
 
-WG_PRIVKEY=$(run_cmd "Failed to read wg_privkey U-Boot environment variable" fw_printenv -n wg_privkey)
-WG_ENDPOINT=$(run_cmd "Failed to read wg_endpoint U-Boot environment variable" fw_printenv -n wg_endpoint)
-WG_ALIVE=$(run_cmd "Failed to read wg_alive U-Boot environment variable" fw_printenv -n wg_alive)
-WG_PUBKEY=$(run_cmd "Failed to read wg_pubkey U-Boot environment variable" fw_printenv -n wg_pubkey)
-WG_ALLOWED=$(run_cmd "Failed to read wg_allowed U-Boot environment variable" fw_printenv -n wg_allowed)
-WG_ADDRESS=$(run_cmd "Failed to read wg_address U-Boot environment variable" fw_printenv -n wg_address)
+run_cmd "Failed to read wg_privkey U-Boot environment variable" WG_PRIVKEY fw_printenv -n wg_privkey
+run_cmd "Failed to read wg_endpoint U-Boot environment variable" WG_ENDPOINT fw_printenv -n wg_endpoint
+run_cmd "Failed to read wg_alive U-Boot environment variable" WG_ALIVE fw_printenv -n wg_alive
+run_cmd "Failed to read wg_pubkey U-Boot environment variable" WG_PUBKEY fw_printenv -n wg_pubkey
+run_cmd "Failed to read wg_allowed U-Boot environment variable" WG_ALLOWED fw_printenv -n wg_allowed
+run_cmd "Failed to read wg_address U-Boot environment variable" WG_ADDRESS fw_printenv -n wg_address
 
 WG_SHARKEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
 
-run_cmd "Failed to load wireguard module" modprobe wireguard
-run_cmd "Failed to create wg0 interface" ip link add dev wg0 type wireguard
+run_cmd "Failed to load wireguard module" "" modprobe wireguard
+run_cmd "Failed to create wg0 interface" "" ip link add dev wg0 type wireguard
 
 HOST="${WG_ENDPOINT%:*}"
 
@@ -58,11 +66,11 @@ fi
 	echo "#"
 ) >>/tmp/wireguard.conf
 
-run_cmd "Failed to apply wireguard configuration" wg setconf wg0 /tmp/wireguard.conf
+run_cmd "Failed to apply wireguard configuration" "" wg setconf wg0 /tmp/wireguard.conf
 
-run_cmd "" ip address add dev wg0 "$WG_ADDRESS"
-run_cmd "" ip link set up dev wg0
+run_cmd "" "" ip address add dev wg0 "$WG_ADDRESS"
+run_cmd "" "" ip link set up dev wg0
 
 for i in $(echo "$WG_ALLOWED" | tr ',' ' '); do
-	run_cmd "" ip -4 route add "$i" dev wg0
+	run_cmd "" "" ip -4 route add "$i" dev wg0
 done
