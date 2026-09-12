@@ -24,13 +24,17 @@ run_cmd() {
 	printf '%s\n' "$output"
 }
 
+WG_PRIVKEY=$(run_cmd "Failed to read wg_privkey U-Boot environment variable" fw_printenv -n wg_privkey)
+WG_ENDPOINT=$(run_cmd "Failed to read wg_endpoint U-Boot environment variable" fw_printenv -n wg_endpoint)
+WG_ALIVE=$(run_cmd "Failed to read wg_alive U-Boot environment variable" fw_printenv -n wg_alive)
+WG_PUBKEY=$(run_cmd "Failed to read wg_pubkey U-Boot environment variable" fw_printenv -n wg_pubkey)
+WG_ALLOWED=$(run_cmd "Failed to read wg_allowed U-Boot environment variable" fw_printenv -n wg_allowed)
+WG_ADDRESS=$(run_cmd "Failed to read wg_address U-Boot environment variable" fw_printenv -n wg_address)
+
+WG_SHARKEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
+
 run_cmd "Failed to load wireguard module" modprobe wireguard
 run_cmd "Failed to create wg0 interface" ip link add dev wg0 type wireguard
-
-WG_PRIVKEY=$(run_cmd "" fw_printenv -n wg_privkey)
-WG_SHARKEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
-WG_ENDPOINT=$(run_cmd "Failed to read wg_endpoint U-Boot environment variable" fw_printenv -n wg_endpoint)
-WG_ADDRESS=$(run_cmd "Failed to read wg_address U-Boot environment variable" fw_printenv -n wg_address)
 
 HOST="${WG_ENDPOINT%:*}"
 
@@ -47,10 +51,10 @@ fi
 	echo
 	echo "[Peer]"
 	echo "Endpoint = $WG_ENDPOINT"
-	echo "PersistentKeepalive = $(run_cmd "" fw_printenv -n wg_alive)"
-	echo "PublicKey = $(run_cmd "" fw_printenv -n wg_pubkey)"
+	echo "PersistentKeepalive = $WG_ALIVE"
+	echo "PublicKey = $WG_PUBKEY"
 	[ -n "$WG_SHARKEY" ] && echo "PresharedKey = $WG_SHARKEY"
-	echo "AllowedIPs = $(run_cmd "" fw_printenv -n wg_allowed)"
+	echo "AllowedIPs = $WG_ALLOWED"
 	echo "#"
 ) >>/tmp/wireguard.conf
 
@@ -58,6 +62,6 @@ run_cmd "Failed to apply wireguard configuration" wg setconf wg0 /tmp/wireguard.
 run_cmd "" ip address add dev wg0 "$WG_ADDRESS"
 run_cmd "" ip link set up dev wg0
 
-for i in $(run_cmd "" fw_printenv -n wg_allowed | tr ',' ' '); do
+for i in $(echo "$WG_ALLOWED" | tr ',' ' '); do
 	run_cmd "" ip -4 route add "$i" dev wg0
 done
