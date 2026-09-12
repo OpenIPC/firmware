@@ -20,26 +20,26 @@ run_cmd() {
 	local rc=$?
 
 	if [ "$rc" -ne 0 ]; then
-		if [ -n "$msg" ]; then
-			logger -p user.err -t "$prog[$$]" "$msg"
-		elif [ -z "$output" ]; then
-			logger -p user.err -t "$prog[$$]" "Command \`$*\` finished with code $rc."
-		else
-			logger -p user.err -t "$prog[$$]" "Command \`$*\` finished with code $rc:"
+		if [ -z "$msg" ]; then
+			local symbol
+			[ -z "$output" ] && symbol="." || symbol=":"
+			msg="Command \`$*\` finished with code $rc$symbol"
+		fi
 
+		logger -p user.err -t "$prog[$$]" "$msg"
+
+		if [ -n "$output" ]; then
 			printf '%s\n' "$output" |
 			while IFS= read -r line; do
 				logger -p user.err -t "$prog[$$]" "$line"
 			done
-		fi
 
-		if [ -n "$output" ]; then
 			echo "$output" >&2
 		fi
 
-		if [ "$fatal" = "true" ]; then
-			exit "$rc"
-		fi	
+		[ "$fatal" = "false" ] && return
+
+		exit "$rc"
 	fi
 
 	if [ -n "$var" ]; then
