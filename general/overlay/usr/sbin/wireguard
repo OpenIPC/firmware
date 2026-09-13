@@ -1,42 +1,95 @@
 #!/bin/sh
 
-modprobe wireguard || { echo "Error: Failed to load wireguard module." >&2; exit 1; }
-ip link add dev wg0 type wireguard || { echo "Error: Failed to create wg0 interface." >&2; exit 1; }
+run_cmd() {
+	local prog="${0##*/}"
+	local msg="$1"
+	local var="$2"
+	shift 2
 
-WG_PRIVKEY="$(fw_printenv -n wg_privkey)"
-WG_PRESHARED_KEY="$(fw_printenv -n wg_sharkey)"
-ENDPOINT=$(fw_printenv -n wg_endpoint)
-[ -n "$ENDPOINT" ] || { echo "Error: wg_endpoint environment variable is not set or empty." >&2; exit 1; }
-HOST="${ENDPOINT%:*}"
+	local fatal
+
+	if [ "$var" = "--non-fatal" ]; then
+		fatal="false"
+		var=""
+	else
+		fatal="true"
+	fi
+
+	local output
+	output=$("$@" 2>&1)
+	local rc=$?
+
+	if [ "$rc" -ne 0 ]; then
+		if [ -n "$msg" ]; then
+			logger -p user.err -t "$prog[$$]" "$msg"
+		fi
+
+		local symbol
+		[ -z "$output" ] && symbol="." || symbol=":"
+		logger -p user.err -t "$prog[$$]" "Command \`$*\` finished with code $rc$symbol"
+
+		if [ -n "$output" ]; then
+			printf '%s\n' "$output" |
+			while IFS= read -r line; do
+				logger -p user.err -t "$prog[$$]" "$line"
+			done
+
+			echo "$output" >&2
+		fi
+
+		if [ "$fatal" = "false" ]; then
+			return
+		fi
+
+		exit "$rc"
+	fi
+
+	if [ -n "$var" ]; then
+		eval "$var=\"\$output\""
+	elif [ -n "$output" ]; then
+		echo "$output"
+	fi
+}
+
+run_cmd "Failed to read wg_privkey U-Boot environment variable" WG_PRIVKEY fw_printenv -n wg_privkey
+run_cmd "Failed to read wg_endpoint U-Boot environment variable" WG_ENDPOINT fw_printenv -n wg_endpoint
+run_cmd "Failed to read wg_alive U-Boot environment variable" WG_ALIVE fw_printenv -n wg_alive
+run_cmd "Failed to read wg_pubkey U-Boot environment variable" WG_PUBKEY fw_printenv -n wg_pubkey
+run_cmd "Failed to read wg_allowed U-Boot environment variable" WG_ALLOWED fw_printenv -n wg_allowed
+run_cmd "Failed to read wg_address U-Boot environment variable" WG_ADDRESS fw_printenv -n wg_address
+
+WG_SHARKEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
+
+run_cmd "Failed to load wireguard module" "" modprobe wireguard
+run_cmd "Failed to create wg0 interface" "" ip link add dev wg0 type wireguard
+
+HOST="${WG_ENDPOINT%:*}"
 
 if ! echo "$HOST" | grep -qE '^\[|^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$'; then
-    while ! nslookup "$HOST" >/dev/null 2>&1; do
-        sleep 10
-    done
+	while ! nslookup "$HOST" >/dev/null 2>&1; do
+		sleep 10
+	done
 fi
 
-( echo "#"
-  echo "[Interface]"
-  echo "PrivateKey = $WG_PRIVKEY"
-  echo
-  echo "[Peer]"
-  echo "Endpoint = $ENDPOINT"
-  echo "PersistentKeepalive = $(fw_printenv -n wg_alive)"
-  echo "PublicKey = $(fw_printenv -n wg_pubkey)"
-  [ -n "$WG_PRESHARED_KEY" ] && echo "PresharedKey = $WG_PRESHARED_KEY"
-  echo "AllowedIPs = $(fw_printenv -n wg_allowed)"
-  echo "#"
+(
+	echo "#"
+	echo "[Interface]"
+	echo "PrivateKey = $WG_PRIVKEY"
+	echo
+	echo "[Peer]"
+	echo "Endpoint = $WG_ENDPOINT"
+	echo "PersistentKeepalive = $WG_ALIVE"
+	echo "PublicKey = $WG_PUBKEY"
+	[ -n "$WG_SHARKEY" ] && echo "PresharedKey = $WG_SHARKEY"
+	echo "AllowedIPs = $WG_ALLOWED"
+	echo "#"
 ) >>/tmp/wireguard.conf
 
-wg setconf wg0 /tmp/wireguard.conf || { echo "Error: Failed to apply wireguard configuration." >&2; exit 1; }
-wg_address="$(fw_printenv -n wg_address)"
-if [ -z "$wg_address" ]; then
-    echo "Error: wg_address environment variable is not set or empty." >&2
-    exit 1
-fi
-ip address add dev wg0 "$wg_address"
-ip link set up dev wg0
-for i in $(fw_printenv -n wg_allowed | tr ',' ' '); do
-    ip -4 route add "$i" dev wg0
-done
+run_cmd "Failed to apply wireguard configuration" "" wg setconf wg0 /tmp/wireguard.conf
 
+run_cmd "" --non-fatal ip address add dev wg0 "$WG_ADDRESS"
+run_cmd "" --non-fatal ip link set up dev wg0
+
+for i in $(echo "$WG_ALLOWED" | tr ',' ' '); do
+	run_cmd "" --non-fatal ip -4 route add "$i" dev wg0
+done
