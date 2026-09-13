@@ -81,6 +81,94 @@ majestic_bad_path() {
 	return 1
 }
 
+# The address a camera may keep as its own.
+#
+# Shape first: six hex pairs, and the second nibble of the first octet even --
+# that bit is the group bit, and a multicast address is not a legal source
+# address for a frame the camera sends.
+mac_is_valid() {
+	echo "$1" | grep -Eiq '^[0-9a-f][02468ace](:[0-9a-f]{2}){5}$' || return 1
+	[ "$1" != 00:00:00:00:00:00 ]
+}
+
+# 00:00:23:34:45:xx is nobody's address. HiSilicon u-boot bakes
+# 00:00:23:34:45:66 into its default env (CONFIG_ETHADDR, in the board
+# headers), a full image carries no environment at all so the value is
+# whatever u-boot compiled in, and this overlay used to fall back to the same
+# literal in two places -- so the fleet converges on it. The last octet tracks
+# the bootloader build rather than the camera: a lab hi3516ev300 was found on
+# :88, which is why the whole prefix is matched and not one value.
+#
+# 00:00:23 is a registered OUI that OpenIPC does not own, so no camera has a
+# legitimate claim to any of the 256.
+mac_is_placeholder() {
+	case "$1" in
+		00:00:23:34:45:*) return 0 ;;
+	esac
+	return 1
+}
+
+mac_is_own() { mac_is_valid "$1" && ! mac_is_placeholder "$1"; }
+
+# A locally administered unicast address: bit 1 of the first octet set, bit 0
+# clear. 02: is the lowest prefix that satisfies both, and holding it fixed
+# also makes a self-assigned address recognisable beside a real vendor OUI.
+mac_generate() {
+	generated=$(od -An -tx1 -N5 /dev/urandom | tr -d ' ' |
+		sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)$/02:\1:\2:\3:\4:\5/')
+	# The pipeline reports sed's status, so a short read or a missing
+	# /dev/urandom comes back as success with nothing in it. That must not
+	# reach the store: `fw_setenv ethaddr ""` does not write an empty address,
+	# it DELETES the variable -- which is #2405 again, a fresh random MAC every
+	# boot, on a camera that had one a moment ago.
+	mac_is_own "$generated" || return 1
+	echo "$generated"
+}
+
+# The address the camera came with, where a stock firmware left one behind.
+# ipcinfo --xm-mac scans the flash for the Xiongmai magic and decodes the MAC
+# that follows it. It looks for a magic rather than trusting a partition
+# layout, so it is worth trying whatever the SoC vendor says -- xiongmai and
+# sigmastar cameras are built on the same stock images as the hisilicon ones
+# this was first written for (#1147) -- but only on NOR, which is the only
+# place that layout exists.
+mac_from_flash() {
+	command -v ipcinfo >/dev/null 2>&1 || return 1
+	[ "$(ipcinfo -F 2>/dev/null)" = nor ] || return 1
+	xmmac=$(ipcinfo --xm-mac 2>/dev/null) || return 1
+	mac_is_own "$xmmac" || return 1
+	echo "$xmmac"
+}
+
+# Where a MAC is kept. The u-boot environment first: sysupgrade never touches
+# that partition, so an address stored there survives firstboot, which is what
+# a DHCP reservation needs. /etc/ethaddr is for the boards that have no
+# fw_setenv at all -- BR2_PACKAGE_UBOOT_TOOLS is off on the two ambarella s2l
+# defconfigs -- and lives on the overlay, so firstboot wipes it and the camera
+# mints a fresh address next boot.
+ETHADDR_FILE=/etc/ethaddr
+
+mac_stored() {
+	stored=$(fw_printenv -n ethaddr 2>/dev/null)
+	if mac_is_own "$stored"; then echo "$stored"; return 0; fi
+	stored=$(cat "$ETHADDR_FILE" 2>/dev/null)
+	if mac_is_own "$stored"; then echo "$stored"; return 0; fi
+	return 1
+}
+
+mac_persist() {
+	# Guarded here as well as in every caller, because this is the last point
+	# before a bad value becomes permanent.
+	mac_is_own "$1" || return 1
+	if command -v fw_setenv >/dev/null 2>&1 && fw_setenv ethaddr "$1" 2>/dev/null; then
+		return 0
+	fi
+	# Braced so the redirection's own failure is suppressed too: `echo >f
+	# 2>/dev/null` sets up >f first, and a read-only /etc reports that to the
+	# stderr the next word is about to replace.
+	{ echo "$1" > "$ETHADDR_FILE"; } 2>/dev/null
+}
+
 case "$CMD" in
 	cli)
 		wpath=$(majestic_write_path "$@")
@@ -135,28 +223,91 @@ case "$CMD" in
 		;;
 
 	check_mac)
-		VENDOR=$(ipcinfo -v)
-		if [ "$VENDOR" = "hisilicon" ] || [ "$VENDOR" = "goke" ]; then
-			if [ "$(fw_printenv -n ethaddr)" = "00:00:23:34:45:66" ]; then
-				XMMAC=$(ipcinfo --xm-mac)
-				if [ -n "$XMMAC" ] && [ "$XMMAC" != "Nothing found." ]; then
-					fw_setenv ethaddr "$XMMAC"
-					reboot -f
-				else
-					echo "Warning. Wired network interface has default MAC address, please change it."
-				fi
-			fi
+		# Runs from S30customizer, which is before S40network: S40network reads
+		# ethaddr at its own start and interfaces.d/eth0 expands get_mac at ifup
+		# time, so an address written here is picked up later in the same boot.
+		# That is why this no longer reboots -- #1147 did, and did not need to.
+		#
+		# A camera that already has an address of its own is left alone. The
+		# repair is for the two ways a camera ends up without one: no environment
+		# at all after a full-image flash (#2405, a fresh random MAC every boot),
+		# and the placeholder every bootloader of a family ships. Duplicates are
+		# not cosmetic -- S96onvifserver derives serial_num from the interface
+		# MAC, so two cameras sharing an address also claim one ONVIF identity.
+		mac_stored >/dev/null && exit 0
+
+		was=$(fw_printenv -n ethaddr 2>/dev/null)
+		mac=$(mac_from_flash) || mac=$(mac_generate)
+		if [ -z "$mac" ]; then
+			echo "check_mac: no MAC address could be produced, eth0 keeps the one the kernel picked" >&2
+			exit 1
+		fi
+		if ! mac_persist "$mac"; then
+			echo "check_mac: nowhere to store a MAC address, eth0 keeps the one the kernel picked" >&2
+			exit 1
+		fi
+
+		# Say what was replaced, not just what was chosen. Taking an address
+		# off a camera that had been answering on it is worth one line in the
+		# boot log, so whoever goes looking for the old one finds the reason.
+		if mac_is_placeholder "$was"; then
+			echo "check_mac: $was is the placeholder shipped fleet-wide, assigned $mac"
+		else
+			echo "check_mac: assigned $mac"
+		fi
+
+		# NFS root is the one boot where this cannot take effect now.
+		# S39netprofiles swaps interfaces.d/eth0 for a no-op, because the
+		# kernel already configured eth0 from the ethaddr= bootarg -- and that
+		# interface is carrying the root filesystem, so changing its MAC would
+		# pull the rootfs out from under the running system. The stored value
+		# reaches u-boot, which passes it as the bootarg, so the camera comes
+		# up on it next boot. Better than forcing a reboot over NFS.
+		if grep -q "root=/dev/nfs" /proc/cmdline 2>/dev/null; then
+			echo "check_mac: NFS root, so eth0 keeps $(cat "/sys/class/net/eth0/address" 2>/dev/null) until the next boot"
 		fi
 		;;
 
+	get_mac)
+		# Printed straight into `hwaddress ether` by interfaces.d/eth0 and by
+		# majestic-webui's setnetwork, so it has to print something busybox ifup
+		# will accept whatever else has gone wrong: an empty value makes ifup
+		# treat the command as failed and the camera never starts udhcpc.
+		#
+		# The last resort is therefore the address the interface already carries,
+		# which makes the assignment a no-op. A kernel-random MAC that changes
+		# each boot is bad; a literal shared with every other camera is worse.
+		mac_stored && exit 0
+		cat "/sys/class/net/${1:-eth0}/address" 2>/dev/null
+		;;
+
 	set_mac)
-		if fw_printenv -n ethaddr >/dev/null 2>&1; then
-			echo "ethaddr: $(fw_printenv -n ethaddr)"
+		# The manual override. With an argument it stores that address; with none
+		# it mints a fresh one, which is how two cameras that collided are pulled
+		# apart. Unlike check_mac it replaces an address that is already good --
+		# being asked is the whole point.
+		mac=$1
+		if [ -n "$mac" ]; then
+			if ! mac_is_valid "$mac"; then
+				echo "set_mac: '$mac' is not a unicast MAC address" >&2
+				exit 1
+			fi
+			if mac_is_placeholder "$mac"; then
+				echo "set_mac: '$mac' is the placeholder the whole fleet shares" >&2
+				exit 1
+			fi
 		else
-			mac=$(od -An -tx1 -N5 /dev/urandom | tr -d ' ' | sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)$/02:\1:\2:\3:\4:\5/')
-			fw_setenv ethaddr "$mac"
-			echo "ethaddr: $mac"
+			mac=$(mac_generate)
+			if [ -z "$mac" ]; then
+				echo "set_mac: could not generate a MAC address" >&2
+				exit 1
+			fi
 		fi
+		if ! mac_persist "$mac"; then
+			echo "set_mac: nowhere to store a MAC address" >&2
+			exit 1
+		fi
+		echo "ethaddr: $mac"
 		;;
 
         sysinfo)
