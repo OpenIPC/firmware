@@ -46,11 +46,18 @@ my_mount() {
 	# filesystem this image has no driver for read identically otherwise, and
 	# they need opposite things done about them. #2384.
 	mounted=
+	firsterr=
 	for fstype in ${2:-auto}; do
 		if err=$(mount -t "${fstype}" "/dev/$1" "${destdir}/$1" 2>&1); then
 			mounted=yes
 			break
 		fi
+		# The first refusal, not the last. The list is tried in order of what
+		# a camera's card actually is, so vfat's answer is the diagnosis --
+		# "invalid argument" means the filesystem is damaged, where the tail
+		# of the list only ever reports the drivers this kernel was not built
+		# with.
+		[ -n "${firsterr}" ] || firsterr="${err}"
 	done
 
 	if [ -z "${mounted}" ]; then
@@ -59,7 +66,7 @@ my_mount() {
 		# and an operator looking at a camera that streams perfectly and
 		# records nothing. It reads as a dead card, and twice it was not one.
 		logger -s -p daemon.err -t automount \
-			"cannot mount /dev/$1 as ${2:-auto}: ${err:-reason not reported}"
+			"cannot mount /dev/$1 as ${2:-auto}: ${firsterr:-reason not reported}"
 		# failed to mount, clean up mountpoint
 		rmdir "${destdir}/$1"
 		exit 1
