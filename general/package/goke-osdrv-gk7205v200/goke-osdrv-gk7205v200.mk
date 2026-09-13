@@ -10,6 +10,24 @@ GOKE_OSDRV_GK7205V200_LICENSE = MIT
 GOKE_OSDRV_GK7205V200_LICENSE_FILES = LICENSE
 GOKE_OSDRV_GK7205V200_INSTALL_STAGING = YES
 
+# Voice quality enhancement engines for the microphone capture path
+# (OpenIPC/majestic#287). See hisilicon-osdrv-hi3516ev200.mk for the full
+# reasoning: libupvqe.so is only the framework and dlopen()s one shared
+# object per DSP stage when HI_MPI_AI_EnableVqe() runs, so without these that
+# call fails with 0xa0158041 and the microphone is passed through unprocessed.
+# Goke names them libvqe_* where HiSilicon names them libhive_*. AEC and EQ
+# are not exposed by majestic, and the resampler is compiled into libupvqe.so
+# (RES_ReSampler_*), so libvqe_res.so is never loaded.
+#
+# They sit in files/vqe/ rather than files/lib/ because the install below
+# takes files/lib/* wholesale — putting them there would ship 360 KB into
+# every lite image, where majestic has no VQE compiled in to dlopen() them.
+ifeq ($(OPENIPC_MAJESTIC),ultimate)
+GOKE_OSDRV_GK7205V200_VQE_LIBS = \
+	libvqe_common.so libvqe_agc.so libvqe_anr.so \
+	libvqe_hpf.so libvqe_record.so
+endif
+
 define GOKE_OSDRV_GK7205V200_INSTALL_STAGING_CMDS
 	$(INSTALL) -m 755 -d $(STAGING_DIR)/usr/include/goke
 	#$(INSTALL) -m 644 -t $(STAGING_DIR)/usr/include/goke $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/include/*
@@ -65,6 +83,9 @@ define GOKE_OSDRV_GK7205V200_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/lib/*
+	$(foreach lib,$(GOKE_OSDRV_GK7205V200_VQE_LIBS), \
+		$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/vqe/$(lib) ; \
+	)
 endef
 
 $(eval $(generic-package))
