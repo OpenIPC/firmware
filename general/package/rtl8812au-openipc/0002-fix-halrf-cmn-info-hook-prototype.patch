@@ -1,0 +1,12 @@
+From: OpenIPC Buildroot integration <build@openipc.org>
+Subject: [PATCH] fix halrf_cmn_info_hook prototype
+
+Keep the header prototype in sync with the implementation.  GCC warns
+about the enum/integer mismatch, and this kernel build treats that
+warning as an error.
+
+--- a/hal/phydm/halrf/halrf.h
++++ b/hal/phydm/halrf/halrf.h
+@@ -216 +216 @@ halrf_cmn_info_hook(
+-	u32		cmn_info,
++	enum halrf_cmninfo_hook_e	cmn_info,
