@@ -7,6 +7,59 @@ on_exit() {
 
 trap on_exit EXIT
 
+# A NOR chip smaller than its driver believes aliases every address at or above
+# its real end back to zero, so the last partition -- the one sized "-(rootfs_data)"
+# against a bogus total -- runs off the end of the device, and erasing it wraps
+# round and takes the bootloader with it. That is #1998: SigmaStar sizes any chip
+# missing from its JEDEC table at 16MB, an 8MB camera gets a 8896KB overlay, and
+# the first format the camera ever runs is also its last boot.
+#
+# Prove the wrap before refusing, because the cost of a false positive is a camera
+# that silently forgets its settings: read the first sector of the flash and the
+# sector the partition would present at each plausible real end of the chip, and
+# only stop if they are the same bytes. Anything that stops us proving it -- no
+# md5sum, an unreadable mtd0, a first sector that is blank and would therefore
+# match any other blank one -- leaves the format to go ahead exactly as before.
+overlay_wraps_past_end_of_flash() {
+	_chrdev=$1
+	_offset=$2
+	_size=$3
+
+	_head=$(dd if=/dev/mtd0 bs=512 count=1 2>/dev/null | md5sum) || return 1
+	[ -n "$_head" ] || return 1
+	[ -n "$(dd if=/dev/mtd0 bs=512 count=1 2>/dev/null | tr -d '\377')" ] || return 1
+
+	_real=$(((_offset + _size) / 2))
+	while [ "$_real" -gt "$_offset" ]; do
+		if [ "$_head" = "$(dd if="/dev/$_chrdev" bs=512 count=1 \
+				skip=$(((_real - _offset) / 512)) 2>/dev/null | md5sum)" ]; then
+			return 0
+		fi
+		_real=$((_real / 2))
+	done
+	return 1
+}
+
+# /proc/mtd carries sizes but no offsets. These layouts come from a single
+# cmdlinepart string, so the partitions are in order and an offset is the sum of
+# everything before it. Sizes are hex and keep their leading zeros, so they have
+# to be read with an 0x prefix -- without it the shell reads 00040000 as octal.
+mtd_geometry() {
+	mtdoffset=0
+	mtdsize=0
+	while read -r _dev _sz _erase _name; do
+		case $_dev in
+			mtd*:) ;;
+			*) continue ;;
+		esac
+		case $_name in
+			'"rootfs_data"') mtdsize=$((0x$_sz)); return 0 ;;
+		esac
+		mtdoffset=$((mtdoffset + 0x$_sz))
+	done < /proc/mtd
+	return 1
+}
+
 mount -t proc proc /proc || exit 1
 grep -q overlay /proc/filesystems || exit 1
 
@@ -27,12 +80,19 @@ if $is_flash_root; then
 		mtdchrdev=$(grep 'rootfs_data' /proc/mtd | cut -d: -f1)
 		if ! mount -t jffs2 /dev/$mtdblkdev /overlay || dmesg | grep -q "jffs2.*: Magic bitmask.*not found"; then
 			mountpoint -q /overlay && umount /overlay
-			echo "Formatting flash..."
-			grep -q 'nand' /proc/cmdline || jffs2="-j"
-			flash_eraseall $jffs2 /dev/$mtdchrdev
-			if ! mount -t jffs2 /dev/$mtdblkdev /overlay && ! mount -t tmpfs tmpfs /overlay; then
-				echo "Cannot mount overlay."
-				exit 1
+			if mtd_geometry && overlay_wraps_past_end_of_flash "$mtdchrdev" "$mtdoffset" "$mtdsize"; then
+				echo "Overlay partition runs past the end of the flash chip."
+				echo "Refusing to format -- erasing it would wipe the bootloader."
+				echo "The flash driver has mis-sized this chip; see OpenIPC/firmware#1998."
+				mount -t tmpfs tmpfs /overlay || { echo "Cannot mount overlay."; exit 1; }
+			else
+				echo "Formatting flash..."
+				grep -q 'nand' /proc/cmdline || jffs2="-j"
+				flash_eraseall $jffs2 /dev/$mtdchrdev
+				if ! mount -t jffs2 /dev/$mtdblkdev /overlay && ! mount -t tmpfs tmpfs /overlay; then
+					echo "Cannot mount overlay."
+					exit 1
+				fi
 			fi
 		fi
 	fi
