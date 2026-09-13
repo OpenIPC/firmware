@@ -10,10 +10,10 @@ config BR2_PACKAGE_MAJESTIC_AF
 	  live here.
 
 	  It is the ONLY writer on that UART, and it is now required for manual
-	  PTZ as well as autofocus: the WebUI asks majestic for a verb
-	  (GET /ptz) rather than shipping its own Pelco scripts, which used to
+	  PTZ as well as autofocus: the WebUI asks majestic for a verb over its
+	  HTTP API rather than shipping its own Pelco scripts, which used to
 	  open the same tty behind the daemon's back. A camera with
-	  ptz_control=pelco-d or pelco-xm and no driver has no pad — the WebUI
-	  says so rather than claiming the camera has no PTZ.
+	  ptz_control=pelco-d or pelco-xm and no driver keeps its pad but says
+	  what is missing, rather than claiming the camera has no PTZ.
 
 	  https://github.com/OpenIPC/majestic-af
