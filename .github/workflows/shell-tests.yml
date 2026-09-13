@@ -81,6 +81,38 @@ jobs:
       # for a build.
       - run: bash .github/scripts/test_excludes_report.sh
 
+  overlay-format-guard:
+    name: overlay format guard refuses only on proof
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install busybox
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq busybox-static
+      # /init decides whether to erase the last partition on the chip, and a
+      # driver that mis-sizes the chip turns that erase into a brick (#1998).
+      # Nothing else exercises it: the overlay is copied in verbatim and a green
+      # build says nothing about what /init does on a camera.
+      - name: Drive the guard against synthetic chips
+        env:
+          STRICT: 1
+        run: bash .github/scripts/test_overlay_format_guard.sh
+
+      # /init ships comment-stripped, and the guard's reasoning lives in those
+      # comments. Re-run against the form the camera actually executes.
+      - name: Re-run against the stripped form that actually ships
+        env:
+          STRICT: 1
+        run: |
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/overlay/init > /tmp/init.stripped
+          SRC=/tmp/init.stripped bash .github/scripts/test_overlay_format_guard.sh
+
   shipped-shell-parse:
     name: shipped shell scripts parse
     if: >-
@@ -123,6 +155,7 @@ jobs:
       - load-hisilicon-parsing
       - sysupgrade-verify
       - excludes-report
+      - overlay-format-guard
       - shipped-shell-parse
     # always() so the gate reports when a needed job fails, but not on a run
     # whose jobs the guard above deliberately skipped. Upstream the added
@@ -136,7 +169,7 @@ jobs:
     steps:
       - name: Require every shell test to succeed
         run: |
-          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} excludes=${{ needs.excludes-report.result }} shell-parse=${{ needs.shipped-shell-parse.result }}"
+          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} excludes=${{ needs.excludes-report.result }} overlay-guard=${{ needs.overlay-format-guard.result }} shell-parse=${{ needs.shipped-shell-parse.result }}"
           # 'skipped' is not accepted, for the reason given in lint.yml: a
           # skipped job would take this context green having checked nothing.
           if [ "${{ needs.load-hisilicon-parsing.result }}" != "success" ]; then
@@ -147,6 +180,9 @@ jobs:
           fi
           if [ "${{ needs.excludes-report.result }}" != "success" ]; then
             echo "::error::excludes lists report did not succeed"; exit 1
+          fi
+          if [ "${{ needs.overlay-format-guard.result }}" != "success" ]; then
+            echo "::error::overlay format guard did not succeed"; exit 1
           fi
           if [ "${{ needs.shipped-shell-parse.result }}" != "success" ]; then
             echo "::error::shipped shell scripts parse did not succeed"; exit 1
