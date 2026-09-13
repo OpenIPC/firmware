@@ -114,8 +114,15 @@ mac_is_own() { mac_is_valid "$1" && ! mac_is_placeholder "$1"; }
 # clear. 02: is the lowest prefix that satisfies both, and holding it fixed
 # also makes a self-assigned address recognisable beside a real vendor OUI.
 mac_generate() {
-	od -An -tx1 -N5 /dev/urandom | tr -d ' ' |
-		sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)$/02:\1:\2:\3:\4:\5/'
+	generated=$(od -An -tx1 -N5 /dev/urandom | tr -d ' ' |
+		sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)$/02:\1:\2:\3:\4:\5/')
+	# The pipeline reports sed's status, so a short read or a missing
+	# /dev/urandom comes back as success with nothing in it. That must not
+	# reach the store: `fw_setenv ethaddr ""` does not write an empty address,
+	# it DELETES the variable -- which is #2405 again, a fresh random MAC every
+	# boot, on a camera that had one a moment ago.
+	mac_is_own "$generated" || return 1
+	echo "$generated"
 }
 
 # The address the camera came with, where a stock firmware left one behind.
@@ -150,6 +157,9 @@ mac_stored() {
 }
 
 mac_persist() {
+	# Guarded here as well as in every caller, because this is the last point
+	# before a bad value becomes permanent.
+	mac_is_own "$1" || return 1
 	if command -v fw_setenv >/dev/null 2>&1 && fw_setenv ethaddr "$1" 2>/dev/null; then
 		return 0
 	fi
@@ -226,11 +236,35 @@ case "$CMD" in
 		# MAC, so two cameras sharing an address also claim one ONVIF identity.
 		mac_stored >/dev/null && exit 0
 
+		was=$(fw_printenv -n ethaddr 2>/dev/null)
 		mac=$(mac_from_flash) || mac=$(mac_generate)
-		if mac_persist "$mac"; then
-			echo "check_mac: assigned $mac"
-		else
+		if [ -z "$mac" ]; then
+			echo "check_mac: no MAC address could be produced, eth0 keeps the one the kernel picked" >&2
+			exit 1
+		fi
+		if ! mac_persist "$mac"; then
 			echo "check_mac: nowhere to store a MAC address, eth0 keeps the one the kernel picked" >&2
+			exit 1
+		fi
+
+		# Say what was replaced, not just what was chosen. Taking an address
+		# off a camera that had been answering on it is worth one line in the
+		# boot log, so whoever goes looking for the old one finds the reason.
+		if mac_is_placeholder "$was"; then
+			echo "check_mac: $was is the placeholder shipped fleet-wide, assigned $mac"
+		else
+			echo "check_mac: assigned $mac"
+		fi
+
+		# NFS root is the one boot where this cannot take effect now.
+		# S39netprofiles swaps interfaces.d/eth0 for a no-op, because the
+		# kernel already configured eth0 from the ethaddr= bootarg -- and that
+		# interface is carrying the root filesystem, so changing its MAC would
+		# pull the rootfs out from under the running system. The stored value
+		# reaches u-boot, which passes it as the bootarg, so the camera comes
+		# up on it next boot. Better than forcing a reboot over NFS.
+		if grep -q "root=/dev/nfs" /proc/cmdline 2>/dev/null; then
+			echo "check_mac: NFS root, so eth0 keeps $(cat "/sys/class/net/eth0/address" 2>/dev/null) until the next boot"
 		fi
 		;;
 
@@ -264,6 +298,10 @@ case "$CMD" in
 			fi
 		else
 			mac=$(mac_generate)
+			if [ -z "$mac" ]; then
+				echo "set_mac: could not generate a MAC address" >&2
+				exit 1
+			fi
 		fi
 		if ! mac_persist "$mac"; then
 			echo "set_mac: nowhere to store a MAC address" >&2
