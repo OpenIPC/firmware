@@ -42,10 +42,12 @@ T()   { local exp="$1" act="$2" desc="$3"
 # ---------------------------------------------------------------------------
 SB=$(mktemp -d)
 trap 'rm -rf "$SB"' EXIT
-mkdir -p "$SB/bin" "$SB/etc" "$SB/sys/class/net/eth0"
+mkdir -p "$SB/bin" "$SB/etc" "$SB/proc" "$SB/sys/class/net/eth0"
+: > "$SB/proc/cmdline"
 
 sed -e "s|^ETHADDR_FILE=/etc/ethaddr|ETHADDR_FILE=$SB/etc/ethaddr|" \
     -e "s|\"/sys/class/net/|\"$SB/sys/class/net/|g" \
+    -e "s|/proc/cmdline|$SB/proc/cmdline|g" \
     "$SRC" > "$SB/bin/extutils"
 chmod +x "$SB/bin/extutils"
 grep -q "^ETHADDR_FILE=$SB/etc/ethaddr" "$SB/bin/extutils" ||
@@ -96,6 +98,7 @@ KERNEL_MAC=6e:5f:91:50:47:a0
 reset_camera() {
     : > "$UENV"; : > "$SETENV_LOG"; rm -f "$SB/etc/ethaddr" "$SB/reboot.log"
     echo "$KERNEL_MAC" > "$SB/sys/class/net/eth0/address"
+    printf 'console=ttyAMA0,115200 root=/dev/mtdblock3\n' > "$SB/proc/cmdline"
     unset STUB_XM_MAC STUB_FLASH STUB_SETENV_RC
 }
 
@@ -252,6 +255,88 @@ T "1" "$?" "set_mac refuses a malformed address"
 set_mac 01:02:03:04:05:06 >/dev/null 2>&1
 T "1" "$?" "set_mac refuses a multicast address"
 T "bc:24:11:aa:bb:cc" "$(env_mac)" "...and still stores nothing"
+
+echo "=== Part 4b: nothing unusable ever reaches the store ==="
+
+# The failure that matters: `fw_setenv ethaddr ""` does not store an empty
+# address, it DELETES the variable. A camera that had a good MAC would come
+# back on a fresh kernel-random one every boot -- #2405, reintroduced by the
+# very code meant to fix it. So a broken generator must persist NOTHING.
+reset_camera
+echo "ethaddr=00:00:23:34:45:66" > "$UENV"
+stub od 'exit 1'
+check_mac >/dev/null 2>&1
+T "1" "$?" "check_mac fails when the address cannot be generated"
+T "0" "$(setenv_runs)" "...and writes nothing to the environment"
+[ -e "$SB/etc/ethaddr" ] && bad "...but it wrote a fallback file anyway" ||
+    ok "...and writes no fallback file either"
+T "00:00:23:34:45:66" "$(env_mac)" "...leaving the old value untouched rather than deleted"
+
+# Same again where od succeeds but returns too few bytes to make an address.
+reset_camera
+stub od 'echo " 12 34"'
+check_mac >/dev/null 2>&1
+T "1" "$?" "check_mac fails on a short read from /dev/urandom"
+T "0" "$(setenv_runs)" "...and still writes nothing"
+
+reset_camera
+stub od 'exit 1'
+set_mac >/dev/null 2>&1
+T "1" "$?" "bare set_mac fails when the address cannot be generated"
+T "0" "$(setenv_runs)" "...and writes nothing"
+
+# Restore the real od for everything after this.
+rm -f "$SB/bin/od"
+
+# Belt and braces: mac_persist itself refuses, whatever a caller passes.
+reset_camera
+grep -q "^\s*mac_is_own \"\$1\" || return 1" "$SB/bin/extutils" &&
+    ok "mac_persist validates before storing" ||
+    bad "mac_persist no longer validates -- an empty value would delete ethaddr"
+
+echo "=== Part 4c: it says what it replaced ==="
+
+reset_camera
+echo "ethaddr=00:00:23:34:45:88" > "$UENV"
+out=$(check_mac 2>&1)
+case "$out" in
+    *"00:00:23:34:45:88"*placeholder*) ok "the replaced placeholder is named in the boot log -- $out" ;;
+    *) bad "the boot log does not say what was replaced -- got '$out'" ;;
+esac
+
+reset_camera
+out=$(check_mac 2>&1)
+case "$out" in
+    *placeholder*) bad "nothing was replaced, but the log claims a placeholder -- '$out'" ;;
+    *assigned*) ok "with nothing stored it just reports the assignment -- $out" ;;
+    *) bad "unexpected log line -- '$out'" ;;
+esac
+
+echo "=== Part 4d: NFS root cannot apply the address this boot ==="
+
+# S39netprofiles swaps interfaces.d/eth0 for a no-op on NFS root, because the
+# kernel already configured eth0 from the ethaddr= bootarg -- and that
+# interface is carrying the rootfs. The address is still stored, for u-boot to
+# pass as the bootarg next boot, but the operator has to be told why ifconfig
+# and fw_printenv disagree until then.
+reset_camera
+printf 'console=ttyAMA0,115200 root=/dev/nfs nfsroot=10.0.0.1:/srv/cam ip=dhcp rw\n' > "$SB/proc/cmdline"
+out=$(check_mac 2>&1)
+case "$out" in
+    *"NFS root"*) ok "an NFS-root boot is called out -- $out" ;;
+    *) bad "an NFS-root boot is not called out -- got '$out'" ;;
+esac
+case "$(env_mac)" in
+    02:*) ok "...and the address is still stored for the next boot" ;;
+    *) bad "...but nothing was stored -- got '$(env_mac)'" ;;
+esac
+
+reset_camera
+out=$(check_mac 2>&1)
+case "$out" in
+    *"NFS root"*) bad "a flash-root boot claims NFS root -- '$out'" ;;
+    *) ok "a flash-root boot says nothing about NFS" ;;
+esac
 
 echo "=== Part 5: drift ==="
 
