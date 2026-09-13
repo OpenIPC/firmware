@@ -29,11 +29,12 @@ my_umount() {
 # likely to reach it is the one this whole change is about, since a damaged
 # partition table is exactly what makes vfat decline and auto keep walking.
 #
-# The list is every block filesystem any board config in this tree enables
-# (CONFIG_VFAT_FS on 80 of them, then ext4/3/2, f2fs, exfat, ntfs, iso9660,
-# udf, msdos), so no camera loses a card it could mount before. What it leaves
-# out is the raw-flash and image filesystems that were never candidates for
-# removable media: yaffs, yaffs2, jffs2, ubifs, squashfs.
+# The list is every block filesystem any board config in this tree enables:
+# VFAT everywhere except the `neo` variants, which carry no block filesystem at
+# all and so could never mount a card under any name, then ext4/3/2, f2fs,
+# exfat, ntfs, iso9660, udf and msdos. No camera loses a card it could mount
+# before. What it leaves out is the raw-flash and image filesystems that were
+# never candidates for removable media: yaffs, yaffs2, jffs2, ubifs, squashfs.
 disk_fstypes="vfat exfat ext4 ext3 ext2 f2fs msdos ntfs iso9660 udf"
 
 my_mount() {
