@@ -50,6 +50,27 @@ jobs:
             general/overlay/usr/sbin/sysupgrade > /tmp/sysupgrade.stripped
           SRC=/tmp/sysupgrade.stripped bash .github/scripts/test_sysupgrade.sh
 
+  camera-mac:
+    name: the MAC the camera gives itself
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/test_check_mac.sh
+
+      # Same reason as sysupgrade above: the copy in git is not the copy that
+      # ships. extutils is comment-stripped into the image, and check_mac runs
+      # at S30 on every boot of every camera, so the stripped form is the one
+      # that has to make the right decision.
+      - name: Re-run against the stripped form that actually ships
+        run: |
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/overlay/usr/sbin/extutils > /tmp/extutils.stripped
+          SRC=/tmp/extutils.stripped bash .github/scripts/test_check_mac.sh
+
   # Only sysupgrade was ever parse-checked; every other script in the image --
   # the init scripts, /etc/profile, /init on initramfs boards, the vendor load_*
   # scripts that insert the SoC drivers -- reached cameras without anything

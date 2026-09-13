@@ -4,8 +4,13 @@
 #include <linux/types.h>
 #include <linux/etherdevice.h>
 
-// Default u-boot env ethaddr on openipc platforms
-static const u8 default_mac[ETH_ALEN] = {0x00,0x00,0x23,0x34,0x45,0x66};
+// The placeholder u-boot hands out when nothing set a real address.
+// HiSilicon bakes 00:00:23:34:45:66 into its board headers (CONFIG_ETHADDR),
+// but the last octet tracks the bootloader build rather than the camera -- a
+// lab hi3516ev300 was found on :88 -- so the whole /40 prefix is rejected.
+// 00:00:23 is a registered OUI OpenIPC does not own; none of the 256 is ours.
+#define OPENIPC_PLACEHOLDER_LEN 5
+static const u8 placeholder_mac[OPENIPC_PLACEHOLDER_LEN] = {0x00,0x00,0x23,0x34,0x45};
 static u8 openipc_ethaddr[ETH_ALEN] __aligned(2);
 
 static int openipc_hex_to_bin(char c)
@@ -56,8 +61,8 @@ static int __init openipc_early_ethaddr(char *str)
 		return 0;
 	}
 
-	if (ether_addr_equal(mac, default_mac))
-		pr_warn("openipc_ethaddr: ignoring default ethaddr '%s'\n",
+	if (!memcmp(mac, placeholder_mac, OPENIPC_PLACEHOLDER_LEN))
+		pr_warn("openipc_ethaddr: ignoring placeholder ethaddr '%s'\n",
 			str);
 	else
 		ether_addr_copy(openipc_ethaddr, mac);
