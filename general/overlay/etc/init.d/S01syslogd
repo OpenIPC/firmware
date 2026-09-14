@@ -6,8 +6,26 @@ DAEMON="syslogd"
 # cameras spend no extra memory; the WebUI (Information > Logs) can raise it by
 # writing SYSLOG_SIZE to /etc/default/syslogd for users who want more backlog.
 SYSLOG_SIZE=64
+
+# Where to forward log lines, as host[:port]. Empty means local-only, which is
+# what every camera does unless somebody asks otherwise.
+#
+# The buffer above is the reason this exists: it is in RAM and it is circular,
+# so the evidence for anything that takes a camera down is gone by the next
+# boot -- and a camera that has just lost its SD card, or wedged, is exactly
+# the one whose last few hundred lines nobody can retrieve. 64 KiB is a few
+# minutes under a chatty fault. Forwarding costs a UDP datagram per line and
+# gives the lines somewhere that survives the camera.
+SYSLOG_REMOTE=
+
 [ -r /etc/default/syslogd ] && . /etc/default/syslogd
 DAEMON_ARGS="-n -C${SYSLOG_SIZE:-64} -t"
+
+# -L as well as -R, never -R alone: without it busybox sends the lines away
+# INSTEAD of keeping them, and the WebUI's Information > Logs page and logread
+# both go silent. Turning on remote logging should add a destination, not
+# replace the one people already use.
+[ -n "${SYSLOG_REMOTE}" ] && DAEMON_ARGS="${DAEMON_ARGS} -L -R ${SYSLOG_REMOTE}"
 
 # Find the daemon by name, never through a pidfile. Given -p, busybox
 # start-stop-daemon inspects only the pid that file holds and never scans
