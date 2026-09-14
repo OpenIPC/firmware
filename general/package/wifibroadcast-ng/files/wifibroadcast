@@ -75,9 +75,19 @@ load_modules() {
 load_mlink() {
 	ifconfig "$wfb_dev" mtu "$mlink"
 
+	# rtsp.naluSize, not outgoing.naluSize: the setting moved there in
+	# OpenIPC/majestic#701, because the codecs that read it serve RTSP
+	# clients as much as the udp:// destinations.
+	#
+	# Writing the old spelling stopped working, silently. majestic carries
+	# it over on load ONLY while rtsp.naluSize is absent from the file, so
+	# the first save pins the new key and every later write to the old one
+	# is discarded — and the read above it, against a file that no longer
+	# has the old key, never matched, so this SIGHUPed majestic on every
+	# call and rebuilt the video pipeline for a change that never landed.
 	nalu=$((mlink - 100))
-	if [ "$(cli -g .outgoing.naluSize)" != "$nalu" ]; then
-		cli -s .outgoing.naluSize "$nalu"
+	if [ "$(cli -g .rtsp.naluSize)" != "$nalu" ]; then
+		cli -s .rtsp.naluSize "$nalu"
 		killall -1 majestic
 	fi
 }
@@ -174,7 +184,6 @@ video_settings() {
 	cli -s .video0.bitrate 8000
 	cli -s .video0.codec h265
 	cli -s .video0.rcMode cbr
-	cli -s .outgoing.enabled true
 	cli -s .outgoing.wfb true
 	cli -s .records.split 1
 	cli -s .records.notime true
