@@ -985,6 +985,21 @@ awk '/^die\(\)/,/^}/' "$SRC" | grep -q 'restore_resources' \
 awk '/^restore_resources\(\)/,/^}/' "$SRC" | grep -q 'S95majestic restart' \
     && ok "restore_resources restarts majestic rather than starting it" \
     || bad "SIGQUIT leaves majestic running without an SDK; 'start' is a no-op, it needs 'restart'"
+# The breadcrumb pair (#2415, #2417). Its whole value rests on ORDER: the line
+# has to leave before syslogd stops, or a camera that never comes back takes the
+# explanation with it. A later reshuffle of free_resources() that moved the
+# logger below the stop would still pass every other check here.
+awk '/^free_resources\(\)/,/^}/' "$SRC" \
+    | grep -E 'logger|S01syslogd stop' | head -1 | grep -q 'logger' \
+    && ok "free_resources announces the flash before it stops syslogd" \
+    || bad "the pre-flash breadcrumb must precede 'S01syslogd stop', or it is never sent"
+awk '/^restore_resources\(\)/,/^}/' "$SRC" | grep -q 'logger' \
+    && ok "restore_resources retracts the breadcrumb when the camera stays up" \
+    || bad "an aborted run leaves the collector holding a death notice for a live camera"
+awk '/^free_resources\(\)/,/^}/' "$SRC" | grep -q 'syslog_remote_set' \
+    && ok "the pre-flash sleep is gated on forwarding actually being enabled" \
+    || bad "every camera pays the datagram-drain second for a feature most have off"
+
 grep -q 'mark_flash_touched' "$SRC" \
     && ok "the flash-touched marker exists" \
     || bad "mark_flash_touched is gone; die() cannot tell a pre-write failure apart"
