@@ -1415,6 +1415,24 @@ else
     bad "the boot marker must background its wait, or it delays the boot it reports on"
 fi
 
+# A hostname destination is resolved once, at S01, before the network exists,
+# and busybox retries only every 120 s (etc/default/syslogd says so). Anything
+# sent inside that window is dropped however ready the path is, so the marker
+# has to wait it out on a name -- confirmed on an hi3516av300, where the marker
+# was present locally and absent at a hostname collector. Restarting syslogd to
+# force a re-resolve is NOT the fix: its buffer is in RAM and logread loses the
+# whole boot with it.
+if grep -q 'sleep 125' "$BOOTMSG" && grep -q '\*\[!0-9\.\]\*' "$BOOTMSG"; then
+    ok "the boot marker waits out the DNS window when the collector is a name"
+else
+    bad "a hostname collector drops everything for 120s; the marker must wait that out"
+fi
+if grep -q 'S01syslogd restart\|syslogd restart' "$BOOTMSG"; then
+    bad "the boot marker must not restart syslogd; its RAM buffer is the boot's local log"
+else
+    ok "...without restarting syslogd and losing the in-RAM boot log"
+fi
+
 echo
 if [ "$fail" -eq 0 ]; then
     echo "All sysupgrade verification checks passed."

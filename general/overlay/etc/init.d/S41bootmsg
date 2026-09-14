@@ -68,6 +68,29 @@ esac
 	# and best-effort in both directions -- a collector that blocks ICMP costs
 	# three seconds and gets its ARP resolved anyway, as a side effect of the
 	# attempt to send. The reply is not what matters here; the resolved entry is.
+	#
+	# A ready path is still not enough when the destination is a NAME. busybox
+	# resolves that once, when syslogd starts -- at S01, before the network --
+	# and retries only every 120 s; etc/default/syslogd documents it and tells
+	# people to prefer a literal IP for exactly this reason. So on a name,
+	# everything sent in the first two minutes is dropped however ready the path
+	# is, and this marker is precisely the line that would silently never
+	# arrive. Measured on an hi3516av300 against a hostname collector: local at
+	# 12:49:55, nothing at the collector, while 48 other lines from the same
+	# window got through once the daemon had re-resolved.
+	#
+	# Wait the window out. Late and delivered beats punctual and dropped, and
+	# the build id is no less true two minutes on. It is free: this is already a
+	# subshell, so nothing is waiting on it.
+	#
+	# Deliberately NOT by restarting syslogd to force a re-resolve, which is the
+	# obvious alternative. The buffer logread and the WebUI read is in RAM and
+	# dies with the daemon, so that trades the whole local record of the boot --
+	# the thing that survives when forwarding does not -- for one forwarded line.
+	case "${SYSLOG_REMOTE%:*}" in
+	*[!0-9.]*) sleep 125 ;;
+	esac
+
 	ping -c1 -w3 "${SYSLOG_REMOTE%:*}" >/dev/null 2>&1
 
 	build=$(grep '^BUILD_ID=' /etc/os-release 2>/dev/null | head -1 | cut -d= -f2)
