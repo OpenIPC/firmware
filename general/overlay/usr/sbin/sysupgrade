@@ -962,9 +962,18 @@ check_sdcard() {
 		for f in $stoplist; do
 			echo "- checking for $d/$f"
 			if [ -f "$d/$f" ]; then
-				echo_c 31 "\nCannot upgrade! Recovery file $d/$f found on the mounted SD card!"
-				echo_c 37 "Please remove the card from the slot and restart sysupgrade."
-				exit 1
+				# die(), not a bare exit. check_sdcard runs after create_lock
+				# and free_resources, so leaving straight from here left the
+				# camera holding everything they had just taken: the lock file,
+				# so every later run answered "Another sysupgrade process is
+				# already running!" until a reboot cleared /tmp; syslogd, klogd,
+				# ntpd, crond and fake-hwclock stopped; majestic gutted by the
+				# SIGQUIT free_resources sends, so no video until someone
+				# rebooted; and, since #2417, a collector left holding "logging
+				# stops here until this camera returns" for a camera that was
+				# never touched. Nothing has been written at this point, so
+				# die() takes its no-reboot branch and puts all of it back.
+				die "Cannot upgrade! Recovery file $d/$f found on the mounted SD card. Remove the card from the slot and restart sysupgrade."
 			fi
 		done
 		umount $d
