@@ -551,15 +551,24 @@ free_resources() {
 	# like a death -- on the one operation most likely to produce the latter.
 	# busybox sends no shutdown marker of its own on the remote path (it
 	# forwards the line unmodified and logs "syslogd exiting" only locally), so
-	# this has to be said out loud, before syslogd goes and with a moment for
-	# the datagram to leave: forwarding is UDP and nothing will retry it. The
-	# image is not known yet -- free_resources runs before the download -- so
-	# name what is about to be written and what it is being written over. #2415.
-	logger -t sysupgrade "flashing now (kernel=${update_kernel:-0}" \
-		"rootfs=${update_rootfs:-0} overlay=${clear_overlay:-0}) over" \
-		"$(sed -n 's/^BUILD_ID=//p' /etc/os-release 2>/dev/null);" \
-		"this log stops here until the camera comes back"
-	sleep 1
+	# this has to be said out loud, before syslogd goes. #2415.
+	#
+	# "Preparing to", not "flashing": free_resources runs before check_sdcard,
+	# before the download and before any write, so several paths end here with
+	# nothing flashed at all -- and restore_resources() below logs the
+	# retraction when they do. It cannot name the image for the same reason.
+	# warning, not the default notice, because a collector that filters at
+	# >= warning should not lose the one line explaining the silence.
+	syslog_remote_set && {
+		logger -s -p user.warning -t sysupgrade \
+			"preparing to flash (kernel=${update_kernel:-0}" \
+			"rootfs=${update_rootfs:-0} overlay-wipe=${clear_overlay:-0})" \
+			"on $(get_build_id); logging stops here until this camera returns"
+		# Only for the forwarded case, and only when it is on: UDP has no
+		# retry, so the datagram needs a moment to leave before syslogd goes.
+		# Every camera used to pay this second for a feature most have off.
+		sleep 1
+	}
 	/etc/init.d/S01syslogd stop
 	services_stopped=1
 	sleep 1
@@ -593,6 +602,15 @@ restore_resources() {
 	for s in S01syslogd S02fakehwclock S02klogd S49ntpd S60crond S99rc.local; do
 		[ -x /etc/init.d/$s ] && /etc/init.d/$s start >/dev/null 2>&1
 	done
+
+	# Retract the warning free_resources sent. Reaching here means the camera
+	# is staying up -- an abort, or a deliberate --no_reboot -- so a collector
+	# holding "logging stops here until this camera returns" is now holding a
+	# death notice for a camera that never died. Without this the log simply
+	# resumes minutes later with no explanation, and the two cases a reader has
+	# to tell apart look identical. #2415.
+	syslog_remote_set && logger -s -p user.warning -t sysupgrade \
+		"still here on $(get_build_id): this camera is not rebooting after all"
 	# majestic needs restarting, not starting: it is still running, just gutted.
 	#
 	# `killall -3 majestic` above is not a terminate. SIGQUIT is majestic's
@@ -1047,6 +1065,21 @@ get_system_build() {
 	grep "BUILD_OPTION" "/etc/os-release" | head -1 | cut -d= -f2
 }
 
+# The build this camera is running now. Beside get_system_build rather than
+# spelled a third way at each call site: --list-builds had its own grep|cut and
+# free_resources nearly grew another, which is two places to find when the
+# os-release format next changes.
+get_build_id() {
+	grep '^BUILD_ID=' /etc/os-release 2>/dev/null | head -1 | cut -d= -f2
+}
+
+# Is this camera forwarding its log off-box? Only then is it worth spending a
+# second letting a datagram out before syslogd stops -- see free_resources.
+# Matches the knob S01syslogd reads (#2415).
+syslog_remote_set() {
+	grep -qs '^[[:space:]]*SYSLOG_REMOTE=[^[:space:]]' /etc/default/syslogd
+}
+
 print_sysinfo() {
 	get_system_info
 	echo_c 33 "OpenIPC System Updater v$scr_version"
@@ -1317,7 +1350,7 @@ if [ "1" = "$list_only" ]; then
 	osr=$(get_system_build)
 	platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
 	if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
-	here=$(grep '^BUILD_ID=' /etc/os-release | cut -d= -f2)
+	here=$(get_build_id)
 	builds=$(awk -v p="$platform" '$2==p && $3=="nor" { print $1 }' "$MANIFEST_CACHE" \
 		| head -n "${list_n:-20}")
 	if [ -z "$builds" ]; then
