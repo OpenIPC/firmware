@@ -12,7 +12,12 @@
 # BR2_PACKAGE_OPENIPC_FAILSAFE; on any other image the "failsafe" token never
 # appears and this script is absent, so rcS falls through to a normal boot.
 echo "*** FAILSAFE: bringing up network + SSH only, services skipped ***"
-for s in S01syslogd S29pstore S38mdev S31hostname S40network S50dropbear; do
+# S02klogd earns its place next to S01syslogd: it is the only thing that pumps
+# the kernel ring buffer into /dev/log, so without it the one boot mode built
+# for post-mortem carries no kernel lines at all -- no panic, no mmc timeouts,
+# none of what usually explains why the boots failed. It must follow syslogd,
+# which owns /dev/log. #2415.
+for s in S01syslogd S02klogd S29pstore S38mdev S31hostname S40network S50dropbear; do
 	[ -x "/etc/init.d/$s" ] && "/etc/init.d/$s" start
 done
 

@@ -544,6 +544,22 @@ free_resources() {
 	# off. Its stop also takes a final checkpoint, so the camera comes back
 	# from the post-flash reboot with the freshest time it can have.
 	/etc/init.d/S02fakehwclock stop
+
+	# The last line a collector sees if this camera never comes back.
+	#
+	# A forwarded log otherwise just stops here, and a clean stop reads exactly
+	# like a death -- on the one operation most likely to produce the latter.
+	# busybox sends no shutdown marker of its own on the remote path (it
+	# forwards the line unmodified and logs "syslogd exiting" only locally), so
+	# this has to be said out loud, before syslogd goes and with a moment for
+	# the datagram to leave: forwarding is UDP and nothing will retry it. The
+	# image is not known yet -- free_resources runs before the download -- so
+	# name what is about to be written and what it is being written over. #2415.
+	logger -t sysupgrade "flashing now (kernel=${update_kernel:-0}" \
+		"rootfs=${update_rootfs:-0} overlay=${clear_overlay:-0}) over" \
+		"$(sed -n 's/^BUILD_ID=//p' /etc/os-release 2>/dev/null);" \
+		"this log stops here until the camera comes back"
+	sleep 1
 	/etc/init.d/S01syslogd stop
 	services_stopped=1
 	sleep 1
