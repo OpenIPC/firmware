@@ -135,7 +135,21 @@ stub fw_printenv 'echo "${STUB_SOC:-ssc338q}"'
 stub killall    'exit 0'
 stub ntpd       'exit 0'
 stub curl       'exit "${STUB_CURL_RC:-0}"'
-stub umount     'exit 0'
+# check_sdcard re-reads `mount` after every umount, so a static pair of stubs
+# would spin forever: the unmount has to actually change what mount reports.
+# $SDMOUNTS is what a bare `mount` prints; empty is the default, which is what
+# every test that does not care about an SD card sees.
+SDMOUNTS="$SB/tmp/sdmounts"
+: > "$SDMOUNTS"
+cat > "$SB/bin/umount" <<EOF
+#!/bin/bash
+if [ -n "\$1" ]; then
+    grep -v " \$1 " "\$SDMOUNTS" > "\$SDMOUNTS.n" 2>/dev/null
+    mv "\$SDMOUNTS.n" "\$SDMOUNTS" 2>/dev/null
+fi
+exit 0
+EOF
+chmod +x "$SB/bin/umount"
 # Logs so ordering can be asserted, and fails by default: an unprivileged test
 # host cannot really pivot, and the fallback is the safety property that matters
 # most here (a camera that cannot build a ramfs must still upgrade).
@@ -178,7 +192,7 @@ exit 0'
 #   hang — mount blocks; only a bounded caller survives this
 # A bare `mount` (check_sdcard's `mount | grep /mnt/mmc`) must stay quiet.
 stub mount '
-[ $# -eq 0 ] && exit 0
+[ $# -eq 0 ] && { cat "$SDMOUNTS" 2>/dev/null; exit 0; }
 target=${!#}
 # STUB_MOUNT models the VERIFY-mount (a squashfs image over a loop device). The
 # ramfs pivot mounts tmpfs and relocates existing mounts; those are a different
@@ -268,6 +282,7 @@ run() {
     : > "$SB/tmp/flash.log"
     OUT=$(cd "$SB" && env PATH="$SB/bin:$PATH" \
         HASERLVER=1 FLASH_LOG="$SB/tmp/flash.log" mount_wait="${MOUNT_WAIT:-3}" \
+        SDMOUNTS="$SDMOUNTS" \
         abort_wait=0 RAM_ROOT="$SB/ram" \
         STUB_PIVOT_RC="${STUB_PIVOT_RC:-1}" \
         STUB_MOUNT="${STUB_MOUNT:-ok}" STUB_VENDOR="${STUB_VENDOR:-sigmastar}" \
@@ -297,6 +312,7 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
     unset STUB_FLASHCP_FAIL STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
+    : > "$SDMOUNTS"
     set_mounts
     rm -rf "$SB/ram"
     rm -f "$SB"/tmp/*.ssc338q "$SB"/tmp/firmware.bin.* "$SB"/tmp/*.tgz "$SB"/tmp/*.md5sum
@@ -955,6 +971,52 @@ fi
     || ok "...and the leftover is gone"
 rm -f "$SB/tmp/sysupgrade"
 
+# --- aborting on a recovery file left on the SD card ------------------------
+# check_sdcard runs AFTER create_lock and free_resources, so how it leaves is
+# not a detail: a bare `exit` there stranded the lock in /tmp (every later run
+# then refused with "Another sysupgrade process is already running!" until a
+# reboot), left syslogd/klogd/ntpd/crond stopped, and left majestic gutted by
+# free_resources' SIGQUIT -- a camera with no video and no logging, having been
+# told only to take the card out.
+#
+# The mount line only has to CONTAIN /mnt/mmc for check_sdcard's grep; the
+# directory it hands on is field 3, so it can point inside the sandbox and the
+# recovery file can actually exist.
+reset_env
+SD="$SB/mnt/mmcblk0p1"
+mkdir -p "$SD"
+: > "$SD/autoupdate-rootfs.img"
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && nothing_wrote; then
+    ok "a recovery file on the card aborts before anything is written"
+else
+    bad "recovery file -> expected a clean abort, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+if [ ! -f "$SB/tmp/sysupgrade.lock" ]; then
+    ok "...and the abort takes its lock file with it"
+else
+    bad "the SD-card abort left the lock file behind; the next run is locked out"
+fi
+if grep -q "S95majestic restart" "$SB/tmp/flash.log"; then
+    ok "...and restarts the services free_resources stopped"
+else
+    bad "the SD-card abort skipped restore_resources; services stay stopped, majestic stays gutted"
+fi
+rm -f "$SD/autoupdate-rootfs.img"
+
+# The other half: a card with nothing incriminating on it is unmounted and the
+# run carries on. This is also what proves the loop terminates -- check_sdcard
+# re-reads `mount` after each umount, so a card that never goes away spins.
+reset_env
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && flashed /dev/mtd3; then
+    ok "a clean card is unmounted and the upgrade proceeds"
+else
+    bad "clean card -> expected the run to proceed, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
 # ---------------------------------------------------------------------------
 echo
 echo "=== Part 2: invariants in $SRC ==="
@@ -1314,6 +1376,61 @@ if sed -n '/-x, --no_reboot/,/-z, --no_update/p' "$SRC" | grep -qi 'ignored'; th
     ok "--help says -x is ignored when the live flash is rewritten"
 else
     bad "-x usage text must document that it is ignored on a live-flash rewrite"
+fi
+
+# --- the boot-side half of the breadcrumb -----------------------------------
+# free_resources tells a collector "logging stops here until this camera
+# returns". Something has to say it returned, or the sentence has no end and a
+# reader cannot tell a camera that came back from one that did not. These are
+# tree-level assertions on that counterpart, not on $SRC.
+BOOTMSG=${BOOTMSG:-general/overlay/etc/init.d/S41bootmsg}
+if [ -x "$BOOTMSG" ]; then
+    ok "the boot-side counterpart exists and is executable"
+else
+    bad "$BOOTMSG must exist and be executable, or rcS will not run it"
+fi
+
+# Same priority as the two lines it pairs with, or a collector filtering at
+# >= warning gets the half that says the log stopped and not the half that
+# says it came back.
+if grep -q 'user\.warning' "$BOOTMSG" && grep -q 'user\.warning' "$SRC"; then
+    ok "both halves of the breadcrumb log at user.warning"
+else
+    bad "the boot marker and sysupgrade's must share a priority, or one is filtered out"
+fi
+
+# Gated, so a camera that forwards nothing pays nothing.
+if grep -q 'SYSLOG_REMOTE' "$BOOTMSG"; then
+    ok "the boot marker is gated on SYSLOG_REMOTE"
+else
+    bad "the boot marker must be gated on SYSLOG_REMOTE; every camera would pay for it"
+fi
+
+# Backgrounded. It waits up to fifteen seconds for a DHCP lease, and doing that
+# in line would hold up every later init script -- majestic, and the video with
+# it -- on exactly the cameras that asked for forwarding.
+if grep -qE '^\) &' "$BOOTMSG"; then
+    ok "the boot marker waits for its address off the boot path"
+else
+    bad "the boot marker must background its wait, or it delays the boot it reports on"
+fi
+
+# A hostname destination is resolved once, at S01, before the network exists,
+# and busybox retries only every 120 s (etc/default/syslogd says so). Anything
+# sent inside that window is dropped however ready the path is, so the marker
+# has to wait it out on a name -- confirmed on an hi3516av300, where the marker
+# was present locally and absent at a hostname collector. Restarting syslogd to
+# force a re-resolve is NOT the fix: its buffer is in RAM and logread loses the
+# whole boot with it.
+if grep -q 'sleep 125' "$BOOTMSG" && grep -q '\*\[!0-9\.\]\*' "$BOOTMSG"; then
+    ok "the boot marker waits out the DNS window when the collector is a name"
+else
+    bad "a hostname collector drops everything for 120s; the marker must wait that out"
+fi
+if grep -q 'S01syslogd restart\|syslogd restart' "$BOOTMSG"; then
+    bad "the boot marker must not restart syslogd; its RAM buffer is the boot's local log"
+else
+    ok "...without restarting syslogd and losing the in-RAM boot log"
 fi
 
 echo
