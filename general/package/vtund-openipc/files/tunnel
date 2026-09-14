@@ -2,7 +2,7 @@
 #
 # OpenIPC.org | v.20230212
 # by Igor Zalatov, aka FlyRouter, aka ZigFisher
-# Busybox applets: awk cat echo insmod ip modprobe sha1sum sleep tr tunctl udhcpc uptime
+# Busybox applets: awk cat echo grep insmod ip logger modprobe nslookup sha1sum sleep tr tunctl udhcpc uptime
 #
 
 vtund_enable="true"
@@ -12,12 +12,30 @@ vtund_iface="tunnel"
 device_name="IPC-VTUND"
 working_dir="/tmp"
 
+# The session name is the MAC of the default-route interface, so until that
+# route exists there is no identity to build a config from. Report that rather
+# than returning empty strings the caller cannot distinguish from a real MAC.
 identity() {
 	identity_src=$(ip r | awk '/default/ {print $5}' | head -n 1)
-	identity_mac=$(cat /sys/class/net/"$identity_src"/address | tr 'a-z' 'A-Z')
+	[ -n "$identity_src" ] || return 1
+	identity_mac=$(cat /sys/class/net/"$identity_src"/address 2>/dev/null | tr 'a-z' 'A-Z')
+	[ -n "$identity_mac" ] || return 1
 	identity_pas=$(echo "$identity_mac" | sha1sum | awk '{print $1}')
 	identity_tid=$(echo "$identity_mac" | tr -d ':')
 	identity_cfg=$working_dir/vtund.conf
+}
+
+# vtund resolves the server name itself and exits when it cannot, so a camera
+# that boots faster than its DNS becomes reachable restarts into the same
+# failure every time. The literal-address test is the one /usr/sbin/wireguard
+# uses, so a numeric server never waits on a resolver it does not need.
+resolves() {
+	echo "$vtund_server" | grep -qE '^\[|^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$' && return 0
+	nslookup "$vtund_server" >/dev/null 2>&1
+}
+
+ready() {
+	identity && resolves
 }
 
 interface() {
@@ -48,6 +66,27 @@ config() {
 		) >$identity_cfg
 }
 
+# A camera that reached here before its network was up wrote an empty session
+# name into line 5 of the config, and vtund answered "syntax error line 5" and
+# "No hosts defined" and exited at once. The loop had no delay, so that pair
+# repeated until it was the only thing left in the 64KB syslog ring and
+# whatever had really gone wrong on that boot had been evicted (#2319). Wait
+# for what the tunnel needs instead of restarting into a failure that cannot
+# succeed, and keep a floor under the restart rate for the failures that
+# remain -- vtund's own keepalive is 10:5, so it reconnects a live session by
+# itself and this delay only paces the restarts it could not.
 if [ "$vtund_enable" = "true" ]; then
-	(while true; do identity; interface; config; vtund -n -f "$identity_cfg" "$identity_tid" "$vtund_server" >/dev/null 2>&1; done) &
+	(
+		while true; do
+			if ! ready; then
+				logger -p daemon.warn -t "${0##*/}[$$]" "waiting for a default route and for $vtund_server to resolve"
+				until ready; do sleep 10; done
+				logger -p daemon.info -t "${0##*/}[$$]" "starting the tunnel to $vtund_server"
+			fi
+			interface
+			config
+			vtund -n -f "$identity_cfg" "$identity_tid" "$vtund_server" >/dev/null 2>&1
+			sleep 10
+		done
+	) &
 fi
