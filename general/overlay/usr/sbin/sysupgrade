@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.63
+scr_version=1.0.64
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -522,6 +522,27 @@ download_firmware() {
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 	fi
+	# An archive staged in /tmp is now a second full-size copy of an image that
+	# is also unpacked beside it, on the tmpfs the rest of the run still needs:
+	# do_update_firmware dd's two more copies out of a combined image, and
+	# verify_rootfs loop-mounts one. The WebUI's "install from a file" route puts
+	# it there -- majestic writes the upload to /tmp and hands us the path -- so
+	# on a camera where /tmp is half of 32 MB the archive is pure cost from here
+	# on. The online route never has one: it pipes curl straight into tar.
+	#
+	# Only under /tmp, and never a path the caller chose: --archive can name a
+	# file on an SD card or a share, and that one is theirs. Freed after the
+	# checksum rather than after the extract, so a failed check still leaves
+	# something to retry from. (OpenIPC/majestic-webui#474)
+	#
+	# Classified by where the file RESOLVES, not by how it was spelt.
+	# "/tmp/../mnt/fw.tgz" matches the pattern and is a file on the SD card, so
+	# the raw string would have deleted exactly the archive this guard exists to
+	# protect. A path that cannot be resolved is left alone: not knowing where it
+	# is, is not a reason to remove it.
+	_resolved=$(readlink -f "$archive" 2>/dev/null)
+	case "$_resolved" in /tmp/*) rm -f "$_resolved" ;; esac
+	unset _resolved
 	# Combined image (FIT kernel + rootfs packed in one blob, e.g. cv6xx):
 	# flashed as a unit by do_update_firmware instead of the split path.
 	[ -f "/tmp/firmware.bin.$model" ] && image_combined=1

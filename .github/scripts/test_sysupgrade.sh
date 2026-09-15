@@ -496,6 +496,53 @@ else
     bad "combined + wrong SoC -> expected refusal with no write, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
 
+# --- the staged archive is not kept ----------------------------------------
+# The WebUI's "install from a file" route uploads the .tgz into /tmp and then
+# points --archive at it, so from the unpack onwards /tmp holds the image twice
+# over -- on a 64 MB SigmaStar that is most of the tmpfs, and the flash phase
+# still wants room for the dd split and the verify mount
+# (OpenIPC/majestic-webui#474). $SB/tmp IS /tmp here: the harness rewrites the
+# literal in the script under test, so the guard fires exactly as it would on a
+# camera.
+reset_env
+make_combined "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/firmware.bin.ssc338q"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ ! -f "$SB/tmp/fw.tgz" ]; then
+    ok "an archive staged in /tmp is freed once it has been unpacked"
+else
+    bad "staged archive should not survive the unpack, rc=$RC present=$([ -f "$SB/tmp/fw.tgz" ] && echo yes || echo no)"
+fi
+
+# ...but only that one. --archive can name a file on an SD card or a share, and
+# deleting the operator's own copy of an image is not this script's business.
+reset_env
+mkdir -p "$SB/keep"
+make_combined "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/firmware.bin.ssc338q"
+mv "$SB/tmp/fw.tgz" "$SB/keep/fw.tgz"
+run -z --archive="$SB/keep/fw.tgz"
+if [ "$RC" -eq 0 ] && [ -f "$SB/keep/fw.tgz" ]; then
+    ok "an archive the caller owns is left where they put it"
+else
+    bad "archive outside /tmp must be kept, rc=$RC present=$([ -f "$SB/keep/fw.tgz" ] && echo yes || echo no)"
+fi
+
+# ...and "under /tmp" is about where the file IS, not how it was spelt. A path
+# that walks back out lands on the caller's own media, which is the one thing
+# this guard exists not to delete.
+reset_env
+mkdir -p "$SB/keep"
+make_combined "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/firmware.bin.ssc338q"
+mv "$SB/tmp/fw.tgz" "$SB/keep/fw.tgz"
+run -z --archive="$SB/tmp/../keep/fw.tgz"
+if [ "$RC" -eq 0 ] && [ -f "$SB/keep/fw.tgz" ]; then
+    ok "an archive reached through /tmp/.. is still the caller's"
+else
+    bad "a /tmp/.. alias must not delete an outside archive, rc=$RC present=$([ -f "$SB/keep/fw.tgz" ] && echo yes || echo no)"
+fi
+
 # --- transcript ------------------------------------------------------------
 reset_env
 run -z --kernel="$K" --rootfs="$R"
