@@ -577,6 +577,34 @@ endif
 
 $(eval $(kernel-module))
 
+# The cv500 neo variant ships every vendor module TWICE, and the wipe in the
+# hook below does not catch it. That board's kernel is the 7.x
+# `upstream-patches` tree, where buildroot's kernel-module install lands the
+# .ko in updates/ rather than the extra/ the wipe clears; INSTALL_TARGET_CMDS
+# then copies the same open_*.ko set into hisilicon/. kmod searches "updates"
+# ahead of everything else, so updates/ is the copy modprobe resolves and
+# depmod indexes, and the hisilicon/ set is bytes nothing can reach. On
+# hi3516av300_neo that is 45 modules and 5.4 MB of .ko -- ~1520KB of squashfs,
+# and what put the board 16KB over its 8192KB cap in the 2026-09-14 nightly
+# (run 34874636710). Verified against that run's own published image:
+# in openipc.hi3516av300-nor-neo.tgz the hisilicon/ names are a pure subset of
+# updates/, and modules.dep names updates/ 156 times and hisilicon/ never.
+#
+# Scoped to cv500+neo deliberately, because the same duplication has the
+# opposite answer elsewhere. The 4.9 boards of every family below put the
+# kernel-module copies in extra/, have no updates/ directory at all, and so
+# hisilicon/ is their only -- live -- copy. The cv300 neo board does have both
+# directories, but its install block RENAMES the modules to hi3516cv300_*/hi_*
+# in hisilicon/, names that appear nowhere in updates/ and that its
+# load_hisilicon insmods by filename, so there hisilicon/ is the live set and
+# updates/ is the dead one. The other neo boards are tracked in issue #2420
+# rather than swept up here.
+ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv500)
+ifeq ($(OPENIPC_VARIANT),neo)
+HISILICON_OPENSDK_DEDUP_CV500_NEO = rm -rf $(TARGET_DIR)/lib/modules/*/hisilicon
+endif
+endif
+
 # Run as a target-finalize hook so it operates on the *merged* $(TARGET_DIR),
 # which is the authoritative tree in both per-package and non-per-package modes.
 #
@@ -600,6 +628,7 @@ ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi351
 define HISILICON_OPENSDK_FINALIZE_MODULES
 	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
+	$(HISILICON_OPENSDK_DEDUP_CV500_NEO)
 	$(LINUX_RUN_DEPMOD)
 endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES
