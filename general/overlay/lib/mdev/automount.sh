@@ -104,8 +104,19 @@ my_umount() {
 # be derived rather than how it came out: hi3519dv500 has carried
 # CONFIG_XFS_FS=y since it was added, three months before the list landed in
 # #2413, so a whole-disk xfs card has been refused on that board ever since.
-# Derive this from the symbols board configs actually set when adding a board,
-# not from the filesystems a card is likely to have.
+#
+# Derive this, do not reach for it. Both halves of the derivation are load
+# bearing -- every CONFIG_*_FS symbol, over every board config that can see a
+# removable block device at all, which is MMC or USB storage because mdev.conf
+# routes sd[a-z] here as well as mmcblk:
+#
+#   for f in $(grep -rlE '^CONFIG_(MMC|USB_STORAGE)=[ym]' br-ext-chip-*/board/)
+#   do grep -oE '^CONFIG_[A-Z0-9_]+_FS=[ym]' "$f"; done | sort -u
+#
+# Shortlisting the symbols by hand is how xfs went missing. Dropping the scope
+# is how a filesystem looks missing when it is not: gfs2 is enabled in this
+# tree, on a board with neither an SD slot nor USB storage, where nothing can
+# ever reach this script.
 disk_fstypes="vfat exfat ext4 ext3 ext2 f2fs xfs msdos ntfs iso9660 udf"
 
 my_mount() {
