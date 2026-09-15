@@ -336,14 +336,32 @@ remove_ko() {
 # driver for and then get "Invalid sensor type" from insert_sns.
 #
 # A name only belongs here if all three layers line up: a case arm in
-# insert_sns above, an /etc/sensors/<name>_*.ini for majestic to find, and the
-# libsns that ini's DllFile points at actually installed by the .mk. Anything
+# insert_sns above, an /etc/sensors/<name>_*.ini for majestic to find, and a
+# libsns that both exists and drives the bus that name selects. Anything
 # missing one of the three gives no video, so advertising it here is worse
-# than silence. Deliberately absent for that reason: imx307 and imx327 (arm
-# only, blobs are in files/sensor/ but the .mk does not install them), 9m034,
-# ar0230, mn34222, ov2718 and ov9752 (arm and library, no ini), jxh42, jxh65
-# and imx122 (library, no arm), and ov9750 (its ini asks for
-# libsns_ov9750_orig.so, which nothing ships).
+# than silence. Deliberately absent for that reason:
+#
+#   gc2023, gc2023_mipi  the only gc2023 ini is the MIPI one, so majestic
+#                        answers plain gc2023 with "No matches for
+#                        'gc2023_i2c'"; and on MIPI the only library shipped
+#                        is the DVP one, which programs the sensor for
+#                        parallel output and times VENC out (#2243, measured
+#                        on a VStarcam Hi3518EV200). Both halves need a GC2023
+#                        MIPI libsns nobody has yet.
+#   imx307, imx327       arm only -- blobs sit in files/sensor/ but the .mk
+#                        does not install them, and there is no ini.
+#   9m034, ar0230,       arm and library, no ini.
+#   mn34222, ov2718,
+#   ov9752
+#   jxh42, jxh65, imx122 library, no arm.
+#   ov9750               its ini asks for libsns_ov9750_orig.so, which nothing
+#                        ships.
+#
+# ov2710_dc and ov2710_mipi are listed apart because their .ini names break
+# the <sensor>_<bus>_<res> convention majestic globs for, so they work only
+# once something points majestic at the file. The library behind them is real:
+# one libsns_ov2710.so that reads its own basename to pick MIPI or DVP (#2035,
+# #2038).
 load_usage() {
         echo "Usage:  ./load_hisilicon [-option] [sensor_name]"
         echo "options:"
@@ -353,9 +371,12 @@ load_usage() {
         echo "    -sensor sensor_name      config sensor type [default: the"
         echo "                             'sensor' U-Boot env var, else ipcinfo]"
         echo "    -h                       help information"
-        echo "Available sensors: ar0130 ar0237 gc1034 gc2023 gc2023_mipi imx222 imx291"
-        echo "                   imx323 jxf22 jxf23 jxh62 ov2710_dc ov2710_mipi ov2735"
-        echo "                   ov9712 ov9732 sc1135 sc1145 sc1235 sc2035 sc2135 sc2235"
+        echo "Available sensors: ar0130 ar0237 gc1034 imx222 imx291 imx323 jxf22"
+        echo "                   jxf23 jxh62 ov2735 ov9712 ov9732 sc1135 sc1145"
+        echo "                   sc1235 sc2035 sc2135 sc2235"
+        echo "    ov2710_dc and ov2710_mipi work too, but majestic cannot find"
+        echo "    their config on its own -- name it with"
+        echo "    cli -s .isp.sensorConfig /etc/sensors/<sensor>_1080p.ini"
         echo -e "for example: ./load_hisilicon -i -sensor jxf23 -osmem 32M -board demo -yuv0 0\n"
 }
 
