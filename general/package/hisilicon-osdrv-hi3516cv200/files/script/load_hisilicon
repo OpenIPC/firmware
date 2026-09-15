@@ -329,16 +329,34 @@ remove_ko() {
         rmmod -w open_mmz
 }
 
+# The list below is the V2 (cv200) one. What this function used to print was
+# the V4 boilerplate copied verbatim from the hi3516ev200 script -- of its nine
+# names this family ships exactly one (sc2235), and it named gc2053 first,
+# which is how the reporter of #2422 came to set a sensor no V2 chip has a
+# driver for and then get "Invalid sensor type" from insert_sns.
+#
+# A name only belongs here if all three layers line up: a case arm in
+# insert_sns above, an /etc/sensors/<name>_*.ini for majestic to find, and the
+# libsns that ini's DllFile points at actually installed by the .mk. Anything
+# missing one of the three gives no video, so advertising it here is worse
+# than silence. Deliberately absent for that reason: imx307 and imx327 (arm
+# only, blobs are in files/sensor/ but the .mk does not install them), 9m034,
+# ar0230, mn34222, ov2718 and ov9752 (arm and library, no ini), jxh42, jxh65
+# and imx122 (library, no arm), and ov9750 (its ini asks for
+# libsns_ov9750_orig.so, which nothing ships).
 load_usage() {
         echo "Usage:  ./load_hisilicon [-option] [sensor_name]"
         echo "options:"
         echo "    -i                       insert modules"
         echo "    -r                       remove modules"
         echo "    -a                       remove modules first, then insert modules"
-        echo "    -sensor sensor_name      config sensor type [default: imx307]"
+        echo "    -sensor sensor_name      config sensor type [default: the"
+        echo "                             'sensor' U-Boot env var, else ipcinfo]"
         echo "    -h                       help information"
-        echo -e "Available sensors: gc2053 imx307 imx327 imx335 os05a sc2231 sc2235 sc4236 sc3235 sc4236 etc."
-        echo -e "for example: ./load_hisilicon -i -sensor imx307 -osmem 32M -board demo -yuv0 0\n"
+        echo "Available sensors: ar0130 ar0237 gc1034 gc2023 gc2023_mipi imx222 imx291"
+        echo "                   imx323 jxf22 jxf23 jxh62 ov2710_dc ov2710_mipi ov2735"
+        echo "                   ov9712 ov9732 sc1135 sc1145 sc1235 sc2035 sc2135 sc2235"
+        echo -e "for example: ./load_hisilicon -i -sensor jxf23 -osmem 32M -board demo -yuv0 0\n"
 }
 
 calc_mmz_info() {
