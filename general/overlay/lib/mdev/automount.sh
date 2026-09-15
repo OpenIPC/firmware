@@ -3,12 +3,76 @@
 destdir=/mnt
 sysblock=/sys/block
 
+# Is this device what the camera is running from?
+#
+# SD-rooted cameras exist in this tree -- /init and sysupgrade both decide
+# whether the rootfs is on flash by testing the kernel command line for
+# root=...mmcblk -- and on one of those this helper would be unmounting the
+# filesystem it is running out of. The command line is checked as well as the
+# mount table because the kernel reports the root device as /dev/root, under
+# which name no rule here would recognise it.
+backs_root() {
+	grep -qs "^/dev/$1 / " /proc/mounts && return 0
+	grep -qs "^/dev/$1 /rom " /proc/mounts && return 0
+
+	for word in $(cat /proc/cmdline 2>/dev/null); do
+		case "${word}" in
+			root=/dev/$1 | root=$1) return 0 ;;
+		esac
+	done
+
+	return 1
+}
+
+# $2 is "gone" when the medium has left the slot.
+#
+# That distinction decides what to do about a umount the kernel refuses. On an
+# add the device is still there and a plain refusal is right: something is using
+# it, and taking it away underneath that user is worse than not mounting.
+#
+# On a REMOVE there is nothing left to protect -- the card is out of the slot,
+# every write to it is already failing -- and refusing to let go is actively
+# destructive. A plain umount returns EBUSY for as long as anything holds a file
+# open, which for a recording camera is the whole time, so the mount survives
+# the card that backed it. The next card to arrive then finds its own name still
+# in /proc/mounts, takes the "already mounted, leave it alone" exit below, and
+# is never mounted at all -- silently, because mdev is spawned through
+# /proc/sys/kernel/hotplug with its descriptors on /dev/null. One pulled card
+# and the slot is dead until somebody reboots.
+#
+# So a removal detaches. The mount leaves the namespace at once and the name is
+# free for the next card; the filesystem itself is cleaned up when the last
+# holder lets go, and that holder is meanwhile getting the EIO it should be
+# getting from a card that is not there.
 my_umount() {
-	if grep -qs "^/dev/$1 " /proc/mounts; then
-		umount "${destdir}/$1"
+	if backs_root "$1"; then
+		logger -s -p daemon.err -t automount \
+			"refusing to unmount /dev/$1: the camera is running from it"
+		return
 	fi
 
-	[ -d "${destdir}/$1" ] && rmdir "${destdir}/$1"
+	if grep -qs "^/dev/$1 " /proc/mounts; then
+		if ! umount "${destdir}/$1" 2>/dev/null; then
+			if [ "$2" != gone ]; then
+				logger -s -p daemon.warn -t automount \
+					"/dev/$1 is in use and was left mounted"
+				return
+			fi
+
+			logger -s -p daemon.warn -t automount \
+				"/dev/$1 was removed while in use; detaching ${destdir}/$1"
+			umount -l "${destdir}/$1" 2>/dev/null
+		fi
+	fi
+
+	# A mountpoint that will not go away is not tidiness. Anything written to
+	# the path while nothing was mounted there lands on the rootfs overlay, and
+	# it is then in the way of the next card -- which mounts over it, leaving
+	# the stray files taking up flash where nobody will look for them.
+	if [ -d "${destdir}/$1" ] && ! rmdir "${destdir}/$1" 2>/dev/null; then
+		logger -s -p daemon.warn -t automount \
+			"${destdir}/$1 could not be removed; something has written into it"
+	fi
 }
 
 # What a removable medium is allowed to be mounted as.
@@ -35,7 +99,14 @@ my_umount() {
 # exfat, ntfs, iso9660, udf and msdos. No camera loses a card it could mount
 # before. What it leaves out is the raw-flash and image filesystems that were
 # never candidates for removable media: yaffs, yaffs2, jffs2, ubifs, squashfs.
-disk_fstypes="vfat exfat ext4 ext3 ext2 f2fs msdos ntfs iso9660 udf"
+#
+# xfs joins them because the sentence above describes how the list was meant to
+# be derived rather than how it came out: hi3519dv500 has carried
+# CONFIG_XFS_FS=y since it was added, three months before the list landed in
+# #2413, so a whole-disk xfs card has been refused on that board ever since.
+# Derive this from the symbols board configs actually set when adding a board,
+# not from the filesystems a card is likely to have.
+disk_fstypes="vfat exfat ext4 ext3 ext2 f2fs xfs msdos ntfs iso9660 udf"
 
 my_mount() {
 	mkdir -p "${destdir}/$1" || exit 1
@@ -159,23 +230,36 @@ case "${ACTION}" in
 		# a whole-disk card, or one an autostart.sh made. Mounting it again
 		# would lay a second live superblock over the same sectors, and would
 		# then run autoconfig and autostart.sh out of it.
-		grep -qs "^/dev/${MDEV} " /proc/mounts && exit 0
-
-		# A whole disk -- the path this change opens -- is mounted only as
-		# something removable media plausibly is. A partition keeps the auto
-		# it has always had: it is exposed to the same trap, but narrowing a
-		# path every camera already depends on is a fleet-wide behaviour
-		# change, and wants its own evidence rather than a ride on this one.
-		if [ -d "${sysblock}/${MDEV}" ]; then
-			my_mount ${MDEV} "${disk_fstypes}"
-		else
-			my_mount ${MDEV}
+		#
+		# Said out loud, because this exit is also where a card goes to be
+		# quietly ignored: before removals learned to detach, a mount left
+		# behind by a card pulled while it was being written to would send
+		# every later card down this branch, and the only symptom was a slot
+		# that had stopped working.
+		if grep -qs "^/dev/${MDEV} " /proc/mounts; then
+			logger -s -p daemon.warn -t automount \
+				"/dev/${MDEV} is already mounted; leaving it to its owner"
+			exit 0
 		fi
+
+		# Both paths are mounted only as something removable media plausibly
+		# is. The partition used to keep the `auto` it had always had, on the
+		# grounds that narrowing a path every camera depends on wanted its own
+		# evidence rather than a ride on the whole-disk change.
+		#
+		# Here is the evidence. The trap auto walks into is a raw-NAND driver
+		# accepting a block device and oopsing the kernel, and mmcblk0p1 is the
+		# device every camera with a card in it actually mounts -- so the one
+		# path still exposed was the one that matters. Deriving the list from
+		# the filesystems board configs enable, rather than from the ones that
+		# seem likely, is what makes the narrowing safe; doing that derivation
+		# again is what turned up the missing xfs above.
+		my_mount ${MDEV} "${disk_fstypes}"
 		;;
 
 	remove)
 		[ -n "${MDEV}" ] || exit 0
 
-		my_umount ${MDEV}
+		my_umount ${MDEV} gone
 		;;
 esac
