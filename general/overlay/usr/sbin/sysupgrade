@@ -534,7 +534,15 @@ download_firmware() {
 	# file on an SD card or a share, and that one is theirs. Freed after the
 	# checksum rather than after the extract, so a failed check still leaves
 	# something to retry from. (OpenIPC/majestic-webui#474)
-	case "$archive" in /tmp/*) rm -f "$archive" ;; esac
+	#
+	# Classified by where the file RESOLVES, not by how it was spelt.
+	# "/tmp/../mnt/fw.tgz" matches the pattern and is a file on the SD card, so
+	# the raw string would have deleted exactly the archive this guard exists to
+	# protect. A path that cannot be resolved is left alone: not knowing where it
+	# is, is not a reason to remove it.
+	_resolved=$(readlink -f "$archive" 2>/dev/null)
+	case "$_resolved" in /tmp/*) rm -f "$_resolved" ;; esac
+	unset _resolved
 	# Combined image (FIT kernel + rootfs packed in one blob, e.g. cv6xx):
 	# flashed as a unit by do_update_firmware instead of the split path.
 	[ -f "/tmp/firmware.bin.$model" ] && image_combined=1

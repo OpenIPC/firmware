@@ -528,6 +528,21 @@ else
     bad "archive outside /tmp must be kept, rc=$RC present=$([ -f "$SB/keep/fw.tgz" ] && echo yes || echo no)"
 fi
 
+# ...and "under /tmp" is about where the file IS, not how it was spelt. A path
+# that walks back out lands on the caller's own media, which is the one thing
+# this guard exists not to delete.
+reset_env
+mkdir -p "$SB/keep"
+make_combined "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/firmware.bin.ssc338q"
+mv "$SB/tmp/fw.tgz" "$SB/keep/fw.tgz"
+run -z --archive="$SB/tmp/../keep/fw.tgz"
+if [ "$RC" -eq 0 ] && [ -f "$SB/keep/fw.tgz" ]; then
+    ok "an archive reached through /tmp/.. is still the caller's"
+else
+    bad "a /tmp/.. alias must not delete an outside archive, rc=$RC present=$([ -f "$SB/keep/fw.tgz" ] && echo yes || echo no)"
+fi
+
 # --- transcript ------------------------------------------------------------
 reset_env
 run -z --kernel="$K" --rootfs="$R"
