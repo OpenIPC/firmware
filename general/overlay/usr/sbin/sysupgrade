@@ -160,14 +160,57 @@ kernel_image() {
 # MTD partition, a layout /proc/mtd does not describe -- must never block a
 # flash that would have worked. The `|| die` on the write itself is the gate;
 # this is the early warning in front of it.
-check_image_fits() {
-	local f=$1 dev=$2 what=$3
-	[ -f "$f" ] || return 0
-	local fsz=$(stat -c %s "$f" 2>/dev/null)
+# $1 bytes, $2 device, $3 what it is, $4 how to name the source in the message.
+# Taken as a size rather than a file because a combined image is measured as two
+# slices that do not exist as files until flash time.
+check_size_fits() {
+	local fsz=$1 dev=$2 what=$3 src=$4
 	local psz=$(partition_size "$dev")
 	[ -n "$fsz" ] && [ -n "$psz" ] || return 0
 	[ "$fsz" -le "$psz" ] && return 0
-	die "The $what image does not fit its partition: $f is $((fsz / 1024)) KB, $dev holds $((psz / 1024)) KB. Nothing was written."
+	die "The $what image does not fit its partition: $src is $((fsz / 1024)) KB, $dev holds $((psz / 1024)) KB. Nothing was written."
+}
+
+check_image_fits() {
+	local f=$1
+	[ -f "$f" ] || return 0
+	check_size_fits "$(stat -c %s "$f" 2>/dev/null)" "$2" "$3" "$f"
+}
+
+# Where do_update_firmware cuts a combined image: the FIT totalsize (header
+# bytes 4-7, big-endian) rounded up to the 64K erase block. Shared with the size
+# pre-check, which has to measure the same two pieces before either is written —
+# two copies of this arithmetic would be two chances to disagree about where the
+# rootfs starts.
+fit_split_blocks() {
+	local hex=$(xxd -p -l 4 -s 4 "$1" 2>/dev/null)
+	local fitsz=$((0x${hex:-0}))
+	[ "$fitsz" -gt 0 ] || return 1
+	echo $(((fitsz + 65535) / 65536))
+}
+
+# A combined image is one blob that do_update_firmware either writes whole to a
+# "firmware" partition or cuts in two for separate kernel and rootfs partitions,
+# picking by layout. Both shapes are measurable here, before the pivot.
+check_combined_fits() {
+	local x=$1
+	[ -f "$x" ] || return 0
+	local kdev=$(get_device "kernel")
+	local rdev=$(get_device "rootfs")
+	if [ "$kdev" = "/dev/" ] || [ "$rdev" = "/dev/" ]; then
+		check_image_fits "$x" "$(get_device "firmware")" firmware
+		return 0
+	fi
+	local blocks total
+	# Not a FIT at all is do_update_firmware's error to raise, with its own
+	# message; here it just means there is nothing to measure.
+	blocks=$(fit_split_blocks "$x") || return 0
+	total=$(stat -c %s "$x" 2>/dev/null)
+	[ -n "$total" ] || return 0
+	local ksz=$((blocks * 65536))
+	check_size_fits "$ksz" "$kdev" kernel "the FIT in $x"
+	[ "$total" -gt "$ksz" ] || return 0
+	check_size_fits "$((total - ksz))" "$rdev" rootfs "the rootfs in $x"
 }
 
 # Every image this run will write, judged against its partition while the camera
@@ -180,17 +223,16 @@ check_image_fits() {
 # successful upgrade (majestic-webui #120). Refusing here costs nothing: no
 # pivot yet, no write yet, services restored, and the log still in /tmp.
 #
-# A combined image is not checked here — it is one blob that may be split across
-# two partitions, and the split is computed at flash time. do_update_firmware
-# checks each slice as it makes it.
-#
 # This deliberately does not ask whether the write would have been SKIPPED for
 # being the same version. An image that cannot fit the partition it is bound for
 # means the layout and the build disagree, and the next build that is not the
 # same version would fail with flash half-written; saying so now, while the
 # camera is intact, is the more useful answer than "nothing to update".
 preflight_image_sizes() {
-	[ "1" = "$image_combined" ] && return 0
+	if [ "1" = "$image_combined" ]; then
+		check_combined_fits "/tmp/firmware.bin.$model"
+		return 0
+	fi
 	[ "1" = "$update_kernel" ] && check_image_fits "$(kernel_image)" "$kernel_device" kernel
 	[ "1" = "$update_rootfs" ] && check_image_fits "$(rootfs_image)" "$(get_device "rootfs")" rootfs
 	return 0
@@ -220,7 +262,17 @@ do_update_kernel() {
 		fi
 	fi
 	check_image_fits "$x" "$kernel_device" kernel
-	mark_flash_touched
+	# A board with no separate "kernel" partition has kernel_device pointing at
+	# the combined "firmware" one (get_system_info's fallback), which overlaps
+	# the rootfs the camera is running from. A kernel write there is every bit
+	# as live as a rootfs write, so -x cannot be honoured after it either.
+	# mark_live_flash_dirty is itself a no-op on a camera not running from
+	# flash, and marks the run touched in both cases.
+	if [ "/dev/" = "$(get_device "kernel")" ]; then
+		mark_live_flash_dirty
+	else
+		mark_flash_touched
+	fi
 	# The success line below reads the version back off the DEVICE, so an
 	# unchecked failure here does not merely claim success, it claims it while
 	# printing the timestamp of the kernel that is still there.
@@ -371,13 +423,12 @@ do_update_firmware() {
 	[ ! -f "$x" ] && die "File $x not found"
 
 	if [ "$(get_device "kernel")" != "/dev/" ] && [ "$(get_device "rootfs")" != "/dev/" ]; then
-		# Split at the FIT totalsize (header bytes 4-7, big-endian), rounded up
-		# to the 64K erase block, then hand each slice to the split flow.
-		local hex=$(xxd -p -l 4 -s 4 "$x" 2>/dev/null)
-		local fitsz=$((0x${hex:-0}))
-		[ "$fitsz" -gt 0 ] || die "Not a FIT combined image: $x"
-		local blocks=$(((fitsz + 65535) / 65536))
-		echo "Split combined image: FIT ${fitsz}B -> kernel, remainder -> rootfs"
+		# Split at the FIT boundary, then hand each slice to the split flow.
+		# Assigned on its own line: `local v=$(cmd)` reports local's status, not
+		# the command's, so the `||` would never fire.
+		local blocks
+		blocks=$(fit_split_blocks "$x") || die "Not a FIT combined image: $x"
+		echo "Split combined image: FIT $((blocks * 65536))B -> kernel, remainder -> rootfs"
 		dd if="$x" bs=65536 count="$blocks" of=/tmp/uImage.$model 2>/dev/null
 		dd if="$x" bs=65536 skip="$blocks" of=/tmp/rootfs.squashfs.$model 2>/dev/null
 		# kernel_follows: the kernel is flashed unconditionally on the next line,
@@ -1285,9 +1336,19 @@ Manifest URL: \$MANIFEST_URL (default: $MANIFEST_URL)
 # image_combined covers a plain `-k` against a combined image, which writes the
 # rootfs with update_rootfs unset; clear_overlay covers -n, which erases the
 # jffs2 that is the overlay's upper layer and is consulted on every lookup.
+#
+# And a kernel write is live too on a board with no separate "kernel" partition:
+# kernel_device is then the combined "firmware" partition (get_system_info's
+# fallback), which overlaps the rootfs. Without that last clause a local
+# `--kernel=... -x` on a cv6xx-shaped layout would skip the pivot and rewrite
+# the running filesystem in place -- the majestic-webui#120 failure, reached
+# from the one path that looks harmless.
 rewrites_live_flash() {
 	[ "1" = "$root_on_flash" ] || return 1
-	[ "1" = "$update_rootfs" ] || [ "1" = "$image_combined" ] || [ "1" = "$clear_overlay" ]
+	[ "1" = "$update_rootfs" ] && return 0
+	[ "1" = "$image_combined" ] && return 0
+	[ "1" = "$clear_overlay" ] && return 0
+	[ "1" = "$update_kernel" ] && [ "/dev/" = "$(get_device "kernel")" ]
 }
 
 reboot_system() {

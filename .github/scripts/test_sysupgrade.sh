@@ -1018,6 +1018,26 @@ grep -q "pivot_root" "$SB/tmp/flash.log" \
     && ok "--wipe_overlay pivots too (the overlay it erases is live)" \
     || bad "-n must pivot; the jffs2 it erases backs the running root"
 
+# The trap in "a kernel write is not a live write": a board with no separate
+# kernel partition has kernel_device pointing at the combined "firmware" one
+# (get_system_info's fallback), which overlaps the rootfs the camera runs from.
+# There a plain --kernel is a live-flash write -- it must pivot, and -x must not
+# be honoured after it -- and the run that looks most harmless is the one that
+# would have rewritten the running filesystem in place.
+reset_env
+set_mtd <<'EOF'
+dev:    size   erasesize  name
+mtd0: 00040000 00010000 "boot"
+mtd1: 00010000 00010000 "env"
+mtd2: 00700000 00010000 "firmware"
+EOF
+run -z --kernel="$K" -x
+if grep -q "pivot_root" "$SB/tmp/flash.log" && flashed /dev/mtd2 && rebooted; then
+    ok "kernel-only on a combined layout is a live write: pivots, and -x is overridden"
+else
+    bad "kernel into the firmware partition must pivot and reboot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
 # --- certificate verification (GHSA-fjf7-9x3v-6mj6) ------------------------
 # Every online fetch used to pass -k, so the network could hand the camera any
 # image -- and, through self_update, any script to exec as root. The probe
@@ -1232,6 +1252,46 @@ if [ "$RC" -ne 0 ] && nothing_wrote; then
     ok "a kernel too big for its partition is refused with nothing written"
 else
     bad "oversized kernel -> expected a clean refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# A combined image has to be measured before the pivot too, and both of its
+# shapes are measurable there: whole-blob against the firmware partition...
+reset_env
+set_mtd <<'EOF'
+dev:    size   erasesize  name
+mtd0: 00040000 00010000 "boot"
+mtd1: 00010000 00010000 "env"
+mtd2: 00001000 00010000 "firmware"
+EOF
+make_combined "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/firmware.bin.ssc338q"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted \
+    && printf '%s' "$OUT" | grep -q "does not fit its partition"; then
+    ok "an oversized whole-blob combined image is refused before the pivot"
+else
+    bad "oversized combined blob -> expected a clean refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# ...and on a split layout, each slice against its own partition, measured at
+# the same 64K-aligned FIT boundary do_update_firmware cuts on. The rootfs slice
+# is the one that used to be found only after the kernel had been committed.
+reset_env
+set_mtd <<'EOF'
+dev:    size   erasesize  name
+mtd0: 00040000 00010000 "boot"
+mtd1: 00010000 00010000 "env"
+mtd2: 00200000 00010000 "kernel"
+mtd3: 00001000 00010000 "rootfs"
+mtd4: 00100000 00010000 "rootfs_data"
+EOF
+make_combined "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/firmware.bin.ssc338q"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted; then
+    ok "an oversized rootfs slice of a combined image is refused before the kernel is written"
+else
+    bad "oversized combined rootfs slice -> expected a clean refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
 
 # It must fail OPEN. The check is an early warning in front of flashcp's own
@@ -1494,6 +1554,11 @@ if awk '/^set_progress\(\)/,/^}/' "$SRC" | grep -qF 'return ${st:-1}'; then
 else
     bad "set_progress swallows the write's status in silent mode; every '|| die' behind it is dead code"
 fi
+# do_update_firmware and the pre-check must cut a combined image at the same
+# place, or the pre-check measures a rootfs slice that is not the one written.
+[ "$(grep -c 'fit_split_blocks' "$SRC")" -ge 3 ] \
+    && ok "the combined-image split boundary has one definition" \
+    || bad "the 64K FIT boundary is computed in more than one place; they will disagree"
 # check_image_fits runs inside the pivot as the backstop for the combined-image
 # split, and the staged root has only the applets enter_ramfs links by name.
 awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'stat sync tail' \
@@ -1621,10 +1686,20 @@ for fn in do_update_rootfs do_update_firmware do_wipe_overlay; do
         bad "$fn writes flash the camera runs from and must mark it dirty"
     fi
 done
-if sed -n '/^do_update_kernel()/,/^}/p' "$SRC" | grep -q 'mark_live_flash_dirty'; then
-    bad "do_update_kernel must NOT mark dirty -- the kernel partition is not mounted"
+# do_update_kernel is the one that depends on the layout. A dedicated kernel
+# partition is not mounted, so marking it would cost -x its only real use; but
+# where there is none, kernel_device is the combined "firmware" partition, which
+# overlaps the running rootfs -- so the mark has to be conditional, never absent
+# and never unconditional.
+kbody=$(sed -n '/^do_update_kernel()/,/^}/p' "$SRC")
+if printf '%s\n' "$kbody" | grep -q 'mark_live_flash_dirty' &&
+    printf '%s\n' "$kbody" | grep -q 'mark_flash_touched' &&
+    printf '%s\n' "$kbody" | grep -q 'get_device "kernel"'; then
+    ok "do_update_kernel marks live only when its target is the combined partition"
+elif printf '%s\n' "$kbody" | grep -q 'mark_live_flash_dirty'; then
+    bad "do_update_kernel marks dirty unconditionally -- a dedicated kernel partition is not mounted, and -x loses its only real use"
 else
-    ok "do_update_kernel leaves -x alone (its partition is not mounted)"
+    bad "do_update_kernel never marks live -- on a layout with no kernel partition it writes the running rootfs and -x would be honoured after it"
 fi
 
 # The mark belongs before the write (a half-erased partition is just as dead)
