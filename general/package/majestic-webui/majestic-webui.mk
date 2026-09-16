@@ -51,8 +51,18 @@ endef
 # was never included by any page and locale_fpv was never read, so an FPV build
 # already renders the standard header and labels. Moving them is not just
 # unnecessary now, it fails -- mv errors on a missing source even with -f.
+#
+# max is the third notification sender, added in OpenIPC/majestic-webui#516,
+# and it belongs on this list for the same reason telegram does. The list it
+# has to agree with is the one in that repo's sbin/updatewebui, which skips
+# sbin/telegram, sbin/max and sbin/openwall on an fpv build: what an image
+# ships and what an updatewebui run installs over it must be the same set, or
+# a deploy puts back a file the image deliberately left out. ntfy is on
+# neither list and is deliberately not added here -- changing that is a
+# decision for the WebUI's list first.
 define MAJESTIC_WEBUI_FPV_FIXUP
 	rm -f $(TARGET_DIR)/usr/sbin/telegram
+	rm -f $(TARGET_DIR)/usr/sbin/max
 	rm -f $(TARGET_DIR)/usr/sbin/openwall
 endef
 
