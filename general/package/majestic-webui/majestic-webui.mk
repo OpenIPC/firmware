@@ -28,6 +28,21 @@ define MAJESTIC_WEBUI_INSTALL
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/var
 	cp -r $(@D)/www $(TARGET_DIR)/var
+
+	# The WebUI installer is downloaded when it is needed, not carried. It is
+	# a 48 KB shell script whose only job is to fetch a tree from GitHub, so a
+	# camera that cannot reach GitHub cannot use it anyway -- and the rootfs is
+	# a fixed-size partition several boards sit at the edge of. gk7202v300_lite
+	# had 12.0 KB spare in its 5120 KB and went 12 KB over.
+	#
+	# updatewebui-fetch is the stub that downloads it, keeps a copy in
+	# /etc/webui and runs it with the arguments it was given; it installs under
+	# the name people type. Guarded on the stub actually being in the tarball
+	# rather than on -f, so a release from before the split still produces a
+	# working image with its own installer in it -- which files the WebUI ships
+	# is decided in another repo, and this has to degrade toward what that
+	# repo already does rather than toward an image with no installer at all.
+	if [ -f $(TARGET_DIR)/usr/sbin/updatewebui-fetch ]; then mv -f $(TARGET_DIR)/usr/sbin/updatewebui-fetch $(TARGET_DIR)/usr/sbin/updatewebui; fi
 endef
 
 # -f throughout: which files the WebUI ships is decided in another repo, so a

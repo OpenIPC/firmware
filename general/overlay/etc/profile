@@ -88,12 +88,18 @@ show_wlan() {
 	grep -r '$1..=' /etc/wireless | cut -d '"' -f4 | sort | grep -e "$(fw_printenv -n soc)" -e generic
 }
 
+# -f, or curl writes the server's error page to the file and exits 0 -- a 404
+# would be downloaded and then handed to sh.
 legacy_webui() {
-	curl -s -L https://github.com/openipc/webui/raw/master/files/usr/sbin/updatewebui.sh -o /tmp/webui.sh && sh /tmp/webui.sh
+	curl -fsSL https://github.com/openipc/webui/raw/master/files/usr/sbin/updatewebui.sh -o /tmp/webui.sh && sh /tmp/webui.sh "$@"
 }
 
+# /usr/sbin/updatewebui does this itself now: it is a stub that downloads the
+# installer, checks that what came back is the installer, keeps a copy in
+# /etc/webui so --restore still needs no network, and passes the arguments on.
+# Kept as a name people have in their notes.
 majestic_webui() {
-	curl -s -L https://raw.githubusercontent.com/openipc/majestic-webui/master/sbin/updatewebui -o /tmp/webui.sh && sh /tmp/webui.sh
+	updatewebui "$@"
 }
 
 # Source configuration files from /etc/profile.d
