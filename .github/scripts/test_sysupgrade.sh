@@ -177,11 +177,23 @@ chmod +x "$SB/bin/md5sum"
 #
 # STUB_FLASHCP_FAIL makes the write fail AFTER it has been logged -- a partially
 # erased partition, which is the state do_update_firmware's `|| die` reacts to.
+#
+# STUB_FLASHCP_FAIL_DEV fails only the write to one device, which is what a
+# split-layout run needs: the kernel goes down first, so failing everything
+# cannot tell "the rootfs write failed" from "we never got that far".
 stub busybox '
 applet=$1; shift
 case "$applet" in
     flashcp|flash_eraseall) echo "$applet $*" >> "$FLASH_LOG"
-                            [ "1" = "$STUB_FLASHCP_FAIL" ] && exit 1 ;;
+                            # Real flashcp writes progress to stdout, and under
+                            # -s that is what set_progress pipes through awk for
+                            # the WebUI. Without some, "does the progress still
+                            # come out?" would be asserted against an empty pipe.
+                            printf "Erasing block 1/1 (100%%)\nWriting kb 8/8 (100%%)\n"
+                            [ "1" = "$STUB_FLASHCP_FAIL" ] && exit 1
+                            if [ -n "$STUB_FLASHCP_FAIL_DEV" ]; then
+                                case " $* " in *" $STUB_FLASHCP_FAIL_DEV "*) exit 1 ;; esac
+                            fi ;;
     reboot)                 echo "reboot" >> "$FLASH_LOG"; exit 0 ;;
 esac
 exit 0'
@@ -290,6 +302,7 @@ run() {
         STUB_IMG_SOC="${STUB_IMG_SOC:-ssc338q}" \
         STUB_IMG_VERSION="${STUB_IMG_VERSION:-2026.07.11}" \
         STUB_FLASHCP_FAIL="${STUB_FLASHCP_FAIL:-0}" \
+        STUB_FLASHCP_FAIL_DEV="${STUB_FLASHCP_FAIL_DEV:-}" \
         STUB_REMOUNT_RC="${STUB_REMOUNT_RC:-0}" \
         STUB_CURL_RC="${STUB_CURL_RC:-0}" \
         sh "$SB/sysupgrade" "$@" 2>&1)
@@ -311,7 +324,7 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
-    unset STUB_FLASHCP_FAIL STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
+    unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     : > "$SDMOUNTS"
     set_mounts
     rm -rf "$SB/ram"
@@ -956,6 +969,55 @@ else
 fi
 rm -f "$SB/bin/rmdir"
 
+# --- the pivot is entered only when it is needed (issue #2416) --------------
+#
+# There is no way back out of the ramfs. The shell, /etc, dropbear and getty are
+# all behind /mnt, so a run that pivots and then hands the camera back leaves a
+# box that answers ping and nothing else: the console loops on `can't run
+# '/sbin/getty'` and ssh rejects a key that worked a minute earlier, until
+# somebody power-cycles it.
+#
+# A kernel-only write never touches the mounted partition, so it never needed
+# the pivot the live rootfs write does -- and it is precisely the run where -x
+# is honoured, which is how people were stranded.
+reset_env
+run -z --kernel="$K" -x
+if [ "$RC" -eq 0 ] && ! grep -q "pivot_root" "$SB/tmp/flash.log" \
+    && flashed /dev/mtd2 && ! rebooted; then
+    ok "-x + kernel only -> no pivot, so the camera keeps its shell (#2416)"
+else
+    bad "a kernel-only run must not pivot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+printf '%s' "$OUT" | grep -q "Flashing in place" \
+    && ok "...and says why there is no ramfs this time" \
+    || bad "a run that skips the pivot should say so; got: $(printf '%s' "$OUT" | tail -3)"
+
+# The other half: a write that DOES land on the live rootfs still moves into RAM.
+reset_env
+run -z --rootfs="$R"
+grep -q "pivot_root" "$SB/tmp/flash.log" \
+    && ok "a live-rootfs write still moves the flash phase into RAM" \
+    || bad "the rootfs write must still pivot, log='$(cat "$SB/tmp/flash.log")'"
+
+# Not every camera runs from the flash it writes; then the partition is just a
+# target and the pivot buys nothing.
+reset_env
+set_cmdline "$CMDLINE_NFS"
+run -z --rootfs="$R"
+if ! grep -q "pivot_root" "$SB/tmp/flash.log" && flashed /dev/mtd3 && [ "$RC" -eq 0 ]; then
+    ok "an NFS-rooted camera writes the rootfs partition without a pivot"
+else
+    bad "NFS root needs no pivot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# -n erases the jffs2 that is the overlay's UPPER layer, which overlayfs
+# consults on every lookup. That is as live as the squashfs, so it pivots.
+reset_env
+run -z -n
+grep -q "pivot_root" "$SB/tmp/flash.log" \
+    && ok "--wipe_overlay pivots too (the overlay it erases is live)" \
+    || bad "-n must pivot; the jffs2 it erases backs the running root"
+
 # --- certificate verification (GHSA-fjf7-9x3v-6mj6) ------------------------
 # Every online fetch used to pass -k, so the network could hand the camera any
 # image -- and, through self_update, any script to exec as root. The probe
@@ -1063,6 +1125,136 @@ if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && flashed /dev/mtd3; then
 else
     bad "clean card -> expected the run to proceed, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
+
+# ---------------------------------------------------------------------------
+echo
+echo "=== Part 1f: a refused write is not a completed one (issue #2426) ==="
+
+# Reported 2026-09-16: an image larger than the partition it is bound for makes
+# flashcp refuse -- it checks the size before it erases anything -- and
+# sysupgrade reported the upgrade as done. On the split path nothing ever looked
+# at flashcp's status, and the success lines are worse than a bare "OK": the
+# kernel one reads the version back off the DEVICE, so it prints the timestamp
+# of the kernel still sitting there, and the rootfs one prints the version
+# verify_rootfs read out of the CANDIDATE FILE -- exactly the version the
+# operator was hoping to see.
+
+# A kernel write that fails must be fatal, and must not claim a version.
+reset_env
+STUB_FLASHCP_FAIL_DEV=/dev/mtd2
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && ! printf '%s' "$OUT" | grep -q "Kernel updated to"; then
+    ok "a failed kernel write fails the run instead of announcing a version"
+else
+    bad "failed kernel write -> expected a non-zero exit and no success line, rc=$RC out='$(printf '%s' "$OUT" | tail -3)'"
+fi
+# ...and it must not go on to write the rootfs on top of it.
+! flashed /dev/mtd3 \
+    && ok "...and stops there rather than carrying on to the rootfs" \
+    || bad "the run continued to the rootfs after the kernel write failed"
+
+# The same for the rootfs, with the kernel write left working so the failure is
+# unambiguously the rootfs one.
+reset_env
+STUB_FLASHCP_FAIL_DEV=/dev/mtd3
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && ! printf '%s' "$OUT" | grep -q "RootFS updated to"; then
+    ok "a failed rootfs write fails the run instead of announcing a version"
+else
+    bad "failed rootfs write -> expected a non-zero exit and no success line, rc=$RC out='$(printf '%s' "$OUT" | tail -3)'"
+fi
+# It erased before it failed, so it has to reboot -- the #2231 rule, reached
+# from the split path for the first time.
+rebooted \
+    && ok "...and reboots, because a half-erased live partition is not survivable" \
+    || bad "a failed live-rootfs write must still reboot, log='$(cat "$SB/tmp/flash.log")'"
+
+# -s is the mode the WebUI drives, and it is the one where the guard was dead
+# code: set_progress pipes busybox through awk, and a pipeline reports its LAST
+# command's status, so every `|| die` behind it saw awk's 0.
+reset_env
+STUB_FLASHCP_FAIL_DEV=/dev/mtd3
+run -z -s --rootfs="$R"
+if [ "$RC" -ne 0 ]; then
+    ok "the write's status survives the progress pipe in silent mode"
+else
+    bad "-s masked a failed write behind awk's exit status, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+# And the mode still does what it is for: the write's own output, numbered.
+printf '%s' "$OUT" | grep -q '^1 Erasing' \
+    && ok "...and still prints the numbered progress the WebUI polls" \
+    || bad "-s no longer emits progress lines, out='$(printf '%s' "$OUT" | tail -3)'"
+
+# The reported case, end to end: an image too big for its partition. flashcp
+# would refuse it without erasing anything, so the right answer is to refuse it
+# BEFORE the pivot -- once inside the ramfs a die() has to reboot, and a reboot
+# with nothing written is indistinguishable from a successful upgrade to
+# anything watching the camera come back.
+reset_env
+set_mtd <<'EOF'
+dev:    size   erasesize  name
+mtd0: 00040000 00010000 "boot"
+mtd1: 00010000 00010000 "env"
+mtd2: 00200000 00010000 "kernel"
+mtd3: 00001000 00010000 "rootfs"
+mtd4: 00100000 00010000 "rootfs_data"
+EOF
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted; then
+    ok "a rootfs too big for its partition is refused with nothing written"
+else
+    bad "oversized rootfs -> expected a clean refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+# The message has to name the two numbers; "flashcp failed" sends the operator
+# looking at the image when the answer is in their partition layout (#2238).
+if printf '%s' "$OUT" | grep -q "does not fit its partition"; then
+    ok "...and says which image, which partition, and by how much"
+else
+    bad "the refusal must name the sizes; got: $(printf '%s' "$OUT" | tail -3)"
+fi
+# Nothing was written, so the camera is untouched: it keeps its services.
+grep -q "S95majestic restart" "$SB/tmp/flash.log" \
+    && ok "...and hands the camera back with its services running" \
+    || bad "the refusal left the camera degraded, log='$(cat "$SB/tmp/flash.log")'"
+
+# The kernel is checked on the same terms.
+reset_env
+set_mtd <<'EOF'
+dev:    size   erasesize  name
+mtd0: 00040000 00010000 "boot"
+mtd1: 00010000 00010000 "env"
+mtd2: 00000010 00010000 "kernel"
+mtd3: 00500000 00010000 "rootfs"
+mtd4: 00100000 00010000 "rootfs_data"
+EOF
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && nothing_wrote; then
+    ok "a kernel too big for its partition is refused with nothing written"
+else
+    bad "oversized kernel -> expected a clean refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# It must fail OPEN. The check is an early warning in front of flashcp's own
+# refusal, not a new gate: a size it cannot read must never block a flash that
+# would have worked. An image on a camera whose busybox has no stat applet is
+# the case that matters.
+reset_env
+stub stat 'exit 1'
+set_mtd <<'EOF'
+dev:    size   erasesize  name
+mtd0: 00040000 00010000 "boot"
+mtd1: 00010000 00010000 "env"
+mtd2: 00200000 00010000 "kernel"
+mtd3: 00001000 00010000 "rootfs"
+mtd4: 00100000 00010000 "rootfs_data"
+EOF
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3; then
+    ok "a size it cannot read does not block the flash"
+else
+    bad "the size check must fail open, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+rm -f "$SB/bin/stat"
 
 # ---------------------------------------------------------------------------
 echo
@@ -1260,6 +1452,53 @@ awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'grep -q "\^tmpfs \$RAM_ROOT tmpf
 awk '/^die\(\)/,/^}/' "$SRC" | grep -q '_ramfs_phase' \
     && ok "die() reboots unconditionally once we are in the ramfs" \
     || bad "a die() inside the ramfs must reboot; there is no system left to return to"
+# The success path needs the same rule. Handing a pivoted camera back to the
+# operator because -x was asked for leaves the corpse of #2416: pings, answers
+# nothing, and rejects a key that worked a minute earlier.
+awk '/^reboot_system\(\)/,/^}/' "$SRC" | grep -q '_ramfs_phase' \
+    && ok "reboot_system will not honour -x from inside the ramfs either (#2416)" \
+    || bad "an -x honoured inside the pivot strands a camera nobody can log into"
+# ...and the way that stops being the common case is not pivoting at all when
+# the run does not rewrite the flash the camera is served from. Gate and warning
+# have to be the same question, asked once, or they drift apart.
+if grep -q '^if ! rewrites_live_flash; then' "$SRC" &&
+    grep -q '\[ "1" = "\$skip_reboot" \] && rewrites_live_flash; then' "$SRC"; then
+    ok "the pivot and the -x warning are gated on one shared question"
+else
+    bad "enter_ramfs and the -x notice must share rewrites_live_flash, or they drift"
+fi
+# The size check has to run while the camera is still whole. Inside the pivot a
+# refusal can only reboot, and a reboot with nothing written is what a watcher
+# reads as a successful upgrade (majestic-webui #120).
+pf=$(grep -n '^preflight_image_sizes$' "$SRC" | head -1 | cut -d: -f1)
+er=$(grep -n 'enter_ramfs; then' "$SRC" | tail -1 | cut -d: -f1)
+if [ -n "$pf" ] && [ -n "$er" ] && [ "$pf" -lt "$er" ]; then
+    ok "images are measured before the pivot, not after it"
+else
+    bad "preflight_image_sizes must run before enter_ramfs -- preflight@${pf:-none} pivot@${er:-none}"
+fi
+# Every flashcp the script runs has to have its status read. A bare call
+# discards it and a pipeline hides it; either way a write that never happened is
+# announced as one that did (#2426).
+if grep -n 'set_progress flash' "$SRC" | grep -qv '||'; then
+    bad "an unguarded set_progress write: $(grep -n 'set_progress flash' "$SRC" | grep -v '||')"
+else
+    ok "every flashcp/flash_eraseall write is followed by a status check"
+fi
+# ...which only means anything if set_progress carries the status out of its own
+# pipe. `busybox "$@" | awk ...` returns awk's 0 however the write went, so in
+# silent mode -- the mode the WebUI drives -- every one of those guards was
+# dead code.
+if awk '/^set_progress\(\)/,/^}/' "$SRC" | grep -qF 'return ${st:-1}'; then
+    ok "set_progress returns the write's status, not awk's"
+else
+    bad "set_progress swallows the write's status in silent mode; every '|| die' behind it is dead code"
+fi
+# check_image_fits runs inside the pivot as the backstop for the combined-image
+# split, and the staged root has only the applets enter_ramfs links by name.
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'stat sync tail' \
+    && ok "the staged root carries stat, which the size check needs" \
+    || bad "check_image_fits reads sizes with stat; without the applet it silently fails open in the ramfs"
 # The WebUI keeps majestic alive on purpose: it is the server streaming the log,
 # and SIGQUIT to a majestic already in upgrade mode is a use-after-free
 # (tracked daemon-side). The only legitimate one left is free_resources'
