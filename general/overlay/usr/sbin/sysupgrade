@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.64
+scr_version=1.0.65
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -127,11 +127,120 @@ compare_versions() {
 	echo_c 32 "New version, going to update" && return 1
 }
 
+# The images a run writes, with the defaults do_update_kernel and
+# do_update_rootfs apply. Factored out because verify_rootfs and the size
+# pre-checks have to name the same files before those two run, and four copies
+# of the defaults would drift.
+rootfs_image() {
+	[ -n "$rootfs_file" ] && echo "$rootfs_file" || echo "/tmp/rootfs.squashfs.$model"
+}
+
+kernel_image() {
+	[ -n "$kernel_file" ] && { echo "$kernel_file"; return 0; }
+	[ "$vendor" = "rockchip" ] && echo "/tmp/zboot.img.$model" || echo "/tmp/uImage.$model"
+}
+
+# Refuse an image that cannot fit the partition it is bound for, before the
+# write rather than during it.
+#
+# flashcp makes this check itself -- and refuses without erasing anything -- but
+# its refusal went unread: the split path never looked at the status, so a run
+# that wrote nothing at all printed "RootFS updated to <exactly the version you
+# asked for>" and rebooted onto the old image (#2426). Reported against a camera
+# whose rootfs partition had been resized in the bootloader environment without
+# /proc/cmdline following (#2238), and reproduced on a lab gk7205v200.
+#
+# Checking here as well as honouring the status there buys the two things a
+# refusal at write time cannot: on a split layout the kernel is not committed
+# before the rootfs is found not to fit, and nothing has been erased, so die()
+# takes its no-reboot branch and leaves the camera exactly as it found it
+# instead of rebooting into what looks to a watcher like a successful upgrade.
+#
+# Fails OPEN. A size it cannot read -- no stat applet, a device that is not an
+# MTD partition, a layout /proc/mtd does not describe -- must never block a
+# flash that would have worked. The `|| die` on the write itself is the gate;
+# this is the early warning in front of it.
+# $1 bytes, $2 device, $3 what it is, $4 how to name the source in the message.
+# Taken as a size rather than a file because a combined image is measured as two
+# slices that do not exist as files until flash time.
+check_size_fits() {
+	local fsz=$1 dev=$2 what=$3 src=$4
+	local psz=$(partition_size "$dev")
+	[ -n "$fsz" ] && [ -n "$psz" ] || return 0
+	[ "$fsz" -le "$psz" ] && return 0
+	die "The $what image does not fit its partition: $src is $((fsz / 1024)) KB, $dev holds $((psz / 1024)) KB. Nothing was written."
+}
+
+check_image_fits() {
+	local f=$1
+	[ -f "$f" ] || return 0
+	check_size_fits "$(stat -c %s "$f" 2>/dev/null)" "$2" "$3" "$f"
+}
+
+# Where do_update_firmware cuts a combined image: the FIT totalsize (header
+# bytes 4-7, big-endian) rounded up to the 64K erase block. Shared with the size
+# pre-check, which has to measure the same two pieces before either is written —
+# two copies of this arithmetic would be two chances to disagree about where the
+# rootfs starts.
+fit_split_blocks() {
+	local hex=$(xxd -p -l 4 -s 4 "$1" 2>/dev/null)
+	local fitsz=$((0x${hex:-0}))
+	[ "$fitsz" -gt 0 ] || return 1
+	echo $(((fitsz + 65535) / 65536))
+}
+
+# A combined image is one blob that do_update_firmware either writes whole to a
+# "firmware" partition or cuts in two for separate kernel and rootfs partitions,
+# picking by layout. Both shapes are measurable here, before the pivot.
+check_combined_fits() {
+	local x=$1
+	[ -f "$x" ] || return 0
+	local kdev=$(get_device "kernel")
+	local rdev=$(get_device "rootfs")
+	if [ "$kdev" = "/dev/" ] || [ "$rdev" = "/dev/" ]; then
+		check_image_fits "$x" "$(get_device "firmware")" firmware
+		return 0
+	fi
+	local blocks total
+	# Not a FIT at all is do_update_firmware's error to raise, with its own
+	# message; here it just means there is nothing to measure.
+	blocks=$(fit_split_blocks "$x") || return 0
+	total=$(stat -c %s "$x" 2>/dev/null)
+	[ -n "$total" ] || return 0
+	local ksz=$((blocks * 65536))
+	check_size_fits "$ksz" "$kdev" kernel "the FIT in $x"
+	[ "$total" -gt "$ksz" ] || return 0
+	check_size_fits "$((total - ksz))" "$rdev" rootfs "the rootfs in $x"
+}
+
+# Every image this run will write, judged against its partition while the camera
+# is still whole -- before the ramfs pivot, not after it.
+#
+# Inside the pivot a die() has to reboot: the shell, /etc and the services an
+# operator would come back to are all behind /mnt (#2416). A reboot with nothing
+# written is exactly the outcome die() goes out of its way to avoid, because to
+# anything watching the camera come back it is indistinguishable from a
+# successful upgrade (majestic-webui #120). Refusing here costs nothing: no
+# pivot yet, no write yet, services restored, and the log still in /tmp.
+#
+# This deliberately does not ask whether the write would have been SKIPPED for
+# being the same version. An image that cannot fit the partition it is bound for
+# means the layout and the build disagree, and the next build that is not the
+# same version would fail with flash half-written; saying so now, while the
+# camera is intact, is the more useful answer than "nothing to update".
+preflight_image_sizes() {
+	if [ "1" = "$image_combined" ]; then
+		check_combined_fits "/tmp/firmware.bin.$model"
+		return 0
+	fi
+	[ "1" = "$update_kernel" ] && check_image_fits "$(kernel_image)" "$kernel_device" kernel
+	[ "1" = "$update_rootfs" ] && check_image_fits "$(rootfs_image)" "$(get_device "rootfs")" rootfs
+	return 0
+}
+
 do_update_kernel() {
 	local x=$1
-	if [ -z "$x" ]; then
-		[ "$vendor" = "rockchip" ] && x="/tmp/zboot.img.$model" || x="/tmp/uImage.$model"
-	fi
+	[ -z "$x" ] && x=$(kernel_image)
 	echo_c 33 "\nKernel"
 	echo "Update kernel from $x"
 	[ ! -f "$x" ] && die "File $x not found"
@@ -152,8 +261,23 @@ do_update_kernel() {
 			compare_versions "$kernel_version" "$(get_kernel_version "$x")" && return 0
 		fi
 	fi
-	mark_flash_touched
-	set_progress flashcp -v "$x" "$kernel_device"
+	check_image_fits "$x" "$kernel_device" kernel
+	# A board with no separate "kernel" partition has kernel_device pointing at
+	# the combined "firmware" one (get_system_info's fallback), which overlaps
+	# the rootfs the camera is running from. A kernel write there is every bit
+	# as live as a rootfs write, so -x cannot be honoured after it either.
+	# mark_live_flash_dirty is itself a no-op on a camera not running from
+	# flash, and marks the run touched in both cases.
+	if [ "/dev/" = "$(get_device "kernel")" ]; then
+		mark_live_flash_dirty
+	else
+		mark_flash_touched
+	fi
+	# The success line below reads the version back off the DEVICE, so an
+	# unchecked failure here does not merely claim success, it claims it while
+	# printing the timestamp of the kernel that is still there.
+	set_progress flashcp -v "$x" "$kernel_device" ||
+		die "Writing $x to $kernel_device failed."
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
 }
 
@@ -210,7 +334,7 @@ soc_guarded_by_kernel() {
 # written to flash, and it must not reject an image that would have flashed fine.
 verify_rootfs() {
 	local x=$1
-	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$model"
+	[ -z "$x" ] && x=$(rootfs_image)
 	echo_c 33 "\nVerify"
 	echo "Verifying rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
@@ -265,13 +389,19 @@ verify_rootfs() {
 
 do_update_rootfs() {
 	local x=$1
-	[ -z "$x" ] && x="/tmp/rootfs.squashfs.$model"
+	[ -z "$x" ] && x=$(rootfs_image)
 	echo_c 33 "\nRootFS"
 	echo "Update rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
 	[ "1" = "$exit_update" ] && return 0
+	local dev=$(get_device "rootfs")
+	check_image_fits "$x" "$dev" rootfs
 	mark_live_flash_dirty
-	set_progress flashcp -v "$x" "$(get_device "rootfs")"
+	# ${rootfs_version} is what verify_rootfs read out of the CANDIDATE FILE, so
+	# an unchecked failure here prints the version the operator asked for --
+	# indistinguishable from the upgrade that did not happen.
+	set_progress flashcp -v "$x" "$dev" ||
+		die "Writing $x to $dev failed."
 	echo_c 32 "RootFS updated to ${rootfs_version:-unknown}"
 }
 
@@ -293,13 +423,12 @@ do_update_firmware() {
 	[ ! -f "$x" ] && die "File $x not found"
 
 	if [ "$(get_device "kernel")" != "/dev/" ] && [ "$(get_device "rootfs")" != "/dev/" ]; then
-		# Split at the FIT totalsize (header bytes 4-7, big-endian), rounded up
-		# to the 64K erase block, then hand each slice to the split flow.
-		local hex=$(xxd -p -l 4 -s 4 "$x" 2>/dev/null)
-		local fitsz=$((0x${hex:-0}))
-		[ "$fitsz" -gt 0 ] || die "Not a FIT combined image: $x"
-		local blocks=$(((fitsz + 65535) / 65536))
-		echo "Split combined image: FIT ${fitsz}B -> kernel, remainder -> rootfs"
+		# Split at the FIT boundary, then hand each slice to the split flow.
+		# Assigned on its own line: `local v=$(cmd)` reports local's status, not
+		# the command's, so the `||` would never fire.
+		local blocks
+		blocks=$(fit_split_blocks "$x") || die "Not a FIT combined image: $x"
+		echo "Split combined image: FIT $((blocks * 65536))B -> kernel, remainder -> rootfs"
 		dd if="$x" bs=65536 count="$blocks" of=/tmp/uImage.$model 2>/dev/null
 		dd if="$x" bs=65536 skip="$blocks" of=/tmp/rootfs.squashfs.$model 2>/dev/null
 		# kernel_follows: the kernel is flashed unconditionally on the next line,
@@ -307,6 +436,10 @@ do_update_firmware() {
 		# with it unset). Tell verify_rootfs so it weighs the same SoC evidence as
 		# --url/--channel do, instead of refusing with advice that is a no-op here.
 		verify_rootfs "/tmp/rootfs.squashfs.$model" kernel_follows
+		# Both slices are judged before either is written, for the same reason
+		# verify_rootfs runs first: the kernel goes down first, so a rootfs slice
+		# that cannot fit must be found while nothing is committed.
+		check_image_fits "/tmp/rootfs.squashfs.$model" "$(get_device "rootfs")" rootfs
 		do_update_kernel "/tmp/uImage.$model"
 		do_update_rootfs "/tmp/rootfs.squashfs.$model"
 		return 0
@@ -315,6 +448,7 @@ do_update_firmware() {
 	local fw_dev=$(get_device "firmware")
 	[ "$fw_dev" = "/dev/" ] && die "No kernel/rootfs or firmware partition to flash"
 	echo "Combined partition $fw_dev"
+	check_image_fits "$x" "$fw_dev" firmware
 	mark_live_flash_dirty
 	set_progress flashcp -v "$x" "$fw_dev" || die "flashcp to $fw_dev failed"
 	echo_c 32 "Firmware updated"
@@ -384,7 +518,13 @@ do_wipe_overlay() {
 	[ "$flash_type" = "nand" ] || jffs2="-j"
 	quiesce_overlay
 	mark_live_flash_dirty
-	set_progress flash_eraseall $jffs2 "$(get_device "rootfs_data")"
+	# Same reason the flashcp writes are checked: an erase that failed and was
+	# not noticed is a `firstboot` that reports the camera reset and leaves the
+	# old overlay -- including the shadow entry that decides whether the camera
+	# is claimed -- exactly where it was.
+	local dev=$(get_device "rootfs_data")
+	set_progress flash_eraseall $jffs2 "$dev" ||
+		die "Erasing the overlay partition $dev failed."
 }
 
 # curl options for one URL. An https URL may redirect (a GitHub release asset
@@ -841,7 +981,7 @@ enter_ramfs() {
 	# --list is a build option; fall back to what the flash phase actually uses.
 	for applet in sh ash awk basename cat cut dd flash_eraseall flashcp grep \
 		head ln losetup ls mkdir mount od printf reboot rm rmdir sed sleep \
-		sync tail timeout umount xxd; do
+		stat sync tail timeout umount xxd; do
 		[ -e "$RAM_ROOT/bin/$applet" ] || ln -sf busybox "$RAM_ROOT/bin/$applet" 2>/dev/null
 	done
 	# If the essentials are not there, the ramfs is worse than useless: better to
@@ -909,12 +1049,31 @@ enter_ramfs() {
 	exit 1
 }
 
+# Run a flash tool, reducing its progress output to the line-count form the
+# WebUI polls when it is driving us (-s).
+#
+# The status has to survive that pipe. A pipeline reports the status of its LAST
+# command, so `busybox flashcp | awk` returns awk's 0 no matter how the write
+# went -- which made `|| die` on a caller dead code in exactly the mode the
+# WebUI drives, and turned a flashcp that refused to write anything into a
+# reported-successful upgrade (#2426). busybox ash has `set -o pipefail`; dash,
+# which .github/scripts/test_sysupgrade.sh runs this script under, does not. So
+# carry the status out of the pipeline by hand.
+#
+# An unreadable status file means failure, not success: this is the guard that
+# stops a silent flash lying about itself, so it must not fail open. /tmp is
+# writable on every path that reaches here -- create_lock has already touched
+# $LOCK_FILE in it, and inside the ramfs it is the tmpfs the images came from.
 set_progress() {
 	if [ "1" = "$silent_update" ]; then
-		busybox "$@" | awk '{print NR, $1}'
-	else
-		busybox "$@"
+		local rcf=/tmp/.sysupgrade-write-rc
+		rm -f "$rcf"
+		{ busybox "$@"; echo $? > "$rcf"; } | awk '{print NR, $1}'
+		local st=$(cat "$rcf" 2>/dev/null)
+		rm -f "$rcf"
+		return ${st:-1}
 	fi
+	busybox "$@"
 }
 
 sync_time() {
@@ -1013,6 +1172,19 @@ create_lock() {
 
 get_device() {
 	echo -n "/dev/$(grep "\"$1\"" /proc/mtd | cut -d: -f1)"
+}
+
+# Bytes in the MTD partition behind $1 (/dev/mtdN), or nothing when it cannot be
+# told -- a name that is not an mtd device, or a /proc/mtd that does not list it.
+#
+# /proc/mtd rather than /sys/class/mtd/mtdN/size: get_device already depends on
+# /proc being there, while /sys is carried into the ramfs pivot best-effort
+# (enter_ramfs moves it without checking), so sysfs can simply be absent exactly
+# where this is needed.
+partition_size() {
+	case "$1" in /dev/mtd[0-9]*) ;; *) return 0 ;; esac
+	local hex=$(grep "^${1#/dev/}:" /proc/mtd 2>/dev/null | cut -d' ' -f2)
+	[ -n "$hex" ] && echo $((0x$hex))
 }
 
 # Record that a write is about to land on flash that backs the RUNNING
@@ -1153,12 +1325,48 @@ Manifest URL: \$MANIFEST_URL (default: $MANIFEST_URL)
 "
 }
 
+# Does this run rewrite flash that the camera is running FROM?
+#
+# One question behind three decisions, so it is asked once: whether -x can be
+# honoured, whether the operator gets a warning and an abort window before the
+# point of no return, and — since #2416 — whether the flash phase needs to move
+# into RAM at all. A kernel-only write touches no mounted partition, so it needs
+# none of the three.
+#
+# image_combined covers a plain `-k` against a combined image, which writes the
+# rootfs with update_rootfs unset; clear_overlay covers -n, which erases the
+# jffs2 that is the overlay's upper layer and is consulted on every lookup.
+#
+# And a kernel write is live too on a board with no separate "kernel" partition:
+# kernel_device is then the combined "firmware" partition (get_system_info's
+# fallback), which overlaps the rootfs. Without that last clause a local
+# `--kernel=... -x` on a cv6xx-shaped layout would skip the pivot and rewrite
+# the running filesystem in place -- the majestic-webui#120 failure, reached
+# from the one path that looks harmless.
+rewrites_live_flash() {
+	[ "1" = "$root_on_flash" ] || return 1
+	[ "1" = "$update_rootfs" ] && return 0
+	[ "1" = "$image_combined" ] && return 0
+	[ "1" = "$clear_overlay" ] && return 0
+	[ "1" = "$update_kernel" ] && [ "/dev/" = "$(get_device "kernel")" ]
+}
+
 reboot_system() {
 	# Nothing landed on flash the running system is served from: -x is safe to
 	# honour. Return rather than exit, so the caller owns the status — the main
 	# path falls through to `exit 0` (a deliberate --no_reboot run is a success,
 	# it used to report failure) while die() keeps its own `exit 1`.
-	if [ "1" = "$skip_reboot" ] && [ "1" != "$live_flash_dirty" ]; then
+	#
+	# Not inside the ramfs, though. There the camera's shell, /etc, dropbear and
+	# getty are all behind /mnt, so "staying up" hands back a box that answers
+	# ping and nothing else: the console loops on `can't run '/sbin/getty'` and
+	# ssh rejects a key that worked a minute earlier, until somebody power-cycles
+	# it (#2416). die() has always reasoned this way about a failure in the
+	# pivot; the same is true of a success. The pivot is now entered only when
+	# the run needs it, so the case that reaches here is a run that intended to
+	# rewrite the live rootfs and then wrote nothing — a same-version -r, say.
+	if [ "1" = "$skip_reboot" ] && [ "1" != "$live_flash_dirty" ] &&
+		[ "1" != "$_ramfs_phase" ]; then
 		echo_c 33 "\nYou asked me not to reboot, so I won't."
 		echo_c 31 "Although a reboot is required to apply the changes."
 		echo_c 37 "Please reboot the camera manually whenever possible."
@@ -1169,7 +1377,7 @@ reboot_system() {
 		rm $LOCK_FILE
 		return 0
 	fi
-	if [ "1" = "$skip_reboot" ]; then
+	if [ "1" = "$skip_reboot" ] && [ "1" = "$live_flash_dirty" ]; then
 		# -x cannot be honoured here. The flash this camera runs from has been
 		# rewritten under the running kernel, so the live filesystem is already
 		# inconsistent: reads miss the cache free_resources() dropped and come
@@ -1180,6 +1388,10 @@ reboot_system() {
 		# it. Reboot now, while we still can.
 		echo_c 31 "\n--no_reboot ignored: the flash this camera runs from was rewritten."
 		echo_c 31 "The running filesystem cannot survive that; only a reboot applies it."
+	elif [ "1" = "$skip_reboot" ]; then
+		# Nothing was written, but we are inside the pivot: see above. #2416.
+		echo_c 31 "\n--no_reboot ignored: the flash phase is running from RAM."
+		echo_c 31 "This camera has no shell, no SSH and no console until it reboots."
 	fi
 	echo_c 37 "\nUnconditional reboot"
 	busybox reboot -d 1 -f
@@ -1200,6 +1412,12 @@ else
 	# committed, leaving a half-upgraded device: new kernel, old rootfs, and no
 	# way back except a manual flash. Checking first means a failure costs nothing.
 	[ "1" = "$update_rootfs" ] && verify_rootfs "$rootfs_file"
+	# And judge its size here too, for the same reason: the kernel goes down
+	# first, so a rootfs that cannot fit has to be found while nothing is
+	# committed. exit_update means the rootfs is not being written at all, so
+	# whether it would have fitted is not this run's business.
+	[ "1" = "$update_rootfs" ] && [ "1" != "$exit_update" ] &&
+		check_image_fits "$(rootfs_image)" "$(get_device "rootfs")" rootfs
 	[ "1" = "$update_kernel" ] && do_update_kernel "$kernel_file"
 	[ "1" = "$update_rootfs" ] && do_update_rootfs "$rootfs_file"
 fi
@@ -1407,6 +1625,9 @@ free_resources
 [ "1" != "$skip_unmount" ] && check_sdcard
 [ "1" = "$remote_update" ] && download_firmware
 
+# Now that every image is on the camera, and while the camera is still whole.
+preflight_image_sizes
+
 # -x cannot be honoured for a write that lands on the flash this camera runs
 # from (see reboot_system). Say so before the first write rather than after it:
 # the trap below takes Ctrl-C away, deliberately, for the rest of the run, so
@@ -1414,8 +1635,7 @@ free_resources
 # out. image_combined is only known once download_firmware has run, and it is
 # what covers a plain `-k` against a combined image (that writes the rootfs
 # with update_rootfs unset).
-if [ "1" = "$skip_reboot" ] && [ "1" = "$root_on_flash" ] &&
-	{ [ "1" = "$update_rootfs" ] || [ "1" = "$image_combined" ] || [ "1" = "$clear_overlay" ]; }; then
+if [ "1" = "$skip_reboot" ] && rewrites_live_flash; then
 	echo_c 31 "\nNOTICE: -x was requested, but this run rewrites the flash this camera"
 	echo_c 31 "is running from. -x cannot be honoured for that: the running filesystem"
 	echo_c 31 "does not survive it. The camera will be rebooted once flashing is done."
@@ -1450,10 +1670,19 @@ fi
 trap '' HUP INT TERM PIPE
 echo_c 37 "\nProtected: flashing continues even if this terminal disconnects."
 
+# Only a run that rewrites the flash the camera is served from needs to leave
+# it. The pivot costs the camera its shell, SSH and console until the next
+# reboot -- there is no way back out of it, which is the whole of #2416 -- and
+# buys nothing when the partition under the running squashfs is not being
+# touched. A kernel-only write is the common case: it is also the one where -x
+# is honoured, so it was the one that stranded people.
+#
 # On success this never comes back — the rest runs in the re-exec'd process
 # inside the ramfs. A camera that cannot give us one still has to upgrade, so a
 # failure here falls through and flashes in place exactly as before.
-if ! enter_ramfs; then
+if ! rewrites_live_flash; then
+	echo_c 37 "\nFlashing in place: this run does not rewrite the filesystem the camera runs from."
+elif ! enter_ramfs; then
 	# The pivot did not take, so the in-place flash below needs none of what was
 	# staged for it. enter_ramfs bails out from a dozen places and cannot tidy up
 	# from inside each one, so the single path that means "no pivot" does it:
