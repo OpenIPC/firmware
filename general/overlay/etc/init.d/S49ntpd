@@ -1,10 +1,64 @@
 #!/bin/sh
 
 DAEMON="ntpd"
+CONF="/etc/ntp.conf"
+# The copy the image shipped. general/overlay/init pivots the read-only rootfs
+# to /rom before mounting the overlay over it, so on a flash root - and on an
+# nfs root mounted ro - this is the original, underneath whatever the overlay
+# has since done to $CONF. On a plain rw rootfs it does not exist, and nothing
+# can have masked $CONF there either.
+ROM_CONF="/rom$CONF"
 # -S feeds sync events (step, stratum, periodic, unsync) to the software
 # RTC so a fresh sync is checkpointed at once instead of waiting for the
 # next periodic save - see /usr/sbin/fake-hwclock.
 DAEMON_ARGS="-n -S /usr/sbin/ntpd-script"
+
+# busybox ntpd carries no built-in peers: it reads $CONF and, with the file
+# absent, prints its usage and exits 1. A camera that loses that file therefore
+# loses its clock at every boot from then on - and losing it is one `rm` away
+# and permanent, because deleting a file that lives in the read-only lower
+# layer frees nothing and writes a whiteout over it instead, which survives
+# both reboot and sysupgrade. The WebUI's time page did exactly that whenever
+# its server boxes were submitted empty (majestic-webui#403); a lab ssc30kq ran
+# 863 minutes behind for a fortnight, ntpd exiting seconds after every boot,
+# with a badge on the dashboard the only thing anywhere that said so.
+#
+# Put the file back rather than pass -p peers on the command line. -p would
+# start this daemon and leave the file missing, so `ntpd -q` in
+# udhcpc/default.script and in sysupgrade's sync_time would go on failing, the
+# WebUI would go on reporting no NTP configuration, and the camera would sit
+# one bug away from the same fault forever. Restoring heals it once, and every
+# reader of the file agrees again afterwards.
+#
+# Only start() calls this, which is after S45setupenv on an nfs root: a build
+# or DHCP-supplied server written there is already in place and is left alone.
+# Returns 0 only when it actually put the file back, so start() can say so.
+restore_conf() {
+	[ -f "$CONF" ] && return 1
+	[ -f "$ROM_CONF" ] || return 1
+	tmp="$CONF.$$"
+	# Written beside the target and published as one step, so an interrupted
+	# boot leaves either no file - which is what we already had - or the whole
+	# list, never half a hostname that would read as configured and resolve to
+	# nothing.
+	#
+	# `ln` and not `mv`, because the intent is create-if-absent and link() is
+	# the only primitive that says exactly that: it fails with EEXIST instead
+	# of overwriting. The test above cannot stand in for it - boot is
+	# single-threaded, but this script is run by hand too, and a `restart`
+	# racing a WebUI save that has just written its own list would otherwise
+	# replace it with the defaults. The pid in the temporary name keeps two
+	# such runs off each other as well.
+	#
+	# The mode is set rather than inherited: busybox cp takes the source mode
+	# through open(), so it comes out masked by whatever umask the caller had.
+	if cp "$ROM_CONF" "$tmp" && chmod 644 "$tmp" && ln "$tmp" "$CONF"; then
+		rm -f "$tmp"
+		return 0
+	fi
+	rm -f "$tmp"
+	return 1
+}
 
 # Find the daemon by name, never through a pidfile. Given -p, busybox
 # start-stop-daemon inspects only the pid that file holds and never scans
@@ -18,6 +72,7 @@ running() {
 }
 
 start() {
+	restore_conf && echo "Restored $CONF from $ROM_CONF"
 	echo -n "Starting $DAEMON: "
 	start-stop-daemon -b -S -q -x "$DAEMON" -- $DAEMON_ARGS
 	case $? in

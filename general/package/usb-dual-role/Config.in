@@ -10,7 +10,11 @@ config BR2_PACKAGE_USB_DUAL_ROLE
 	  at a time, chosen with usb-mode and remembered in /etc/usbmode.
 
 	  Only useful where the device tree wires dwc3 as dual-role and the
-	  kernel is built with CONFIG_USB_DWC3_DUAL_ROLE. It is a separate
+	  kernel is built with CONFIG_USB_DWC3_DUAL_ROLE. Device mode also
+	  needs a V4L2 stack: the package asks the kernel for the gadget
+	  symbols it modprobes, but CONFIG_USB_CONFIGFS_F_UVC depends on
+	  VIDEO_V4L2 and VIDEO_DEV, so on a board without those the host half
+	  works and the UVC gadget is unavailable. It is a separate
 	  option rather than part of the shared overlay because these images
 	  live at the edge of their flash partitions, and a board that
 	  cannot switch roles should not pay for the scripts that do it.

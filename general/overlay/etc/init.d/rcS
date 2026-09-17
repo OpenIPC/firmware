@@ -5,6 +5,17 @@ export UPGRADE=$(fw_printenv -n upgrade)
 # that an unset TZ would use, so a missing /etc/TZ must leave TZ alone.
 [ -r /etc/TZ ] && export TZ=$(cat /etc/TZ)
 
+# Failsafe rescue: the bootloader appends "failsafe" to the kernel command line
+# after repeated failed boots (it can also be set by hand). The rescue itself
+# ships only on SoC families that reserve the DRAM boot counter -- it is
+# /usr/sbin/failsafe-rescue from package/openipc-failsafe, keyed off
+# BR2_PACKAGE_OPENIPC_FAILSAFE. On any other image the token never appears and
+# the script is absent, so this falls through to a normal boot. See #2396.
+if grep -qw failsafe /proc/cmdline 2>/dev/null && [ -x /usr/sbin/failsafe-rescue ]; then
+	/usr/sbin/failsafe-rescue
+	exit 0
+fi
+
 for i in /etc/init.d/S??*; do
 	[ ! -f "$i" ] && continue
 	case "$i" in

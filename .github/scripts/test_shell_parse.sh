@@ -70,8 +70,8 @@ fi
 # Everything the overlay drops into the rootfs, plus every file a package
 # installs from its files/ dir. Selection is by shebang below rather than by
 # path, so nothing depends on guessing where scripts live. Symlinks are resolved
-# and the list deduplicated: usr/sbin has five aliases pointing at extutils, and
-# parsing it six times only pads the count.
+# and the list deduplicated: usr/sbin has seven aliases pointing at extutils,
+# and parsing it eight times only pads the count.
 candidates() {
 	{
 		find general/overlay \( -type f -o -type l \) 2>/dev/null

@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# A `hwaddress` in interfaces.d is applied by busybox ifupdown as part of one
+# command -- dhcp_up() runs `ip link set addr <mac> <iface> up` -- and busybox
+# `ip` sets the MAC through SIOCSIFHWADDR, which eth_mac_addr() refuses with
+# EBUSY on an interface that is already running. busybox `ip` dies on that
+# ioctl, ifupdown treats the failed command as fatal, and udhcpc is never
+# started: the camera boots with no lease and no address.
+#
+# That only bites where something brought the interface up before ifup did. On
+# rv1106 the vendor u-boot does, so eth0 is already running when S40network
+# gets there (#2382). Taking it down first lets the MAC set succeed. Where the
+# interface was still down -- gk7205v200 was measured, ADDRCONF(NETDEV_UP)
+# lands after the kernel hands off to init -- this changes nothing.
+#
+# Exits 0 whatever happens: a failure to bring the interface down is not worth
+# aborting ifup over, and dhcp_up() reports the real error a moment later.
+
+[ -n "$IF_HWADDRESS" ] || exit 0
+[ -e "/sys/class/net/$IFACE" ] || exit 0
+
+ip link set "$IFACE" down
+
+exit 0

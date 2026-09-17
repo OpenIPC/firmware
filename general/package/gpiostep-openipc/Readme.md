@@ -7,9 +7,15 @@ cameras whose pan/tilt motors are 4-wire steppers wired straight to GPIO
 This is the kernel-side counterpart to the userspace `gpio-motors` tool. Both
 implement the same 8-phase half-step sequence and the same
 `<pan> <tilt> <delay_ms>` command signature, so they can be compared 1:1. The
-difference: `gpio-motors` toggles `/sys/class/gpio` (open/write/close per pin
-per microstep) from userspace, whereas `gpiostep` does `gpio_set_value()`
-directly in kernel context — steadier timing and far lower CPU.
+difference: `gpio-motors` writes `/sys/class/gpio` from userspace, whereas
+`gpiostep` does `gpio_set_value()` directly in kernel context, which skips the
+per-write syscall cost. Timing granularity is the same for both: the kernels
+that ship this package have no high-resolution timers, so any sleep rounds up
+to a whole 10ms tick. Delays under a quarter tick therefore busy-wait between
+scheduler yields in `gpiostep` (see `step_delay()` in `src/gpiostep.c`); longer
+ones sleep and accept the rounding. The sub-tick pacing holds on an idle core:
+under load the yield after each micro-step can hand the core away for several
+ticks.
 
 ### Load
 

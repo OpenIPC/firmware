@@ -1,0 +1,34 @@
+# Settings for /etc/init.d/S01syslogd. Sourced by it, so this is shell: one
+# NAME=value per line, no spaces around the `=`, and no spaces inside a value
+# unless it is quoted.
+#
+# This file ships with everything commented out, so it changes nothing until
+# somebody edits it. It exists mostly so that /etc/default does -- without the
+# directory, the documented way to set any of this fails with "nonexistent
+# directory", which is a poor first experience of a supported knob.
+
+# Size in KiB of the in-RAM circular log buffer that `logread` and the WebUI's
+# Information > Logs page read from. Bigger holds more backlog and costs that
+# much RAM on a camera that may have 64 MB in total.
+#SYSLOG_SIZE=64
+
+# Forward every line to a syslog collector as well as keeping it locally, as
+# host[:port]; port defaults to 514/udp.
+#
+# The buffer above is in RAM and circular, so whatever explains a camera going
+# down is gone by the next boot. Forwarding costs a UDP datagram per line and
+# puts the lines somewhere that outlives the camera. See #2384.
+#
+# Worth knowing before relying on it:
+#   - Nothing is forwarded until the network is up. syslogd starts at S01 and
+#     the network at S40, and busybox drops rather than queues, so the kernel
+#     messages replayed at boot by S02klogd -- including an SD card that fails
+#     at probe -- stay on the camera. Runtime faults after S40 are forwarded.
+#   - Prefer a literal IP. busybox retries DNS only every 120 s, so a name is
+#     unresolvable for the first two minutes of uptime, and once resolved the
+#     address is cached until syslogd restarts.
+#   - The datagrams carry no hostname: busybox sends the line unmodified and
+#     splices the hostname in only on the local path. The collector sees the
+#     source IP, so give each camera a stable address or map it there.
+#   - It is all or nothing; there is no severity filter on the remote path.
+#SYSLOG_REMOTE=10.0.0.1:514

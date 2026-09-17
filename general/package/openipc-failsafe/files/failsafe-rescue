@@ -1,0 +1,93 @@
+#!/bin/sh
+# Failsafe rescue mode, run by rcS when the bootloader has appended "failsafe"
+# to the kernel command line after repeated failed boots (it can also be set by
+# hand). Bring up only logging, device nodes, networking and SSH, and skip the
+# SDK (S70vendor), the streamer (S95majestic) and every other service, so
+# nothing that could be crashlooping runs. The overlay stays mounted (see
+# /init), so the camera is still claimed -- SSH auth works -- and its config and
+# /sys/fs/pstore logs are left intact for inspection. Nothing is wiped: a
+# reachable camera to diagnose and fix, instead of one someone must reset blind.
+#
+# Ships only on families that reserve the DRAM boot counter, keyed off
+# BR2_PACKAGE_OPENIPC_FAILSAFE; on any other image the "failsafe" token never
+# appears and this script is absent, so rcS falls through to a normal boot.
+echo "*** FAILSAFE: bringing up network + SSH only, services skipped ***"
+# S02klogd earns its place next to S01syslogd: it is the only thing that pumps
+# the kernel ring buffer into /dev/log, so without it the one boot mode built
+# for post-mortem carries no kernel lines at all -- none of the mmc timeouts or
+# driver errors that usually explain why the boots failed. It must follow
+# syslogd, which owns /dev/log. #2415.
+#
+# Not the panic, though: klogd replays THIS boot's ring buffer, and a boot that
+# reached failsafe reached userspace, so its buffer holds no crash. The oops
+# that tripped bootlimit is in /sys/fs/pstore, which S29pstore mounts and this
+# mode deliberately leaves intact for the operator to read.
+#
+# Both come AFTER the network here, which inverts the numeric order rcS would
+# use, and is the whole point. busybox syslogd drops rather than queues while
+# the network is down (etc/default/syslogd spells this out), and klogd's
+# klogctl() read CONSUMES the ring buffer -- so lines drained before eth0 is up
+# are gone for good, not merely delayed. Reordering is free here because this
+# list is hand-written rather than a directory glob. S31hostname comes first
+# for the same reason: syslogd samples the hostname once, at startup.
+for s in S29pstore S38mdev S31hostname S40network S01syslogd S02klogd S50dropbear; do
+	[ -x "/etc/init.d/$s" ] || continue
+	"/etc/init.d/$s" start
+
+	# S01syslogd starts via start-stop-daemon -b, so it returns before
+	# /dev/log exists. klogd drains the ring buffer through a consuming read,
+	# and whatever it hands to a socket that is not there yet cannot be read
+	# again -- and those are the earliest lines, where a failing card shows up.
+	# Wait for the socket instead of racing it.
+	# S40network's udhcpc forks to the background, so "started" is a long way
+	# from "reachable" -- and busybox syslogd drops rather than queues, so
+	# anything klogd replays before then is gone rather than delayed. Measured
+	# on a gk7205v200: with syslogd started first, exactly one of 154 replayed
+	# kernel lines reached the collector.
+	#
+	# Wait for an address, then settle. The address is necessary and not
+	# sufficient: on that board lines stamped 00:00:08 were still lost while
+	# 00:00:10 arrived, so something after the lease -- carrier, or the
+	# interface finishing its bring-up -- is worth a couple of seconds.
+	#
+	# Bounded, and best-effort by nature: failsafe has to come up where there
+	# is no DHCP server at all, and a camera with no address is still worth
+	# having on the serial console. What this reliably buys is the LOCAL log --
+	# `logread` in failsafe now carries the kernel, where it carried nothing --
+	# and every kernel message from then on. The replayed backlog gets its best
+	# chance, not a guarantee.
+	if [ "$s" = "S40network" ]; then
+		i=0
+		while [ "$i" -lt 15 ] &&
+			! ip -4 addr show scope global 2>/dev/null | grep -q "inet "; do
+			i=$((i + 1))
+			sleep 1
+		done
+		[ "$i" -lt 15 ] && sleep 2
+	fi
+
+	if [ "$s" = "S01syslogd" ]; then
+		i=0
+		while [ ! -e /dev/log ] && [ "$i" -lt 10 ]; do
+			i=$((i + 1))
+			sleep 1
+		done
+	fi
+done
+
+# Leave a breadcrumb the WebUI reads on the next normal boot, so a fault that
+# left no pstore panic -- a service that simply never came up -- still shows the
+# owner "this camera recovered from a crash". Overlay-only, no flash.
+mkdir -p /etc/crash 2>/dev/null && \
+	printf 'reason=bootlimit\nutc=%s\n' \
+		"$(date -u '+%Y-%m-%d %H:%M:%S' 2>/dev/null)" \
+		> /etc/crash/failsafe 2>/dev/null
+
+# Reaching failsafe counts as "handled": clear the DRAM boot counter (no flash)
+# so once the operator fixes the fault and reboots, the next boot is a normal
+# one. If they reboot without fixing it, bootlimit more failed boots land back
+# here. A cold power-cycle also clears it.
+bootcount-clear
+
+echo "*** FAILSAFE: ready. SSH in to inspect (pstore, config) and recover. ***"
+exit 0

@@ -1,0 +1,101 @@
+#!/bin/sh
+# Tell a remote collector that this camera has come back.
+#
+# The counterpart to the line sysupgrade sends just before it stops syslogd --
+# "preparing to flash ...; logging stops here until this camera returns"
+# (#2417). Without this the return is only implicit: the forwarded log resumes
+# whenever the camera next happens to say something, which on a quiet camera can
+# be a long time after it booted. So a collector cannot tell a camera that came
+# back in ninety seconds from one that is still gone, and has nothing that says
+# WHICH image it came back on -- and that last part is the payload. It is the
+# only word from the camera itself that the flash took, or that it did not and
+# the bootloader fell back to the image it had.
+#
+# Fires on every boot, not only after an upgrade. A camera that reboots on its
+# own is exactly as interesting to whoever is reading the log, and keying this
+# on "was upgrading" would need state carried across the flash -- which
+# sysupgrade -n deliberately wipes, in the one case that matters most.
+#
+# user.warning to match the two lines it pairs with, so a collector filtering at
+# >= warning gets the whole story rather than the half that says the log stopped.
+#
+# Forwarding only. Locally the entire boot is already in `logread`, so this adds
+# nothing a reader does not have, and a camera that has not asked to forward
+# anything should not pay for it -- see the same gate on the sleep in
+# sysupgrade's free_resources.
+
+[ "$1" = "start" ] || exit 0
+
+# Sourced rather than grepped: S01syslogd has already run this file at S01, so
+# reading it the same way adds no exposure, and it gets the quoting right.
+# The character test is S01syslogd's, deliberately -- a value it refused to
+# forward with is a value there is nothing to announce to.
+SYSLOG_REMOTE=
+[ -r /etc/default/syslogd ] && . /etc/default/syslogd
+case "${SYSLOG_REMOTE}" in
+"" | *[!A-Za-z0-9.:_-]*) exit 0 ;;
+esac
+
+# Backgrounded, because the line cannot go out yet and waiting in line would
+# charge the boot for it. busybox syslogd drops rather than queues while the
+# network is down, and S40network's udhcpc forks to the background, so "network
+# started" is a long way from "has an address". Blocking here would delay every
+# later init script on a forwarding camera, majestic and the video with it, and
+# on a camera whose DHCP server is missing it would delay them by the whole
+# timeout. In a subshell it costs the boot nothing; the only thing lost is a
+# camera that reboots again inside the window, which has bigger problems.
+(
+	i=0
+	while [ "$i" -lt 15 ] &&
+		! ip -4 addr show scope global 2>/dev/null | grep -q "inet "; do
+		i=$((i + 1))
+		sleep 1
+	done
+	# Re-tested rather than inferred from the counter: an address that arrives
+	# exactly as the last tick expires still counts.
+	ip -4 addr show scope global 2>/dev/null | grep -q "inet " || exit 0
+
+	# An address is not yet a usable path, and this is the part a fixed settle
+	# gets wrong. Measured on an hi3516av300: with the two-second settle
+	# failsafe-rescue uses, this marker went out at 13:28:10 and the first line
+	# the collector actually received that boot was majestic's at 13:28:11. It
+	# missed by one second and was dropped -- forwarding is UDP, busybox drops
+	# what it cannot send, and nothing retries it.
+	#
+	# So make the path ready instead of guessing how long it takes. One ICMP
+	# packet at the collector resolves the ARP entry the datagram needs: the
+	# collector's own if it is on-link, the first hop's if it is not. Bounded,
+	# and best-effort in both directions -- a collector that blocks ICMP costs
+	# three seconds and gets its ARP resolved anyway, as a side effect of the
+	# attempt to send. The reply is not what matters here; the resolved entry is.
+	#
+	# A ready path is still not enough when the destination is a NAME. busybox
+	# resolves that once, when syslogd starts -- at S01, before the network --
+	# and retries only every 120 s; etc/default/syslogd documents it and tells
+	# people to prefer a literal IP for exactly this reason. So on a name,
+	# everything sent in the first two minutes is dropped however ready the path
+	# is, and this marker is precisely the line that would silently never
+	# arrive. Measured on an hi3516av300 against a hostname collector: local at
+	# 12:49:55, nothing at the collector, while 48 other lines from the same
+	# window got through once the daemon had re-resolved.
+	#
+	# Wait the window out. Late and delivered beats punctual and dropped, and
+	# the build id is no less true two minutes on. It is free: this is already a
+	# subshell, so nothing is waiting on it.
+	#
+	# Deliberately NOT by restarting syslogd to force a re-resolve, which is the
+	# obvious alternative. The buffer logread and the WebUI read is in RAM and
+	# dies with the daemon, so that trades the whole local record of the boot --
+	# the thing that survives when forwarding does not -- for one forwarded line.
+	case "${SYSLOG_REMOTE%:*}" in
+	*[!0-9.]*) sleep 125 ;;
+	esac
+
+	ping -c1 -w3 "${SYSLOG_REMOTE%:*}" >/dev/null 2>&1
+
+	build=$(grep '^BUILD_ID=' /etc/os-release 2>/dev/null | head -1 | cut -d= -f2)
+	logger -p user.warning -t boot \
+		"this camera is up on ${build:-an unidentified build}"
+) &
+
+exit 0

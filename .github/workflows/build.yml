@@ -354,6 +354,21 @@ jobs:
             find "${BR2_DL_DIR}" -type f -regextype posix-extended \
               -regex '.*[-.](HEAD|master|main|dist)\.tar\.(gz|bz2|xz)' \
               -print -delete
+            # And the kernel, which the pattern above cannot see. Every board
+            # fetches it from openipc/linux/archive/<branch>.tar.gz -- 122 of the
+            # defconfigs -- so the filename is the BRANCH name, hisilicon-hi3516cv500
+            # .tar.gz or ingenic-t31.tar.gz. That is a moving ref with a constant
+            # name and no .hash, exactly the case this step exists for, but it
+            # ends in none of the four words above. A kernel fix merged today
+            # would otherwise wait for the monthly cache key to roll over before
+            # any nightly built it. Buildroot keeps custom kernel tarballs in the
+            # package's own dl subdirectory, so this reaches them and nothing else.
+            if [ -d "${BR2_DL_DIR}/linux" ]; then
+              find "${BR2_DL_DIR}/linux" -maxdepth 1 -type f -name '*.tar.gz' \
+                -print -delete
+            else
+              echo "no kernel archive cached yet -- nothing to refresh."
+            fi
           else
             echo "dl cache is cold (${BR2_DL_DIR} absent) -- nothing to refresh."
           fi

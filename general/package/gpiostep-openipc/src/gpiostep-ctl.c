@@ -11,6 +11,7 @@
  *       gpiostep-ctl 0 -20 30  # tilt -20 steps
  */
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +25,7 @@
 int main(int argc, char *argv[])
 {
 	struct gpiostep_move m;
-	int fd, ret;
+	int fd, ret, delay_ms;
 
 	if (argc != 4) {
 		fprintf(stderr, "Usage: %s <pan steps> <tilt steps> <delay (ms)>\n",
@@ -35,7 +36,12 @@ int main(int argc, char *argv[])
 	memset(&m, 0, sizeof(m));
 	m.pan = atoi(argv[1]);
 	m.tilt = atoi(argv[2]);
-	m.delay_us = atoi(argv[3]) * 1000;
+	delay_ms = atoi(argv[3]);
+	if (delay_ms < 0 || delay_ms > INT_MAX / 1000) {
+		fprintf(stderr, "delay must be between 0 and %d ms\n", INT_MAX / 1000);
+		return 1;
+	}
+	m.delay_us = delay_ms * 1000;
 
 	fd = open(DEV, O_RDWR);
 	if (fd < 0) {

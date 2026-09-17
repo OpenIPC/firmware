@@ -1,0 +1,23 @@
+config BR2_PACKAGE_OPENIPC_FAILSAFE
+	bool "OpenIPC failsafe rescue + crash capture"
+	help
+	  Recovery machinery for SoC families whose U-Boot keeps a boot
+	  counter in a reserved DRAM word and whose kernel reserves that
+	  word and enables pstore/ramoops (currently Goke gk7205v200 and
+	  gk7205v300).
+
+	  Ships three pieces, none of which touch flash:
+
+	    - failsafe-rescue: brings a camera up on network + SSH only,
+	      skipping the SDK and streamer, when the bootloader has fallen
+	      into failsafe after repeated failed boots;
+	    - S99bootok: clears the DRAM boot counter once the image is
+	      proven healthy, so a camera that boots but never streams still
+	      escalates to failsafe instead of looping forever;
+	    - S98crashlog: preserves the pstore crash log across a reboot for
+	      the owner-pull crash report.
+
+	  Enable it only on boards that reserve the counter; the address is
+	  read from the board DTS, so on an image that does not reserve it
+	  the counter writes are a safe no-op, but the scripts are dead
+	  weight there and cost rootfs space.
