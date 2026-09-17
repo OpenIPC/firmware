@@ -10,6 +10,32 @@ GOKE_OSDRV_GK7205V500_LICENSE = MIT
 GOKE_OSDRV_GK7205V500_LICENSE_FILES = LICENSE
 GOKE_OSDRV_GK7205V500_INSTALL_STAGING = YES
 
+# The V500 SDK has two halves. The implementation is libxmedia_*.so, which
+# export MPI_* / XMEDIA_API_*; beside them the vendor ships libhi_*.so, thin
+# shims that re-export the HiSilicon-spelled HI_MPI_* names and forward each
+# one to its XMEDIA_API_* twin. majestic links against the shimmed half --
+# its FindHiSiliconSDK gives SDK code 7205500 the same hi_mpi/hi_md/hi_isp/
+# hi_ive/hi_ae/hi_awb list as the GK7205V200 -- so without these six, and
+# without libvqe.so that libxmedia_api.so needs for its audio_vqe_* calls,
+# musl refuses to start it at all ("Error loading shared library
+# libhi_mpi.so", then ~250 HI_MPI_* relocation failures) and the camera
+# streams nothing. Reported on a GK7202V500 in #2428; goke-osdrv-gk7205v200
+# has shipped its own libhi_* shims since the family was added.
+#
+# Only a majestic image can use them, so the three lite boards that share this
+# package do not pay the 32KB.
+ifeq ($(BR2_PACKAGE_MAJESTIC),y)
+define GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_ae.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_awb.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_isp.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_ive.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_md.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_mpi.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe.so
+endef
+endif
+
 define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/config/*.ini
@@ -138,7 +164,7 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_gain.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_hpf.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_res.so
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe.so
+	# libvqe.so is installed by GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS above.
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_talkv2.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe_wnr.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libxmedia_ae.so
@@ -153,6 +179,7 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libxmedia_qr.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libxmedia_tde.so
 
+	$(GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS)
 endef
 
 $(eval $(generic-package))
