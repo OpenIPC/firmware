@@ -44,14 +44,25 @@ calc_mmz_info() {
         echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
 }
 
+# xm_osal MUST be inserted before anything that modprobes a module depending on
+# it. modules.dep has `xm_sysconfig.ko: xm_osal.ko`, so a `modprobe
+# xm_sysconfig` first pulls xm_osal in with NO parameters -- and the modprobe
+# below then finds it loaded and silently does nothing, exiting 0, so the
+# `|| report_error` never fires either. xm_osal without `mmz=` prints `error
+# parameters`, creates no memory zone, and still says `osal 1.0 init success!`.
+# xm_sys's 31.5KB scaler-coefficient allocation then fails (`malloc buffer for
+# SYS sclcoeffset fail!`), its probe fails while insmod still returns 0, and
+# xm_rgn dereferences the NULL it gets back from CMPI_GetModuleFuncById(SYS) --
+# the `RGN_Init+0x1b` NULL oops at 0x0000000c reported on a GK7202V500 in #2428,
+# after which no vendor module loads and there is no video at all.
 insert_osal() {
 	calc_mmz_info
 	modprobe xm_osal mmz_allocator=xmedia mmz=anonymous,0,$mmz_start,$mmz_size || report_error
 }
 
 insert_detect() {
-	modprobe xm_sysconfig chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
+	modprobe xm_sysconfig chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insmod xm_base.ko
 	modprobe xm_isp
 	modprobe xm_isp_sensor_i2c
@@ -101,8 +112,8 @@ insert_ko() {
 	if [ "$SENSOR" == "bt656" ] || [ "$SENSOR" == "jxf23_dc" ]; then
 		YUV_TYPE0=1
 	fi
-	modprobe xm_sysconfig chip=${chipid} sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
+	modprobe xm_sysconfig chip=${chipid} sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insmod xm_base.ko
 	insmod xm_sys.ko
 	# insmod xm_tde.ko
