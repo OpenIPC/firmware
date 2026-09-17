@@ -125,7 +125,18 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_q03.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc2231.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc2235.so
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc223a.so
+	# SC223A is the die behind the SC5239S these boards are sold with, and the
+	# SC2239P and SC233A labels too -- one part, several names, which is why the
+	# sensor the seller advertises is not the one the driver is called after.
+	# sc223a_i2c_1080p.ini already ships and names this driver, so only the half
+	# majestic dlopens from /usr/lib/sensors was missing and a camera with this
+	# sensor had no video however it was configured. The four-lane
+	# 4l_sc223a_i2c_1080p.ini beside it is NOT served by this: it names
+	# libsns_sc223a_4l.so, which the V500 SDK does not carry in any flavour.
+	# It is one of six configs here naming a driver this package does not have
+	# (the others are jxf23, jxf23_dc, mis2008, sc200ai, sc2232h), inherited
+	# with the config set from a family whose SDK did. #2428.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc223a.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc2336.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc3235.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc3335.so
