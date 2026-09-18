@@ -66,7 +66,7 @@ while true; do
 			echo "}"
 		} >"$identity_cfg"
 
-		run_cmd_nonfatal "" "" ifconfig $vtund_iface hw ether $identity_mac mtu 1500 -multicast up # workaround for VTun bug described in https://bugzilla.redhat.com/show_bug.cgi?id=1462458#c26
+		run_cmd_nonfatal "" "" ifconfig $vtund_iface hw ether $identity_mac mtu 1500 -multicast up || break # workaround for VTun bug described in https://bugzilla.redhat.com/show_bug.cgi?id=1462458#c26
 		vtund -n -f "$identity_cfg" "$identity_tid" "$vtund_server" >/dev/null 2>&1
 
 		break
