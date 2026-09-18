@@ -165,6 +165,16 @@ else
 endif
 else
 ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3516cv6xx")
+# The cv610 u-boot boots from a fixed table: 2048K(kernel) read whole by
+# `sf read ${kernaddr} ${kernsize}`, then 5120K(rootfs) at a fixed offset. The
+# combined firmware.bin hides both bounds, so on the 8 MiB part measure the two
+# halves against their slots here, where a PR sees it. 16 MiB is left on the
+# whole-blob figure: its kernel already overruns 2048K on master, and that is a
+# u-boot table question, not one a size check here can settle.
+ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
+	@$(call CHECK_SIZE,fitImage,2048)
+	@$(call CHECK_SIZE,rootfs.squashfs,5120)
+endif
 	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
 else ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3519dv500")
 	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)

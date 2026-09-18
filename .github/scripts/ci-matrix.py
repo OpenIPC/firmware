@@ -66,7 +66,7 @@ ALL_BOARDS = [
     # Hisilicon [HI3516CV500]
     "hi3516av300_lite", "hi3516av300_neo", "hi3516cv500_lite", "hi3516dv300_lite",
     # Hisilicon [HI3516CV6XX]
-    "hi3516cv6xx_ultimate",
+    "hi3516cv6xx_lite", "hi3516cv6xx_ultimate",
     # Hisilicon [HI3519DV500]
     "hi3519dv500_ultimate",
     # Hisilicon [HI3516EV200]
@@ -754,7 +754,7 @@ def self_test():
         (["general/package/hisilicon-osdrv-hi3516ev200/files/script/load_hisilicon"],
          8, "osdrv narrows to its family"),
         (["general/package/hisilicon-opensdk/hisilicon-opensdk.mk"],
-         43, "opensdk spans HiSilicon and Goke"),
+         44, "opensdk spans HiSilicon and Goke"),
         (["general/package/goke-osdrv-gk7205v200/Config.in"], 7, "goke osdrv"),
         (["general/package/hisilicon-osdrv-hi3520dv200/files/script/load_hisilicon"],
          1, "single-board osdrv"),
@@ -766,7 +766,7 @@ def self_test():
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
          24, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 87, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 88, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -832,7 +832,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         87, "markdown inside a package is that package"),
+         88, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],
