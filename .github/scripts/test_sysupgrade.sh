@@ -632,6 +632,21 @@ else
     bad "uncovered rootfs -> expected a refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
 
+# A manifest may legitimately name its members with a leading "./" -- that is
+# what `md5sum` writes when it is run from a staging directory, and `md5sum -c`
+# verifies it fine from /tmp. Refusing those would block a good archive from
+# installing, which is worse than the hole the coverage check closes.
+reset_env
+rm -rf "$SB/stage3"; mkdir -p "$SB/stage3"
+cp "$K" "$SB/stage3/uImage.ssc338q"
+cp "$R" "$SB/stage3/rootfs.squashfs.ssc338q"
+(cd "$SB/stage3" && md5sum ./uImage.ssc338q ./rootfs.squashfs.ssc338q > openipc.md5sum)
+(cd "$SB/stage3" && tar cf - . | gzip > "$SB/tmp/fw.tgz")
+run -z --archive="$SB/tmp/fw.tgz"
+{ [ "$RC" -eq 0 ] && flashed /dev/mtd3; } \
+    && ok "a manifest that names its members ./x still counts as coverage" \
+    || bad "./-prefixed manifest names must not be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+
 # --- an unpack with nowhere to go ------------------------------------------
 #
 # The archive routes hold the .tgz and everything inside it on the same tmpfs at

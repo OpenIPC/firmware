@@ -694,8 +694,13 @@ images_this_run() {
 }
 
 # Every name the manifests actually cover.
+# Normalised, because `md5sum -c` accepts spellings this comparison must not
+# reject: a `*` prefix is its binary-mode marker, and a manifest written from a
+# staging directory names its members `./x`, which verifies fine from /tmp.
+# Refusing those would block a perfectly good archive from installing at all --
+# a worse failure than the one this guard exists to catch.
 md5_names() {
-	awk '{ sub(/^[*]/, "", $2); print $2 }' /tmp/*.md5sum 2>&3
+	awk '{ n = $2; sub(/^[*]/, "", n); while (sub(/^[.]\//, "", n)) ; print n }' /tmp/*.md5sum 2>&3
 }
 
 # An image no manifest mentions has not been checksummed, and must not pass for
