@@ -123,11 +123,36 @@ jobs:
             #   (firmware.bin.<soc>) flashed at the SoC's firmware-partition
             #   offset. So assemble one full NOR image per DDR binning:
             #   u-boot at 0, firmware.bin at <fw_off_kib>.
-            create_hisi() {
-              local uboot="$1" soc="$2" variant="$3" tag="$4" off="$5"
-              local release="target/openipc-${tag}-nor-${variant}.bin"
+            # Where the image has to land is decided by the u-boot it is paired
+            # with: the cv610 and dv500 boot images carry their partition table
+            # in a compiled-in env (a HiSilicon boot table with a gzip'd u-boot
+            # behind it), and nothing rewrites that table later. Decompressed:
+            #
+            #   cv6xx  256k(boot),64k(env),2048k(kernel),5120k(rootfs),7168k@0x50000(firmware),-(rootfs_data)
+            #          bootnor: sf read ${kernaddr}=0x50000 ${kernsize}=0x200000; root=/dev/mtdblock3
+            #   dv500  512k(boot),256k(env),6144k(kernel),8192k(rootfs),14336k@0xC0000(firmware),-(rootfs_data)
+            #
+            # So the kernel is read as one 2048/6144 KiB slot and the rootfs is
+            # mounted at a fixed offset behind it. firmware.bin is the FIT with
+            # the squashfs packed at the next 64 KiB boundary (board
+            # post-image.sh), which is only the same thing if the FIT happens to
+            # end exactly at the slot. Split the blob the way sysupgrade's
+            # do_update_firmware does and put each half where the env looks.
+            hisi_layout() {
+              case "$1" in
+                hi3516cv6xx) boot_kib=256 kern_kib=2048 fw_kib=7168 ;;
+                hi3519dv500) boot_kib=512 kern_kib=6144 fw_kib=14336 ;;
+                *) echo "::error::create_hisi: no NOR layout known for $1"; return 1 ;;
+              esac
+            }
 
-              mkdir -p output target
+            create_hisi() {
+              local uboot="$1" soc="$2" variant="$3" tag="$4" off="$5" nor="${6:-16384}"
+              local release="target/openipc-${tag}-nor-${variant}.bin"
+              local boot_kib kern_kib fw_kib fw fitsz fit_kib rootsz root_kib ub_kib got
+              hisi_layout "$soc" || return 1
+
+              rm -rf output; mkdir -p output target
               if ! wget -nv "$UBOOT_URL/$uboot" -O "output/$uboot"; then
                 echo -e "Download failed: $UBOOT_URL/$uboot\n"
                 return 0
@@ -144,14 +169,70 @@ jobs:
               fi
 
               tar -xf "output/$soc.tgz" -C output
-              # 16 MiB NOR, erased (0xff); u-boot at 0, firmware.bin at its
-              # partition offset (cv6xx MTDPARTS: firmware @ 0x50000 = 320 KiB).
-              dd if=/dev/zero bs=1K count=16384 status=none | tr '\000' '\377' > "$release"
+              fw="output/firmware.bin.$soc"
+
+              # The FIT is a flattened device tree: its total size is the
+              # big-endian word at byte 4. The rootfs starts at the next 64 KiB.
+              set -- $(od -An -tu1 -j4 -N4 "$fw")
+              fitsz=$(( ($1 << 24) | ($2 << 16) | ($3 << 8) | $4 ))
+              if [ "$fitsz" -le 0 ] || [ "$fitsz" -gt "$(stat -c%s "$fw")" ]; then
+                echo "::error::${soc}_${variant}: firmware.bin does not start with a FIT image"
+                return 1
+              fi
+              fit_kib=$(( (fitsz + 65535) / 65536 * 64 ))
+              # The squashfs superblock carries its own length (bytes_used, a
+              # little-endian u64 at byte 40); measure that rather than the
+              # blob's remainder, which post-image.sh pads to an erase block.
+              rootsz=$(od -An -tu8 -j "$(( fit_kib * 1024 + 40 ))" -N8 "$fw" | tr -d ' ')
+              if [ "$(od -An -c -j "$(( fit_kib * 1024 ))" -N4 "$fw" | tr -d ' ')" != "hsqs" ] || [ "${rootsz:-0}" -le 0 ]; then
+                echo "::error::${soc}_${variant}: no squashfs at ${fit_kib} KiB in firmware.bin"
+                return 1
+              fi
+              root_kib=$(( (rootsz + 4095) / 4096 * 4 ))   # mksquashfs pads the image to 4 KiB
+              ub_kib=$(( ( $(stat -c%s "output/$uboot") + 1023 ) / 1024 ))
+
+              # Every bound is the partition u-boot declares, not the space left
+              # on the chip: past the kernel slot the FIT is truncated by sf read,
+              # past the rootfs slot the squashfs is written over rootfs_data.
+              if [ "$ub_kib" -gt "$boot_kib" ]; then
+                echo "::error::${soc}_${variant}: u-boot ${uboot} is ${ub_kib} KiB, the boot partition is ${boot_kib} KiB (the env sits behind it)"
+                return 1
+              fi
+              if [ "$fit_kib" -gt "$kern_kib" ]; then
+                echo "::error::${soc}_${variant}: the FIT is ${fit_kib} KiB, the kernel partition is ${kern_kib} KiB"
+                return 1
+              fi
+              if [ "$root_kib" -gt "$(( fw_kib - kern_kib ))" ]; then
+                echo "::error::${soc}_${variant}: the rootfs is ${root_kib} KiB, the rootfs partition is $(( fw_kib - kern_kib )) KiB"
+                return 1
+              fi
+              if [ "$(( off + fw_kib ))" -gt "$nor" ]; then
+                echo "::error::${soc}_${variant}: firmware partition ends at $(( off + fw_kib )) KiB on a ${nor} KiB part"
+                return 1
+              fi
+
+              # NOR canvas, erased (0xff): u-boot at 0, the FIT at the firmware
+              # offset, the rootfs at the rootfs partition; the env and
+              # rootfs_data stay erased, so u-boot boots its defaults and /init
+              # formats the overlay. $nor is the part size in KiB -- a lite
+              # variant is flashed to an 8 MiB part.
+              dd if=/dev/zero bs=1K count="$nor" status=none | tr '\000' '\377' > "$release"
               dd if="output/$uboot" of="$release" bs=1K seek=0 conv=notrunc status=none
-              dd if="output/firmware.bin.$soc" of="$release" bs=1K seek="$off" conv=notrunc status=none
+              dd if="$fw" of="$release" bs=1K count="$fit_kib" seek="$off" conv=notrunc status=none
+              dd if="$fw" of="$release" bs=1K skip="$fit_kib" count="$root_kib" seek="$(( off + kern_kib ))" conv=notrunc status=none
+
+              # Backstop for the checks above: if any is ever wrong, the canvas
+              # has grown past $nor and the file is no longer an image of the
+              # part. Refuse to upload it rather than ship an unflashable
+              # release.
+              got=$(stat -c%s "$release")
+              if [ "$got" -ne "$(( nor * 1024 ))" ]; then
+                echo "::error::${soc}_${variant}: assembled ${release} is ${got} bytes, expected $(( nor * 1024 ))"
+                return 1
+              fi
               rm -rf output
 
-              echo -e "Created: $release\n"
+              echo -e "Created: $release (FIT ${fit_kib} KiB in ${kern_kib}, rootfs ${root_kib} KiB in $(( fw_kib - kern_kib )))\n"
             }
 
             for soc in $SIGMASTAR $ALLWINNER; do
@@ -171,11 +252,22 @@ jobs:
             # cv608 is a single DDR2-64M part. firmware partition @ 0x50000.
             # The 20s/00s u-boots are picked per DDR (their 20g/00g siblings
             # carry the same DDR table, differing only in the socmodel env tag).
-            for variant in ultimate; do
-              create_hisi boot-hi3516cv610-10b-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr2-64m  320
-              create_hisi boot-hi3516cv610-20s-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr3-128m 320
-              create_hisi boot-hi3516cv610-00s-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr3-512m 320
-              create_hisi boot-hi3516cv608-nor.bin     hi3516cv6xx "$variant" hi3516cv608           320
+            # lite targets 8 MiB parts, ultimate 16 MiB -- the same kernel and
+            # rootfs blob, on the flash the variant was built for.
+            # create_hisi returns 1 for an image it refuses to assemble. This
+            # step runs under Actions' default `bash -e`, so a bare call would
+            # end the step at the first refusal -- with the Sigmastar, Allwinner
+            # and Ingenic images already in target/ and the upload never
+            # reached, nothing would publish for anyone. Collect instead: every
+            # target gets its turn, what did assemble ships (Upload runs on
+            # failure too), and the step still goes red so the refusal is seen.
+            hisi_failed=
+            for variant in lite ultimate; do
+              case $variant in lite) nor=8192 ;; *) nor=16384 ;; esac
+              create_hisi boot-hi3516cv610-10b-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr2-64m  320 "$nor" || hisi_failed=1
+              create_hisi boot-hi3516cv610-20s-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr3-128m 320 "$nor" || hisi_failed=1
+              create_hisi boot-hi3516cv610-00s-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr3-512m 320 "$nor" || hisi_failed=1
+              create_hisi boot-hi3516cv608-nor.bin     hi3516cv6xx "$variant" hi3516cv608           320 "$nor" || hisi_failed=1
             done
 
             # HiSilicon Hi3519DV500 (aarch64 V5). Same scheme: a single shared
@@ -184,11 +276,19 @@ jobs:
             # (6-layer) and dmebpro (4-layer flyby), both DDR4-2666 2 GB. NOR
             # layout (16 MiB): u-boot @0, env @0x80000, firmware @0xC0000 = 768 KiB.
             for variant in ultimate; do
-              create_hisi boot-hi3519dv500-dmeb-nor.bin    hi3519dv500 "$variant" hi3519dv500-dmeb    768
-              create_hisi boot-hi3519dv500-dmebpro-nor.bin hi3519dv500 "$variant" hi3519dv500-dmebpro 768
+              create_hisi boot-hi3519dv500-dmeb-nor.bin    hi3519dv500 "$variant" hi3519dv500-dmeb    768 || hisi_failed=1
+              create_hisi boot-hi3519dv500-dmebpro-nor.bin hi3519dv500 "$variant" hi3519dv500-dmebpro 768 || hisi_failed=1
             done
 
+            if [ -n "$hisi_failed" ]; then
+              echo "::error::one or more HiSilicon NOR images were refused (see above); the rest were assembled and will still be uploaded"
+              exit 1
+            fi
+
+      # always(): a refused HiSilicon image fails the Prepare step on purpose,
+      # and the images that did assemble must still ship.
       - name: Upload
+        if: always()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: image
