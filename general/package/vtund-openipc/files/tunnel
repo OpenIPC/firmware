@@ -16,7 +16,7 @@ ready() {
 	[ -n "$identity_src" ] || return 1
 	identity_mac=$(cat "/sys/class/net/$identity_src/address" 2>/dev/null | tr 'a-z' 'A-Z')
 	[ -n "$identity_mac" ] || return 1
-	echo "$vtund_server" | grep -qE '^\[|^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$' && return 0
+	echo "$vtund_server" | grep -qE '^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$' && return 0
 	nslookup "$vtund_server" >/dev/null 2>&1
 }
 
