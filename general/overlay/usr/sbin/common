@@ -1,7 +1,13 @@
 #!/bin/sh
 
+read_subshell_pid() {
+	IFS=' ' read -r subshell_pid _ < /proc/self/stat
+}
+
 run_cmd_internal() {
-	local run_cmd_prog="${0##*/}[$$]"
+	local subshell_pid
+	read_subshell_pid
+	local run_cmd_prog="${0##*/}[$subshell_pid]"
 	local run_cmd_msg="$1"
 	local run_cmd_var="$2"
 	local run_cmd_fatal="$3"
@@ -62,7 +68,7 @@ kill_pid_file() {
 
 	if [ "${1:0:1}" = "-" ]; then
 		signal="$1"
-		shift	
+		shift
 	else
 		signal=-15
 	fi
