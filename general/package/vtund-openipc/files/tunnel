@@ -13,8 +13,16 @@ delay_max=300
 
 . /usr/sbin/common
 
+log() {
+	logger -p $1 -t "$prog" "$2"
+}
+
 warning() {
-	logger -p daemon.warn -t "$prog" "$1"
+	log daemon.warn "$1"
+}
+
+info() {
+	log daemon.info "$1"
 }
 
 ready() {
@@ -56,7 +64,7 @@ ready() {
 					ready && break
 				done
 
-				warning "starting the tunnel to $vtund_server"
+				info "Starting the tunnel to $vtund_server"
 			fi
 
 			if [ ! -L "/sys/class/net/$vtund_iface" ]; then
@@ -94,9 +102,9 @@ ready() {
 
 			# workaround for VTun bug described in https://bugzilla.redhat.com/show_bug.cgi?id=1462458#c26
 			run_cmd_nonfatal "" "" ifconfig $vtund_iface hw ether $identity_mac mtu 1500 -multicast up || break
-			
-			vtund -n -f "$identity_cfg" "$identity_tid" "$vtund_server" >/dev/null 2>&1
-			restart_delay=$delay_start
+
+			vtund -n -f "$identity_cfg" "$identity_tid" "$vtund_server" >/dev/null 2>&1 &&
+				restart_delay=$delay_start
 
 			break
 		done
