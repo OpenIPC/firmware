@@ -1,14 +1,38 @@
 #!/bin/sh
-#
-# rc.local
-#
-# This script is executed at the end of each multiuser runlevel.
-# Make sure that the script will "exit 0" on success or any other
-# value on error.
-#
-# In order to enable or disable this script just change the execution
-# bits.
-#
-# By default this script does nothing.
+
+# --- IR LED: drive via PWM1 on GPIO4_7 (pin 39) ---
+# The IR LED driver circuit needs a PWM signal, not just GPIO high/low.
+# Enable PWM clock, set pinmux to PWM1, configure ~94% duty @ 24kHz.
+(
+  sleep 8
+  devmem 0x120101BC 32 $(( $(devmem 0x120101BC 32) | 0x80 ))
+  devmem 0x100C0010 32 0x1001
+  devmem 0x12080020 32 0x3e8
+  devmem 0x12080024 32 0x3b0
+  devmem 0x12080028 32 0xa
+  devmem 0x1208002c 32 0x5
+) &
+
+# --- Sensor init fixup + majestic restart + VPSS 3DNR ---
+# Sensor 180° rotation via hardware mirror+flip (reg 0x3221).
+# Majestic must restart AFTER to pick up the new orientation.
+# Then nrxset applies VPSS 3D noise reduction params directly
+# via HI_MPI_VPSS_SetGrpNRXParam (IQ profile 3DNR is not used).
+(
+  sleep 12
+  # Sensor mirror+flip + DVP pad enables
+  ipctool i2cset --bus 0 0x60 0x3221 0x06
+  ipctool i2cset --bus 0 0x60 0x3d08 0x01
+  ipctool i2cset --bus 0 0x60 0x3640 0x01
+  ipctool i2cset --bus 0 0x60 0x3641 0x02
+  ipctool i2cset --bus 0 0x60 0x0100 0x01
+
+  # Restart majestic so it reads the updated sensor state
+  # and applies the boosted 3DNR params from the IQ profile.
+  sleep 2
+  killall majestic 2>/dev/null
+  sleep 3
+  majestic > /dev/null 2>&1 &
+) &
 
 exit 0
