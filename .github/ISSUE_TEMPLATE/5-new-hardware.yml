@@ -1,0 +1,225 @@
+name: "New board or SoC: hardware profile and vendor dump"
+description: A camera OpenIPC does not support yet, and what you can find out about it.
+labels: ["category/Hardware"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking one of these apart. The profile below is modelled
+        on the reports that actually led somewhere - #2318 and #1970 are the
+        shape to aim for.
+
+        **Which repository.** A profile for *one retail camera* - its GPIO map,
+        its sensor, its pruning list - belongs in
+        [OpenIPC/builder](https://github.com/OpenIPC/builder) under
+        `devices/<soc>_<flavor>_<vendor>-<model>/`. A whole *SoC or variant*
+        that nothing supports yet belongs here. If you are not sure, file it
+        here and say so; moving it is easy.
+
+        **What we can and cannot promise.** OpenIPC does not port drivers for
+        hardware nobody on the team has in front of them. A good dump and a good
+        profile are what let someone who *does* have the board do the work, and
+        they stay useful for years. Offering to test builds - the last section -
+        changes this from an archive entry into something that can move.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: >-
+            I checked https://openipc.org/supported-hardware/ and this SoC or
+            board is not listed.
+          required: true
+        - label: I searched the open **and closed** issues for this board.
+          required: true
+
+  - type: dropdown
+    id: soc_vendor
+    attributes:
+      label: SoC vendor
+      description: Pick the last option if the marking is unreadable - the photos will settle it.
+      options:
+        - HiSilicon
+        - Goke
+        - SigmaStar
+        - Ingenic
+        - Xiongmai
+        - Fullhan
+        - Novatek
+        - Anyka
+        - Rockchip
+        - Ambarella
+        - GrainMedia
+        - Allwinner
+        - TI
+        - I don't know
+    validations:
+      required: true
+
+  - type: input
+    id: soc_model
+    attributes:
+      label: SoC model
+      placeholder: AK3918AV130L
+
+  - type: input
+    id: retail_model
+    attributes:
+      label: Retail model
+      description: What it is sold as, including the brand.
+      placeholder: LSC 1080p Smart Indoor Camera
+    validations:
+      required: true
+
+  - type: input
+    id: purchase_link
+    attributes:
+      label: Where to buy one
+      description: >-
+        A link, if you have it. Whether a developer can get hold of the same
+        board for 15 dollars decides whether this gets picked up, so it matters
+        more than it looks.
+      placeholder: https://...
+
+  - type: upload
+    id: board_photos
+    attributes:
+      label: Photos of the board
+      description: >-
+        Both sides, in focus, plus a close-up of every chip marking you can read
+        - SoC, sensor, flash, Wi-Fi, PMIC. Bright light and a phone macro lens
+        are enough. Up to 10 MB each; several images are fine.
+    validations:
+      required: true
+      accept: ".png,.jpg,.jpeg,.webp"
+
+  - type: dropdown
+    id: dump_availability
+    attributes:
+      label: The vendor firmware dump
+      description: >-
+        This is the single most valuable thing in the report -- it carries the
+        bootloader, the partition layout, the sensor driver and the register
+        tables, and it stays useful long after the camera is gone. But it is
+        also full of secrets, so how you share it is your call, not ours.
+      options:
+        - Attached below
+        - Available on request, I would rather not publish it
+        - Linked in a comment (too large to attach)
+        - I cannot produce one -- explain why below
+    validations:
+      required: true
+
+  - type: upload
+    id: vendor_dump
+    attributes:
+      label: Vendor firmware dump
+      description: >-
+        **A dump is a credential store.** A full flash image carries the
+        camera's root password hash, usually the Wi-Fi SSID and passphrase the
+        vendor firmware last joined, the cloud/P2P device key, the serial and
+        the MAC. Attaching it here publishes all of that permanently. Before you
+        do: change any Wi-Fi password the camera knew, and expect the MAC and
+        serial to be public afterwards.
+
+        If you would rather not publish it, say so in the dropdown above --
+        nobody will think less of a report that says "available on request", and
+        a maintainer can arrange a private handover.
+
+        **Compress it first** -- `.bin` is not an accepted extension here, and
+        neither is `.tar.gz`; GitHub's uploader takes such files but an accept
+        list may not name a two-part extension. The cap is 25 MB, which an 8 or
+        16 MB NOR image fits comfortably. A 128 MB NAND image will not fit; host
+        it somewhere and link it in a comment instead.
+        [Backing up your stock firmware](https://github.com/OpenIPC/wiki/blob/master/en/backup-stock-firmware.md)
+        has every route, including the ones that work with no network and no
+        shell.
+    validations:
+      required: false
+      accept: ".zip,.gz"
+
+  - type: textarea
+    id: hw_profile
+    attributes:
+      label: Hardware profile
+      description: >-
+        Fill in what you know and delete what you cannot find out - a partial
+        profile is worth filing. Everything here can be read off the board, out
+        of the stock boot log, or out of the dump.
+      value: |
+        ## Device
+        - **Retail:**
+        - **Board id:**
+        - **Vendor firmware:**
+
+        ## Main SoC
+        - **Model / chip id:**
+        - **Core, clock:**
+        - **Stock kernel version:**
+
+        ## Sensor
+        - **Model:**
+        - **Bus (MIPI / DVP / LVDS):**
+        - **Resolution, fps:**
+
+        ## RAM
+        - **Size, type:**
+
+        ## Wi-Fi
+        - **Chip, USB VID:PID or SDIO:**
+        - **Driver module in the stock image:**
+
+        ## Flash
+        - **Chip marking, JEDEC id, size:**
+        - **NOR or SPI NAND:**
+
+        ## Flash layout
+        ```
+        # cat /proc/mtd, or the mtdparts= from the stock kernel cmdline
+        ```
+
+        ## Bootloader
+        - **Version banner:**
+        - **Commands available (sf / tftp / mmc / fatload):**
+        - **Password protected:**
+
+        ## Video
+        - **Main and sub stream, codec, resolution, fps:**
+        - **Audio:**
+    validations:
+      required: true
+
+  - type: textarea
+    id: uart_log
+    attributes:
+      label: Stock boot log over serial
+      description: >-
+        From power-on, complete. It names the SoC, the RAM split, the flash
+        chip, the partition layout and usually the sensor, all in one place. If
+        it is long, attach it as a file below instead.
+      render: shell
+
+  - type: checkboxes
+    id: offer
+    attributes:
+      label: What you can do with this board
+      description: >-
+        Be honest here - "I can flash it but I cannot solder" is useful
+        information, not a disappointment.
+      options:
+        - label: I have serial console access to it.
+        - label: I can flash test builds and report what happens.
+        - label: I have a programmer and can recover it from a bad flash.
+        - label: I am willing to brick it if that is what it takes.
+
+  - type: upload
+    id: attachments
+    attributes:
+      label: Other attachments
+      description: >-
+        Serial logs, the stock `dmesg`, `printenv` from the bootloader, extra
+        photos, datasheets.
+    validations:
+      required: false
+      accept: ".log,.txt,.json,.csv,.pdf,.zip,.gz,.png,.jpg,.jpeg,.webp"

@@ -1,0 +1,62 @@
+# Blank issues are disabled deliberately. Before this file existed every issue
+# was free-form, and the corpus shows what that produced: bodies of "xxx" and
+# "GK7205V200????", and 39 of 300 issues carrying platform:Unknown because the
+# SoC was never stated.
+#
+# This is narrower than it sounds. GitHub still shows "Blank issue" to anyone
+# with Write, Maintain or Admin, labelled "Maintainers only", so the team keeps
+# its free-form route without this file granting it. What the setting actually
+# does is close that route to Read and Triage -- which is where the one-line
+# reports came from. 6-dev.yml is the escape hatch for the people the setting
+# does affect: an outside contributor with a real technical report should not
+# have to answer a hardware questionnaire to file it.
+blank_issues_enabled: false
+
+# These mirror best_practices.md section 3, "Repo boundaries". 15 of the last
+# 150 issues got a redirect as their first reply, which is a round trip the
+# reporter waits through and a maintainer spends; catching them here costs
+# nothing.
+contact_links:
+  - name: Which firmware do I use? Is my camera supported?
+    url: https://openipc.org/supported-hardware/
+    about: >-
+      The supported-hardware list answers this, and answers it faster than we
+      can. Look your SoC up there first. An issue asking which image to flash
+      will be closed with this link.
+
+  - name: Installation help, or an unidentified board
+    url: https://openipc.org/our-channels
+    about: >-
+      The community chat is the right place for hands-on install help and for
+      "what is this board?" with photos. People there are looking at cameras
+      all day. Open an issue once you have something reproducible.
+
+  - name: Video, audio, ONVIF, RTSP or WebUI behaviour
+    url: https://github.com/OpenIPC/majestic/issues
+    about: >-
+      The streamer is a separate project with its own maintainers. Wrong
+      colours, no audio, a codec that misbehaves, an ONVIF client that will not
+      connect, exposure that does not do what you expect - all of that is
+      majestic, not this repository.
+
+  - name: Kernel source, a kernel driver, or a kernel patch
+    url: https://github.com/OpenIPC/linux/issues
+    about: >-
+      Kernel sources and patches live in OpenIPC/linux. The exception that
+      stays here is a board's kernel *config*, at
+      br-ext-chip-<vendor>/board/<family>/<model>.<variant>.config.
+
+  - name: One specific retail camera model
+    url: https://github.com/OpenIPC/builder/issues
+    about: >-
+      A profile for one retail camera - its GPIO map, its sensor, its pruning
+      list - belongs in OpenIPC/builder under devices/<board>/. This repository
+      carries what a whole SoC family shares.
+
+  - name: Probing, identification and bring-up tooling
+    url: https://github.com/OpenIPC/ipctool/issues
+    about: ipctool, ipcinfo, GPIO scanning and register dumping live in OpenIPC/ipctool.
+
+  - name: Documentation, guides and device notes
+    url: https://github.com/OpenIPC/wiki/issues
+    about: Corrections and additions to the wiki go to OpenIPC/wiki.

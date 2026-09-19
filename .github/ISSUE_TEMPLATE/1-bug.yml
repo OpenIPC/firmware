@@ -1,0 +1,155 @@
+name: Bug on a camera already running OpenIPC
+description: Something worked, or should work, and does not. The camera boots and you can reach it.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If the camera does not boot, or you are still flashing it, use
+        **Installation, flashing, bootloader, or a bricked camera** instead.
+
+        Write in whatever language you are comfortable with - but **paste logs
+        untranslated**, exactly as the camera printed them.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the open **and closed** issues for this.
+          required: true
+        - label: >-
+            This is not about the picture, sound, ONVIF or WebUI behaviour
+            itself - that is majestic, and there is a link for it on the
+            previous page.
+          required: true
+        - label: I read the wiki page for my SoC.
+
+  - type: dropdown
+    id: soc_vendor
+    attributes:
+      label: SoC vendor
+      description: >-
+        This is what routes the issue to whoever knows that silicon. If you are
+        not sure, pick the last option and attach photos below - guessing wrong
+        is worse than saying you do not know.
+      options:
+        - HiSilicon
+        - Goke
+        - SigmaStar
+        - Ingenic
+        - Xiongmai
+        - Fullhan
+        - Novatek
+        - Anyka
+        - Rockchip
+        - Ambarella
+        - GrainMedia
+        - Allwinner
+        - TI
+        - I don't know
+    validations:
+      required: true
+
+  - type: input
+    id: soc_model
+    attributes:
+      label: SoC model
+      description: "From `ipcinfo --chip-name` on the camera, or read off the chip itself."
+      placeholder: gk7205v300
+    validations:
+      required: true
+
+  - type: input
+    id: retail_model
+    attributes:
+      label: Camera model
+      description: As printed on the camera or its box.
+      placeholder: Xiaomi Dafang
+
+  - type: textarea
+    id: sysinfo
+    attributes:
+      label: Output of `sysinfo`
+      description: >-
+        One command, already on the camera. It prints the firmware version,
+        both majestic versions, the USB ids, the memory split, and the SoC and
+        sensor both as detected and as recorded in the U-Boot environment -
+        which is most of what anyone needs to answer you.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: os_release
+    attributes:
+      label: Output of `cat /etc/os-release`
+      description: >-
+        `sysinfo` prints only OPENIPC_VERSION. BUILD_ID, GITHUB_VERSION and
+        BUILD_SHA are what make a regression bisectable, and they are only in
+        this file.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: last_good
+    attributes:
+      label: Last build where this worked
+      description: >-
+        If it ever did. A known-good build and a known-bad one turn a report
+        into a bisect - that is how #2439 was narrowed to 30 commits.
+      placeholder: nightly-20260913-910e724
+
+  - type: dropdown
+    id: image_source
+    attributes:
+      label: Where the image came from
+      options:
+        - The openipc.org download page
+        - A nightly build
+        - An OpenIPC/builder release
+        - I built it myself
+        - I don't know
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happens
+    attributes:
+      label: What happens
+      description: >-
+        The symptom, and how to reach it. "Improves stability" is not a
+        symptom; "the stream stops after about six hours and the OSD stays up"
+        is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+
+  - type: textarea
+    id: logread
+    attributes:
+      label: "`logread | tail -200`"
+      render: shell
+
+  - type: textarea
+    id: dmesg
+    attributes:
+      label: "`dmesg | tail -200`"
+      render: shell
+
+  - type: upload
+    id: attachments
+    attributes:
+      label: Attachments
+      description: >-
+        A full serial log, a crash report (`/etc/crash/crash.tar.gz`, or WebUI
+        -> Download crash log), screenshots. Logs and archives up to 25 MB,
+        images up to 10 MB.
+    validations:
+      required: false
+      accept: ".log,.txt,.json,.csv,.zip,.gz,.png,.jpg,.jpeg,.webp"
