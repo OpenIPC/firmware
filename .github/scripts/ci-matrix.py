@@ -264,6 +264,13 @@ UNBUILT_FAMILIES = {
 # wires dwc3 as dual-role and a kernel built with CONFIG_USB_DWC3_DUAL_ROLE,
 # which no defconfig in ALL_BOARDS has. OpenIPC/builder's gk7205v200_otg_generic
 # selects it. A mainline dual-role defconfig would take it off this list.
+#
+# wpa_supplicant-openipc is here because no board in this tree selects it on
+# purpose. It is the WPA3-SAE supplicant (#2449); the camera that wants it is
+# OpenIPC/builder's ssc377_lite_tp-link-tapo-c120, and the generic ssc377_lite
+# ships no Wi-Fi driver to use it with, so flipping a mainline board to it
+# would spend flash on a radio that is not there. A mainline board with a
+# driver choosing it would take it off this list.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x", "atbm-wifi",
     "aura-httpd", "baresip-openipc", "comgt", "f2fs-tools-openipc", "faceter-agent",
@@ -277,7 +284,7 @@ NOT_BUILT = {
     "rtl8812au", "rtl8812au-openipc", "rtl88x2eu-openipc", "rtw-hostapd", "rubyfpv",
     "siproxd-openipc", "ssv615x-openipc", "ssv635x-openipc", "txw8301-openipc",
     "uqmi-openipc", "usb-dual-role", "vdec-openipc", "venc-openipc",
-    "w1-ds18b20", "waybeam",
+    "w1-ds18b20", "waybeam", "wpa_supplicant-openipc",
     "webface",
     "webrtc-audio-processing-openipc", "wifibroadcast-ng", "wq9001", "yaml-cli-multi",
 }
