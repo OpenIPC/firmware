@@ -1,0 +1,28 @@
+config BR2_PACKAGE_WPA_SUPPLICANT_OPENIPC
+	bool "wpa_supplicant-openipc"
+	depends on BR2_USE_MMU # fork()
+	depends on BR2_TOOLCHAIN_HAS_THREADS # libnl
+	depends on !BR2_PACKAGE_WPA_SUPPLICANT
+	select BR2_PACKAGE_LIBNL
+	select BR2_PACKAGE_MBEDTLS_OPENIPC
+	help
+	  wpa_supplicant 2.11 for the camera as a Wi-Fi station: WPA2-PSK
+	  and WPA3-SAE (plus OWE), nl80211 and wext drivers, control
+	  interface. Crypto comes from the mbedtls library the images
+	  already ship, so it is smaller than the Buildroot package with
+	  WPA3 (which needs OpenSSL) and does not carry a second copy of
+	  internal crypto code.
+
+	  https://w1.fi/wpa_supplicant/ (source: https://w1.fi/releases/)
+
+if BR2_PACKAGE_WPA_SUPPLICANT_OPENIPC
+
+config BR2_PACKAGE_WPA_SUPPLICANT_OPENIPC_CLI
+	bool "Install wpa_cli binary"
+	default y
+
+config BR2_PACKAGE_WPA_SUPPLICANT_OPENIPC_PASSPHRASE
+	bool "Install wpa_passphrase binary"
+	default y
+
+endif
