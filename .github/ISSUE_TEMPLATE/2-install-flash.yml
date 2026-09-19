@@ -1,0 +1,169 @@
+name: Installation, flashing, bootloader, or a bricked camera
+description: The camera will not boot, will not flash, or the bootloader is not behaving.
+labels: ["category/Boot"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two things decide almost every one of these, and both are below: the
+        **complete** serial log from power-on, and whether you have a **backup
+        of the original flash**.
+
+        The log matters line by line. #2299 was diagnosed from `System startup`
+        appearing with no U-Boot banner after it - the bootloader was gone, not
+        looping. #2381 was diagnosed from a `tftp` usage dump three lines above
+        the command everyone was looking at. An excerpt would have hidden both.
+
+        Write in whatever language you like - but **paste logs untranslated**.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the open **and closed** issues for this.
+          required: true
+        - label: >-
+            I followed the install page for my SoC on openipc.org, and I am
+            saying below where I diverged from it if I did.
+          required: true
+
+  - type: dropdown
+    id: soc_vendor
+    attributes:
+      label: SoC vendor
+      description: If you are not sure, pick the last option and attach photos below.
+      options:
+        - HiSilicon
+        - Goke
+        - SigmaStar
+        - Ingenic
+        - Xiongmai
+        - Fullhan
+        - Novatek
+        - Anyka
+        - Rockchip
+        - Ambarella
+        - GrainMedia
+        - Allwinner
+        - TI
+        - I don't know
+    validations:
+      required: true
+
+  - type: input
+    id: soc_model
+    attributes:
+      label: SoC model
+      description: From the marking on the chip, or from the stock firmware's own boot log.
+      placeholder: hi3516ev200
+    validations:
+      required: true
+
+  - type: input
+    id: retail_model
+    attributes:
+      label: Camera model
+      placeholder: Q-See QTN8037BC
+
+  - type: input
+    id: board_id
+    attributes:
+      label: Board id
+      description: >-
+        The string silkscreened on the board, or the one the stock kernel
+        prints. Vendor SDKs and OpenIPC/builder device profiles are keyed on it.
+      placeholder: HI3516D_N81820
+
+  - type: dropdown
+    id: flash_type
+    attributes:
+      label: Flash type
+      options:
+        - SPI NOR
+        - SPI NAND
+        - I don't know
+    validations:
+      required: true
+
+  - type: input
+    id: flash_chip
+    attributes:
+      label: Flash chip marking
+      description: >-
+        Read it off the chip, or take it from the bootloader's probe line. This
+        one value has explained a whole class of failures - the Puya write-lock
+        in #2428, the Winbond NAND corruption in #2285.
+      placeholder: PY25Q128HA, W25N01GV, XM25QH64D
+    validations:
+      required: true
+
+  - type: dropdown
+    id: has_backup
+    attributes:
+      label: Do you have a full backup of the original flash?
+      description: >-
+        This changes the advice completely, so answer it honestly. If the
+        answer is no and the camera still boots its stock firmware, stop and
+        take one first - see [Backing up your stock firmware](https://github.com/OpenIPC/wiki/blob/master/en/backup-stock-firmware.md).
+      options:
+        - Yes, a full dump of the whole chip
+        - Partial - some partitions only
+        # Quoted: bare No is a YAML 1.1 boolean, and GitHub's parser turns it
+        # into `false`, which is not a string and makes the whole form invalid.
+        - "No"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: recovery_access
+    attributes:
+      label: What recovery access do you have?
+      options:
+        - Serial console (UART), soldered or clipped on
+        - A CH341A or similar programmer, and a clip
+        - Both
+        - Neither
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_you_did
+    attributes:
+      label: What you did
+      description: >-
+        The exact commands, pasted, in the order you ran them - not a
+        description of them. If you copied them from a guide, say which guide.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: uart_log
+    attributes:
+      label: Complete serial log from power-on
+      description: >-
+        From the moment power is applied, including the very first line the SoC
+        prints and the bootloader banner. Not an excerpt, not the part you think
+        is relevant. If it is long, leave this blank and attach it as a file
+        below instead.
+      render: shell
+
+  - type: textarea
+    id: proc_mtd
+    attributes:
+      label: "`cat /proc/mtd`"
+      description: From the stock firmware if you can still reach it, or from OpenIPC.
+      render: shell
+
+  - type: upload
+    id: attachments
+    attributes:
+      label: Attachments
+      description: >-
+        The full serial log as a file, photos of the board and the flash chip,
+        the bootloader environment (`printenv`). Logs and archives up to 25 MB,
+        images up to 10 MB.
+    validations:
+      required: false
+      accept: ".log,.txt,.json,.csv,.zip,.gz,.png,.jpg,.jpeg,.webp"
