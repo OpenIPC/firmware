@@ -35,6 +35,8 @@ else. Check this first — it costs a minute and can save an evening.
 | Kernel source and kernel patches | [OpenIPC/linux][linux] |
 | Support for one specific retail camera model | [OpenIPC/builder][builder] |
 | Probing, identification, bring-up tooling | [OpenIPC/ipctool][ipctool] |
+| HiSilicon sensor drivers and open SDK code | [OpenIPC/openhisilicon][openhisilicon] |
+| Sigmastar sensor drivers | [OpenIPC/sensors][sensors] |
 | A bug in the video stream itself | majestic's maintainers, not a shim here |
 | Documentation, device notes, how-tos | [OpenIPC/wiki][wiki], [docs][docs] |
 
@@ -148,15 +150,31 @@ Summarised from `pr_compliance_checklist.yaml`; the reasoning is in `best_practi
   every caller, is invisible to anyone debugging the process, and freezes the real bug in place.
 - **No binaries without buildable source.** Nothing lifted out of a factory image, nothing a
   script in the same pull request generated. A `PROVENANCE.md` documents the problem; it does not
-  solve it.
+  solve it. The test is the diff marker — anything rendered `Binary files ... differ` — not the
+  extension; an executable with no extension is still a blob, and `general/overlay/` is never the
+  place for one. A register table copied out of a camera vendor's driver is the same problem
+  written in C.
+- **No patches against OpenIPC's own packages.** Every `*.patch` in the tree targets a third-party
+  upstream. If a package's `*_SITE` is an `openipc` repository, the fix is a pull request there
+  and a `*_VERSION` bump here.
+- **Nothing ships that nothing runs.** An overlay file needs no `Config.in`, so nothing catches a
+  file the camera never opens. Grep the installed path before adding one.
+- **Shipped scripts call only what the image contains.** Busybox applets, or binaries a package in
+  the board's defconfig installs. `ipctool` looks installed and is not: the package ships
+  `ipcinfo`, and `/usr/sbin/ipctool` is an `extutils` arm that downloads the tool at first use.
 - **No runtime patching of vendor blob memory**, and no `kallsyms` address hooking.
 - **`*_SITE` points at an OpenIPC-org repository or a documented upstream**, never a personal
   fork, and a `*_VERSION` bump never becomes less specific than the pin it replaces — a full
   40-character SHA for anything new. `Config.in` help text must name the URL the `.mk` fetches.
 - **No board-specific value in shared files.** A sensor name, I2C address, GPIO number,
   resolution, MAC prefix or IP literal does not belong in `general/overlay/` or in a shared
-  `load_<vendor>` default. Extending a case arm, or adding a sensor to a package's list, is
-  additive and fine.
+  `load_<vendor>` default. Extending a `load_<vendor>` case arm, or adding a sensor to a
+  package's list, is additive and fine; that exemption does not extend to the overlay.
+  Per-board values have their own seams — `/usr/share/openipc/customizer.sh` and
+  `/usr/share/openipc/muxes.sh`, both run by `S30customizer`; the declarative pin map
+  `/usr/share/openipc/gpio.conf`; `late-overlays.list`; and
+  `general/scripts/excludes/<model>_<variant>.list`. All of them live per-device in
+  OpenIPC/builder under `devices/<board>/`, at the same paths.
 
 ## Verifying a change
 
@@ -341,4 +359,6 @@ Maintainers append the pull request number at merge time; you do not need to.
 [docs]: https://docs.openipc.org
 [ipctool]: https://github.com/OpenIPC/ipctool
 [linux]: https://github.com/OpenIPC/linux
+[openhisilicon]: https://github.com/OpenIPC/openhisilicon
+[sensors]: https://github.com/OpenIPC/sensors
 [wiki]: https://github.com/OpenIPC/wiki

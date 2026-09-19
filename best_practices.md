@@ -6,8 +6,9 @@ are shared, so one file there reaches every camera of a family. Those cameras si
 places nobody can physically reach, there is no staged rollout, and a bad change is
 found only after `sysupgrade` has already written it to flash.
 
-Each rule below was written from a pull request that was actually closed. The
-referenced PR is the one that motivated it.
+Each rule below was written from a pull request this project actually received. The
+referenced PR is the one that motivated it — usually one that was closed, occasionally
+one still open where the pattern is clear enough to write down now.
 
 ---
 
@@ -100,6 +101,65 @@ Flag any added or changed `BR2_TARGET_OPTIMIZATION`, `BR2_TARGET_LDFLAGS`, or
 `BR2_GLOBAL_PATCH_DIR` without a named symptom and a before/after image-size and
 boot check on the affected board. If the flag fixes one package, fix that package.
 
+### 1.4 The per-device seam already exists — name it, do not just say "move it"
+
+"This is board-specific, take it to OpenIPC/builder" is the correct verdict and half an
+answer. The tree already carries a mechanism for every board-specific thing a retail
+camera needs, and a contributor who has not been shown it invents a new init script
+with the pin numbers typed into it.
+
+`general/overlay/etc/init.d/S30customizer` is the entry point. On first boot it runs
+`/usr/share/openipc/customizer.sh` once, guarded by `/etc/custom.ok`; on every boot it
+runs `/usr/share/openipc/muxes.sh`, which is where a board's pinmux and GPIO presets
+go. `/usr/share/openipc/gpio.conf` is the declarative pin map beside them — `button`,
+`ircut1`, `ircut2`, `led1`, `led2`, `light_ir`, `light_wl`, `light_sensor`, `speaker`,
+`usb`, `-1` for a pin the board does not have — read by consumers such as
+`general/package/quirc-openipc/files/qrscan.sh`. Per-image pruning has a seam too:
+`general/scripts/rootfs_script.sh` applies `general/scripts/excludes/<model>_<variant>.list`,
+and `late-overlays.list` ships a file only when a config symbol is set.
+
+All of it is per-device *in OpenIPC/builder*, at the same paths under
+`devices/<board>/`: 96 devices ship a `customizer.sh`, 18 a `gpio.conf`, 15 a
+`muxes.sh`, and the excludes lists live there too — this repository deliberately ships
+no `general/scripts/excludes/` directory at all. The exclusion key is
+`<model>_<variant>`, which is the *generic* board's key as well, so a list added here
+prunes the family board and not only the contributor's camera.
+
+`#2446` added `S01leds` and `S99leds` driving GPIO 0, 4 and 9 on every camera the tree
+builds, a `customizer.sh` in the shared overlay branding every image an Imou Cue 2, and
+a `general/scripts/excludes/hi3516ev200_lite.list` that took `libsns_imx307.so` and
+`default.ini` away from the generic `hi3516ev200_lite` board.
+
+When redirecting, say which of these the work becomes. Note also that none of
+`gpio.conf`, `muxes.sh` or `customizer.sh` is documented in OpenIPC/wiki —
+`en/gpio-settings.md` is a human-readable pin table only — so the contributor has had
+no way to find them.
+
+### 1.5 `devmem` in a shipped script is now a question, not a given
+
+Writing an SoC register from `rc.local` used to be the only way to tell a camera that
+something is soldered to a pad. It no longer is. A `devmem` line is also the worst
+available way to do it: it is undone by anything that later exports the pad, and it is
+lost at the next reflash, because nothing in the camera has been told the pad exists.
+
+The camera can be told now. `/api/v1/pinmux` reports what every pad can be, what it is
+currently, and which pads are already driven, and takes a selection back — that is what
+the pins page in OpenIPC/majestic-webui draws (`www/a/mj-pins.js`), and the choice is
+remembered rather than replayed from a boot script. `nightMode` drives an IR
+illuminator, PWM lamp included, from configuration. `#2446` added a `devmem` block to
+the shared `rc.local` programming PWM1 for its IR LED.
+
+So ask what owns the pad before accepting a register write. A `devmem` line under
+`general/overlay/` needs to say why configuration cannot express it, and — because
+`rc.local` is shared — why every other camera should execute it.
+
+A related trap: "additive, so it changes no existing board" is the right exemption for a
+`load_<vendor>` sensor case arm, and it is not a licence for the shared overlay.
+`general/overlay/etc/wireless/usb` has accumulated 46 arms keyed on retail model names
+in 327 lines, while 18 builder devices override the whole file. Treat those 46 as
+grandfathered, not as precedent: a new arm is a board-specific value in
+`general/overlay/` and belongs in the device's own copy of the file.
+
 ---
 
 ## 2. Provenance of sources and binaries
@@ -169,6 +229,37 @@ Flag any added `.ko`, `.so`, `.bin`, or firmware image that cannot be traced to 
 vendor SDK release or a buildable source tree. A `PROVENANCE.md` documents the problem;
 it does not solve it.
 
+Do not read that list of extensions as the definition. `#2446` added
+`general/overlay/etc/ir/nrxset`, an executable with no extension at all, and it went
+unremarked through an automated review that reported it as "the supplied patch contains
+no textual changes" — which is exactly what a binary looks like to anything reading the
+diff as text. The signal that always survives is the diff marker itself:
+
+```
+Binary files /dev/null and b/general/overlay/etc/ir/nrxset differ
+```
+
+Any hunk rendered that way is a binary, whatever it is called and wherever it sits, and
+`general/overlay/` is never the right place for a compiled artefact — the overlay is
+copied verbatim into every image, so a blob there ships to every camera of every vendor.
+
+### 2.5 A register table lifted from a vendor's driver is the same problem as a binary
+
+§2.4 is about what a file *is*; this is about what it *contains*. A sensor init sequence
+copied out of a vendor's shipped driver has no more provenance than the driver did — it
+cannot be corrected against a datasheet nobody has, and the reasoning behind any one
+register is gone. Written as C it passes every check aimed at blobs.
+
+`#2446` replaced the SC2235 init table with a "Dahua DVP register sequence (114
+entries)" whose only stated origin was Dahua's own firmware, dropping about forty
+registers the OpenSDK driver sets and adding others, for every Hi3516EV200 board using
+that sensor.
+
+Flag an added or replaced register table that names a camera vendor rather than a
+datasheet as its source. Ask for the deltas the board actually needs — here the PCLK
+output-enable and pad-drive registers the PR itself identifies — rather than a wholesale
+swap, and ask which other boards were retested.
+
 ---
 
 ## 3. Repo boundaries
@@ -227,6 +318,25 @@ Flag changes to `general/package/majestic/files/*` that alter how majestic runs 
 order to compensate for how majestic behaves. Redirect the contributor to file the
 underlying issue with the majestic maintainers.
 
+### 3.5 SoC driver behaviour belongs to the SDK repository
+
+`hisilicon-opensdk` fetches **OpenIPC/openhisilicon**, and the Sigmastar sensor drivers
+come from **OpenIPC/sensors**. Both are OpenIPC-org repositories that take pull
+requests. A sensor that mis-detects, an ISP that does not track gain, a driver that
+leaves a pad unconfigured — those are changes to the driver, made once, for every tree
+that consumes it.
+
+`#2446` is the shape to recognise. Its `rc.local` waited twelve seconds, wrote five
+SC2235 registers over I²C, then killed and relaunched majestic, and the comment above it
+said what it was for: the sensor's DVP pad enables, and majestic not re-reading
+orientation. Both halves name an owner. The pad enables are a two-line change to
+`libraries/sensor/hi3516ev200/smart_sc2235/sc2235_sensor_ctl.c` in
+**OpenIPC/openhisilicon**; the orientation re-read is an issue for **OpenIPC/majestic**.
+Neither is a shell script that runs on every camera the tree builds.
+
+A comment that explains *why* a workaround is needed has usually named the repository
+the work belongs to. Read it as a redirect and quote it back.
+
 ---
 
 ## 4. No monkey-patching
@@ -270,6 +380,27 @@ reviewable — nobody rebuilds it, and the committed `.so` is what actually ship
 
 Flag any committed binary produced by a script in the same PR. If it is generated, the
 build system generates it; if the build system cannot, the change needs the real SDK.
+
+### 4.4 A patch against an OpenIPC package is a pull request to that repository
+
+Patches in a package directory are normal here, and every one of them targets code
+this project cannot commit to: ffmpeg, mbedTLS, vtund, baresip's libre, siproxd,
+ZeroTier, libwebsockets, f2fs-tools, and the Realtek WiFi drivers. Not one patches a
+repository under the OpenIPC organisation, because for those the fix has somewhere
+better to go.
+
+A downstream patch against our own code is monkey-patching with extra steps. It is
+invisible to anyone reading the SDK, it is silently dropped the moment someone bumps
+`*_VERSION`, and every other consumer of that repository keeps the bug.
+
+`#2446` added `general/package/hisilicon-opensdk/0001-sc2235-replace-init-table-with-dahua-dvp-sequence.patch`.
+`HISILICON_OPENSDK_SITE` is `$(call github,openipc,openhisilicon,...)`, and the file it
+patches is checked in there.
+
+Flag a new `*.patch` in a package whose `*_SITE` resolves to an `openipc` repository.
+Redirect to that repository; once it lands, bump `*_VERSION` here and the patch is not
+needed. Where the change must ride ahead of the bump, say so explicitly and keep the
+patch to the delta, not a wholesale replacement (§2.5).
 
 ---
 
@@ -379,6 +510,28 @@ which no reviewer reading the title would look for.
 Flag files in the diff that the stated purpose does not explain, especially shared
 `.mk`, defconfig, and overlay files. Ask for them to be split into their own PR.
 
+### 6.3 Nothing ships that nothing runs
+
+§6.1 catches source nobody compiles. Its mirror image is a file that reaches the rootfs
+perfectly well and that nothing on the camera ever opens. `general/overlay/` needs no
+`Config.in` and no `.mk` — anything dropped in it ships — so the usual dead-code check
+never fires, and the cost lands on every board of every vendor, several of which sit
+within 32 KB of their squashfs cap.
+
+`#2446` added `general/overlay/etc/ir/nrxset` and
+`general/overlay/etc/ir/nrx_night_06.txt`. Nothing in firmware or builder reads either
+path, and the `rc.local` the same PR ships never invokes `nrxset` — while the comment
+above that code says it does. Its own two comments also disagree with each other about
+whether the files are needed at all: `rc.local` says the 3DNR parameters are applied
+from them and not from the IQ profile, the IQ profile says the opposite and that the
+parameters were baked into it instead. Both cannot be true, and either way one of the
+two is dead.
+
+Grep the tree for the installed path of any added overlay file. If nothing reads it,
+ask what does; "the vendor's firmware had it" is not an answer. Where a comment asserts
+a consumer, check that the consumer is actually called — a stale comment is how a file
+keeps looking justified.
+
 ---
 
 ## 7. Shipped shell scripts
@@ -448,6 +601,50 @@ whether a script has a good reason to signal by hand. Lifecycle signalling is ne
 sysupgrade's SIGQUIT, and SIGTERM to stop the daemon, are not reload attempts and are not
 in scope for either.
 
+### 7.3 A shipped script may only call commands the image contains
+
+A script under `general/overlay/` runs on a camera with no package manager, no
+`$PATH` beyond what the rootfs holds, and frequently no network. A command that is not
+there does not fail loudly: `sh` prints "not found" to a console nobody is reading and
+carries straight on to the next line, so the script reports success having done nothing.
+
+`ipctool` is the trap worth knowing by name, because a defconfig line looks like it
+supplies it and does not. `general/package/ipctool/ipctool.mk` installs `ipcinfo` and
+nothing else, so `BR2_PACKAGE_IPCTOOL=y` puts no binary called `ipctool` on the image.
+What answers to that name is `/usr/sbin/ipctool`, a symlink to
+`general/overlay/usr/sbin/extutils`, whose `ipctool)` arm curls the tool from
+`https://github.com/OpenIPC/ipctool/releases/download/latest/` into `/tmp` the first
+time somebody asks for it — "installed as remote GitHub plugin", as it says. That is a
+debugging convenience for a person at a shell, and it is four bad properties in a boot
+script: a network fetch during boot, from a floating `latest` tag, repeated every boot
+because `/tmp` is tmpfs, and a silent no-op until the network is up.
+
+`#2446` used `ipctool i2cset --bus 0 0x60 ...` from `rc.local`, twelve seconds into
+boot, on a WiFi-only camera, to apply the sensor registers the whole change depends on.
+
+Flag a call in `general/overlay/` or `general/package/*/files/` to anything that is not
+a busybox applet and not installed by a package the board's defconfig selects. Reach for
+`ipcinfo` where the information is what is wanted, and for the vendor `load_<vendor>`
+script or the SDK driver where hardware must actually be programmed (§3.5).
+
+### 7.4 Restart majestic through its init script, not by hand
+
+`general/package/majestic/files/S95majestic` is not a thin wrapper. It re-reads `/etc/TZ`
+so a restart picks up a zone change; it passes `-s`; it finds the daemon with
+`start-stop-daemon -x` rather than a pidfile, because a stale pidfile makes `-S` start a
+*second* majestic that dies on the busy sensor HAL; it waits up to ten seconds for the
+old process to actually exit; and it starts the new one under `trap '' HUP`, because the
+disposition survives `exec()` and a handler does not — the script's own comment records
+25 out of 25 deaths without it, measured on a hi3516ev200.
+
+A hand-rolled `killall majestic; sleep 3; majestic &` re-opens every one of those, which
+is what `#2446` shipped, on a hi3516ev200.
+
+Flag a shipped script that stops or starts majestic directly. `/etc/init.d/S95majestic
+restart` does it correctly; `reload` is the SIGHUP path in §7.2. Lifecycle signalling by
+other consumers — sysupgrade's SIGQUIT to make majestic release the SDK while staying
+alive, or SIGTERM to stop it — is a different thing and is not in scope here.
+
 ---
 
 ## 8. Things that must not reach `master`
@@ -456,15 +653,23 @@ These are hard gates rather than judgement calls; `pr_compliance_checklist.yaml`
 enforces them. Summarised here because they are the most common review findings:
 
 - `LD_PRELOAD` in any shipped script, package file, or overlay.
-- Binaries extracted from a camera's factory firmware, or any `.ko`/`.so`/`.bin` with
-  no vendor SDK or buildable source behind it.
+- Binaries extracted from a camera's factory firmware, or anything the diff renders as
+  `Binary files ... differ`, with no vendor SDK or buildable source behind it —
+  extension and path do not matter, and `general/overlay/` is never the place for one.
 - New kernel patches under `general/package/all-patches/linux/` — those go to
   OpenIPC/linux.
+- A new `*.patch` against a package whose `*_SITE` is an `openipc` repository — that
+  goes to the repository itself.
 - A `*_SITE` pointing at a personal fork, or a `*_VERSION` that is an abbreviated SHA.
 - A sensor, GPIO, I2C address, or other board-specific value written into
   `general/overlay/` or into a shared `load_<vendor>` default.
-- Single-board scripts and packages in the shared tree — those go to OpenIPC/builder.
-- New sources that no `Config.in` selects and no defconfig builds.
-- `insmod` where the tree uses `modprobe`, or an OpenSDK module not named `open_*`.
+- Single-board scripts and packages in the shared tree — those go to OpenIPC/builder,
+  through the per-device seams in §1.4.
+- New sources that no `Config.in` selects and no defconfig builds, and overlay files
+  that nothing on the camera reads.
+- A shipped script calling a command the image does not contain — `ipctool` is the one
+  that looks installed and is not.
+- `insmod` where the tree uses `modprobe`, an OpenSDK module not named `open_*`, or a
+  hand-rolled majestic restart in place of `/etc/init.d/S95majestic restart`.
 - A test plan whose boxes are unchecked, or a description stating the change was not
   tested on hardware.
