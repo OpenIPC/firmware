@@ -2,17 +2,17 @@
 
 . /usr/sbin/common
 
-daemon_run "Failed to read wg_privkey U-Boot environment variable" WG_PRIVKEY fw_printenv -n wg_privkey
-daemon_run "Failed to read wg_endpoint U-Boot environment variable" WG_ENDPOINT fw_printenv -n wg_endpoint
-daemon_run "Failed to read wg_alive U-Boot environment variable" WG_ALIVE fw_printenv -n wg_alive
-daemon_run "Failed to read wg_pubkey U-Boot environment variable" WG_PUBKEY fw_printenv -n wg_pubkey
-daemon_run "Failed to read wg_allowed U-Boot environment variable" WG_ALLOWED fw_printenv -n wg_allowed
-daemon_run "Failed to read wg_address U-Boot environment variable" WG_ADDRESS fw_printenv -n wg_address
+run_cmd "Failed to read wg_privkey U-Boot environment variable" WG_PRIVKEY fw_printenv -n wg_privkey
+run_cmd "Failed to read wg_endpoint U-Boot environment variable" WG_ENDPOINT fw_printenv -n wg_endpoint
+run_cmd "Failed to read wg_alive U-Boot environment variable" WG_ALIVE fw_printenv -n wg_alive
+run_cmd "Failed to read wg_pubkey U-Boot environment variable" WG_PUBKEY fw_printenv -n wg_pubkey
+run_cmd "Failed to read wg_allowed U-Boot environment variable" WG_ALLOWED fw_printenv -n wg_allowed
+run_cmd "Failed to read wg_address U-Boot environment variable" WG_ADDRESS fw_printenv -n wg_address
 
 WG_SHARKEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
 
-daemon_run "Failed to load wireguard module" "" modprobe wireguard
-daemon_run "Failed to create wg0 interface" "" ip link add dev wg0 type wireguard
+run_cmd "Failed to load wireguard module" "" modprobe wireguard
+run_cmd "Failed to create wg0 interface" "" ip link add dev wg0 type wireguard
 
 HOST="${WG_ENDPOINT%:*}"
 
@@ -36,11 +36,11 @@ fi
 	echo "#"
 } >/tmp/wireguard.conf
 
-daemon_run "Failed to apply wireguard configuration" "" wg setconf wg0 /tmp/wireguard.conf
+run_cmd "Failed to apply wireguard configuration" "" wg setconf wg0 /tmp/wireguard.conf
 
-daemon_run_nonfatal "" "" ip address add dev wg0 "$WG_ADDRESS"
-daemon_run_nonfatal "" "" ip link set up dev wg0
+run_cmd "" "" false ip address add dev wg0 "$WG_ADDRESS"
+run_cmd "" "" false ip link set up dev wg0
 
 for i in $(echo "$WG_ALLOWED" | tr ',' ' '); do
-	daemon_run_nonfatal "" "" ip -4 route add "$i" dev wg0
+	run_cmd "" "" false ip -4 route add "$i" dev wg0
 done

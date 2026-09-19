@@ -68,8 +68,8 @@ ready() {
 			fi
 
 			if [ ! -L "/sys/class/net/$vtund_iface" ]; then
-				daemon_run_nonfatal "" "" modprobe tun || break
-				daemon_run_nonfatal "" "" tunctl -t "$vtund_iface" || break
+				run_cmd "" "" false daemon.err modprobe tun || break
+				run_cmd "" "" false daemon.err tunctl -t "$vtund_iface" || break
 			fi
 
 			kill_pid_file -9 "$udhcpc_pid" udhcpc
@@ -101,7 +101,7 @@ ready() {
 			} >"$identity_cfg"
 
 			# workaround for VTun bug described in https://bugzilla.redhat.com/show_bug.cgi?id=1462458#c26
-			daemon_run_nonfatal "" "" ifconfig $vtund_iface hw ether $identity_mac mtu 1500 -multicast up || break
+			run_cmd "" "" false daemon.err ifconfig $vtund_iface hw ether $identity_mac mtu 1500 -multicast up || break
 
 			vtund -n -f "$identity_cfg" "$identity_tid" "$vtund_server" >/dev/null 2>&1 &&
 				restart_delay=$delay_start
