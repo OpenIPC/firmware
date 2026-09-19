@@ -381,7 +381,7 @@ reviewable — nobody rebuilds it, and the committed `.so` is what actually ship
 Flag any committed binary produced by a script in the same PR. If it is generated, the
 build system generates it; if the build system cannot, the change needs the real SDK.
 
-### 4.4 A patch against an OpenIPC package is a pull request to that repository
+### 4.4 A patch against an OpenIPC package is a bridge, not a substitute
 
 Patches in a package directory are normal here. Twenty-two of the twenty-three
 patched packages target code this project cannot commit to — ffmpeg, mbedTLS, vtund,
@@ -681,8 +681,8 @@ enforces them. Summarised here because they are the most common review findings:
   extension and path do not matter, and `general/overlay/` is never the place for one.
 - New kernel patches under `general/package/all-patches/linux/` — those go to
   OpenIPC/linux.
-- A new `*.patch` against a package whose `*_SITE` is an `openipc` repository — that
-  goes to the repository itself.
+- A new `*.patch` against a package whose `*_SITE` is an `openipc` repository, unless it
+  is a named, minimal, temporary bridge to a pull request already open there (§4.4).
 - A `*_SITE` pointing at a personal fork, or a `*_VERSION` that is an abbreviated SHA.
 - A sensor, GPIO, I2C address, or other board-specific value written into
   `general/overlay/` or into a shared `load_<vendor>` default.
