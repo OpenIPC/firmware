@@ -238,7 +238,7 @@ def run_labeller(bodies):
     """
     with open(LABELER) as handle:
         source = handle.read()
-    match = re.search(r"(const VENDORS = \[.*?\n            \})\n", source, re.S)
+    match = re.search(r"(const VENDORS = \[.*?\n            \})\n\n", source, re.S)
     if not match:
         raise SystemExit("could not extract vendorLabel() from the workflow")
     fn = re.sub(r"^            ", "", match.group(1), flags=re.M)
@@ -285,6 +285,25 @@ def self_test():
         ("", None),
         # A heading that merely mentions the words must not match.
         ("### Notes about the SoC vendor situation\n\nHiSilicon\n", None),
+        # Qodo caught this on #2454. 6-dev.yml renders its free-form Report
+        # field BEFORE the dropdown, so a reporter who types the field's own
+        # heading into their prose -- which anyone filing a bug about these
+        # forms would do -- used to have that read as the answer. Two headings
+        # means label nothing; a wrong platform label is worse than none.
+        ("### Report\n\nprose\n\n### SoC vendor\n\nAmbarella\n\n"
+         "### SoC vendor, if it is specific to one\n\nNot SoC specific\n", None),
+        # ...and the same duplicate after the real field.
+        ("### SoC vendor\n\nHiSilicon\n\n### What happens\n\n"
+         "### SoC vendor\n\nGoke\n", None),
+        # An inline mention is not a heading, so the one real field still wins.
+        # Worth pinning: the fix must not become "give up whenever the words
+        # appear", which would label nothing on half the sensor reports.
+        ("### SoC vendor\n\nHiSilicon\n\n### What happens\n\n"
+         "I quoted the form's ### SoC vendor line at it.\n", "platform:HiSilicon"),
+        # A fenced log that happens to contain the heading is the same problem:
+        # `render:` wraps a textarea in a code fence, it does not escape it.
+        ("### SoC vendor\n\nGoke\n\n### Evidence\n\n```shell\n"
+         "### SoC vendor\n\nTI\n```\n", None),
     ]
     got = run_labeller([b for b, _ in cases])
     bad = 0

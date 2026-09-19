@@ -44,9 +44,20 @@ jobs:
             // without opening throwaway issues on a public tracker.
             function vendorLabel(body) {
               if (!body) return null;
-              const m = body.match(/^###\s+SoC vendor.*$\n+([^\n]+)/mi);
-              if (!m) return null;
-              const answer = m[1].trim();
+              // Every match, not the first. A form renders its fields as
+              // `### <label>`, but nothing stops a reporter typing that same
+              // heading inside a free-form textarea -- and 6-dev.yml puts its
+              // Report field *before* the dropdown, so such a heading is read
+              // first and the issue gets a vendor nobody chose. An issue
+              // reporting a bug in these very forms would quote the heading,
+              // so this is not a contrived case. Bodies stay editable and this
+              // workflow also runs on `edited`, so the wrong label can arrive
+              // long after filing. Two or more matches means the body is
+              // ambiguous: label nothing and let a human decide, because a
+              // wrong platform label is worse than an absent one.
+              const matches = [...body.matchAll(/^###\s+SoC vendor\b.*$\n+([^\n]+)/gmi)];
+              if (matches.length !== 1) return null;
+              const answer = matches[0][1].trim();
               // "_No response_" is what GitHub writes for a skipped optional
               // field, and "Not SoC specific" is the developer form's own
               // opt-out. Neither is an unknown platform; both mean no label.
@@ -58,7 +69,7 @@ jobs:
 
             const label = vendorLabel(context.payload.issue.body);
             if (!label) {
-              core.info('no SoC vendor field in this issue; nothing to label');
+              core.info('no single SoC vendor field in this issue; nothing to label');
               return;
             }
 
