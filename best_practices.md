@@ -383,24 +383,34 @@ build system generates it; if the build system cannot, the change needs the real
 
 ### 4.4 A patch against an OpenIPC package is a pull request to that repository
 
-Patches in a package directory are normal here, and every one of them targets code
-this project cannot commit to: ffmpeg, mbedTLS, vtund, baresip's libre, siproxd,
-ZeroTier, libwebsockets, f2fs-tools, and the Realtek WiFi drivers. Not one patches a
-repository under the OpenIPC organisation, because for those the fix has somewhere
-better to go.
+Patches in a package directory are normal here. Twenty-two of the twenty-three
+patched packages target code this project cannot commit to — ffmpeg, mbedTLS, vtund,
+baresip and its libre, siproxd, ZeroTier, libwebsockets, f2fs-tools, mini-snmpd, uacme,
+nabto, mavlink-router, onvif-simple-server, gst-plugins-bad, and the Realtek WiFi
+drivers — because for those a downstream patch is the only route there is.
 
-A downstream patch against our own code is monkey-patching with extra steps. It is
-invisible to anyone reading the SDK, it is silently dropped the moment someone bumps
-`*_VERSION`, and every other consumer of that repository keeps the bug.
+A patch against code the project *does* own is different. It is invisible to anyone
+reading that repository, it is dropped the moment someone bumps `*_VERSION`, and every
+other consumer of the code keeps the bug. So the default is a pull request to the owning
+repository, and a `*_VERSION` bump here once it lands.
 
-`#2446` added `general/package/hisilicon-opensdk/0001-sc2235-replace-init-table-with-dahua-dvp-sequence.patch`.
-`HISILICON_OPENSDK_SITE` is `$(call github,openipc,openhisilicon,...)`, and the file it
-patches is checked in there.
+**The default has one legitimate exception, and the tree contains exactly one instance
+of it.** `libevent-openipc` carries `0001-CMakeLists-remove-epoll_pwait2-check.patch`
+against `https://github.com/OpenIPC/libevent`. That is the shape the exception should
+take: one hunk, a build fix, obviously temporary, riding ahead of a bump. Do not read
+this section as "never" — read it as "not instead of the pull request".
 
-Flag a new `*.patch` in a package whose `*_SITE` resolves to an `openipc` repository.
-Redirect to that repository; once it lands, bump `*_VERSION` here and the patch is not
-needed. Where the change must ride ahead of the bump, say so explicitly and keep the
-patch to the delta, not a wholesale replacement (§2.5).
+`#2446` is the other shape.
+`general/package/hisilicon-opensdk/0001-sc2235-replace-init-table-with-dahua-dvp-sequence.patch`
+rewrites a 114-entry sensor init table for every Hi3516EV200 board using that sensor.
+`HISILICON_OPENSDK_SITE` is `$(call github,openipc,openhisilicon,...)`, the file it
+patches is checked in there, and nothing about it is temporary.
+
+So the question to ask of a new `*.patch` in a package whose `*_SITE` resolves to an
+`openipc` repository is not whether it exists but whether it is a bridge: does the PR
+name the pull request opened against the owning repository, is the patch the minimal
+delta rather than a wholesale replacement (§2.5), and will it be deleted at the next
+bump? Three yeses and it is the libevent case. Any no and it belongs upstream first.
 
 ---
 
@@ -527,10 +537,23 @@ from them and not from the IQ profile, the IQ profile says the opposite and that
 parameters were baked into it instead. Both cannot be true, and either way one of the
 two is dead.
 
-Grep the tree for the installed path of any added overlay file. If nothing reads it,
-ask what does; "the vendor's firmware had it" is not an answer. Where a comment asserts
-a consumer, check that the consumer is actually called — a stale comment is how a file
-keeps looking justified.
+**Reachability is semantic, not a literal path match, and getting that wrong turns this
+rule into a false-finding generator.** Most of the tree's data files are never named by
+a consumer. `hisilicon-osdrv-hi3516ev200.mk` installs `files/sensor/config/*.ini` into
+`/etc/sensors/` by wildcard, and the file that gets used is chosen at runtime from the
+configured sensor name; a kernel module is reached by `modprobe <name>`, not by path; an
+IQ profile is named through `isp.iqProfile`. All of those are reachable. The compliance
+checklist already says as much under "New sources are wired into the build" — a data
+file landing under a path an existing install rule globs needs no `.mk` change and
+passes — and this rule must not contradict it.
+
+So trace the mechanism before raising anything. A file is reachable if something names
+its path, or its basename, or constructs its name at runtime, or picks it up through an
+install glob that a documented convention then selects from. The finding is for the
+residue: a file whose name appears nowhere, that no convention selects, and that sits in
+a directory no consumer knows about — `/etc/ir/` being the case in hand. Where a comment
+asserts a consumer, check that the consumer is actually called; a stale comment is how a
+dead file keeps looking justified. "The vendor's firmware had it" is not an answer.
 
 ---
 

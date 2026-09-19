@@ -154,11 +154,14 @@ Summarised from `pr_compliance_checklist.yaml`; the reasoning is in `best_practi
   extension; an executable with no extension is still a blob, and `general/overlay/` is never the
   place for one. A register table copied out of a camera vendor's driver is the same problem
   written in C.
-- **No patches against OpenIPC's own packages.** Every `*.patch` in the tree targets a third-party
-  upstream. If a package's `*_SITE` is an `openipc` repository, the fix is a pull request there
-  and a `*_VERSION` bump here.
+- **A patch against an OpenIPC-owned package is a bridge, not a fix.** 22 of the tree's 23 patched
+  packages target third-party upstreams. If a package's `*_SITE` is an `openipc` repository the fix
+  belongs there; a patch here passes only when the pull request against the owning repository is
+  named, the patch is the minimal delta, and it goes at the next `*_VERSION` bump —
+  `libevent-openipc` is the one instance and the model.
 - **Nothing ships that nothing runs.** An overlay file needs no `Config.in`, so nothing catches a
-  file the camera never opens. Grep the installed path before adding one.
+  file the camera never opens. Trace the consumer before adding one — reachability is semantic, so
+  a basename, a name built at runtime, or an install glob a convention selects from all count.
 - **Shipped scripts call only what the image contains.** Busybox applets, or binaries a package in
   the board's defconfig installs. `ipctool` looks installed and is not: the package ships
   `ipcinfo`, and `/usr/sbin/ipctool` is an `extutils` arm that downloads the tool at first use.

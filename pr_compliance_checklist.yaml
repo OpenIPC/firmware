@@ -177,17 +177,26 @@ pr_compliances:
       extra steps: invisible to anyone reading the SDK, silently dropped at the next
       *_VERSION bump, and leaving the bug in place for every other consumer.
     success_criteria: >
-      A new *.patch sits in a package whose *_SITE names a third-party upstream. Every
-      patch in the tree today does — ffmpeg, mbedtls, vtund, libre, siproxd, zerotier,
-      libwebsockets, f2fs-tools, webrtc-audio-processing and the Realtek drivers.
-      A fix to OpenIPC-org code lands in that repository and arrives here as a
-      *_VERSION bump.
+      A new *.patch sits in a package whose *_SITE names a third-party upstream —
+      22 of the tree's 23 patched packages do, among them ffmpeg, mbedtls, vtund, libre,
+      baresip, siproxd, zerotier, libwebsockets, f2fs-tools, mini-snmpd, uacme, nabto,
+      mavlink-router, onvif-simple-server and the Realtek drivers.
+      A patch against OpenIPC-org code passes when it is a NAMED BRIDGE rather than a
+      substitute for the upstream fix: the PR cites the pull request opened against the
+      owning repository, the patch is the minimal delta, and it goes away at the next
+      *_VERSION bump. libevent-openipc is the tree's one instance and the model for it —
+      0001-CMakeLists-remove-epoll_pwait2-check.patch against github.com/OpenIPC/libevent
+      is a single hunk removing one build-time feature check.
     failure_criteria: >
       The diff adds a *.patch to a package whose *_SITE resolves to a repository in the
-      openipc organisation. hisilicon-opensdk fetches openipc/openhisilicon, and #2446
-      added 0001-sc2235-replace-init-table-with-dahua-dvp-sequence.patch against a file
-      checked in there. Redirect to that repository. Sensor and SDK work for HiSilicon
-      goes to OpenIPC/openhisilicon; Sigmastar sensor drivers go to OpenIPC/sensors.
+      openipc organisation AND does not meet the bridge conditions above — no upstream
+      pull request named, or a wholesale replacement rather than a delta, or nothing
+      saying it is temporary. #2446 is the case: hisilicon-opensdk fetches
+      openipc/openhisilicon, and 0001-sc2235-replace-init-table-with-dahua-dvp-sequence.patch
+      rewrites a 114-entry sensor init table, permanently, for every Hi3516EV200 board
+      using that sensor. Redirect to the owning repository. Sensor and SDK work for
+      HiSilicon goes to OpenIPC/openhisilicon; Sigmastar sensor drivers go to
+      OpenIPC/sensors. Do not raise this for an existing patch the diff merely touches.
 
   - title: "Shipped files are reachable from something that runs"
     compliance_label: true
@@ -196,15 +205,26 @@ pr_compliances:
       the dead-code gate above never fires on it. A file nothing opens still costs every
       board of every vendor, and several sit within 32 KB of their squashfs cap.
     success_criteria: >
-      Every added file under general/overlay/ or a package's files/ directory is read at
-      its installed path by a script, init file, package, or configuration somewhere in
-      firmware or builder. Documentation and license text shipped on purpose are fine.
+      Every added file under general/overlay/ or a package's files/ directory can be
+      traced to a consumer. Reachability is SEMANTIC, not a literal path match, and most
+      of this tree's data files are never named by anyone: a sensor .ini is installed by
+      the wildcard files/sensor/config/*.ini and selected at runtime from the configured
+      sensor name, a kernel module is reached by `modprobe <name>` and not by path, an IQ
+      profile is named through isp.iqProfile. A file passes if something names its path,
+      its basename, a name built at runtime, or an install glob that a documented
+      convention then selects from. This is the same allowance the "New sources are wired
+      into the build" gate already makes for a data file landing under a path an existing
+      install rule globs, and the two must not contradict each other. Documentation and
+      license text shipped on purpose are fine.
     failure_criteria: >
-      The diff adds an overlay file whose installed path appears nowhere else in the
-      tree. #2446 added /etc/ir/nrxset and /etc/ir/nrx_night_06.txt, which nothing reads
-      — and its own two comments contradict each other about whether they are used, one
-      claiming nrxset applies the VPSS 3DNR parameters and the other saying they were
-      baked into the IQ profile instead. "The vendor's firmware had it" is not a reason.
+      The diff adds a file whose name appears nowhere, that no runtime convention
+      selects, and that sits in a directory no consumer knows about. #2446 is the case:
+      /etc/ir/nrxset and /etc/ir/nrx_night_06.txt, in a directory nothing in firmware or
+      builder reads, and the rc.local in the same PR never invokes nrxset although its
+      comment says it does — while the IQ profile it ships says the opposite, that the
+      parameters were baked into the profile instead. Trace the mechanism before raising
+      this; an asset reached by basename or convention is reachable, and a finding that
+      says otherwise is a false one. "The vendor's firmware had it" is not a reason.
 
   - title: "A shipped script calls only commands the image contains"
     compliance_label: true

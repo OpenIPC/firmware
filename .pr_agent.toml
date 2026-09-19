@@ -86,11 +86,15 @@ Prioritise, in order:
    provenance failure written in C: unverifiable against a datasheet, and replacing a
    whole table rather than adding the deltas a board needs changes every other board
    using that sensor.
-   A new *.patch is fine against a third-party upstream (every patch in the tree today is
-   - ffmpeg, mbedtls, vtund, libre, siproxd, zerotier, libwebsockets, f2fs-tools, the
-   Realtek drivers) and is a finding when the package's *_SITE resolves to an openipc
-   repository, because there the fix has somewhere better to go and a *_VERSION bump
-   silently drops it.
+   A new *.patch is fine against a third-party upstream (22 of the tree's 23 patched
+   packages - ffmpeg, mbedtls, vtund, libre, baresip, siproxd, zerotier, libwebsockets,
+   f2fs-tools, mini-snmpd, uacme, nabto, mavlink-router, the Realtek drivers). Against a
+   package whose *_SITE resolves to an openipc repository it is a finding ONLY when it
+   substitutes for the upstream fix rather than bridging to it: no pull request named
+   against the owning repo, or a wholesale replacement rather than a minimal delta, or
+   nothing saying it goes at the next *_VERSION bump. libevent-openipc is the tree's one
+   legitimate instance - a single hunk dropping a build-time feature check - so do not
+   report this as an absolute prohibition.
 
 4. Changes that belong to a different repository. Kernel code and kernel patches belong to
    OpenIPC/linux. Support for one retail camera model belongs to OpenIPC/builder, under
@@ -150,8 +154,13 @@ Prioritise, in order:
    The overlay's mirror image of this needs saying separately, because general/overlay/
    needs no Config.in and no .mk - anything dropped there ships, so a file nothing on the
    camera ever opens passes every dead-code check while costing every board of every
-   vendor, several of which sit within 32 KB of their squashfs cap. Grep the installed
-   path of an added overlay file; if nothing reads it, that is a finding.
+   vendor, several of which sit within 32 KB of their squashfs cap. But reachability is
+   SEMANTIC: a sensor .ini installed by a files/sensor/config/*.ini wildcard and chosen
+   at runtime from the configured sensor name is reachable, as is a module loaded by
+   `modprobe <name>` and an IQ profile named through isp.iqProfile. Trace the mechanism
+   before raising anything - path, basename, a name built at runtime, or an install glob
+   a documented convention selects from all count. The finding is the residue: a file
+   whose name appears nowhere, in a directory no consumer knows about.
 
 8. Commands a shipped script calls must exist on the image. A camera has no package
    manager and often no network, and a missing command does not fail loudly - sh prints
