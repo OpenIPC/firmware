@@ -296,9 +296,15 @@ define REPACK_FIRMWARE
 	$(if $(2),cd $(TARGET)/images && if test -e $(2); then mv -f $(2) $(2).$(BR2_OPENIPC_SOC_MODEL); fi)
 	$(if $(1),cd $(TARGET)/images && md5sum $(1).$(BR2_OPENIPC_SOC_MODEL) > $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum)
 	$(if $(2),cd $(TARGET)/images && md5sum $(2).$(BR2_OPENIPC_SOC_MODEL) > $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum)
-	$(if $(1),$(eval KERNEL = $(1).$(BR2_OPENIPC_SOC_MODEL) $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval KERNEL =))
-	$(if $(2),$(eval ROOTFS = $(2).$(BR2_OPENIPC_SOC_MODEL) $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval ROOTFS =))
+	$(if $(1),$(eval KERNEL = $(1).$(BR2_OPENIPC_SOC_MODEL)),$(eval KERNEL =))
+	$(if $(2),$(eval ROOTFS = $(2).$(BR2_OPENIPC_SOC_MODEL)),$(eval ROOTFS =))
+	$(if $(1),$(eval KERNEL_MD5 = $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval KERNEL_MD5 =))
+	$(if $(2),$(eval ROOTFS_MD5 = $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval ROOTFS_MD5 =))
 	$(eval ARCHIVE = openipc.$(BR2_OPENIPC_SOC_MODEL)-$(3)-$(BR2_OPENIPC_VARIANT).tgz)
-	cd $(TARGET)/images && tar -czf $(ARCHIVE) $(KERNEL) $(ROOTFS)
+	# Checksums first, so an unpack that runs out of room in /tmp on a 32 MB
+	# camera loses the IMAGE and keeps the .md5sum that convicts it. The other
+	# order loses the checksum and leaves a short image that sysupgrade's
+	# `md5sum -c *.md5sum` then cannot see at all.
+	cd $(TARGET)/images && tar -czf $(ARCHIVE) $(KERNEL_MD5) $(ROOTFS_MD5) $(KERNEL) $(ROOTFS)
 	rm -f $(TARGET)/images/*.md5sum
 endef
