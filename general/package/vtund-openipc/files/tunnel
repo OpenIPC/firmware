@@ -1,53 +1,115 @@
 #!/bin/sh
-#
-# OpenIPC.org | v.20230212
-# by Igor Zalatov, aka FlyRouter, aka ZigFisher
-# Busybox applets: awk cat echo insmod ip modprobe sha1sum sleep tr tunctl udhcpc uptime
-#
 
-vtund_enable="true"
 vtund_server=${1:-vtun.localhost}
 vtund_port="5000"
 vtund_iface="tunnel"
 device_name="IPC-VTUND"
 working_dir="/tmp"
+identity_cfg="$working_dir/vtund.conf"
+udhcpc_pid="$working_dir/udhcpc-$vtund_iface.pid"
+delay_start=0
+delay_step=10
+delay_max=300
 
-identity() {
+. /usr/sbin/common
+
+log() {
+	logger -p $1 -t "$prog" "$2"
+}
+
+warning() {
+	log daemon.warn "$1"
+}
+
+info() {
+	log daemon.info "$1"
+}
+
+ready() {
 	identity_src=$(ip r | awk '/default/ {print $5}' | head -n 1)
-	identity_mac=$(cat /sys/class/net/"$identity_src"/address | tr 'a-z' 'A-Z')
-	identity_pas=$(echo "$identity_mac" | sha1sum | awk '{print $1}')
-	identity_tid=$(echo "$identity_mac" | tr -d ':')
-	identity_cfg=$working_dir/vtund.conf
+
+	[ -n "$identity_src" ] || {
+		warning "Unable to determine the default network interface"
+		return 1
+	}
+
+	identity_mac=$(cat "/sys/class/net/$identity_src/address" 2>/dev/null | tr 'a-z' 'A-Z')
+
+	[ -n "$identity_mac" ] || {
+		warning "Unable to read the MAC address of the default network interface"
+		return 1
+	}
+
+	echo "$vtund_server" | grep -qE '^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$' && return 0
+
+	nslookup "$vtund_server" >/dev/null 2>&1 || {
+		warning "Unable to resolve the VTun server address"
+		return 1
+	}
 }
 
-interface() {
-	[ -L /sys/class/net/$vtund_iface ] || (modprobe tun; tunctl -t $vtund_iface) >/dev/null 2>&1
-	[ -f $working_dir/udhcpc-$vtund_iface.pid ] && kill -9 "$(cat $working_dir/udhcpc-$vtund_iface.pid)" >/dev/null 2>&1
-}
+{
+	read_subshell_pid
+	prog="${0##*/}[$subshell_pid]"
+	restart_delay=$delay_start
 
-config() {
-	( echo "options {"
-		echo "	port $vtund_port;"
-		echo "	ifconfig /sbin/ifconfig;"
-		echo "}"
-		echo "$identity_tid {"
-		echo "	password $identity_pas;"
-		echo "	device $vtund_iface;"
-		echo "	stat no;"
-		echo "	persist yes;"
-		echo "	keepalive 10:5;"
-		echo "	timeout 10;"
-		echo "	up {"
-		echo "		ifconfig \"$vtund_iface hw ether $identity_mac mtu 1500 -multicast up\";"
-		echo "		program \"udhcpc -T 1 -t 5 -R -b -O staticroutes -S -s tapip -p $working_dir/udhcpc-$vtund_iface.pid -i $vtund_iface -x hostname:$device_name-$identity_tid\";"
-		echo "	};"
-		echo "	down {"
-		echo "		ifconfig \"$vtund_iface down\";"
-		echo "	};"
-		echo "}"
-		) >$identity_cfg
-}
+	while true; do
+		while true; do
+			if ! ready; then
+				ready_delay=$delay_start
 
-if [ "$vtund_enable" = "true" ]; then
-	(while true; do identity; interface; config; vtund -n -f "$identity_cfg" "$identity_tid" "$vtund_server" >/dev/null 2>&1; done) &
-fi
+				while true; do
+					[ $ready_delay -lt $delay_max ] && ready_delay=$(( ready_delay + delay_step ))
+					sleep $ready_delay
+					ready && break
+				done
+
+				info "Starting the tunnel to $vtund_server"
+			fi
+
+			if [ ! -L "/sys/class/net/$vtund_iface" ]; then
+				run_cmd "" "" false daemon.err modprobe tun || break
+				run_cmd "" "" false daemon.err tunctl -t "$vtund_iface" || break
+			fi
+
+			kill_pid_file -9 "$udhcpc_pid" udhcpc
+
+			identity_pas=$(echo "$identity_mac" | sha1sum | awk '{print $1}')
+			identity_tid=$(echo "$identity_mac" | tr -d ':')
+
+			{
+				echo "options {"
+				echo "	port $vtund_port;"
+				echo "	ifconfig /sbin/ifconfig;"
+				echo "}"
+				echo "$identity_tid {"
+				echo "	password $identity_pas;"
+				echo "	device $vtund_iface;"
+				echo "	stat no;"
+				echo "	persist yes;"
+				echo "	keepalive 10:5;"
+				echo "	timeout 10;"
+				echo "	up {"
+				echo "		ifconfig \"$vtund_iface hw ether $identity_mac mtu 1500 -multicast up\";"
+				echo "		program \"udhcpc -T 1 -t 5 -R -b -O staticroutes -S -s tapip -p '$udhcpc_pid' -i $vtund_iface -x hostname:$device_name-$identity_tid\";"
+				echo "	};"
+				echo "	down {"
+				echo "		program \"kill_pid_file -9 '$udhcpc_pid' udhcpc\";"
+				echo "		ifconfig \"$vtund_iface down\";"
+				echo "	};"
+				echo "}"
+			} >"$identity_cfg"
+
+			# workaround for VTun bug described in https://bugzilla.redhat.com/show_bug.cgi?id=1462458#c26
+			run_cmd "" "" false daemon.err ifconfig $vtund_iface hw ether $identity_mac mtu 1500 -multicast up || break
+
+			vtund -n -f "$identity_cfg" "$identity_tid" "$vtund_server" >/dev/null 2>&1 &&
+				restart_delay=$delay_start
+
+			break
+		done
+
+		[ $restart_delay -lt $delay_max ] && restart_delay=$(( restart_delay + delay_step ))
+		sleep $restart_delay
+	done
+} &

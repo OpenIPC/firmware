@@ -66,7 +66,7 @@ ALL_BOARDS = [
     # Hisilicon [HI3516CV500]
     "hi3516av300_lite", "hi3516av300_neo", "hi3516cv500_lite", "hi3516dv300_lite",
     # Hisilicon [HI3516CV6XX]
-    "hi3516cv6xx_ultimate",
+    "hi3516cv6xx_lite", "hi3516cv6xx_ultimate",
     # Hisilicon [HI3519DV500]
     "hi3519dv500_ultimate",
     # Hisilicon [HI3516EV200]
@@ -170,15 +170,16 @@ UNBUILT_BOARDS = {
 # unknown, and unknown widens. Skipping the matrix for something that does feed
 # the build is the one direction this must never fail in.
 NO_BUILD_WORKFLOWS = {
-    "build-one.yml", "cleanup.yml", "gcc-compat.yml", "image.yml", "lint.yml",
-    "manifest.yml", "qodo-gate.yml", "shell-tests.yml", "toolchain.yml",
-    "uboot.yml",
+    "build-one.yml", "cleanup.yml", "gcc-compat.yml", "image.yml",
+    "issue-labeler.yml", "lint.yml", "manifest.yml", "qodo-gate.yml",
+    "shell-tests.yml", "toolchain.yml", "uboot.yml",
 }
 
 # Same for .github/scripts/.
 NO_BUILD_SCRIPTS = {
-    "build-summary.py", "enrich_manifest.py", "lint-workflow-shell.py",
-    "test_load_hisilicon.sh", "test_shell_parse.sh", "test_sysupgrade.sh",
+    "build-summary.py", "enrich_manifest.py", "lint-issue-forms.py",
+    "lint-workflow-shell.py", "test_load_hisilicon.sh", "test_shell_parse.sh",
+    "test_sysupgrade.sh",
 }
 
 # CI plumbing: it decides how the build runs but cannot change a byte of what
@@ -264,6 +265,13 @@ UNBUILT_FAMILIES = {
 # wires dwc3 as dual-role and a kernel built with CONFIG_USB_DWC3_DUAL_ROLE,
 # which no defconfig in ALL_BOARDS has. OpenIPC/builder's gk7205v200_otg_generic
 # selects it. A mainline dual-role defconfig would take it off this list.
+#
+# wpa_supplicant-openipc is here because no board in this tree selects it on
+# purpose. It is the WPA3-SAE supplicant (#2449); the camera that wants it is
+# OpenIPC/builder's ssc377_lite_tp-link-tapo-c120, and the generic ssc377_lite
+# ships no Wi-Fi driver to use it with, so flipping a mainline board to it
+# would spend flash on a radio that is not there. A mainline board with a
+# driver choosing it would take it off this list.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x", "atbm-wifi",
     "aura-httpd", "baresip-openipc", "comgt", "f2fs-tools-openipc", "faceter-agent",
@@ -277,7 +285,7 @@ NOT_BUILT = {
     "rtl8812au", "rtl8812au-openipc", "rtl88x2eu-openipc", "rtw-hostapd", "rubyfpv",
     "siproxd-openipc", "ssv615x-openipc", "ssv635x-openipc", "txw8301-openipc",
     "uqmi-openipc", "usb-dual-role", "vdec-openipc", "venc-openipc",
-    "w1-ds18b20", "waybeam",
+    "w1-ds18b20", "waybeam", "wpa_supplicant-openipc",
     "webface",
     "webrtc-audio-processing-openipc", "wifibroadcast-ng", "wq9001", "yaml-cli-multi",
 }
@@ -754,7 +762,7 @@ def self_test():
         (["general/package/hisilicon-osdrv-hi3516ev200/files/script/load_hisilicon"],
          8, "osdrv narrows to its family"),
         (["general/package/hisilicon-opensdk/hisilicon-opensdk.mk"],
-         43, "opensdk spans HiSilicon and Goke"),
+         44, "opensdk spans HiSilicon and Goke"),
         (["general/package/goke-osdrv-gk7205v200/Config.in"], 7, "goke osdrv"),
         (["general/package/hisilicon-osdrv-hi3520dv200/files/script/load_hisilicon"],
          1, "single-board osdrv"),
@@ -766,7 +774,7 @@ def self_test():
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
          24, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 87, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 88, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -817,6 +825,10 @@ def self_test():
         (["best_practices.md"], 0, "review standards are markdown"),
         (["CLAUDE.md"], 0, "agent instructions are markdown"),
         ([".github/workflows/qodo-gate.yml"], 0, "review gate never builds"),
+        ([".github/workflows/issue-labeler.yml"], 0, "the issue labeller never builds"),
+        ([".github/scripts/lint-issue-forms.py"], 0, "the issue-form linter never builds"),
+        ([".github/ISSUE_TEMPLATE/config.yml"], 0, "issue templates never build"),
+        ([".github/ISSUE_TEMPLATE/1-bug.yml"], 0, "an issue form never builds"),
         ([".github/scripts/test_sysupgrade.sh"], 0, "shell-tests fixture"),
         ([".github/workflows/lint.yml"], 0, "the workflow linter never builds"),
         ([".github/scripts/lint-workflow-shell.py"], 0, "its script"),
@@ -832,7 +844,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         87, "markdown inside a package is that package"),
+         88, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],

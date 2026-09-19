@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.65
+scr_version=1.0.66
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -37,6 +37,18 @@ case "$RAM_ROOT" in /*) ;; *) RAM_ROOT="/$RAM_ROOT" ;; esac
 # mount move, the pivot and the exec. Guarded and given a fallback because `exec`
 # is a special builtin: a redirection it cannot satisfy takes the script down.
 if [ -c /dev/null ]; then exec 3>/dev/null; else exec 3>&2; fi
+# The hardware watchdog, and where to look for the process that owns it.
+#
+# majestic opens /dev/watchdog and is the only thing on the image that pets it
+# (measured on gk7205v200, hi3516av300 and t31 -- three vendors, one pattern).
+# Nothing here opens it unless that owner dies mid-flash; see watchdog_keep.
+# Overridable so the test harness can point both at its sandbox.
+WDOG=${WDOG:-/dev/watchdog}
+WDOG_PROC=${WDOG_PROC:-/proc}
+# Written to tell a running watchdog_keep to stop petting and let go. Inside the
+# pivot /tmp is the tmpfs enter_ramfs moved across, the same one set_progress
+# smuggles its status through.
+WDOG_RELEASE=/tmp/.sysupgrade-wdog-release
 # Seconds the rootfs verify-mount may take before it is treated as unmountable.
 mount_wait=${mount_wait:-45}
 # Seconds the operator gets to Ctrl-C out of a run that will force a reboot.
@@ -235,6 +247,7 @@ preflight_image_sizes() {
 	fi
 	[ "1" = "$update_kernel" ] && check_image_fits "$(kernel_image)" "$kernel_device" kernel
 	[ "1" = "$update_rootfs" ] && check_image_fits "$(rootfs_image)" "$(get_device "rootfs")" rootfs
+	[ "1" = "$update_rootfs" ] && check_rootfs_complete "$(rootfs_image)"
 	return 0
 }
 
@@ -327,6 +340,58 @@ soc_guarded_by_kernel() {
 	return 0
 }
 
+# Is this rootfs shorter than it says it is?
+#
+# A squashfs records its own length at offset 0x28, so a truncated image is
+# provable here with no companion checksum, no mount and no decompressor. That
+# matters because the two guards either side of this one can both be absent at
+# once. An unpack that runs out of room in /tmp drops the image's .md5sum -- it
+# is packed after the file it describes, so it is the member that does not land
+# -- which makes `md5sum -c *.md5sum` verify only the kernel and exit 0. And the
+# unmountable branch in verify_rootfs is deliberately non-fatal, because a
+# running kernel may lack the new image's decompressor. flashcp then writes the
+# short file and verifies it happily: it compares the file against the flash,
+# not the filesystem. Reported as a camera that flashed 4.19 MB of a 4.70 MB
+# rootfs, called it a success, and rebooted into a filesystem the kernel could
+# not mount.
+#
+# Padding makes the test "shorter than", never "not equal to": repack pads the
+# artifact to a 4 KB boundary (4700598 -> 4702208 on the image measured).
+#
+# Refuses only what it can prove. No squashfs magic, an unreadable header, a
+# length that will not parse -- all mean no opinion, so a non-squashfs artifact
+# keeps today's behaviour, and so does a big-endian host, where the magic reads
+# back byte-swapped and simply fails to match. `[ -f ]` because `stat -c %s`
+# reports 0 for a block device, which would otherwise read as short.
+squashfs_short() {
+	local f=$1 lo hi have
+	[ -f "$f" ] || return 1
+	[ "$(od -An -tx4 -j0 -N4 "$f" 2>&3 | awk '{print $1; exit}')" = "73717368" ] || return 1
+	lo=$(od -An -tu4 -j40 -N4 "$f" 2>&3 | awk '{print $1; exit}')
+	hi=$(od -An -tu4 -j44 -N4 "$f" 2>&3 | awk '{print $1; exit}')
+	[ "$hi" = "0" ] || return 1
+	[ -n "$lo" ] && [ "$lo" -gt 0 ] 2>&3 || return 1
+	have=$(stat -c %s "$f" 2>&3) || return 1
+	[ -n "$have" ] || return 1
+	[ "$have" -lt "$lo" ]
+}
+
+# Refuse a rootfs that is provably incomplete, before anything is written.
+#
+# Called from preflight_image_sizes, so the normal path refuses on the
+# still-normal system -- services handed back, no reboot, message on the
+# operator's terminal -- and again from verify_rootfs, which is the one place
+# every rootfs candidate passes through, including the slice dd'd out of a
+# combined image inside the pivot.
+check_rootfs_complete() {
+	local f=$1 have lo
+	squashfs_short "$f" || return 0
+	have=$(stat -c %s "$f" 2>&3)
+	lo=$(od -An -tu4 -j40 -N4 "$f" 2>&3 | awk '{print $1; exit}')
+	die "Incomplete rootfs: $f is $((have / 1024)) KB but its superblock says $((lo / 1024)) KB.
+Nothing was written. Download it again -- a truncated image loses its .md5sum with it."
+}
+
 # Read the candidate rootfs's SoC stamp and version by loop-mounting it.
 #
 # This is a PRE-FLIGHT CHECK ONLY: the image is written with flashcp, which writes
@@ -338,6 +403,7 @@ verify_rootfs() {
 	echo_c 33 "\nVerify"
 	echo "Verifying rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
+	check_rootfs_complete "$x"
 
 	local y=/tmp/rootfs
 	local loop=
@@ -616,6 +682,81 @@ resolve_model_alias() {
 	return 0
 }
 
+# The images THIS run intends to write, one per line.
+#
+# Not "everything the archive brought": a plain `-k` downloads both halves and
+# writes one, and whether the other arrived intact is not this run's business.
+images_this_run() {
+	[ -f "/tmp/firmware.bin.$model" ] && { echo "/tmp/firmware.bin.$model"; return 0; }
+	[ "1" = "$update_kernel" ] && kernel_image
+	[ "1" = "$update_rootfs" ] && rootfs_image
+	return 0
+}
+
+# Every name the manifests actually cover.
+# Normalised, because `md5sum -c` accepts spellings this comparison must not
+# reject: a `*` prefix is its binary-mode marker, and a manifest written from a
+# staging directory names its members `./x`, which verifies fine from /tmp.
+# Refusing those would block a perfectly good archive from installing at all --
+# a worse failure than the one this guard exists to catch.
+md5_names() {
+	awk '{ n = $2; sub(/^[*]/, "", n); while (sub(/^[.]\//, "", n)) ; print n }' /tmp/*.md5sum 2>&3
+}
+
+# An image no manifest mentions has not been checksummed, and must not pass for
+# one that has.
+#
+# `md5sum -c *.md5sum` verifies the files the manifests list and says nothing
+# about a file no manifest names -- so when an unpack drops
+# rootfs.squashfs.$model.md5sum, the check silently narrows to the kernel and
+# still exits 0. Measured: a 4190208-byte truncated rootfs whose companion never
+# landed passes that gate untouched, which is how a short image reached flashcp.
+#
+# Matched by name INSIDE the manifests rather than by a $f.md5sum filename,
+# because both layouts are valid: the released artifacts carry one companion per
+# image, and a single manifest listing several images is just as correct.
+check_md5_covered() {
+	local f
+	for f in $(images_this_run); do
+		[ -f "$f" ] || continue
+		md5_names | grep -qxF "${f##*/}" && continue
+		die "Nothing checksums ${f##*/}: its .md5sum never arrived, so the check
+above could not see this file. The download is incomplete. Nothing was written."
+	done
+}
+
+# Will the unpack fit in /tmp?
+#
+# Asked only on an archive route, where the .tgz and everything inside it have
+# to sit on the same tmpfs at once -- the WebUI's "install from a file" hands
+# majestic's upload straight to --archive. Measured on the camera this was
+# reported from: a 6395 KB archive plus 6413 KB of unpacked images against a
+# 13564 KB /tmp, so 756 KB of headroom before majestic's own RAM. Past that edge
+# tar dies mid-member and leaves a truncated image behind, which is where the
+# missing-checksum hole starts. The streamed route needs half as much and stages
+# no second copy, so it is not asked.
+#
+# #2425 frees the archive once it is unpacked, which cannot help an unpack that
+# is itself what runs out of room.
+#
+# Refuses only on arithmetic it actually has: a gzip trailer that will not read
+# or a df that will not parse means proceed.
+check_unpack_room() {
+	local a=$1 sz need free
+	sz=$(stat -c %s "$a" 2>&3) || return 0
+	[ -n "$sz" ] && [ "$sz" -gt 4 ] 2>&3 || return 0
+	# The last four bytes of a gzip stream are the uncompressed size.
+	need=$(od -An -tu4 -j $((sz - 4)) -N4 "$a" 2>&3 | awk '{print $1; exit}')
+	[ -n "$need" ] && [ "$need" -gt 0 ] 2>&3 || return 0
+	# Anchored on the Use% column rather than a field number, so a long device
+	# name that wraps the row does not shift the answer.
+	free=$(df -k /tmp 2>&3 | awk 'END { print $(NF - 2) }')
+	[ -n "$free" ] && [ "$free" -gt 0 ] 2>&3 || return 0
+	[ "$((need / 1024))" -lt "$free" ] && return 0
+	die "No room to unpack $a in /tmp: needs $((need / 1024)) KB, $free KB free.
+Use 'sysupgrade --channel nightly' instead -- it streams and stages no second copy."
+}
+
 download_firmware() {
 	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
@@ -623,6 +764,7 @@ download_firmware() {
 	build="$model-nor-$osr"
 	if [ -n "$archive" ]; then
 		[ ! -f "$archive" ] && die "File $archive not found"
+		check_unpack_room "$archive"
 		gzip -d "$archive" -c | tar xf - -C /tmp && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
 	else
 		case "$osr" in lite|ultimate|neo) repo=firmware ;; esac
@@ -661,6 +803,7 @@ download_firmware() {
 	fi
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
+		check_md5_covered
 	fi
 	# An archive staged in /tmp is now a second full-size copy of an image that
 	# is also unpacked beside it, on the tmpfs the rest of the run still needs:
@@ -686,6 +829,82 @@ download_firmware() {
 	# Combined image (FIT kernel + rootfs packed in one blob, e.g. cv6xx):
 	# flashed as a unit by do_update_firmware instead of the split path.
 	[ -f "/tmp/firmware.bin.$model" ] && image_combined=1
+}
+
+# Who is petting the hardware watchdog, if anyone.
+#
+# Asked once, on the still-normal system, because the answer decides whether the
+# flash phase may touch the device at all -- and after the pivot there is no
+# majestic left to ask about.
+#
+# On gk7205v200/v300 the kernel carries no CONFIG_WATCHDOG at all; the device
+# comes from open_wdt.ko, which load_goke inserts with no parameters, so
+# nodeamon defaults to 0 and a KERNEL daemon pets the dog while no userspace
+# process holds it. Opening the device takes that duty away from the kernel. So
+# on a camera whose owner turned the watchdog off, or one where majestic was
+# stopped before this ran, nobody holds it and we must leave it alone: claiming
+# it there would manufacture exactly the unfed fuse this guards against.
+# `-ef` rather than readlink: it is a test builtin in both busybox ash and dash,
+# so the whole scan costs no forks. Per-fd readlink cost one each, which is
+# thousands on anything bigger than a camera.
+watchdog_owner() {
+	local p f
+	[ -c "$WDOG" ] || return 1
+	for p in "$WDOG_PROC"/[0-9]*; do
+		for f in "$p"/fd/*; do
+			[ -e "$f" ] || continue
+			[ "$f" -ef "$WDOG" ] && { echo "${p##*/}"; return 0; }
+		done
+	done
+	return 1
+}
+
+# Keep petting a watchdog whose owner has died, for as long as the flash lasts.
+#
+# majestic is demand-paged from the rootfs partition and free_resources has
+# already dropped the page cache, so its first fault after the erase is SIGBUS:
+# the pivot protects this script, not majestic. When it dies the driver says
+# "Unexpected close, watchdog left running!" and means it -- measured on
+# gk7205v200, the SoC hard-resets 297-307 s later (majestic asks for a 300 s
+# margin; the driver's own default is 60). A reset inside the write leaves the
+# rootfs partition part-written, which is how a camera comes back with a
+# corrupted filesystem from an upgrade whose log looked fine. It is also why
+# such a log stops mid-erase: majestic is what streams it.
+#
+# Whether majestic dies in that window is decided by which of its pages happen
+# to still be resident, which nothing here can reason about -- hence taking the
+# device over rather than estimating the odds.
+#
+# While majestic is alive the open is simply refused (measured: EPERM), so this
+# idles and the WebUI keeps streaming. It only ever takes over what someone else
+# abandoned, and only where a userspace owner was seen to begin with.
+#
+# No magic close on the way out. A plain close leaves the dog armed, so if the
+# reboot cannot exec -- the #2231 failure, where the binary lives on the
+# partition just overwritten -- it bites and recovers the camera instead of
+# leaving it wedged forever.
+watchdog_keep() {
+	while :; do
+		[ -f "$WDOG_RELEASE" ] && return 0
+		# The open cannot be the test. `exec` is a special builtin, so a
+		# redirection it cannot satisfy takes this shell down -- and while the
+		# owner is alive the open IS refused (measured: EPERM), so probing with
+		# it killed this keeper on its first attempt, silently, before the owner
+		# it was waiting for had even died. Ask who holds the device instead, and
+		# only reach for it once nobody does. If something claims it in the
+		# moment between the two, this keeper dies and the run is no worse off
+		# than it was before there was one.
+		if ! wd_holder=$(watchdog_owner); then
+			exec 9>"$WDOG"
+			echo_c 33 "\nWatchdog: its owner is gone; petting $WDOG until the reboot."
+			while :; do
+				[ -f "$WDOG_RELEASE" ] && return 0
+				printf 1 >&9
+				sleep 3
+			done
+		fi
+		sleep 1
+	done
 }
 
 free_resources() {
@@ -742,6 +961,16 @@ free_resources() {
 	free -h
 	echo_c 34 "\nProcesses:"
 	ps | grep -v '\['
+	# Said out loud either way: a camera that comes back from a flash with a
+	# corrupted rootfs needs this line to tell an unfed-dog reset apart from a
+	# bad image, and it costs one scan of /proc on the normal system.
+	wdog_owner_pid=$(watchdog_owner) && wdog_userspace_owned=1
+	echo_c 34 "\nWatchdog:"
+	if [ "1" = "$wdog_userspace_owned" ]; then
+		echo "$WDOG: pid $wdog_owner_pid feeds it; taken over if that dies"
+	else
+		[ -c "$WDOG" ] && echo "$WDOG: nobody feeds it; left alone" || echo "none"
+	fi
 }
 
 # Undo free_resources for a run that ends without rebooting.
@@ -1017,6 +1246,10 @@ enter_ramfs() {
 	# remote_update: verify_rootfs branches on it for an unmountable rootfs.
 	# lock_owned: die() needs it to know the lock is ours to remove.
 	export remote_update lock_owned
+	# wdog_userspace_owned: watchdog_keep must not claim a device nobody was
+	# petting, and the scan behind that answer needs a /proc this pivot is about
+	# to move and a majestic it is about to leave behind /mnt.
+	export wdog_userspace_owned
 	# ram_root_shipped: the second phase reclaims the old root's mount point and
 	# needs the same answer ramfs_discard does. It cannot recompute it -- by then
 	# $RAM_ROOT names a directory in the NEW root, not the one being judged.
@@ -1394,6 +1627,8 @@ reboot_system() {
 		echo_c 31 "This camera has no shell, no SSH and no console until it reboots."
 	fi
 	echo_c 37 "\nUnconditional reboot"
+	# Let the dog go, without the magic 'V' -- see watchdog_keep.
+	[ -n "$wdog_keeper" ] && : > "$WDOG_RELEASE"
 	busybox reboot -d 1 -f
 }
 
@@ -1401,6 +1636,15 @@ reboot_system() {
 # from two places: normally after enter_ramfs has re-exec'd us inside the ramfs,
 # and directly when there is no ramfs to move into.
 flash_and_reboot() {
+# Anything that kills majestic from here on leaves the watchdog armed and unfed.
+# Armed only when a userspace owner was seen before the pivot, and only inside
+# the pivot: there every exit is a reboot, so there is nothing to hand back, and
+# `sleep` is the copy in RAM rather than one more exec off the partition being
+# erased. The in-place fallback gets no keeper and no change.
+if [ "1" = "$_ramfs_phase" ] && [ "1" = "$wdog_userspace_owned" ]; then
+	watchdog_keep &
+	wdog_keeper=$!
+fi
 if [ "1" = "$image_combined" ]; then
 	# One blob covers both kernel and rootfs; any of -k/-r/--url/--channel
 	# maps to a single combined write.
