@@ -285,10 +285,15 @@ jobs:
               exit 1
             fi
 
-      # always(): a refused HiSilicon image fails the Prepare step on purpose,
-      # and the images that did assemble must still ship.
+      # A refused HiSilicon image fails the Prepare step on purpose, and the
+      # images that did assemble must still ship -- so this runs on failure.
+      # Not always(): that runs on cancellation too, and create_hisi lays down
+      # the canvas, u-boot, the FIT and the rootfs as four separate writes, so a
+      # cancelled run leaves a bootloader on an otherwise blank part. Uploading
+      # that publishes an unflashable image indistinguishable from a finished
+      # one. The ${{ }} is load-bearing: a bare `!` starts a YAML tag.
       - name: Upload
-        if: always()
+        if: ${{ !cancelled() }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: image
