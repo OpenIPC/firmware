@@ -519,12 +519,19 @@ endef
 # Sensor .so files built from source under libraries/sensor/hi3516cv6xx/
 # get installed to /usr/lib/sensors/, overwriting any prebuilt vendor
 # copies that hisilicon-osdrv-hi3516cv6xx may also have installed.
+# The .ko are installed unstripped: Buildroot's target-finalize skips *.ko on
+# purpose, and nothing here strips them either, so every module ships its
+# .symtab, .strtab and a .comment for each object file. --strip-unneeded keeps
+# every symbol a relocation or __ksymtab needs (INSTALL_MOD_STRIP=1 in the
+# kernel is the same operation); the rest is dead weight on a NOR part.
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv6xx)
 HISILICON_OPENSDK_KMOD_DST = $(HISILICON_OPENSDK_KMOD_BASE)
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	for ko in $(@D)/kernel/open_*.ko; do \
-		[ -f $${ko} ] && $(INSTALL) -m 644 -t $(HISILICON_OPENSDK_KMOD_DST) $${ko} || true; \
+		[ -f $${ko} ] || continue; \
+		$(TARGET_STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note $${ko}; \
+		$(INSTALL) -m 644 -t $(HISILICON_OPENSDK_KMOD_DST) $${ko}; \
 	done
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
@@ -624,11 +631,26 @@ endif
 #    TARGET_FINALIZE_HOOKS (linux package is processed before this one), so
 #    it has already executed by the time we get here — we need a second pass
 #    so modules.dep reflects the post-cleanup state.
+# hi3516cv6xx_lite has a 5120 KB rootfs slot in the cv610 u-boot's partition
+# table and the V5 module set is a third of it. Eight of the 42 modules are
+# never loaded on this family: load_hisilicon has no modprobe for adc, aiisp,
+# devstat, spi_dma_transfer, user, user_proc or uvc, and open_svac3e (the SVAC3
+# encoder) is only probed on the 20g/00s/00g dies, for a codec majestic has no
+# code for. 60 KB of squashfs together; ultimate keeps all of them.
+ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3516cv6xx/lite)
+define HISILICON_OPENSDK_PRUNE_CV6XX_LITE
+	for m in adc aiisp devstat spi_dma_transfer user user_proc uvc svac3e; do \
+		rm -f $(TARGET_DIR)/lib/modules/*/hisilicon/open_$$m.ko; \
+	done
+endef
+endif
+
 ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300 hi3520dv200 hi3516cv6xx hi3519dv500,$(OPENIPC_SOC_FAMILY)),)
 define HISILICON_OPENSDK_FINALIZE_MODULES
 	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
 	$(HISILICON_OPENSDK_DEDUP_CV500_NEO)
+	$(HISILICON_OPENSDK_PRUNE_CV6XX_LITE)
 	$(LINUX_RUN_DEPMOD)
 endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES
