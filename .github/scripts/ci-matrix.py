@@ -170,15 +170,16 @@ UNBUILT_BOARDS = {
 # unknown, and unknown widens. Skipping the matrix for something that does feed
 # the build is the one direction this must never fail in.
 NO_BUILD_WORKFLOWS = {
-    "build-one.yml", "cleanup.yml", "gcc-compat.yml", "image.yml", "lint.yml",
-    "manifest.yml", "qodo-gate.yml", "shell-tests.yml", "toolchain.yml",
-    "uboot.yml",
+    "build-one.yml", "cleanup.yml", "gcc-compat.yml", "image.yml",
+    "issue-labeler.yml", "lint.yml", "manifest.yml", "qodo-gate.yml",
+    "shell-tests.yml", "toolchain.yml", "uboot.yml",
 }
 
 # Same for .github/scripts/.
 NO_BUILD_SCRIPTS = {
-    "build-summary.py", "enrich_manifest.py", "lint-workflow-shell.py",
-    "test_load_hisilicon.sh", "test_shell_parse.sh", "test_sysupgrade.sh",
+    "build-summary.py", "enrich_manifest.py", "lint-issue-forms.py",
+    "lint-workflow-shell.py", "test_load_hisilicon.sh", "test_shell_parse.sh",
+    "test_sysupgrade.sh",
 }
 
 # CI plumbing: it decides how the build runs but cannot change a byte of what
@@ -817,6 +818,10 @@ def self_test():
         (["best_practices.md"], 0, "review standards are markdown"),
         (["CLAUDE.md"], 0, "agent instructions are markdown"),
         ([".github/workflows/qodo-gate.yml"], 0, "review gate never builds"),
+        ([".github/workflows/issue-labeler.yml"], 0, "the issue labeller never builds"),
+        ([".github/scripts/lint-issue-forms.py"], 0, "the issue-form linter never builds"),
+        ([".github/ISSUE_TEMPLATE/config.yml"], 0, "issue templates never build"),
+        ([".github/ISSUE_TEMPLATE/1-bug.yml"], 0, "an issue form never builds"),
         ([".github/scripts/test_sysupgrade.sh"], 0, "shell-tests fixture"),
         ([".github/workflows/lint.yml"], 0, "the workflow linter never builds"),
         ([".github/scripts/lint-workflow-shell.py"], 0, "its script"),

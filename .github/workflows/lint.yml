@@ -92,6 +92,38 @@ jobs:
       - name: Check the annotation grammars still match the workflow
         run: python3 .github/scripts/build-summary.py --self-test
 
+  # Issue forms are read from the default branch and nowhere else, so a form
+  # with a bad element type or a misplaced `accept:` cannot be caught by opening
+  # a pull request -- GitHub drops the broken template from the chooser after
+  # the merge and says nothing, and the first sign of it is a reporter who
+  # cannot file. This job is the only pre-merge check that exists for them.
+  #
+  # The self-test runs the labeller's real JavaScript over synthetic issue
+  # bodies. ubuntu-latest ships node, so nothing is installed for it here.
+  issue-forms:
+    name: issue forms match GitHub's schema
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # Same import-first, install-only-on-failure shape as the job above, and
+      # for the same reason: the common path must not touch the network.
+      - name: Ensure PyYAML
+        run: |
+          if python3 -c 'import yaml' 2>/dev/null; then
+            echo "PyYAML already present; nothing to install."
+          else
+            echo "PyYAML missing from the runner image; installing."
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq python3-yaml
+          fi
+      - name: Lint the forms, and check the labeller's own rules
+        run: python3 .github/scripts/lint-issue-forms.py --self-test
+
   # Everything above reported advisory contexts, and advisory means a pull
   # request can merge straight through them. #2351 did: it landed with "build
   # summariser agrees with build.yml" red, which left master failing its own
@@ -105,7 +137,7 @@ jobs:
   # covered by it.
   lint-gate:
     name: Lint Gate
-    needs: [workflow-shell, build-summary]
+    needs: [workflow-shell, build-summary, issue-forms]
     # always() so the gate still reports when a needed job fails -- but not on a
     # run whose jobs the guard above deliberately skipped. Upstream the added
     # disjunct is true, so this reduces to always().
@@ -118,7 +150,7 @@ jobs:
     steps:
       - name: Require every lint job to succeed
         run: |
-          echo "workflow-shell=${{ needs.workflow-shell.result }} build-summary=${{ needs.build-summary.result }}"
+          echo "workflow-shell=${{ needs.workflow-shell.result }} build-summary=${{ needs.build-summary.result }} issue-forms=${{ needs.issue-forms.result }}"
           # 'skipped' is not accepted. Upstream the guard on those jobs is a
           # tautology, so a skipped one means the guard changed or the job was
           # dropped from `needs` -- either way this context would go green
@@ -128,4 +160,7 @@ jobs:
           fi
           if [ "${{ needs.build-summary.result }}" != "success" ]; then
             echo "::error::build summariser drift gate did not succeed"; exit 1
+          fi
+          if [ "${{ needs.issue-forms.result }}" != "success" ]; then
+            echo "::error::issue form schema check did not succeed"; exit 1
           fi
