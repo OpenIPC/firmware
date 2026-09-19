@@ -263,6 +263,22 @@ make_fit() {
 
 make_rootfs() { dd if=/dev/zero bs=1k count=8 of="$1" 2>/dev/null; }
 
+# A squashfs whose superblock claims $2 bytes, padded to $3 bytes on disk ($3
+# defaults to $2). $3 < $2 is what an unpack that runs out of room in /tmp
+# leaves behind, and what check_rootfs_complete has to refuse; $3 > $2 is what
+# repack normally produces, because it pads the artifact to a 4K boundary. Only
+# the two fields sysupgrade reads are real: the magic at 0, bytes_used at 0x28.
+make_squashfs() {
+    local claimed=$2 ondisk=${3:-$2}
+    printf '\x68\x73\x71\x73' > "$1"                      # 'hsqs'
+    dd if=/dev/zero bs=1 count=36 >> "$1" 2>/dev/null       # 4..39
+    printf %b "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' \
+        $((claimed & 255)) $(((claimed >> 8) & 255)) \
+        $(((claimed >> 16) & 255)) $(((claimed >> 24) & 255)))" >> "$1"
+    dd if=/dev/zero bs=1 count=4 >> "$1" 2>/dev/null        # 44..47, the high half
+    dd if=/dev/zero bs=1 count=$((ondisk - 48)) >> "$1" 2>/dev/null
+}
+
 # A combined image (cv6xx): the FIT and the rootfs squashfs in one blob, rootfs
 # packed after the FIT at a 64K-aligned offset. do_update_firmware splits it on
 # the FIT totalsize (header bytes 4..7, big-endian) — one 64K block here.
@@ -296,6 +312,7 @@ run() {
         HASERLVER=1 FLASH_LOG="$SB/tmp/flash.log" mount_wait="${MOUNT_WAIT:-3}" \
         SDMOUNTS="$SDMOUNTS" \
         abort_wait=0 RAM_ROOT="$SB/ram" \
+        WDOG="${WDOG:-$SB/dev/watchdog}" WDOG_PROC="${WDOG_PROC:-$SB/proc}" \
         STUB_PIVOT_RC="${STUB_PIVOT_RC:-1}" \
         STUB_MOUNT="${STUB_MOUNT:-ok}" STUB_VENDOR="${STUB_VENDOR:-sigmastar}" \
         STUB_SOC="${STUB_SOC:-ssc338q}" \
@@ -555,6 +572,110 @@ if [ "$RC" -eq 0 ] && [ -f "$SB/keep/fw.tgz" ]; then
 else
     bad "a /tmp/.. alias must not delete an outside archive, rc=$RC present=$([ -f "$SB/keep/fw.tgz" ] && echo yes || echo no)"
 fi
+
+# --- an image shorter than its own superblock -------------------------------
+#
+# Reported 2026-09-18: a gk7205v200 froze at "Erasing block: 62/64 (96%)" and
+# came back with a corrupted filesystem. 64 blocks is 4 MB of erase, and the
+# rootfs published for that camera is 4.70 MB -- it flashed an image ~500 KB
+# short. Every gate it passed on the way is load-bearing here: an unpack that
+# fills /tmp drops the image's .md5sum (packed after the image, so it is the
+# member that does not land), which narrows `md5sum -c *.md5sum` to the kernel
+# and still exits 0; the loop-mount then fails, which is deliberately NOT fatal
+# because a running kernel may lack the new decompressor; and flashcp verifies
+# the file against the flash rather than against a filesystem, so it reports
+# success. The squashfs's own recorded length is the one witness that survives
+# all three.
+reset_env
+make_squashfs "$R" 8192 4096
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "Incomplete rootfs"; then
+    ok "a rootfs shorter than its own superblock is refused before any write"
+else
+    bad "short rootfs -> expected a clean refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+grep -q "S95majestic restart" "$SB/tmp/flash.log" \
+    && ok "...and the refusal hands the stopped services back" \
+    || bad "a short-rootfs refusal must restore the services it stopped"
+
+# Padding is normal, so the test is "shorter than", never "not equal to".
+reset_env
+make_squashfs "$R" 8192 12288
+run -z --kernel="$K" --rootfs="$R"
+{ [ "$RC" -eq 0 ] && flashed /dev/mtd3; } \
+    && ok "a squashfs padded past its recorded length still flashes" \
+    || bad "padded rootfs -> expected a flash, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+
+# And no magic means no opinion: the guard must not start rejecting artifacts it
+# cannot actually measure.
+reset_env
+run -z --kernel="$K" --rootfs="$R"
+{ [ "$RC" -eq 0 ] && flashed /dev/mtd3; } \
+    && ok "a rootfs with no squashfs magic is left alone" \
+    || bad "an unmeasurable rootfs must keep today's behaviour, rc=$RC"
+
+# --- a checksum that never arrived is not a checksum that passed ------------
+#
+# `md5sum -c *.md5sum` verifies what the manifests list and says nothing about a
+# file no manifest names, so the gate does not fail when a companion goes
+# missing -- it silently narrows. This is the archive that proves it.
+reset_env
+rm -rf "$SB/stage2"; mkdir -p "$SB/stage2"
+cp "$K" "$SB/stage2/uImage.ssc338q"
+cp "$R" "$SB/stage2/rootfs.squashfs.ssc338q"
+(cd "$SB/stage2" && md5sum uImage.ssc338q > openipc.md5sum)
+(cd "$SB/stage2" && tar cf - . | gzip > "$SB/tmp/fw.tgz")
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "Nothing checksums rootfs.squashfs.ssc338q"; then
+    ok "an image no manifest covers is refused, not waved through"
+else
+    bad "uncovered rootfs -> expected a refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# A manifest may legitimately name its members with a leading "./" -- that is
+# what `md5sum` writes when it is run from a staging directory, and `md5sum -c`
+# verifies it fine from /tmp. Refusing those would block a good archive from
+# installing, which is worse than the hole the coverage check closes.
+reset_env
+rm -rf "$SB/stage3"; mkdir -p "$SB/stage3"
+cp "$K" "$SB/stage3/uImage.ssc338q"
+cp "$R" "$SB/stage3/rootfs.squashfs.ssc338q"
+(cd "$SB/stage3" && md5sum ./uImage.ssc338q ./rootfs.squashfs.ssc338q > openipc.md5sum)
+(cd "$SB/stage3" && tar cf - . | gzip > "$SB/tmp/fw.tgz")
+run -z --archive="$SB/tmp/fw.tgz"
+{ [ "$RC" -eq 0 ] && flashed /dev/mtd3; } \
+    && ok "a manifest that names its members ./x still counts as coverage" \
+    || bad "./-prefixed manifest names must not be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+
+# --- an unpack with nowhere to go ------------------------------------------
+#
+# The archive routes hold the .tgz and everything inside it on the same tmpfs at
+# once: 6395 KB + 6413 KB against a 13564 KB /tmp on the camera this was
+# reported from. Past that edge tar dies mid-member and leaves the truncated
+# image the cases above have to catch, so refuse while the numbers are still
+# knowable. #2425 frees the archive after the unpack, which cannot help the
+# unpack itself.
+reset_env
+make_archive "$K" "$R"
+stub df 'echo "Filesystem 1K-blocks Used Available Use% Mounted on"; echo "tmpfs 13564 13560 4 99% /tmp"'
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "No room to unpack"; then
+    ok "an unpack that cannot fit is refused before it truncates an image"
+else
+    bad "full /tmp -> expected a refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+rm -f "$SB/bin/df"
+
+# Fails open, like every other measurement in this script: a df that will not
+# answer is not grounds to refuse an upgrade.
+reset_env
+make_archive "$K" "$R"
+stub df 'exit 1'
+run -z --archive="$SB/tmp/fw.tgz"
+[ "$RC" -eq 0 ] \
+    && ok "...and a df that will not answer is not a refusal" \
+    || bad "an unreadable df must not block an upgrade, rc=$RC"
+rm -f "$SB/bin/df"
 
 # --- transcript ------------------------------------------------------------
 reset_env
@@ -1793,6 +1914,89 @@ if grep -q 'S01syslogd restart\|syslogd restart' "$BOOTMSG"; then
 else
     ok "...without restarting syslogd and losing the in-RAM boot log"
 fi
+
+# --- the watchdog keeper ---------------------------------------------------
+#
+# majestic is the only thing on the image that pets the hardware watchdog (true
+# on gk7205v200, hi3516av300 and t31 alike), and the flash window is exactly
+# where it dies: it is demand-paged from the partition being erased and
+# free_resources has already dropped the cache, so its next fault is SIGBUS. The
+# driver leaves the dog armed on that close -- measured on gk7205v200, the SoC
+# hard-resets 297-307 s later, which lands inside the write on a slow enough
+# flash and leaves the rootfs part-written.
+#
+# Two properties hold the fix together, and neither shows up in the flash log.
+kf=$(awk '/^flash_and_reboot\(\)/,/^}/' "$SRC")
+printf '%s\n' "$kf" | grep -q 'watchdog_keep &' \
+    && ok "the flash phase arms the watchdog keeper" \
+    || bad "flash_and_reboot must start watchdog_keep"
+
+# Outside the pivot the keeper's own `sleep` would be one more exec off the
+# partition being erased, so it must not arm there.
+printf '%s\n' "$kf" | grep -q '_ramfs_phase' \
+    && ok "...only inside the pivot, where its sleep lives in RAM" \
+    || bad "the keeper must be gated on _ramfs_phase"
+
+# And it must never claim a device nobody was petting. On gk7205v200 the kernel
+# has no CONFIG_WATCHDOG at all and open_wdt.ko feeds the dog while userspace
+# holds no fd, so opening it on a camera whose owner turned the watchdog off
+# would CREATE the unfed fuse this exists to prevent.
+printf '%s\n' "$kf" | grep -q 'wdog_userspace_owned' \
+    && ok "...and only when a userspace owner was seen before the pivot" \
+    || bad "the keeper must be gated on wdog_userspace_owned"
+
+grep -qE '^	export .*\bwdog_userspace_owned\b' "$SRC" \
+    && ok "the owner verdict survives the re-exec (phase 2 cannot rescan)" \
+    || bad "wdog_userspace_owned must be exported into the ramfs phase"
+
+awk '/^watchdog_owner\(\)/,/^}/' "$SRC" | grep -q '\[ -c "\$WDOG" \]' \
+    && ok "watchdog_owner asks whether there is a watchdog at all first" \
+    || bad "watchdog_owner must check for the device before scanning"
+
+# `-ef` is a test builtin in both busybox ash and dash, so the scan costs no
+# forks; readlink cost one per open fd.
+awk '/^watchdog_owner\(\)/,/^}/' "$SRC" | grep -q -- '-ef' \
+    && ok "...and finds the holder without forking per descriptor" \
+    || bad "watchdog_owner should compare with -ef rather than fork readlink"
+
+# And it must not probe by opening: `exec` is a special builtin, so an open the
+# kernel refuses -- which is exactly what it gets while the owner is alive --
+# takes the keeper down without a word. Measured on hardware: probing that way
+# killed the keeper before the owner it was waiting for had died.
+kk=$(awk '/^watchdog_keep\(\)/,/^}/' "$SRC")
+kow=$(printf '%s\n' "$kk" | grep -n 'watchdog_owner' | head -1 | cut -d: -f1)
+kex=$(printf '%s\n' "$kk" | grep -n 'exec 9>' | head -1 | cut -d: -f1)
+if [ -n "$kow" ] && [ -n "$kex" ] && [ "$kow" -lt "$kex" ]; then
+    ok "the keeper asks who holds the device before it opens it"
+else
+    bad "watchdog_keep must test ownership before `exec 9>` (owner=$kow exec=$kex)"
+fi
+
+if awk '/^watchdog_keep\(\)/,/^}/' "$SRC" | grep -qF 'printf V'; then
+    bad "the keeper must NOT magic-close: a reboot that cannot exec needs the dog armed"
+else
+    ok "the keeper never disarms the dog, so a wedged reboot is still rescued"
+fi
+
+rbw=$(awk '/^reboot_system\(\)/,/^}/' "$SRC")
+relw=$(printf '%s\n' "$rbw" | grep -n 'WDOG_RELEASE' | head -1 | cut -d: -f1)
+rbtw=$(printf '%s\n' "$rbw" | grep -n 'busybox reboot' | head -1 | cut -d: -f1)
+if [ -n "$relw" ] && [ -n "$rbtw" ] && [ "$relw" -lt "$rbtw" ]; then
+    ok "petting stops before the reboot, not after it"
+else
+    bad "reboot_system must release the watchdog before it reboots (rel=$relw reboot=$rbtw)"
+fi
+
+grep -q '^WDOG=${WDOG:-/dev/watchdog}' "$SRC" && grep -q '^WDOG_PROC=${WDOG_PROC:-/proc}' "$SRC" \
+    && ok "both watchdog paths are overridable, so this suite never scans the real /proc" \
+    || bad "WDOG and WDOG_PROC must be overridable"
+
+# The short-rootfs refusal belongs on the pre-pivot path: inside the pivot a
+# die() has to reboot, and a reboot with nothing written is the outcome die()
+# goes out of its way to avoid.
+awk '/^preflight_image_sizes\(\)/,/^}/' "$SRC" | grep -q 'check_rootfs_complete' \
+    && ok "the incomplete-image check runs before the pivot" \
+    || bad "preflight_image_sizes must call check_rootfs_complete"
 
 echo
 if [ "$fail" -eq 0 ]; then
