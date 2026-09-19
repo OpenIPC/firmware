@@ -94,25 +94,49 @@ body:
       required: true
       accept: ".png,.jpg,.jpeg,.webp"
 
+  - type: dropdown
+    id: dump_availability
+    attributes:
+      label: The vendor firmware dump
+      description: >-
+        This is the single most valuable thing in the report -- it carries the
+        bootloader, the partition layout, the sensor driver and the register
+        tables, and it stays useful long after the camera is gone. But it is
+        also full of secrets, so how you share it is your call, not ours.
+      options:
+        - Attached below
+        - Available on request, I would rather not publish it
+        - Linked in a comment (too large to attach)
+        - I cannot produce one -- explain why below
+    validations:
+      required: true
+
   - type: upload
     id: vendor_dump
     attributes:
       label: Vendor firmware dump
       description: >-
-        The stock flash image, whole chip. This is the single most valuable
-        thing in the report: it carries the bootloader, the partition layout,
-        the sensor driver and the register tables, and it stays useful long
-        after the camera is gone. **Compress it first** - `.bin` is not an
-        accepted extension here (nor is `.tar.gz` -- GitHub's uploader
-        takes the file, but an accept list may not name a two-part extension),
-        and the cap is 25 MB, which an 8 or 16 MB NOR
-        image fits comfortably. A 128 MB NAND image will not fit; host it
-        somewhere and link it in a comment instead.
+        **A dump is a credential store.** A full flash image carries the
+        camera's root password hash, usually the Wi-Fi SSID and passphrase the
+        vendor firmware last joined, the cloud/P2P device key, the serial and
+        the MAC. Attaching it here publishes all of that permanently. Before you
+        do: change any Wi-Fi password the camera knew, and expect the MAC and
+        serial to be public afterwards.
+
+        If you would rather not publish it, say so in the dropdown above --
+        nobody will think less of a report that says "available on request", and
+        a maintainer can arrange a private handover.
+
+        **Compress it first** -- `.bin` is not an accepted extension here, and
+        neither is `.tar.gz`; GitHub's uploader takes such files but an accept
+        list may not name a two-part extension. The cap is 25 MB, which an 8 or
+        16 MB NOR image fits comfortably. A 128 MB NAND image will not fit; host
+        it somewhere and link it in a comment instead.
         [Backing up your stock firmware](https://github.com/OpenIPC/wiki/blob/master/en/backup-stock-firmware.md)
         has every route, including the ones that work with no network and no
         shell.
     validations:
-      required: true
+      required: false
       accept: ".zip,.gz"
 
   - type: textarea

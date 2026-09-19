@@ -139,10 +139,18 @@ body:
       description: >-
         If the stock firmware drove this sensor, its dump contains the driver
         and the register table that make it work, and that is what a port is
-        built from. **Compress it** - `.bin` is not an accepted extension, and
-        the limit is 25 MB, which an 8 or 16 MB NOR image fits easily. For a
-        128 MB NAND image, put it somewhere else and link it in a comment. The
-        wiki page [Backing up your stock firmware](https://github.com/OpenIPC/wiki/blob/master/en/backup-stock-firmware.md) has the procedure.
+        built from.
+
+        **A dump is a credential store** -- root password hash, the Wi-Fi
+        credentials the vendor firmware last used, the device key, the serial
+        and the MAC. Attaching it publishes all of that permanently. Change any
+        Wi-Fi password the camera knew first, or say in a comment that a dump is
+        available on request and a maintainer will arrange a private handover.
+
+        **Compress it** -- `.bin` and `.tar.gz` are both rejected here; use
+        `.zip` or `.gz`, 25 MB cap.
+        [Backing up your stock firmware](https://github.com/OpenIPC/wiki/blob/master/en/backup-stock-firmware.md)
+        has the procedure.
     validations:
       required: false
       accept: ".zip,.gz"
