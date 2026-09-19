@@ -4,14 +4,53 @@ read_subshell_pid() {
 	IFS=' ' read -r subshell_pid _ < /proc/self/stat
 }
 
-run_cmd_internal() {
+is_priority() {
+	case "${1%%.*}" in
+		auth|authpriv|cron|daemon|ftp|kern|lpr|mail|mark|news|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7)
+			case "${1#*.}" in
+				alert|crit|debug|emerg|err|error|info|none|notice|panic|warn|warning)
+					return 0
+					;;
+			esac
+			;;
+	esac
+
+	return 1
+}
+
+run_cmd() {
 	local subshell_pid
 	read_subshell_pid
 	local run_cmd_prog="${0##*/}[$subshell_pid]"
+
 	local run_cmd_msg="$1"
 	local run_cmd_var="$2"
-	local run_cmd_fatal="$3"
-	shift 3
+	shift 2
+
+	local run_cmd_fatal
+
+	case "$1" in
+		true|false)
+			run_cmd_fatal="$1"
+			shift
+			;;
+		*)
+			run_cmd_fatal=true
+			;;
+	esac
+
+	local run_cmd_priority
+
+	if is_priority "$1"; then
+		run_cmd_priority="$1"
+		shift
+	else
+		if [ "$run_cmd_fatal" = true ]; then
+			run_cmd_priority=daemon.err
+		else
+			run_cmd_priority=daemon.warning
+		fi
+	fi
 
 	local run_cmd_output
 	run_cmd_output=$("$@" 2>&1)
@@ -19,23 +58,23 @@ run_cmd_internal() {
 
 	if [ "$run_cmd_rc" -ne 0 ]; then
 		if [ -n "$run_cmd_msg" ]; then
-			logger -p user.err -t "$run_cmd_prog" "$run_cmd_msg"
+			logger -p "$run_cmd_priority" -t "$run_cmd_prog" "$run_cmd_msg"
 		fi
 
 		local run_cmd_symbol
 		[ -z "$run_cmd_output" ] && run_cmd_symbol="." || run_cmd_symbol=":"
-		logger -p user.err -t "$run_cmd_prog" "Command \`$*\` finished with code $run_cmd_rc$run_cmd_symbol"
+		logger -p "$run_cmd_priority" -t "$run_cmd_prog" "Command \`$*\` finished with code $run_cmd_rc$run_cmd_symbol"
 
 		if [ -n "$run_cmd_output" ]; then
 			printf '%s\n' "$run_cmd_output" |
 			while IFS= read -r line; do
-				logger -p user.err -t "$run_cmd_prog" "$line"
+				logger -p "$run_cmd_priority" -t "$run_cmd_prog" "$line"
 			done
 
 			echo "$run_cmd_output" >&2
 		fi
 
-		if [ "$run_cmd_fatal" = "false" ]; then
+		if [ "$run_cmd_fatal" = false ]; then
 			return "$run_cmd_rc"
 		fi
 
@@ -49,22 +88,17 @@ run_cmd_internal() {
 	fi
 }
 
-run_cmd_nonfatal() {
-	local run_cmd_msg="$1"
-	local run_cmd_var="$2"
-	shift 2
-	run_cmd_internal "$run_cmd_msg" "$run_cmd_var" "false" "$@"
-}
-
-run_cmd() {
-	local run_cmd_msg="$1"
-	local run_cmd_var="$2"
-	shift 2
-	run_cmd_internal "$run_cmd_msg" "$run_cmd_var" "true" "$@"
-}
-
 kill_pid_file() {
 	local signal
+
+	local run_cmd_priority
+
+	if is_priority "$1"; then
+		run_cmd_priority="$1"
+		shift
+	else
+		run_cmd_priority=daemon.err
+	fi
 
 	if [ "${1:0:1}" = "-" ]; then
 		signal="$1"
@@ -77,6 +111,12 @@ kill_pid_file() {
 	local pid=$(cat "$1" 2>/dev/null)
 	[ -n "$pid" ] && [ -d "/proc/$pid" ] || return 252
 	[ "$(cat "/proc/$pid/comm" 2>/dev/null)" = "$2" ] || return 253
-	run_cmd_nonfatal "" "" kill "$signal" "$pid" &&
-		run_cmd_nonfatal "" "" rm -f "$1"
+	run_cmd "" "" false "$run_cmd_priority" kill "$signal" "$pid" &&
+		run_cmd "" "" false "$run_cmd_priority" rm -f "$1"
 }
+
+case "${0##*/}" in
+	kill_pid_file)
+		kill_pid_file "$@"
+		;;
+esac
