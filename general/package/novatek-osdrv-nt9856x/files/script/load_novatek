@@ -159,6 +159,16 @@ insert_ko
 # SENSOR=${SENSOR:=imx307}
 #
 
+# A failed probe used to be stored as sensor=unknown, and rcS exports the
+# stored value into SENSOR before this ever runs -- so an already-latched
+# camera arrives here with SENSOR=unknown, takes the "set manually" branch
+# below, and never probes again however the real fault is fixed. Treat it
+# as unset and drop it from the environment so this boot re-detects. #2428.
+if [ "$SENSOR" = "unknown" ]; then
+	SENSOR=
+	fw_setenv sensor
+fi
+
 if [ -n "$SENSOR" ]; then
     logger -s -p daemon.info -t novatek "Manualy set SENSOR as ${SENSOR}"
 else
