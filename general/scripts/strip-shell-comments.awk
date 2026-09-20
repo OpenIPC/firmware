@@ -104,7 +104,7 @@ BEGIN { nd = 0; sq = 0; dq = 0; cont = 0; prev_cont = 0 }
 		next
 	}
 
-	if (/^[ \t]*$/) next
+	if (/^[ \t]*$/) { print; next }
 
 	code = code_of($0)
 	if (code ~ /^[ \t]*$/) next          # the line was only a comment
