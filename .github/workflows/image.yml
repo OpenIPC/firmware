@@ -300,6 +300,34 @@ jobs:
       # cancelled run leaves a bootloader on an otherwise blank part. Uploading
       # that publishes an unflashable image indistinguishable from a finished
       # one. The ${{ }} is load-bearing: a bare `!` starts a YAML tag.
+      # `image` is a fixed tag and Upload only adds or replaces the files this
+      # run produced, so an asset we stop assembling would sit on the release
+      # for good. These six are exactly that: published before #2448 taught
+      # create_hisi to measure each half against the partition it goes into,
+      # and mis-laid by the arithmetic it replaced -- a FIT past the end of the
+      # kernel slot, a rootfs written over rootfs_data. Withdrawing them by
+      # name, tolerating absence, keeps the release from offering an image this
+      # workflow no longer builds. Drop a name from the list when its loop
+      # comes back (#2460).
+      - name: Withdraw images this workflow no longer assembles
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for asset in openipc-hi3516cv610-ddr2-64m-nor-ultimate.bin \
+                       openipc-hi3516cv610-ddr3-128m-nor-ultimate.bin \
+                       openipc-hi3516cv610-ddr3-512m-nor-ultimate.bin \
+                       openipc-hi3516cv608-nor-ultimate.bin \
+                       openipc-hi3519dv500-dmeb-nor-ultimate.bin \
+                       openipc-hi3519dv500-dmebpro-nor-ultimate.bin; do
+            if gh release delete-asset image "$asset" --yes \
+                 --repo "$GITHUB_REPOSITORY" 2>/dev/null; then
+              echo "withdrawn: $asset"
+            else
+              echo "absent:    $asset"
+            fi
+          done
+
       - name: Upload
         if: ${{ !cancelled() }}
         uses: softprops/action-gh-release@v2
