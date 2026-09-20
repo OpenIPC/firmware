@@ -146,18 +146,46 @@ stub ipcinfo    'case "$1" in -v) echo "${STUB_VENDOR:-sigmastar}";; -F) echo no
 stub fw_printenv 'echo "${STUB_SOC:-ssc338q}"'
 stub killall    'exit 0'
 stub ntpd       'exit 0'
-# Two shapes reach this. remote_size_kb sends a HEAD (-sIL) and parses
-# Content-Length out of the headers; everything else is a body fetch whose only
-# interesting property is its exit status. STUB_DL_BYTES unset means a server
-# that will not say, which check_unpack_ram has to treat as "no opinion".
+# Three shapes reach this.
+#
+#  -r    gzip_isize_kb asking for the trailer. STUB_ISIZE set means a server
+#        that implements Range: four little-endian bytes into the -o target and
+#        a 206. Unset means one that does not -- GitHub's asset host answers
+#        501 -- so the caller must fall back.
+#  -sIL  remote_length_kb's HEAD. Always answered as a redirect that carries a
+#        body length of its own (legal, and what makes "the last length in the
+#        stream" the wrong reading) followed by the artifact. STUB_DL_BYTES
+#        unset makes that final response chunked, i.e. a server that will not
+#        say, which check_unpack_ram has to treat as "no opinion".
+#  else  a body fetch whose only interesting property is its exit status.
 stub curl '
+out=""; prev=""; ranged=0; head=0
 for a in "$@"; do
-    if [ "$a" = "-sIL" ]; then
-        [ -n "${STUB_DL_BYTES:-}" ] &&
-            printf "HTTP/1.1 302 Found\r\ncontent-length: 0\r\n\r\nHTTP/1.1 200 OK\r\ncontent-length: %s\r\n\r\n" "$STUB_DL_BYTES"
-        exit 0
-    fi
+    [ "$prev" = "-o" ] && out=$a
+    [ "$a" = "-r" ] && ranged=1
+    [ "$a" = "-sIL" ] && head=1
+    prev=$a
 done
+if [ "$ranged" = "1" ]; then
+    if [ -n "${STUB_ISIZE:-}" ] && [ -n "$out" ]; then
+        n=$STUB_ISIZE
+        printf %b "$(printf "\\x%02x\\x%02x\\x%02x\\x%02x" \
+            $((n & 255)) $(((n >> 8) & 255)) $(((n >> 16) & 255)) $(((n >> 24) & 255)))" > "$out"
+        printf 206
+    else
+        printf 501
+    fi
+    exit 0
+fi
+if [ "$head" = "1" ]; then
+    printf "HTTP/1.1 302 Found\r\ncontent-length: 65536\r\nlocation: /dl\r\n\r\n"
+    if [ -n "${STUB_DL_BYTES:-}" ]; then
+        printf "HTTP/1.1 200 OK\r\ncontent-length: %s\r\n\r\n" "$STUB_DL_BYTES"
+    else
+        printf "HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n"
+    fi
+    exit 0
+fi
 exit "${STUB_CURL_RC:-0}"'
 # check_sdcard re-reads `mount` after every umount, so a static pair of stubs
 # would spin forever: the unmount has to actually change what mount reports.
@@ -347,6 +375,8 @@ run() {
         STUB_REMOUNT_RC="${STUB_REMOUNT_RC:-0}" \
         STUB_CURL_RC="${STUB_CURL_RC:-0}" \
         STUB_DL_BYTES="${STUB_DL_BYTES:-}" \
+        STUB_ISIZE="${STUB_ISIZE:-}" \
+        UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
         sh "$SB/sysupgrade" "$@" 2>&1)
     RC=$?
 }
@@ -367,7 +397,7 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
-    unset STUB_DL_BYTES
+    unset STUB_DL_BYTES STUB_ISIZE UNPACK_RESERVE_KB
     set_meminfo
     : > "$SDMOUNTS"
     set_mounts
@@ -787,6 +817,71 @@ else
     bad "an unreadable meminfo must not block an upgrade, out='$OUT'"
 fi
 set_meminfo
+
+# The budget is not just the image. curl, gzip and tar are forked after
+# MemAvailable is read and live alongside the pages they write -- 96 pages
+# between them in the #2457 OOM dump -- so an unpack that fits with nothing to
+# spare does not fit. 8691055 B is 8487 KB, and the reserve is 512.
+reset_env
+set_meminfo 9000
+STUB_DL_BYTES=8691055
+run -z --web -k -r
+if ! printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "an image that fits with the reserve to spare is not refused"
+else
+    bad "8487+512 KB into 9000 KB should pass, out='$OUT'"
+fi
+
+reset_env
+set_meminfo 8999
+STUB_DL_BYTES=8691055
+run -z --web -k -r
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "...and one kilobyte tighter is refused, with the reserve counted in"
+else
+    bad "8487+512 KB into 8999 KB should refuse, rc=$RC out='$OUT'"
+fi
+
+# Content-Length is a floor, not a bound. It is the unpacked size to within a
+# fraction of a percent for OpenIPC's own tarballs -- already-compressed
+# payloads -- but --url takes any archive, and a compressible one expands far
+# past it. Ask the gzip trailer first, wherever the server will serve a Range.
+reset_env
+set_meminfo 8192
+STUB_DL_BYTES=1048576     # 1 MB on the wire...
+STUB_ISIZE=52428800       # ...50 MB once unpacked
+run -z --web -k -r
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "51200 KB of image"; then
+    ok "the gzip trailer outranks Content-Length when the server serves a Range"
+else
+    bad "a compressible custom archive must be sized by its trailer, rc=$RC out='$OUT'"
+fi
+
+# And the trailer is only believed when it really is the trailer. A server that
+# ignores Range answers 200 with the whole file, where the first four bytes are
+# the gzip magic -- 0x08088b1f, which would read as a 135 MB unpack.
+reset_env
+set_meminfo 8192
+STUB_DL_BYTES=1048576
+run -z --web -k -r          # STUB_ISIZE unset: the stub answers 501
+if ! printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "...and a server with no Range support falls back instead of guessing"
+else
+    bad "a 501 to the range probe must fall back to Content-Length, out='$OUT'"
+fi
+
+# Which response the length came from matters. `curl -IL` prints every hop, so
+# the last length in the stream is the redirect's whenever the artifact itself
+# is chunked -- and the redirect below declares one, as a redirect with a body
+# may. Reading that would size a 8.5 MB image at 64 KB, or refuse on it.
+reset_env
+set_meminfo 64              # so any estimate at all would refuse
+run -z --web -k -r          # STUB_DL_BYTES unset: the final response is chunked
+if ! printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "a chunked artifact behind a redirect is not measured as the redirect"
+else
+    bad "Content-Length must come from the final response only, out='$OUT'"
+fi
 
 # --- transcript ------------------------------------------------------------
 reset_env
