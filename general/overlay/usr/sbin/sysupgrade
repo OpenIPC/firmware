@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.66
+scr_version=1.0.67
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -748,6 +748,10 @@ check_unpack_room() {
 	# The last four bytes of a gzip stream are the uncompressed size.
 	need=$(od -An -tu4 -j $((sz - 4)) -N4 "$a" 2>&3 | awk '{print $1; exit}')
 	[ -n "$need" ] && [ "$need" -gt 0 ] 2>&3 || return 0
+	# The same archive has to fit twice over: once in the tmpfs, and once in the
+	# RAM that tmpfs is made of. They are different numbers -- see
+	# check_unpack_ram -- and either can be the one that binds.
+	check_unpack_ram "$((need / 1024))" "$a"
 	# Anchored on the Use% column rather than a field number, so a long device
 	# name that wraps the row does not shift the answer.
 	free=$(df -k /tmp 2>&3 | awk 'END { print $(NF - 2) }')
@@ -756,6 +760,138 @@ check_unpack_room() {
 	die "No room to unpack $a in /tmp: needs $((need / 1024)) KB, $free KB free.
 Use 'sysupgrade --channel nightly' instead -- it streams and stages no second copy."
 }
+
+# What the run still needs for itself while that tmpfs is full, in KB.
+#
+# The measurement is not free of the measurer: curl, gzip and tar are forked
+# AFTER MemAvailable is read, and they live alongside the pages they are
+# writing. The kernel's own OOM dump in the #2457 reproduction put them at 57,
+# 28 and 11 pages -- 384 KB together -- with the shell driving them at 11 more.
+# Rounded up to cover that and the page rounding on 8 MB of tmpfs writes.
+#
+# Deliberately does NOT reserve for the ramfs pivot, which stages around 1.5 MB
+# of busybox and libraries later in the run. A pivot that cannot be built is not
+# a failure -- enter_ramfs returns 1 and the run flashes in place instead -- so
+# reserving for it would refuse upgrades that would have completed.
+#
+# Overridable so the test harness can pin the boundary.
+UNPACK_RESERVE_KB=${UNPACK_RESERVE_KB:-512}
+
+# Will the unpack fit in the RAM this camera has left? $1 KB, $2 what to call
+# the source in the message.
+#
+# /tmp is a tmpfs, so every byte unpacked into it is a page of RAM that nothing
+# can reclaim -- and, being shared memory, it is charged to no process. So when
+# the machine runs out, the OOM killer cannot choose the unpack: it chooses the
+# largest RSS on the box, which on a camera is majestic. Reproduced on a lab
+# gk7205v300 held at the reporter's ~8 MB of MemAvailable while it unpacked the
+# 8510 KB image from #2457:
+#
+#   [  968] ... rss 928 ... majestic     <- every other task held 11 to 57 pages
+#   Out of memory: Kill process 968 (majestic) score 29
+#
+# curl, gzip and tar were never candidates. The unpack then FINISHED, all four
+# members at their published sizes, so no exit status downstream was wrong and
+# nothing printed a word. What died was the process streaming the WebUI's
+# progress, which is why the run ends mid-log, the camera keeps the old image,
+# and RTSP and the WebUI are gone until somebody power-cycles it. That is also
+# why this has to be asked BEFORE the unpack: afterwards there is nobody left to
+# ask it to.
+#
+# --web is what makes it reachable at all. Every other path has free_resources
+# kill majestic first, and majestic's 3.7 MB is most of the shortfall: the same
+# 8510 KB unpack with majestic stopped and 9544 KB free finished rc=0.
+#
+# df is the wrong question and was the only one being asked. tmpfs is sized at
+# half of RAM and charges nothing until it is written, so that same camera
+# reported 51836 KB free in /tmp while it had 9544 KB left to give.
+#
+# Fails OPEN, like every other measurement here: a /proc/meminfo that will not
+# parse, or a size the caller could not learn, is not grounds to refuse an
+# upgrade that would have worked.
+check_unpack_ram() {
+	local need=$1 src=$2 avail want
+	[ -n "$need" ] && [ "$need" -gt 0 ] 2>&3 || return 0
+	avail=$(awk '/^MemAvailable:/ { print $2; exit }' /proc/meminfo 2>&3)
+	[ -n "$avail" ] && [ "$avail" -gt 0 ] 2>&3 || return 0
+	want=$((need + UNPACK_RESERVE_KB))
+	[ "$want" -lt "$avail" ] && return 0
+	# Said differently depending on who is asking, because the two callers have
+	# different ways out. A WebUI run has majestic resident and a shell has not,
+	# so the advice that works for one is noise to the other.
+	local out="Not enough memory to unpack $src: it needs $want KB -- $need KB of image
+plus $UNPACK_RESERVE_KB KB for the tools unpacking it -- and this camera has $avail KB free.
+/tmp is a tmpfs, so the unpacked image is RAM. Nothing was written."
+	if [ "1" = "$web_update" ]; then
+		die "$out
+Run 'sysupgrade -k -r' from ssh or the serial console instead: that path stops
+majestic first, and majestic is where the missing memory is."
+	fi
+	die "$out"
+}
+
+# How big will the unpack be, in KB? Nothing when it cannot be told.
+#
+# Asked two ways, because neither works everywhere.
+#
+# The exact answer is the gzip trailer -- the last four bytes of the stream are
+# the uncompressed size -- and a Range request fetches it without downloading
+# the archive. Plenty of servers serve that; GitHub's does not. Measured against
+# release-assets.githubusercontent.com, which advertises `accept-ranges: bytes`
+# in its own headers and then answers a ranged GET with 501, at the redirecting
+# github.com URL and at the resolved one alike.
+#
+# So fall back to the artifact's Content-Length, which for OpenIPC's tarballs is
+# the unpacked size within a fraction of a percent: the payload is a squashfs
+# and a compressed kernel, both already compressed, so gzip takes almost nothing
+# off (measured on the image from #2457, 8691055 packed against 8714240
+# unpacked -- 0.3%). For anything else that number is a floor and not a bound --
+# a hand-rolled --url archive of something compressible expands far past it --
+# which is why the trailer is asked for first and this is only the fallback.
+unpack_size_kb() {
+	gzip_isize_kb "$1" || remote_length_kb "$1"
+}
+
+# The gzip trailer, via Range. Trusted only on a 206 with exactly four bytes
+# back: a server that does not implement Range answers 200 with the whole file,
+# and reading "the first four bytes of what arrived" would parse the gzip MAGIC
+# as a length.
+#
+# --max-filesize is not belt and braces, it is the whole safety of this probe.
+# That 200 is a full-artifact download, and -o points into the tmpfs this guard
+# exists to protect, so without a cap the check funds the very failure it is
+# meant to refuse. Measured on a lab gk7205v300 while writing this: a ranged GET
+# for four bytes of a 200 MB artifact, against a server with no Range support,
+# filled the camera's 60 MB /tmp and reset the board. 64 bytes is room for the
+# four wanted and nothing else; curl gives up on the declared length before it
+# transfers a body, and mid-stream when the length is not declared.
+gzip_isize_kb() {
+	local t=/tmp/.sysupgrade-isize code n
+	rm -f "$t"
+	code=$(curl --connect-timeout 30 -m 60 -s -r -4 --max-filesize 64 \
+		$(tls_opts "$1") "$1" -o "$t" -w '%{http_code}' 2>&3)
+	if [ "206" = "$code" ] && [ "4" = "$(stat -c %s "$t" 2>&3)" ]; then
+		n=$(od -An -tu4 -j0 -N4 "$t" 2>&3 | awk '{print $1; exit}')
+	fi
+	rm -f "$t"
+	[ -n "$n" ] && [ "$n" -gt 0 ] 2>&3 && echo $(((n + 1023) / 1024))
+}
+
+# Content-Length, read from the FINAL response only.
+#
+# `curl -IL` prints the headers of every hop, so taking the last length in the
+# stream measures a redirect whenever the final response declares none -- a
+# chunked artifact behind a redirect that did declare one. Track the status line
+# of each block instead and answer only for a 2xx that carried a length itself.
+remote_length_kb() {
+	local n
+	n=$(curl --connect-timeout 30 -m 60 -sIL $(tls_opts "$1") "$1" 2>&3 | awk '
+		/^HTTP\// { ok = ($2 >= 200 && $2 < 300); len = ""; next }
+		/^[Cc]ontent-[Ll]ength:/ { gsub(/[^0-9]/, "", $2); len = $2 }
+		END { if (ok && len != "") print len }')
+	[ -n "$n" ] && [ "$n" -gt 0 ] 2>&3 && echo $((n / 1024))
+}
+
 
 download_firmware() {
 	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
@@ -785,6 +921,10 @@ download_firmware() {
 		[ -z "$url" ] && url=$(fw_printenv -n upgrade || echo "https://github.com/OpenIPC/${repo:-builder}/releases/download/latest/openipc.$build.tgz")
 		echo "Download from $url"
 		probe_url "$url"
+		# The streamed route stages no second copy, so it never had a room
+		# question asked of it. It still has to land the unpacked image in a
+		# tmpfs, and that is the half that runs out first on a 32 MB camera.
+		check_unpack_ram "$(unpack_size_kb "$url")" "$url"
 		# Show a transfer bar so the (silent, up-to-2-min) download doesn't look
 		# stuck — over /ws/upgrade this also gives the WebUI something to stream
 		# (issue #120). `-s` (silent_update) opts back out for a quiet console run.
