@@ -63,6 +63,7 @@ sed -e 's|grep "GITHUB_VERSION" "$1/etc/os-release"|grep "GITHUB_VERSION" "${1:-
     -e "s|/proc/mtd|@SB@/proc/mtd|g" \
     -e "s|/proc/cmdline|@SB@/proc/cmdline|g" \
     -e "s|/proc/mounts|@SB@/proc/mounts|g" \
+    -e "s|/proc/meminfo|@SB@/proc/meminfo|g" \
     -e "s|/proc/sys/vm/drop_caches|@SB@/tmp/drop_caches|g" \
     -e "s|/etc/init.d/|@SB@/etc/init.d/|g" \
     -e "s|/bin/busybox|@SB@/bin/busybox|g" \
@@ -105,6 +106,17 @@ set_mounts() {
 }
 set_mounts
 
+# MemAvailable is the budget check_unpack_ram measures an unpack against. The
+# default is generous, so every test that is not about memory sees the same
+# camera it always did; the memory tests set it to the figure the reporter's
+# gk7205v200 had. Deliberately more than one line, because the awk that reads it
+# has to pick MemAvailable out and not MemFree above it.
+set_meminfo() {
+    printf 'MemTotal:       %8d kB\nMemFree:        %8d kB\nMemAvailable:   %8d kB\n' \
+        131072 "${1:-65536}" "${1:-65536}" > "$SB/proc/meminfo"
+}
+set_meminfo
+
 set_mtd() { cat > "$SB/proc/mtd"; }
 
 set_mtd <<'EOF'
@@ -134,7 +146,19 @@ stub ipcinfo    'case "$1" in -v) echo "${STUB_VENDOR:-sigmastar}";; -F) echo no
 stub fw_printenv 'echo "${STUB_SOC:-ssc338q}"'
 stub killall    'exit 0'
 stub ntpd       'exit 0'
-stub curl       'exit "${STUB_CURL_RC:-0}"'
+# Two shapes reach this. remote_size_kb sends a HEAD (-sIL) and parses
+# Content-Length out of the headers; everything else is a body fetch whose only
+# interesting property is its exit status. STUB_DL_BYTES unset means a server
+# that will not say, which check_unpack_ram has to treat as "no opinion".
+stub curl '
+for a in "$@"; do
+    if [ "$a" = "-sIL" ]; then
+        [ -n "${STUB_DL_BYTES:-}" ] &&
+            printf "HTTP/1.1 302 Found\r\ncontent-length: 0\r\n\r\nHTTP/1.1 200 OK\r\ncontent-length: %s\r\n\r\n" "$STUB_DL_BYTES"
+        exit 0
+    fi
+done
+exit "${STUB_CURL_RC:-0}"'
 # check_sdcard re-reads `mount` after every umount, so a static pair of stubs
 # would spin forever: the unmount has to actually change what mount reports.
 # $SDMOUNTS is what a bare `mount` prints; empty is the default, which is what
@@ -322,6 +346,7 @@ run() {
         STUB_FLASHCP_FAIL_DEV="${STUB_FLASHCP_FAIL_DEV:-}" \
         STUB_REMOUNT_RC="${STUB_REMOUNT_RC:-0}" \
         STUB_CURL_RC="${STUB_CURL_RC:-0}" \
+        STUB_DL_BYTES="${STUB_DL_BYTES:-}" \
         sh "$SB/sysupgrade" "$@" 2>&1)
     RC=$?
 }
@@ -342,6 +367,8 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
+    unset STUB_DL_BYTES
+    set_meminfo
     : > "$SDMOUNTS"
     set_mounts
     rm -rf "$SB/ram"
@@ -676,6 +703,90 @@ run -z --archive="$SB/tmp/fw.tgz"
     && ok "...and a df that will not answer is not a refusal" \
     || bad "an unreadable df must not block an upgrade, rc=$RC"
 rm -f "$SB/bin/df"
+
+# --- an unpack with nowhere to go, the other kind (issue #2457) -------------
+#
+# /tmp is a tmpfs, so the room question has a second half: the RAM the tmpfs is
+# made of. On a `mem=32M` camera that is the half that binds, and df cannot see
+# it -- the camera in #2457 was 400 KB short of the memory it needed while
+# reporting 51836 KB free in /tmp.
+#
+# It has to be refused BEFORE the unpack, because afterwards there is nobody
+# left to refuse it: tmpfs pages belong to no process, so the OOM killer takes
+# the largest RSS on the box instead, which is majestic -- and on a --web run
+# majestic is what is streaming the log. The observed failure is a transcript
+# that stops mid-sentence, a camera still on the old image, and RTSP and the
+# WebUI gone until it is power-cycled.
+reset_env
+set_meminfo 8192          # what free -h reported on the reporter's gk7205v200
+STUB_DL_BYTES=8691055     # openipc.gk7205v200-nor-ultimate.tgz
+run -z --web -k -r
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "a streamed image larger than free RAM is refused before it is unpacked"
+else
+    bad "8487 KB into 8192 KB -> expected a refusal, rc=$RC out='$OUT'"
+fi
+
+# The advice has to be reachable. A WebUI run is the only one with majestic
+# still resident, so it is the only one told to go and use a shell; saying that
+# to somebody already in one would be noise.
+printf '%s' "$OUT" | grep -q "from ssh or the serial console" \
+    && ok "...and says where the missing memory is" \
+    || bad "a --web refusal should point at the shell path, out='$OUT'"
+
+reset_env
+set_meminfo 8192
+STUB_DL_BYTES=8691055
+run -z -k -r
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "Not enough memory to unpack" &&
+    ! printf '%s' "$OUT" | grep -q "from ssh or the serial console"; then
+    ok "...but a console run is not told to go and find a console"
+else
+    bad "a non-web refusal should not carry the --web advice, rc=$RC out='$OUT'"
+fi
+
+# The same measurement, on the archive route -- the WebUI's "install from a
+# file", which hands majestic's upload straight to --archive and so has majestic
+# resident too. Here df has an opinion and it is the wrong one: the sandbox's
+# /tmp is a real filesystem with gigabytes free, exactly as the camera's tmpfs
+# claimed 51836 KB while the machine had 9 MB to give.
+#
+# A zero-filled rootfs, because what check_unpack_room reads is the gzip
+# trailer: 12 MB of zeros costs the suite a few KB on disk and still asks the
+# question at the scale a real image asks it.
+reset_env
+dd if=/dev/zero bs=1k count=12288 of="$R" 2>/dev/null
+make_archive "$K" "$R"
+set_meminfo 8192
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "a staged archive too big for RAM is refused even where df says there is room"
+else
+    bad "archive route ignored the memory budget, rc=$RC out='$OUT'"
+fi
+
+# Fails open on both halves of the arithmetic, like every other measurement in
+# this script. A server that will not give a size, and a /proc/meminfo that will
+# not parse, are each "no opinion" -- never a refusal.
+reset_env
+set_meminfo 8192
+run -z --web -k -r       # STUB_DL_BYTES unset: no Content-Length comes back
+if ! printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "a server that will not give a size is not a refusal"
+else
+    bad "an unknown download size must not block an upgrade, out='$OUT'"
+fi
+
+reset_env
+: > "$SB/proc/meminfo"
+STUB_DL_BYTES=8691055
+run -z --web -k -r
+if ! printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "...and neither is a /proc/meminfo that will not parse"
+else
+    bad "an unreadable meminfo must not block an upgrade, out='$OUT'"
+fi
+set_meminfo
 
 # --- transcript ------------------------------------------------------------
 reset_env
