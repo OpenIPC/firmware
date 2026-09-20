@@ -1,4 +1,5 @@
-# Drop whole-line comments and blank lines from a POSIX shell script.
+# Drop whole-line comments from a POSIX shell script.
+# Keep blank lines to preserve readability. See #2386.
 #
 # Comments are worth writing and worth keeping in the tree, but every byte of
 # them is also flashed to an 8MB camera. sysupgrade alone reached 52KB, 57% of
