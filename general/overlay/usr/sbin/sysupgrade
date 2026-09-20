@@ -856,11 +856,20 @@ unpack_size_kb() {
 # back: a server that does not implement Range answers 200 with the whole file,
 # and reading "the first four bytes of what arrived" would parse the gzip MAGIC
 # as a length.
+#
+# --max-filesize is not belt and braces, it is the whole safety of this probe.
+# That 200 is a full-artifact download, and -o points into the tmpfs this guard
+# exists to protect, so without a cap the check funds the very failure it is
+# meant to refuse. Measured on a lab gk7205v300 while writing this: a ranged GET
+# for four bytes of a 200 MB artifact, against a server with no Range support,
+# filled the camera's 60 MB /tmp and reset the board. 64 bytes is room for the
+# four wanted and nothing else; curl gives up on the declared length before it
+# transfers a body, and mid-stream when the length is not declared.
 gzip_isize_kb() {
 	local t=/tmp/.sysupgrade-isize code n
 	rm -f "$t"
-	code=$(curl --connect-timeout 30 -m 60 -s -r -4 $(tls_opts "$1") "$1" \
-		-o "$t" -w '%{http_code}' 2>&3)
+	code=$(curl --connect-timeout 30 -m 60 -s -r -4 --max-filesize 64 \
+		$(tls_opts "$1") "$1" -o "$t" -w '%{http_code}' 2>&3)
 	if [ "206" = "$code" ] && [ "4" = "$(stat -c %s "$t" 2>&3)" ]; then
 		n=$(od -An -tu4 -j0 -N4 "$t" 2>&3 | awk '{print $1; exit}')
 	fi

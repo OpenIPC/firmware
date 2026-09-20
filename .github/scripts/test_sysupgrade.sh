@@ -167,6 +167,14 @@ for a in "$@"; do
     prev=$a
 done
 if [ "$ranged" = "1" ]; then
+    if [ -n "${STUB_RANGE_IGNORED:-}" ] && [ -n "$out" ]; then
+        # A server with no Range support: 200, and the whole file. The real
+        # request caps this with --max-filesize, so only the head of it lands --
+        # which begins with the gzip magic, 0x08088b1f.
+        printf %b "\\x1f\\x8b\\x08\\x08\\x00\\x00\\x00\\x00" > "$out"
+        printf 200
+        exit 0
+    fi
     if [ -n "${STUB_ISIZE:-}" ] && [ -n "$out" ]; then
         n=$STUB_ISIZE
         printf %b "$(printf "\\x%02x\\x%02x\\x%02x\\x%02x" \
@@ -376,6 +384,7 @@ run() {
         STUB_CURL_RC="${STUB_CURL_RC:-0}" \
         STUB_DL_BYTES="${STUB_DL_BYTES:-}" \
         STUB_ISIZE="${STUB_ISIZE:-}" \
+        STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
         UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
         sh "$SB/sysupgrade" "$@" 2>&1)
     RC=$?
@@ -397,7 +406,7 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
-    unset STUB_DL_BYTES STUB_ISIZE UNPACK_RESERVE_KB
+    unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB
     set_meminfo
     : > "$SDMOUNTS"
     set_mounts
@@ -869,6 +878,27 @@ if ! printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
 else
     bad "a 501 to the range probe must fall back to Content-Length, out='$OUT'"
 fi
+
+# The other way a Range probe goes wrong: a 200 with the file itself, whose
+# first four bytes are the gzip magic 0x08088b1f -- 135 MB, if believed.
+reset_env
+set_meminfo 8192
+STUB_DL_BYTES=1048576
+STUB_RANGE_IGNORED=1
+run -z --web -k -r
+if ! printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "...and a 200 to a ranged request is not read as a trailer"
+else
+    bad "the gzip magic must not be mistaken for a length, out='$OUT'"
+fi
+
+# That probe writes into the tmpfs this guard protects, so it has to be capped
+# at the four bytes it wants. Without --max-filesize a ranged GET that the
+# server answers with the whole artifact downloads the whole artifact: measured
+# on a lab gk7205v300, a 200 MB one filled its 60 MB /tmp and reset the board.
+grep -q -- '--max-filesize' "$SRC" \
+    && ok "the range probe cannot download more than the four bytes it wants" \
+    || bad "gzip_isize_kb must cap its response size"
 
 # Which response the length came from matters. `curl -IL` prints every hop, so
 # the last length in the stream is the redirect's whenever the artifact itself
@@ -1648,10 +1678,11 @@ echo
 echo "=== Part 2: invariants in $SRC ==="
 
 # An option named in a user-facing message must exist in the parser.
-# --connect-timeout and --speed-limit/--speed-time are curl's, not ours.
+# --connect-timeout, --speed-limit/--speed-time and --max-filesize are curl's,
+# not ours.
 for opt in $(grep -oE '\-\-[a-z_]+' "$SRC" | sort -u); do
     case "$opt" in
-        --force_*|--wipe_overlay|--no_reboot|--no_update|--no_ramfs|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--insecure|--connect*|--speed*|--proto*) continue ;;
+        --force_*|--wipe_overlay|--no_reboot|--no_update|--no_ramfs|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--insecure|--connect*|--speed*|--proto*|--max*) continue ;;
     esac
     bad "message references '$opt', which the option parser does not accept"
 done
