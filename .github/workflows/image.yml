@@ -141,7 +141,6 @@ jobs:
             hisi_layout() {
               case "$1" in
                 hi3516cv6xx) boot_kib=256 kern_kib=2048 fw_kib=7168 ;;
-                hi3519dv500) boot_kib=512 kern_kib=6144 fw_kib=14336 ;;
                 *) echo "::error::create_hisi: no NOR layout known for $1"; return 1 ;;
               esac
             }
@@ -261,8 +260,18 @@ jobs:
             # reached, nothing would publish for anyone. Collect instead: every
             # target gets its turn, what did assemble ships (Upload runs on
             # failure too), and the step still goes red so the refusal is seen.
+            # lite only. The table above is what the shipped u-boot declares,
+            # and it is the same table on an 8 MiB part and a 16 MiB one --
+            # there is one boot binary per DDR binning, not one per part size.
+            # So the firmware partition is 7168 KiB either way, and the cv6xx
+            # ultimate blob is 9152 KiB: it does not fit the partition at all,
+            # let alone the 5120 KiB rootfs slot inside it. FLASH_SIZE="16"
+            # buys it nothing, because the rest of the chip is rootfs_data.
+            # #2448 added the bounds checks that report this; it is not a
+            # regression they introduced. Re-add ultimate here when a u-boot
+            # ships whose mtdparts matches a 16 MiB part -- tracked in #2460.
             hisi_failed=
-            for variant in lite ultimate; do
+            for variant in lite; do
               case $variant in lite) nor=8192 ;; *) nor=16384 ;; esac
               create_hisi boot-hi3516cv610-10b-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr2-64m  320 "$nor" || hisi_failed=1
               create_hisi boot-hi3516cv610-20s-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr3-128m 320 "$nor" || hisi_failed=1
@@ -270,15 +279,14 @@ jobs:
               create_hisi boot-hi3516cv608-nor.bin     hi3516cv6xx "$variant" hi3516cv608           320 "$nor" || hisi_failed=1
             done
 
-            # HiSilicon Hi3519DV500 (aarch64 V5). Same scheme: a single shared
-            # kernel+rootfs blob (firmware.bin.hi3519dv500) plus a per-binning
-            # u-boot whose baked DDR reg table differs by board layout — dmeb
-            # (6-layer) and dmebpro (4-layer flyby), both DDR4-2666 2 GB. NOR
-            # layout (16 MiB): u-boot @0, env @0x80000, firmware @0xC0000 = 768 KiB.
-            for variant in ultimate; do
-              create_hisi boot-hi3519dv500-dmeb-nor.bin    hi3519dv500 "$variant" hi3519dv500-dmeb    768 || hisi_failed=1
-              create_hisi boot-hi3519dv500-dmebpro-nor.bin hi3519dv500 "$variant" hi3519dv500-dmebpro 768 || hisi_failed=1
-            done
+            # HiSilicon Hi3519DV500 (aarch64 V5) is not assembled here for the
+            # same reason, and it has no lite variant to fall back on. Its
+            # u-boot (dmeb 6-layer and dmebpro 4-layer flyby, both DDR4-2666
+            # 2 GB) declares 512k(boot),256k(env),6144k(kernel),8192k(rootfs),
+            # 14336k@0xC0000(firmware); the ultimate blob is 14464 KiB with an
+            # 8820 KiB rootfs, so it overruns both the rootfs slot and the
+            # firmware partition. Restore the loop with those numbers in
+            # hisi_layout once a u-boot exists that declares room for it (#2460).
 
             if [ -n "$hisi_failed" ]; then
               echo "::error::one or more HiSilicon NOR images were refused (see above); the rest were assembled and will still be uploaded"
