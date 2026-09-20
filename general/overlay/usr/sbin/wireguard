@@ -2,9 +2,9 @@
 
 . /usr/sbin/common
 
-for NAME in WG_PRIVKEY WG_ENDPOINT WG_ALIVE WG_PUBKEY WG_ALLOWED WG_ADDRESS; do
-	name=$(echo "$NAME" | tr '[:upper:]' '[:lower:]')
-	run_cmd "Failed to read $name U-Boot environment variable" "$NAME" fw_printenv -n "$name"
+for name in wg_privkey wg_endpoint wg_alive wg_pubkey wg_allowed wg_address; do
+	NAME=$(echo "$name" | tr '[:lower:]' '[:upper:]')
+	run_cmd "Failed to read $name U-Boot environment variable" $NAME fw_printenv -n $name
 done
 
 WG_SHARKEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
