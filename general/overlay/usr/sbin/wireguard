@@ -2,12 +2,10 @@
 
 . /usr/sbin/common
 
-run_cmd "Failed to read wg_privkey U-Boot environment variable" WG_PRIVKEY fw_printenv -n wg_privkey
-run_cmd "Failed to read wg_endpoint U-Boot environment variable" WG_ENDPOINT fw_printenv -n wg_endpoint
-run_cmd "Failed to read wg_alive U-Boot environment variable" WG_ALIVE fw_printenv -n wg_alive
-run_cmd "Failed to read wg_pubkey U-Boot environment variable" WG_PUBKEY fw_printenv -n wg_pubkey
-run_cmd "Failed to read wg_allowed U-Boot environment variable" WG_ALLOWED fw_printenv -n wg_allowed
-run_cmd "Failed to read wg_address U-Boot environment variable" WG_ADDRESS fw_printenv -n wg_address
+for name in wg_privkey wg_endpoint wg_alive wg_pubkey wg_allowed wg_address; do
+	NAME=$(echo "$name" | tr '[:lower:]' '[:upper:]')
+	run_cmd "Failed to read $name U-Boot environment variable" $NAME fw_printenv -n $name
+done
 
 WG_SHARKEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
 
