@@ -7,29 +7,17 @@ delay_max=60
 
 . /usr/sbin/common
 
-log() {
-	logger -p $1 -t "$prog" "$2"
-}
-
-warning() {
-	log daemon.warn "$1"
-}
-
-info() {
-	log daemon.info "$1"
-}
-
 start() {
 	read_subshell_pid
 	prog="${0##*/}[$subshell_pid]"
 
 	echo "$host" | grep -qE '^\[|^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$' ||
 		nslookup -timeout=3 -retry=1 "$host" >/dev/null 2>&1 || {
-			warning "Unable to resolve the WireGuard server hostname"
+			log_warning "Unable to resolve the WireGuard server hostname"
 			return 1
 		}
 
-	info "Starting WireGuard connection to $wg_endpoint"
+	log_info "Starting WireGuard connection to $wg_endpoint"
 
 	{
 		echo "#"
