@@ -13,37 +13,25 @@ delay_max=300
 
 . /usr/sbin/common
 
-log() {
-	logger -p $1 -t "$prog" "$2"
-}
-
-warning() {
-	log daemon.warn "$1"
-}
-
-info() {
-	log daemon.info "$1"
-}
-
 ready() {
 	identity_src=$(ip r | awk '/default/ {print $5}' | head -n 1)
 
 	[ -n "$identity_src" ] || {
-		warning "Unable to determine the default network interface"
+		log_warning "Unable to determine the default network interface"
 		return 1
 	}
 
 	identity_mac=$(cat "/sys/class/net/$identity_src/address" 2>/dev/null | tr 'a-z' 'A-Z')
 
 	[ -n "$identity_mac" ] || {
-		warning "Unable to read the MAC address of the default network interface"
+		log_warning "Unable to read the MAC address of the default network interface"
 		return 1
 	}
 
 	echo "$vtund_server" | grep -qE '^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$' && return 0
 
 	nslookup "$vtund_server" >/dev/null 2>&1 || {
-		warning "Unable to resolve the VTun server address"
+		log_warning "Unable to resolve the VTun server address"
 		return 1
 	}
 }
@@ -64,7 +52,7 @@ ready() {
 					ready && break
 				done
 
-				info "Starting the tunnel to $vtund_server"
+				log_info "Starting the tunnel to $vtund_server"
 			fi
 
 			if [ ! -L "/sys/class/net/$vtund_iface" ]; then

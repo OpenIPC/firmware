@@ -4,6 +4,7 @@ read_subshell_pid() {
 	IFS=' ' read -r subshell_pid _ < /proc/self/stat
 }
 
+# The calling script must set $prog before using the logging functions below.
 log_message() {
 	logger -p "$1" -t "$prog" "$2"
 }
