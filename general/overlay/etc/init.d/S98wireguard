@@ -2,7 +2,8 @@
 
 case "$1" in
 	start)
-		fw_printenv wg_privkey && wireguard
+		fw_printenv wg_privkey >/dev/null 2>&1 &&
+			wireguard
 		;;
 
 	stop)
