@@ -58,7 +58,7 @@ Thank you.
 <a href="https://opencollective.com/openipc/contribute/backer-14335/checkout" target="_blank"><img src="https://opencollective.com/webpack/donate/button@2x.png?color=blue" width="250" alt="Open Collective donate button"></a>
 </p>
 
-[chat]: https://openipc.org/our-channels
+[chat]: https://openipc.org/our-channels?ref=readme
 [contribution]: https://opencollective.com/openipc/contribute/backer-14335/checkout
 
 
@@ -68,6 +68,6 @@ Thank you.
 [opencollective]: https://opencollective.com/openipc
 [paypal]: https://www.paypal.com/donate/?hosted_button_id=C6F7UJLA58MBS
 [project]: https://github.com/openipc
-[telegram]: https://openipc.org/our-channels
-[website]: https://openipc.org
+[telegram]: https://openipc.org/our-channels?ref=readme
+[website]: https://openipc.org/?ref=readme
 [wiki]: https://github.com/openipc/wiki
