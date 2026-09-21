@@ -1,44 +1,72 @@
 #!/bin/sh
 
+config_path="/tmp/wireguard.conf"
+delay_start=0
+delay_step=10
+delay_max=60
+
 . /usr/sbin/common
 
+start() {
+	read_subshell_pid
+	prog="${0##*/}[$subshell_pid]"
+
+	echo "$host" | grep -qE '^\[|^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$' ||
+		nslookup -timeout=3 -retry=1 "$host" >/dev/null 2>&1 || {
+			log_warning "Unable to resolve the WireGuard server hostname"
+			return 1
+		}
+
+	log_info "Starting WireGuard connection to $wg_endpoint"
+
+	{
+		echo "#"
+		echo "[Interface]"
+		echo "PrivateKey = $wg_privkey"
+		echo
+		echo "[Peer]"
+		echo "Endpoint = $wg_endpoint"
+		echo "PersistentKeepalive = $wg_alive"
+		echo "PublicKey = $wg_pubkey"
+		[ -n "$wg_sharkey" ] && echo "PresharedKey = $wg_sharkey"
+		echo "AllowedIPs = $wg_allowed"
+		echo "#"
+	} >"$config_path"
+
+	run_cmd "Failed to apply WireGuard configuration" "" wg setconf wg0 "$config_path"
+
+	run_cmd "" "" false ip address add dev wg0 "$wg_address"
+	run_cmd "" "" false ip link set up dev wg0
+
+	for i in $(echo "$wg_allowed" | tr ',' ' '); do
+		run_cmd "" "" false ip -4 route add "$i" dev wg0
+	done
+
+	return 0
+}
+
 for name in wg_privkey wg_endpoint wg_alive wg_pubkey wg_allowed wg_address; do
-	NAME=$(echo "$name" | tr '[:lower:]' '[:upper:]')
-	run_cmd "Failed to read $name U-Boot environment variable" $NAME fw_printenv -n $name
+	run_cmd "Failed to read U-Boot environment variable $name" $name fw_printenv -n $name
 done
 
-WG_SHARKEY=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
+wg_sharkey=$(fw_printenv -n wg_sharkey 2>/dev/null || true)
 
-run_cmd "Failed to load wireguard module" "" modprobe wireguard
+run_cmd "Failed to load WireGuard module" "" modprobe wireguard
 run_cmd "Failed to create wg0 interface" "" ip link add dev wg0 type wireguard
 
-HOST="${WG_ENDPOINT%:*}"
+host="${wg_endpoint%:*}"
 
-if ! echo "$HOST" | grep -qE '^\[|^((^|\.)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){4}$'; then
-	while ! nslookup "$HOST" >/dev/null 2>&1; do
-		sleep 10
-	done
+if ! start; then
+	{
+		delay=$delay_start
+
+		while true; do
+			[ $delay -lt $delay_max ] && delay=$(( delay + delay_step ))
+			sleep $delay
+			start && break
+		done
+	} &
+
+	# 255 indicates that startup was deferred to the background retry loop.
+	exit 255
 fi
-
-{
-	echo "#"
-	echo "[Interface]"
-	echo "PrivateKey = $WG_PRIVKEY"
-	echo
-	echo "[Peer]"
-	echo "Endpoint = $WG_ENDPOINT"
-	echo "PersistentKeepalive = $WG_ALIVE"
-	echo "PublicKey = $WG_PUBKEY"
-	[ -n "$WG_SHARKEY" ] && echo "PresharedKey = $WG_SHARKEY"
-	echo "AllowedIPs = $WG_ALLOWED"
-	echo "#"
-} >/tmp/wireguard.conf
-
-run_cmd "Failed to apply wireguard configuration" "" wg setconf wg0 /tmp/wireguard.conf
-
-run_cmd "" "" false ip address add dev wg0 "$WG_ADDRESS"
-run_cmd "" "" false ip link set up dev wg0
-
-for i in $(echo "$WG_ALLOWED" | tr ',' ' '); do
-	run_cmd "" "" false ip -4 route add "$i" dev wg0
-done

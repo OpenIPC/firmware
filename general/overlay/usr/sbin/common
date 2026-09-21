@@ -4,6 +4,19 @@ read_subshell_pid() {
 	IFS=' ' read -r subshell_pid _ < /proc/self/stat
 }
 
+# The calling script must set $prog before using the logging functions below.
+log_message() {
+	logger -p "$1" -t "$prog" "$2"
+}
+
+log_warning() {
+	log_message daemon.warn "$1"
+}
+
+log_info() {
+	log_message daemon.info "$1"
+}
+
 is_priority() {
 	case "${1%%.*}" in
 		auth|authpriv|cron|daemon|ftp|kern|lpr|mail|mark|news|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7)
@@ -19,10 +32,6 @@ is_priority() {
 }
 
 run_cmd() {
-	local subshell_pid
-	read_subshell_pid
-	local run_cmd_prog="${0##*/}[$subshell_pid]"
-
 	local run_cmd_msg="$1"
 	local run_cmd_var="$2"
 	shift 2
@@ -57,18 +66,22 @@ run_cmd() {
 	local run_cmd_rc=$?
 
 	if [ "$run_cmd_rc" -ne 0 ]; then
+		local subshell_pid
+		read_subshell_pid
+		local prog="${0##*/}[$subshell_pid]"
+
 		if [ -n "$run_cmd_msg" ]; then
-			logger -p "$run_cmd_priority" -t "$run_cmd_prog" "$run_cmd_msg"
+			log_message "$run_cmd_priority" "$run_cmd_msg"
 		fi
 
-		local run_cmd_symbol
-		[ -z "$run_cmd_output" ] && run_cmd_symbol="." || run_cmd_symbol=":"
-		logger -p "$run_cmd_priority" -t "$run_cmd_prog" "Command \`$*\` finished with code $run_cmd_rc$run_cmd_symbol"
+		local symbol
+		[ -z "$run_cmd_output" ] && symbol="." || symbol=":"
+		log_message "$run_cmd_priority" "Command \`$*\` finished with code $run_cmd_rc$symbol"
 
 		if [ -n "$run_cmd_output" ]; then
 			printf '%s\n' "$run_cmd_output" |
 			while IFS= read -r line; do
-				logger -p "$run_cmd_priority" -t "$run_cmd_prog" "$line"
+				log_message "$run_cmd_priority" "$line"
 			done
 
 			echo "$run_cmd_output" >&2
