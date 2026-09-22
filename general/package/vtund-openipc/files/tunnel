@@ -36,8 +36,6 @@ start() {
 			return 1
 		}
 
-	log_info "Starting the tunnel to $server"
-
 	if [ ! -L "/sys/class/net/$vtund_iface" ]; then
 		run_cmd "" "" false daemon.err modprobe tun || return 1
 		run_cmd "" "" false daemon.err tunctl -t "$vtund_iface" || return 1
@@ -74,12 +72,14 @@ start() {
 	# Workaround for VTun bug described in https://bugzilla.redhat.com/show_bug.cgi?id=1462458#c26
 	run_cmd "" "" false daemon.err ifconfig $vtund_iface hw ether $default_mac mtu 1500 -multicast up || return 1
 
-	start_time=$(date +%s)
+	log_info "Starting the tunnel to $server"
+
+	start_time=$(cat /proc/uptime | cut -d " " -f 1 | tr -d .)
 	vtund -n -f "$config_path" "$profile" "$server" >/dev/null 2>&1
-	end_time=$(date +%s)
+	end_time=$(cat /proc/uptime | cut -d " " -f 1 | tr -d .)
 
 	# Treat a session that ends quickly as a failed attempt regardless of status
-	[ $(( end_time - start_time )) -ge 3 ]
+	[ $(( end_time - start_time )) -ge 1000 ]
 }
 
 {
