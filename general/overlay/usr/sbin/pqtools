@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# OpenIPC.org | v.20241112
+# OpenIPC.org | v.20260922
 #
 
 set -e
@@ -21,7 +21,7 @@ prepare() {
 	gk7205v200 | gk7205v210 | gk7205v300)
 		echo -e "\n\e[1;31mA supported processor with unknown MPP was found...\e[0m\n"
 		echo -e "\n\e[1;31mDownload PQTools from https://github.com/openipc/pqtools/raw/master/gk7205v200/PQTools.tgz\e[0m\n"
-		ittb_url="https://raw.githubusercontent.com/widgetii/openipc/master/gk7205v200/ittb_V1.0.2.0.tgz"
+		ittb_url="https://raw.githubusercontent.com/openipc/pqtools/master/gk7205v200/ittb_V1.0.2.0.tgz"
 		ittb_folder="ittb_V1.0.2.0"
 		;;
 
@@ -40,7 +40,27 @@ download() if [[ -d /tmp/${ittb_folder} ]]; then
 	./start.sh
 else
 	echo -e "\n\e[1;31mDownloading the latest tools, please wait...\e[0m\n"
-	curl -s ${ittb_url} | gzip -d - | tar xvf - -C /tmp
+	# Fetched to a file and only then unpacked. A `curl | gzip | tar` pipeline
+	# reports just tar's status in ash, so a truncated download that tar
+	# half-accepts would look like success -- and the directory it left behind
+	# is what the branch above treats as a valid cache on the next run.
+	# mktemp, not a name derived from ${ittb_folder}: this runs as root, and a
+	# predictable path in a world-writable /tmp can be pre-created as a symlink,
+	# in which case curl truncates and rewrites whatever it points at and the
+	# rm below only takes the link away. mktemp creates the file exclusively.
+	archive=$(mktemp /tmp/ittb.XXXXXX) || exit 1
+	if ! curl -sfL -o "${archive}" ${ittb_url}; then
+		rm -f "${archive}"
+		echo -e "\n\e[1;31mCould not fetch ${ittb_url}\e[0m\n"
+		exit 1
+	fi
+	if ! tar xzf "${archive}" -C /tmp; then
+		rm -f "${archive}"
+		rm -rf /tmp/${ittb_folder}
+		echo -e "\n\e[1;31m${ittb_url} is not a readable archive\e[0m\n"
+		exit 1
+	fi
+	rm -f "${archive}"
 	echo -e "\n\e[1;31mWe run the utilities for sensor calibration...\e[0m\n"
 	cd /tmp/${ittb_folder}
 	./start.sh
