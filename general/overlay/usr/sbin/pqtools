@@ -40,10 +40,22 @@ download() if [[ -d /tmp/${ittb_folder} ]]; then
 	./start.sh
 else
 	echo -e "\n\e[1;31mDownloading the latest tools, please wait...\e[0m\n"
-	if ! curl -sfL ${ittb_url} | gzip -d - | tar xvf - -C /tmp; then
+	# Fetched to a file and only then unpacked. A `curl | gzip | tar` pipeline
+	# reports just tar's status in ash, so a truncated download that tar
+	# half-accepts would look like success -- and the directory it left behind
+	# is what the branch above treats as a valid cache on the next run.
+	archive=/tmp/${ittb_folder}.tgz
+	if ! curl -sfL -o ${archive} ${ittb_url}; then
+		rm -f ${archive}
 		echo -e "\n\e[1;31mCould not fetch ${ittb_url}\e[0m\n"
 		exit 1
 	fi
+	if ! tar xzf ${archive} -C /tmp; then
+		rm -rf ${archive} /tmp/${ittb_folder}
+		echo -e "\n\e[1;31m${ittb_url} is not a readable archive\e[0m\n"
+		exit 1
+	fi
+	rm -f ${archive}
 	echo -e "\n\e[1;31mWe run the utilities for sensor calibration...\e[0m\n"
 	cd /tmp/${ittb_folder}
 	./start.sh
