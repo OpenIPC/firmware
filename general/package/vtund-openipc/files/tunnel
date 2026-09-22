@@ -72,7 +72,7 @@ start() {
 	# Workaround for VTun bug described in https://bugzilla.redhat.com/show_bug.cgi?id=1462458#c26
 	run_cmd "" "" false daemon.err ifconfig $vtund_iface hw ether $default_mac mtu 1500 -multicast up || return 1
 
-	log_info "Starting the tunnel to $server"
+	log_info "Starting VTun connection to $server"
 
 	start_time=$(cat /proc/uptime | cut -d " " -f 1 | tr -d .)
 	vtund -n -f "$config_path" "$profile" "$server" >/dev/null 2>&1
