@@ -17,8 +17,6 @@ start() {
 			return 1
 		}
 
-	log_info "Starting WireGuard connection to $wg_endpoint"
-
 	{
 		echo "#"
 		echo "[Interface]"
@@ -32,6 +30,8 @@ start() {
 		echo "AllowedIPs = $wg_allowed"
 		echo "#"
 	} >"$config_path"
+
+	log_info "Starting WireGuard connection to $wg_endpoint"
 
 	run_cmd "Failed to apply WireGuard configuration" "" wg setconf wg0 "$config_path"
 
