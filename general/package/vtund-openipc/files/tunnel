@@ -3,7 +3,7 @@
 server=${1:-vtun.localhost}
 port="5000"
 vtund_iface="tunnel"
-device="IPC-VTUND"
+device_name="IPC-VTUND"
 working_dir="/tmp"
 config_path="$working_dir/vtund.conf"
 udhcpc_pid_path="$working_dir/udhcpc-$vtund_iface.pid"
@@ -62,7 +62,7 @@ start() {
 		echo "	timeout 10;"
 		echo "	up {"
 		echo "		ifconfig \"$vtund_iface hw ether $default_mac mtu 1500 -multicast up\";"
-		echo "		program \"udhcpc -T 1 -t 5 -R -b -O staticroutes -S -s tapip -p '$udhcpc_pid_path' -i $vtund_iface -x hostname:$device-$profile\";"
+		echo "		program \"udhcpc -T 1 -t 5 -R -b -O staticroutes -S -s tapip -p '$udhcpc_pid_path' -i $vtund_iface -x hostname:$device_name-$profile\";"
 		echo "	};"
 		echo "	down {"
 		echo "		program \"kill_pid_file -9 '$udhcpc_pid_path' udhcpc\";"
@@ -71,12 +71,15 @@ start() {
 		echo "}"
 	} >"$config_path"
 
-	# workaround for VTun bug described in https://bugzilla.redhat.com/show_bug.cgi?id=1462458#c26
+	# Workaround for VTun bug described in https://bugzilla.redhat.com/show_bug.cgi?id=1462458#c26
 	run_cmd "" "" false daemon.err ifconfig $vtund_iface hw ether $default_mac mtu 1500 -multicast up || return 1
 
+	start_time=$(date +%s)
 	vtund -n -f "$config_path" "$profile" "$server" >/dev/null 2>&1
+	end_time=$(date +%s)
 
-	return 0
+	# Treat a session that ends quickly as a failed attempt regardless of status
+	[ $(( end_time - start_time )) -ge 3 ]
 }
 
 {
