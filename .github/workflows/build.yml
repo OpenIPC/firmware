@@ -521,13 +521,63 @@ jobs:
       # e.g. run 27108181857, where every build succeeded but 14 jobs went red
       # in their upload step. Consolidating every release write into one job
       # removes the concurrent-writer contention.
+      #
+      # It also makes this the only post-build step whose failure costs
+      # anything, because it is the only one something downstream reads.
+      # `size-report`, `kconfig-graph` and the Telegram call below all degrade
+      # to a warning; this upload IS the board's handoff to `publish`, so a
+      # board whose artifact never arrives keeps its PREVIOUS image on
+      # `nightly` and `latest` (#2303) while every other board moves on. It
+      # therefore has to keep failing the job — but it had no reason to fail
+      # it for one dropped packet, which is what the retry below fixes.
+      #
+      # On 2026-09-22 (run 35761639634) gk7205v200_ultimate built clean —
+      # 1876KB/2048KB kernel, 6656KB/8192KB rootfs, modules verified — and
+      # then died here with `getaddrinfo EAI_AGAIN` against
+      # productionresultssa2.blob.core.windows.net: a runner DNS blip talking
+      # to Azure blob storage. One board shipped a day-old image and the
+      # nightly went red 99/100. The build step gets 7 attempts over ~38
+      # minutes (#2036); this one got a single shot, the same asymmetry that
+      # made a lost Telegram packet fail a run before #2351.
       - name: Upload build artifacts
+        id: upload
         if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: fw-${{ matrix.platform }}
+          if-no-files-found: ignore
+          retention-days: 1
+          path: |
+            output/images/openipc*.tgz
+            output/images/sizes.*.json
+            output/images/kconfig-graph.*.json
+            output/images/kconfig-help.*.json
+
+      # A pause, not an immediate retry: EAI_AGAIN is a resolver that has not
+      # answered yet, and asking it again in the same second asks the same
+      # unanswered question.
+      - name: Pause before retrying the upload
+        if: github.event_name != 'pull_request' && steps.upload.outcome == 'failure'
+        run: |
+          echo "::warning::${{matrix.platform}}: artifact upload failed, retrying in 60s"
+          sleep 60
+
+      # One retry, and it is allowed to fail the job. The first attempt
+      # absorbed the blip class; a second failure is no longer a blip, and
+      # `publish` and the gate both need to see that this board did not
+      # deliver rather than find out from a stale release asset.
+      #
+      # `overwrite` because a first attempt that dies mid-upload has already
+      # claimed the artifact name, and v4 refuses a duplicate.
+      - name: Upload build artifacts (retry)
+        if: github.event_name != 'pull_request' && steps.upload.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: fw-${{ matrix.platform }}
           if-no-files-found: ignore
           retention-days: 1
+          overwrite: true
           path: |
             output/images/openipc*.tgz
             output/images/sizes.*.json
