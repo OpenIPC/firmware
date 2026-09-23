@@ -5,7 +5,7 @@
 ################################################################################
 
 MAJESTIC_AF_SITE = $(call github,openipc,majestic-af,$(MAJESTIC_AF_VERSION))
-MAJESTIC_AF_VERSION = d1ff109ac0de1ca3cc800827b949415860038444
+MAJESTIC_AF_VERSION = 0fbc58a82183b06db6c5696630eb4441f10b8711
 
 MAJESTIC_AF_LICENSE = MIT
 MAJESTIC_AF_LICENSE_FILES = LICENSE
@@ -16,6 +16,16 @@ MAJESTIC_AF_LICENSE_FILES = LICENSE
 # this links nothing from majestic — only its own vendored headers. majestic must
 # be built with plugin-symbol export (WITH_PLUGINS_SUPPORT) for those to resolve;
 # the plugin otherwise fails to load and majestic keeps working without it.
+#
+# The pin is a full SHA and stays one. It went stale for ten days here — three
+# merged autofocus fixes that no nightly ever built — and the cure for that is
+# something that MOVES the pin, not the removal of the pin: a SHA is what lets a
+# published image be tied back to the plugin source inside it, and nothing else
+# in this package records that. Tracking HEAD would also give the download a
+# constant filename, which the Makefile's `prepare` expiry does not cover (it
+# names only majestic.*.master.tar.bz2 and majestic-webui-dist.tar.gz), so a
+# local from-source build would serve a stale majestic-af archive indefinitely —
+# the very staleness this bump exists to end.
 #
 # Built through upstream's own CMakeLists, which is the only place the source
 # list is allowed to live. This package used to carry a hand-written compile
