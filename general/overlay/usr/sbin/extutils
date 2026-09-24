@@ -113,9 +113,29 @@ mac_is_own() { mac_is_valid "$1" && ! mac_is_placeholder "$1"; }
 # A locally administered unicast address: bit 1 of the first octet set, bit 0
 # clear. 02: is the lowest prefix that satisfies both, and holding it fixed
 # also makes a self-assigned address recognisable beside a real vendor OUI.
+#
+# The read is bounded because it runs at S30, ahead of everything after
+# S40network. A kernel with no entropy source yet blocks /dev/urandom until
+# its CRNG is ready: on a hi3516av100 _neo image under QEMU (no working arch
+# timer) that was 85 s, measured. -k for the reason udhcpc's ntpd call has
+# it: TERM alone bounds nothing against a process that does not act on it. A
+# camera whose store refuses the write mints again at every boot, so this is
+# paid every time, not once.
+#
+# The fallback is the address the kernel already put on eth0, which it drew
+# from its own pool without waiting -- but only if that is locally
+# administered, i.e. the kernel's random pick. A vendor or bootarg address
+# there (the placeholder included) is exactly what must not be copied onto a
+# second camera. The first octet is forced to 02 like the minted ones.
 mac_generate() {
-	generated=$(od -An -tx1 -N5 /dev/urandom | tr -d ' ' |
+	generated=$(timeout -k 1 3 od -An -tx1 -N5 /dev/urandom 2>/dev/null | tr -d ' ' |
 		sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)$/02:\1:\2:\3:\4:\5/')
+	if ! mac_is_own "$generated"; then
+		kernel=$(cat "/sys/class/net/eth0/address" 2>/dev/null)
+		case "$kernel" in
+			[0-9a-fA-F][26aeAE]:*) generated=02:${kernel#??:} ;;
+		esac
+	fi
 	# The pipeline reports sed's status, so a short read or a missing
 	# /dev/urandom comes back as success with nothing in it. That must not
 	# reach the store: `fw_setenv ethaddr ""` does not write an empty address,
