@@ -122,18 +122,35 @@ mac_is_own() { mac_is_valid "$1" && ! mac_is_placeholder "$1"; }
 # camera whose store refuses the write mints again at every boot, so this is
 # paid every time, not once.
 #
-# The fallback is the address the kernel already put on eth0, which it drew
-# from its own pool without waiting -- but only if that is locally
-# administered, i.e. the kernel's random pick. A vendor or bootarg address
-# there (the placeholder included) is exactly what must not be copied onto a
-# second camera. The first octet is forced to 02 like the minted ones.
+# The fallback is the address already on eth0, and only when it is locally
+# administered. Two things put one there. The kernel's own random pick, drawn
+# from its pool without waiting, is forced to the 02 prefix like a minted
+# address. An ethaddr= bootarg (openipc_ethaddr applies it to eth0; it is how
+# an NFS-root camera gets its address) is kept exactly: that is this camera's
+# address from its u-boot env, and rewriting it would persist a different one
+# for the next boot. A vendor OUI on eth0 is refused whichever way it came --
+# a u-boot default is shared fleet-wide, the placeholder being the known case,
+# and copying it is the duplicate-identity bug.
 mac_generate() {
-	generated=$(timeout -k 1 3 od -An -tx1 -N5 /dev/urandom 2>/dev/null | tr -d ' ' |
-		sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)$/02:\1:\2:\3:\4:\5/')
+	# The group redirect, not one on timeout: when the limit fires it is ash
+	# that reports the kill ("Terminated"), to its own stderr, and that line
+	# would land in the boot log.
+	generated=$( { timeout -k 1 3 od -An -tx1 -N5 /dev/urandom | tr -d ' ' |
+		sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)$/02:\1:\2:\3:\4:\5/'; } 2>/dev/null)
 	if ! mac_is_own "$generated"; then
-		kernel=$(cat "/sys/class/net/eth0/address" 2>/dev/null)
-		case "$kernel" in
-			[0-9a-fA-F][26aeAE]:*) generated=02:${kernel#??:} ;;
+		live=$(cat "/sys/class/net/eth0/address" 2>/dev/null)
+		bootarg=
+		for arg in $(cat /proc/cmdline 2>/dev/null); do
+			case "$arg" in ethaddr=*) bootarg=$(echo "${arg#ethaddr=}" | tr 'A-F' 'a-f') ;; esac
+		done
+		case "$live" in
+			[0-9a-f][26ae]:*)
+				if [ "$live" = "$bootarg" ]; then
+					generated=$live
+				else
+					generated=02:${live#??:}
+				fi
+				;;
 		esac
 	fi
 	# The pipeline reports sed's status, so a short read or a missing

@@ -215,6 +215,34 @@ for eth in bc:24:11:aa:bb:cc 00:00:23:34:45:66; do
     T "" "$(env_mac)" "...and stores nothing rather than a copy of $eth"
 done
 
+# An ethaddr= bootarg is how an NFS-root camera gets its address, and the
+# kernel applies it to eth0. Locally administered, that is this camera's own
+# address from its u-boot env -- kept exactly, not rewritten to 02:, or the
+# next boot comes up on a different one.
+for arg in 0a:11:22:33:44:55 0A:11:22:33:44:55; do
+    reset_camera
+    echo 0a:11:22:33:44:55 > "$SB/sys/class/net/eth0/address"
+    printf 'console=ttyAMA0,115200 root=/dev/nfs ethaddr=%s ip=dhcp\n' "$arg" > "$SB/proc/cmdline"
+    URANDOM=$SB/urandom-blocked check_mac >/dev/null 2>&1
+    T "0a:11:22:33:44:55" "$(env_mac)" "blocking /dev/urandom, eth0 set by bootarg ethaddr=$arg: kept unchanged"
+done
+
+# A bootarg that does not match eth0 says nothing about eth0's address; the
+# kernel's random pick is still rewritten to 02:.
+reset_camera
+printf 'console=ttyAMA0,115200 ethaddr=0a:11:22:33:44:55\n' > "$SB/proc/cmdline"
+URANDOM=$SB/urandom-blocked check_mac >/dev/null 2>&1
+T "02:${KERNEL_MAC#??:}" "$(env_mac)" "a bootarg that does not match eth0 does not stop the 02 rewrite"
+
+# A vendor OUI from the bootarg is refused like any other: it may be a u-boot
+# default that every camera of the family carries.
+reset_camera
+echo bc:24:11:aa:bb:cc > "$SB/sys/class/net/eth0/address"
+printf 'console=ttyAMA0,115200 ethaddr=bc:24:11:aa:bb:cc\n' > "$SB/proc/cmdline"
+URANDOM=$SB/urandom-blocked check_mac >/dev/null 2>&1
+T "1" "$?" "blocking /dev/urandom, vendor OUI from the bootarg on eth0: check_mac fails"
+T "" "$(env_mac)" "...and stores nothing"
+
 echo "=== Part 2: where it is stored ==="
 
 # A board whose environment refuses the write still has to end up with an
