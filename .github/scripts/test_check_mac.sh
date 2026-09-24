@@ -48,6 +48,7 @@ mkdir -p "$SB/bin" "$SB/etc" "$SB/proc" "$SB/sys/class/net/eth0"
 sed -e "s|^ETHADDR_FILE=/etc/ethaddr|ETHADDR_FILE=$SB/etc/ethaddr|" \
     -e "s|\"/sys/class/net/|\"$SB/sys/class/net/|g" \
     -e "s|/proc/cmdline|$SB/proc/cmdline|g" \
+    -e "s|/dev/urandom|\${URANDOM:-/dev/urandom}|g" \
     "$SRC" > "$SB/bin/extutils"
 chmod +x "$SB/bin/extutils"
 grep -q "^ETHADDR_FILE=$SB/etc/ethaddr" "$SB/bin/extutils" ||
@@ -192,6 +193,56 @@ octet=$(printf '%d' "0x${first%%:*}")
 [ $((octet & 1)) -eq 0 ] && ok "generated address is unicast" ||
     bad "generated address $first is multicast"
 
+# A kernel whose CRNG is not ready yet blocks the read. A FIFO nobody writes
+# to blocks the same way, at open(). The mint must neither hang the boot (S30
+# runs ahead of the network) nor come back empty.
+mkfifo "$SB/urandom-blocked"
+reset_camera
+t0=$SECONDS
+URANDOM=$SB/urandom-blocked check_mac >/dev/null 2>&1
+took=$((SECONDS - t0))
+[ $took -le 6 ] && ok "a blocking /dev/urandom costs ${took}s, not the boot" ||
+    bad "a blocking /dev/urandom held check_mac for ${took}s"
+T "02:${KERNEL_MAC#??:}" "$(env_mac)" "...and the kernel's random eth0 address is used instead"
+
+# ...but only the kernel's own random pick. A vendor OUI or the placeholder on
+# eth0 came from u-boot, and copying it is the duplicate-identity bug.
+for eth in bc:24:11:aa:bb:cc 00:00:23:34:45:66; do
+    reset_camera
+    echo "$eth" > "$SB/sys/class/net/eth0/address"
+    URANDOM=$SB/urandom-blocked check_mac >/dev/null 2>&1
+    T "1" "$?" "blocking /dev/urandom with $eth on eth0: check_mac fails"
+    T "" "$(env_mac)" "...and stores nothing rather than a copy of $eth"
+done
+
+# An ethaddr= bootarg is how an NFS-root camera gets its address, and the
+# kernel applies it to eth0. Locally administered, that is this camera's own
+# address from its u-boot env -- kept exactly, not rewritten to 02:, or the
+# next boot comes up on a different one.
+for arg in 0a:11:22:33:44:55 0A:11:22:33:44:55; do
+    reset_camera
+    echo 0a:11:22:33:44:55 > "$SB/sys/class/net/eth0/address"
+    printf 'console=ttyAMA0,115200 root=/dev/nfs ethaddr=%s ip=dhcp\n' "$arg" > "$SB/proc/cmdline"
+    URANDOM=$SB/urandom-blocked check_mac >/dev/null 2>&1
+    T "0a:11:22:33:44:55" "$(env_mac)" "blocking /dev/urandom, eth0 set by bootarg ethaddr=$arg: kept unchanged"
+done
+
+# A bootarg that does not match eth0 says nothing about eth0's address; the
+# kernel's random pick is still rewritten to 02:.
+reset_camera
+printf 'console=ttyAMA0,115200 ethaddr=0a:11:22:33:44:55\n' > "$SB/proc/cmdline"
+URANDOM=$SB/urandom-blocked check_mac >/dev/null 2>&1
+T "02:${KERNEL_MAC#??:}" "$(env_mac)" "a bootarg that does not match eth0 does not stop the 02 rewrite"
+
+# A vendor OUI from the bootarg is refused like any other: it may be a u-boot
+# default that every camera of the family carries.
+reset_camera
+echo bc:24:11:aa:bb:cc > "$SB/sys/class/net/eth0/address"
+printf 'console=ttyAMA0,115200 ethaddr=bc:24:11:aa:bb:cc\n' > "$SB/proc/cmdline"
+URANDOM=$SB/urandom-blocked check_mac >/dev/null 2>&1
+T "1" "$?" "blocking /dev/urandom, vendor OUI from the bootarg on eth0: check_mac fails"
+T "" "$(env_mac)" "...and stores nothing"
+
 echo "=== Part 2: where it is stored ==="
 
 # A board whose environment refuses the write still has to end up with an
@@ -262,7 +313,12 @@ echo "=== Part 4b: nothing unusable ever reaches the store ==="
 # address, it DELETES the variable. A camera that had a good MAC would come
 # back on a fresh kernel-random one every boot -- #2405, reintroduced by the
 # very code meant to fix it. So a broken generator must persist NOTHING.
+#
+# "Broken" means no source at all: od fails AND eth0 carries a u-boot address
+# rather than the kernel's random pick, so the fallback has nothing it may use.
+NO_FALLBACK_MAC=bc:24:11:aa:bb:cc
 reset_camera
+echo "$NO_FALLBACK_MAC" > "$SB/sys/class/net/eth0/address"
 echo "ethaddr=00:00:23:34:45:66" > "$UENV"
 stub od 'exit 1'
 check_mac >/dev/null 2>&1
@@ -274,16 +330,26 @@ T "00:00:23:34:45:66" "$(env_mac)" "...leaving the old value untouched rather th
 
 # Same again where od succeeds but returns too few bytes to make an address.
 reset_camera
+echo "$NO_FALLBACK_MAC" > "$SB/sys/class/net/eth0/address"
 stub od 'echo " 12 34"'
 check_mac >/dev/null 2>&1
 T "1" "$?" "check_mac fails on a short read from /dev/urandom"
 T "0" "$(setenv_runs)" "...and still writes nothing"
 
 reset_camera
+echo "$NO_FALLBACK_MAC" > "$SB/sys/class/net/eth0/address"
 stub od 'exit 1'
 set_mac >/dev/null 2>&1
 T "1" "$?" "bare set_mac fails when the address cannot be generated"
 T "0" "$(setenv_runs)" "...and writes nothing"
+
+# With the kernel's random pick on eth0 the same broken od still yields a
+# usable address -- and only that one.
+reset_camera
+stub od 'exit 1'
+check_mac >/dev/null 2>&1
+T "0" "$?" "od failing with a kernel-random eth0 falls back to it"
+T "02:${KERNEL_MAC#??:}" "$(env_mac)" "...storing it under the 02 prefix"
 
 # Restore the real od for everything after this.
 rm -f "$SB/bin/od"
