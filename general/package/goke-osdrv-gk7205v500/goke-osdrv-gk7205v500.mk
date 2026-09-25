@@ -36,14 +36,12 @@ define GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS
 endef
 endif
 
-define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/config/*.ini
-
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/iq/sc2232.ini
-	ln -sf sc2232.ini $(TARGET_DIR)/etc/sensors/iq/default.ini
-
+# GK7201V200 takes its vendor modules from hisilicon-opensdk instead: the
+# XMedia SDK's V200 set, rebuilt from source and relinked against this
+# kernel. The prebuilt set below is the V500 one, which on that die gets as
+# far as the ISP and then fails VENC CreateChn (F008FFFF, #2464).
+ifneq ($(BR2_PACKAGE_HISILICON_OPENSDK),y)
+define GOKE_OSDRV_GK7205V500_INSTALL_KMODS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.37/goke
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/goke $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod/xm_acodec.ko
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/goke $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod/xm_adc.ko
@@ -84,6 +82,28 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/goke $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod/xm_vo.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/goke $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod/xm_vpss.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/goke $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/kmod/xm_wdt.ko
+endef
+endif
+
+# ...and the userspace half to match: the kernel<->userspace MPI boundary is
+# binary, so libxmedia_* have to come from the same (V200) set as the
+# modules. These are the SDK's V200 builds of the libraries that differ from
+# the V500 ones installed above; the rest are byte-identical.
+ifeq ($(OPENIPC_SOC_MODEL),gk7201v200)
+define GOKE_OSDRV_GK7205V500_INSTALL_V200_LIBS
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/v200/*.so
+endef
+endif
+
+define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/config/*.ini
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/iq/sc2232.ini
+	ln -sf sc2232.ini $(TARGET_DIR)/etc/sensors/iq/default.ini
+
+	$(GOKE_OSDRV_GK7205V500_INSTALL_KMODS)
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/script/load*
@@ -191,6 +211,7 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libxmedia_tde.so
 
 	$(GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS)
+	$(GOKE_OSDRV_GK7205V500_INSTALL_V200_LIBS)
 endef
 
 $(eval $(generic-package))
