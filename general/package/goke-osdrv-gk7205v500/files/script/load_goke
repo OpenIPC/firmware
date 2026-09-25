@@ -261,6 +261,16 @@ fi
 
 #######################Action###############################
 
+# -r and -a remove the stack first, which needs a kernel that can unload
+# modules. This family's kernels are built without CONFIG_MODULE_UNLOAD, to
+# match the ABI the vendor modules were compiled against, so rmmod would fail
+# on every module and -a would then insmod over the ones still loaded.
+# /sys/module/<m>/refcnt only exists when unloading is supported.
+if [ $b_arg_remove -eq 1 ] && ! ls /sys/module/*/refcnt >/dev/null 2>&1; then
+	echo "[err] this kernel cannot unload modules: -r/-a are unavailable, reboot to reload" >&2
+	exit 1
+fi
+
 if [ $# -lt 1 ]; then
 	load_usage
 	exit 0

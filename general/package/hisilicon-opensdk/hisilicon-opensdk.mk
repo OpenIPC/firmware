@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 56bc640059c68ee40433b2c60e3b8ca114d12b77
+HISILICON_OPENSDK_VERSION = 6eb7736a69121fda49f53656001426d2fe6a5030
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -38,6 +38,9 @@ endif
 ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3519DV500),y)
 HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3519dv500
 endif
+ifeq ($(BR2_PACKAGE_GOKE_OSDRV_GK7205V500),y)
+HISILICON_OPENSDK_DEPENDENCIES += goke-osdrv-gk7205v500
+endif
 
 HISILICON_OPENSDK_MODULE_SUBDIRS = kernel
 HISILICON_OPENSDK_MODULE_MAKE_OPTS = \
@@ -66,6 +69,17 @@ endif
 # include() stay disabled.
 ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv6xx)
 HISILICON_OPENSDK_MODULE_MAKE_OPTS += DISABLE_VO=1 DISABLE_TDE=1
+endif
+
+# XMedia (gk7205v500 family): the SDK ships two prebuilt module sets that are
+# not interchangeable. GK7201V200 is a V200-class die (chip id 0x72010200);
+# the V500 set gets it as far as the ISP and no further (#2464).
+ifeq ($(OPENIPC_SOC_FAMILY),gk7205v500)
+ifeq ($(OPENIPC_SOC_MODEL),gk7201v200)
+HISILICON_OPENSDK_MODULE_MAKE_OPTS += XM_SET=V200
+else
+HISILICON_OPENSDK_MODULE_MAKE_OPTS += XM_SET=V500
+endif
 endif
 
 ifeq ($(OPENIPC_SOC_FAMILY),hi3516ev200)
@@ -244,6 +258,12 @@ HISILICON_OPENSDK_SENSORS_hi3519dv500 = \
 	sony_imx347_slave/libsns_imx347_slave \
 	sony_imx515/libsns_imx515
 
+# gk7205v500 builds the V4 drivers (sensor/hi3516ev200) against the XMedia
+# API. Only the sensors GK7201V200 boards carry are installed: the lite
+# rootfs has no room for all thirty. sc2336 still comes from the osdrv.
+HISILICON_OPENSDK_SENSORS_gk7205v500 = \
+	imagedesign_mis2008/libsns_mis2008 \
+	smart_sc223a/libsns_sc223a
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
 # fpv variant on V4 (hi3516ev200 + gk7205v200): restrict to the high-fps
@@ -514,6 +534,26 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	done
 endef
 
+# For gk7205v500 (XMedia): same scheme as gk7205v200, under the xm_*.ko names
+# load_goke insmods/modprobes -- the set goke-osdrv-gk7205v500 installs when
+# opensdk is off. The sensors are the V4 ones from sensor/hi3516ev200.
+else ifeq ($(OPENIPC_SOC_FAMILY),gk7205v500)
+HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/$(HISILICON_OPENSDK_KVER)/goke
+HISILICON_OPENSDK_XM_MODS = acodec adec aenc ai aio ao base chnl h264e h265e \
+	isp isp_sensor_i2c isp_sensor_spi ive jpege mipi_rx osal rc rgn sys \
+	sysconfig vedu venc vgs vi vpss wdt
+define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
+	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/hi3516ev200/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
+	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
+	for mod in $(HISILICON_OPENSDK_XM_MODS); do \
+		$(INSTALL) -m 644 $(@D)/kernel/open_$${mod}.ko \
+			$(HISILICON_OPENSDK_KMOD_DST)/xm_$${mod}.ko || exit 1; \
+	done
+endef
+
 # For hi3516cv6xx: V5 — install opensdk .ko directly to hisilicon/ keeping
 # the open_* names. load_hisilicon (rewritten) drives `modprobe open_*`.
 # Sensor .so files built from source under libraries/sensor/hi3516cv6xx/
@@ -675,6 +715,17 @@ define HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
 	$(LINUX_RUN_DEPMOD)
 endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
+endif
+
+# For gk7205v500: every module is renamed into goke/, so none of the
+# source-named copies in extra/ is reachable; drop them all.
+ifeq ($(OPENIPC_SOC_FAMILY),gk7205v500)
+define HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V500
+	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
+	rm -f $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
+	$(LINUX_RUN_DEPMOD)
+endef
+HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V500
 endif
 
 # Modules built for V4 ev200 by openhisilicon's Kbuild but never insmod'd
