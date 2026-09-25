@@ -20,6 +20,19 @@ fi
 if grep -q "USES_MUSL=y" ${BR2_CONFIG}; then
 	ln -sf libc.so ${TARGET_DIR}/lib/ld-uClibc.so.0
 	ln -sf ../../lib/libc.so ${TARGET_DIR}/usr/bin/ldd
+
+	# The external toolchain copies libgcc_s and libatomic into every image
+	# whether anything links them or not: 36KB of squashfs on hi3516ev300,
+	# which is what tipped its lite board over the cap on 2026-09-25. musl
+	# never loads libgcc_s itself -- uClibc and glibc do, for pthread_cancel,
+	# so this stays inside the musl branch. The test is the name appearing
+	# anywhere in the target, which covers a NEEDED entry and a dlopen() by
+	# literal name alike, and keeps them for any board that ships C++.
+	for lib in libgcc_s libatomic; do
+		if ! grep -rqaF -D skip --exclude="${lib}.so*" "${lib}.so" ${TARGET_DIR}; then
+			rm -f ${TARGET_DIR}/lib/${lib}.so* ${TARGET_DIR}/usr/lib/${lib}.so*
+		fi
+	done
 fi
 
 LIST="${BR2_EXTERNAL_GENERAL_PATH}/scripts/excludes/${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}.list"
