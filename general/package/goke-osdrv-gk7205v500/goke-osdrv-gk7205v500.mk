@@ -89,8 +89,15 @@ endif
 # binary, so libxmedia_* have to come from the same (V200) set as the
 # modules. These are the SDK's V200 builds of the libraries that differ from
 # the V500 ones installed above; the rest are byte-identical.
+#
+# Provenance: XMediaIPCLinuxV100R002C00SPC020 (MPP_V1.0.0.0 B00, built Apr
+# 2023 -- the release openhisilicon's gk7205v500 modules come from),
+# source/gmp/obj_ko_lib/V200/linux-4.9.y/lib_nolog/share/, copied unmodified.
+# files/lib/v200/SHA256SUMS pins them and the install checks it, so a
+# swapped or truncated blob fails the build instead of shipping.
 ifeq ($(OPENIPC_SOC_MODEL),gk7201v200)
 define GOKE_OSDRV_GK7205V500_INSTALL_V200_LIBS
+	cd $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/v200 && sha256sum -c --quiet SHA256SUMS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/v200/*.so
 endef
 endif
