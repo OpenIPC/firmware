@@ -7,6 +7,11 @@ if [ ! "$chip" = "hi3536dv100" ]; then
 	sensor=$(ipcinfo -s)
 fi
 
+# The 4 MP IMX335 profile. Where the 5 MP mode is the default it is
+# 4M_imx335_i2c.ini; everywhere else it keeps its old name.
+imx335_4m=/etc/sensors/4M_imx335_i2c.ini
+[ -f "$imx335_4m" ] || imx335_4m=/etc/sensors/imx335_i2c_4M.ini
+
 basic() {
 	# set boot delay
 	fw_setenv bootdelay 0
@@ -37,7 +42,7 @@ hisi_goke() {
 	# change fps 25 -> 30
 	sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx307_i2c_2l_1080p.ini
 	sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/smtsec_imx307_i2c_4l_1080p.ini
-	sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" /etc/sensors/imx335_i2c_4M.ini
+	sed -i "s!Isp_FrameRate=25!Isp_FrameRate=30!g" "$imx335_4m"
 }
 
 streamer() {
@@ -60,7 +65,7 @@ streamer() {
 
 		if [ "$sensor" = "imx335" ]; then
 			cli -s .isp.drc 350
-			cli -s .isp.sensorConfig /etc/sensors/imx335_i2c_4M.ini
+			cli -s .isp.sensorConfig "$imx335_4m"
 		fi
 
 		cli -s .hls.enabled false
