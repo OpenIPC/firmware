@@ -44,6 +44,10 @@ FIRST_DELAY = 5  # seconds, doubling
 # openipc.<board>-<storage>-<edition>.tgz: the platform is <board>-<edition>,
 # the same name size_report.py and kconfig_graph.py give their files.
 FIRMWARE_ASSET_RE = re.compile(r"^openipc\.([^.]+?)-(nor|nand|emmc|sd)-([a-z0-9]+)\.tgz$")
+# OpenIPC/builder's compound devices publish <matrix platform>-<storage>.tgz,
+# and their size report is sizes.<matrix platform>.json, so the platform is
+# the name before the storage suffix.
+DEVICE_ASSET_RE = re.compile(r"^(?!openipc\.)([A-Za-z0-9._-]+?)-(nor|nand|emmc|sd)\.tgz$")
 SIDECAR_RE = re.compile(r"^(sizes|kconfig-graph|kconfig-help)\.(.+)\.json$")
 
 
@@ -98,7 +102,7 @@ def collect_assets(published: dict[str, dict], match: str | None,
                 raise SystemExit(f"::error::GitHub reports no digest for {name}")
             out[name] = {"name": name, **a}
     for pattern in patterns:
-        for p in glob.glob(pattern):
+        for p in glob.glob(pattern, recursive=True):
             path = Path(p)
             if not path.is_file() or path.name in out:
                 continue
@@ -137,6 +141,10 @@ def collect_platforms(dist: Path | None, assets: list[dict]) -> list[dict]:
         if m:
             board, _storage, edition = m.groups()
             docs.setdefault(f"{board}-{edition}", {})
+            continue
+        m = DEVICE_ASSET_RE.match(a["name"])
+        if m:
+            docs.setdefault(m.group(1), {})
     return [{"name": plat, **docs[plat]} for plat in sorted(docs)]
 
 

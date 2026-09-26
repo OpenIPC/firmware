@@ -146,12 +146,57 @@ class Payload(unittest.TestCase):
             {"name": "u-boot-t40-nor.bin", "size": 10, "sha256": digest(b"local only")},
         ])
 
+    def test_uboot_artifact_layout_is_searched_at_any_depth(self):
+        # upload-artifact keeps u-boot-<family>/output/ under its root.
+        nested = self.tmp / "art" / "u-boot-ingenic" / "output"
+        nested.mkdir(parents=True)
+        (nested / "u-boot-t31-nor.bin").write_bytes(b"deep")
+        a = push_build.parse_args([
+            "--source", "uboot", "--build-id", "uboot-20260926T120000Z-abcdef0", "--release", "latest",
+            "--sha", "a" * 40, "--built-at", "2026-09-26T12:00:00Z",
+            "--assets", str(self.tmp / "art" / "**" / "*-nor.bin")])
+        p = push_build.build_payload(a, NOW)
+        self.assertEqual([x["name"] for x in p["assets"]], ["u-boot-t31-nor.bin"])
+
     def test_uboot_without_the_release_hashes_locally(self):
         out = self.tmp / "out"
         out.mkdir()
         (out / "u-boot-t31-nor.bin").write_bytes(b"u-boot")
         p = push_build.build_payload(self.uboot(), NOW)
         self.assertEqual(p["assets"], [{"name": "u-boot-t31-nor.bin", "size": 6, "sha256": digest(b"u-boot")}])
+
+
+class Platforms(unittest.TestCase):
+    """Both publishing schemes name a platform, with or without its report."""
+
+    def assets(self, *names):
+        return [{"name": n, "size": 1, "sha256": "0" * 64} for n in names]
+
+    def test_builder_compound_devices_without_reports(self):
+        plats = push_build.collect_platforms(None, self.assets(
+            "gk7205v200_lite_hisilicon-ipc-a-nor.tgz",
+            "ssc338q_fpv_emax-wyvern-link-nand.tgz",
+            "openipc.t31-nor-lite.tgz"))
+        self.assertEqual([p["name"] for p in plats], [
+            "gk7205v200_lite_hisilicon-ipc-a", "ssc338q_fpv_emax-wyvern-link", "t31-lite"])
+
+    def test_builder_compound_devices_with_reports(self):
+        with tempfile.TemporaryDirectory() as t:
+            reports = Path(t)
+            (reports / "sizes.gk7205v200_lite_hisilicon-ipc-a.json").write_text(json.dumps({"flash_mb": 8}))
+            (reports / "sizes.t31-lite.json").write_text(json.dumps({"flash_mb": 16}))
+            plats = {p["name"]: p for p in push_build.collect_platforms(reports, self.assets(
+                "gk7205v200_lite_hisilicon-ipc-a-nor.tgz", "openipc.t31-nor-lite.tgz"))}
+        self.assertEqual(sorted(plats), ["gk7205v200_lite_hisilicon-ipc-a", "t31-lite"])
+        self.assertEqual(plats["gk7205v200_lite_hisilicon-ipc-a"]["sizes"]["flash_mb"], 8)
+        self.assertEqual(plats["t31-lite"]["sizes"]["flash_mb"], 16)
+
+    def test_a_report_and_its_tarball_are_one_platform(self):
+        with tempfile.TemporaryDirectory() as t:
+            reports = Path(t)
+            (reports / "sizes.ssc338q_fpv_emax-wyvern-link.json").write_text("{}")
+            plats = push_build.collect_platforms(reports, self.assets("ssc338q_fpv_emax-wyvern-link-nor.tgz"))
+        self.assertEqual(len(plats), 1)
 
 
 class Aliases(unittest.TestCase):
