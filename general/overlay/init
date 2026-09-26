@@ -12,12 +12,18 @@ grep -q overlay /proc/filesystems || exit 1
 
 is_flash_root=true
 is_nfs_root=false
+block_overlay=
 # Anchor these to the root= value. A bare "ram"/"mmcblk"/"nfs" matched the whole
 # command line, so any unrelated token carrying those letters -- e.g. the
 # "ramoops" crash-log parameters -- was mistaken for a ramdisk/SD/NFS root, the
 # flash overlay was never mounted, and the camera booted read-only and unclaimed.
 grep -qE 'root=[^ ]*(nfs|mmcblk|ram)' /proc/cmdline && is_flash_root=false
 grep -qE 'root=[^ ]*nfs' /proc/cmdline && is_nfs_root=true
+for parameter in $(cat /proc/cmdline); do
+	case "$parameter" in
+		overlay=/dev/*) block_overlay=${parameter#overlay=} ;;
+	esac
+done
 
 if $is_flash_root; then
 	if grep -q ubifs /proc/cmdline; then
@@ -36,6 +42,18 @@ if $is_flash_root; then
 			fi
 		fi
 	fi
+elif [ -n "$block_overlay" ]; then
+	if ! mount -t ext4 -o noatime "$block_overlay" /overlay; then
+		echo "Initializing SD overlay $block_overlay..."
+		if ! mke2fs -t ext4 -F -L rootfs_data "$block_overlay"; then
+			echo "Cannot format SD overlay $block_overlay."
+			exit 1
+		fi
+		if ! mount -t ext4 -o noatime "$block_overlay" /overlay; then
+			echo "Cannot mount SD overlay $block_overlay."
+			exit 1
+		fi
+	fi
 elif $is_nfs_root && grep -q ' ro ' /proc/cmdline; then
 	TMPFS_SIZE='@TMPFS_SIZE@'
 	TMPFS_SIZE="${TMPFS_SIZE:-16M}"
@@ -45,7 +63,7 @@ elif $is_nfs_root && grep -q ' ro ' /proc/cmdline; then
 	fi
 fi
 
-if $is_flash_root || $is_nfs_root; then
+if $is_flash_root || $is_nfs_root || [ -n "$block_overlay" ]; then
 	if grep -q overlayfs /proc/filesystems; then
 		if ! mount -t overlayfs overlayfs -o lowerdir=/,upperdir=/overlay,ro /mnt; then
 			umount /overlay

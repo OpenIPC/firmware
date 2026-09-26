@@ -1,0 +1,39 @@
+From: OpenIPC Buildroot integration <build@openipc.org>
+Subject: [PATCH] fix build when transmit power limits are disabled
+
+CONFIG_TXPWR_LIMIT is a presence macro.  The FPV configuration leaves it
+undefined intentionally, so testing its value triggers -Wundef and fails
+on kernels that reject compiler warnings.  Use the same presence test as
+the rest of the driver.
+
+--- a/include/rtw_rf.h
++++ b/include/rtw_rf.h
+@@ -211 +211 @@
+-#if CONFIG_TXPWR_LIMIT
++#ifdef CONFIG_TXPWR_LIMIT
+--- a/include/autoconf.h
++++ b/include/autoconf.h
+@@ -325 +325 @@
+-#define CONFIG_PROC_DEBUG
++/* CONFIG_PROC_DEBUG is incompatible with Linux 5.10 proc_ops */
+--- a/include/rtw_debug.h
++++ b/include/rtw_debug.h
+@@ -616,3 +616,13 @@ ssize_t proc_set_tx_auth(struct file *file, const char __user *buffer, size_t cou
+ #endif /* CONFIG_PROC_DEBUG */
++#ifndef CONFIG_PROC_DEBUG
++static inline bool rtw_del_rx_ampdu_test_trigger_no_tx_fail(void) { return _FALSE; }
++static inline bool rtw_fwdl_test_trigger_chksum_fail(void) { return _FALSE; }
++static inline bool rtw_fwdl_test_trigger_wintint_rdy_fail(void) { return _FALSE; }
++static inline void rtw_sta_linking_test_set_start(void) {}
++static inline bool rtw_sta_linking_test_wait_done(void) { return _FALSE; }
++static inline bool rtw_sta_linking_test_force_fail(void) { return _FALSE; }
++static inline u32 rtw_get_wait_hiq_empty_ms(void) { return 0; }
++#endif
++
+ int proc_get_efuse_map(struct seq_file *m, void *v);
+ ssize_t proc_set_efuse_map(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
+--- a/core/rtw_rf.c
++++ b/core/rtw_rf.c
+@@ -1045 +1045 @@ void rtw_rfctl_deinit(_adapter *adapter)
+-#if CONFIG_TXPWR_LIMIT
++#ifdef CONFIG_TXPWR_LIMIT

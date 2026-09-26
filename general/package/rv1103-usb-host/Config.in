@@ -1,0 +1,6 @@
+config BR2_PACKAGE_RV1103_USB_HOST
+	bool "rv1103-usb-host"
+	help
+	  Force the RV1103 USB2 PHY OTG port into host mode during boot.
+	  This is required for USB peripherals such as Wi-Fi adapters on
+	  boards whose boot firmware leaves the port in OTG/device mode.
