@@ -5,7 +5,7 @@
 ################################################################################
 
 ATBM60XX_SITE = $(call github,openipc,atbm_60xx,$(ATBM60XX_VERSION))
-ATBM60XX_VERSION = HEAD
+ATBM60XX_VERSION = 5243746967626551d29dd17ebdc7c1e4659bfb17
 
 define ATBM60XX_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/share/atbm60xx_conf
