@@ -514,8 +514,9 @@ jobs:
           if [ -e "$KCONFIG" ]; then echo "KCONFIG=$KCONFIG" >> ${GITHUB_ENV}; fi
           if [ -e "$KHELP" ]; then echo "KHELP=$KHELP" >> ${GITHUB_ENV}; fi
 
-      # Hand the firmware + sidecars to the single `publish` job instead of
-      # uploading to releases from here. ~90 matrix jobs all deleting and
+      # Hand the firmware to the single `publish` job, and the size report and
+      # kconfig graph to the `report` job that pushes them to openipc.org,
+      # instead of uploading to releases from here. ~90 matrix jobs all deleting and
       # re-uploading assets on the SAME shared `nightly`/`latest` releases at
       # once made the GitHub releases API return HTTP 500 ("Server Error") —
       # e.g. run 27108181857, where every build succeeded but 14 jobs went red
@@ -801,32 +802,26 @@ jobs:
             NOTES=$(printf '%s\nwebui=%s\n' "$NOTES" "$WEBUI_DIGEST")
           fi
 
-          # Full asset set (firmware images + sizes/kconfig sidecars) → dated.
-          mapfile -t DATED < <(find dist -maxdepth 1 -type f | sort)
-          # nightly/latest are firmware-delivery aliases for flashers, so ship
-          # only the firmware images there — re-uploading the small JSON sidecars
-          # to two more releases is pure rate-limit cost for no consumer.
+          # Releases carry firmware and nothing else. The size reports and
+          # kconfig graphs that used to ride along as ~300 small JSON sidecars
+          # per build now reach openipc.org once, from the report job below,
+          # and stay in dist/ only as workflow artifacts. That also takes most
+          # of the paced uploads -- and most of the rate-limit exposure -- off
+          # this job.
           mapfile -t IMAGES < <(find dist -maxdepth 1 -type f -name 'openipc*.tgz' | sort)
 
-          # --- dated: immutable per-build history ---
-          ensure_release "$BUILD_ID" --prerelease --title "$BUILD_ID"
-          upload_paced "$BUILD_ID" "${DATED[@]}"
-          # Completion marker, uploaded LAST: its presence is the single downstream
-          # signal that the dated release finished publishing. firmware-explorer's
-          # prebuild gates ingestion on it so a rate-limit-truncated release is
-          # never indexed as a complete build.
-          printf '{"build_id":"%s","expected_assets":%s,"head_sha":"%s","built_at":"%s"}\n' \
-            "$BUILD_ID" "${#DATED[@]}" "$HEAD_SHA" "$BUILT_AT" > dist/_manifest.json
-          gh_retry gh release upload "$BUILD_ID" dist/_manifest.json --clobber
-
-          # nightly and latest only ever move when there is firmware to move
-          # them to. dist/ can be sidecars and no images -- one board that
-          # produced a size report and no .tgz is enough -- and pointing the
-          # two tags flashers pull from at a build with no images behind them
-          # is worse than leaving them on yesterday's.
+          # Nothing moves when there is no firmware to move it to. dist/ can
+          # hold size reports and no images -- one board that produced a
+          # report and no .tgz is enough -- and a dated release with nothing
+          # in it, or the two tags flashers pull from pointing at one, is worse
+          # than leaving everything on yesterday's.
           if [ "${#IMAGES[@]}" -eq 0 ]; then
-            echo "::warning::no images in this build; leaving nightly and latest where they are"
+            echo "::warning::no images in this build; no dated release, and nightly and latest stay where they are"
           else
+            # --- dated: immutable per-build history ---
+            ensure_release "$BUILD_ID" --prerelease --title "$BUILD_ID"
+            upload_paced "$BUILD_ID" "${IMAGES[@]}"
+
             # --- rolling nightly: move tag + body to this build, refresh images ---
             ensure_release nightly
             gh_retry gh release edit nightly --notes "$NOTES"
@@ -838,6 +833,78 @@ jobs:
             gh_retry gh api -X PATCH "repos/${GH_REPO}/git/refs/tags/latest" -f sha="$HEAD_SHA" -F force=true
             upload_paced latest "${IMAGES[@]}"
           fi
+
+  # openipc.org learns about the build here, once: which images were published
+  # and their digests, each board's size report and kconfig graph, and the SoC
+  # aliases. It never polls GitHub for any of it, and none of it is uploaded to
+  # a release for anyone to find. The contract, and who may push, is
+  # https://github.com/OpenIPC/website/blob/master/service/internal/builds/PUSH.md
+  #
+  # Authorization is this job's OIDC token (audience https://openipc.org),
+  # which openipc.org checks against the repository, this workflow and
+  # master. There is no secret to store or rotate.
+  #
+  # A job of its own, after publish, so that:
+  #   - openipc.org being down cannot cost a published nightly anything;
+  #   - the push can be re-run by itself once it is back, because the push is
+  #     idempotent by build id. The fw-* artifacts it reads are kept one day,
+  #     which bounds how late that re-run can be.
+  # Not in ci-gate's needs, for the same reason.
+  report:
+    name: Report build to openipc.org
+    needs: [preflight, publish]
+    if: >-
+      !cancelled() &&
+      github.event_name != 'pull_request' &&
+      needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fw-*
+          path: dist
+          merge-multiple: true
+
+      # The push script and the defconfigs, at the commit that was built: the
+      # aliases are read from the same tree the images came from.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.head_sha }}
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/scripts/
+            br-ext-chip-*/configs/
+
+      - name: Push the build
+        env:
+          BUILD_ID: ${{ needs.preflight.outputs.build_id }}
+          HEAD_SHA: ${{ needs.preflight.outputs.head_sha }}
+          BUILT_AT: ${{ needs.preflight.outputs.built_at }}
+          WEBUI_DIGEST: ${{ needs.preflight.outputs.webui_digest }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          images=(dist/openipc*.tgz)
+          # publish wrote no release when there were no images; there is
+          # nothing to report either.
+          if [ "${#images[@]}" -eq 0 ]; then
+            echo "::notice::no images in this build; nothing to report"
+            exit 0
+          fi
+          python3 .github/scripts/push_build.py \
+            --source firmware \
+            --build-id "$BUILD_ID" \
+            --sha "$HEAD_SHA" \
+            --built-at "$BUILT_AT" \
+            --webui-digest "$WEBUI_DIGEST" \
+            --dist dist \
+            --assets 'dist/openipc*.tgz' \
+            --aliases-root .
 
   # "The nightly is red" does not say whether one board broke or ninety-four.
   # On 2026-08-12 (run 31649720825) a majestic-webui fixup did a bare `rm` on

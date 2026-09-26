@@ -18,6 +18,9 @@ on:
       - '.github/workflows/**'
       - '.github/scripts/lint-workflow-shell.py'
       - '.github/scripts/build-summary.py'
+      - '.github/scripts/push_build.py'
+      - '.github/scripts/soc_aliases.py'
+      - '.github/scripts/test_push_build.py'
   workflow_dispatch:
 
 # Reads the tree and reports; writes nothing. Declared rather than inherited so
@@ -91,6 +94,24 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check the annotation grammars still match the workflow
         run: python3 .github/scripts/build-summary.py --self-test
+
+  # The nightly's report job is the only way openipc.org learns about a build,
+  # and it runs once, after publish, where nobody watches it. What it sends and
+  # how it authenticates are checked here instead: the payload from a fixture
+  # dist/, the alias scan against the real defconfigs, the OIDC audience, and
+  # which failures are retried. Stdlib only, so no install step.
+  build-push:
+    name: build push assembles and authenticates
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test push_build.py
+        run: python3 .github/scripts/test_push_build.py
 
   # Issue forms are read from the default branch and nowhere else, so a form
   # with a bad element type or a misplaced `accept:` cannot be caught by opening

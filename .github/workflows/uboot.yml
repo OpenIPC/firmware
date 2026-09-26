@@ -4,6 +4,8 @@ on:
 
 permissions:
   contents: write
+  # For the push to openipc.org below: its OIDC token is the authorization.
+  id-token: write
 
 jobs:
   toolchain:
@@ -12,6 +14,7 @@ jobs:
     steps:
       - name: Prepare
         run: |
+          echo "BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
           sudo apt-get update
           sudo apt-get install gcc-arm-linux-gnueabi gcc-mipsel-linux-gnu u-boot-tools lzop gnutls-dev lzma-alone uuid-dev
 
@@ -71,3 +74,23 @@ jobs:
           for f in "${files[@]}"; do
             gh_retry gh release upload latest "$f" --clobber
           done
+
+      # openipc.org learns which u-boot binaries exist, and their digests, from
+      # this push rather than by listing the `latest` release (see build.yml's
+      # report job, and PUSH.md in OpenIPC/website). The id is unique per run;
+      # the binaries download from `latest`, where they were just uploaded.
+      - uses: actions/checkout@v4
+        with:
+          path: firmware
+          sparse-checkout: .github/scripts
+      - name: Report to openipc.org
+        run: |
+          set -euo pipefail
+          python3 firmware/.github/scripts/push_build.py \
+            --source uboot \
+            --build-id "uboot-$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_SHA::7}" \
+            --release latest \
+            --sha "$GITHUB_SHA" \
+            --built-at "$BUILT_AT" \
+            --assets 'u-boot-*/output/*-nor.bin' \
+            --assets 'u-boot-*/output/*-nand.bin'

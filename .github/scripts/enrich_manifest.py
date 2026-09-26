@@ -25,15 +25,14 @@ import sys
 import time
 from pathlib import Path
 
+# The alias scan is shared with push_build.py; it sits beside this script.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import soc_aliases  # noqa: E402
+
 REPO = os.environ.get("GITHUB_REPOSITORY", "OpenIPC/firmware")
 RETENTION = 90
 TAG_RE = re.compile(r"^nightly-(\d{8})-([0-9a-f]{7})$")
 ASSET_RE = re.compile(r"^openipc\.([^.]+)-(nor|nand)-(lite|ultimate|neo)\.tgz$")
-
-# Defconfig lines for the SoC-alias scan: a published image's SOC_MODEL plus
-# the space-separated retired/compatible ids it also serves (SOC_ALIASES).
-SOC_MODEL_RE = re.compile(r'^BR2_OPENIPC_SOC_MODEL\s*=\s*"?([A-Za-z0-9]+)"?\s*$')
-SOC_ALIASES_RE = re.compile(r'^BR2_OPENIPC_SOC_ALIASES\s*=\s*"?([^"\n]*)"?\s*$')
 
 # Retry budget for transient GitHub API failures (HTTP 401 Bad credentials,
 # 5xx, rate-limit) observed on workflow_run-triggered runs 2026-05-23.
@@ -107,43 +106,16 @@ def parse_asset(name: str) -> tuple[str, str] | None:
 def scan_aliases() -> dict[str, str]:
     """Map each retired/compatible SoC id -> the canonical SOC_MODEL it is
     published under, read from BR2_OPENIPC_SOC_ALIASES in the in-tree
-    defconfigs. Lets on-device sysupgrade route a camera still reporting the
-    old id (xm550, gk7205v210, hi3516cv610, ...) to the image that exists.
+    defconfigs (soc_aliases.py, shared with push_build.py). Lets on-device
+    sysupgrade route a camera still reporting the old id (xm550, gk7205v210,
+    hi3516cv610, ...) to the image that exists.
     Best-effort: returns {} if the defconfig tree is not beside this script.
     """
     try:
         root = Path(__file__).resolve().parents[2]
     except (IndexError, OSError):
         return {}
-    aliases: dict[str, str] = {}
-    for cfg in sorted(root.glob("br-ext-chip-*/configs/*_defconfig")):
-        try:
-            text = cfg.read_text()
-        except OSError:
-            continue
-        model = ""
-        alias_field = ""
-        for line in text.splitlines():
-            m = SOC_MODEL_RE.match(line)
-            if m:
-                model = m.group(1)
-                continue
-            a = SOC_ALIASES_RE.match(line)
-            if a:
-                alias_field = a.group(1)
-        if not model or not alias_field.strip():
-            continue
-        for chip in alias_field.split():
-            if not chip or chip == model:
-                continue
-            prev = aliases.get(chip)
-            if prev and prev != model:
-                sys.stderr.write(
-                    f"alias conflict: {chip} -> {prev} and {model}; keeping {prev}\n"
-                )
-                continue
-            aliases[chip] = model
-    return dict(sorted(aliases.items()))
+    return soc_aliases.scan(root)
 
 
 def main() -> None:
