@@ -1,0 +1,182 @@
+system:
+  webPort: 80
+  httpsPort: 443
+  logLevel: debug
+  unsafe: false
+  buffer: 1024
+  plugins: true
+  telemetry: true
+  staticDir: /tmp/www
+isp:
+  antiFlicker: disabled
+  sensorConfig: /etc/sensors/sc2235_i2c_1080p.ini
+  slowShutter: low
+  rawMode: slow
+  dis: false
+  memMode: reduction
+  lowDelay: false
+  yuvCompression: auto
+  iris:
+    type: none
+    manual: false
+    holdValue: 610
+    kp: 7000
+    ki: 100
+    kd: 3000
+    minPwmDuty: 250
+    maxPwmDuty: 950
+    openPwmDuty: 800
+  blkCnt: 8
+  iqProfile: /etc/sensors/iq/sc2235.ini
+  exposure: 40
+  drc: 300
+image:
+  mirror: false
+  flip: false
+  contrast: 45
+  hue: 50
+  saturation: 50
+  luminance: 50
+  rotate: 0
+  tuning: false
+video0:
+  codec: h264
+  fps: 20
+  bitrate: 8192
+  rcMode: vbr
+  profile: main
+  crop: []
+  enabled: true
+  gopSize: "1"
+  size: 1920x1080
+  gopMode: normal
+  svct: "off"
+  sliceUnits: 0
+  sliceBytes: 0
+  minQp: 28
+  maxQp: 42
+  minIp: 1
+  maxIp: 2
+video1:
+  codec: h264
+  fps: 10
+  bitrate: 1024
+  rcMode: vbr
+  profile: main
+  crop: []
+  size: 640x360
+  enabled: true
+usbcam:
+  enabled: false
+  device: /dev/video0
+  codec: auto
+  cameraId: 1
+  size: 1280x720
+  fps: 30
+  sliceUnits: 0
+  gopSize: "1.0"
+  transcode:
+    codec: h264
+jpeg:
+  enabled: true
+  qfactor: 50
+  fps: 5
+  osd: true
+  rtsp: false
+  tuned: "off"
+osd:
+  enabled: true
+  template: '%Y.%m.%d %T'
+  font: /usr/share/fonts/truetype/UbuntuMono-Regular.ttf
+  size: "1.0"
+  weight: normal
+  outline: true
+  anchor: proportional
+  offsetX: "0"
+  offsetY: "0"
+  posX: 16
+  posY: 16
+  bgAlpha: 25
+  privacyMasks: []
+audio:
+  enabled: true
+  volume: 30
+  srate: "8000"
+  codec: opus
+  outputEnabled: true
+  outputVolume: 80
+  speakerPinInvert: false
+  jitterBufferMs: 0
+  speakerPin: 53
+  dual: false
+rtsp:
+  enabled: true
+  port: 554
+  backchannel: true
+  audioCodec: ""
+webrtc:
+  iceServers: "stun:stun.cloudflare.com:3478"
+sip:
+  enabled: false
+  server: ""
+  port: 5060
+  username: ""
+  password: ""
+  localUri: ""
+  callTarget: ""
+  localIp: ""
+  localPort: 5060
+  doRegister: true
+  registerExpires: 3600
+  buttonActiveLow: true
+  rtpPortHint: 5004
+nightMode:
+  enabled: true
+  colorToGray: true
+  irCutSingleInvert: true
+  lightMonitor: true
+  lightSensorInvert: false
+  monitorDelay: 20
+  irCutPin1: 55
+  backlightPin: 39
+  maxThreshold: 12000
+  minThreshold: 4000
+  overrideDrc: 120
+motionDetect:
+  enabled: false
+  visualize: false
+  debug: false
+  roi: []
+  sensitivity: 3
+records:
+  enabled: false
+  path: "/mnt/mmcblk0p1/%F"
+  filename: "%H-%M"
+  split: 20
+  maxUsage: 95
+  substream: false
+  audioCodec: ""
+  dualcam: false
+outgoing:
+  enabled: false
+  naluSize: 1200
+  substream: false
+  audioSource: auto
+  audioCodec: ""
+watchdog:
+  enabled: true
+  timeout: 300
+hls:
+  enabled: false
+mdns:
+  enabled: true
+onvif:
+  enabled: true
+  username: root
+  password: ""
+ipeye:
+  enabled: false
+netip:
+  enabled: false
+  snapshots: false
+  ignoreSetTime: false
