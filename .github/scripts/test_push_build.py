@@ -23,48 +23,75 @@ import soc_aliases  # noqa: E402
 NOW = dt.datetime(2026, 9, 26, 18, 51, 28, tzinfo=dt.timezone.utc)
 
 
+def digest(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+IMAGES = {
+    "openipc.gk7205v200-nor-lite.tgz": b"lite image",
+    "openipc.gk7205v200-nor-ultimate.tgz": b"ultimate",
+    "openipc.ssc338q-nand-lite.tgz": b"nand",
+}
+
+
 def args(tmp: Path, *extra: str):
     return push_build.parse_args([
         "--source", "firmware", "--build-id", "nightly-20260925-230295e",
         "--sha", "230295e494013e17a9802633a58b30ed7c937f8c",
-        "--built-at", "2026-09-25T17:48:37Z", "--dist", str(tmp),
-        "--assets", str(tmp / "openipc.*.tgz"), *extra,
+        "--built-at", "2026-09-25T17:48:37Z", "--reports", str(tmp / "reports"),
+        "--release-json", str(tmp / "release.json"), "--match", r"^openipc\..*\.tgz$",
+        *extra,
     ])
 
 
 class Payload(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
-        self.dist = Path(self._tmp.name)
-        (self.dist / "openipc.gk7205v200-nor-lite.tgz").write_bytes(b"lite image")
-        (self.dist / "openipc.gk7205v200-nor-ultimate.tgz").write_bytes(b"ultimate")
-        (self.dist / "openipc.ssc338q-nand-lite.tgz").write_bytes(b"nand")
-        (self.dist / "sizes.gk7205v200-lite.json").write_text(
+        self.tmp = Path(self._tmp.name)
+        # The release as `gh release view --json assets` reports it: the
+        # images with GitHub's digests, plus files the push must not pick up.
+        assets = [{"name": n, "size": len(b), "digest": "sha256:" + digest(b)} for n, b in IMAGES.items()]
+        assets.append({"name": "sizes.gk7205v200-lite.json", "size": 10, "digest": "sha256:" + "0" * 64})
+        self.write_release(assets)
+        reports = self.tmp / "reports"
+        reports.mkdir()
+        (reports / "sizes.gk7205v200-lite.json").write_text(
             json.dumps({"schema": 1, "board": "gk7205v200", "variant": "lite", "flash_mb": 8}))
-        (self.dist / "kconfig-graph.gk7205v200-lite.json").write_text(json.dumps({"schema": 1, "symbols": {}}))
-        (self.dist / "kconfig-help.gk7205v200-lite.json").write_text(json.dumps({"schema": 1, "help": {}}))
+        (reports / "kconfig-graph.gk7205v200-lite.json").write_text(json.dumps({"schema": 1, "symbols": {}}))
+        (reports / "kconfig-help.gk7205v200-lite.json").write_text(json.dumps({"schema": 1, "help": {}}))
+
+    def write_release(self, assets):
+        (self.tmp / "release.json").write_text(json.dumps({"assets": assets}))
 
     def tearDown(self):
         self._tmp.cleanup()
 
-    def test_build_and_assets(self):
-        p = push_build.build_payload(args(self.dist), NOW)
+    def test_build_and_assets_come_from_the_release(self):
+        p = push_build.build_payload(args(self.tmp), NOW)
         self.assertEqual(p["schema"], 1)
         self.assertEqual(p["source"], "firmware")
         self.assertEqual(p["build"], {
             "id": "nightly-20260925-230295e", "release": "nightly-20260925-230295e",
             "sha": "230295e494013e17a9802633a58b30ed7c937f8c",
             "built_at": "2026-09-25T17:48:37Z", "published_at": "2026-09-26T18:51:28Z"})
-        names = [a["name"] for a in p["assets"]]
-        self.assertEqual(names, sorted(names))
-        lite = next(a for a in p["assets"] if a["name"] == "openipc.gk7205v200-nor-lite.tgz")
-        self.assertEqual(lite["size"], len(b"lite image"))
-        self.assertEqual(lite["sha256"], hashlib.sha256(b"lite image").hexdigest())
-        # The sidecars are pushed as platform detail, never as assets.
-        self.assertFalse(any(n.endswith(".json") for n in names))
+        self.assertEqual(p["assets"], [
+            {"name": n, "size": len(IMAGES[n]), "sha256": digest(IMAGES[n])} for n in sorted(IMAGES)])
+
+    def test_a_release_asset_without_a_digest_is_refused(self):
+        self.write_release([{"name": "openipc.gk7205v200-nor-lite.tgz", "size": 3, "digest": None}])
+        with self.assertRaises(SystemExit):
+            push_build.build_payload(args(self.tmp), NOW)
+
+    def test_rest_release_objects_work_too(self):
+        # The REST release object has the same assets[].{name,size,digest}.
+        rest = {"tag_name": "nightly-20260925-230295e", "assets": [
+            {"name": "openipc.x-nor-lite.tgz", "size": 1, "digest": "sha256:" + "a" * 64, "id": 7}]}
+        (self.tmp / "release.json").write_text(json.dumps(rest))
+        p = push_build.build_payload(args(self.tmp), NOW)
+        self.assertEqual(p["assets"], [{"name": "openipc.x-nor-lite.tgz", "size": 1, "sha256": "a" * 64}])
 
     def test_platforms_carry_their_documents_and_survive_a_missing_report(self):
-        p = push_build.build_payload(args(self.dist), NOW)
+        p = push_build.build_payload(args(self.tmp), NOW)
         plats = {x["name"]: x for x in p["platforms"]}
         self.assertEqual(sorted(plats), ["gk7205v200-lite", "gk7205v200-ultimate", "ssc338q-lite"])
         self.assertEqual(plats["gk7205v200-lite"]["sizes"]["flash_mb"], 8)
@@ -74,32 +101,57 @@ class Payload(unittest.TestCase):
         self.assertEqual(plats["gk7205v200-ultimate"], {"name": "gk7205v200-ultimate"})
         self.assertEqual(plats["ssc338q-lite"], {"name": "ssc338q-lite"})
 
+    def test_no_reports_at_all_still_lists_every_platform(self):
+        p = push_build.build_payload(args(self.tmp, "--reports", str(self.tmp / "missing")), NOW)
+        self.assertEqual(len(p["platforms"]), 3)
+
     def test_an_unreadable_report_costs_its_detail_not_the_push(self):
-        (self.dist / "sizes.gk7205v200-ultimate.json").write_text("{not json")
-        p = push_build.build_payload(args(self.dist), NOW)
+        (self.tmp / "reports" / "sizes.gk7205v200-ultimate.json").write_text("{not json")
+        p = push_build.build_payload(args(self.tmp), NOW)
         plats = {x["name"]: x for x in p["platforms"]}
         self.assertNotIn("sizes", plats["gk7205v200-ultimate"])
 
     def test_nothing_published_is_an_error(self):
-        empty = Path(self._tmp.name) / "empty"
-        empty.mkdir()
+        self.write_release([])
         with self.assertRaises(SystemExit):
-            push_build.build_payload(args(empty), NOW)
+            push_build.build_payload(args(self.tmp), NOW)
 
     def test_webui_digest_and_release(self):
-        p = push_build.build_payload(args(self.dist, "--webui-digest", "sha256:ab", "--release", "latest"), NOW)
+        p = push_build.build_payload(args(self.tmp, "--webui-digest", "sha256:ab", "--release", "latest"), NOW)
         self.assertEqual(p["build"]["webui_digest"], "sha256:ab")
         self.assertEqual(p["build"]["release"], "latest")
 
-    def test_uboot_has_no_platforms(self):
-        (self.dist / "u-boot-t31-universal-nor.bin").write_bytes(b"u-boot")
-        a = push_build.parse_args([
+    def uboot(self, *extra):
+        return push_build.parse_args([
             "--source", "uboot", "--build-id", "uboot-20260926T120000Z-abcdef0", "--release", "latest",
             "--sha", "a" * 40, "--built-at", "2026-09-26T12:00:00Z",
-            "--assets", str(self.dist / "u-boot-*.bin")])
-        p = push_build.build_payload(a, NOW)
+            "--assets", str(self.tmp / "out" / "*.bin"), *extra])
+
+    def test_uboot_takes_the_release_digest_for_what_it_uploaded(self):
+        out = self.tmp / "out"
+        out.mkdir()
+        (out / "u-boot-t31-nor.bin").write_bytes(b"u-boot")
+        (out / "u-boot-t40-nor.bin").write_bytes(b"local only")
+        # latest has the first with GitHub's digest (deliberately not the local
+        # file's, to prove which one is used) and the second with none yet.
+        self.write_release([
+            {"name": "u-boot-t31-nor.bin", "size": 6, "digest": "sha256:" + "b" * 64},
+            {"name": "u-boot-t40-nor.bin", "size": 10, "digest": None},
+            {"name": "u-boot-other-nor.bin", "size": 1, "digest": "sha256:" + "c" * 64},
+        ])
+        p = push_build.build_payload(self.uboot("--release-json", str(self.tmp / "release.json")), NOW)
         self.assertNotIn("platforms", p)
-        self.assertEqual([x["name"] for x in p["assets"]], ["u-boot-t31-universal-nor.bin"])
+        self.assertEqual(p["assets"], [
+            {"name": "u-boot-t31-nor.bin", "size": 6, "sha256": "b" * 64},
+            {"name": "u-boot-t40-nor.bin", "size": 10, "sha256": digest(b"local only")},
+        ])
+
+    def test_uboot_without_the_release_hashes_locally(self):
+        out = self.tmp / "out"
+        out.mkdir()
+        (out / "u-boot-t31-nor.bin").write_bytes(b"u-boot")
+        p = push_build.build_payload(self.uboot(), NOW)
+        self.assertEqual(p["assets"], [{"name": "u-boot-t31-nor.bin", "size": 6, "sha256": digest(b"u-boot")}])
 
 
 class Aliases(unittest.TestCase):

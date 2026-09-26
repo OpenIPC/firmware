@@ -10,9 +10,10 @@ Authorization is the job's GitHub Actions OIDC token, requested with audience
 https://openipc.org. There is no shared secret. The job needs
 `permissions: id-token: write`.
 
+  gh release view "$BUILD_ID" --json assets > release.json
   push_build.py --source firmware --build-id nightly-20260925-230295e \
-      --sha <40 hex> --built-at 2026-09-25T17:48:37Z --dist dist \
-      --assets 'dist/openipc.*.tgz' --aliases-root .
+      --sha <40 hex> --built-at 2026-09-25T17:48:37Z --reports reports \
+      --release-json release.json --match '^openipc\..*\.tgz$' --aliases-root .
 
   push_build.py ... --out payload.json    assemble and write, do not send
 
@@ -54,18 +55,60 @@ def sha256_of(path: Path) -> str:
     return h.hexdigest()
 
 
-def collect_assets(patterns: list[str]) -> list[dict]:
-    """Every file matching the patterns, once, sorted by name."""
-    seen: dict[str, Path] = {}
+def release_assets(path: str | None) -> dict[str, dict]:
+    """name -> {size, digest} from the release as GitHub reports it.
+
+    Accepts `gh release view <tag> --json assets` output or a REST release
+    object; both carry `assets[].{name,size,digest}`. GitHub computes the
+    digest ("sha256:<hex>") itself when an asset is uploaded, so the push
+    describes exactly the bytes a download returns, and nothing has to be kept
+    around to hash afterwards.
+    """
+    if not path:
+        return {}
+    doc = json.loads(Path(path).read_text())
+    out = {}
+    for a in doc.get("assets", []):
+        digest = a.get("digest") or ""
+        out[a["name"]] = {
+            "size": int(a["size"]),
+            "sha256": digest[len("sha256:"):] if digest.startswith("sha256:") else "",
+        }
+    return out
+
+
+def collect_assets(published: dict[str, dict], match: str | None,
+                   patterns: list[str]) -> list[dict]:
+    """The assets to push, sorted by name.
+
+    - Every release asset whose name matches `match`, with GitHub's size and
+      digest. An asset GitHub has no digest for is an error: the push would
+      otherwise describe a file nobody hashed.
+    - Every local file matching `patterns`, with the release's size and digest
+      when the release has them, and its own otherwise (uboot uploads to
+      `latest` and hashes locally only as a fallback).
+    """
+    out: dict[str, dict] = {}
+    if match:
+        rx = re.compile(match)
+        for name, a in published.items():
+            if not rx.search(name):
+                continue
+            if not a["sha256"]:
+                raise SystemExit(f"::error::GitHub reports no digest for {name}")
+            out[name] = {"name": name, **a}
     for pattern in patterns:
         for p in glob.glob(pattern):
             path = Path(p)
-            if path.is_file():
-                seen.setdefault(path.name, path)
-    return [
-        {"name": name, "size": path.stat().st_size, "sha256": sha256_of(path)}
-        for name, path in sorted(seen.items())
-    ]
+            if not path.is_file() or path.name in out:
+                continue
+            a = published.get(path.name)
+            if a and a["sha256"]:
+                out[path.name] = {"name": path.name, **a}
+            else:
+                out[path.name] = {"name": path.name, "size": path.stat().st_size,
+                                  "sha256": sha256_of(path)}
+    return [out[n] for n in sorted(out)]
 
 
 def collect_platforms(dist: Path | None, assets: list[dict]) -> list[dict]:
@@ -98,7 +141,7 @@ def collect_platforms(dist: Path | None, assets: list[dict]) -> list[dict]:
 
 
 def build_payload(args: argparse.Namespace, now: dt.datetime) -> dict:
-    assets = collect_assets(args.assets)
+    assets = collect_assets(release_assets(args.release_json), args.match, args.assets)
     if not assets:
         raise SystemExit("::error::no assets matched; nothing published, nothing to push")
     payload: dict = {
@@ -185,8 +228,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--sha", required=True)
     p.add_argument("--built-at", required=True)
     p.add_argument("--webui-digest", default="")
-    p.add_argument("--dist", help="directory holding the size report and kconfig files")
-    p.add_argument("--assets", action="append", default=[], help="glob of published files; repeatable")
+    p.add_argument("--reports", "--dist", dest="dist",
+                   help="directory holding the size report and kconfig files")
+    p.add_argument("--release-json", help="`gh release view <tag> --json assets` output")
+    p.add_argument("--match", help="regex selecting the release assets to push")
+    p.add_argument("--assets", action="append", default=[],
+                   help="glob of local published files; repeatable (uboot)")
     p.add_argument("--aliases-root", help="repository root to scan for BR2_OPENIPC_SOC_ALIASES")
     p.add_argument("--url", default=os.environ.get("OPENIPC_ORG_URL") or DEFAULT_URL)
     p.add_argument("--out", help="write the payload here instead of pushing it")

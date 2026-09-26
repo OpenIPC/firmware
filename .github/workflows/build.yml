@@ -514,9 +514,26 @@ jobs:
           if [ -e "$KCONFIG" ]; then echo "KCONFIG=$KCONFIG" >> ${GITHUB_ENV}; fi
           if [ -e "$KHELP" ]; then echo "KHELP=$KHELP" >> ${GITHUB_ENV}; fi
 
-      # Hand the firmware to the single `publish` job, and the size report and
-      # kconfig graph to the `report` job that pushes them to openipc.org,
-      # instead of uploading to releases from here. ~90 matrix jobs all deleting and
+      # The size report and kconfig graph, for the `report` job that pushes
+      # them to openipc.org. An artifact of their own, a few tens of KB, kept a
+      # week -- unlike the images below, which are kept a day because publish
+      # consumes them within the run -- so a report that could not be pushed
+      # can be re-run days later. Both reports are optional, so is this.
+      - name: Upload reports
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: reports-${{ matrix.platform }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            output/images/sizes.*.json
+            output/images/kconfig-graph.*.json
+            output/images/kconfig-help.*.json
+
+      # Hand the firmware to the single `publish` job instead of uploading to
+      # releases from here. ~90 matrix jobs all deleting and
       # re-uploading assets on the SAME shared `nightly`/`latest` releases at
       # once made the GitHub releases API return HTTP 500 ("Server Error") —
       # e.g. run 27108181857, where every build succeeded but 14 jobs went red
@@ -549,11 +566,7 @@ jobs:
           name: fw-${{ matrix.platform }}
           if-no-files-found: ignore
           retention-days: 1
-          path: |
-            output/images/openipc*.tgz
-            output/images/sizes.*.json
-            output/images/kconfig-graph.*.json
-            output/images/kconfig-help.*.json
+          path: output/images/openipc*.tgz
 
       # A pause, not an immediate retry: EAI_AGAIN is a resolver that has not
       # answered yet, and asking it again in the same second asks the same
@@ -579,11 +592,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 1
           overwrite: true
-          path: |
-            output/images/openipc*.tgz
-            output/images/sizes.*.json
-            output/images/kconfig-graph.*.json
-            output/images/kconfig-help.*.json
+          path: output/images/openipc*.tgz
 
       # A Telegram notification, and nothing else. The image it announces was
       # handed to the `publish` job by the step above, so whether this call
@@ -804,17 +813,14 @@ jobs:
 
           # Releases carry firmware and nothing else. The size reports and
           # kconfig graphs that used to ride along as ~300 small JSON sidecars
-          # per build now reach openipc.org once, from the report job below,
-          # and stay in dist/ only as workflow artifacts. That also takes most
-          # of the paced uploads -- and most of the rate-limit exposure -- off
-          # this job.
+          # per build reach openipc.org once, from the report job below, out of
+          # their own reports-* artifacts. That also takes most of the paced
+          # uploads -- and most of the rate-limit exposure -- off this job.
           mapfile -t IMAGES < <(find dist -maxdepth 1 -type f -name 'openipc*.tgz' | sort)
 
-          # Nothing moves when there is no firmware to move it to. dist/ can
-          # hold size reports and no images -- one board that produced a
-          # report and no .tgz is enough -- and a dated release with nothing
-          # in it, or the two tags flashers pull from pointing at one, is worse
-          # than leaving everything on yesterday's.
+          # Nothing moves when there is no firmware to move it to. A dated
+          # release with nothing in it, or the two tags flashers pull from
+          # pointing at one, is worse than leaving everything on yesterday's.
           if [ "${#IMAGES[@]}" -eq 0 ]; then
             echo "::warning::no images in this build; no dated release, and nightly and latest stay where they are"
           else
@@ -847,8 +853,8 @@ jobs:
   # A job of its own, after publish, so that:
   #   - openipc.org being down cannot cost a published nightly anything;
   #   - the push can be re-run by itself once it is back, because the push is
-  #     idempotent by build id. The fw-* artifacts it reads are kept one day,
-  #     which bounds how late that re-run can be.
+  #     idempotent by build id. It reads the release and the reports-*
+  #     artifacts, which are kept a week.
   # Not in ci-gate's needs, for the same reason.
   report:
     name: Report build to openipc.org
@@ -863,11 +869,15 @@ jobs:
       contents: read
     timeout-minutes: 20
     steps:
-      - name: Download build artifacts
+      # The reports only. The images are described from the release itself
+      # below, so nothing here depends on the one-day fw-* artifacts, and a
+      # re-run works for as long as the reports are kept (a week).
+      - name: Download reports
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
-          pattern: fw-*
-          path: dist
+          pattern: reports-*
+          path: reports
           merge-multiple: true
 
       # The push script and the defconfigs, at the commit that was built: the
@@ -880,20 +890,21 @@ jobs:
             .github/scripts/
             br-ext-chip-*/configs/
 
+      # What was published, as GitHub has it: each image's size and the
+      # sha256 GitHub computed on upload. publish creates no dated release
+      # when there were no images, and then there is nothing to report.
       - name: Push the build
         env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           BUILD_ID: ${{ needs.preflight.outputs.build_id }}
           HEAD_SHA: ${{ needs.preflight.outputs.head_sha }}
           BUILT_AT: ${{ needs.preflight.outputs.built_at }}
           WEBUI_DIGEST: ${{ needs.preflight.outputs.webui_digest }}
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          images=(dist/openipc*.tgz)
-          # publish wrote no release when there were no images; there is
-          # nothing to report either.
-          if [ "${#images[@]}" -eq 0 ]; then
-            echo "::notice::no images in this build; nothing to report"
+          if ! gh release view "$BUILD_ID" --json assets > release.json; then
+            echo "::notice::no release $BUILD_ID; nothing to report"
             exit 0
           fi
           python3 .github/scripts/push_build.py \
@@ -902,8 +913,9 @@ jobs:
             --sha "$HEAD_SHA" \
             --built-at "$BUILT_AT" \
             --webui-digest "$WEBUI_DIGEST" \
-            --dist dist \
-            --assets 'dist/openipc*.tgz' \
+            --reports reports \
+            --release-json release.json \
+            --match '^openipc\..*\.tgz$' \
             --aliases-root .
 
   # "The nightly is red" does not say whether one board broke or ninety-four.

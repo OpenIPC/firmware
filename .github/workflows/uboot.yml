@@ -77,20 +77,26 @@ jobs:
 
       # openipc.org learns which u-boot binaries exist, and their digests, from
       # this push rather than by listing the `latest` release (see build.yml's
-      # report job, and PUSH.md in OpenIPC/website). The id is unique per run;
-      # the binaries download from `latest`, where they were just uploaded.
+      # report job, and PUSH.md in OpenIPC/website). Sizes and digests are
+      # GitHub's, read back from `latest` after the upload; a binary GitHub
+      # has no digest for yet is hashed locally. The id is unique per run.
       - uses: actions/checkout@v4
         with:
           path: firmware
           sparse-checkout: .github/scripts
       - name: Report to openipc.org
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          gh release view latest --json assets > release.json
           python3 firmware/.github/scripts/push_build.py \
             --source uboot \
             --build-id "uboot-$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_SHA::7}" \
             --release latest \
             --sha "$GITHUB_SHA" \
             --built-at "$BUILT_AT" \
+            --release-json release.json \
             --assets 'u-boot-*/output/*-nor.bin' \
             --assets 'u-boot-*/output/*-nand.bin'
