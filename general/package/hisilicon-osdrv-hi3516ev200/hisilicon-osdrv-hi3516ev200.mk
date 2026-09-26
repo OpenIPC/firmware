@@ -39,12 +39,14 @@ endif
 # matches, and the old 5M name stays as a link for configs that spell it out
 # (it cannot match, since it does not start with imx335). Every other part in
 # this family keeps the old names and so the 4 MP mode -- a 5 MP frame pool
-# does not fit their 64 MB.
+# does not fit their 64 MB. The old 4M name is removed on the 128 MB parts, or
+# a rebuild over an earlier target would leave two profiles matching.
 HISILICON_OSDRV_HI3516EV200_IMX335_5M_SOCS = hi3516ev300 hi3516dv200 gk7205v300 gk7605v100
 
 ifneq ($(filter $(OPENIPC_SOC_MODEL),$(HISILICON_OSDRV_HI3516EV200_IMX335_5M_SOCS)),)
 define HISILICON_OSDRV_HI3516EV200_IMX335_LAYOUT
 	for d in $(TARGET_DIR)/etc/sensors $(TARGET_DIR)/etc/sensors/WDR; do \
+		rm -f $$d/imx335_i2c_4M.ini; \
 		ln -sf imx335_i2c_5M.ini $$d/5M_imx335.ini; \
 	done
 endef
