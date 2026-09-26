@@ -178,7 +178,8 @@ NO_BUILD_WORKFLOWS = {
 # Same for .github/scripts/.
 NO_BUILD_SCRIPTS = {
     "build-summary.py", "enrich_manifest.py", "lint-issue-forms.py",
-    "lint-workflow-shell.py", "test_load_hisilicon.sh", "test_shell_parse.sh",
+    "lint-workflow-shell.py", "push_build.py", "soc_aliases.py",
+    "test_load_hisilicon.sh", "test_push_build.py", "test_shell_parse.sh",
     "test_sysupgrade.sh",
 }
 
