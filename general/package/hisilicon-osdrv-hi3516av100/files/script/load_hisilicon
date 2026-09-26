@@ -485,6 +485,24 @@ else
                 if [ "$SENSOR" != "unknown" ]; then
                 	fw_setenv sensor $SENSOR && logger -s -p daemon.info -t hisilicon "Write detected ${SENSOR} to U-Boot ENV"
                 fi
+
+                # insert_ko opens with `insmod mmz.ko ... || report_error`. If the probe
+                # stack insert_detect brought up is still resident -- remove_detect cannot
+                # always tear it back down: its rmmod names predate the open_* module
+                # renames, and on hi3516av100 rmmod of the ISP module faults -- that first
+                # insmod returns EEXIST ("File exists"), report_error runs, and hi3516a_sys
+                # never loads, so majestic dies with ERR_SYS_NOTREADY. The sensor is
+                # persisted now, so reboot: the next boot takes the fw_printenv branch
+                # above, skips detection, and insert_ko runs on a clean kernel. The
+                # fw_printenv guard means a write that did not stick falls through instead
+                # of rebooting, so a failed persist cannot loop the boot. b_arg_insmod scopes
+                # it to the modes that go on to insert_ko (-i, -a); -r and query calls, which
+                # never reach insert_ko, must not reboot the camera.
+                if [ $b_arg_insmod -eq 1 ] && grep -qE '^(open_)?mmz ' /proc/modules && [ -n "$(fw_printenv -n sensor)" ]; then
+                	logger -s -p daemon.warn -t hisilicon "probe modules still resident after detect; rebooting for a clean module load"
+                	reboot
+                	exit 0
+                fi
         fi
 fi
 
