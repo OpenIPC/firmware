@@ -47,15 +47,18 @@ insert_detect() {
         SENSOR=ar0230 insert_sns
 }
 
+# rmmod takes the name a module registers, not its file name, and the modules
+# OpenIPC builds register as open_*: sensor_i2c.ko loads as open_sensor_i2c,
+# hi_media.ko as open_himedia, mmz.ko as open_mmz. The vendor hi3516a_* ones
+# keep their file names.
 remove_detect() {
-        rmmod -w sensor_spi
-        rmmod -w sensor_i2c
+        rmmod -w open_sensor_spi
+        rmmod -w open_sensor_i2c
         rmmod -w hi3516a_isp
         rmmod -w hi3516a_sys
         rmmod -w hi3516a_base
-        rmmod -w hi_media
-        rmmod -w mmz
-        rmmod -w sys_config
+        rmmod -w open_himedia
+        rmmod -w open_mmz
 }
 
 insert_audio() {
@@ -79,8 +82,8 @@ remove_audio() {
 }
 
 remove_sns() {
-        rmmod -w sensor_spi &>/dev/null
-        rmmod -w sensor_i2c &>/dev/null
+        rmmod -w open_sensor_spi &>/dev/null
+        rmmod -w open_sensor_i2c &>/dev/null
 }
 
 sys_config() {
@@ -309,11 +312,11 @@ insert_ko() {
 }
 
 remove_ko() {
-        rmmod -w wdt
+        rmmod -w open_wdt
         remove_audio
         remove_sns
 
-        rmmod -w pwm
+        rmmod -w open_pwm
         #rmmod -w piris
         #rmmod -w hi3516a_ive
         rmmod -w hi3516a_vda
@@ -329,7 +332,7 @@ remove_ko() {
         rmmod -w hi3516a_vou
         rmmod -w hi3516a_vpss
         rmmod -w hi3516a_viu
-        rmmod -w hi_mipi
+        rmmod -w open_mipi_rx
 
         rmmod -w hi3516a_vgs
         rmmod -w hi3516a_region
@@ -338,8 +341,8 @@ remove_ko() {
         rmmod -w hi3516a_isp
         rmmod -w hi3516a_sys
         rmmod -w hi3516a_base
-        rmmod -w hi_media
-        rmmod -w mmz
+        rmmod -w open_himedia
+        rmmod -w open_mmz
 }
 
 load_usage()
@@ -487,9 +490,11 @@ else
                 fi
 
                 # insert_ko opens with `insmod mmz.ko ... || report_error`. If the probe
-                # stack insert_detect brought up is still resident -- remove_detect cannot
-                # always tear it back down: its rmmod names predate the open_* module
-                # renames, and on hi3516av100 rmmod of the ISP module faults -- that first
+                # stack insert_detect brought up is still resident -- remove_detect tears
+                # it down now that it uses the open_* names, but a module that will not
+                # unload (rmmod of the ISP module once faulted here, back when the sensor
+                # modules it depends on were left behind under names rmmod did not know)
+                # must not cost the camera its first boot -- that first
                 # insmod returns EEXIST ("File exists"), report_error runs, and hi3516a_sys
                 # never loads, so majestic dies with ERR_SYS_NOTREADY. The sensor is
                 # persisted now, so reboot: the next boot takes the fw_printenv branch
