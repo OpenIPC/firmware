@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.67
+scr_version=1.0.68
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -408,12 +408,20 @@ verify_rootfs() {
 	local y=/tmp/rootfs
 	local loop=
 	local err=
+	local verdict=
 	rootfs_version=
 
 	if mkdir -p "$y" && loop=$(losetup -f) && err=$(losetup "$loop" "$x" 2>&1) \
 		&& err=$(mount_rootfs "$loop" "$y"); then
 		rootfs_version=$(get_system_version "$y")
 		check_soc "$(head -1 $y/etc/hostname | cut -d- -f2)"
+		if ! verdict=$(check_platform "$y"); then
+			umount "$y"
+			losetup -d "$loop" 2>/dev/null
+			rm -rf "$y"
+			die "$verdict"
+		fi
+		[ -n "$verdict" ] && echo "$verdict"
 		compare_versions "$system_version" "$rootfs_version" && exit_update=1
 		umount "$y"
 	else
@@ -437,6 +445,10 @@ verify_rootfs() {
 		# the case worth refusing, and refusing costs nothing here: no flash yet.
 		if [ "1" = "$skip_soc" ]; then
 			echo_c 33 "Skipping the rootfs version/SoC pre-check (SoC validation disabled)."
+		elif is_device_platform "$system_platform" && [ "1" != "$device_pinned" ]; then
+			losetup -d "$loop" 2>/dev/null
+			rm -rf "$y"
+			die "Cannot verify that an unmountable rootfs is built for this camera's device profile ('$system_platform'). Nothing was written. Pass --force_soc if you are sure it is."
 		elif soc_guarded_by_kernel "$2"; then
 			echo_c 33 "Skipping the rootfs version/SoC pre-check; the SoC is validated from the kernel image header instead."
 		elif [ "1" = "$remote_update" ]; then
@@ -897,13 +909,11 @@ download_firmware() {
 	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
-	build="$model-nor-$osr"
 	if [ -n "$archive" ]; then
 		[ ! -f "$archive" ] && die "File $archive not found"
 		check_unpack_room "$archive"
 		gzip -d "$archive" -c | tar xf - -C /tmp && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
 	else
-		case "$osr" in lite|ultimate|neo) repo=firmware ;; esac
 		if [ -n "$channel" ] || [ -n "$build_id" ]; then
 			fetch_manifest
 			resolve_model_alias
@@ -917,8 +927,11 @@ download_firmware() {
 			url=$(resolve_url "$build_id" "$platform" "nor")
 			[ -z "$url" ] && die "No artifact for $platform in $build_id"
 			echo "Resolved $build_id for $platform"
+			device_pinned=1
 		fi
-		[ -z "$url" ] && url=$(fw_printenv -n upgrade || echo "https://github.com/OpenIPC/${repo:-builder}/releases/download/latest/openipc.$build.tgz")
+		[ -z "$url" ] && url=$(fw_printenv -n upgrade || default_upgrade_url)
+		# Named for this device, so verify_rootfs can trust it when it cannot mount it.
+		[ "${url##*/}" = "$system_platform-nor.tgz" ] && device_pinned=1
 		echo "Download from $url"
 		probe_url "$url"
 		# The streamed route stages no second copy, so it never had a room
@@ -1395,6 +1408,10 @@ enter_ramfs() {
 	# $RAM_ROOT names a directory in the NEW root, not the one being judged.
 	export ram_root_shipped
 	export kernel_version system_version rootfs_version mount_wait abort_wait
+	# system_platform: check_platform runs in the ramfs, which has no
+	# /etc/os-release to read it from (#2484).
+	# device_pinned: the image was fetched under this device's own name.
+	export system_platform device_pinned
 
 	cd "$RAM_ROOT" || { ramfs_unwind; return 1; }
 	# After this the old root is at ./mnt and still mounted — deliberately: the
@@ -1614,6 +1631,7 @@ get_system_info() {
 	[ "$kernel_device" = "/dev/" ] && kernel_device=$(get_device "firmware")
 	kernel_version=$(get_kernel_version "$kernel_device")
 	system_version=$(get_system_version "")
+	system_platform=$(get_system_platform "")
 	flash_type=$(ipcinfo -F)
 	# 1 when the running filesystem is served from the flash this run may
 	# rewrite. init(1) mounts the rw overlay from "rootfs_data" and pivots onto
@@ -1638,6 +1656,60 @@ get_system_version() {
 
 get_system_build() {
 	grep "BUILD_OPTION" "/etc/os-release" | head -1 | cut -d= -f2
+}
+
+get_system_platform() {
+	grep '^BUILD_PLATFORM=' "$1/etc/os-release" 2>/dev/null | head -1 | cut -d= -f2
+}
+
+# Where a plain -k/-r fetches from when the U-Boot env names nothing. A builder
+# per-device image (<soc>_<variant>_<device>) is published under its full
+# platform, ${BUILD_PLATFORM}-nor.tgz, and keying on the variant alone sent it
+# to the generic openipc.<soc>-nor-lite.tgz -- an image that passes every SoC,
+# size and checksum check and loses the profile's network driver and mtdparts
+# (#2484). The profile writes this URL into `upgrade` once, on first boot, so a
+# lost or never-written env lands here. Verbatim platform, not the aliased
+# $model: it is the name builder published under.
+default_upgrade_url() {
+	local plat osr repo=builder
+	plat=$(get_system_platform)
+	case "$plat" in
+		*_*_*)
+			echo "https://github.com/OpenIPC/builder/releases/download/latest/$plat-nor.tgz"
+			return ;;
+	esac
+	osr=$(get_system_build)
+	case "$osr" in lite|ultimate|neo) repo=firmware ;; esac
+	echo "https://github.com/OpenIPC/$repo/releases/download/latest/openipc.$model-nor-$osr.tgz"
+}
+
+is_device_platform() {
+	case "$1" in *_*_*) return 0 ;; esac
+	return 1
+}
+
+# A device profile is what makes some cameras reachable at all -- its WiFi
+# driver, its mtdparts over a vendor U-Boot's layout -- and the SoC stamp cannot
+# tell a profile image from the generic one it was built on. So a camera running
+# a <soc>_<variant>_<device> build takes only a rootfs stamped for the same
+# device (#2484). Compared past the SoC token, like the manifest lookup, so SoC
+# aliases do not matter. Moving onto a profile, or between stock variants, is
+# left alone: nothing that makes the camera reachable is lost there.
+#
+# Prints its verdict; a non-zero return is a refusal, left to the caller to
+# raise once it has released the mount. An image from before BUILD_PLATFORM
+# was stamped (1.0.51) has nothing to compare and passes, as it always did.
+check_platform() {
+	local have=$system_platform want
+	is_device_platform "$have" || return 0
+	want=$(get_system_platform "$1")
+	[ -z "$want" ] && echo "Image carries no BUILD_PLATFORM; cannot compare it with '$have'" && return 0
+	[ "${want#*_}" = "${have#*_}" ] && echo "Platform OK" && return 0
+	[ "1" = "$skip_soc" ] && echo "Skip platform validation (image '$want', running '$have')" && return 0
+	echo "Wrong platform! (image '$want' != running '$have')
+This camera runs a device profile; the image would drop it. Nothing was written.
+Pass --force_soc to flash it anyway."
+	return 1
 }
 
 # The build this camera is running now. Beside get_system_build rather than
