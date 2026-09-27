@@ -47,18 +47,28 @@ insert_detect() {
         SENSOR=ar0230 insert_sns
 }
 
-# rmmod takes the name a module registers, not its file name, and the modules
-# OpenIPC builds register as open_*: sensor_i2c.ko loads as open_sensor_i2c,
-# hi_media.ko as open_himedia, mmz.ko as open_mmz. The vendor hi3516a_* ones
-# keep their file names.
+# rmmod takes the name a module registers, not its file name. With
+# hisilicon-opensdk the modules it builds register as open_*: sensor_i2c.ko
+# loads as open_sensor_i2c, hi_media.ko as open_himedia, mmz.ko as open_mmz.
+# Without it the vendor's own files keep their file names. Remove whichever of
+# the names given is loaded; the vendor hi3516a_* modules are the same in both.
+rmmod_loaded() {
+        for m in "$@"; do
+                if grep -q "^$m " /proc/modules; then
+                        rmmod -w "$m"
+                        return
+                fi
+        done
+}
+
 remove_detect() {
-        rmmod -w open_sensor_spi
-        rmmod -w open_sensor_i2c
+        rmmod_loaded open_sensor_spi sensor_spi
+        rmmod_loaded open_sensor_i2c sensor_i2c
         rmmod -w hi3516a_isp
         rmmod -w hi3516a_sys
         rmmod -w hi3516a_base
-        rmmod -w open_himedia
-        rmmod -w open_mmz
+        rmmod_loaded open_himedia hi_media
+        rmmod_loaded open_mmz mmz
 }
 
 insert_audio() {
@@ -82,8 +92,8 @@ remove_audio() {
 }
 
 remove_sns() {
-        rmmod -w open_sensor_spi &>/dev/null
-        rmmod -w open_sensor_i2c &>/dev/null
+        rmmod_loaded open_sensor_spi sensor_spi &>/dev/null
+        rmmod_loaded open_sensor_i2c sensor_i2c &>/dev/null
 }
 
 sys_config() {
@@ -312,11 +322,11 @@ insert_ko() {
 }
 
 remove_ko() {
-        rmmod -w open_wdt
+        rmmod_loaded open_wdt wdt
         remove_audio
         remove_sns
 
-        rmmod -w open_pwm
+        rmmod_loaded open_pwm pwm
         #rmmod -w piris
         #rmmod -w hi3516a_ive
         rmmod -w hi3516a_vda
@@ -332,7 +342,7 @@ remove_ko() {
         rmmod -w hi3516a_vou
         rmmod -w hi3516a_vpss
         rmmod -w hi3516a_viu
-        rmmod -w open_mipi_rx
+        rmmod_loaded open_mipi_rx hi_mipi
 
         rmmod -w hi3516a_vgs
         rmmod -w hi3516a_region
@@ -341,8 +351,8 @@ remove_ko() {
         rmmod -w hi3516a_isp
         rmmod -w hi3516a_sys
         rmmod -w hi3516a_base
-        rmmod -w open_himedia
-        rmmod -w open_mmz
+        rmmod_loaded open_himedia hi_media
+        rmmod_loaded open_mmz mmz
 }
 
 load_usage()
