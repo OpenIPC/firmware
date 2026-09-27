@@ -51,13 +51,13 @@ mkdir -p "$SB/tmp" "$SB/proc" "$SB/etc/init.d" "$SB/bin"
 # inline: $SB itself lives under /tmp, so a naive `s|/tmp|$SB/tmp|` would go on
 # to rewrite the very paths the earlier rules had just produced.
 #
-#  1. get_system_version() takes its root as "$1" — "" for the running system
+#  1. get_system_version() and get_system_platform() take their root as "$1" — "" for the running system
 #     (which must be sandboxed) and the mountpoint for the candidate rootfs
 #     (which must NOT be). Give it a default and hide the literal behind a
 #     sentinel so rule 3 cannot touch it. Getting this wrong makes every
 #     version read empty, which silently turns the same-version test green.
 #  2. /tmp\b, before anything that inserts a /tmp path of its own.
-sed -e 's|grep "GITHUB_VERSION" "$1/etc/os-release"|grep "GITHUB_VERSION" "${1:-@SB@}@OSRELEASE@"|' \
+sed -e 's|"$1/etc/os-release"|"${1:-@SB@}@OSRELEASE@"|g' \
     -e "s|/tmp\\b|@SB@/tmp|g" \
     -e "s|/etc/os-release|@SB@/etc/os-release|g" \
     -e "s|/proc/mtd|@SB@/proc/mtd|g" \
@@ -143,7 +143,14 @@ set_cmdline "$CMDLINE_FLASH"
 stub() { printf '#!/bin/bash\n%s\n' "$2" > "$SB/bin/$1"; chmod +x "$SB/bin/$1"; }
 
 stub ipcinfo    'case "$1" in -v) echo "${STUB_VENDOR:-sigmastar}";; -F) echo nor;; esac'
-stub fw_printenv 'echo "${STUB_SOC:-ssc338q}"'
+# `upgrade` is the URL a builder profile writes on first boot; unset models
+# the env that lost it, or never had it (#2484).
+stub fw_printenv '
+if [ "$2" = upgrade ]; then
+    [ -n "${STUB_UPGRADE:-}" ] && { echo "$STUB_UPGRADE"; exit 0; }
+    exit 1
+fi
+echo "${STUB_SOC:-ssc338q}"'
 stub killall    'exit 0'
 stub ntpd       'exit 0'
 # Three shapes reach this.
@@ -283,6 +290,8 @@ case "${STUB_MOUNT:-ok}" in
     ok)
         mkdir -p "$target/etc"
         echo "GITHUB_VERSION=${STUB_IMG_VERSION:-2026.07.11}" > "$target/etc/os-release"
+        [ -n "${STUB_IMG_PLATFORM:-}" ] &&
+            echo "BUILD_PLATFORM=$STUB_IMG_PLATFORM" >> "$target/etc/os-release"
         echo "openipc-${STUB_IMG_SOC:-ssc338q}" > "$target/etc/hostname"
         exit 0 ;;
     fail)
@@ -295,12 +304,16 @@ case "${STUB_MOUNT:-ok}" in
         exec sleep "${STUB_HANG_SECS:-600}" ;;
 esac'
 
-cat > "$SB/etc/os-release" <<'EOF'
-BUILD_PLATFORM=ssc338q_lite
-BUILD_OPTION=lite
+# set_platform <BUILD_PLATFORM> [BUILD_OPTION]: the build the camera runs.
+set_platform() {
+    cat > "$SB/etc/os-release" <<EOF
+BUILD_PLATFORM=$1
+BUILD_OPTION=${2:-lite}
 GITHUB_VERSION=2026.06.01
 BUILD_ID=nightly-20260601-aaaaaaa
 EOF
+}
+set_platform ssc338q_lite
 
 # --- fixtures --------------------------------------------------------------
 # A legacy uImage: 32-byte header (magic 0x27051956, timestamp at offset 8),
@@ -378,6 +391,8 @@ run() {
         STUB_SOC="${STUB_SOC:-ssc338q}" \
         STUB_IMG_SOC="${STUB_IMG_SOC:-ssc338q}" \
         STUB_IMG_VERSION="${STUB_IMG_VERSION:-2026.07.11}" \
+        STUB_IMG_PLATFORM="${STUB_IMG_PLATFORM:-}" \
+        STUB_UPGRADE="${STUB_UPGRADE:-}" \
         STUB_FLASHCP_FAIL="${STUB_FLASHCP_FAIL:-0}" \
         STUB_FLASHCP_FAIL_DEV="${STUB_FLASHCP_FAIL_DEV:-}" \
         STUB_REMOUNT_RC="${STUB_REMOUNT_RC:-0}" \
@@ -405,6 +420,8 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
+    unset STUB_UPGRADE STUB_IMG_PLATFORM
+    set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB
     set_meminfo
@@ -783,6 +800,94 @@ if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "Not enough memory to unpack"
 else
     bad "a non-web refusal should not carry the --web advice, rc=$RC out='$OUT'"
 fi
+
+# --- #2484: a builder device profile must not be traded for the generic image
+#
+# A builder per-device build stamps BUILD_PLATFORM=<soc>_<variant>_<device> and
+# is published as ${BUILD_PLATFORM}-nor.tgz; its profile writes that URL into
+# the `upgrade` env var once, on first boot. With the var gone, a plain -k/-r
+# used to key on BUILD_OPTION alone and fetch OpenIPC/firmware's
+# openipc.<soc>-nor-lite.tgz -- same SoC stamp, fits the partitions, passes
+# every check, and boots without the profile's WiFi driver or mtdparts.
+# The memory refusal stops each run right after the URL is chosen, before
+# anything is unpacked.
+default_url_is() {
+    local want=$1; shift
+    reset_env
+    set_meminfo 8192
+    STUB_DL_BYTES=8691055
+    "$@"
+    run -z -k -r
+    if printf '%s' "$OUT" | grep -qF "Download from $want" && nothing_wrote; then
+        ok "default URL -> $want"
+    else
+        bad "expected 'Download from $want', rc=$RC out='$OUT'"
+    fi
+}
+B=https://github.com/OpenIPC/builder/releases/download/latest
+F=https://github.com/OpenIPC/firmware/releases/download/latest
+default_url_is "$B/ssc338q_lite_acme-cam1-nor.tgz" set_platform ssc338q_lite_acme-cam1
+default_url_is "$F/openipc.ssc338q-nor-lite.tgz"   set_platform ssc338q_lite
+default_url_is "$F/openipc.ssc338q-nor-ultimate.tgz" set_platform ssc338q_ultimate ultimate
+default_url_is "$B/openipc.ssc338q-nor-fpv.tgz"    set_platform ssc338q_fpv fpv
+default_url_is "https://mirror.example/x.tgz" eval 'set_platform ssc338q_lite_acme-cam1; STUB_UPGRADE=https://mirror.example/x.tgz'
+
+# Whatever the URL, the rootfs itself says what it was built as. A camera on a
+# device profile takes only an image for the same device.
+reset_env
+set_platform ssc338q_lite_acme-cam1
+STUB_IMG_PLATFORM=ssc338q_lite
+run -z --rootfs="$R"
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "Wrong platform"; then
+    ok "device profile + generic rootfs -> refused, nothing written"
+else
+    bad "device profile + generic rootfs -> expected refusal, rc=$RC out='$OUT'"
+fi
+printf '%s' "$OUT" | grep -q -- "--force_soc" \
+    && ok "...and names the option that overrides it" \
+    || bad "platform refusal should advise --force_soc, out='$OUT'"
+
+reset_env
+set_platform ssc338q_lite_acme-cam1
+run -z --rootfs="$R"            # an image stamped with no BUILD_PLATFORM at all
+if [ "$RC" -ne 0 ] && nothing_wrote; then
+    ok "device profile + unstamped rootfs -> refused"
+else
+    bad "device profile + unstamped rootfs -> expected refusal, rc=$RC out='$OUT'"
+fi
+
+reset_env
+set_platform ssc338q_lite_acme-cam1
+STUB_IMG_PLATFORM=ssc338q_lite
+run -z --force_soc --rootfs="$R"
+[ "$RC" -eq 0 ] && flashed /dev/mtd3 \
+    && ok "device profile + generic rootfs + --force_soc -> flashed" \
+    || bad "--force_soc should override the platform check, rc=$RC out='$OUT'"
+
+# The same device's own image is what a profile camera upgrades to.
+reset_env
+set_platform ssc338q_lite_acme-cam1
+STUB_IMG_PLATFORM=ssc338q_lite_acme-cam1
+run -z --rootfs="$R"
+[ "$RC" -eq 0 ] && flashed /dev/mtd3 \
+    && ok "device profile + same device's rootfs -> flashed" \
+    || bad "same device should pass, rc=$RC out='$OUT'"
+
+# Moving onto a profile, and between stock variants, loses nothing that makes
+# the camera reachable, so neither is the platform check's business.
+reset_env
+STUB_IMG_PLATFORM=ssc338q_lite_acme-cam1
+run -z --rootfs="$R"
+[ "$RC" -eq 0 ] && flashed /dev/mtd3 \
+    && ok "generic build + device rootfs -> flashed (onboarding)" \
+    || bad "generic -> device should pass, rc=$RC out='$OUT'"
+
+reset_env
+STUB_IMG_PLATFORM=ssc338q_ultimate
+run -z --rootfs="$R"
+[ "$RC" -eq 0 ] && flashed /dev/mtd3 \
+    && ok "lite build + ultimate rootfs -> flashed" \
+    || bad "lite -> ultimate should pass, rc=$RC out='$OUT'"
 
 # The same measurement, on the archive route -- the WebUI's "install from a
 # file", which hands majestic's upload straight to --archive and so has majestic
@@ -2049,6 +2154,20 @@ done
 # where there is none, kernel_device is the combined "firmware" partition, which
 # overlaps the running rootfs -- so the mark has to be conditional, never absent
 # and never unconditional.
+# check_platform runs after the ramfs pivot, where there is no /etc/os-release:
+# a read of the running build there comes back empty, and an empty platform is
+# "not a device profile", so the check passed silently -- which is what the
+# first on-camera run of it did (#2484). The running platform has to be taken
+# before the pivot and carried across it.
+cp=$(sed -n '/^check_platform()/,/^}/p' "$SRC")
+if printf '%s\n' "$cp" | grep -qE 'get_system_platform *\)|get_system_platform *""|/etc/os-release'; then
+    bad "check_platform reads the running os-release itself; it runs in the ramfs"
+elif ! grep -qE '^[[:space:]]*export .*\bsystem_platform\b' "$SRC"; then
+    bad "system_platform is not exported across the ramfs pivot"
+else
+    ok "check_platform uses the pre-pivot platform, and it crosses the pivot"
+fi
+
 kbody=$(sed -n '/^do_update_kernel()/,/^}/p' "$SRC")
 if printf '%s\n' "$kbody" | grep -q 'mark_live_flash_dirty' &&
     printf '%s\n' "$kbody" | grep -q 'mark_flash_touched' &&
