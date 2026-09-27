@@ -408,13 +408,20 @@ verify_rootfs() {
 	local y=/tmp/rootfs
 	local loop=
 	local err=
+	local verdict=
 	rootfs_version=
 
 	if mkdir -p "$y" && loop=$(losetup -f) && err=$(losetup "$loop" "$x" 2>&1) \
 		&& err=$(mount_rootfs "$loop" "$y"); then
 		rootfs_version=$(get_system_version "$y")
 		check_soc "$(head -1 $y/etc/hostname | cut -d- -f2)"
-		check_platform "$y"
+		if ! verdict=$(check_platform "$y"); then
+			umount "$y"
+			losetup -d "$loop" 2>/dev/null
+			rm -rf "$y"
+			die "$verdict"
+		fi
+		[ -n "$verdict" ] && echo "$verdict"
 		compare_versions "$system_version" "$rootfs_version" && exit_update=1
 		umount "$y"
 	else
@@ -438,6 +445,10 @@ verify_rootfs() {
 		# the case worth refusing, and refusing costs nothing here: no flash yet.
 		if [ "1" = "$skip_soc" ]; then
 			echo_c 33 "Skipping the rootfs version/SoC pre-check (SoC validation disabled)."
+		elif is_device_platform "$system_platform" && [ "1" != "$device_pinned" ]; then
+			losetup -d "$loop" 2>/dev/null
+			rm -rf "$y"
+			die "Cannot verify that an unmountable rootfs is built for this camera's device profile ('$system_platform'). Nothing was written. Pass --force_soc if you are sure it is."
 		elif soc_guarded_by_kernel "$2"; then
 			echo_c 33 "Skipping the rootfs version/SoC pre-check; the SoC is validated from the kernel image header instead."
 		elif [ "1" = "$remote_update" ]; then
@@ -916,8 +927,11 @@ download_firmware() {
 			url=$(resolve_url "$build_id" "$platform" "nor")
 			[ -z "$url" ] && die "No artifact for $platform in $build_id"
 			echo "Resolved $build_id for $platform"
+			device_pinned=1
 		fi
 		[ -z "$url" ] && url=$(fw_printenv -n upgrade || default_upgrade_url)
+		# Named for this device, so verify_rootfs can trust it when it cannot mount it.
+		[ "${url##*/}" = "$system_platform-nor.tgz" ] && device_pinned=1
 		echo "Download from $url"
 		probe_url "$url"
 		# The streamed route stages no second copy, so it never had a room
@@ -1396,7 +1410,8 @@ enter_ramfs() {
 	export kernel_version system_version rootfs_version mount_wait abort_wait
 	# system_platform: check_platform runs in the ramfs, which has no
 	# /etc/os-release to read it from (#2484).
-	export system_platform
+	# device_pinned: the image was fetched under this device's own name.
+	export system_platform device_pinned
 
 	cd "$RAM_ROOT" || { ramfs_unwind; return 1; }
 	# After this the old root is at ./mnt and still mounted — deliberately: the
@@ -1668,6 +1683,11 @@ default_upgrade_url() {
 	echo "https://github.com/OpenIPC/$repo/releases/download/latest/openipc.$model-nor-$osr.tgz"
 }
 
+is_device_platform() {
+	case "$1" in *_*_*) return 0 ;; esac
+	return 1
+}
+
 # A device profile is what makes some cameras reachable at all -- its WiFi
 # driver, its mtdparts over a vendor U-Boot's layout -- and the SoC stamp cannot
 # tell a profile image from the generic one it was built on. So a camera running
@@ -1675,15 +1695,21 @@ default_upgrade_url() {
 # device (#2484). Compared past the SoC token, like the manifest lookup, so SoC
 # aliases do not matter. Moving onto a profile, or between stock variants, is
 # left alone: nothing that makes the camera reachable is lost there.
+#
+# Prints its verdict; a non-zero return is a refusal, left to the caller to
+# raise once it has released the mount. An image from before BUILD_PLATFORM
+# was stamped (1.0.51) has nothing to compare and passes, as it always did.
 check_platform() {
 	local have=$system_platform want
-	case "$have" in *_*_*) ;; *) return 0 ;; esac
+	is_device_platform "$have" || return 0
 	want=$(get_system_platform "$1")
-	[ "${want#*_}" = "${have#*_}" ] && [ -n "$want" ] && echo "Platform OK" && return 0
-	[ "1" = "$skip_soc" ] && echo "Skip platform validation (image '${want:-none}', running '$have')" && return 0
-	die "Wrong platform! (image '${want:-none}' != running '$have')
+	[ -z "$want" ] && echo "Image carries no BUILD_PLATFORM; cannot compare it with '$have'" && return 0
+	[ "${want#*_}" = "${have#*_}" ] && echo "Platform OK" && return 0
+	[ "1" = "$skip_soc" ] && echo "Skip platform validation (image '$want', running '$have')" && return 0
+	echo "Wrong platform! (image '$want' != running '$have')
 This camera runs a device profile; the image would drop it. Nothing was written.
 Pass --force_soc to flash it anyway."
+	return 1
 }
 
 # The build this camera is running now. Beside get_system_build rather than

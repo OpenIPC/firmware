@@ -201,6 +201,7 @@ if [ "$head" = "1" ]; then
     fi
     exit 0
 fi
+[ "$out" = "-" ] && [ -n "${STUB_DL_FILE:-}" ] && cat "$STUB_DL_FILE"
 exit "${STUB_CURL_RC:-0}"'
 # check_sdcard re-reads `mount` after every umount, so a static pair of stubs
 # would spin forever: the unmount has to actually change what mount reports.
@@ -221,7 +222,7 @@ chmod +x "$SB/bin/umount"
 # host cannot really pivot, and the fallback is the safety property that matters
 # most here (a camera that cannot build a ramfs must still upgrade).
 stub pivot_root 'echo "pivot_root $*" >> "$FLASH_LOG"; exit ${STUB_PIVOT_RC:-1}'
-stub losetup    'case "$1" in -f) echo /dev/loop0;; *) exit 0;; esac'
+stub losetup    'case "$1" in -f) echo /dev/loop0;; -d) echo "losetup -d $2" >> "$FLASH_LOG";; esac; exit 0'
 
 # download_firmware runs `md5sum -s -c`. -s (silent) is a busybox extension; GNU
 # coreutils spells it --status and rejects -s outright. Bridge it, so the real
@@ -393,6 +394,7 @@ run() {
         STUB_IMG_VERSION="${STUB_IMG_VERSION:-2026.07.11}" \
         STUB_IMG_PLATFORM="${STUB_IMG_PLATFORM:-}" \
         STUB_UPGRADE="${STUB_UPGRADE:-}" \
+        STUB_DL_FILE="${STUB_DL_FILE:-}" \
         STUB_FLASHCP_FAIL="${STUB_FLASHCP_FAIL:-0}" \
         STUB_FLASHCP_FAIL_DEV="${STUB_FLASHCP_FAIL_DEV:-}" \
         STUB_REMOUNT_RC="${STUB_REMOUNT_RC:-0}" \
@@ -420,7 +422,7 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
-    unset STUB_UPGRADE STUB_IMG_PLATFORM
+    unset STUB_UPGRADE STUB_IMG_PLATFORM STUB_DL_FILE
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB
@@ -846,15 +848,69 @@ fi
 printf '%s' "$OUT" | grep -q -- "--force_soc" \
     && ok "...and names the option that overrides it" \
     || bad "platform refusal should advise --force_soc, out='$OUT'"
+# Without the ramfs die() does not reboot, so a refusal that left the candidate
+# mounted would hand the next attempt a taken loop device.
+grep -q "losetup -d" "$SB/tmp/flash.log" \
+    && ok "...after releasing the candidate's loop device" \
+    || bad "platform refusal left the loop device attached, log='$(cat "$SB/tmp/flash.log")'"
+
+# An image from before BUILD_PLATFORM was stamped (1.0.51) has nothing to
+# compare, and passes as it always did.
+reset_env
+set_platform ssc338q_lite_acme-cam1
+run -z --rootfs="$R"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && printf '%s' "$OUT" | grep -q "no BUILD_PLATFORM"; then
+    ok "device profile + unstamped rootfs -> flashed, and says it could not compare"
+else
+    bad "device profile + unstamped rootfs -> expected to proceed with a note, rc=$RC out='$OUT'"
+fi
+
+# Unmountable (the running kernel lacks the new image's decompressor): the
+# artifact name is the only evidence left. It pins the SoC, which is enough on
+# a stock camera; on a device profile only a name carrying the device is.
+reset_env
+set_platform ssc338q_lite_acme-cam1
+make_fit "$SB/tmp/uImage.ssc338q"
+make_archive "$SB/tmp/uImage.ssc338q" "$SB/tmp/rootfs.squashfs.ssc338q"
+STUB_MOUNT=fail
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "device profile"; then
+    ok "device profile + unmountable archive -> refused, nothing written"
+else
+    bad "device profile + unmountable archive -> expected refusal, rc=$RC out='$OUT'"
+fi
 
 reset_env
 set_platform ssc338q_lite_acme-cam1
-run -z --rootfs="$R"            # an image stamped with no BUILD_PLATFORM at all
-if [ "$RC" -ne 0 ] && nothing_wrote; then
-    ok "device profile + unstamped rootfs -> refused"
+make_fit "$SB/tmp/uImage.ssc338q"
+make_archive "$SB/tmp/uImage.ssc338q" "$SB/tmp/rootfs.squashfs.ssc338q"
+mkdir -p "$SB/keep" && mv "$SB/tmp/fw.tgz" "$SB/keep/dl.tgz"
+rm -f "$SB"/tmp/*.ssc338q
+STUB_DL_FILE="$SB/keep/dl.tgz"
+STUB_MOUNT=fail
+run -z -k -r
+if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && flashed /dev/mtd3; then
+    ok "device profile + unmountable image fetched under the device's name -> proceeds"
 else
-    bad "device profile + unstamped rootfs -> expected refusal, rc=$RC out='$OUT'"
+    bad "the device's own artifact should not be refused, rc=$RC out='$OUT'"
 fi
+
+reset_env
+set_platform ssc338q_lite_acme-cam1
+make_fit "$SB/tmp/uImage.ssc338q"
+make_archive "$SB/tmp/uImage.ssc338q" "$SB/tmp/rootfs.squashfs.ssc338q"
+mv "$SB/tmp/fw.tgz" "$SB/keep/dl.tgz"
+rm -f "$SB"/tmp/*.ssc338q
+STUB_DL_FILE="$SB/keep/dl.tgz"
+STUB_UPGRADE=https://github.com/OpenIPC/firmware/releases/download/latest/openipc.ssc338q-nor-lite.tgz
+STUB_MOUNT=fail
+run -z -k -r
+if [ "$RC" -ne 0 ] && nothing_wrote; then
+    ok "device profile + unmountable image from a generic URL -> refused"
+else
+    bad "a generic URL is no proof of the device, rc=$RC out='$OUT'"
+fi
+rm -rf "$SB/keep"
 
 reset_env
 set_platform ssc338q_lite_acme-cam1
