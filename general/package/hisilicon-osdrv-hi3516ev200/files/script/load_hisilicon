@@ -31,6 +31,17 @@ os_mem_size=${os_mem_size:=32}
 
 YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 
+# DVP-wired sensor boards — opt-in, set by the device profile.
+#
+# open_sys_config selects MIPI or DVP pad routing from g_cmos_yuv_flag.
+# A board that wires its sensor to the DVP pads needs the DVP path;
+# with the MIPI default the I2C controller is muxed to pads that are
+# not connected to the sensor, so every address NACKs and no sensor is
+# ever detected.  Profiles opt in with `fw_setenv sensor_dvp 1`.
+if [ "$(fw_printenv -n sensor_dvp 2>/dev/null)" = "1" ]; then
+	YUV_TYPE0=1
+fi
+
 ##################################################################
 #
 # DDR start:0x40000000, kernel start:0x40000000,  OS(32M); MMZ start:0x42000000
