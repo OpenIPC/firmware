@@ -28,6 +28,7 @@ Usage:
 """
 
 import argparse
+import ast
 import collections
 import glob
 import json
@@ -172,27 +173,42 @@ UNBUILT_BOARDS = {
 NO_BUILD_WORKFLOWS = {
     "build-one.yml", "cleanup.yml", "gcc-compat.yml", "image.yml",
     "issue-labeler.yml", "lint.yml", "manifest.yml", "qodo-gate.yml",
-    "shell-tests.yml", "toolchain.yml", "uboot.yml",
+    "shell-tests.yml", "toolchain-asan.yml", "toolchain.yml", "uboot.yml",
+    "vendor-abi.yml",
 }
 
 # Same for .github/scripts/.
+#
+# Every file in .github/scripts/ and .github/workflows/ has to be named in one
+# of these lists or in WIDEN_ON_PURPOSE; --self-test enforces it. Before that,
+# a new off-device test was "unknown" and widened: test_check_mac.sh,
+# test_strip_shell_comments.sh, test_automount.sh, test_excludes_report.sh,
+# toolchain-asan.yml and vendor-abi.yml cost ~6000 runner-minutes of full
+# matrices between them in six weeks, proving nothing about an image.
 NO_BUILD_SCRIPTS = {
     "build-summary.py", "enrich_manifest.py", "lint-issue-forms.py",
     "lint-workflow-shell.py", "push_build.py", "soc_aliases.py",
+    "test_automount.sh", "test_check_mac.sh", "test_excludes_report.sh",
     "test_load_hisilicon.sh", "test_push_build.py", "test_shell_parse.sh",
-    "test_sysupgrade.sh",
+    "test_strip_shell_comments.sh", "test_sysupgrade.sh",
 }
 
 # CI plumbing: it decides how the build runs but cannot change a byte of what
 # ends up on a camera, so what needs proving is that the steps still work, not
 # that 96 images still come out the same. These get SMOKE_BOARDS.
 #
-# ci-matrix.py is deliberately NOT here. Adding a board is an edit to
-# ALL_BOARDS, and a smoke set would build the 13 boards that were already there
-# and never the new one. It widens like anything else this file has not
-# classified.
+# ci-matrix.py is deliberately NOT here: a smoke set alone would never build a
+# board the edit adds to ALL_BOARDS. classify() gives it the smoke set plus
+# every board the base revision did not build, and the full matrix when the
+# base cannot be read. It edited 26 runs into full matrices in six weeks,
+# ~12000 runner-minutes, most of them for comment or list changes.
 SMOKE_WORKFLOWS = {"build.yml"}
 SMOKE_SCRIPTS = {"check_target_modules.sh"}
+SELECTOR = "ci-matrix.py"
+
+# Files under .github/ that widen to the full matrix by design. Only the
+# selector itself, which classify() narrows further when it can read the base.
+WIDEN_ON_PURPOSE = {SELECTOR}
 
 # One board per way the build can differ: every architecture, every toolchain
 # tuple, every rootfs shape, every variant and every vendor directory appears at
@@ -322,7 +338,13 @@ WORKFLOW = re.compile(r"^\.github/workflows/([^/]+)$")
 GITHUB_SCRIPT = re.compile(r"^\.github/scripts/([^/]+)$")
 DEFCONFIG = re.compile(r"^br-ext-chip-[^/]+/configs/(.+)_defconfig$")
 BOARD_DIR = re.compile(r"^(br-ext-chip-[^/]+)/board/([^/]+)/")
-PACKAGE_DIR = re.compile(r"^general/package/([^/]+)/")
+# legacy/ nests a second package tree that external.mk and package/Config.in
+# include like the first, and a matrix board can enable one of its packages
+# (ssc337de_ultimate sets BR2_PACKAGE_SIGMASTAR_MOTORS), so a path there is
+# that nested package, not "legacy". A file directly in legacy/ still matches
+# as "legacy" and widens.
+PACKAGE_DIR = re.compile(r"^general/package/(?:legacy/)?([^/]+)/")
+PACKAGE_GLOBS = ("general/package/*/", "general/package/legacy/*/")
 
 # Label that forces the full matrix on a PR, for when you do not trust the
 # narrowing --- an opensdk bump behaving oddly, say.
@@ -350,7 +372,8 @@ class Tree:
         self.symbols_of = {}      # package dir -> symbols it declares
         self.package_of = {}      # symbol -> package dir
         self.selects = collections.defaultdict(set)   # symbol -> symbols
-        for path in sorted(glob.glob(f"{self.root}/general/package/*/Config.in")):
+        for path in sorted(p for pattern in PACKAGE_GLOBS
+                           for p in glob.glob(f"{self.root}/{pattern}Config.in")):
             package = path.split(os.sep)[-2]
             current, owned = None, []
             with open(path) as handle:
@@ -374,7 +397,8 @@ class Tree:
         # conditional is opaque to this parser, so the edge is taken
         # unconditionally --- over-approximating widens, which is the safe way.
         self.depends = collections.defaultdict(list)   # package -> [(guard|None, package)]
-        for path in sorted(glob.glob(f"{self.root}/general/package/*/*.mk")):
+        for path in sorted(p for pattern in PACKAGE_GLOBS
+                           for p in glob.glob(f"{self.root}/{pattern}*.mk")):
             package = path.split(os.sep)[-2]
             with open(path) as handle:
                 body = re.sub(r"\\\n", " ", handle.read())
@@ -487,8 +511,13 @@ class Tree:
 # Classification
 # --------------------------------------------------------------------------
 
-def classify(tree, changed, labels=(), event="pull_request", draft=False):
-    """Map a list of changed paths to {rows, needs_build, reason}."""
+def classify(tree, changed, labels=(), event="pull_request", draft=False,
+             base_boards=None):
+    """Map a list of changed paths to {rows, needs_build, reason}.
+
+    base_boards is ALL_BOARDS as the PR's base revision had it, or None when it
+    could not be read; only an edit to this file consults it.
+    """
     full = list(tree.built)
 
     if event != "pull_request":
@@ -500,7 +529,7 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False):
     if not changed:
         return _decision(full, True, reason="no file list available")
 
-    boards, smoked = set(), False
+    boards, smoked = set(), None
     for path in changed:
         if DOCS.match(path) or MARKDOWN.match(path) or REVIEW_CONFIG.match(path) \
                 or REPO_META.match(path):
@@ -513,16 +542,24 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False):
                 continue
             if workflow.group(1) in SMOKE_WORKFLOWS:
                 boards.update(tree.smoke)
-                smoked = True
+                smoked = smoked or "CI plumbing"
                 continue
             return _decision(full, True, reason=f"{path} affects every board")
         script = GITHUB_SCRIPT.match(path)
         if script:
             if script.group(1) in NO_BUILD_SCRIPTS:
                 continue
+            if script.group(1) == SELECTOR and base_boards is not None:
+                # This file picks boards and changes no image. What an edit to
+                # it can break is the build steps (smoke) and a board it newly
+                # adds to the matrix, which nothing has ever built.
+                boards.update(tree.smoke)
+                boards.update(b for b in tree.built if b not in base_boards)
+                smoked = smoked or "CI plumbing"
+                continue
             if script.group(1) in SMOKE_SCRIPTS:
                 boards.update(tree.smoke)
-                smoked = True
+                smoked = smoked or "CI plumbing"
                 continue
             return _decision(full, True, reason=f"{path} affects every board")
 
@@ -550,14 +587,21 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False):
             if hits:
                 boards.update(hits)
                 continue
-            # No board in the matrix enables this package -- but it still
-            # widens, and NOT_BUILT deliberately does not shortcut that.
+            # No board in the matrix enables this package -- but it cannot
+            # narrow to zero, and NOT_BUILT deliberately does not shortcut that.
             # general/external.mk does
             #     include $(sort $(wildcard $(BR2_EXTERNAL)/package/*/*.mk))
             # and general/package/Config.in sources every Config.in, both
             # unconditionally, so a syntax error in a package nothing enables
-            # still breaks make or kconfig for all 96 boards. Narrowing to zero
-            # here would let that reach master unbuilt.
+            # still breaks make or kconfig for every board. That failure is the
+            # same on every board, though -- the parse does not depend on the
+            # defconfig -- so the smoke set proves it as well as 100 boards do.
+            # The global patch dirs, busybox and gcc are not like this: they
+            # change what every board compiles, so they still widen.
+            if package_dir.group(1) not in PACKAGE_NON_PACKAGES:
+                boards.update(tree.smoke)
+                smoked = smoked or "a package no matrix board builds"
+                continue
             return _decision(full, True, reason=f"{path} reaches no board of its own")
 
         # The overlay, the Makefile, general/scripts, general/linux, the
@@ -574,9 +618,9 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False):
     # affected boards" would misrepresent that.
     if boards == set(tree.smoke):
         return _decision(sorted(boards), True,
-                         reason="CI plumbing only: smoke set, not every board")
+                         reason=f"smoke set, not every board: {smoked} only")
     return _decision(sorted(boards), True,
-                     reason="affected boards plus the CI-plumbing smoke set")
+                     reason=f"affected boards plus the smoke set for {smoked}")
 
 
 def _decision(rows, needs_build, reason):
@@ -632,6 +676,39 @@ def changed_files_from_api():
         if page > 30:
             print("ci-matrix: PR exceeds the 3000-file listing limit", file=sys.stderr)
             return None
+
+
+def all_boards_of(source):
+    """ALL_BOARDS as written in a copy of this file, or None.
+
+    Read with ast, never executed: on a pull request the copy comes from the
+    base branch, but the parser is the only part of it that has to run.
+    """
+    try:
+        for node in ast.parse(source).body:
+            if isinstance(node, ast.Assign) and any(
+                    isinstance(t, ast.Name) and t.id == "ALL_BOARDS" for t in node.targets):
+                return set(ast.literal_eval(node.value))
+    except (SyntaxError, ValueError):
+        pass
+    return None
+
+
+def base_all_boards():
+    """ALL_BOARDS at the PR's base revision, or None -- which widens."""
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    sha = _event().get("pull_request", {}).get("base", {}).get("sha")
+    if not (repo and token and sha):
+        return None
+    url = (f"https://api.github.com/repos/{repo}/contents/.github/scripts/"
+           f"{SELECTOR}?ref={sha}")
+    request = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github.raw",
+    })
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return all_boards_of(response.read().decode())
 
 
 def _event():
@@ -743,6 +820,18 @@ def self_test():
             if not os.path.exists(os.path.join(REPO_ROOT, ".github", directory, name)):
                 problems.append(
                     f".github/{directory}/{name} is classified but does not exist")
+    # Every file under .github/scripts and .github/workflows is classified.
+    # An unlisted one widens, which is safe but costs a full matrix on every
+    # push of every PR that touches it -- so make the PR that adds it decide.
+    for names, directory in [(NO_BUILD_WORKFLOWS | SMOKE_WORKFLOWS, "workflows"),
+                             (NO_BUILD_SCRIPTS | SMOKE_SCRIPTS | WIDEN_ON_PURPOSE,
+                              "scripts")]:
+        for name in sorted(os.listdir(os.path.join(REPO_ROOT, ".github", directory))):
+            if os.path.isfile(os.path.join(REPO_ROOT, ".github", directory, name)) \
+                    and name not in names:
+                problems.append(
+                    f".github/{directory}/{name} is not classified; add it to the "
+                    f"no-build or smoke list, or it widens every PR to the full matrix")
     if len(tree.smoke) >= len(tree.built):
         problems.append("SMOKE_BOARDS is not smaller than the full matrix")
     covered = set().union(*(tree.boards[b]["traits"] for b in tree.smoke)) \
@@ -794,12 +883,19 @@ def self_test():
         (["general/package/busybox/busybox.config"], full, "every defconfig points at it"),
         # external.mk includes every package's .mk and Config.in sources every
         # Config.in, so a package nothing enables can still break every board.
+        # ...but the parse is the same on every board, so the smoke set proves it.
         (["general/package/rtl8188eus-openipc/rtl8188eus-openipc.mk"],
-         full, "a package no board enables still widens"),
-        (["general/package/legacy/datalink/files/tweaksys"], full, "the nested legacy tree"),
+         smoke, "a package no board enables is proven by the smoke set"),
+        (["general/package/legacy/datalink/files/tweaksys"],
+         smoke, "a nested legacy package no board enables"),
+        (["general/package/legacy/sigmastar-motors/Config.in"],
+         1, "a nested legacy package narrows to the board enabling it"),
+        (["general/package/legacy/Config.in"], full, "a file directly in legacy/"),
+        (["general/package/all-patches/busybox/0001-x.patch"],
+         full, "the global patch dir is no package, and widens"),
         (["br-ext-chip-hisilicon/external.mk"], full, "vendor external tree"),
         ([".github/scripts/ci-matrix.py"], full,
-         "this file picks the boards, so it cannot pick fewer for itself"),
+         "this file, with no base revision to compare against, widens"),
         ([".github/workflows/some-new-thing.yml"], full, "an unknown workflow widens"),
         ([".github/scripts/some-new-thing.sh"], full, "an unknown script widens"),
         # CI plumbing gets the smoke set: it cannot change image content, only
@@ -831,6 +927,12 @@ def self_test():
         ([".github/ISSUE_TEMPLATE/config.yml"], 0, "issue templates never build"),
         ([".github/ISSUE_TEMPLATE/1-bug.yml"], 0, "an issue form never builds"),
         ([".github/scripts/test_sysupgrade.sh"], 0, "shell-tests fixture"),
+        ([".github/scripts/test_check_mac.sh"], 0, "shell-tests: MAC derivation"),
+        ([".github/scripts/test_strip_shell_comments.sh"], 0, "shell-tests: stripper"),
+        ([".github/scripts/test_automount.sh"], 0, "shell-tests: automount"),
+        ([".github/scripts/test_excludes_report.sh"], 0, "shell-tests: excludes"),
+        ([".github/workflows/toolchain-asan.yml"], 0, "ASan toolchain is dispatch-only"),
+        ([".github/workflows/vendor-abi.yml"], 0, "the advisory ABI audit"),
         ([".github/workflows/lint.yml"], 0, "the workflow linter never builds"),
         ([".github/scripts/lint-workflow-shell.py"], 0, "its script"),
         ([".github/PULL_REQUEST_TEMPLATE.md"], 0, "PR template"),
@@ -859,6 +961,26 @@ def self_test():
         got = len(classify(tree, paths)["rows"])
         if got != expected:
             problems.append(f"{what}: expected {expected} rows, got {got}")
+
+    # 5b. An edit to this file builds the smoke set, plus whatever it adds to
+    #     the matrix, when the base revision's ALL_BOARDS is known.
+    selector = [".github/scripts/ci-matrix.py"]
+    newest = tree.built[-1]
+    for base, expected, what in [
+            (set(tree.built), set(tree.smoke), "selector edit adding no board"),
+            (set(tree.built) - {newest}, set(tree.smoke) | {newest},
+             "selector edit adding a board builds it too")]:
+        got = set(classify(tree, selector, base_boards=base)["rows"])
+        if got != expected:
+            problems.append(f"{what}: expected {sorted(expected)}, got {sorted(got)}")
+    if len(classify(tree, selector + ["general/overlay/etc/passwd"],
+                    base_boards=set(tree.built))["rows"]) != full:
+        problems.append("selector edit plus an overlay file must still widen")
+    source = open(os.path.abspath(__file__)).read()
+    if all_boards_of(source) != set(ALL_BOARDS):
+        problems.append("all_boards_of() cannot read ALL_BOARDS back out of this file")
+    if all_boards_of("ALL_BOARDS = [") is not None:
+        problems.append("all_boards_of() must give None, not raise, on a broken file")
 
     # 6. Zero rows and "go build something" must never be emitted together, in
     #    either direction: Actions errors on an empty include list, and a row
@@ -916,6 +1038,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--stdin", action="store_true",
                         help="read changed paths from stdin instead of the API")
+    parser.add_argument("--base-file", metavar="PATH",
+                        help="with --stdin: the base revision's ci-matrix.py, so an "
+                             "edit to it narrows as it would on a pull request")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
 
@@ -926,20 +1051,31 @@ def main():
     if args.stdin:
         changed = [line.strip() for line in sys.stdin if line.strip()]
         event, labels, draft = "pull_request", [], False
+        base_boards = None
+        if args.base_file:
+            with open(args.base_file) as handle:
+                base_boards = all_boards_of(handle.read())
     else:
         event = os.environ.get("GITHUB_EVENT_NAME", "pull_request")
         pull_request = _event().get("pull_request", {})
         labels = [label["name"] for label in pull_request.get("labels", [])]
         draft = bool(pull_request.get("draft"))
-        changed = None
+        changed, base_boards = None, None
         if event == "pull_request":
             try:
                 changed = changed_files_from_api()
             except (urllib.error.URLError, OSError, ValueError) as exc:
                 # Never fail the run over this; an empty list means full matrix.
                 print(f"ci-matrix: cannot list PR files ({exc})", file=sys.stderr)
+            if changed and f".github/scripts/{SELECTOR}" in changed:
+                try:
+                    base_boards = base_all_boards()
+                except (urllib.error.URLError, OSError, ValueError) as exc:
+                    # None: an edit to this file then widens, as it always did.
+                    print(f"ci-matrix: cannot read the base {SELECTOR} ({exc})",
+                          file=sys.stderr)
 
-    decision = classify(tree, changed or [], labels, event, draft)
+    decision = classify(tree, changed or [], labels, event, draft, base_boards)
 
     print(f"ci-matrix: {len(decision['rows'])}/{len(tree.built)} boards "
           f"(needs_build={decision['needs_build']}) --- {decision['reason']}",
