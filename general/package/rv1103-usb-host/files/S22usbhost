@@ -1,0 +1,20 @@
+#!/bin/sh
+
+OTG_MODE=/sys/devices/platform/ff3e0000.usb2-phy/otg_mode
+
+case "$1" in
+	start)
+		if [ -w "$OTG_MODE" ]; then
+			echo host > "$OTG_MODE"
+			sleep 1
+		fi
+		;;
+	stop)
+		;;
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac
+
+exit 0
