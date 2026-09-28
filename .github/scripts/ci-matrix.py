@@ -295,7 +295,7 @@ NOT_BUILT = {
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "hisilicon-osdrv-hi3536dv100", "i2c-telemetry",
     "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
-    "linux-patcher", "matter",
+    "matter",
     "mavfwd", "mdnsd-openipc", "mini", "mqtt-bot", "msposd", "n3n-openipc", "nabto",
     "netblink", "node-exporter", "ntfy", "onvif-simple-server", "openipc-nfs-root",
     "osd-openipc", "rtl8188eus-openipc", "rtl8192eu-openipc", "rtl8811cu-openipc",
@@ -372,10 +372,18 @@ class Tree:
         self.symbols_of = {}      # package dir -> symbols it declares
         self.package_of = {}      # symbol -> package dir
         self.selects = collections.defaultdict(set)   # symbol -> symbols
+        # Packages whose own symbol has a Kconfig default, so a board can build
+        # them without naming them: linux-patcher is `default y if
+        # BR2_LINUX_KERNEL` and hooks the kernel patch step of every board.
+        # The graph below starts from what defconfigs write down and cannot
+        # see these, so classify() widens on them rather than narrowing to
+        # whichever boards happen to spell the symbol out.
+        self.implicit = set()
         for path in sorted(p for pattern in PACKAGE_GLOBS
                            for p in glob.glob(f"{self.root}/{pattern}Config.in")):
             package = path.split(os.sep)[-2]
             current, owned = None, []
+            main = "BR2_PACKAGE_" + re.sub(r"[^A-Z0-9]", "_", package.upper())
             with open(path) as handle:
                 for line in handle:
                     declared = re.match(r"\s*(?:menu)?config\s+(BR2_\w+)", line)
@@ -384,6 +392,11 @@ class Tree:
                         owned.append(current)
                         self.package_of[current] = package
                         continue
+                    if re.match(r"\s*(?:---)?help", line):
+                        current = None   # help text is prose, not attributes
+                        continue
+                    if current == main and re.match(r"\s*default\s+(?!n\b)", line):
+                        self.implicit.add(package)
                     selected = re.match(r"\s*select\s+(BR2_\w+)", line)
                     if selected and current:
                         self.selects[current].add(selected.group(1))
@@ -583,6 +596,9 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False,
 
         package_dir = PACKAGE_DIR.match(path)
         if package_dir:
+            if package_dir.group(1) in tree.implicit:
+                return _decision(full, True,
+                                 reason=f"{path} is a package boards enable by default")
             hits = tree.boards_for_package(package_dir.group(1))
             if hits:
                 boards.update(hits)
@@ -785,13 +801,17 @@ def self_test():
                 f"general/package/{package}/ has no Config.in symbol; add it to "
                 f"PACKAGE_NON_PACKAGES if it is not a Buildroot package")
             continue
-        if tree.boards_for_package(package):
+        if tree.boards_for_package(package) or package in tree.implicit:
             continue
         if package not in NOT_BUILT:
             problems.append(
                 f"general/package/{package}/ is built by no board in ALL_BOARDS; add "
                 f"it to NOT_BUILT if that is deliberate")
     for package in sorted(NOT_BUILT):
+        if package in tree.implicit:
+            problems.append(
+                f"{package} is in NOT_BUILT but its symbol defaults on; boards "
+                f"build it without naming it, so drop it")
         if tree.boards_for_package(package):
             problems.append(
                 f"{package} is in NOT_BUILT but the matrix builds it now; drop it")
@@ -891,6 +911,10 @@ def self_test():
         (["general/package/legacy/sigmastar-motors/Config.in"],
          1, "a nested legacy package narrows to the board enabling it"),
         (["general/package/legacy/Config.in"], full, "a file directly in legacy/"),
+        # A package whose symbol defaults on is built by boards that never
+        # name it, which the graph cannot see: it must not fall to the smoke set.
+        (["general/package/linux-patcher/linux-patcher.mk"],
+         full, "a package enabled by a Kconfig default widens"),
         (["general/package/all-patches/busybox/0001-x.patch"],
          full, "the global patch dir is no package, and widens"),
         (["br-ext-chip-hisilicon/external.mk"], full, "vendor external tree"),
