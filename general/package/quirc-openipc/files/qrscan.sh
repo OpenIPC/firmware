@@ -16,15 +16,17 @@
 #   badqr      one low blip              a code was read, but not a Wi-Fi one
 #   timeout    three falling notes       no code seen; scanning stopped
 #
-# After a failure it keeps scanning, so a corrected code can be shown straight
-# away. The same code is not retried until it has been out of sight a while.
+# After a failed attempt it reconnects to the network already saved, if there
+# is one, and keeps scanning, so a corrected code can be shown straight away.
+# The same code is tried again only after RETRY seconds, and does not extend
+# the scan: WINDOW counts from the last new code.
 #
 # Two payloads are understood: the two lines OpenIPC's generator writes
 # (wlanssid=... / wlanpass=...), and the WIFI: URI a phone's "share network"
 # screen shows.
 
 IFACE=wlan0
-STATE=/tmp/qrscan
+STATE=${STATE:-}
 WINDOW=${QRSCAN_WINDOW:-30}	# seconds without a code before giving up
 RETRY=${QRSCAN_RETRY:-15}	# seconds before the same code is tried again
 JOIN_S=${QRSCAN_JOIN_S:-25}	# seconds to wait for the network to accept us
@@ -39,8 +41,10 @@ chime() {
 	timeout 3 wget -q -O /dev/null "http://127.0.0.1/night/chime?cue=$1" 2>/dev/null
 }
 
-# Print the SSID and the password on two lines, or fail for a payload that is
-# not a Wi-Fi one.
+# Print the SSID on the first line and the password on the second, or fail for
+# a payload that is not a Wi-Fi one. Two lines rather than two words because
+# either may contain spaces -- the old script split on them -- and a newline
+# is the one character a QR code's Wi-Fi fields cannot carry.
 qr_wifi_parse() {
 	case "$1" in
 	WIFI:*)
@@ -97,24 +101,6 @@ qr_wifi_classify() {
 	fi
 }
 
-qr_wifi_conf() {
-	# The SSID as hex, so no byte of it needs quoting.
-	hex=$(printf '%s' "$1" | od -An -tx1 | tr -d ' \n')
-	echo "network={"
-	echo "	ssid=$hex"
-	echo "	scan_ssid=1"
-	if [ -z "$2" ]; then
-		echo "	key_mgmt=NONE"
-	elif printf '%s' "$2" | grep -qE '^[0-9a-fA-F]{64}$'; then
-		echo "	psk=$2"
-	else
-		psk=$(wpa_passphrase "$1" "$2" | sed -n 's/^[[:space:]]*psk=\([0-9a-f]\{64\}\)$/\1/p')
-		[ -n "$psk" ] || return 1
-		echo "	psk=$psk"
-	fi
-	echo "}"
-}
-
 # Try the network. Prints connected, wrongkey, nonetwork or nodhcp; leaves
 # the interface up and addressed only for connected.
 qr_wifi_try() {
@@ -123,7 +109,9 @@ qr_wifi_try() {
 		echo wrongkey
 		return
 	fi
-	if ! qr_wifi_conf "$1" "$2" > "$STATE/wpa.conf"; then
+	# The same configuration the boot path will build from the saved
+	# settings, so what joins now joins after the reboot.
+	if ! wlan_conf "$1" "$2" > "$STATE/wpa.conf"; then
 		echo wrongkey
 		return
 	fi
@@ -157,12 +145,22 @@ qr_wifi_try() {
 	echo "$outcome"
 }
 
+# Back onto the network already saved, if there is one: a camera that was
+# working before someone showed it a bad code must not stay off the air.
+qr_wifi_restore() {
+	[ -n "$(fw_printenv -n wlanssid 2>/dev/null)" ] || return 0
+	ifup -f "$IFACE" >/dev/null 2>&1
+}
+
 qr_main() {
-	mkdir -p "$STATE"
+	if ! command -v wpa_supplicant >/dev/null; then
+		say "This image has no wpa_supplicant; QR Wi-Fi onboarding needs it"
+		exit 1
+	fi
+	STATE=$(mktemp -d /tmp/qrscan.XXXXXX) || exit 1
 	n=0
 	last=
 	last_at=0
-	tried=
 
 	while [ $n -lt "$WINDOW" ]; do
 		timeout 2 wget -q -O "$STATE/image.jpg" http://127.0.0.1/image.jpg
@@ -171,13 +169,15 @@ qr_main() {
 		now=$(cut -d. -f1 /proc/uptime)
 
 		if [ -n "$data" ] && { [ "$data" != "$last" ] || [ $((now - last_at)) -ge "$RETRY" ]; }; then
+			# Only a new code restarts the window; one left in view is
+			# retried, but cannot keep the scanner running for ever.
+			[ "$data" != "$last" ] && n=0
 			last=$data
 			if creds=$(qr_wifi_parse "$data"); then
 				ssid=$(printf '%s\n' "$creds" | sed -n 1p)
 				pass=$(printf '%s\n' "$creds" | sed -n 2p)
 				chime scanned
 				say "Code read, trying network \"$ssid\""
-				tried=1
 				outcome=$(qr_wifi_try "$ssid" "$pass")
 				chime "$outcome"
 				if [ "$outcome" = connected ]; then
@@ -191,21 +191,20 @@ qr_main() {
 					exit 0
 				fi
 				say "Network \"$ssid\" not joined: $outcome"
+				qr_wifi_restore
 			else
 				chime badqr
 				say "Code read, but it is not a Wi-Fi code"
 			fi
 			last_at=$(cut -d. -f1 /proc/uptime)
-			n=0
 		fi
 		sleep 1
 		n=$((n + 1))
 	done
 
 	chime timeout
-	say "No usable code in ${WINDOW}s; scanning stopped"
-	# Hand the interface back to whatever the saved settings bring up.
-	[ -n "$tried" ] && ifup "$IFACE" >/dev/null 2>&1
+	say "No usable code in ${WINDOW} attempts; scanning stopped"
+	rm -rf "$STATE"
 	exit 1
 }
 

@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# Print a wpa_supplicant configuration for one network.
+#
+#   wlan_conf <ssid> [key]
+#
+# An empty key is an open network, 64 hex digits are a raw pre-shared key, and
+# anything else is a WPA passphrase. The SSID is written as hex, so no byte of
+# it needs quoting.
+#
+# The boot path (/etc/network/interfaces.d/wlan0) and QR onboarding both build
+# their configuration here, so a network that joined during onboarding joins
+# the same way after the reboot.
+
+if [ -z "$1" ]; then
+	echo "usage: wlan_conf <ssid> [key]" >&2
+	exit 1
+fi
+
+hex=$(printf '%s' "$1" | od -An -tx1 | tr -d ' \n')
+
+if [ -z "$2" ]; then
+	key="key_mgmt=NONE"
+elif printf '%s' "$2" | grep -qE '^[0-9a-fA-F]{64}$'; then
+	key="psk=$2"
+else
+	if ! command -v wpa_passphrase >/dev/null; then
+		echo "wlan_conf: this image has no wpa_passphrase" >&2
+		exit 1
+	fi
+	psk=$(wpa_passphrase "$1" "$2" | sed -n 's/^[[:space:]]*psk=\([0-9a-f]\{64\}\)$/\1/p')
+	if [ -z "$psk" ]; then
+		echo "wlan_conf: a WPA passphrase is 8 to 63 characters" >&2
+		exit 1
+	fi
+	key="psk=$psk"
+fi
+
+printf 'network={\n\tssid=%s\n\tscan_ssid=1\n\t%s\n}\n' "$hex" "$key"
