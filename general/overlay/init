@@ -26,7 +26,8 @@ for parameter in $(cat /proc/cmdline); do
 done
 
 if $is_flash_root; then
-	if grep -q ubifs /proc/cmdline; then
+	# SquashFS on UBI still needs UBIFS for rootfs_data.
+	if grep -qE 'ubifs|(^| )ubi\.mtd=' /proc/cmdline; then
 		mount -t ubifs ubi0:rootfs_data /overlay
 	else
 		mtdblkdev=$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd | sed 's/mtd/mtdblock/')

@@ -18,6 +18,12 @@ define WIFIBROADCAST_NG_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(WIFIBROADCAST_NG_PKGDIR)/files/drone.key
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc $(WIFIBROADCAST_NG_PKGDIR)/files/wfb.yaml
+	# Rockchip uses mavfwd for telemetry; msposd has no Rockchip backend.
+	if [ "$(OPENIPC_SOC_VENDOR)" = rockchip ]; then \
+		$(SED) 's/^  router: msposd$$/  router: mavfwd/' \
+			-e 's/^  telemetry_enabled: false$$/  telemetry_enabled: true/' \
+			$(TARGET_DIR)/etc/wfb.yaml; \
+	fi
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/init.d
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/etc/init.d $(WIFIBROADCAST_NG_PKGDIR)/files/S98wifibroadcast
