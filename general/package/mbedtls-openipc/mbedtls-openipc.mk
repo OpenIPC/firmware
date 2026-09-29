@@ -24,6 +24,22 @@ define MBEDTLS_ENABLE_SRTP
 		$(@D)/include/mbedtls/config.h
 endef
 MBEDTLS_OPENIPC_POST_PATCH_HOOKS += MBEDTLS_ENABLE_SRTP
+
+# Upstream's default config compiles in every algorithm's self-test vectors,
+# a table of feature-name strings, and a set of test CA/server/client keys for
+# the sample programs. Nothing on a camera calls mbedtls_*_self_test,
+# mbedtls_version_check_feature or mbedtls_test_*, majestic included (it is
+# linked against this library, so its imports were checked on every build),
+# and ENABLE_PROGRAMS is off. None of the three changes a struct layout.
+define MBEDTLS_OPENIPC_DROP_TEST_CODE
+	$(SED) "s:^#define MBEDTLS_SELF_TEST$$://#define MBEDTLS_SELF_TEST:" \
+		$(@D)/include/mbedtls/config.h
+	$(SED) "s:^#define MBEDTLS_VERSION_FEATURES$$://#define MBEDTLS_VERSION_FEATURES:" \
+		$(@D)/include/mbedtls/config.h
+	$(SED) "s:^#define MBEDTLS_CERTS_C$$://#define MBEDTLS_CERTS_C:" \
+		$(@D)/include/mbedtls/config.h
+endef
+MBEDTLS_OPENIPC_POST_PATCH_HOOKS += MBEDTLS_OPENIPC_DROP_TEST_CODE
 ifeq ($(BR2_STATIC_LIBS),y)
 MBEDTLS_OPENIPC_CONF_OPTS += -DLINK_WITH_PTHREAD=ON
 endif
