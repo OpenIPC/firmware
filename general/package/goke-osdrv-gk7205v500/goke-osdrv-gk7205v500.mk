@@ -108,6 +108,7 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/iq/sc2232.ini
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/iq/sc2336.ini
 	ln -sf sc2232.ini $(TARGET_DIR)/etc/sensors/iq/default.ini
 
 	$(GOKE_OSDRV_GK7205V500_INSTALL_KMODS)
