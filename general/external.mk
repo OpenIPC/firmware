@@ -28,5 +28,17 @@ OPENIPC_TOOLCHAIN := toolchain/toolchain.$(OPENIPC_KERNEL)
 # by ~45KB in the size report rather than anything failing.
 WPA_SUPPLICANT_CONFIG_DISABLE += CONFIG_TDLS CONFIG_IEEE80211R
 
+# linux.mk passes INSTALL_MOD_STRIP=1, which the kernel turns into
+# `strip --strip-debug`: every module still ships its full .symtab/.strtab.
+# Any other value is handed to strip as its options, and --strip-unneeded keeps
+# exactly the symbols relocation and __ksymtab need. The last assignment on the
+# make command line wins, and pkg-kernel-module.mk installs with the same
+# LINUX_MAKE_FLAGS, so out-of-tree modules (wireguard, the Wi-Fi drivers) are
+# covered too. Same include-order dependency as the line above. The cost is
+# that an oops inside a module prints offsets instead of its static function
+# names. On hi3516ev300 this took the 26 in-tree and wireguard modules from
+# 1827288 to 1624584 B, and all 26 loaded and worked on the camera.
+LINUX_MAKE_FLAGS += INSTALL_MOD_STRIP=--strip-unneeded
+
 include $(sort $(wildcard $(BR2_EXTERNAL)/package/*/*.mk))
 include $(sort $(wildcard $(BR2_EXTERNAL)/package/legacy/*/*.mk))
