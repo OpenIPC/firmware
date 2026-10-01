@@ -1,5 +1,5 @@
---- a/uacme.sh	2021-08-11 00:54:06.720473918 +0300
-+++ b/uacme.sh	2021-08-11 00:53:57.168540420 +0300
+--- a/uacme.sh
++++ b/uacme.sh
 @@ -16,7 +16,7 @@
  # You should have received a copy of the GNU General Public License
  # along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -14,6 +14,6 @@
          case "$TYPE" in
              http-01)
 +                mkdir -p ${CHALLENGE_PATH}
-                 echo -n "${AUTH}" > "${CHALLENGE_PATH}/${TOKEN}"
+                 printf "%s" "${AUTH}" > "${CHALLENGE_PATH}/${TOKEN}"
                  exit $?
                  ;;

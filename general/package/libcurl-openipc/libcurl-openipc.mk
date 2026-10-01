@@ -4,9 +4,9 @@
 #
 ################################################################################
 
-LIBCURL_OPENIPC_VERSION = 7.76.0
+LIBCURL_OPENIPC_VERSION = 8.15.0
 LIBCURL_OPENIPC_SOURCE = curl-$(LIBCURL_OPENIPC_VERSION).tar.xz
-LIBCURL_OPENIPC_SITE = https://curl.haxx.se/download
+LIBCURL_OPENIPC_SITE = https://curl.se/download
 LIBCURL_OPENIPC_DL_SUBDIR = libcurl
 LIBCURL_OPENIPC_DEPENDENCIES = host-pkgconf \
 	$(if $(BR2_PACKAGE_ZLIB),zlib) \
@@ -23,7 +23,25 @@ LIBCURL_OPENIPC_INSTALL_STAGING = YES
 # generate C code) isn't very useful
 LIBCURL_OPENIPC_CONF_OPTS = --disable-manual --disable-ntlm-wb \
 	--enable-hidden-symbols --with-random=/dev/urandom --disable-curldebug \
-	--disable-libcurl-option
+	--disable-libcurl-option --without-libpsl
+
+# What curl 8 added over the 7.76 this replaced, none of which anything on a
+# camera asks for: IPFS, websockets, HSTS, the headers API, SHA-512/256
+# digests, TLS session export and HTTPS resource records. And what neither
+# the image's scripts nor its programs use: NTLM (the only user of DES),
+# DNS-over-HTTPS, alt-svc, .netrc, the easy-options table, the legacy form
+# API (curl -F uses MIME, which stays), AWS signing and GSSAPI auth.
+LIBCURL_OPENIPC_CONF_OPTS += --disable-ipfs --disable-websockets \
+	--disable-hsts --disable-headers-api --disable-sha512-256 \
+	--disable-ssls-export --disable-httpsrr --disable-ech \
+	--disable-ntlm --disable-doh --disable-alt-svc --disable-netrc \
+	--disable-get-easy-options --disable-form-api --disable-aws \
+	--disable-kerberos-auth --disable-negotiate-auth --disable-dnsshuffle
+
+# Link-time optimisation takes a tenth off libcurl, which is what curl 8 grew
+# by over 7.76 beyond those features.
+LIBCURL_OPENIPC_CONF_ENV += CFLAGS="$(TARGET_CFLAGS) -flto" \
+	LDFLAGS="$(TARGET_LDFLAGS) -flto"
 
 ifeq ($(BR2_TOOLCHAIN_HAS_THREADS),y)
 LIBCURL_OPENIPC_CONF_OPTS += --enable-threaded-resolver
@@ -39,6 +57,12 @@ endif
 
 LIBCURL_OPENIPC_CONFIG_SCRIPTS = curl-config
 
+# wcurl, a shell wrapper curl 8 installs, is nothing a camera runs.
+define LIBCURL_OPENIPC_DROP_WCURL
+	rm -f $(TARGET_DIR)/usr/bin/wcurl
+endef
+LIBCURL_OPENIPC_POST_INSTALL_TARGET_HOOKS += LIBCURL_OPENIPC_DROP_WCURL
+
 ifeq ($(BR2_PACKAGE_LIBCURL_OPENIPC_OPENSSL),y)
 LIBCURL_OPENIPC_DEPENDENCIES += openssl
 # configure adds the cross openssl dir to LD_LIBRARY_PATH which screws up
@@ -48,8 +72,12 @@ LIBCURL_OPENIPC_DEPENDENCIES += openssl
 LIBCURL_OPENIPC_CONF_ENV += LD_LIBRARY_PATH=$(if $(LD_LIBRARY_PATH),$(LD_LIBRARY_PATH):)/lib:/usr/lib
 LIBCURL_OPENIPC_CONF_OPTS += --with-ssl=$(STAGING_DIR)/usr \
 	--with-ca-path=/etc/ssl/certs
-else
+else ifeq ($(BR2_PACKAGE_LIBCURL_OPENIPC_TLS_NONE),y)
+# curl 8 spells "no TLS at all" --without-ssl; with another library chosen
+# below, --without-ssl would contradict it, so only OpenSSL is ruled out.
 LIBCURL_OPENIPC_CONF_OPTS += --without-ssl
+else
+LIBCURL_OPENIPC_CONF_OPTS += --without-openssl
 endif
 
 ifeq ($(BR2_PACKAGE_LIBCURL_OPENIPC_GNUTLS),y)
@@ -58,14 +86,6 @@ LIBCURL_OPENIPC_CONF_OPTS += --with-gnutls=$(STAGING_DIR)/usr \
 LIBCURL_OPENIPC_DEPENDENCIES += gnutls
 else
 LIBCURL_OPENIPC_CONF_OPTS += --without-gnutls
-endif
-
-ifeq ($(BR2_PACKAGE_LIBCURL_OPENIPC_LIBNSS),y)
-LIBCURL_OPENIPC_CONF_OPTS += --with-nss=$(STAGING_DIR)/usr
-LIBCURL_OPENIPC_CONF_ENV += CPPFLAGS="$(TARGET_CPPFLAGS) `$(PKG_CONFIG_HOST_BINARY) nspr nss --cflags`"
-LIBCURL_OPENIPC_DEPENDENCIES += libnss
-else
-LIBCURL_OPENIPC_CONF_OPTS += --without-nss
 endif
 
 ifeq ($(BR2_PACKAGE_LIBCURL_OPENIPC_MBEDTLS),y)
@@ -187,10 +207,21 @@ HOST_LIBCURL_OPENIPC_CONF_OPTS = \
 	--disable-curldebug \
 	--with-ssl \
 	--without-gnutls \
-	--without-mbedtls \
-	--without-nss
+	--without-mbedtls
 
 HOST_LIBCURL_OPENIPC_POST_PATCH_HOOKS += LIBCURL_FIX_DOT_PC
+
+# The toolchains carry a libcurl of their own, built against the mbedTLS they
+# shipped; with per-package directories it can win the staging merge over
+# this one, as the mbedTLS copy can. Take it out when this package builds one.
+ifeq ($(BR2_PACKAGE_LIBCURL_OPENIPC),y)
+define LIBCURL_OPENIPC_DROP_TOOLCHAIN_COPY
+	rm -rf $(STAGING_DIR)/usr/include/curl
+	rm -f $(STAGING_DIR)/usr/lib/libcurl.* $(STAGING_DIR)/usr/lib/pkgconfig/libcurl.pc \
+		$(STAGING_DIR)/usr/bin/curl-config
+endef
+TOOLCHAIN_EXTERNAL_CUSTOM_POST_INSTALL_STAGING_HOOKS += LIBCURL_OPENIPC_DROP_TOOLCHAIN_COPY
+endif
 
 $(eval $(autotools-package))
 $(eval $(host-autotools-package))
