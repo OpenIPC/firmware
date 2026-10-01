@@ -76,10 +76,41 @@ MBEDTLS_OPENIPC_UNUSED = \
 	SSL_MAX_FRAGMENT_LENGTH X509_RSASSA_PSS_SUPPORT PK_RSA_ALT_SUPPORT \
 	SSL_DTLS_CONNECTION_ID SSL_DTLS_CONNECTION_ID_COMPAT \
 	SSL_CONTEXT_SERIALIZATION AESCE_C
-# DES, DH, CMAC and NIST key wrap are wanted by wpa_supplicant's mbedTLS
-# backend (MS-CHAPv2, WPS, PMF, EAPOL key data) and by nothing else here.
+# The second round (#2507), measured against what majestic, curl, libevent's
+# bufferevent and uacme import: ChaCha20-Poly1305, every TLS record cipher but
+# AES-GCM (every server and browser these talk to offers it, and nothing on
+# the image encrypts a PEM key), CFB/OFB/XTS, static-RSA key exchange,
+# deterministic ECDSA and the HMAC-DRBG only it used, PKCS#5,
+# compressed and specified-domain EC keys, session tickets (curl compiles
+# them out without the option), the RFC 5705 exporter, DTLS client port
+# reuse, the alerts beyond the ones a handshake sends, the debug module
+# (majestic stopped needing it), and the error-string table: with
+# ERROR_STRERROR_DUMMY, on by default, mbedtls_strerror() stays defined for
+# majestic, curl and uacme and prints the numeric code. About 45 KB of xz on
+# top of the first round. Curve25519 stays for majestic's DTLS, GENPRIME and
+# CSR parsing for uacme's RSA keys, renegotiation for libevent, and P-521
+# because the CA bundle carries a P-521 root (e-Szigno TLS Root CA 2023):
+# without it mbedtls_x509_crt_parse_file() skips that one certificate, and
+# majestic stops at startup ("Make sure CA repository ... exist", "Error while
+# SSL init") rather than run with a partial bundle. A curve, key type or
+# signature algorithm can only go once no root in general/overlay/etc/ssl/certs
+# uses it.
+MBEDTLS_OPENIPC_UNUSED += \
+	CHACHA20_C POLY1305_C CHACHAPOLY_C \
+	CIPHER_MODE_CFB CIPHER_MODE_OFB CIPHER_MODE_XTS \
+	KEY_EXCHANGE_RSA_ENABLED \
+	ECDSA_DETERMINISTIC HMAC_DRBG_C PKCS5_C \
+	PK_PARSE_EC_COMPRESSED PK_PARSE_EC_EXTENDED \
+	SSL_SESSION_TICKETS SSL_KEYING_MATERIAL_EXPORT \
+	SSL_DTLS_CLIENT_PORT_REUSE SSL_ALL_ALERT_MESSAGES SSL_ENCRYPT_THEN_MAC \
+	DEBUG_C ERROR_C
+# DES, DH, CMAC, NIST key wrap and AES-CBC are wanted by wpa_supplicant's
+# mbedTLS backend (MS-CHAPv2, WPS, PMF, EAPOL key data) and by nothing else
+# here.
 ifneq ($(BR2_PACKAGE_WPA_SUPPLICANT_OPENIPC),y)
-MBEDTLS_OPENIPC_UNUSED += DES_C DHM_C CMAC_C NIST_KW_C
+MBEDTLS_OPENIPC_UNUSED += DES_C DHM_C CMAC_C NIST_KW_C \
+	CIPHER_MODE_CBC CIPHER_PADDING_PKCS7 CIPHER_PADDING_ONE_AND_ZEROS \
+	CIPHER_PADDING_ZEROS_AND_LEN CIPHER_PADDING_ZEROS
 endif
 define MBEDTLS_OPENIPC_DROP_UNUSED
 	$(foreach o,$(MBEDTLS_OPENIPC_UNUSED),
@@ -98,6 +129,13 @@ define MBEDTLS_OPENIPC_SMALLER_SHA
 		$(MBEDTLS_OPENIPC_CONFIG_H)
 endef
 MBEDTLS_OPENIPC_POST_PATCH_HOOKS += MBEDTLS_OPENIPC_SMALLER_SHA
+
+# Smaller AES tables: a few cycles more per block at SRTP rates.
+define MBEDTLS_OPENIPC_SMALLER_AES
+	$(SED) "s:^//#define MBEDTLS_AES_FEWER_TABLES$$:#define MBEDTLS_AES_FEWER_TABLES:" \
+		$(MBEDTLS_OPENIPC_CONFIG_H)
+endef
+MBEDTLS_OPENIPC_POST_PATCH_HOOKS += MBEDTLS_OPENIPC_SMALLER_AES
 ifeq ($(BR2_STATIC_LIBS),y)
 MBEDTLS_OPENIPC_CONF_OPTS += -DLINK_WITH_PTHREAD=ON
 endif
