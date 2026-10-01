@@ -1,5 +1,8 @@
 config BR2_PACKAGE_MAJESTIC
 	bool "Majestic streamer"
+	# majestic links libz at run time, so it cannot rely on another package
+	# happening to pull zlib in.
+	select BR2_PACKAGE_ZLIB
 	help
 	  Tiny but powerful IPC streaming software
 	  (non-commercial version for personal use only)

@@ -17,7 +17,8 @@ MAJESTIC_DEPENDENCIES += \
 	libogg-openipc \
 	mbedtls-openipc \
 	opus-openipc \
-	json-c
+	json-c \
+	zlib
 
 define MAJESTIC_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc
