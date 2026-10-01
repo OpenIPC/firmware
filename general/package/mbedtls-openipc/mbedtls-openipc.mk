@@ -80,7 +80,7 @@ MBEDTLS_OPENIPC_UNUSED = \
 # bufferevent and uacme import: ChaCha20-Poly1305, every TLS record cipher but
 # AES-GCM (every server and browser these talk to offers it, and nothing on
 # the image encrypts a PEM key), CFB/OFB/XTS, static-RSA key exchange,
-# deterministic ECDSA and the HMAC-DRBG only it used, PKCS#5,
+# deterministic ECDSA and the HMAC-DRBG only it used, PKCS#5 (PBKDF2),
 # compressed and specified-domain EC keys, session tickets (curl compiles
 # them out without the option), the RFC 5705 exporter, DTLS client port
 # reuse, the alerts beyond the ones a handshake sends, the debug module
@@ -99,16 +99,16 @@ MBEDTLS_OPENIPC_UNUSED += \
 	CHACHA20_C POLY1305_C CHACHAPOLY_C \
 	CIPHER_MODE_CFB CIPHER_MODE_OFB CIPHER_MODE_XTS \
 	KEY_EXCHANGE_RSA_ENABLED \
-	ECDSA_DETERMINISTIC HMAC_DRBG_C PKCS5_C \
+	ECDSA_DETERMINISTIC HMAC_DRBG_C \
 	PK_PARSE_EC_COMPRESSED PK_PARSE_EC_EXTENDED \
 	SSL_SESSION_TICKETS SSL_KEYING_MATERIAL_EXPORT \
 	SSL_DTLS_CLIENT_PORT_REUSE SSL_ALL_ALERT_MESSAGES SSL_ENCRYPT_THEN_MAC \
 	DEBUG_C ERROR_C
-# DES, DH, CMAC, NIST key wrap and AES-CBC are wanted by wpa_supplicant's
-# mbedTLS backend (MS-CHAPv2, WPS, PMF, EAPOL key data) and by nothing else
-# here.
+# DES, DH, CMAC, NIST key wrap, AES-CBC and PKCS#5 are wanted by
+# wpa_supplicant's mbedTLS backend (MS-CHAPv2, WPS, PMF, EAPOL key data, and
+# PBKDF2 for the WPA-PSK passphrase) and by nothing else here.
 ifneq ($(BR2_PACKAGE_WPA_SUPPLICANT_OPENIPC),y)
-MBEDTLS_OPENIPC_UNUSED += DES_C DHM_C CMAC_C NIST_KW_C \
+MBEDTLS_OPENIPC_UNUSED += DES_C DHM_C CMAC_C NIST_KW_C PKCS5_C \
 	CIPHER_MODE_CBC CIPHER_PADDING_PKCS7 CIPHER_PADDING_ONE_AND_ZEROS \
 	CIPHER_PADDING_ZEROS_AND_LEN CIPHER_PADDING_ZEROS
 endif
