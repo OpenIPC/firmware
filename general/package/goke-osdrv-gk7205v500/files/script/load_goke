@@ -18,6 +18,14 @@ mem_total=${mem_total:=64}
 os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
 
+# The MMZ split must match the kernel's actual mem= (set by the defcfg cmdLine),
+# else the MMZ pool overlaps kernel RAM and xm_osal init fails with
+# "Conflict MMZ ... to kernel memory". The osmem env can disagree with mem=
+# (e.g. gk7205v510 boots mem=70M while osmem=32M), so prefer the kernel value
+# (an explicit -osmem arg below still wins).
+_kmem=$(grep -oE 'mem=[0-9]+M' /proc/cmdline | head -1 | tr -dc '0-9')
+[ -n "$_kmem" ] && os_mem_size=$_kmem
+
 YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 
 cd /lib/modules/$(uname -r)/goke/
