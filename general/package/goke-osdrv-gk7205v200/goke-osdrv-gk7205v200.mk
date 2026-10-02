@@ -67,6 +67,7 @@ define GOKE_OSDRV_GK7205V200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/iq/imx307.ini
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/iq/imx335.ini
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/iq/sc2232.ini
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/iq/sc2239.ini
 	ln -sf imx307.ini $(TARGET_DIR)/etc/sensors/iq/default.ini
 
 	# V4 heavy modules (acodec, adec, aenc, ai, aio, ao, base, chnl, h264e,
