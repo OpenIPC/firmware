@@ -84,7 +84,9 @@ ALL_BOARDS = [
     # via gk7205v200's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "gk7202v300_lite", "gk7205v200_lite", "gk7205v300_lite", "gk7605v100_lite",
     # Goke [GK7205V500]
-    "gk7201v200_lite", "gk7205v500_lite", "gk7205v510_lite",
+    # gk7205v510 is firmware-identical to gk7205v500 --- built once and served
+    # via gk7205v500's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
+    "gk7201v200_lite", "gk7205v500_lite",
     # Allwinner
     "v851s_lite",
     # Fullhan
@@ -872,7 +874,7 @@ def self_test():
         (["general/package/hisilicon-osdrv-hi3516ev200/files/script/load_hisilicon"],
          8, "osdrv narrows to its family"),
         (["general/package/hisilicon-opensdk/hisilicon-opensdk.mk"],
-         45, "opensdk spans HiSilicon and Goke"),
+         47, "opensdk spans HiSilicon and Goke"),
         (["general/package/goke-osdrv-gk7205v200/Config.in"], 7, "goke osdrv"),
         (["general/package/hisilicon-osdrv-hi3520dv200/files/script/load_hisilicon"],
          1, "single-board osdrv"),
