@@ -151,7 +151,7 @@ if [ "$2" = upgrade ]; then
     exit 1
 fi
 echo "${STUB_SOC:-ssc338q}"'
-stub killall    'exit 0'
+stub killall    'echo "killall $*" >> "$FLASH_LOG"; exit 0'
 stub ntpd       'exit 0'
 # Three shapes reach this.
 #
@@ -166,6 +166,20 @@ stub ntpd       'exit 0'
 #        say, which check_unpack_ram has to treat as "no opinion".
 #  else  a body fetch whose only interesting property is its exit status.
 stub curl '
+# majestic_api: POST http://127.0.0.1[:port]/api/v1/upgrade/{prepare,abort}.
+# STUB_PREPARE / STUB_ABORT are the status codes majestic answers; the 404
+# default is a majestic too old to have the endpoint, which is what every test
+# that does not care about it gets.
+for a in "$@"; do
+    case "$a" in
+    http://127.0.0.1*/api/v1/upgrade/*)
+        action=${a##*/}
+        echo "majestic_api $action" >> "$FLASH_LOG"
+        if [ "$action" = prepare ]; then printf %s "${STUB_PREPARE:-404}"
+        else printf %s "${STUB_ABORT:-404}"; fi
+        exit 0 ;;
+    esac
+done
 out=""; prev=""; ranged=0; head=0
 for a in "$@"; do
     [ "$prev" = "-o" ] && out=$a
@@ -211,6 +225,8 @@ SDMOUNTS="$SB/tmp/sdmounts"
 : > "$SDMOUNTS"
 cat > "$SB/bin/umount" <<EOF
 #!/bin/bash
+# STUB_UMOUNT_BUSY: a card something still has open -- EBUSY, mount unchanged.
+[ -n "\${STUB_UMOUNT_BUSY:-}" ] && exit 1
 if [ -n "\$1" ]; then
     grep -v " \$1 " "\$SDMOUNTS" > "\$SDMOUNTS.n" 2>/dev/null
     mv "\$SDMOUNTS.n" "\$SDMOUNTS" 2>/dev/null
@@ -399,6 +415,8 @@ run() {
         STUB_FLASHCP_FAIL_DEV="${STUB_FLASHCP_FAIL_DEV:-}" \
         STUB_REMOUNT_RC="${STUB_REMOUNT_RC:-0}" \
         STUB_CURL_RC="${STUB_CURL_RC:-0}" \
+        STUB_PREPARE="${STUB_PREPARE:-}" STUB_ABORT="${STUB_ABORT:-}" \
+        STUB_UMOUNT_BUSY="${STUB_UMOUNT_BUSY:-}" \
         STUB_DL_BYTES="${STUB_DL_BYTES:-}" \
         STUB_ISIZE="${STUB_ISIZE:-}" \
         STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
@@ -426,6 +444,7 @@ reset_env() {
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB
+    unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY
     set_meminfo
     : > "$SDMOUNTS"
     set_mounts
@@ -1663,6 +1682,125 @@ if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && flashed /dev/mtd3; then
 else
     bad "clean card -> expected the run to proceed, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
+
+# --- majestic frees its video over the API (prepare / abort) ----------------
+# The order is: majestic stops video (prepare), the card is unmounted and the
+# image fetched into the RAM that freed, then flash. A majestic that answers
+# prepare is not sent SIGQUIT on top of it.
+reset_env
+STUB_PREPARE=200
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && grep -q "majestic_api prepare" "$SB/tmp/flash.log" \
+    && ! grep -q "killall" "$SB/tmp/flash.log" && flashed /dev/mtd3; then
+    ok "a prepared majestic is not sent SIGQUIT, and the upgrade proceeds"
+else
+    bad "prepare 200 -> expected no killall and a flash, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# An older majestic has no endpoint: it gets the SIGQUIT it always got.
+reset_env
+STUB_PREPARE=404
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && grep -q "killall -q -3 majestic" "$SB/tmp/flash.log"; then
+    ok "a majestic without the endpoint falls back to SIGQUIT"
+else
+    bad "prepare 404 -> expected the SIGQUIT fallback, log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# A run that gives up before writing asks a prepared majestic to put its video
+# back; nothing else would -- there is no /ws/upgrade watcher on this path.
+reset_env
+STUB_PREPARE=200 STUB_ABORT=200
+: > "$SD/autoupdate-rootfs.img"
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+run -z --kernel="$K" --rootfs="$R"
+rm -f "$SD/autoupdate-rootfs.img"
+if [ "$RC" -ne 0 ] && nothing_wrote && grep -q "majestic_api abort" "$SB/tmp/flash.log" \
+    && ! grep -q "S95majestic restart" "$SB/tmp/flash.log"; then
+    ok "a pre-write abort asks the prepared majestic to restart its video"
+else
+    bad "abort after prepare -> expected majestic_api abort and no restart, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# ...and if majestic cannot, it is restarted.
+reset_env
+STUB_PREPARE=200 STUB_ABORT=500
+: > "$SD/autoupdate-rootfs.img"
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+run -z --kernel="$K" --rootfs="$R"
+rm -f "$SD/autoupdate-rootfs.img"
+if grep -q "S95majestic restart" "$SB/tmp/flash.log"; then
+    ok "...and restarts majestic when the abort fails"
+else
+    bad "a failed abort left majestic without video, log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# --- an archive for another camera is refused before the pivot -------------
+# It unpacked fine and held nothing named for this model, and the missing file
+# was only noticed inside the pivot, where die() reboots: a camera restarted for
+# an upgrade that never wrote anything. Seen on an hi3516av300 given an ev300
+# archive. Now it is refused while die() can still put the camera back.
+reset_env
+mkdir -p "$SB/other"
+cp "$SB/tmp/uImage.ssc338q" "$SB/other/uImage.gk7205v300"
+cp "$SB/tmp/rootfs.squashfs.ssc338q" "$SB/other/rootfs.squashfs.gk7205v300"
+make_archive "$SB/other/uImage.gk7205v300" "$SB/other/rootfs.squashfs.gk7205v300"
+rm -f "$SB"/tmp/*.ssc338q
+STUB_PREPARE=200 STUB_ABORT=200
+run -z --archive="$SB/tmp/fw.tgz"
+rm -rf "$SB/other"
+if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted \
+    && printf '%s' "$OUT" | grep -q "Is the firmware built for" \
+    && grep -q "majestic_api abort" "$SB/tmp/flash.log"; then
+    ok "an archive for another camera is refused before the pivot, without a reboot"
+else
+    bad "wrong-model archive -> expected a pre-pivot refusal, rc=$RC rebooted=$(rebooted && echo yes || echo no) out='$(printf '%s' "$OUT" | tail -3)'"
+fi
+
+# --- a busy card does not hang the run -------------------------------------
+# The unmount was never checked, so a card majestic was still recording to
+# spun check_sdcard forever, holding the lock. Now it gives up, says who has the
+# card, and leaves through die() with nothing written.
+reset_env
+STUB_UMOUNT_BUSY=1
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "Cannot unmount" \
+    && [ ! -f "$SB/tmp/sysupgrade.lock" ]; then
+    ok "a card that will not unmount aborts cleanly instead of hanging"
+else
+    bad "busy card -> expected a bounded abort, rc=$RC out='$(printf '%s' "$OUT" | tail -3)'"
+fi
+
+# --- a stale lock is taken over, a live one is not --------------------------
+# A killed run (an ssh session dropped while it waited) used to strand the lock
+# until a reboot. The lock now names its owner.
+reset_env
+sh -c 'exit 0' & dead=$!; wait $dead
+echo "$dead" > "$SB/tmp/sysupgrade.lock"
+OUT=$(cd "$SB" && env PATH="$SB/bin:$PATH" HASERLVER=1 \
+    FLASH_LOG="$SB/tmp/flash.log" abort_wait=0 SDMOUNTS="$SDMOUNTS" \
+    sh "$SB/sysupgrade" -z --kernel="$K" --rootfs="$R" 2>&1)
+RC=$?
+if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q "Taking over a stale lock"; then
+    ok "a lock whose owner is gone is taken over"
+else
+    bad "stale lock -> expected a takeover, rc=$RC out='$(printf '%s' "$OUT" | tail -3)'"
+fi
+rm -f "$SB/tmp/sysupgrade.lock"
+
+reset_env
+echo "$$" > "$SB/tmp/sysupgrade.lock"
+OUT=$(cd "$SB" && env PATH="$SB/bin:$PATH" HASERLVER=1 \
+    FLASH_LOG="$SB/tmp/flash.log" abort_wait=0 \
+    sh "$SB/sysupgrade" -z --kernel="$K" --rootfs="$R" 2>&1)
+RC=$?
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "already running"; then
+    ok "a lock whose owner is alive is respected"
+else
+    bad "live lock -> expected a refusal, rc=$RC"
+fi
+rm -f "$SB/tmp/sysupgrade.lock"
 
 # ---------------------------------------------------------------------------
 echo

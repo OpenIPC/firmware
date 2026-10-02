@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.68
+scr_version=1.0.69
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -245,6 +245,15 @@ preflight_image_sizes() {
 		check_combined_fits "/tmp/firmware.bin.$model"
 		return 0
 	fi
+	# Present at all, first. An archive built for another camera unpacks
+	# fine and holds nothing named for this $model; the image checks found
+	# that only after the pivot, where every failure reboots -- a camera
+	# restarted for an upgrade that never wrote a byte. Here die() still
+	# restores it in place.
+	[ "1" = "$update_kernel" ] && [ ! -f "$(kernel_image)" ] &&
+		die "No kernel image for this camera ($model): $(kernel_image) not found. Is the firmware built for $model?"
+	[ "1" = "$update_rootfs" ] && [ ! -f "$(rootfs_image)" ] &&
+		die "No rootfs image for this camera ($model): $(rootfs_image) not found. Is the firmware built for $model?"
 	[ "1" = "$update_kernel" ] && check_image_fits "$(kernel_image)" "$kernel_device" kernel
 	[ "1" = "$update_rootfs" ] && check_image_fits "$(rootfs_image)" "$(get_device "rootfs")" rootfs
 	[ "1" = "$update_rootfs" ] && check_rootfs_complete "$(rootfs_image)"
@@ -1060,13 +1069,38 @@ watchdog_keep() {
 	done
 }
 
+# Ask majestic, over its API on this camera, to enter or leave upgrade mode
+# (prepare | abort). Answers true on a 200 and false on anything else: an
+# older majestic without the endpoint (404), one that is not running, or no
+# answer in time. Loopback needs no credential, so this works on a camera
+# nobody has claimed yet; majestic accepts it only from the camera itself.
+majestic_api() {
+	local port
+	port=$(cli -g .system.webPort 2>/dev/null)
+	[ -n "$port" ] || port=80
+	[ "200" = "$(curl -s -o /dev/null -w '%{http_code}' -m 60 -X POST \
+		"http://127.0.0.1:$port/api/v1/upgrade/$1" 2>/dev/null)" ]
+}
+
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
 	# --web: majestic freed its own video pipeline and is streaming this log
 	# over /ws/upgrade; keep it alive until just before the flash (see below).
+	#
+	# Otherwise ask it to do the same: prepare stops video and the SDK and
+	# closes the clip the recorder is writing, so the image is downloaded into
+	# RAM the video pipeline held and the SD card is free to unmount, while
+	# majestic keeps serving and can put video back if we give up
+	# (restore_resources). A majestic too old to have the endpoint gets the
+	# SIGQUIT it always got.
 	if [ "1" != "$web_update" ]; then
-		killall -q -3 majestic
-		sleep 1
+		if majestic_api prepare; then
+			majestic_prepared=1
+			echo "majestic stopped its video for the upgrade"
+		else
+			killall -q -3 majestic
+			sleep 1
+		fi
 	fi
 	/etc/init.d/S99rc.local stop
 	/etc/init.d/S60crond stop
@@ -1154,6 +1188,14 @@ restore_resources() {
 	# to tell apart look identical. #2415.
 	syslog_remote_set && logger -s -p user.warning -t sysupgrade \
 		"still here on $(get_build_id): this camera is not rebooting after all"
+	# Give back the cards check_sdcard took, through the same hotplug handler
+	# that mounted them at boot, so a camera that stays up records again
+	# instead of writing to a card nobody remounts until the next reboot.
+	local dev
+	for dev in $sd_unmounted; do
+		[ -x /lib/mdev/automount.sh ] &&
+			ACTION=add MDEV=${dev#/dev/} /lib/mdev/automount.sh >/dev/null 2>&1
+	done
 	# majestic needs restarting, not starting: it is still running, just gutted.
 	#
 	# `killall -3 majestic` above is not a terminate. SIGQUIT is majestic's
@@ -1186,7 +1228,14 @@ restore_resources() {
 	# marker alone would turn "we did not need to restart it" into "nobody
 	# restarted it", and the camera stays video-less until a power cycle. That is
 	# strictly worse than the redundant restart this replaces.
-	if [ -f "$MAJESTIC_OWNER" ] && pidof majestic >/dev/null 2>&1; then
+	#
+	# A majestic we prepared over the API is in upgrade mode with no watcher of
+	# its own -- nobody else will bring its video back -- so ask it to leave.
+	# Only if that fails is it restarted.
+	if [ "1" = "$majestic_prepared" ] && majestic_api abort; then
+		echo "majestic restarted its video"
+	elif [ "1" != "$majestic_prepared" ] && [ -f "$MAJESTIC_OWNER" ] &&
+		pidof majestic >/dev/null 2>&1; then
 		echo "majestic is restoring itself; leaving it running"
 	elif [ -x /etc/init.d/S95majestic ]; then
 		/etc/init.d/S95majestic restart >/dev/null 2>&1
@@ -1525,6 +1574,7 @@ self_update() {
 check_sdcard() {
 	echo_c 33 "\nUnmounting SD card"
 	stoplist="autoupdate-kernel.img autoupdate-rootfs.img autoupdate-uboot.img"
+	local busy=0
 	while [ -n "$(mount | grep /mnt/mmc)" ]; do
 		local d=$(mount | grep /mnt/mmc | tail -1 | awk '{print $3}')
 		echo_c 34 "$d"
@@ -1546,16 +1596,56 @@ check_sdcard() {
 				die "Cannot upgrade! Recovery file $d/$f found on the mounted SD card. Remove the card from the slot and restart sysupgrade."
 			fi
 		done
-		umount $d
+		# Checked, and bounded. A busy card -- majestic recording to it, a
+		# shell sitting in it -- refuses the umount, and an unchecked loop then
+		# found the same mount again and spun forever, holding the lock.
+		local dev=$(mount | grep " $d " | tail -1 | awk '{print $1}')
+		if umount $d 2>/dev/null; then
+			sd_unmounted="$sd_unmounted $dev"
+		else
+			busy=$((busy + 1))
+			if [ "$busy" -ge 5 ]; then
+				die "Cannot unmount $d: it is in use$(sd_holders $d). Stop whatever is using the card, or remove it, and restart sysupgrade."
+			fi
+			sleep 1
+		fi
 	done
+}
+
+# Who has files open under a mount point, as " (by name[pid] ...)", or nothing
+# when that cannot be told. For the message only.
+sd_holders() {
+	local p f who=
+	for p in /proc/[0-9]*; do
+		for f in "$p"/fd/*; do
+			case "$(readlink "$f" 2>/dev/null)" in
+			"$1"/*)
+				who="$who $(cat "$p/comm" 2>/dev/null)[${p#/proc/}]"
+				break
+				;;
+			esac
+		done
+	done
+	[ -n "$who" ] && echo " (by$who)"
 }
 
 create_lock() {
 	if [ -f $LOCK_FILE ]; then
-		echo_c 31 "\nAnother sysupgrade process is already running!"
-		exit 1
+		# The lock names its owner, so a run that was killed -- an ssh session
+		# dropped mid-upgrade -- no longer refuses every later one until a
+		# reboot clears /tmp. A lock whose owner is gone is taken over; one that
+		# names no owner (an older sysupgrade's) or a live one is respected.
+		local owner
+		owner=$(cat $LOCK_FILE 2>/dev/null)
+		if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
+			echo "Taking over a stale lock left by sysupgrade process $owner"
+		else
+			echo_c 31 "\nAnother sysupgrade process is already running!"
+			[ -z "$owner" ] && echo "If none is, remove $LOCK_FILE and try again."
+			exit 1
+		fi
 	fi
-	touch $LOCK_FILE
+	echo $$ >$LOCK_FILE
 	# Ownership, so die() can tell "my lock" from "somebody else's".
 	lock_owned=1
 }
