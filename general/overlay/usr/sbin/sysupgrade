@@ -118,7 +118,9 @@ die() {
 		# create_lock has run (get_system_info, called from print_sysinfo, can
 		# raise one), and an unconditional rm there would unlink a CONCURRENT
 		# sysupgrade's lock and let two upgrades run at once.
-		[ "1" = "$lock_owned" ] && rm -f $LOCK_FILE
+		# And only while it still names this process: a stale lock can be
+		# taken over, so "it was mine" is not the same as "it is mine".
+		[ "1" = "$lock_owned" ] && [ "$(cat $LOCK_FILE 2>/dev/null)" = "$$" ] && rm -f $LOCK_FILE
 	fi
 	exit 1
 }
@@ -1188,13 +1190,19 @@ restore_resources() {
 	# to tell apart look identical. #2415.
 	syslog_remote_set && logger -s -p user.warning -t sysupgrade \
 		"still here on $(get_build_id): this camera is not rebooting after all"
-	# Give back the cards check_sdcard took, through the same hotplug handler
-	# that mounted them at boot, so a camera that stays up records again
-	# instead of writing to a card nobody remounts until the next reboot.
-	local dev
-	for dev in $sd_unmounted; do
-		[ -x /lib/mdev/automount.sh ] &&
-			ACTION=add MDEV=${dev#/dev/} /lib/mdev/automount.sh >/dev/null 2>&1
+	# Give back the cards check_sdcard took, mounted exactly as they were, so a
+	# camera that stays up records again instead of writing to a card nobody
+	# remounts until the next reboot. Not through the hotplug handler: that
+	# would run the card's autostart.sh a second time.
+	local dev dir type opts rest
+	printf '%s\n' "$sd_unmounted" | while read -r dev dir type opts rest; do
+		[ -n "$dev" ] || continue
+		mkdir -p "$dir"
+		if mount -t "$type" -o "$opts" "$dev" "$dir" 2>/dev/null; then
+			echo "Remounted $dev on $dir"
+		else
+			echo_c 31 "Could not remount $dev on $dir; it stays unmounted until the card is reinserted or the camera reboots"
+		fi
 	done
 	# majestic needs restarting, not starting: it is still running, just gutted.
 	#
@@ -1599,9 +1607,10 @@ check_sdcard() {
 		# Checked, and bounded. A busy card -- majestic recording to it, a
 		# shell sitting in it -- refuses the umount, and an unchecked loop then
 		# found the same mount again and spun forever, holding the lock.
-		local dev=$(mount | grep " $d " | tail -1 | awk '{print $1}')
+		local entry=$(grep " $d " /proc/mounts | tail -1)
 		if umount $d 2>/dev/null; then
-			sd_unmounted="$sd_unmounted $dev"
+			[ -n "$entry" ] && sd_unmounted="$sd_unmounted
+$entry"
 		else
 			busy=$((busy + 1))
 			if [ "$busy" -ge 5 ]; then
@@ -1639,13 +1648,19 @@ create_lock() {
 		owner=$(cat $LOCK_FILE 2>/dev/null)
 		if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
 			echo "Taking over a stale lock left by sysupgrade process $owner"
+			rm -f $LOCK_FILE
 		else
 			echo_c 31 "\nAnother sysupgrade process is already running!"
 			[ -z "$owner" ] && echo "If none is, remove $LOCK_FILE and try again."
 			exit 1
 		fi
 	fi
-	echo $$ >$LOCK_FILE
+	# Created with noclobber, so of two runs taking over the same stale lock
+	# only one gets it; the other finds it again and is refused.
+	if ! (set -C; echo $$ >$LOCK_FILE) 2>/dev/null; then
+		echo_c 31 "\nAnother sysupgrade process is already running!"
+		exit 1
+	fi
 	# Ownership, so die() can tell "my lock" from "somebody else's".
 	lock_owned=1
 }

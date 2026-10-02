@@ -1709,6 +1709,19 @@ fi
 
 # A run that gives up before writing asks a prepared majestic to put its video
 # back; nothing else would -- there is no /ws/upgrade watcher on this path.
+# The card it took is mounted again, exactly as /proc/mounts had it.
+reset_env
+STUB_PREPARE=200 STUB_ABORT=200
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+printf '/dev/mmcblk0p1 %s vfat rw,relatime 0 0\n' "$SD" >> "$SB/proc/mounts"
+STUB_IMG_SOC=gk7205v300
+run -z --rootfs="$R"
+unset STUB_IMG_SOC
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "Remounted /dev/mmcblk0p1 on $SD"; then
+    ok "a pre-write abort mounts the card it took again"
+else
+    bad "abort -> expected the card remounted, out='$(printf '%s' "$OUT" | tail -4)'"
+fi
 reset_env
 STUB_PREPARE=200 STUB_ABORT=200
 : > "$SD/autoupdate-rootfs.img"
