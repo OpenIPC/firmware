@@ -191,6 +191,7 @@ bash .github/scripts/test_load_hisilicon.sh                   # os_mem_size deri
 bash .github/scripts/test_sysupgrade.sh                       # sysupgrade rootfs verification
 bash .github/scripts/test_check_mac.sh                        # the MAC the camera gives itself
 bash .github/scripts/test_excludes_report.sh                  # excludes lists report stale entries
+bash .github/scripts/test_ca_bundle_lite.sh                   # lite CA bundle keeps the roots it must
 STRICT=1 bash .github/scripts/test_shell_parse.sh             # every shipped script parses
 STRICT=1 bash .github/scripts/test_strip_shell_comments.sh    # ...and still parses once stripped
 python3 .github/scripts/ci-matrix.py --self-test              # the selector agrees with the tree

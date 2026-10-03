@@ -128,6 +128,18 @@ if [ -x "${TARGET_DIR}${CLAIM_SHELL}" ]; then
 		|| echo "${CLAIM_SHELL}" >> "${TARGET_DIR}/etc/shells"
 fi
 
+# Mozilla's whole store is 121 roots and ~100KB of squashfs; most of it is
+# national and regional roots a camera's outbound HTTPS never meets. Lite keeps
+# the operators named in ca-bundle-lite.keep, ~60KB less (#2508). A bundle that
+# lost GitHub's or Let's Encrypt's root would only show up once sysupgrade had
+# nowhere left to fetch from, so a keep-list that has gone stale fails the build
+# here instead.
+CA_BUNDLE="${TARGET_DIR}/etc/ssl/certs/ca-certificates.crt"
+if [ "${OPENIPC_VARIANT}" = "lite" ] && [ -f "${CA_BUNDLE}" ]; then
+	python3 "${BR2_EXTERNAL_GENERAL_PATH}/scripts/filter-ca-bundle.py" \
+		"${BR2_EXTERNAL_GENERAL_PATH}/scripts/ca-bundle-lite.keep" "${CA_BUNDLE}" || exit 1
+fi
+
 # Comments are worth writing and worth keeping in git; they are not worth
 # flashing. sysupgrade alone had grown to 52KB, 57% of it comment, and on
 # 2026-08-18 it pushed hi3519v101_lite 4KB past its 5120KB rootfs cap -- a board

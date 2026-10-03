@@ -189,6 +189,7 @@ NO_BUILD_WORKFLOWS = {
 # matrices between them in six weeks, proving nothing about an image.
 NO_BUILD_SCRIPTS = {
     "build-summary.py", "enrich_manifest.py", "lint-issue-forms.py",
+    "test_ca_bundle_lite.sh",
     "lint-workflow-shell.py", "push_build.py", "soc_aliases.py",
     "test_automount.sh", "test_check_mac.sh", "test_excludes_report.sh",
     "test_load_hisilicon.sh", "test_push_build.py", "test_shell_parse.sh",
@@ -957,6 +958,7 @@ def self_test():
         ([".github/scripts/test_strip_shell_comments.sh"], 0, "shell-tests: stripper"),
         ([".github/scripts/test_automount.sh"], 0, "shell-tests: automount"),
         ([".github/scripts/test_excludes_report.sh"], 0, "shell-tests: excludes"),
+        ([".github/scripts/test_ca_bundle_lite.sh"], 0, "shell-tests: lite CA bundle"),
         ([".github/workflows/toolchain-asan.yml"], 0, "ASan toolchain is dispatch-only"),
         ([".github/workflows/vendor-abi.yml"], 0, "the advisory ABI audit"),
         ([".github/workflows/lint.yml"], 0, "the workflow linter never builds"),

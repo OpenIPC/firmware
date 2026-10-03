@@ -102,6 +102,21 @@ jobs:
       # for a build.
       - run: bash .github/scripts/test_excludes_report.sh
 
+  ca-bundle-lite:
+    name: lite CA bundle keeps the roots it must
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # A lite bundle that lost GitHub's or Let's Encrypt's root builds green
+      # and is found only when sysupgrade cannot fetch. This runs the real
+      # rootfs_script.sh cut against the committed bundle, so a Mozilla refresh
+      # or a keep-list edit is checked without a build (#2508).
+      - run: bash .github/scripts/test_ca_bundle_lite.sh
+
   shipped-shell-parse:
     name: shipped shell scripts parse
     if: >-
@@ -145,6 +160,7 @@ jobs:
       - sysupgrade-verify
       - camera-mac
       - excludes-report
+      - ca-bundle-lite
       - shipped-shell-parse
     # always() so the gate reports when a needed job fails, but not on a run
     # whose jobs the guard above deliberately skipped. Upstream the added
@@ -158,7 +174,7 @@ jobs:
     steps:
       - name: Require every shell test to succeed
         run: |
-          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} excludes=${{ needs.excludes-report.result }} shell-parse=${{ needs.shipped-shell-parse.result }}"
+          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }}"
           # 'skipped' is not accepted, for the reason given in lint.yml: a
           # skipped job would take this context green having checked nothing.
           if [ "${{ needs.load-hisilicon-parsing.result }}" != "success" ]; then
@@ -172,6 +188,9 @@ jobs:
           fi
           if [ "${{ needs.excludes-report.result }}" != "success" ]; then
             echo "::error::excludes lists report did not succeed"; exit 1
+          fi
+          if [ "${{ needs.ca-bundle-lite.result }}" != "success" ]; then
+            echo "::error::lite CA bundle check did not succeed"; exit 1
           fi
           if [ "${{ needs.shipped-shell-parse.result }}" != "success" ]; then
             echo "::error::shipped shell scripts parse did not succeed"; exit 1
