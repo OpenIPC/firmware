@@ -124,6 +124,40 @@ grep -q "'No Such Operator Inc' matches no root" "$work/out.txt" && ok "and name
 cmp -s "$BUNDLE" "$t/etc/ssl/certs/ca-certificates.crt" && ok "and leaves the bundle whole" \
 	|| bad "the bundle was rewritten despite the failure"
 
+# ----- subject encodings Mozilla does not use today -----
+# Every root in the store has its O= alone in its RDN and in UTF8String or
+# PrintableString, so the cases above cannot reach the other paths. Build
+# skeleton certificates -- the filter reads no further than the subject --
+# with an O= second in a multi-valued RDN, and an O= in BMPString. Either one
+# missed would drop a kept operator's new root without a word.
+python3 - "$work/synthetic.crt" <<-'EOF'
+	import base64, sys
+	def tlv(tag, body):
+	    n = len(body)
+	    size = bytes([n]) if n < 0x80 else bytes([0x82]) + n.to_bytes(2, "big")
+	    return bytes([tag]) + size + body
+	def atv(oid, tag, value):
+	    return tlv(0x30, tlv(0x06, oid) + tlv(tag, value))
+	CN, O = bytes.fromhex("550403"), bytes.fromhex("55040a")
+	def cert(subject):
+	    tbs = (tlv(0xA0, tlv(0x02, b"\x02")) + tlv(0x02, b"\x01") + tlv(0x30, b"")
+	           + tlv(0x30, b"") + tlv(0x30, b"") + subject)
+	    b64 = base64.b64encode(tlv(0x30, tlv(0x30, tbs))).decode()
+	    return "-----BEGIN CERTIFICATE-----\n" + b64 + "\n-----END CERTIFICATE-----\n"
+	multi = tlv(0x30, tlv(0x31, atv(CN, 0x0C, b"Some Root") + atv(O, 0x0C, b"Second In Set Ltd")))
+	bmp = tlv(0x30, tlv(0x31, atv(O, 0x1E, "BMP Operator AG".encode("utf-16-be"))))
+	other = tlv(0x30, tlv(0x31, atv(O, 0x13, b"Dropped Operator")))
+	open(sys.argv[1], "w").write(cert(multi) + cert(bmp) + cert(other))
+	EOF
+printf '%s\n' 'Second In Set' 'BMP Operator' > "$work/synthetic.keep"
+if python3 general/scripts/filter-ca-bundle.py "$work/synthetic.keep" "$work/synthetic.crt" > "$work/out.txt" 2>&1; then
+	ok "an O= second in its RDN and an O= in BMPString both match"
+else
+	bad "a keep entry missed an O= the filter should read: $(cat "$work/out.txt")"
+fi
+grep -q 'kept 2 of 3 roots' "$work/out.txt" && ok "and the operator not listed is dropped" \
+	|| bad "expected 'kept 2 of 3 roots': $(cat "$work/out.txt")"
+
 echo
 if [ "$fail" -eq 0 ]; then
 	echo "All CA bundle checks passed."

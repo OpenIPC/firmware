@@ -22,6 +22,17 @@ import re
 import sys
 
 OID_ORGANIZATION = bytes.fromhex("060355040a")  # 2.5.4.10
+# DirectoryString is a CHOICE. Mozilla's roots are all UTF8String or
+# PrintableString today, but a name in another encoding must still match: a
+# kept operator's new root that failed to would be dropped without a word.
+STRING_CODECS = {
+    0x0C: "utf-8",          # UTF8String
+    0x13: "ascii",          # PrintableString
+    0x14: "latin-1",        # TeletexString, as everyone reads it in practice
+    0x16: "ascii",          # IA5String
+    0x1C: "utf-32-be",      # UniversalString
+    0x1E: "utf-16-be",      # BMPString
+}
 PEM = re.compile(rb"-----BEGIN CERTIFICATE-----\r?\n.*?-----END CERTIFICATE-----\r?\n?", re.S)
 
 
@@ -47,11 +58,13 @@ def subject_organizations(der):
     orgs = []
     while pos < end:
         _, attr, pos = tlv(der, pos)        # RelativeDistinguishedName SET
-        _, attr, _ = tlv(der, attr)         # AttributeTypeAndValue
-        _, oid, value = tlv(der, attr)
-        if der[attr:value] == OID_ORGANIZATION:
-            _, start, stop = tlv(der, value)
-            orgs.append(der[start:stop].decode("utf-8", "replace"))
+        # A SET may carry several attributes, the O= not necessarily first.
+        while attr < pos:
+            _, inner, attr = tlv(der, attr) # AttributeTypeAndValue
+            _, _, value = tlv(der, inner)
+            if der[inner:value] == OID_ORGANIZATION:
+                tag, start, stop = tlv(der, value)
+                orgs.append(der[start:stop].decode(STRING_CODECS.get(tag, "utf-8"), "replace"))
     return orgs
 
 
