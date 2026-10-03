@@ -34,3 +34,9 @@ console::respawn:/sbin/getty -L console 0 vt100
 # Stuff to do before rebooting
 ::shutdown:/etc/init.d/rcK
 ::shutdown:/bin/umount -a -f
+
+# SIGQUIT: run the shutdown actions above, kill every process, exec /sbin/init.
+# sysupgrade relies on it to rewrite a mounted UBIFS volume: it pivots into a
+# RAM root whose /sbin/init is its flash phase, so PID 1 itself leaves the
+# flash and the volume can be released (see need_handoff in sysupgrade).
+::restart:/sbin/init

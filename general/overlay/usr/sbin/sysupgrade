@@ -49,6 +49,10 @@ WDOG_PROC=${WDOG_PROC:-/proc}
 # pivot /tmp is the tmpfs enter_ramfs moved across, the same one set_progress
 # smuggles its status through.
 WDOG_RELEASE=/tmp/.sysupgrade-wdog-release
+# Where UBI publishes its devices and volumes, and the inittab PID 1 parsed at
+# boot. Overridable so the test harness can point both at its sandbox.
+UBI_SYS=${UBI_SYS:-/sys/class/ubi}
+INITTAB=${INITTAB:-/etc/inittab}
 # Seconds the rootfs verify-mount may take before it is treated as unmountable.
 mount_wait=${mount_wait:-45}
 # Seconds the operator gets to Ctrl-C out of a run that will force a reboot.
@@ -146,12 +150,21 @@ compare_versions() {
 # pre-checks have to name the same files before those two run, and four copies
 # of the defaults would drift.
 rootfs_image() {
-	[ -n "$rootfs_file" ] && echo "$rootfs_file" || echo "/tmp/rootfs.squashfs.$model"
+	[ -n "$rootfs_file" ] && { echo "$rootfs_file"; return 0; }
+	[ "$ubi_layout" = "ubifs" ] && echo "/tmp/rootfs.ubifs.$model" || echo "/tmp/rootfs.squashfs.$model"
 }
 
 kernel_image() {
 	[ -n "$kernel_file" ] && { echo "$kernel_file"; return 0; }
+	[ "$ubi_layout" = "ubifs" ] && { echo "/tmp/fitImage.$model"; return 0; }
 	[ "$vendor" = "rockchip" ] && echo "/tmp/zboot.img.$model" || echo "/tmp/uImage.$model"
+}
+
+# Where the rootfs is written: the `rootfs` UBI volume on a UBI layout, the
+# partition of that name otherwise.
+rootfs_device() {
+	[ -n "$ubi_layout" ] && { echo "$ubi_rootfs_dev"; return 0; }
+	get_device "rootfs"
 }
 
 # Refuse an image that cannot fit the partition it is bound for, before the
@@ -257,8 +270,17 @@ preflight_image_sizes() {
 	[ "1" = "$update_rootfs" ] && [ ! -f "$(rootfs_image)" ] &&
 		die "No rootfs image for this camera ($model): $(rootfs_image) not found. Is the firmware built for $model?"
 	[ "1" = "$update_kernel" ] && check_image_fits "$(kernel_image)" "$kernel_device" kernel
-	[ "1" = "$update_rootfs" ] && check_image_fits "$(rootfs_image)" "$(get_device "rootfs")" rootfs
+	[ "1" = "$update_rootfs" ] && check_image_fits "$(rootfs_image)" "$(rootfs_device)" rootfs
 	[ "1" = "$update_rootfs" ] && check_rootfs_complete "$(rootfs_image)"
+	# The UBIFS checks read the target volume out of sysfs, which the flash
+	# phase may not have; the camera is also still whole here.
+	if [ "1" = "$update_rootfs" ] && [ -n "$ubi_layout" ]; then
+		check_rootfs_format "$(rootfs_image)"
+		# The whole UBIFS verdict, SoC included: a UBIFS rootfs is written from
+		# the handed-off PID 1, where any refusal is a reboot.
+		is_ubifs "$(rootfs_image)" && verify_ubifs_rootfs "$(rootfs_image)"
+	fi
+	need_handoff && check_handoff
 	return 0
 }
 
@@ -277,6 +299,8 @@ do_update_kernel() {
 		# and always reflash.
 		if [ "$(xxd -p -l 4 "$x" 2>/dev/null)" = "d00dfeed" ]; then
 			echo "FIT kernel detected, skipping uImage SoC/version probe"
+			local fsoc=$(fit_soc "$x")
+			[ -n "$fsoc" ] && check_soc "$fsoc"
 		else
 			local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
 			if [ "$vendor" != "ingenic" ] && [ "$vendor" != "rockchip" ]; then
@@ -292,7 +316,8 @@ do_update_kernel() {
 	# as live as a rootfs write, so -x cannot be honoured after it either.
 	# mark_live_flash_dirty is itself a no-op on a camera not running from
 	# flash, and marks the run touched in both cases.
-	if [ "/dev/" = "$(get_device "kernel")" ]; then
+	# A UBI kernel volume is never mounted, gluebi or not.
+	if [ -z "$ubi_layout" ] && [ "/dev/" = "$(get_device "kernel")" ]; then
 		mark_live_flash_dirty
 	else
 		mark_flash_touched
@@ -300,7 +325,7 @@ do_update_kernel() {
 	# The success line below reads the version back off the DEVICE, so an
 	# unchecked failure here does not merely claim success, it claims it while
 	# printing the timestamp of the kernel that is still there.
-	set_progress flashcp -v "$x" "$kernel_device" ||
+	write_image "$x" "$kernel_device" ||
 		die "Writing $x to $kernel_device failed."
 	echo_c 32 "Kernel updated to $(get_kernel_version "$kernel_device")"
 }
@@ -338,8 +363,7 @@ soc_guarded_by_kernel() {
 	if [ "kernel_follows" = "$1" ]; then
 		k="/tmp/uImage.$model"
 	elif [ "1" = "$update_kernel" ]; then
-		k="$kernel_file"
-		[ -z "$k" ] && k="/tmp/uImage.$model"
+		k=$(kernel_image)
 	else
 		return 1
 	fi
@@ -403,6 +427,90 @@ check_rootfs_complete() {
 Nothing was written. Download it again -- a truncated image loses its .md5sum with it."
 }
 
+# The SoC a FIT kernel was built for, or nothing.
+#
+# A legacy uImage carries it in its name field (do_update_kernel reads it at
+# offset 32); a FIT has none of its own, so the NAND FIT is described as
+# "OpenIPC <soc>" (board/<family>/nand-fit.its, stamped at build time). The
+# description is in the FIT's first few hundred bytes. A FIT without one -- the
+# cv6xx kernel -- answers nothing, and no conclusion is drawn from that.
+fit_soc() {
+	[ -f "$1" ] || return 0
+	[ "$(xxd -p -l 4 "$1" 2>&3)" = "d00dfeed" ] || return 0
+	dd if="$1" bs=4096 count=1 2>&3 | tr -c 'a-zA-Z0-9_ ' '\n' |
+		awk '$1 == "OpenIPC" && NF == 2 { print $2; exit }'
+}
+
+# A UBIFS image: the superblock node's magic (0x06101831, stored little-endian)
+# at offset 0.
+is_ubifs() {
+	[ "$(xxd -p -l 4 "$1" 2>&3)" = "31181006" ]
+}
+
+# The rootfs format has to be the one this camera's kernel command line mounts:
+# a squashfs written into the volume of a root=ubi0:rootfs camera, or a UBIFS
+# into a ubiblock one, flashes cleanly and never mounts again. The kernel's
+# rootfstype is fixed by the bootloader environment, which no upgrade rewrites.
+check_rootfs_format() {
+	[ -n "$ubi_layout" ] || return 0
+	if [ "$ubi_layout" = "ubifs" ] && ! is_ubifs "$1"; then
+		die "This camera boots a UBIFS rootfs, and $1 is not one. Nothing was written."
+	fi
+	if [ "$ubi_layout" = "ubiblock" ] && is_ubifs "$1"; then
+		die "This camera boots a squashfs rootfs through ubiblock, and $1 is a UBIFS image. Nothing was written."
+	fi
+	return 0
+}
+
+# What can be known about a UBIFS rootfs without mounting it -- which needs UBI
+# under it, so a loop device will not do.
+#
+# Its superblock pins the LEB size the image was made for, and UBIFS refuses to
+# mount on a volume whose LEBs are any other size: the classic way to get this
+# wrong is a 2 KiB-page image on a 4 KiB-page chip, and it fails only after the
+# reboot. So that is checked against the volume it is bound for.
+#
+# What it cannot give is the SoC stamp or the version: both live in files the
+# image stores compressed. So the SoC rests on the same evidence an unmountable
+# squashfs does (see verify_rootfs), and an image is never skipped as the same
+# version -- the kernel FIT carries no version either.
+check_ubifs_image() {
+	local x=$1 dev want leb ntype
+	ntype=$(od -An -tu1 -j20 -N1 "$x" 2>&3 | awk '{print $1; exit}')
+	[ "$ntype" = "6" ] || die "$x is not a UBIFS image: its first node is not a superblock. Nothing was written."
+	leb=$(od -An -tu4 -j36 -N4 "$x" 2>&3 | awk '{print $1; exit}')
+	dev=$(rootfs_device)
+	want=$(cat "$UBI_SYS/${dev#/dev/}/usable_eb_size" 2>&3)
+	[ -n "$leb" ] && [ -n "$want" ] || return 0
+	[ "$leb" = "$want" ] && return 0
+	die "$x was made for $leb-byte LEBs; $dev has $want. It would not mount. Nothing was written."
+}
+
+verify_ubifs_rootfs() {
+	local x=$1
+	rootfs_version=
+	check_ubifs_image "$x"
+	echo "UBIFS rootfs; its SoC and version cannot be read without mounting it."
+	# The FIT that ships beside it says which SoC the pair was built for --
+	# the one witness a UBIFS rootfs has. Taken whether or not this run
+	# writes the kernel: the package carries it either way.
+	local fsoc=$(fit_soc "$(kernel_image)")
+	if [ "1" = "$skip_soc" ]; then
+		echo_c 33 "Skipping the rootfs SoC pre-check (SoC validation disabled)."
+	elif is_device_platform "$system_platform" && [ "1" != "$device_pinned" ]; then
+		die "Cannot verify that a UBIFS rootfs is built for this camera's device profile ('$system_platform'). Nothing was written. Pass --force_soc if you are sure it is."
+	elif [ -n "$fsoc" ]; then
+		echo "SoC from the FIT kernel beside it: $fsoc"
+		check_soc "$fsoc"
+	elif [ "1" = "$remote_update" ] && [ -z "$archive" ]; then
+		# A download, named for this camera's model. A local archive is
+		# named by whoever made it, so it does not count.
+		echo_c 33 "The image is pinned to '$model' by its artifact name."
+	else
+		die "Cannot verify the SoC of a UBIFS rootfs: no FIT kernel beside it names one. Nothing was written. Pass --force_soc if you are sure it is built for '$model'."
+	fi
+}
+
 # Read the candidate rootfs's SoC stamp and version by loop-mounting it.
 #
 # This is a PRE-FLIGHT CHECK ONLY: the image is written with flashcp, which writes
@@ -414,6 +522,11 @@ verify_rootfs() {
 	echo_c 33 "\nVerify"
 	echo "Verifying rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
+	check_rootfs_format "$x"
+	if is_ubifs "$x"; then
+		verify_ubifs_rootfs "$x" "$2"
+		return 0
+	fi
 	check_rootfs_complete "$x"
 
 	local y=/tmp/rootfs
@@ -483,13 +596,13 @@ do_update_rootfs() {
 	echo "Update rootfs from $x"
 	[ ! -f "$x" ] && die "File $x not found"
 	[ "1" = "$exit_update" ] && return 0
-	local dev=$(get_device "rootfs")
+	local dev=$(rootfs_device)
 	check_image_fits "$x" "$dev" rootfs
 	mark_live_flash_dirty
 	# ${rootfs_version} is what verify_rootfs read out of the CANDIDATE FILE, so
 	# an unchecked failure here prints the version the operator asked for --
 	# indistinguishable from the upgrade that did not happen.
-	set_progress flashcp -v "$x" "$dev" ||
+	write_image "$x" "$dev" ||
 		die "Writing $x to $dev failed."
 	echo_c 32 "RootFS updated to ${rootfs_version:-unknown}"
 }
@@ -612,6 +725,16 @@ do_wipe_overlay() {
 	# old overlay -- including the shadow entry that decides whether the camera
 	# is claimed -- exactly where it was.
 	local dev=$(get_device "rootfs_data")
+	# A UBI rootfs_data that no MTD (gluebi) name reaches: truncate the volume.
+	# An empty volume is what ubinize ships, and UBIFS formats it on the next
+	# mount. Reaching here with it mounted means PID 1 was handed off and the
+	# old root released first (need_handoff), so the volume is free.
+	if [ -n "$ubi_layout" ] && [ "$dev" = "/dev/" ]; then
+		[ -n "$ubi_data_dev" ] || die "No rootfs_data volume to wipe."
+		set_progress ubiupdatevol -t "$ubi_data_dev" ||
+			die "Truncating the overlay volume $ubi_data_dev failed."
+		return 0
+	fi
 	set_progress flash_eraseall $jffs2 "$dev" ||
 		die "Erasing the overlay partition $dev failed."
 }
@@ -771,6 +894,7 @@ check_unpack_room() {
 	# The last four bytes of a gzip stream are the uncompressed size.
 	need=$(od -An -tu4 -j $((sz - 4)) -N4 "$a" 2>&3 | awk '{print $1; exit}')
 	[ -n "$need" ] && [ "$need" -gt 0 ] 2>&3 || return 0
+	need=$(($(unpacked_part_kb $((need / 1024)) unpacked) * 1024))
 	# The same archive has to fit twice over: once in the tmpfs, and once in the
 	# RAM that tmpfs is made of. They are different numbers -- see
 	# check_unpack_ram -- and either can be the one that binds.
@@ -853,6 +977,40 @@ majestic first, and majestic is where the missing memory is."
 	die "$out"
 }
 
+# Members of the archive this run does not unpack, as tar options.
+#
+# A UBIFS NAND package carries rootfs.ubi -- the whole UBI image, for a fresh
+# install from U-Boot or defib -- beside the two volume images sysupgrade
+# writes. It is the largest member and it is never written here, so it is not
+# unpacked either: /tmp is RAM. The pattern takes its .md5sum with it, so the
+# checksum pass does not go looking for it.
+tar_excludes() {
+	[ "$ubi_layout" = "ubifs" ] && echo "--exclude=rootfs.ubi.*"
+	return 0
+}
+
+# Of an unpack measured as $1 KB, the part tar_excludes leaves -- $2 says what
+# was measured: "unpacked" (the gzip trailer) or "packed" (Content-Length).
+#
+# A UBIFS NAND package holds each volume image twice -- alone, and again inside
+# rootfs.ubi -- so the two this run keeps are about half of the unpacked total
+# (48% on the gk7205v500 image). Against the PACKED size they are more: a UBIFS
+# image pads every LEB with 0xFF, which gzip takes almost nothing to store, so
+# Content-Length understates what lands in /tmp (65% measured, 22035917 bytes
+# packed against 14640708 kept). Both rounded up, so the guess errs towards
+# asking for more. Every other package unpacks whole, and its Content-Length
+# already stands for the unpacked size (see unpack_size_kb).
+unpacked_part_kb() {
+	[ -n "$1" ] || return 0
+	if [ "$ubi_layout" != "ubifs" ]; then
+		echo "$1"
+	elif [ "$2" = "packed" ]; then
+		echo $(($1 * 75 / 100))
+	else
+		echo $(($1 * 55 / 100))
+	fi
+}
+
 # How big will the unpack be, in KB? Nothing when it cannot be told.
 #
 # Asked two ways, because neither works everywhere.
@@ -872,7 +1030,12 @@ majestic first, and majestic is where the missing memory is."
 # a hand-rolled --url archive of something compressible expands far past it --
 # which is why the trailer is asked for first and this is only the fallback.
 unpack_size_kb() {
-	gzip_isize_kb "$1" || remote_length_kb "$1"
+	local n
+	if n=$(gzip_isize_kb "$1"); then
+		unpacked_part_kb "$n" unpacked
+	elif n=$(remote_length_kb "$1"); then
+		unpacked_part_kb "$n" packed
+	fi
 }
 
 # The gzip trailer, via Range. Trusted only on a 206 with exactly four bytes
@@ -917,13 +1080,17 @@ remote_length_kb() {
 
 
 download_firmware() {
-	[ "$flash_type" = "nand" ] && echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
+	# A UBIFS NAND layout installs from the -nand- package; every other camera,
+	# NAND ones included (a ubiblock rootfs holds the NOR artifacts verbatim),
+	# from the NOR package.
+	[ "$flash_type" = "nand" ] && [ "$(pkg_flash)" = "nor" ] &&
+		echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
 	if [ -n "$archive" ]; then
 		[ ! -f "$archive" ] && die "File $archive not found"
 		check_unpack_room "$archive"
-		gzip -d "$archive" -c | tar xf - -C /tmp && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
+		gzip -d "$archive" -c | tar xf - -C /tmp $(tar_excludes) && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
 	else
 		if [ -n "$channel" ] || [ -n "$build_id" ]; then
 			fetch_manifest
@@ -935,14 +1102,14 @@ download_firmware() {
 			# by builder); fall back to ${model}_${osr} for pre-1.0.51 images.
 			platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
 			if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
-			url=$(resolve_url "$build_id" "$platform" "nor")
+			url=$(resolve_url "$build_id" "$platform" "$(pkg_flash)")
 			[ -z "$url" ] && die "No artifact for $platform in $build_id"
 			echo "Resolved $build_id for $platform"
 			device_pinned=1
 		fi
 		[ -z "$url" ] && url=$(fw_printenv -n upgrade || default_upgrade_url)
 		# Named for this device, so verify_rootfs can trust it when it cannot mount it.
-		[ "${url##*/}" = "$system_platform-nor.tgz" ] && device_pinned=1
+		[ "${url##*/}" = "$system_platform-$(pkg_flash).tgz" ] && device_pinned=1
 		echo "Download from $url"
 		probe_url "$url"
 		# The streamed route stages no second copy, so it never had a room
@@ -963,7 +1130,7 @@ download_firmware() {
 		# link completes. -m stays as a far outer backstop against a trickle that
 		# never trips the stall check.
 		curl --connect-timeout 30 $dl_meter --speed-limit 1024 --speed-time 60 -m 1800 \
-			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xf - -C /tmp && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xf - -C /tmp $(tar_excludes) && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	fi
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
@@ -1362,6 +1529,117 @@ ramfs_unwind() {
 	return 1
 }
 
+# Does this run have to get PID 1 off the flash before it writes?
+#
+# ubiupdatevol (UBI_IOCVOLUP) takes the volume exclusively -- get_exclusive()
+# in drivers/mtd/ubi/cdev.c -- and fails with EBUSY while anything else has it
+# open, readers included. Every volume init mounted is open: a UBIFS rootfs or
+# overlay (UBIFS opens its volume even for a read-only mount), and a squashfs
+# rootfs through ubiblock alike. The ramfs pivot does not unmount them: init's
+# overlay root is the old root, and PID 1 runs from it. OpenWrt meets the same
+# wall the same way (procd execs upgraded as PID 1 before stage2 unmounts
+# anything); here busybox init does the exec, through inittab's ::restart:.
+# Measured on a gk7205v510 with a ubiblock root: "ubiupdatevol: UBI_IOCVOLUP:
+# Resource busy" from inside the ramfs pivot.
+#
+# The kernel volume is never mounted, so a kernel-only run needs none of this.
+need_handoff() {
+	[ -n "$ubi_layout" ] || return 1
+	[ "1" = "$update_rootfs" ] && return 0
+	[ "1" = "$clear_overlay" ] &&
+		grep -qE '^ubi[0-9]*:rootfs_data ' /proc/mounts 2>&3 && return 0
+	return 1
+}
+
+# Can PID 1 be handed off at all? Asked before anything is written, where a
+# refusal still leaves the camera exactly as it was.
+#
+# The ::restart: entry is read by init at boot, so the file on flash is the
+# best evidence there is of what PID 1 will do with SIGQUIT. Without one,
+# busybox init ignores the signal, and the run could only reboot unwritten.
+check_handoff() {
+	[ "1" = "$skip_ramfs" ] &&
+		die "--no_ramfs: this run must rewrite a mounted UBI volume, which cannot be done from the running system. Nothing was written."
+	command -v pivot_root >/dev/null 2>&1 ||
+		die "No pivot_root: this run must rewrite a mounted UBI volume, which needs it. Nothing was written."
+	inittab_hands_off ||
+		die "This run must rewrite a mounted UBI volume, and only PID 1 can let go of it: $INITTAB has no '::restart:/sbin/init' entry to hand it off with. Nothing was written."
+	return 0
+}
+
+# Whether PID 1 can be handed off at all: its inittab, read at boot, has the
+# ::restart: entry that execs /sbin/init. Images before the UBI layouts had none.
+inittab_hands_off() {
+	grep -qE '^[^#]*::restart:/sbin/init([[:space:]]|$)' "$INITTAB" 2>&3
+}
+
+# Lay out what busybox init needs to exec into this ramfs as PID 1.
+#
+# init runs its ::shutdown: actions before it execs the ::restart: target, and
+# after the pivot it resolves them here. rcK is not here, which is right. But
+# `/bin/umount -a -f` would be -- the applet symlinks above put an umount in
+# /bin -- and it would take /tmp, holding the images, down with everything
+# else. The action names that absolute path, so the link moves to /sbin: init
+# no longer finds it, and the flash phase (verify_rootfs's loop mount, for
+# one) still does, through PATH.
+#
+# /sbin/init is the restart target init names, resolved in this root too. The
+# state the second phase needs cannot ride in the environment: init execs it
+# with init's environment, not ours. So it goes in a file, written after the
+# exports it records -- see hand_off_pid1.
+stage_handoff() {
+	mkdir -p "$RAM_ROOT/sbin" 2>&3 || return 1
+	rm -f "$RAM_ROOT/bin/umount" 2>&3
+	ln -sf ../bin/busybox "$RAM_ROOT/sbin/umount" 2>&3
+	printf '#!/bin/sh\n. /sysupgrade.env\nexec /bin/busybox ash /sysupgrade\n' \
+		> "$RAM_ROOT/sbin/init" 2>&3 || return 1
+	chmod +x "$RAM_ROOT/sbin/init" 2>&3
+	[ -x "$RAM_ROOT/sbin/init" ]
+}
+
+# Hand PID 1 to the ramfs, and never come back.
+#
+# pivot_root has already moved PID 1's root and cwd here along with ours. What
+# still ties it to the flash is its own text -- busybox mapped from the old
+# root -- and the processes it supervises. SIGQUIT makes busybox init run its
+# shutdown actions, kill every other process (this one included), and exec
+# /sbin/init: ours. The second phase then starts as PID 1 with the old root
+# referenced by nothing, which is what lets its UBI volumes go.
+#
+# If PID 1 does not take it -- an inittab that changed under a running init --
+# this survives the wait and reboots: nothing has been written.
+hand_off_pid1() {
+	# Relative: the cwd is the new root (enter_ramfs cd'd into it), so this is
+	# the /sysupgrade.env that /sbin/init sources.
+	export -p > ./sysupgrade.env 2>&3
+	echo "export _handoff=1" >> ./sysupgrade.env
+	echo_c 37 "\nHanding PID 1 over to the RAM root; this console goes quiet until it does."
+	sync
+	busybox kill -QUIT 1
+	sleep "${handoff_wait:-30}"
+	echo_c 31 "PID 1 did not hand over; rebooting (nothing was flashed)"
+	./bin/busybox reboot -d 1 -f
+	exit 1
+}
+
+# Second phase, as PID 1: let go of the old root so its UBI volumes close.
+#
+# Lazy, because the old root holds the moved-out mount points' parents and
+# whatever else init had mounted under it; with every process that could hold
+# a reference gone, the lazy detach is final at once: UBIFS's put_super closes
+# its volumes, and the squashfs on a ubiblock device is the block device's last
+# opener, so ubiblock closes its reader too.
+release_old_root() {
+	# Nothing is written before this answers. If the old root is still
+	# attached, every volume under it is still open, and the kernel would go
+	# down and the rootfs then fail -- a half upgrade. Refusing here reboots
+	# onto the image that is still there, untouched.
+	busybox umount -l /mnt 2>&3 ||
+		die "Could not let go of the old root; nothing was written."
+	sync
+	echo 3 > /proc/sys/vm/drop_caches 2>&3
+}
+
 # Move the whole flashing phase into a RAM filesystem and re-exec there, so that
 # nothing it needs afterwards lives on the partition it is about to overwrite.
 #
@@ -1430,6 +1708,9 @@ enter_ramfs() {
 	done
 	cp "$0" "$RAM_ROOT/sysupgrade" 2>/dev/null || return 1
 	chmod +x "$RAM_ROOT/sysupgrade" 2>/dev/null
+	if [ "handoff" = "$1" ]; then
+		stage_handoff || return 1
+	fi
 
 	# Carry over the mounts the flash still needs: /dev for the MTD nodes, /proc
 	# for get_device and sysrq, /tmp for the unpacked images. Moving rather than
@@ -1469,6 +1750,11 @@ enter_ramfs() {
 	# /etc/os-release to read it from (#2484).
 	# device_pinned: the image was fetched under this device's own name.
 	export system_platform device_pinned
+	# The UBI layout and its volumes, resolved on the whole system: the flash
+	# phase may have no /sys to resolve them from.
+	export ubi_layout ubi_rootfs_dev ubi_data_dev UBI_SYS INITTAB
+	# archive: verify_ubifs_rootfs does not count a local archive as pinned.
+	export archive
 
 	cd "$RAM_ROOT" || { ramfs_unwind; return 1; }
 	# After this the old root is at ./mnt and still mounted — deliberately: the
@@ -1481,6 +1767,8 @@ enter_ramfs() {
 	# Past the pivot there is no way back, so this is where the second phase is
 	# declared -- see the note above the other exports.
 	export _ramfs_phase=1
+
+	[ "handoff" = "$1" ] && hand_off_pid1
 
 	# `chroot .` is what actually re-points this process's root; pivot_root only
 	# moved the mounts. Then exec so the shell interpreting the rest is the copy
@@ -1677,9 +1965,43 @@ get_device() {
 # (enter_ramfs moves it without checking), so sysfs can simply be absent exactly
 # where this is needed.
 partition_size() {
-	case "$1" in /dev/mtd[0-9]*) ;; *) return 0 ;; esac
+	case "$1" in
+		# A UBI volume holds reserved_ebs LEBs of usable_eb_size bytes each;
+		# ubiupdatevol refuses anything larger (UBI_IOCVOLUP's -EINVAL).
+		/dev/ubi[0-9]*_[0-9]*)
+			local d="$UBI_SYS/${1#/dev/}" ebs usable
+			ebs=$(cat "$d/reserved_ebs" 2>&3) && usable=$(cat "$d/usable_eb_size" 2>&3) || return 0
+			[ -n "$ebs" ] && [ -n "$usable" ] && echo $((ebs * usable))
+			return 0 ;;
+		/dev/mtd[0-9]*) ;;
+		*) return 0 ;;
+	esac
 	local hex=$(grep "^${1#/dev/}:" /proc/mtd 2>/dev/null | cut -d' ' -f2)
 	[ -n "$hex" ] && echo $((0x$hex))
+}
+
+# The character device of the UBI volume named $1 (/dev/ubi0_1), or nothing.
+#
+# By name, never by number: ubinize numbers the volumes, but a camera whose
+# layout came from somewhere else -- U-Boot's `ubi create`, defib's installer
+# -- numbers them in the order they were made.
+ubi_volume() {
+	local d
+	for d in "$UBI_SYS"/ubi[0-9]*_[0-9]*; do
+		[ -f "$d/name" ] || continue
+		[ "$(cat "$d/name" 2>&3)" = "$1" ] && { echo "/dev/${d##*/}"; return 0; }
+	done
+	return 1
+}
+
+# Write image $1 to flash target $2: a UBI volume through ubiupdatevol, which
+# replaces the volume's contents and trims the 0xFF tail of every LEB (#2519);
+# anything else is an MTD partition and goes through flashcp as it always has.
+write_image() {
+	case "$2" in
+		/dev/ubi[0-9]*_[0-9]*) set_progress ubiupdatevol "$2" "$1" ;;
+		*) set_progress flashcp -v "$1" "$2" ;;
+	esac
 }
 
 # Record that a write is about to land on flash that backs the RUNNING
@@ -1732,8 +2054,27 @@ get_system_info() {
 	[ -z "$model" ] && model="$soc"
 	[ -z "$model" ] && die "Cannot determine SoC: no BUILD_PLATFORM and no U-Boot 'soc'"
 	resolve_model_alias
-	kernel_device=$(get_device "kernel")
-	[ "$kernel_device" = "/dev/" ] && kernel_device=$(get_device "firmware")
+	detect_ubi_layout
+	# A ubiblock camera running an image from before the hand-off has no
+	# ::restart: entry, and only the upgrade being run would ship one. Its
+	# rootfs was written through gluebi's mtd until now, which works with the
+	# volume mounted (gluebi writes beside ubiblock's reader), so keep doing
+	# that rather than refusing every upgrade. The next image brings the
+	# entry, and the UBI path, with it.
+	if [ "$ubi_layout" = "ubiblock" ] && ! inittab_hands_off &&
+		[ "/dev/" != "$(get_device "rootfs")" ]; then
+		ubi_layout=
+	fi
+	if [ -n "$ubi_layout" ]; then
+		# Resolved here, on the whole system: the flash phase may run in a ramfs
+		# where /sys came across best-effort, or not at all.
+		kernel_device=$(ubi_volume kernel)
+		ubi_rootfs_dev=$(ubi_volume rootfs)
+		ubi_data_dev=$(ubi_volume rootfs_data)
+	else
+		kernel_device=$(get_device "kernel")
+		[ "$kernel_device" = "/dev/" ] && kernel_device=$(get_device "firmware")
+	fi
 	kernel_version=$(get_kernel_version "$kernel_device")
 	system_version=$(get_system_version "")
 	system_platform=$(get_system_platform "")
@@ -1753,6 +2094,37 @@ get_system_info() {
 	root_on_flash=1
 	grep -qE '(^|[[:space:]])root=(/dev/)?(nfs|mmcblk|ram)' /proc/cmdline 2>/dev/null \
 		&& root_on_flash=0
+}
+
+# Which NAND layout this camera boots, when its kernel and rootfs are UBI
+# volumes rather than MTD partitions. Empty for everything else -- NOR, a raw
+# NAND kernel partition, and a squashfs reached through gluebi's mtdblock, which
+# the MTD path below already writes.
+#
+#   ubifs     kernel volume = FIT, rootfs volume = UBIFS (root=ubi0:rootfs).
+#             Fetches the -nand- package: fitImage.<soc> + rootfs.ubifs.<soc>.
+#   ubiblock  kernel volume = uImage, rootfs volume = squashfs mounted through
+#             ubiblock (root=/dev/ubiblockX_Y). Its volumes hold exactly the
+#             NOR artifacts, so it fetches the NOR package.
+#
+# Either way the rootfs volume is in use for as long as the camera runs: UBIFS
+# or ubiblock holds it open under init's overlay root, and ubiupdatevol needs
+# the volume to itself (see need_handoff). So a rootfs write on either layout
+# has PID 1 leave the flash first. See enter_ramfs.
+detect_ubi_layout() {
+	ubi_layout=
+	[ -n "$(ubi_volume kernel)" ] && [ -n "$(ubi_volume rootfs)" ] || return 0
+	if grep -qE '(^|[[:space:]])root=ubi[0-9]*:rootfs([[:space:]]|$)' /proc/cmdline 2>&3; then
+		ubi_layout=ubifs
+	elif grep -qE '(^|[[:space:]])root=/dev/ubiblock' /proc/cmdline 2>&3; then
+		ubi_layout=ubiblock
+	fi
+	return 0
+}
+
+# The package flavour this camera installs from, as the manifest spells it.
+pkg_flash() {
+	[ "$ubi_layout" = "ubifs" ] && echo nand || echo nor
 }
 
 get_system_version() {
@@ -1780,12 +2152,12 @@ default_upgrade_url() {
 	plat=$(get_system_platform)
 	case "$plat" in
 		*_*_*)
-			echo "https://github.com/OpenIPC/builder/releases/download/latest/$plat-nor.tgz"
+			echo "https://github.com/OpenIPC/builder/releases/download/latest/$plat-$(pkg_flash).tgz"
 			return ;;
 	esac
 	osr=$(get_system_build)
 	case "$osr" in lite|ultimate|neo) repo=firmware ;; esac
-	echo "https://github.com/OpenIPC/$repo/releases/download/latest/openipc.$model-nor-$osr.tgz"
+	echo "https://github.com/OpenIPC/$repo/releases/download/latest/openipc.$model-$(pkg_flash)-$osr.tgz"
 }
 
 is_device_platform() {
@@ -1898,7 +2270,8 @@ rewrites_live_flash() {
 	[ "1" = "$update_rootfs" ] && return 0
 	[ "1" = "$image_combined" ] && return 0
 	[ "1" = "$clear_overlay" ] && return 0
-	[ "1" = "$update_kernel" ] && [ "/dev/" = "$(get_device "kernel")" ]
+	# A UBI kernel volume is a volume of its own, never mounted.
+	[ -z "$ubi_layout" ] && [ "1" = "$update_kernel" ] && [ "/dev/" = "$(get_device "kernel")" ]
 }
 
 reboot_system() {
@@ -1947,6 +2320,13 @@ reboot_system() {
 	# Let the dog go, without the magic 'V' -- see watchdog_keep.
 	[ -n "$wdog_keeper" ] && : > "$WDOG_RELEASE"
 	busybox reboot -d 1 -f
+	# As PID 1 (a handed-off flash phase) the shell must outlive that delayed
+	# reboot: PID 1 exiting is a kernel panic, which does reboot -- after
+	# panic= seconds, and through an oops on the console that reads like a
+	# failed upgrade.
+	if [ "$$" = "1" ]; then
+		while :; do sleep 1; done
+	fi
 }
 
 # Do everything that writes flash, then reboot. A function because it is entered
@@ -1978,7 +2358,7 @@ else
 	# committed. exit_update means the rootfs is not being written at all, so
 	# whether it would have fitted is not this run's business.
 	[ "1" = "$update_rootfs" ] && [ "1" != "$exit_update" ] &&
-		check_image_fits "$(rootfs_image)" "$(get_device "rootfs")" rootfs
+		check_image_fits "$(rootfs_image)" "$(rootfs_device)" rootfs
 	[ "1" = "$update_kernel" ] && do_update_kernel "$kernel_file"
 	[ "1" = "$update_rootfs" ] && do_update_rootfs "$rootfs_file"
 fi
@@ -2148,6 +2528,9 @@ if [ "1" = "$_ramfs_phase" ]; then
 	# missed -- so the whiteout replaced the stray directory it was meant to fix,
 	# on upgrade and on factory reset alike (@usa-, majestic-webui#120).
 	[ "1" = "$ram_root_shipped" ] || rmdir "/mnt$RAM_ROOT" 2>/dev/null
+	# Handed off: this is PID 1 now, and nothing else is left running from the
+	# old root, so it can finally be let go -- see need_handoff.
+	[ "1" = "$_handoff" ] && release_old_root
 	flash_and_reboot
 fi
 
@@ -2160,7 +2543,7 @@ if [ "1" = "$list_only" ]; then
 	platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
 	if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
 	here=$(get_build_id)
-	builds=$(awk -v p="$platform" '$2==p && $3=="nor" { print $1 }' "$MANIFEST_CACHE" \
+	builds=$(awk -v p="$platform" -v f="$(pkg_flash)" '$2==p && $3==f { print $1 }' "$MANIFEST_CACHE" \
 		| head -n "${list_n:-20}")
 	if [ -z "$builds" ]; then
 		echo_c 33 "\nNo builds available for $platform yet."
@@ -2243,6 +2626,13 @@ echo_c 37 "\nProtected: flashing continues even if this terminal disconnects."
 # failure here falls through and flashes in place exactly as before.
 if ! rewrites_live_flash; then
 	echo_c 37 "\nFlashing in place: this run does not rewrite the filesystem the camera runs from."
+elif need_handoff; then
+	# A mounted UBI volume cannot be rewritten in place at all (see
+	# need_handoff), so there is no fallback to fall back to: refuse while
+	# nothing is written.
+	enter_ramfs handoff
+	ramfs_discard
+	die "Could not move the flash phase into RAM; a mounted UBI volume cannot be rewritten without it. Nothing was written."
 elif ! enter_ramfs; then
 	# The pivot did not take, so the in-place flash below needs none of what was
 	# staged for it. enter_ramfs bails out from a dozen places and cannot tidy up

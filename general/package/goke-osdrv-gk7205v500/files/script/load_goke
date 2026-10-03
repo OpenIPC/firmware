@@ -23,8 +23,12 @@ os_mem_size=${os_mem_size:=32}
 # "Conflict MMZ ... to kernel memory". The osmem env can disagree with mem=
 # (e.g. gk7205v510 boots mem=70M while osmem=32M), so prefer the kernel value
 # (an explicit -osmem arg below still wins).
-_kmem=$(grep -oE 'mem=[0-9]+M' /proc/cmdline | head -1 | tr -dc '0-9')
-[ -n "$_kmem" ] && os_mem_size=$_kmem
+# Only for the xmedia carve-out: with mmz_allocator=cma, mem= is the whole DDR
+# and the MMZ is a CMA zone inside it, so there is no split to derive.
+if ! grep -q "mmz_allocator=cma" /proc/cmdline; then
+	_kmem=$(grep -oE 'mem=[0-9]+M' /proc/cmdline | head -1 | tr -dc '0-9')
+	[ -n "$_kmem" ] && os_mem_size=$_kmem
+fi
 
 YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 
@@ -63,9 +67,42 @@ calc_mmz_info() {
 # xm_rgn dereferences the NULL it gets back from CMPI_GetModuleFuncById(SYS) --
 # the `RGN_Init+0x1b` NULL oops at 0x0000000c reported on a GK7202V500 in #2428,
 # after which no vendor module loads and there is no video at all.
+# CMA is the default, as on gk7205v200: Linux gets the whole DDR and the MMZ
+# is a CMA zone reserved from mmz= on the command line. A command line that
+# names no allocator yet -- a fresh install, an env from before this -- is
+# rewritten here for the next boot; this boot keeps the carve-out. To stay on
+# the carve-out, name it: mmz_allocator=xmedia in bootargs.
+#
+# Every other bootargs token is kept, in order: rebuilding bootargs from a
+# fixed list once dropped ubi.mtd and left a NAND board unbootable (#2281).
+# Keys the extras variable sets are left to it, so it is not carried twice.
+check_allocator() {
+	grep -q mmz_allocator /proc/cmdline && return 0
+	# Only where the kernel can reserve the zone: this script also loads
+	# gk7201v200, whose kernel has no CMA.
+	grep -q '^CmaTotal:' /proc/meminfo || return 0
+	local bootargs extras kept osmem totalmem mmz_start mmz_size
+	bootargs=$(fw_printenv -n bootargs)
+	[ -n "$bootargs" ] || return 0
+	extras=$(fw_printenv -n extras)
+	kept=$(echo ${bootargs} | awk -v extras="${extras}" 'BEGIN { RS = " "; n = split(extras, e, " "); for (i = 1; i <= n; i++) { k = e[i]; sub(/=.*/, "", k); skip[k] = 1 } skip["mem"] = skip["mmz"] = skip["mmz_allocator"] = 1 } { sub(/\n$/, ""); k = $0; sub(/=.*/, "", k); if ($0 != "" && !(k in skip)) printf "%s ", $0 }')
+	osmem=$(fw_printenv -n osmem | tr -d 'M'); osmem=${osmem:-32}
+	totalmem=$(fw_printenv -n totalmem | tr -d 'M'); totalmem=${totalmem:-64}
+	mmz_start=$(echo "$mem_start $osmem" | awk '{ printf("0x%x00000\n", $1/1024/1024 + $2) }')
+	mmz_size=$((totalmem - osmem))M
+	echo "Media memory: switching to CMA from the next boot (mem=${totalmem}M)"
+	fw_setenv bootargs mem=${totalmem}M ${kept}mmz_allocator=cma mmz=anonymous,0,${mmz_start},${mmz_size} ${extras}
+}
+
 insert_osal() {
-	calc_mmz_info
-	modprobe xm_osal mmz_allocator=xmedia mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+	check_allocator
+	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
+	if [ -n "$MMZ" ] && grep -q "mmz_allocator=cma" /proc/cmdline; then
+		modprobe xm_osal mmz_allocator=cma mmz=$MMZ || report_error
+	else
+		calc_mmz_info
+		modprobe xm_osal mmz_allocator=xmedia mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+	fi
 }
 
 insert_detect() {
