@@ -142,7 +142,7 @@ set_cmdline "$CMDLINE_FLASH"
 # --- stubs -----------------------------------------------------------------
 stub() { printf '#!/bin/bash\n%s\n' "$2" > "$SB/bin/$1"; chmod +x "$SB/bin/$1"; }
 
-stub ipcinfo    'case "$1" in -v) echo "${STUB_VENDOR:-sigmastar}";; -F) echo nor;; esac'
+stub ipcinfo    'case "$1" in -v) echo "${STUB_VENDOR:-sigmastar}";; -F) echo "${STUB_FLASH:-nor}";; esac'
 # `upgrade` is the URL a builder profile writes on first boot; unset models
 # the env that lost it, or never had it (#2484).
 stub fw_printenv '
@@ -279,6 +279,11 @@ case "$applet" in
                                 case " $* " in *" $STUB_FLASHCP_FAIL_DEV "*) exit 1 ;; esac
                             fi ;;
     reboot)                 echo "reboot" >> "$FLASH_LOG"; exit 0 ;;
+    # UBI volume writes, the PID 1 hand-off and the stage-2 unmount: logged
+    # like flashcp, so a test can assert what reached which volume, in order.
+    ubiupdatevol)           echo "ubiupdatevol $*" >> "$FLASH_LOG"
+                            [ "1" = "$STUB_FLASHCP_FAIL" ] && exit 1 ;;
+    kill|umount)            echo "$applet $*" >> "$FLASH_LOG" ;;
 esac
 exit 0'
 
@@ -353,6 +358,38 @@ make_fit() {
 
 make_rootfs() { dd if=/dev/zero bs=1k count=8 of="$1" 2>/dev/null; }
 
+# set_ubi [rootfs_reserved_ebs]: a UBI device with kernel/rootfs/rootfs_data
+# volumes, as /sys/class/ubi shows them: 126976-byte LEBs (2 KiB pages,
+# 128 KiB blocks). The rootfs volume is 2 LEBs by default -- room for the
+# fixtures below and not much more, so a size test has an edge to cross.
+set_ubi() {
+    local u="$SB/sys/class/ubi" i name ebs
+    rm -rf "$u"
+    i=0
+    for name in kernel rootfs rootfs_data; do
+        mkdir -p "$u/ubi0_$i"
+        echo "$name" > "$u/ubi0_$i/name"
+        echo 126976 > "$u/ubi0_$i/usable_eb_size"
+        ebs=2; [ "$name" = rootfs ] && ebs=${1:-2}
+        echo "$ebs" > "$u/ubi0_$i/reserved_ebs"
+        i=$((i + 1))
+    done
+}
+
+# A UBIFS image: superblock node magic at 0 (0x06101831, little-endian), node
+# type 6 (superblock) at 20, and the LEB size it was made for at 36 -- the three
+# fields sysupgrade reads. $2 is that LEB size (default: the volume's).
+make_ubifs() {
+    local leb=${2:-126976}
+    printf '\x31\x18\x10\x06' > "$1"
+    dd if=/dev/zero bs=1 count=16 >> "$1" 2>/dev/null         # 4..19
+    printf '\x06' >> "$1"                                     # 20: node type
+    dd if=/dev/zero bs=1 count=15 >> "$1" 2>/dev/null         # 21..35
+    printf %b "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' \
+        $((leb & 255)) $(((leb >> 8) & 255)) $(((leb >> 16) & 255)) $(((leb >> 24) & 255)))" >> "$1"
+    dd if=/dev/zero bs=1k count=8 >> "$1" 2>/dev/null
+}
+
 # A squashfs whose superblock claims $2 bytes, padded to $3 bytes on disk ($3
 # defaults to $2). $3 < $2 is what an unpack that runs out of room in /tmp
 # leaves behind, and what check_rootfs_complete has to refuse; $3 > $2 is what
@@ -421,6 +458,8 @@ run() {
         STUB_ISIZE="${STUB_ISIZE:-}" \
         STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
         UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
+        UBI_SYS="$SB/sys/class/ubi" INITTAB="$SB/etc/inittab" handoff_wait=0 \
+        ${RUN_ENV:-} \
         sh "$SB/sysupgrade" "$@" 2>&1)
     RC=$?
 }
@@ -444,7 +483,10 @@ reset_env() {
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB
-    unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY
+    unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY RUN_ENV
+    rm -rf "$SB/sys"
+    printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n::restart:/sbin/init\n' > "$SB/etc/inittab"
+    rm -f "$SB"/tmp/*.gk7205v500
     set_meminfo
     : > "$SDMOUNTS"
     set_mounts
@@ -1987,14 +2029,217 @@ rm -f "$SB/bin/stat"
 
 # ---------------------------------------------------------------------------
 echo
+echo "=== Part 1b: UBI NAND layouts ==="
+
+# Two layouts keep kernel and rootfs in UBI volumes, told apart by root=:
+#   ubifs     kernel = FIT, rootfs = UBIFS, root=ubi0:rootfs
+#   ubiblock  kernel = uImage, rootfs = squashfs through ubiblock
+# ubiupdatevol takes its volume exclusively, and the rootfs volume is held
+# open on both (UBIFS, or ubiblock's reader), so a rootfs write on either
+# goes through the PID 1 hand-off; the kernel volume is written in place.
+CMDLINE_UBIFS='mem=32M console=ttyAMA0,115200 panic=20 init=/init root=ubi0:rootfs rootfstype=ubifs ubi.mtd=2,2048 mtdparts=nand:768k(boot),256k(env),-(ubi)'
+CMDLINE_UBIBLOCK='mem=32M console=ttyAMA0,115200 panic=20 init=/init root=/dev/ubiblock0_1 ubi.mtd=2,2048 ubi.block=0,1 mtdparts=nand:768k(boot),256k(env),-(ubi)'
+UFIT="$SB/tmp/fitImage.gk7205v500"
+UFS="$SB/tmp/rootfs.ubifs.gk7205v500"
+UK="$SB/tmp/uImage.gk7205v500"
+US="$SB/tmp/rootfs.squashfs.gk7205v500"
+
+# ubi_setup <ubifs|ubiblock> [rootfs_reserved_ebs]: a gk7205v500 NAND camera
+# whose MTD table has no kernel/rootfs partitions -- they are UBI volumes.
+ubi_setup() {
+    set_ubi "${2:-2}"
+    set_mtd <<'EOF2'
+dev:    size   erasesize  name
+mtd0: 000c0000 00020000 "boot"
+mtd1: 00040000 00020000 "env"
+mtd2: 07f00000 00020000 "ubi"
+EOF2
+    if [ "$1" = ubifs ]; then set_cmdline "$CMDLINE_UBIFS"; else set_cmdline "$CMDLINE_UBIBLOCK"; fi
+    set_platform gk7205v500_ultimate ultimate
+    export STUB_VENDOR=goke STUB_SOC=gk7205v500 STUB_IMG_SOC=gk7205v500
+    make_fit "$UFIT"
+    make_ubifs "$UFS"
+    make_uimage "$UK" gk7205v500
+    make_squashfs "$US" 8192
+}
+ubi_wrote() { grep -q "ubiupdatevol .*$1" "$SB/tmp/flash.log"; }
+nothing_ubi() { ! grep -qE "ubiupdatevol|flashcp|flash_eraseall" "$SB/tmp/flash.log"; }
+handed_off() { grep -q "^kill -QUIT 1" "$SB/tmp/flash.log"; }
+
+# --- ubiblock: NOR artifacts; the rootfs goes through the hand-off too
+# (measured: ubiupdatevol on a volume ubiblock has open is EBUSY)
+reset_env; ubi_setup ubiblock
+STUB_PIVOT_RC=0
+run -z --kernel="$UK" --rootfs="$US"
+if handed_off && nothing_ubi && grep -q "ubi_layout=.ubiblock" "$SB/ram/sysupgrade.env"; then
+    ok "ubiblock: a rootfs write hands PID 1 off before anything is written"
+else
+    bad "ubiblock: expected the hand-off, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+reset_env; ubi_setup ubiblock
+run -z --kernel="$UK"
+if [ "$RC" -eq 0 ] && ubi_wrote "/dev/ubi0_0 $UK" && ! handed_off && ! grep -q flashcp "$SB/tmp/flash.log"; then
+    ok "ubiblock: a uImage is written into the kernel volume in place"
+else
+    bad "ubiblock: kernel-only should write ubi0_0 in place, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+reset_env; ubi_setup ubiblock
+RUN_ENV="_ramfs_phase=1 _handoff=1 ubi_layout=ubiblock kernel_device=/dev/ubi0_0 ubi_rootfs_dev=/dev/ubi0_1 ubi_data_dev=/dev/ubi0_2 update_kernel=1 update_rootfs=1 kernel_file=$UK rootfs_file=$US model=gk7205v500 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
+run
+u=$(logged_at "umount -l /mnt"); k=$(logged_at "ubiupdatevol /dev/ubi0_0 $UK"); r=$(logged_at "ubiupdatevol /dev/ubi0_1 $US")
+if [ -n "$u" ] && [ -n "$k" ] && [ -n "$r" ] && [ "$u" -lt "$k" ] && [ "$k" -lt "$r" ] && rebooted; then
+    ok "stage 2 (ubiblock): old root released, uImage then squashfs written"
+else
+    bad "stage 2 ubiblock order ${u:-none}/${k:-none}/${r:-none} log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- ubifs: a kernel-only write touches no mounted volume
+reset_env; ubi_setup ubifs
+run -z --kernel="$UFIT"
+if [ "$RC" -eq 0 ] && ubi_wrote "/dev/ubi0_0 $UFIT" && ! handed_off; then
+    ok "ubifs: a FIT kernel is written into the kernel volume in place"
+else
+    bad "ubifs: kernel-only should write ubi0_0 without a hand-off, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- ubifs: a local UBIFS rootfs has no SoC witness
+reset_env; ubi_setup ubifs
+run -z --kernel="$UFIT" --rootfs="$UFS"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "Cannot verify the SoC of a UBIFS rootfs" && nothing_ubi; then
+    ok "ubifs: a local UBIFS rootfs is refused without --force_soc, nothing written"
+else
+    bad "ubifs: expected the SoC refusal before any write, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- ubifs: no ::restart: entry -> refused before the kernel goes down
+reset_env; ubi_setup ubifs
+printf '::sysinit:/etc/init.d/rcS\n' > "$SB/etc/inittab"
+run -z -f --kernel="$UFIT" --rootfs="$UFS"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "::restart:/sbin/init" && nothing_ubi && ! rebooted; then
+    ok "ubifs: an inittab that cannot hand PID 1 off is refused, nothing written, no reboot"
+else
+    bad "ubifs: expected the inittab refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- ubifs: no pivot -> no in-place fallback, refused unwritten
+reset_env; ubi_setup ubifs
+run -z -f --kernel="$UFIT" --rootfs="$UFS"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "cannot be rewritten without it" && nothing_ubi && ! rebooted; then
+    ok "ubifs: a failed pivot refuses rather than writing a volume that is in use"
+else
+    bad "ubifs: expected the no-pivot refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- format must match what root= mounts
+reset_env; ubi_setup ubifs
+run -z -f --rootfs="$US"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "boots a UBIFS rootfs" && nothing_ubi; then
+    ok "ubifs: a squashfs rootfs is refused"
+else
+    bad "ubifs: a squashfs must be refused, rc=$RC out='$OUT'"
+fi
+reset_env; ubi_setup ubiblock
+run -z -f --rootfs="$UFS"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "is a UBIFS image" && nothing_ubi; then
+    ok "ubiblock: a UBIFS rootfs is refused"
+else
+    bad "ubiblock: a UBIFS image must be refused, rc=$RC out='$OUT'"
+fi
+
+# --- a UBIFS made for other LEBs would never mount
+reset_env; ubi_setup ubifs
+make_ubifs "$UFS" 253952
+run -z -f --kernel="$UFIT" --rootfs="$UFS"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "253952-byte LEBs" && nothing_ubi; then
+    ok "ubifs: an image for another LEB size is refused before the kernel is written"
+else
+    bad "ubifs: LEB mismatch must be refused, rc=$RC out='$OUT'"
+fi
+
+# --- bigger than the volume
+reset_env; ubi_setup ubifs 1
+dd if=/dev/zero bs=1k count=200 >> "$UFS" 2>/dev/null
+run -z -f --kernel="$UFIT" --rootfs="$UFS"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "does not fit" && nothing_ubi; then
+    ok "ubifs: a rootfs larger than its volume is refused, nothing written"
+else
+    bad "ubifs: oversize rootfs must be refused, rc=$RC out='$OUT'"
+fi
+
+# --- the hand-off itself
+reset_env; ubi_setup ubifs
+STUB_PIVOT_RC=0
+run -z -f --kernel="$UFIT" --rootfs="$UFS"
+envf="$SB/ram/sysupgrade.env"
+if handed_off && nothing_ubi && [ -x "$SB/ram/sbin/init" ] && [ ! -e "$SB/ram/bin/umount" ] &&
+    [ -L "$SB/ram/sbin/umount" ] &&
+    grep -q "_handoff=1" "$envf" 2>/dev/null && grep -q "_ramfs_phase=.1" "$envf" &&
+    grep -q "ubi_rootfs_dev=./dev/ubi0_1" "$envf" && grep -q "sysupgrade.env" "$SB/ram/sbin/init"; then
+    ok "ubifs: the RAM root is staged for PID 1 and SIGQUIT sent before any write"
+else
+    bad "ubifs: hand-off staging, log='$(cat "$SB/tmp/flash.log")' init='$(cat "$SB/ram/sbin/init" 2>&1)' out='$OUT'"
+fi
+
+# --- stage 2, as PID 1: release the old root, then write, then reboot
+reset_env; ubi_setup ubifs
+RUN_ENV="_ramfs_phase=1 _handoff=1 ubi_layout=ubifs kernel_device=/dev/ubi0_0 ubi_rootfs_dev=/dev/ubi0_1 ubi_data_dev=/dev/ubi0_2 update_kernel=1 update_rootfs=1 kernel_file=$UFIT rootfs_file=$UFS model=gk7205v500 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
+run
+u=$(logged_at "umount -l /mnt"); k=$(logged_at "ubiupdatevol /dev/ubi0_0"); r=$(logged_at "ubiupdatevol /dev/ubi0_1"); b=$(logged_at "^reboot")
+if [ -n "$u" ] && [ -n "$k" ] && [ -n "$r" ] && [ -n "$b" ] && [ "$u" -lt "$k" ] && [ "$k" -lt "$r" ] && [ "$r" -lt "$b" ]; then
+    ok "stage 2: old root released, kernel then rootfs written, then reboot"
+else
+    bad "stage 2 order umount/kernel/rootfs/reboot = ${u:-none}/${k:-none}/${r:-none}/${b:-none} log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+reset_env; ubi_setup ubifs
+RUN_ENV="_ramfs_phase=1 _handoff=1 ubi_layout=ubifs kernel_device=/dev/ubi0_0 ubi_rootfs_dev=/dev/ubi0_1 ubi_data_dev=/dev/ubi0_2 clear_overlay=1 model=gk7205v500 root_on_flash=1 ram_root_shipped=1"
+run
+if grep -q "ubiupdatevol -t /dev/ubi0_2" "$SB/tmp/flash.log" && rebooted; then
+    ok "stage 2: the UBIFS overlay volume is truncated"
+else
+    bad "stage 2 wipe: expected ubiupdatevol -t /dev/ubi0_2, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- -n on a mounted UBIFS overlay needs the hand-off too
+reset_env; ubi_setup ubifs; set_mounts ubi
+run -z -n
+if [ "$RC" -ne 0 ] && nothing_ubi && ! rebooted; then
+    ok "ubifs: wiping a mounted UBIFS overlay without a pivot is refused, nothing erased"
+else
+    bad "ubifs: -n without a pivot must refuse, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- the download: -nand- for ubifs, -nor- for ubiblock
+F=https://github.com/OpenIPC/firmware/releases/download/latest
+default_url_is "$F/openipc.gk7205v500-nand-ultimate.tgz" ubi_setup ubifs
+default_url_is "$F/openipc.gk7205v500-nor-ultimate.tgz" ubi_setup ubiblock
+
+# --- the unpack leaves rootfs.ubi (fresh-install image) in the archive
+reset_env; ubi_setup ubifs
+stage="$SB/stage"; rm -rf "$stage"; mkdir -p "$stage"
+cp "$UFIT" "$UFS" "$stage/"
+dd if=/dev/zero bs=1k count=64 of="$stage/rootfs.ubi.gk7205v500" 2>/dev/null
+(cd "$stage" && for f in fitImage.gk7205v500 rootfs.ubifs.gk7205v500 rootfs.ubi.gk7205v500; do
+    md5sum "$f" > "$f.md5sum"; done && tar cf - . | gzip > "$SB/tmp/fw.tgz")
+rm -f "$UFIT" "$UFS"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ -f "$UFIT" ] && [ -f "$UFS" ] && [ ! -e "$SB/tmp/rootfs.ubi.gk7205v500" ] &&
+    ! printf '%s' "$OUT" | grep -q "Wrong checksum"; then
+    ok "ubifs: the volume images are unpacked, rootfs.ubi and its checksum are not"
+else
+    bad "ubifs unpack: fit=$([ -f "$UFIT" ] && echo y) ubifs=$([ -f "$UFS" ] && echo y) ubi=$([ -e "$SB/tmp/rootfs.ubi.gk7205v500" ] && echo y) out='$OUT'"
+fi
+
+# ---------------------------------------------------------------------------
+echo
 echo "=== Part 2: invariants in $SRC ==="
 
 # An option named in a user-facing message must exist in the parser.
 # --connect-timeout, --speed-limit/--speed-time and --max-filesize are curl's,
-# not ours.
+# and --exclude is tar's, not ours.
 for opt in $(grep -oE '\-\-[a-z_]+' "$SRC" | sort -u); do
     case "$opt" in
-        --force_*|--wipe_overlay|--no_reboot|--no_update|--no_ramfs|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--insecure|--connect*|--speed*|--proto*|--max*) continue ;;
+        --force_*|--wipe_overlay|--no_reboot|--no_update|--no_ramfs|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--insecure|--connect*|--speed*|--proto*|--max*|--exclude) continue ;;
     esac
     bad "message references '$opt', which the option parser does not accept"
 done
@@ -2210,8 +2455,14 @@ fi
 # Every flashcp the script runs has to have its status read. A bare call
 # discards it and a pipeline hides it; either way a write that never happened is
 # announced as one that did (#2426).
-if grep -n 'set_progress flash' "$SRC" | grep -qv '||'; then
-    bad "an unguarded set_progress write: $(grep -n 'set_progress flash' "$SRC" | grep -v '||')"
+# write_image is the one place a write is not guarded on its own line: its
+# set_progress IS its return status, and its callers carry the `||` instead.
+wi_lines=$(awk '/^write_image\(\)/,/^}/ { print NR }' "$SRC")
+if grep -n 'set_progress \(flash\|ubiupdatevol\)' "$SRC" | grep -v '||' |
+    grep -qvE "^($(echo $wi_lines | tr ' ' '|')):"; then
+    bad "an unguarded set_progress write: $(grep -n 'set_progress \(flash\|ubiupdatevol\)' "$SRC" | grep -v '||')"
+elif grep -n 'write_image "' "$SRC" | grep -qv '||'; then
+    bad "an unguarded write_image call: $(grep -n 'write_image "' "$SRC" | grep -v '||')"
 else
     ok "every flashcp/flash_eraseall write is followed by a status check"
 fi
@@ -2391,7 +2642,7 @@ fi
 body=$(sed -n '/^do_update_rootfs()/,/^}/p' "$SRC")
 e=$(printf '%s\n' "$body" | grep -n 'exit_update'          | head -1 | cut -d: -f1)
 m=$(printf '%s\n' "$body" | grep -n 'mark_live_flash_dirty' | head -1 | cut -d: -f1)
-f=$(printf '%s\n' "$body" | grep -n 'flashcp'               | head -1 | cut -d: -f1)
+f=$(printf '%s\n' "$body" | grep -nE 'write_image|flashcp'  | head -1 | cut -d: -f1)
 if [ -n "$e" ] && [ -n "$m" ] && [ -n "$f" ] && [ "$e" -lt "$m" ] && [ "$m" -lt "$f" ]; then
     ok "do_update_rootfs marks after the same-version return and before the write"
 else
