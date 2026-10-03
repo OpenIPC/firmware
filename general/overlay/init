@@ -89,7 +89,12 @@ if $is_flash_root; then
 	# that volume, fail to mount jffs2 on it and erase it: the overlay and the
 	# camera's claim with it.
 	if grep -q ubifs /proc/cmdline || grep -qE 'root=/dev/ubiblock' /proc/cmdline; then
-		mount -t ubifs ubi0:rootfs_data /overlay
+		# Settings in RAM rather than a camera that does not boot: a volume that
+		# will not mount as UBIFS must not take PID 1 down with it.
+		if ! mount -t ubifs ubi0:rootfs_data /overlay && ! mount -t tmpfs tmpfs /overlay; then
+			echo "Cannot mount overlay."
+			exit 1
+		fi
 	else
 		mtdblkdev=$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd | sed 's/mtd/mtdblock/')
 		mtdchrdev=$(grep 'rootfs_data' /proc/mtd | cut -d: -f1)

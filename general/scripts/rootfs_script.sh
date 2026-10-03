@@ -114,11 +114,15 @@ fi
 # BINARIES_DIR only gets the uImage, which has the DTB appended and is what the
 # NOR image still boots.
 NAND_FIT_ITS="${BR2_EXTERNAL_GENERAL_PATH}/../br-ext-chip-${OPENIPC_SOC_VENDOR}/board/${OPENIPC_SOC_FAMILY}/nand-fit.its"
+# One built for another board in a reused output directory must not ride along:
+# repack packs whatever fitImage it finds. (cv6xx makes its own in post-image,
+# which runs after this.)
+rm -f "${BINARIES_DIR}/fitImage"
 if [ -f "${NAND_FIT_ITS}" ] && grep -q "^BR2_TARGET_ROOTFS_UBI=y" "${BR2_CONFIG}"; then
 	KBOOT=$(ls -d "${BUILD_DIR}"/linux-*/arch/arm/boot 2>/dev/null | grep -v headers | head -1)
 	FIT_DIR="${BINARIES_DIR}/nand-fit"
 	rm -rf "${FIT_DIR}" && mkdir -p "${FIT_DIR}" || exit 1
-	cp "${NAND_FIT_ITS}" "${FIT_DIR}/" || exit 1
+	sed "s/@SOC@/${OPENIPC_SOC_MODEL}/" "${NAND_FIT_ITS}" > "${FIT_DIR}/nand-fit.its" || exit 1
 	cp "${KBOOT}/zImage" "${FIT_DIR}/" || { echo "NAND FIT: no zImage in ${KBOOT}" >&2; exit 1; }
 	# Every DTB the .its names, from the kernel's dts output.
 	for dtb in $(grep -o '/incbin/("[^"]*\.dtb")' "${NAND_FIT_ITS}" | sed 's/.*("\(.*\)")/\1/'); do

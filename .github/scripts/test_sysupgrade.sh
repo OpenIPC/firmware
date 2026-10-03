@@ -283,7 +283,9 @@ case "$applet" in
     # like flashcp, so a test can assert what reached which volume, in order.
     ubiupdatevol)           echo "ubiupdatevol $*" >> "$FLASH_LOG"
                             [ "1" = "$STUB_FLASHCP_FAIL" ] && exit 1 ;;
-    kill|umount)            echo "$applet $*" >> "$FLASH_LOG" ;;
+    kill)                   echo "$applet $*" >> "$FLASH_LOG" ;;
+    umount)                 echo "$applet $*" >> "$FLASH_LOG"
+                            exit "${STUB_BB_UMOUNT_RC:-0}" ;;
 esac
 exit 0'
 
@@ -357,6 +359,15 @@ make_fit() {
 }
 
 make_rootfs() { dd if=/dev/zero bs=1k count=8 of="$1" 2>/dev/null; }
+
+# A FIT whose root description names a SoC, as the NAND FIT's does
+# ("OpenIPC <soc>", board/<family>/nand-fit.its): fit_soc's witness.
+make_fit_soc() {
+    printf '\xd0\x0d\xfe\xed' > "$1"
+    dd if=/dev/zero bs=1 count=60 >> "$1" 2>/dev/null
+    printf 'description\0OpenIPC %s\0' "$2" >> "$1"
+    dd if=/dev/zero bs=1 count=64 >> "$1" 2>/dev/null
+}
 
 # set_ubi [rootfs_reserved_ebs]: a UBI device with kernel/rootfs/rootfs_data
 # volumes, as /sys/class/ubi shows them: 126976-byte LEBs (2 KiB pages,
@@ -2207,6 +2218,77 @@ if [ "$RC" -ne 0 ] && nothing_ubi && ! rebooted; then
     ok "ubifs: wiping a mounted UBIFS overlay without a pivot is refused, nothing erased"
 else
     bad "ubifs: -n without a pivot must refuse, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- the FIT beside a UBIFS rootfs is its SoC witness
+reset_env; ubi_setup ubifs
+make_fit_soc "$UFIT" gk7205v500
+run -z --kernel="$UFIT" --rootfs="$UFS"
+if printf '%s' "$OUT" | grep -q "SoC from the FIT kernel beside it: gk7205v500" &&
+    printf '%s' "$OUT" | grep -q "SoC OK" && nothing_ubi; then
+    ok "ubifs: a FIT naming this SoC vouches for the UBIFS rootfs beside it"
+else
+    bad "ubifs: FIT witness, rc=$RC out='$OUT'"
+fi
+reset_env; ubi_setup ubifs
+make_fit_soc "$UFIT" hi3516ev300
+run -z --kernel="$UFIT" --rootfs="$UFS"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "Wrong SoC" && nothing_ubi && ! rebooted; then
+    ok "ubifs: a FIT for another SoC stops the run before anything is written"
+else
+    bad "ubifs: foreign FIT must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- a local archive is not pinned by its names
+reset_env; ubi_setup ubifs
+stage="$SB/stage"; rm -rf "$stage"; mkdir -p "$stage"
+cp "$UFIT" "$UFS" "$stage/"
+(cd "$stage" && for f in fitImage.gk7205v500 rootfs.ubifs.gk7205v500; do
+    md5sum "$f" > "$f.md5sum"; done && tar cf - . | gzip > "$SB/tmp/fw.tgz")
+rm -f "$UFIT" "$UFS"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "no FIT kernel beside it names one" && nothing_ubi; then
+    ok "ubifs: an archive whose FIT names no SoC is not taken on its file names"
+else
+    bad "ubifs: archive without a witness must be refused, rc=$RC out='$OUT'"
+fi
+
+# --- stage 2 writes nothing when the old root will not let go
+reset_env; ubi_setup ubifs
+RUN_ENV="STUB_BB_UMOUNT_RC=1 _ramfs_phase=1 _handoff=1 ubi_layout=ubifs kernel_device=/dev/ubi0_0 ubi_rootfs_dev=/dev/ubi0_1 ubi_data_dev=/dev/ubi0_2 update_kernel=1 update_rootfs=1 kernel_file=$UFIT rootfs_file=$UFS model=gk7205v500 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
+run
+if printf '%s' "$OUT" | grep -q "Could not let go of the old root" && nothing_ubi && rebooted; then
+    ok "stage 2: a failed release of the old root reboots with nothing written"
+else
+    bad "stage 2: umount failure must stop before the first write, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- a ubiblock camera from before the hand-off keeps its gluebi path
+reset_env; ubi_setup ubiblock
+printf '::sysinit:/etc/init.d/rcS\n' > "$SB/etc/inittab"
+set_mtd <<'EOF2'
+dev:    size   erasesize  name
+mtd0: 000c0000 00020000 "boot"
+mtd1: 00040000 00020000 "env"
+mtd2: 07f00000 00020000 "ubi"
+mtd3: 003e0000 0001f000 "kernel"
+mtd4: 01f00000 0001f000 "rootfs"
+mtd5: 00200000 0001f000 "rootfs_data"
+EOF2
+run -z --kernel="$UK" --rootfs="$US"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && flashed /dev/mtd4 && ! handed_off &&
+    ! grep -q ubiupdatevol "$SB/tmp/flash.log"; then
+    ok "ubiblock without ::restart: writes through gluebi as it always did"
+else
+    bad "ubiblock old-inittab fallback, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+reset_env; ubi_setup ubiblock
+printf '::sysinit:/etc/init.d/rcS\n' > "$SB/etc/inittab"
+run -z --kernel="$UK" --rootfs="$US"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "::restart:/sbin/init" && nothing_ubi && ! rebooted; then
+    ok "ubiblock without ::restart: and without gluebi is refused, nothing written"
+else
+    bad "ubiblock old inittab, no gluebi, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
 # --- the download: -nand- for ubifs, -nor- for ubiblock

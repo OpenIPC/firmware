@@ -299,6 +299,8 @@ do_update_kernel() {
 		# and always reflash.
 		if [ "$(xxd -p -l 4 "$x" 2>/dev/null)" = "d00dfeed" ]; then
 			echo "FIT kernel detected, skipping uImage SoC/version probe"
+			local fsoc=$(fit_soc "$x")
+			[ -n "$fsoc" ] && check_soc "$fsoc"
 		else
 			local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
 			if [ "$vendor" != "ingenic" ] && [ "$vendor" != "rockchip" ]; then
@@ -425,6 +427,20 @@ check_rootfs_complete() {
 Nothing was written. Download it again -- a truncated image loses its .md5sum with it."
 }
 
+# The SoC a FIT kernel was built for, or nothing.
+#
+# A legacy uImage carries it in its name field (do_update_kernel reads it at
+# offset 32); a FIT has none of its own, so the NAND FIT is described as
+# "OpenIPC <soc>" (board/<family>/nand-fit.its, stamped at build time). The
+# description is in the FIT's first few hundred bytes. A FIT without one -- the
+# cv6xx kernel -- answers nothing, and no conclusion is drawn from that.
+fit_soc() {
+	[ -f "$1" ] || return 0
+	[ "$(xxd -p -l 4 "$1" 2>&3)" = "d00dfeed" ] || return 0
+	dd if="$1" bs=4096 count=1 2>&3 | tr -c 'a-zA-Z0-9_ ' '\n' |
+		awk '$1 == "OpenIPC" && NF == 2 { print $2; exit }'
+}
+
 # A UBIFS image: the superblock node's magic (0x06101831, stored little-endian)
 # at offset 0.
 is_ubifs() {
@@ -475,16 +491,23 @@ verify_ubifs_rootfs() {
 	rootfs_version=
 	check_ubifs_image "$x"
 	echo "UBIFS rootfs; its SoC and version cannot be read without mounting it."
+	# The FIT that ships beside it says which SoC the pair was built for --
+	# the one witness a UBIFS rootfs has. Taken whether or not this run
+	# writes the kernel: the package carries it either way.
+	local fsoc=$(fit_soc "$(kernel_image)")
 	if [ "1" = "$skip_soc" ]; then
 		echo_c 33 "Skipping the rootfs SoC pre-check (SoC validation disabled)."
 	elif is_device_platform "$system_platform" && [ "1" != "$device_pinned" ]; then
 		die "Cannot verify that a UBIFS rootfs is built for this camera's device profile ('$system_platform'). Nothing was written. Pass --force_soc if you are sure it is."
-	elif soc_guarded_by_kernel "$2"; then
-		echo_c 33 "The SoC is validated from the kernel image header instead."
-	elif [ "1" = "$remote_update" ]; then
+	elif [ -n "$fsoc" ]; then
+		echo "SoC from the FIT kernel beside it: $fsoc"
+		check_soc "$fsoc"
+	elif [ "1" = "$remote_update" ] && [ -z "$archive" ]; then
+		# A download, named for this camera's model. A local archive is
+		# named by whoever made it, so it does not count.
 		echo_c 33 "The image is pinned to '$model' by its artifact name."
 	else
-		die "Cannot verify the SoC of a UBIFS rootfs, and no kernel in this run carries a SoC to check it against. Pass --force_soc if you are sure it is built for '$model'."
+		die "Cannot verify the SoC of a UBIFS rootfs: no FIT kernel beside it names one. Nothing was written. Pass --force_soc if you are sure it is built for '$model'."
 	fi
 }
 
@@ -1539,9 +1562,15 @@ check_handoff() {
 		die "--no_ramfs: this run must rewrite a mounted UBI volume, which cannot be done from the running system. Nothing was written."
 	command -v pivot_root >/dev/null 2>&1 ||
 		die "No pivot_root: this run must rewrite a mounted UBI volume, which needs it. Nothing was written."
-	grep -qE '^[^#]*::restart:/sbin/init([[:space:]]|$)' "$INITTAB" 2>&3 ||
+	inittab_hands_off ||
 		die "This run must rewrite a mounted UBI volume, and only PID 1 can let go of it: $INITTAB has no '::restart:/sbin/init' entry to hand it off with. Nothing was written."
 	return 0
+}
+
+# Whether PID 1 can be handed off at all: its inittab, read at boot, has the
+# ::restart: entry that execs /sbin/init. Images before the UBI layouts had none.
+inittab_hands_off() {
+	grep -qE '^[^#]*::restart:/sbin/init([[:space:]]|$)' "$INITTAB" 2>&3
 }
 
 # Lay out what busybox init needs to exec into this ramfs as PID 1.
@@ -1601,7 +1630,12 @@ hand_off_pid1() {
 # its volumes, and the squashfs on a ubiblock device is the block device's last
 # opener, so ubiblock closes its reader too.
 release_old_root() {
-	busybox umount -l /mnt 2>&3
+	# Nothing is written before this answers. If the old root is still
+	# attached, every volume under it is still open, and the kernel would go
+	# down and the rootfs then fail -- a half upgrade. Refusing here reboots
+	# onto the image that is still there, untouched.
+	busybox umount -l /mnt 2>&3 ||
+		die "Could not let go of the old root; nothing was written."
 	sync
 	echo 3 > /proc/sys/vm/drop_caches 2>&3
 }
@@ -1719,6 +1753,8 @@ enter_ramfs() {
 	# The UBI layout and its volumes, resolved on the whole system: the flash
 	# phase may have no /sys to resolve them from.
 	export ubi_layout ubi_rootfs_dev ubi_data_dev UBI_SYS INITTAB
+	# archive: verify_ubifs_rootfs does not count a local archive as pinned.
+	export archive
 
 	cd "$RAM_ROOT" || { ramfs_unwind; return 1; }
 	# After this the old root is at ./mnt and still mounted — deliberately: the
@@ -2019,6 +2055,16 @@ get_system_info() {
 	[ -z "$model" ] && die "Cannot determine SoC: no BUILD_PLATFORM and no U-Boot 'soc'"
 	resolve_model_alias
 	detect_ubi_layout
+	# A ubiblock camera running an image from before the hand-off has no
+	# ::restart: entry, and only the upgrade being run would ship one. Its
+	# rootfs was written through gluebi's mtd until now, which works with the
+	# volume mounted (gluebi writes beside ubiblock's reader), so keep doing
+	# that rather than refusing every upgrade. The next image brings the
+	# entry, and the UBI path, with it.
+	if [ "$ubi_layout" = "ubiblock" ] && ! inittab_hands_off &&
+		[ "/dev/" != "$(get_device "rootfs")" ]; then
+		ubi_layout=
+	fi
 	if [ -n "$ubi_layout" ]; then
 		# Resolved here, on the whole system: the flash phase may run in a ramfs
 		# where /sys came across best-effort, or not at all.

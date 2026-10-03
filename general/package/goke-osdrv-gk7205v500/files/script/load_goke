@@ -78,6 +78,9 @@ calc_mmz_info() {
 # Keys the extras variable sets are left to it, so it is not carried twice.
 check_allocator() {
 	grep -q mmz_allocator /proc/cmdline && return 0
+	# Only where the kernel can reserve the zone: this script also loads
+	# gk7201v200, whose kernel has no CMA.
+	grep -q '^CmaTotal:' /proc/meminfo || return 0
 	local bootargs extras kept osmem totalmem mmz_start mmz_size
 	bootargs=$(fw_printenv -n bootargs)
 	[ -n "$bootargs" ] || return 0

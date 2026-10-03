@@ -193,7 +193,7 @@ endif
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
 ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"rockchip" "sigmastar"),)
 	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
-else ifneq ($(wildcard $(TARGET)/images/fitImage),)
+else ifneq ($(wildcard $(PWD)/br-ext-chip-$(subst ",,$(BR2_OPENIPC_SOC_VENDOR))/board/$(subst ",,$(BR2_OPENIPC_SOC_FAMILY))/nand-fit.its),)
 # FIT NAND (board/<family>/nand-fit.its): the kernel lives in the `kernel` UBI
 # volume, so the package carries what sysupgrade writes into each volume --
 # fitImage and rootfs.ubifs -- and rootfs.ubi for a fresh install. Measured

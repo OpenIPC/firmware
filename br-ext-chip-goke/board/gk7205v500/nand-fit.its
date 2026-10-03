@@ -10,7 +10,9 @@
  * inside the kernel's lowmem.
  */
 / {
-	description = "OpenIPC kernel";
+	/* "OpenIPC <soc>": sysupgrade's SoC check reads it (fit_soc). @SOC@ is
+	   filled in from OPENIPC_SOC_MODEL when the FIT is built. */
+	description = "OpenIPC @SOC@";
 	#address-cells = <1>;
 
 	images {
