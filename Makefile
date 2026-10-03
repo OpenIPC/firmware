@@ -193,6 +193,15 @@ endif
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
 ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"rockchip" "sigmastar"),)
 	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
+else ifneq ($(wildcard $(TARGET)/images/fitImage),)
+# FIT NAND (board/<family>/nand-fit.its): the kernel lives in the `kernel` UBI
+# volume, so the package carries what sysupgrade writes into each volume --
+# fitImage and rootfs.ubifs -- and rootfs.ubi for a fresh install. Measured
+# against the volume sizes in the board's ubinize-nand.cfg.
+	@$(call CHECK_SIZE,fitImage,4096)
+	@$(call CHECK_SIZE,rootfs.ubifs,32768)
+	@$(call CHECK_SIZE,rootfs.ubi,16384)
+	@$(call REPACK_NAND_FIT)
 else
 	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand)
 endif
@@ -316,5 +325,20 @@ define REPACK_FIRMWARE
 	# order loses the checksum and leaves a short image that sysupgrade's
 	# `md5sum -c *.md5sum` then cannot see at all.
 	cd $(TARGET)/images && tar -czf $(ARCHIVE) $(KERNEL_MD5) $(ROOTFS_MD5) $(KERNEL) $(ROOTFS)
+	rm -f $(TARGET)/images/*.md5sum
+endef
+
+# The FIT NAND package: three images, so not REPACK_FIRMWARE's two. Copies
+# rather than renames -- rootfs.ubifs stays where buildroot left it, and the
+# NOR package built from the same tree does not share any of these names.
+NAND_FIT_IMAGES = fitImage rootfs.ubifs rootfs.ubi
+define REPACK_NAND_FIT
+	cd $(TARGET)/images && for f in $(NAND_FIT_IMAGES); do \
+		cp -f $$f $$f.$(BR2_OPENIPC_SOC_MODEL) && \
+		md5sum $$f.$(BR2_OPENIPC_SOC_MODEL) > $$f.$(BR2_OPENIPC_SOC_MODEL).md5sum || exit 1; done
+	# Checksums first, as in REPACK_FIRMWARE.
+	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-nand-$(BR2_OPENIPC_VARIANT).tgz \
+		$(foreach f,$(NAND_FIT_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL).md5sum) \
+		$(foreach f,$(NAND_FIT_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL))
 	rm -f $(TARGET)/images/*.md5sum
 endef
