@@ -83,7 +83,12 @@ grep -qE 'root=[^ ]*(nfs|mmcblk|ram)' /proc/cmdline && is_flash_root=false
 grep -qE 'root=[^ ]*nfs' /proc/cmdline && is_nfs_root=true
 
 if $is_flash_root; then
-	if grep -q ubifs /proc/cmdline; then
+	# A UBI root -- a UBIFS rootfs, or a squashfs through ubiblock -- keeps its
+	# overlay in the rootfs_data UBI volume, as UBIFS. A ubiblock command line
+	# names no ubifs, and the jffs2 branch below would find gluebi's mtd for
+	# that volume, fail to mount jffs2 on it and erase it: the overlay and the
+	# camera's claim with it.
+	if grep -q ubifs /proc/cmdline || grep -qE 'root=/dev/ubiblock' /proc/cmdline; then
 		mount -t ubifs ubi0:rootfs_data /overlay
 	else
 		mtdblkdev=$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd | sed 's/mtd/mtdblock/')
