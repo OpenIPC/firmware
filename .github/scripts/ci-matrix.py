@@ -194,6 +194,9 @@ NO_BUILD_SCRIPTS = {
     "test_automount.sh", "test_check_mac.sh", "test_excludes_report.sh",
     "test_load_hisilicon.sh", "test_push_build.py", "test_shell_parse.sh",
     "test_strip_shell_comments.sh", "test_sysupgrade.sh",
+    # build-one.yml's request parser and its test: dispatch and shell-tests
+    # only, never part of a board build.
+    "build_request.sh", "test_build_request.sh",
 }
 
 # CI plumbing: it decides how the build runs but cannot change a byte of what
