@@ -114,13 +114,22 @@ insert_detect() {
 	modprobe xm_isp_sensor_spi
 }
 
+# The from-source build (hisilicon-opensdk) installs xm_<m>.ko, but the module
+# inside registers as open_<m>, and rmmod and modprobe -r both want the
+# registered name: `rmmod xm_vi` fails with "No such file or directory" and
+# `modprobe -r xm_vi` exits 0 with the module still in. Try the registered
+# name first, then the name as given for a build that ships the vendor's own.
+unload() {
+	rmmod -w "open_${1#xm_}" 2>/dev/null || rmmod -w "$1"
+}
+
 remove_detect() {
-	rmmod -w xm_isp_sensor_spi
-	rmmod -w xm_isp_sensor_i2c
-	rmmod -w xm_isp
-	rmmod -w xm_base
-	rmmod -w xm_osal >/dev/null 2>&1
-	rmmod -w xm_sys_config
+	unload xm_isp_sensor_spi
+	unload xm_isp_sensor_i2c
+	unload xm_isp
+	unload xm_base
+	unload xm_sysconfig
+	unload xm_osal
 }
 
 insert_audio() {
@@ -134,12 +143,12 @@ insert_audio() {
 }
 
 remove_audio() {
-	rmmod -w xm_acodec
-	rmmod -w xm_adec
-	rmmod -w xm_aenc
-	rmmod -w xm_ao
-	rmmod -w xm_ai
-	rmmod -w xm_aio
+	unload xm_acodec
+	unload xm_adec
+	unload xm_aenc
+	unload xm_ao
+	unload xm_ai
+	unload xm_aio
 	echo "remove audio"
 }
 
@@ -191,33 +200,35 @@ insert_ko() {
 remove_ko() {
 	# rmmod -w xm_wdt
 	# rmmod -w xm_pm
+	# Dependents before what they depend on: venc holds rc, and sysconfig is
+	# held by sys and mipi_rx and itself holds osal.
 	remove_audio
-	rmmod -w xm_mipi_rx
+	unload xm_mipi_rx
 	# rmmod -w xm_isp_piris
 	# rmmod -w sil9024 &> /dev/null
-	rmmod -w xm_ive
-	rmmod -w xm_rc
-	rmmod -w xm_jpege
-	rmmod -w xm_h264e
-	rmmod -w xm_h265e
-	rmmod -w xm_venc
-	rmmod -w xm_vedu
-	rmmod -w xm_chnl
+	unload xm_isp_sensor_spi
+	unload xm_isp_sensor_i2c
+	unload xm_isp_pwm 2>/dev/null
+	unload xm_ive
+	unload xm_jpege
+	unload xm_h265e
+	unload xm_h264e
+	unload xm_venc
+	unload xm_rc
+	unload xm_vedu
+	unload xm_chnl
 	# rmmod -w gfbg
 	# rmmod -w xm_vo
-	rmmod -w xm_vpss
-	rmmod -w xm_isp
-	rmmod -w xm_vi
-	rmmod -w xm_vgs
-	rmmod -w xm_rgn
+	unload xm_vpss
+	unload xm_isp
+	unload xm_vi
+	unload xm_vgs
+	unload xm_rgn
 	# rmmod -w xm_tde
-	rmmod -w xm_isp_sensor_i2c &>/dev/null
-	rmmod -w xm_isp_sensor_spi &>/dev/null
-	rmmod -w xm_isp_pwm
-	rmmod -w xm_sys
-	rmmod -w xm_base
-	rmmod -w xm_osal
-	rmmod -w xm_sys_config
+	unload xm_sys
+	unload xm_base
+	unload xm_sysconfig
+	unload xm_osal
 }
 
 load_usage() {
@@ -307,9 +318,9 @@ fi
 #######################Action###############################
 
 # -r and -a remove the stack first, which needs a kernel that can unload
-# modules. This family's kernels are built without CONFIG_MODULE_UNLOAD, to
-# match the ABI the vendor modules were compiled against, so rmmod would fail
-# on every module and -a would then insmod over the ones still loaded.
+# modules. Kernels for this family were built without CONFIG_MODULE_UNLOAD
+# before #2528, and on one of those rmmod fails on every module and -a would
+# then insmod over the ones still loaded.
 # /sys/module/<m>/refcnt only exists when unloading is supported.
 if [ $b_arg_remove -eq 1 ] && ! ls /sys/module/*/refcnt >/dev/null 2>&1; then
 	echo "[err] this kernel cannot unload modules: -r/-a are unavailable, reboot to reload" >&2
