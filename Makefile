@@ -194,13 +194,16 @@ ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
 ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"rockchip" "sigmastar"),)
 	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
 else ifneq ($(wildcard $(PWD)/br-ext-chip-$(subst ",,$(BR2_OPENIPC_SOC_VENDOR))/board/$(subst ",,$(BR2_OPENIPC_SOC_FAMILY))/nand-fit.its),)
-# FIT NAND (board/<family>/nand-fit.its): the kernel lives in the `kernel` UBI
-# volume, so the package carries what sysupgrade writes into each volume --
-# fitImage and rootfs.ubifs -- and rootfs.ubi for a fresh install. Measured
-# against the volume sizes in the board's ubinize-nand.cfg.
-	@$(call CHECK_SIZE,fitImage,4096)
-	@$(call CHECK_SIZE,rootfs.ubifs,32768)
-	@$(call CHECK_SIZE,rootfs.ubi,16384)
+# FIT NAND (board/<family>/nand-fit.its): the kernel lives inside the UBIFS
+# rootfs (/boot, see external.mk), so the package carries what sysupgrade
+# writes -- rootfs.ubifs -- plus rootfs.ubi for a fresh install, and fitImage
+# as the SoC witness sysupgrade reads beside a UBIFS rootfs. No volume bounds
+# either image: sysupgrade sizes the volumes to them. rootfs.ubi is the whole
+# UBI image a fresh install loads into RAM at 0x42000000 and writes from there,
+# so it is held to the 24M the installer stages (openipc.org's 0x1800000),
+# which still clears the relocated U-Boot at the top of a 64M part
+# (hi3516ev200).
+	@$(call CHECK_SIZE,rootfs.ubi,24576)
 	@$(call REPACK_NAND_FIT)
 else
 	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand)

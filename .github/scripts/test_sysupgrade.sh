@@ -283,7 +283,8 @@ case "$applet" in
     # like flashcp, so a test can assert what reached which volume, in order.
     ubiupdatevol)           echo "ubiupdatevol $*" >> "$FLASH_LOG"
                             [ "1" = "$STUB_FLASHCP_FAIL" ] && exit 1 ;;
-    kill)                   echo "$applet $*" >> "$FLASH_LOG" ;;
+    kill|ubirmvol|ubirsvol|ubimkvol)
+                            echo "$applet $*" >> "$FLASH_LOG" ;;
     umount)                 echo "$applet $*" >> "$FLASH_LOG"
                             exit "${STUB_BB_UMOUNT_RC:-0}" ;;
 esac
@@ -310,6 +311,21 @@ for a in "$@"; do
         move|tmpfs|--move|-M) exit 0 ;;
     esac
 done
+# rewrite_ubifs mounts rootfs_data read-only to copy the settings out, then
+# the new, empty volume read-write to put them back. The copy finds a marker;
+# the new volume starts empty, so the marker is there afterwards only if the
+# settings really went round through the backup.
+case " $* " in
+    *" -t ubifs "*)
+        case " $* " in
+            *" ro "*) [ "1" = "$STUB_UBIFS_RO_FAIL" ] && exit 255
+                      echo "mount ubifs ro $target" >> "$FLASH_LOG"
+                      mkdir -p "$target/etc"; echo settings > "$target/etc/marker" ;;
+            *)        echo "mount ubifs rw $target" >> "$FLASH_LOG"
+                      rm -rf "$target"; mkdir -p "$target" ;;
+        esac
+        exit 0 ;;
+esac
 case "${STUB_MOUNT:-ok}" in
     ok)
         mkdir -p "$target/etc"
@@ -373,15 +389,18 @@ make_fit_soc() {
 # volumes, as /sys/class/ubi shows them: 126976-byte LEBs (2 KiB pages,
 # 128 KiB blocks). The rootfs volume is 2 LEBs by default -- room for the
 # fixtures below and not much more, so a size test has an edge to cross.
+# $2 is the volume list, $3 the overlay's LEBs (the ubifs layout's rootfs can
+# grow into them, so its size tests need them to be real).
 set_ubi() {
     local u="$SB/sys/class/ubi" i name ebs
     rm -rf "$u"
     i=0
-    for name in kernel rootfs rootfs_data; do
+    for name in ${2:-kernel rootfs rootfs_data}; do
         mkdir -p "$u/ubi0_$i"
         echo "$name" > "$u/ubi0_$i/name"
         echo 126976 > "$u/ubi0_$i/usable_eb_size"
         ebs=2; [ "$name" = rootfs ] && ebs=${1:-2}
+        [ "$name" = rootfs_data ] && ebs=${3:-2}
         echo "$ebs" > "$u/ubi0_$i/reserved_ebs"
         i=$((i + 1))
     done
@@ -2058,19 +2077,32 @@ US="$SB/tmp/rootfs.squashfs.gk7205v500"
 # ubi_setup <ubifs|ubiblock> [rootfs_reserved_ebs]: a gk7205v500 NAND camera
 # whose MTD table has no kernel/rootfs partitions -- they are UBI volumes.
 ubi_setup() {
-    set_ubi "${2:-2}"
+    case "$1" in
+        ubifs) set_ubi "${2:-2}" "rootfs rootfs_data" 600 ;;
+        *)     set_ubi "${2:-2}" ;;
+    esac
     set_mtd <<'EOF2'
 dev:    size   erasesize  name
 mtd0: 000c0000 00020000 "boot"
 mtd1: 00040000 00020000 "env"
 mtd2: 07f00000 00020000 "ubi"
 EOF2
-    if [ "$1" = ubifs ]; then set_cmdline "$CMDLINE_UBIFS"; else set_cmdline "$CMDLINE_UBIBLOCK"; fi
-    set_platform gk7205v500_ultimate ultimate
-    export STUB_VENDOR=goke STUB_SOC=gk7205v500 STUB_IMG_SOC=gk7205v500
+    case "$1" in
+        ubifs|ubifs-kvol) set_cmdline "$CMDLINE_UBIFS" ;;
+        *) set_cmdline "$CMDLINE_UBIBLOCK" ;;
+    esac
+    # ubiblock is what SigmaStar and Rockchip NAND images still are; on the
+    # SoCs that moved to the kernel-in-rootfs layout it is retired, so its
+    # write path is exercised on one that did not (ssc338q). UBLOCK_SOC picks
+    # a moved one instead, for the refusal.
+    local soc=gk7205v500 vendor=goke
+    [ "$1" = ubiblock ] && { soc=${UBLOCK_SOC:-ssc338q}; [ "$soc" = ssc338q ] && vendor=sigmastar; }
+    UK="$SB/tmp/uImage.$soc"; US="$SB/tmp/rootfs.squashfs.$soc"
+    set_platform ${soc}_ultimate ultimate
+    export STUB_VENDOR=$vendor STUB_SOC=$soc STUB_IMG_SOC=$soc
     make_fit "$UFIT"
     make_ubifs "$UFS"
-    make_uimage "$UK" gk7205v500
+    make_uimage "$UK" $soc
     make_squashfs "$US" 8192
 }
 ubi_wrote() { grep -q "ubiupdatevol .*$1" "$SB/tmp/flash.log"; }
@@ -2095,7 +2127,7 @@ else
     bad "ubiblock: kernel-only should write ubi0_0 in place, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 reset_env; ubi_setup ubiblock
-RUN_ENV="_ramfs_phase=1 _handoff=1 ubi_layout=ubiblock kernel_device=/dev/ubi0_0 ubi_rootfs_dev=/dev/ubi0_1 ubi_data_dev=/dev/ubi0_2 update_kernel=1 update_rootfs=1 kernel_file=$UK rootfs_file=$US model=gk7205v500 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
+RUN_ENV="_ramfs_phase=1 _handoff=1 ubi_layout=ubiblock kernel_device=/dev/ubi0_0 ubi_rootfs_dev=/dev/ubi0_1 ubi_data_dev=/dev/ubi0_2 update_kernel=1 update_rootfs=1 kernel_file=$UK rootfs_file=$US model=ssc338q skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
 run
 u=$(logged_at "umount -l /mnt"); k=$(logged_at "ubiupdatevol /dev/ubi0_0 $UK"); r=$(logged_at "ubiupdatevol /dev/ubi0_1 $US")
 if [ -n "$u" ] && [ -n "$k" ] && [ -n "$r" ] && [ "$u" -lt "$k" ] && [ "$k" -lt "$r" ] && rebooted; then
@@ -2104,13 +2136,26 @@ else
     bad "stage 2 ubiblock order ${u:-none}/${k:-none}/${r:-none} log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
-# --- ubifs: a kernel-only write touches no mounted volume
+# --- ubifs: the kernel is a file in the rootfs, so -k writes the rootfs
 reset_env; ubi_setup ubifs
-run -z --kernel="$UFIT"
-if [ "$RC" -eq 0 ] && ubi_wrote "/dev/ubi0_0 $UFIT" && ! handed_off; then
-    ok "ubifs: a FIT kernel is written into the kernel volume in place"
+make_fit_soc "$UFIT" gk7205v500
+STUB_PIVOT_RC=0
+run -z --kernel="$UFIT" --rootfs="$UFS"
+if printf '%s' "$OUT" | grep -q "kernel lives inside the rootfs" && handed_off && nothing_ubi; then
+    ok "ubifs: -k means writing the rootfs, through the hand-off"
 else
-    bad "ubifs: kernel-only should write ubi0_0 without a hand-off, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+    bad "ubifs: -k should become a rootfs write, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- the retired layout with a kernel volume of its own is reinstalled, not upgraded
+reset_env; ubi_setup ubifs-kvol
+STUB_PIVOT_RC=0
+run -z --kernel="$UFIT" --rootfs="$UFS"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired NAND layout with a separate kernel volume" &&
+    nothing_ubi && ! handed_off && ! rebooted; then
+    ok "ubifs-kvol: refused before anything is touched, reinstall link given"
+else
+    bad "ubifs-kvol must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
 # --- ubifs: a local UBIFS rootfs has no SoC witness
@@ -2167,8 +2212,9 @@ else
     bad "ubifs: LEB mismatch must be refused, rc=$RC out='$OUT'"
 fi
 
-# --- bigger than the volume
+# --- bigger than the UBI device leaves room for, beside the settings
 reset_env; ubi_setup ubifs 1
+echo 24 > "$SB/sys/class/ubi/ubi0_1/reserved_ebs"
 dd if=/dev/zero bs=1k count=200 >> "$UFS" 2>/dev/null
 run -z -f --kernel="$UFIT" --rootfs="$UFS"
 if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "does not fit" && nothing_ubi; then
@@ -2185,30 +2231,48 @@ envf="$SB/ram/sysupgrade.env"
 if handed_off && nothing_ubi && [ -x "$SB/ram/sbin/init" ] && [ ! -e "$SB/ram/bin/umount" ] &&
     [ -L "$SB/ram/sbin/umount" ] &&
     grep -q "_handoff=1" "$envf" 2>/dev/null && grep -q "_ramfs_phase=.1" "$envf" &&
-    grep -q "ubi_rootfs_dev=./dev/ubi0_1" "$envf" && grep -q "sysupgrade.env" "$SB/ram/sbin/init"; then
+    grep -q "ubi_rootfs_dev=./dev/ubi0_0" "$envf" && grep -q "sysupgrade.env" "$SB/ram/sbin/init"; then
     ok "ubifs: the RAM root is staged for PID 1 and SIGQUIT sent before any write"
 else
     bad "ubifs: hand-off staging, log='$(cat "$SB/tmp/flash.log")' init='$(cat "$SB/ram/sbin/init" 2>&1)' out='$OUT'"
 fi
 
-# --- stage 2, as PID 1: release the old root, then write, then reboot
+# --- stage 2, as PID 1: release the old root, copy the settings out, rebuild
+# the volumes around the new image, put the settings back, reboot
+S2="_ramfs_phase=1 _handoff=1 ubi_layout=ubifs kernel_device=/rom/boot/uImage ubi_rootfs_dev=/dev/ubi0_0 ubi_data_dev=/dev/ubi0_1 model=gk7205v500 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1 overlay_kb=64"
 reset_env; ubi_setup ubifs
-RUN_ENV="_ramfs_phase=1 _handoff=1 ubi_layout=ubifs kernel_device=/dev/ubi0_0 ubi_rootfs_dev=/dev/ubi0_1 ubi_data_dev=/dev/ubi0_2 update_kernel=1 update_rootfs=1 kernel_file=$UFIT rootfs_file=$UFS model=gk7205v500 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
+RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS"
 run
-u=$(logged_at "umount -l /mnt"); k=$(logged_at "ubiupdatevol /dev/ubi0_0"); r=$(logged_at "ubiupdatevol /dev/ubi0_1"); b=$(logged_at "^reboot")
-if [ -n "$u" ] && [ -n "$k" ] && [ -n "$r" ] && [ -n "$b" ] && [ "$u" -lt "$k" ] && [ "$k" -lt "$r" ] && [ "$r" -lt "$b" ]; then
-    ok "stage 2: old root released, kernel then rootfs written, then reboot"
+u=$(logged_at "umount -l /mnt"); bk=$(logged_at "mount ubifs ro"); rm=$(logged_at "ubirmvol /dev/ubi0 -N rootfs_data")
+rs=$(logged_at "ubirsvol /dev/ubi0 -n 0 -s $(stat -c %s "$UFS")"); w=$(logged_at "ubiupdatevol /dev/ubi0_0 $UFS")
+mk=$(logged_at "ubimkvol /dev/ubi0 -N rootfs_data -m"); rs2=$(logged_at "mount ubifs rw"); b=$(logged_at "^reboot")
+if [ -n "$u" ] && [ -n "$bk" ] && [ -n "$rm" ] && [ -n "$rs" ] && [ -n "$w" ] && [ -n "$mk" ] && [ -n "$rs2" ] && [ -n "$b" ] &&
+    [ "$u" -lt "$bk" ] && [ "$bk" -lt "$rm" ] && [ "$rm" -lt "$rs" ] && [ "$rs" -lt "$w" ] && [ "$w" -lt "$mk" ] &&
+    [ "$mk" -lt "$rs2" ] && [ "$rs2" -lt "$b" ] && [ -f "$SB/tmp/overlay.old/etc/marker" ] &&
+    printf '%s' "$OUT" | grep -q "Settings carried over"; then
+    ok "stage 2: settings copied, volumes resized to the image, settings restored, then reboot"
 else
-    bad "stage 2 order umount/kernel/rootfs/reboot = ${u:-none}/${k:-none}/${r:-none}/${b:-none} log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+    bad "stage 2 order release/copy/rmvol/rsvol/write/mkvol/restore/reboot = ${u:-none}/${bk:-none}/${rm:-none}/${rs:-none}/${w:-none}/${mk:-none}/${rs2:-none}/${b:-none} log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- -r with -n: the new overlay is the wipe; nothing is copied or restored
+reset_env; ubi_setup ubifs
+RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS clear_overlay=1"
+run
+if ubi_wrote "/dev/ubi0_0 $UFS" && grep -q "ubimkvol /dev/ubi0 -N rootfs_data -m" "$SB/tmp/flash.log" &&
+    ! grep -q "mount ubifs" "$SB/tmp/flash.log" && ! grep -q "ubiupdatevol -t" "$SB/tmp/flash.log" && rebooted; then
+    ok "stage 2: -r -n rebuilds an empty settings volume and copies nothing"
+else
+    bad "stage 2 -r -n, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
 reset_env; ubi_setup ubifs
-RUN_ENV="_ramfs_phase=1 _handoff=1 ubi_layout=ubifs kernel_device=/dev/ubi0_0 ubi_rootfs_dev=/dev/ubi0_1 ubi_data_dev=/dev/ubi0_2 clear_overlay=1 model=gk7205v500 root_on_flash=1 ram_root_shipped=1"
+RUN_ENV="$S2 clear_overlay=1"
 run
-if grep -q "ubiupdatevol -t /dev/ubi0_2" "$SB/tmp/flash.log" && rebooted; then
-    ok "stage 2: the UBIFS overlay volume is truncated"
+if grep -q "ubiupdatevol -t /dev/ubi0_1" "$SB/tmp/flash.log" && ! grep -q "ubirmvol" "$SB/tmp/flash.log" && rebooted; then
+    ok "stage 2: -n alone truncates the UBIFS overlay volume"
 else
-    bad "stage 2 wipe: expected ubiupdatevol -t /dev/ubi0_2, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+    bad "stage 2 wipe: expected ubiupdatevol -t /dev/ubi0_1, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
 # --- -n on a mounted UBIFS overlay needs the hand-off too
@@ -2255,9 +2319,10 @@ fi
 
 # --- stage 2 writes nothing when the old root will not let go
 reset_env; ubi_setup ubifs
-RUN_ENV="STUB_BB_UMOUNT_RC=1 _ramfs_phase=1 _handoff=1 ubi_layout=ubifs kernel_device=/dev/ubi0_0 ubi_rootfs_dev=/dev/ubi0_1 ubi_data_dev=/dev/ubi0_2 update_kernel=1 update_rootfs=1 kernel_file=$UFIT rootfs_file=$UFS model=gk7205v500 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
+RUN_ENV="STUB_BB_UMOUNT_RC=1 $S2 update_rootfs=1 rootfs_file=$UFS"
 run
-if printf '%s' "$OUT" | grep -q "Could not let go of the old root" && nothing_ubi && rebooted; then
+if printf '%s' "$OUT" | grep -q "Could not let go of the old root" && nothing_ubi &&
+    ! grep -q "ubirmvol" "$SB/tmp/flash.log" && rebooted; then
     ok "stage 2: a failed release of the old root reboots with nothing written"
 else
     bad "stage 2: umount failure must stop before the first write, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
@@ -2291,10 +2356,134 @@ else
     bad "ubiblock old inittab, no gluebi, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
+# --- the retired HiSilicon split NAND layout: uImage in a raw `kernel`
+# partition, UBIFS root in a UBI device beside it, no `kernel` volume. gluebi
+# names the UBIFS volume "rootfs" in /proc/mtd, which is what the MTD path
+# would have flashed a NOR squashfs over.
+split_setup() {
+    local u="$SB/sys/class/ubi" i=0 name
+    rm -rf "$u"
+    for name in rootfs rootfs_data; do
+        mkdir -p "$u/ubi0_$i"
+        echo "$name" > "$u/ubi0_$i/name"
+        echo 126976 > "$u/ubi0_$i/usable_eb_size"
+        echo 260 > "$u/ubi0_$i/reserved_ebs"
+        i=$((i + 1))
+    done
+    set_mtd <<'EOF2'
+dev:    size   erasesize  name
+mtd0: 00100000 00020000 "boot"
+mtd1: 00100000 00020000 "env"
+mtd2: 00800000 00020000 "kernel"
+mtd3: 07600000 00020000 "ubi"
+mtd4: 02017000 0001f000 "rootfs"
+mtd5: 04f51000 0001f000 "rootfs_data"
+EOF2
+    set_cmdline 'mem=128M console=ttyAMA0,115200 panic=20 rootfstype=ubifs root=ubi0:rootfs ubi.mtd=3,2048 mtdparts=hinand:1024k(boot),1024k(env),8192k(kernel),-(ubi)'
+    set_platform hi3516ev300_ultimate ultimate
+    export STUB_VENDOR=hisilicon STUB_SOC=hi3516ev300 STUB_IMG_SOC=hi3516ev300
+    SK="$SB/tmp/uImage.hi3516ev300"; SS="$SB/tmp/rootfs.squashfs.hi3516ev300"
+    make_uimage "$SK" hi3516ev300
+    make_squashfs "$SS" 8192
+}
+reset_env; split_setup
+STUB_PIVOT_RC=0
+run -z --kernel="$SK" --rootfs="$SS"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired split NAND layout" &&
+    printf '%s' "$OUT" | grep -q "openipc.org/cameras/vendors/hisilicon/socs/hi3516ev300" &&
+    ! grep -qE "flashcp|ubiupdatevol|flash_eraseall|pivot_root" "$SB/tmp/flash.log" && ! rebooted; then
+    ok "split NAND: kernel+rootfs refused before anything is touched, reinstall link given"
+else
+    bad "split NAND -k -r, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+reset_env; split_setup
+run -z --kernel="$SK"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired split NAND layout" && nothing_wrote && ! rebooted; then
+    ok "split NAND: a kernel-only run is refused too"
+else
+    bad "split NAND -k, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+reset_env; split_setup
+run -z -n
+if ! printf '%s' "$OUT" | grep -q "retired split NAND layout"; then
+    ok "split NAND: -n alone is not refused"
+else
+    bad "split NAND -n should not be refused, rc=$RC out='$OUT'"
+fi
+
+# --- an hi3516ev300 on the UBI-only layout is an ordinary ubifs camera
+ubi_setup_hisi() {
+    ubi_setup ubifs
+    set_cmdline 'mem=32M console=ttyAMA0,115200 panic=20 init=/init root=ubi0:rootfs rootfstype=ubifs ubi.mtd=2,2048 mtdparts=hinand:768k(boot),256k(env),-(ubi)'
+    set_platform hi3516ev300_ultimate ultimate
+    export STUB_VENDOR=hisilicon STUB_SOC=hi3516ev300 STUB_IMG_SOC=hi3516ev300
+}
+reset_env; ubi_setup_hisi
+HFIT="$SB/tmp/fitImage.hi3516ev300"; make_fit_soc "$HFIT" hi3516ev300
+HFS="$SB/tmp/rootfs.ubifs.hi3516ev300"; make_ubifs "$HFS"
+STUB_PIVOT_RC=0
+run -z --kernel="$HFIT" --rootfs="$HFS"
+if printf '%s' "$OUT" | grep -q "SoC from the FIT kernel beside it: hi3516ev300" && handed_off && nothing_ubi &&
+    ! printf '%s' "$OUT" | grep -qE "retired (split )?NAND layout"; then
+    ok "hi3516ev300 UBI-only: an ordinary ubifs camera, rootfs write handed off"
+else
+    bad "hi3516ev300 UBI-only, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+default_url_is "https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516ev300-nand-ultimate.tgz" \
+    ubi_setup_hisi
+
 # --- the download: -nand- for ubifs, -nor- for ubiblock
 F=https://github.com/OpenIPC/firmware/releases/download/latest
 default_url_is "$F/openipc.gk7205v500-nand-ultimate.tgz" ubi_setup ubifs
-default_url_is "$F/openipc.gk7205v500-nor-ultimate.tgz" ubi_setup ubiblock
+default_url_is "$F/openipc.ssc338q-nor-ultimate.tgz" ubi_setup ubiblock
+
+# --- on a SoC that moved to the kernel-in-rootfs layout, ubiblock is retired
+reset_env; UBLOCK_SOC=gk7205v500 ubi_setup ubiblock
+STUB_PIVOT_RC=0
+run -z --kernel="$UK" --rootfs="$US"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired NAND layout with a separate kernel volume" &&
+    nothing_ubi && ! handed_off && ! rebooted; then
+    ok "ubiblock on gk7205v500: refused before anything is touched, reinstall link given"
+else
+    bad "ubiblock on a moved SoC must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+reset_env; UBLOCK_SOC=gk7205v500 ubi_setup ubiblock
+printf '::sysinit:/etc/init.d/rcS\n' > "$SB/etc/inittab"
+set_mtd <<'EOF2'
+dev:    size   erasesize  name
+mtd0: 000c0000 00020000 "boot"
+mtd1: 00040000 00020000 "env"
+mtd2: 07f00000 00020000 "ubi"
+mtd3: 003e0000 0001f000 "kernel"
+mtd4: 01f00000 0001f000 "rootfs"
+mtd5: 00200000 0001f000 "rootfs_data"
+EOF2
+run -z --kernel="$UK" --rootfs="$US"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired NAND layout" && nothing_ubi && ! rebooted; then
+    ok "ubiblock on gk7205v500 without ::restart: is refused too, not written through gluebi"
+else
+    bad "old-inittab ubiblock on a moved SoC must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- ubifs: a local kernel file cannot be written on its own
+reset_env; ubi_setup ubifs
+make_fit_soc "$UFIT" gk7205v500
+run -z --kernel="$UFIT"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "pass the rootfs.ubifs that carries it" && nothing_ubi && ! handed_off; then
+    ok "ubifs: --kernel=FILE alone is refused, not swapped for some other rootfs"
+else
+    bad "ubifs --kernel=FILE alone must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- stage 2: settings that cannot be copied stop the run before any volume changes
+reset_env; ubi_setup ubifs
+RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS STUB_UBIFS_RO_FAIL=1"
+run
+if printf '%s' "$OUT" | grep -q "Could not read the settings" && ! grep -qE "ubirmvol|ubirsvol|ubiupdatevol|ubimkvol" "$SB/tmp/flash.log" && rebooted; then
+    ok "stage 2: unreadable settings stop the run before any volume is touched"
+else
+    bad "stage 2 settings read failure, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
 
 # --- the unpack leaves rootfs.ubi (fresh-install image) in the archive
 reset_env; ubi_setup ubifs
