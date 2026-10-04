@@ -34,7 +34,10 @@
 /* Default pin map: pan (roll) = 3,4,72,73 ; tilt (pitch) = 69,59,58,57. */
 static int pan_gpios[4] = { 3, 4, 72, 73 };
 static int tilt_gpios[4] = { 69, 59, 58, 57 };
-static int n_pan, n_tilt;
+/* module_param_array() writes the count only when the parameter is given, so
+ * these start at the length of the defaults: a plain insmod uses the map above
+ * rather than refusing it as "0 pins". */
+static int n_pan = 4, n_tilt = 4;
 module_param_array(pan_gpios, int, &n_pan, 0444);
 MODULE_PARM_DESC(pan_gpios, "4 GPIO numbers for the pan coil");
 module_param_array(tilt_gpios, int, &n_tilt, 0444);
