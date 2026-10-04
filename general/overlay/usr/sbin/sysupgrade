@@ -178,6 +178,8 @@ ubifs_rootfs_room() {
 	usable=$(cat "$r/usable_eb_size" 2>&3) && ebs=$(cat "$r/reserved_ebs" 2>&3) || return 0
 	[ -n "$ubi_data_dev" ] && debs=$(cat "$d/reserved_ebs" 2>&3 || echo 0)
 	[ "1" = "$clear_overlay" ] || keep=$((${overlay_kb:-0} * 1024))
+	# $1 replaces the settings estimate, for the caller that has measured them.
+	[ -n "$1" ] && keep=$1
 	echo $(((ebs + debs - UBIFS_OVERLAY_MIN_LEBS) * usable - keep))
 }
 
@@ -214,13 +216,27 @@ rewrite_ubifs() {
 	mark_live_flash_dirty
 	rm -f "$bak"
 	if [ -n "$ubi_data_dev" ]; then
+		# Keeping the settings means having them in RAM before the volume
+		# goes. Any failure here stops the run while nothing is written --
+		# die reboots into the system as it was; -n is the way to upgrade
+		# without them. The archive, not df, is what has to fit back: it
+		# counts sparse files at their full length, as extracting them will.
 		if [ "1" != "$clear_overlay" ]; then
 			mkdir -p "$mnt"
-			if mount -t ubifs -o ro "$name:rootfs_data" "$mnt" 2>&3; then
-				tar -C "$mnt" -cf "$bak" . 2>&3 ||
-					{ echo_c 33 "Warning: could not copy the settings; they will be reset."; rm -f "$bak"; }
+			mount -t ubifs -o ro "$name:rootfs_data" "$mnt" 2>&3 ||
+				die "Could not read the settings to carry them over. Nothing was written; -n upgrades without them."
+			if ! tar -C "$mnt" -cf "$bak" . 2>&3; then
 				busybox umount "$mnt" 2>&3
+				rm -f "$bak"
+				die "Could not copy the settings into RAM. Nothing was written; -n upgrades without them."
 			fi
+			busybox umount "$mnt" 2>&3
+			local room=$(ubifs_rootfs_room 0)
+			local need=$(( size + $(stat -c %s "$bak" 2>/dev/null || echo 0) ))
+			[ -z "$room" ] || [ "$need" -le "$room" ] || {
+				rm -f "$bak"
+				die "The new rootfs and the settings ($(( need / 1024 )) KB together) do not fit the UBI device ($(( room / 1024 )) KB). Nothing was written; -n upgrades without the settings."
+			}
 		fi
 		set_progress ubirmvol "$ubi" -N rootfs_data ||
 			die "Removing the settings volume failed."
@@ -526,12 +542,16 @@ is_ubifs() {
 }
 
 # The rootfs format has to be the one this camera's kernel command line mounts:
-# a squashfs written into the volume of a root=ubi0:rootfs camera flashes
-# cleanly and never mounts again. The kernel's rootfstype is fixed by the
-# bootloader environment, which no upgrade rewrites.
+# a squashfs written into the volume of a root=ubi0:rootfs camera, or a UBIFS
+# into a ubiblock one, flashes cleanly and never mounts again. The kernel's
+# rootfstype is fixed by the bootloader environment, which no upgrade rewrites.
 check_rootfs_format() {
+	[ -n "$ubi_layout" ] || return 0
 	if [ "$ubi_layout" = "ubifs" ] && ! is_ubifs "$1"; then
 		die "This camera boots a UBIFS rootfs, and $1 is not one. Nothing was written."
+	fi
+	if [ "$ubi_layout" = "ubiblock" ] && is_ubifs "$1"; then
+		die "This camera boots a squashfs rootfs through ubiblock, and $1 is a UBIFS image. Nothing was written."
 	fi
 	return 0
 }
@@ -1160,9 +1180,9 @@ remote_length_kb() {
 
 
 download_firmware() {
-	# A UBIFS NAND layout installs from the -nand- package, every other camera
-	# from the NOR package. A NAND camera on a retired layout has been refused
-	# before this.
+	# A UBIFS NAND layout installs from the -nand- package; every other camera,
+	# NAND ones included (a ubiblock rootfs holds the NOR artifacts verbatim),
+	# from the NOR package.
 	[ "$flash_type" = "nand" ] && [ "$(pkg_flash)" = "nor" ] &&
 		echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
@@ -2135,6 +2155,16 @@ get_system_info() {
 	[ -z "$model" ] && die "Cannot determine SoC: no BUILD_PLATFORM and no U-Boot 'soc'"
 	resolve_model_alias
 	detect_ubi_layout
+	# A ubiblock camera running an image from before the hand-off has no
+	# ::restart: entry, and only the upgrade being run would ship one. Its
+	# rootfs was written through gluebi's mtd until now, which works with the
+	# volume mounted (gluebi writes beside ubiblock's reader), so keep doing
+	# that rather than refusing every upgrade. The next image brings the
+	# entry, and the UBI path, with it.
+	if [ "$ubi_layout" = "ubiblock" ] && ! nand_layout_moved && ! inittab_hands_off &&
+		[ "/dev/" != "$(get_device "rootfs")" ]; then
+		ubi_layout=
+	fi
 	if [ -n "$ubi_layout" ]; then
 		# Resolved here, on the whole system: the flash phase may run in a ramfs
 		# where /sys came across best-effort, or not at all.
@@ -2186,7 +2216,8 @@ get_system_info() {
 #               its own. Retired: a run that would write it is refused, and
 #               the camera is reinstalled from U-Boot.
 #   ubiblock    kernel volume = uImage, rootfs volume = squashfs mounted through
-#               ubiblock (root=/dev/ubiblockX_Y). Retired like ubifs-kvol.
+#               ubiblock (root=/dev/ubiblockX_Y). Its volumes hold exactly the
+#               NOR artifacts, so it fetches the NOR package.
 #
 # The rootfs volume is in use for as long as the camera runs: UBIFS or
 # ubiblock holds it open under init's overlay root, and ubiupdatevol needs the
@@ -2222,6 +2253,17 @@ is_split_nand() {
 	[ -n "$(ubi_volume rootfs)" ] && [ -z "$(ubi_volume kernel)" ] || return 1
 	grep -qE '(^|[[:space:]])root=ubi[0-9]*:rootfs([[:space:]]|$)' /proc/cmdline 2>&3 || return 1
 	grep -q '"kernel"$' /proc/mtd 2>&3
+}
+
+# The SoCs whose NAND images moved to the kernel-in-rootfs layout (ubifs).
+# On these the older NAND layouts with a kernel volume of their own are
+# retired and reinstalled; every other SoC keeps its ubiblock layout, which is
+# still what its NAND images are (SigmaStar, Rockchip).
+nand_layout_moved() {
+	case "$model" in
+		gk7205v500|gk7205v510|gk7205v530|hi3516ev200|hi3516ev300|hi3518ev300|hi3516dv200) return 0 ;;
+	esac
+	return 1
 }
 
 # The package flavour this camera installs from, as the manifest spells it.
@@ -2669,19 +2711,23 @@ fi
 # only empties rootfs_data, which this layout keeps in a UBI volume like any
 # other.
 if { [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && is_split_nand; then
-	die "This camera uses the retired split NAND layout (kernel in its own partition, UBIFS root beside it), which this upgrade cannot write safely. Reinstall it from U-Boot with the current NAND instructions: https://openipc.org/cameras/vendors/hisilicon/socs/$model -- nothing was written."
+	die "This camera uses the retired split NAND layout (kernel in its own partition, UBIFS root beside it), which this upgrade cannot write safely. Reinstall it from U-Boot with the current NAND instructions: https://openipc.org/cameras/vendors/$vendor/socs/$model -- nothing was written."
 fi
-# Both NAND layouts with a kernel volume of their own are retired the same way:
-# current images carry the kernel inside the UBIFS rootfs and size the volumes
-# to it, which neither can take without its volumes being made anew.
-case "$ubi_layout" in ubifs-kvol|ubiblock)
-	if [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; then
-		die "This camera uses the retired NAND layout with a separate kernel volume; current images carry the kernel inside the rootfs. Reinstall it from U-Boot with the current NAND instructions: https://openipc.org/cameras/vendors/$vendor/socs/$model -- nothing was written."
-	fi ;;
-esac
+# The NAND layouts with a kernel volume of their own are retired on the SoCs
+# that moved to the kernel-in-rootfs one: current images for them carry the
+# kernel inside the UBIFS rootfs and size the volumes to it. ubiblock stays
+# for the rest (nand_layout_moved).
+if { [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } &&
+	{ [ "$ubi_layout" = "ubifs-kvol" ] || { [ "$ubi_layout" = "ubiblock" ] && nand_layout_moved; }; }; then
+	die "This camera uses the retired NAND layout with a separate kernel volume; current images carry the kernel inside the rootfs. Reinstall it from U-Boot with the current NAND instructions: https://openipc.org/cameras/vendors/$vendor/socs/$model -- nothing was written."
+fi
 # On the ubifs layout the kernel is a file in the rootfs: there is no kernel
 # to write on its own, and either flag means writing the one image.
 if [ "$ubi_layout" = "ubifs" ] && [ "1" = "$update_kernel" ]; then
+	# A local kernel file cannot be written on its own: it would have to be
+	# inside the rootfs image. Say so rather than write some other rootfs.
+	[ -n "$kernel_file" ] && [ -z "$rootfs_file" ] && [ "1" != "$remote_update" ] &&
+		die "On this camera the kernel lives inside the rootfs: pass the rootfs.ubifs that carries it with --rootfs=. Nothing was written."
 	update_kernel=0
 	update_rootfs=1
 	echo_c 37 "\nThe kernel lives inside the rootfs on this camera: writing the rootfs."
