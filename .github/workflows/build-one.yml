@@ -125,6 +125,16 @@ jobs:
             echo "dl cache is cold (${BR2_DL_DIR} absent) -- nothing to refresh."
           fi
 
+      # The request tooling comes from this workflow's own commit: `commit`
+      # may predate it.
+      - name: Checkout request tooling
+        if: inputs.request_issue != ''
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .ci
+          sparse-checkout: .github/scripts
+
       # The issue body is untrusted text. build_request.sh accepts only
       # `# BR2_<NAME> is not set` lines from it and refuses the request on
       # anything else, so a request can switch symbols off and do nothing more.
@@ -141,7 +151,7 @@ jobs:
             echo "::error::no defconfig for platform '$PLATFORM'"
             exit 1
           fi
-          sh .github/scripts/build_request.sh apply /tmp/request.md "$DEFCONFIG" /tmp/request.symbols
+          sh .ci/.github/scripts/build_request.sh apply /tmp/request.md "$DEFCONFIG" /tmp/request.symbols
 
       - name: Build firmware
         env:
@@ -190,7 +200,7 @@ jobs:
       - name: Check build request
         if: inputs.request_issue != ''
         run: |
-          KEPT=$(sh .github/scripts/build_request.sh verify /tmp/request.symbols output/.config | tr '\n' ' ')
+          KEPT=$(sh .ci/.github/scripts/build_request.sh verify /tmp/request.symbols output/.config | tr '\n' ' ')
           echo "REQUEST_KEPT=${KEPT}" >> ${GITHUB_ENV}
           if [ -n "$KEPT" ]; then
             echo "::warning::still enabled after the request (selected by another package): ${KEPT}"
