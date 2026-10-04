@@ -2,7 +2,7 @@
 # Apply a firmware-explorer build request to a defconfig, and check afterwards
 # what the build actually did with it.
 #
-#   build_request.sh apply  <issue-body> <defconfig> <symbols-out>
+#   build_request.sh apply  <issue-body> <defconfig> <symbols-out> [<protected>]
 #   build_request.sh verify <symbols>    <dot-config>
 #
 # The explorer (openipc.org/firmware-explorer, "What if") files an issue whose
@@ -16,9 +16,16 @@
 # anything else. A request can therefore only switch symbols off -- it can
 # never enable a package, set a string, or reach the shell.
 #
+# <protected> is general/openipc.fragment, which the Makefile concatenates
+# after the board defconfig: hostname, overlay, ccache, hardening flags and
+# the host U-Boot tools the image repack needs. A request does not get to turn
+# those off -- they would win over it anyway -- so a symbol the fragment sets
+# is dropped from the request with a notice, before anything is built.
+#
 # `verify` exists because switching a symbol off is a request, not a command:
 # a package that `select`s it turns it back on, and Kconfig says nothing. It
-# prints every requested symbol that is still `=y` in the final .config, so
+# prints every requested symbol that is still `=y` (or `=m`) in the final
+# .config -- a string or number left by a default is not a package kept -- so
 # the release notes and the reply on the issue say which parts of the request
 # the build could not honour.
 
@@ -27,7 +34,7 @@ set -eu
 die() { echo "build_request: $*" >&2; exit 1; }
 
 apply() {
-	body=$1 defconfig=$2 out=$3
+	body=$1 defconfig=$2 out=$3 protected=${4:-}
 	[ -f "$body" ] || die "no issue body at $body"
 	[ -f "$defconfig" ] || die "no defconfig at $defconfig"
 
@@ -64,6 +71,24 @@ apply() {
 	[ -s "$out" ] || die "the fragment names no symbol to disable"
 	sort -u -o "$out" "$out"
 
+	if [ -n "$protected" ]; then
+		[ -f "$protected" ] || die "no protected fragment at $protected"
+		kept=""
+		: > "$out.req"
+		while IFS= read -r sym; do
+			if grep -q "^${sym}=" "$protected"; then
+				kept="$kept $sym"
+			else
+				echo "$sym" >> "$out.req"
+			fi
+		done < "$out"
+		mv "$out.req" "$out"
+		if [ -n "$kept" ]; then
+			echo "build_request: not switching off, set by ${protected##*/} for every build:$kept"
+		fi
+		[ -s "$out" ] || die "every symbol in the request is set by ${protected##*/}; nothing to build"
+	fi
+
 	{
 		echo ""
 		echo "# Build request: symbols switched off by the firmware explorer."
@@ -78,14 +103,15 @@ verify() {
 	[ -f "$symbols" ] || die "no symbol list at $symbols"
 	[ -f "$config" ] || die "no .config at $config"
 	while IFS= read -r sym; do
-		if grep -q "^${sym}=" "$config"; then
+		if grep -Eq "^${sym}=[ym]\$" "$config"; then
 			echo "$sym"
 		fi
 	done < "$symbols"
 }
 
 case "${1:-}" in
-	apply)  [ $# -eq 4 ] || die "usage: $0 apply <issue-body> <defconfig> <symbols-out>"; apply "$2" "$3" "$4" ;;
+	apply)  [ $# -eq 4 ] || [ $# -eq 5 ] || die "usage: $0 apply <issue-body> <defconfig> <symbols-out> [<protected>]"
+		apply "$2" "$3" "$4" "${5:-}" ;;
 	verify) [ $# -eq 3 ] || die "usage: $0 verify <symbols> <dot-config>"; verify "$2" "$3" ;;
 	*) die "usage: $0 apply|verify ..." ;;
 esac
