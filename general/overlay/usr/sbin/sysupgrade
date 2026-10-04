@@ -1112,15 +1112,23 @@ tmpfs_is_ramfs() {
 	[ "$(stat -f -c %t /tmp 2>&3)" = "858458f6" ]
 }
 
-# What enter_ramfs stages into the RAM root, in KB: busybox, the libraries ldd
-# names for it (the same list enter_ramfs copies) and this script. The applet
-# links cost nothing beside them. Measured 1.5 to 2 MB.
+# What enter_ramfs stages into the RAM root, in KB, counted the way the RAM is
+# taken: busybox, the libraries ldd names for it (the same list enter_ramfs
+# copies) and this script, each rounded up to whole pages; on ramfs a page for
+# every applet link as well, because a ramfs symlink keeps its target in a page
+# of its own (227 links, 908 KB, on a gk7205v510) where a real tmpfs keeps a
+# short one inline; and 16 KB for the directories, sysupgrade.env and the
+# /sbin/init the hand-off writes.
 ramfs_stage_kb() {
-	local f bytes=0 sz
+	local f sz kb=16 links
 	for f in /bin/busybox $(ldd /bin/busybox 2>/dev/null | grep -oE '/[^ ]*\.so[^ ]*' | sort -u) "$0"; do
-		sz=$(stat -L -c %s "$f" 2>&3) && [ -n "$sz" ] && bytes=$((bytes + sz))
+		sz=$(stat -L -c %s "$f" 2>&3) && [ -n "$sz" ] && kb=$((kb + (sz + 4095) / 4096 * 4))
 	done
-	echo $(((bytes + 1023) / 1024))
+	if tmpfs_is_ramfs; then
+		links=$(/bin/busybox --list 2>&3 | wc -l)
+		kb=$((kb + ${links:-0} * 4))
+	fi
+	echo "$kb"
 }
 
 # Members of the archive this run does not unpack, as tar options.

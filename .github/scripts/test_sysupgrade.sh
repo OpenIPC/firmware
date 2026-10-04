@@ -287,6 +287,12 @@ case "$applet" in
                             echo "$applet $*" >> "$FLASH_LOG" ;;
     umount)                 echo "$applet $*" >> "$FLASH_LOG"
                             exit "${STUB_BB_UMOUNT_RC:-0}" ;;
+    # The applet list enter_ramfs links into the RAM root, and the RAM-root
+    # reservation counts. Silent unless a test asks for one.
+    --list)                 i=0
+                            while [ "$i" -lt "${STUB_BB_APPLETS:-0}" ]; do
+                                echo "applet$i"; i=$((i + 1))
+                            done ;;
 esac
 exit 0'
 
@@ -2318,6 +2324,26 @@ else
     bad "could not read the image and RAM-root figures from the refusal, n='$n' s='$s' out='$OUT'"
 fi
 set_meminfo
+
+# ...and counted the way ramfs takes it: a page per applet link, which a real
+# tmpfs keeps inline. 250 links are 1000 KB on ramfs and nothing on tmpfs.
+ram_root_kb() {
+    reset_env; ubi_setup ubifs
+    make_archive "$UFIT" "$UFS"
+    set_meminfo 1
+    RUN_ENV="STUB_BB_APPLETS=250" run -z -f --archive="$SB/tmp/fw.tgz"
+    printf '%s' "$OUT" | sed -n 's/.* and \([0-9]*\) KB for the RAM root.*/\1/p' | head -1
+}
+on_tmpfs=$(ram_root_kb)
+stub_ramfs_tmp
+on_ramfs=$(ram_root_kb)
+rm -f "$SB/bin/stat"
+set_meminfo
+if [ -n "$on_tmpfs" ] && [ -n "$on_ramfs" ] && [ "$((on_ramfs - on_tmpfs))" -eq 1000 ]; then
+    ok "the RAM root on ramfs reserves a page per applet link"
+else
+    bad "RAM root on tmpfs '$on_tmpfs' KB, on ramfs '$on_ramfs' KB: expected 1000 KB apart"
+fi
 
 # --- stage 2, as PID 1: release the old root, copy the settings out, rebuild
 # the volumes around the new image, put the settings back, reboot
