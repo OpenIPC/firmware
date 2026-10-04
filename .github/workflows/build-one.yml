@@ -8,6 +8,9 @@ on:
       commit:
         description: 'Commit SHA to build (optional; defaults to current branch HEAD). Use this from `git bisect run` or for one-off historic rebuilds.'
         required: false
+      request_issue:
+        description: 'Issue number of a firmware explorer build request (optional). Its "Defconfig fragment" is appended to the board defconfig, and the result is posted back on the issue.'
+        required: false
 
 jobs:
   resolve:
@@ -19,14 +22,24 @@ jobs:
       tag_name:  ${{ steps.r.outputs.tag_name }}
     steps:
       - id: r
+        env:
+          REQUEST: ${{ inputs.request_issue }}
         run: |
           REF="${{ inputs.commit }}"
           [ -z "$REF" ] && REF="${{ github.sha }}"
           SHORT="$(printf '%s' "$REF" | cut -c1-7)"
+          # A build request is its own release: same commit, different image.
+          REQ=""
+          if [ -n "$REQUEST" ]; then
+            case "$REQUEST" in
+              *[!0-9]*) echo "::error::request_issue must be an issue number, got '$REQUEST'"; exit 1 ;;
+            esac
+            REQ="-req${REQUEST}"
+          fi
           if [ -n "${{ inputs.commit }}" ]; then
-            TAG="nightly-bisect-${SHORT}"
+            TAG="nightly-bisect-${SHORT}${REQ}"
           else
-            TAG="nightly-bisect-${SHORT}-$(date -u +%Y%m%d%H%M%S)"
+            TAG="nightly-bisect-${SHORT}${REQ}-$(date -u +%Y%m%d%H%M%S)"
           fi
           echo "ref=$REF"               >> "$GITHUB_OUTPUT"
           echo "short_sha=$SHORT"       >> "$GITHUB_OUTPUT"
@@ -112,6 +125,24 @@ jobs:
             echo "dl cache is cold (${BR2_DL_DIR} absent) -- nothing to refresh."
           fi
 
+      # The issue body is untrusted text. build_request.sh accepts only
+      # `# BR2_<NAME> is not set` lines from it and refuses the request on
+      # anything else, so a request can switch symbols off and do nothing more.
+      - name: Apply build request
+        if: inputs.request_issue != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUEST:  ${{ inputs.request_issue }}
+          PLATFORM: ${{ inputs.platform }}
+        run: |
+          gh issue view "$REQUEST" -R "$GITHUB_REPOSITORY" --json body --jq .body > /tmp/request.md
+          DEFCONFIG=$(find br-ext-*/configs -name "${PLATFORM}_defconfig" | head -n1)
+          if [ -z "$DEFCONFIG" ]; then
+            echo "::error::no defconfig for platform '$PLATFORM'"
+            exit 1
+          fi
+          sh .github/scripts/build_request.sh apply /tmp/request.md "$DEFCONFIG" /tmp/request.symbols
+
       - name: Build firmware
         env:
           BUILD_ID:  ${{ needs.resolve.outputs.tag_name }}
@@ -154,6 +185,17 @@ jobs:
       - name: Verify kernel modules
         run: sh .github/scripts/check_target_modules.sh
 
+      # A select elsewhere can switch a requested symbol straight back on;
+      # say so rather than let the requester assume it is gone.
+      - name: Check build request
+        if: inputs.request_issue != ''
+        run: |
+          KEPT=$(sh .github/scripts/build_request.sh verify /tmp/request.symbols output/.config | tr '\n' ' ')
+          echo "REQUEST_KEPT=${KEPT}" >> ${GITHUB_ENV}
+          if [ -n "$KEPT" ]; then
+            echo "::warning::still enabled after the request (selected by another package): ${KEPT}"
+          fi
+
       - name: Upload firmware
         uses: softprops/action-gh-release@v2
         with:
@@ -164,6 +206,32 @@ jobs:
             short=${{ needs.resolve.outputs.short_sha }}
             platform=${{ inputs.platform }}
             one_off=true
+            request_issue=${{ inputs.request_issue }}
+            request_not_honoured=${{ env.REQUEST_KEPT }}
           files: |
             ${{env.NORFW}}
             ${{env.NANDFW}}
+
+      - name: Reply on the build request
+        if: always() && inputs.request_issue != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUEST:  ${{ inputs.request_issue }}
+          PLATFORM: ${{ inputs.platform }}
+          TAG:      ${{ needs.resolve.outputs.tag_name }}
+          OUTCOME:  ${{ job.status }}
+          KEPT:     ${{ env.REQUEST_KEPT }}
+          RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            if [ "$OUTCOME" = success ]; then
+              echo "Built \`${PLATFORM}\` with this request applied: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+              if [ -n "$KEPT" ]; then
+                echo ""
+                echo "Still enabled, because another package selects them: \`${KEPT% }\`"
+              fi
+            else
+              echo "The build of \`${PLATFORM}\` for this request did not complete: ${RUN_URL}"
+            fi
+          } > /tmp/reply.md
+          gh issue comment "$REQUEST" -R "$GITHUB_REPOSITORY" --body-file /tmp/reply.md
