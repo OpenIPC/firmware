@@ -526,16 +526,12 @@ is_ubifs() {
 }
 
 # The rootfs format has to be the one this camera's kernel command line mounts:
-# a squashfs written into the volume of a root=ubi0:rootfs camera, or a UBIFS
-# into a ubiblock one, flashes cleanly and never mounts again. The kernel's
-# rootfstype is fixed by the bootloader environment, which no upgrade rewrites.
+# a squashfs written into the volume of a root=ubi0:rootfs camera flashes
+# cleanly and never mounts again. The kernel's rootfstype is fixed by the
+# bootloader environment, which no upgrade rewrites.
 check_rootfs_format() {
-	[ -n "$ubi_layout" ] || return 0
 	if [ "$ubi_layout" = "ubifs" ] && ! is_ubifs "$1"; then
 		die "This camera boots a UBIFS rootfs, and $1 is not one. Nothing was written."
-	fi
-	if [ "$ubi_layout" = "ubiblock" ] && is_ubifs "$1"; then
-		die "This camera boots a squashfs rootfs through ubiblock, and $1 is a UBIFS image. Nothing was written."
 	fi
 	return 0
 }
@@ -1164,9 +1160,9 @@ remote_length_kb() {
 
 
 download_firmware() {
-	# A UBIFS NAND layout installs from the -nand- package; every other camera,
-	# NAND ones included (a ubiblock rootfs holds the NOR artifacts verbatim),
-	# from the NOR package.
+	# A UBIFS NAND layout installs from the -nand- package, every other camera
+	# from the NOR package. A NAND camera on a retired layout has been refused
+	# before this.
 	[ "$flash_type" = "nand" ] && [ "$(pkg_flash)" = "nor" ] &&
 		echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
@@ -2139,16 +2135,6 @@ get_system_info() {
 	[ -z "$model" ] && die "Cannot determine SoC: no BUILD_PLATFORM and no U-Boot 'soc'"
 	resolve_model_alias
 	detect_ubi_layout
-	# A ubiblock camera running an image from before the hand-off has no
-	# ::restart: entry, and only the upgrade being run would ship one. Its
-	# rootfs was written through gluebi's mtd until now, which works with the
-	# volume mounted (gluebi writes beside ubiblock's reader), so keep doing
-	# that rather than refusing every upgrade. The next image brings the
-	# entry, and the UBI path, with it.
-	if [ "$ubi_layout" = "ubiblock" ] && ! inittab_hands_off &&
-		[ "/dev/" != "$(get_device "rootfs")" ]; then
-		ubi_layout=
-	fi
 	if [ -n "$ubi_layout" ]; then
 		# Resolved here, on the whole system: the flash phase may run in a ramfs
 		# where /sys came across best-effort, or not at all.
@@ -2200,8 +2186,7 @@ get_system_info() {
 #               its own. Retired: a run that would write it is refused, and
 #               the camera is reinstalled from U-Boot.
 #   ubiblock    kernel volume = uImage, rootfs volume = squashfs mounted through
-#               ubiblock (root=/dev/ubiblockX_Y). Its volumes hold exactly the
-#               NOR artifacts, so it fetches the NOR package.
+#               ubiblock (root=/dev/ubiblockX_Y). Retired like ubifs-kvol.
 #
 # The rootfs volume is in use for as long as the camera runs: UBIFS or
 # ubiblock holds it open under init's overlay root, and ubiupdatevol needs the
@@ -2686,9 +2671,14 @@ fi
 if { [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && is_split_nand; then
 	die "This camera uses the retired split NAND layout (kernel in its own partition, UBIFS root beside it), which this upgrade cannot write safely. Reinstall it from U-Boot with the current NAND instructions: https://openipc.org/cameras/vendors/hisilicon/socs/$model -- nothing was written."
 fi
-if { [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && [ "$ubi_layout" = "ubifs-kvol" ]; then
-	die "This camera uses the retired NAND layout with a separate kernel volume; current images carry the kernel inside the rootfs. Reinstall it from U-Boot with the current NAND instructions: https://openipc.org/cameras/vendors/$vendor/socs/$model -- nothing was written."
-fi
+# Both NAND layouts with a kernel volume of their own are retired the same way:
+# current images carry the kernel inside the UBIFS rootfs and size the volumes
+# to it, which neither can take without its volumes being made anew.
+case "$ubi_layout" in ubifs-kvol|ubiblock)
+	if [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; then
+		die "This camera uses the retired NAND layout with a separate kernel volume; current images carry the kernel inside the rootfs. Reinstall it from U-Boot with the current NAND instructions: https://openipc.org/cameras/vendors/$vendor/socs/$model -- nothing was written."
+	fi ;;
+esac
 # On the ubifs layout the kernel is a file in the rootfs: there is no kernel
 # to write on its own, and either flag means writing the one image.
 if [ "$ubi_layout" = "ubifs" ] && [ "1" = "$update_kernel" ]; then

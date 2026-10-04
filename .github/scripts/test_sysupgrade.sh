@@ -2060,12 +2060,13 @@ rm -f "$SB/bin/stat"
 echo
 echo "=== Part 1b: UBI NAND layouts ==="
 
-# Two layouts keep kernel and rootfs in UBI volumes, told apart by root=:
-#   ubifs     kernel = FIT, rootfs = UBIFS, root=ubi0:rootfs
-#   ubiblock  kernel = uImage, rootfs = squashfs through ubiblock
-# ubiupdatevol takes its volume exclusively, and the rootfs volume is held
-# open on both (UBIFS, or ubiblock's reader), so a rootfs write on either
-# goes through the PID 1 hand-off; the kernel volume is written in place.
+# The NAND layout is one UBIFS rootfs volume with the kernel inside it
+# (/boot/fitImage) plus rootfs_data, root=ubi0:rootfs. An upgrade writes the
+# one image and resizes both volumes to it, from the handed-off PID 1: the
+# rootfs volume is held open for as long as the camera runs, and
+# ubiupdatevol takes its volume exclusively. The layouts with a kernel volume
+# of their own -- ubiblock (uImage + squashfs) and ubifs-kvol (FIT + UBIFS) --
+# and the split one (raw kernel partition) are retired: refused, reinstalled.
 CMDLINE_UBIFS='mem=32M console=ttyAMA0,115200 panic=20 init=/init root=ubi0:rootfs rootfstype=ubifs ubi.mtd=2,2048 mtdparts=nand:768k(boot),256k(env),-(ubi)'
 CMDLINE_UBIBLOCK='mem=32M console=ttyAMA0,115200 panic=20 init=/init root=/dev/ubiblock0_1 ubi.mtd=2,2048 ubi.block=0,1 mtdparts=nand:768k(boot),256k(env),-(ubi)'
 UFIT="$SB/tmp/fitImage.gk7205v500"
@@ -2101,31 +2102,22 @@ ubi_wrote() { grep -q "ubiupdatevol .*$1" "$SB/tmp/flash.log"; }
 nothing_ubi() { ! grep -qE "ubiupdatevol|flashcp|flash_eraseall" "$SB/tmp/flash.log"; }
 handed_off() { grep -q "^kill -QUIT 1" "$SB/tmp/flash.log"; }
 
-# --- ubiblock: NOR artifacts; the rootfs goes through the hand-off too
-# (measured: ubiupdatevol on a volume ubiblock has open is EBUSY)
+# --- ubiblock is retired: a write of either half is refused, nothing touched
 reset_env; ubi_setup ubiblock
 STUB_PIVOT_RC=0
 run -z --kernel="$UK" --rootfs="$US"
-if handed_off && nothing_ubi && grep -q "ubi_layout=.ubiblock" "$SB/ram/sysupgrade.env"; then
-    ok "ubiblock: a rootfs write hands PID 1 off before anything is written"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired NAND layout with a separate kernel volume" &&
+    nothing_ubi && ! handed_off && ! rebooted; then
+    ok "ubiblock: a kernel+rootfs run is refused before anything is touched"
 else
-    bad "ubiblock: expected the hand-off, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+    bad "ubiblock must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 reset_env; ubi_setup ubiblock
 run -z --kernel="$UK"
-if [ "$RC" -eq 0 ] && ubi_wrote "/dev/ubi0_0 $UK" && ! handed_off && ! grep -q flashcp "$SB/tmp/flash.log"; then
-    ok "ubiblock: a uImage is written into the kernel volume in place"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired NAND layout" && nothing_ubi && ! rebooted; then
+    ok "ubiblock: a kernel-only run is refused too"
 else
-    bad "ubiblock: kernel-only should write ubi0_0 in place, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
-fi
-reset_env; ubi_setup ubiblock
-RUN_ENV="_ramfs_phase=1 _handoff=1 ubi_layout=ubiblock kernel_device=/dev/ubi0_0 ubi_rootfs_dev=/dev/ubi0_1 ubi_data_dev=/dev/ubi0_2 update_kernel=1 update_rootfs=1 kernel_file=$UK rootfs_file=$US model=gk7205v500 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
-run
-u=$(logged_at "umount -l /mnt"); k=$(logged_at "ubiupdatevol /dev/ubi0_0 $UK"); r=$(logged_at "ubiupdatevol /dev/ubi0_1 $US")
-if [ -n "$u" ] && [ -n "$k" ] && [ -n "$r" ] && [ "$u" -lt "$k" ] && [ "$k" -lt "$r" ] && rebooted; then
-    ok "stage 2 (ubiblock): old root released, uImage then squashfs written"
-else
-    bad "stage 2 ubiblock order ${u:-none}/${k:-none}/${r:-none} log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+    bad "ubiblock -k must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
 # --- ubifs: the kernel is a file in the rootfs, so -k writes the rootfs
@@ -2185,13 +2177,6 @@ if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "boots a UBIFS rootfs" && not
     ok "ubifs: a squashfs rootfs is refused"
 else
     bad "ubifs: a squashfs must be refused, rc=$RC out='$OUT'"
-fi
-reset_env; ubi_setup ubiblock
-run -z -f --rootfs="$UFS"
-if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "is a UBIFS image" && nothing_ubi; then
-    ok "ubiblock: a UBIFS rootfs is refused"
-else
-    bad "ubiblock: a UBIFS image must be refused, rc=$RC out='$OUT'"
 fi
 
 # --- a UBIFS made for other LEBs would never mount
@@ -2320,7 +2305,7 @@ else
     bad "stage 2: umount failure must stop before the first write, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
-# --- a ubiblock camera from before the hand-off keeps its gluebi path
+# --- a ubiblock camera from before the hand-off no longer writes through gluebi
 reset_env; ubi_setup ubiblock
 printf '::sysinit:/etc/init.d/rcS\n' > "$SB/etc/inittab"
 set_mtd <<'EOF2'
@@ -2333,101 +2318,15 @@ mtd4: 01f00000 0001f000 "rootfs"
 mtd5: 00200000 0001f000 "rootfs_data"
 EOF2
 run -z --kernel="$UK" --rootfs="$US"
-if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && flashed /dev/mtd4 && ! handed_off &&
-    ! grep -q ubiupdatevol "$SB/tmp/flash.log"; then
-    ok "ubiblock without ::restart: writes through gluebi as it always did"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired NAND layout" && nothing_ubi && ! rebooted; then
+    ok "ubiblock without ::restart: is refused too, gluebi or not"
 else
-    bad "ubiblock old-inittab fallback, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
-fi
-reset_env; ubi_setup ubiblock
-printf '::sysinit:/etc/init.d/rcS\n' > "$SB/etc/inittab"
-run -z --kernel="$UK" --rootfs="$US"
-if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "::restart:/sbin/init" && nothing_ubi && ! rebooted; then
-    ok "ubiblock without ::restart: and without gluebi is refused, nothing written"
-else
-    bad "ubiblock old inittab, no gluebi, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+    bad "ubiblock old inittab must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
-# --- the retired HiSilicon split NAND layout: uImage in a raw `kernel`
-# partition, UBIFS root in a UBI device beside it, no `kernel` volume. gluebi
-# names the UBIFS volume "rootfs" in /proc/mtd, which is what the MTD path
-# would have flashed a NOR squashfs over.
-split_setup() {
-    local u="$SB/sys/class/ubi" i=0 name
-    rm -rf "$u"
-    for name in rootfs rootfs_data; do
-        mkdir -p "$u/ubi0_$i"
-        echo "$name" > "$u/ubi0_$i/name"
-        echo 126976 > "$u/ubi0_$i/usable_eb_size"
-        echo 260 > "$u/ubi0_$i/reserved_ebs"
-        i=$((i + 1))
-    done
-    set_mtd <<'EOF2'
-dev:    size   erasesize  name
-mtd0: 00100000 00020000 "boot"
-mtd1: 00100000 00020000 "env"
-mtd2: 00800000 00020000 "kernel"
-mtd3: 07600000 00020000 "ubi"
-mtd4: 02017000 0001f000 "rootfs"
-mtd5: 04f51000 0001f000 "rootfs_data"
-EOF2
-    set_cmdline 'mem=128M console=ttyAMA0,115200 panic=20 rootfstype=ubifs root=ubi0:rootfs ubi.mtd=3,2048 mtdparts=hinand:1024k(boot),1024k(env),8192k(kernel),-(ubi)'
-    set_platform hi3516ev300_ultimate ultimate
-    export STUB_VENDOR=hisilicon STUB_SOC=hi3516ev300 STUB_IMG_SOC=hi3516ev300
-    SK="$SB/tmp/uImage.hi3516ev300"; SS="$SB/tmp/rootfs.squashfs.hi3516ev300"
-    make_uimage "$SK" hi3516ev300
-    make_squashfs "$SS" 8192
-}
-reset_env; split_setup
-STUB_PIVOT_RC=0
-run -z --kernel="$SK" --rootfs="$SS"
-if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired split NAND layout" &&
-    printf '%s' "$OUT" | grep -q "openipc.org/cameras/vendors/hisilicon/socs/hi3516ev300" &&
-    ! grep -qE "flashcp|ubiupdatevol|flash_eraseall|pivot_root" "$SB/tmp/flash.log" && ! rebooted; then
-    ok "split NAND: kernel+rootfs refused before anything is touched, reinstall link given"
-else
-    bad "split NAND -k -r, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
-fi
-reset_env; split_setup
-run -z --kernel="$SK"
-if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired split NAND layout" && nothing_wrote && ! rebooted; then
-    ok "split NAND: a kernel-only run is refused too"
-else
-    bad "split NAND -k, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
-fi
-reset_env; split_setup
-run -z -n
-if ! printf '%s' "$OUT" | grep -q "retired split NAND layout"; then
-    ok "split NAND: -n alone is not refused"
-else
-    bad "split NAND -n should not be refused, rc=$RC out='$OUT'"
-fi
-
-# --- an hi3516ev300 on the UBI-only layout is an ordinary ubifs camera
-ubi_setup_hisi() {
-    ubi_setup ubifs
-    set_cmdline 'mem=32M console=ttyAMA0,115200 panic=20 init=/init root=ubi0:rootfs rootfstype=ubifs ubi.mtd=2,2048 mtdparts=hinand:768k(boot),256k(env),-(ubi)'
-    set_platform hi3516ev300_ultimate ultimate
-    export STUB_VENDOR=hisilicon STUB_SOC=hi3516ev300 STUB_IMG_SOC=hi3516ev300
-}
-reset_env; ubi_setup_hisi
-HFIT="$SB/tmp/fitImage.hi3516ev300"; make_fit_soc "$HFIT" hi3516ev300
-HFS="$SB/tmp/rootfs.ubifs.hi3516ev300"; make_ubifs "$HFS"
-STUB_PIVOT_RC=0
-run -z --kernel="$HFIT" --rootfs="$HFS"
-if printf '%s' "$OUT" | grep -q "SoC from the FIT kernel beside it: hi3516ev300" && handed_off && nothing_ubi &&
-    ! printf '%s' "$OUT" | grep -qE "retired (split )?NAND layout"; then
-    ok "hi3516ev300 UBI-only: an ordinary ubifs camera, rootfs write handed off"
-else
-    bad "hi3516ev300 UBI-only, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
-fi
-default_url_is "https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516ev300-nand-ultimate.tgz" \
-    ubi_setup_hisi
-
-# --- the download: -nand- for ubifs, -nor- for ubiblock
+# --- the download: -nand- for ubifs
 F=https://github.com/OpenIPC/firmware/releases/download/latest
 default_url_is "$F/openipc.gk7205v500-nand-ultimate.tgz" ubi_setup ubifs
-default_url_is "$F/openipc.gk7205v500-nor-ultimate.tgz" ubi_setup ubiblock
 
 # --- the unpack leaves rootfs.ubi (fresh-install image) in the archive
 reset_env; ubi_setup ubifs
