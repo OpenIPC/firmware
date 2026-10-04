@@ -1019,7 +1019,9 @@ Use 'sysupgrade --channel nightly' instead -- it streams and stages no second co
 # Deliberately does NOT reserve for the ramfs pivot, which stages around 1.5 MB
 # of busybox and libraries later in the run. A pivot that cannot be built is not
 # a failure -- enter_ramfs returns 1 and the run flashes in place instead -- so
-# reserving for it would refuse upgrades that would have completed.
+# reserving for it would refuse upgrades that would have completed. The one
+# exception is a run that must hand PID 1 over, which has no in-place path to
+# fall back to; check_unpack_ram reserves the pivot for that one.
 #
 # Overridable so the test harness can pin the boundary.
 UNPACK_RESERVE_KB=${UNPACK_RESERVE_KB:-512}
@@ -1056,25 +1058,69 @@ UNPACK_RESERVE_KB=${UNPACK_RESERVE_KB:-512}
 # Fails OPEN, like every other measurement here: a /proc/meminfo that will not
 # parse, or a size the caller could not learn, is not grounds to refuse an
 # upgrade that would have worked.
+#
+# Two things MemAvailable does not say, both from a gk7205v500 that passed this
+# check with 96 MB to spare and was then OOM-killed at the hand-off (#2536):
+#
+# On a kernel without CONFIG_SHMEM, tmpfs is ramfs, and ramfs pages are not
+# movable, so they can never be placed in a CMA area. MemAvailable counts free
+# CMA all the same -- on that camera, 98 of the 99 MB it reported once the image
+# was unpacked. There, CmaFree is not memory the unpack can have.
+#
+# And where the run must hand PID 1 to a RAM root (need_handoff) that root is
+# not optional: it is staged after the unpack, from the same memory, and a
+# staging that runs out is not a clean fallback but an OOM kill in the middle
+# of the hand-off. So for that run it is reserved, at its real size.
 check_unpack_ram() {
-	local need=$1 src=$2 avail want
+	local need=$1 src=$2 avail cma want stage=0 why
 	[ -n "$need" ] && [ "$need" -gt 0 ] 2>&3 || return 0
 	avail=$(awk '/^MemAvailable:/ { print $2; exit }' /proc/meminfo 2>&3)
 	[ -n "$avail" ] && [ "$avail" -gt 0 ] 2>&3 || return 0
-	want=$((need + UNPACK_RESERVE_KB))
+	if tmpfs_is_ramfs; then
+		cma=$(awk '/^CmaFree:/ { print $2; exit }' /proc/meminfo 2>&3)
+		if [ -n "$cma" ] && [ "$cma" -gt 0 ] 2>&3; then
+			avail=$((avail > cma ? avail - cma : 0))
+			why="
+On this kernel that tmpfs is ramfs, which cannot use the $cma KB free in the
+CMA (MMZ) area, so that is not counted."
+		fi
+	fi
+	need_handoff && stage=$(ramfs_stage_kb)
+	want=$((need + UNPACK_RESERVE_KB + stage))
 	[ "$want" -lt "$avail" ] && return 0
 	# Said differently depending on who is asking, because the two callers have
 	# different ways out. A WebUI run has majestic resident and a shell has not,
 	# so the advice that works for one is noise to the other.
 	local out="Not enough memory to unpack $src: it needs $want KB -- $need KB of image
-plus $UNPACK_RESERVE_KB KB for the tools unpacking it -- and this camera has $avail KB free.
-/tmp is a tmpfs, so the unpacked image is RAM. Nothing was written."
+plus $UNPACK_RESERVE_KB KB for the tools unpacking it"
+	[ "$stage" -gt 0 ] && out="$out and $stage KB for the RAM root
+the flash phase runs from"
+	out="$out -- and this camera has $avail KB free.
+/tmp is a tmpfs, so the unpacked image is RAM.$why Nothing was written."
 	if [ "1" = "$web_update" ]; then
 		die "$out
 Run 'sysupgrade -k -r' from ssh or the serial console instead: that path stops
 majestic first, and majestic is where the missing memory is."
 	fi
 	die "$out"
+}
+
+# Whether /tmp is ramfs underneath: what "tmpfs" is on a kernel built without
+# CONFIG_SHMEM, and what statfs then reports (RAMFS_MAGIC). Anything else,
+# including a stat that will not answer, is a real tmpfs.
+tmpfs_is_ramfs() {
+	[ "$(stat -f -c %t /tmp 2>&3)" = "858458f6" ]
+}
+
+# What enter_ramfs stages into the RAM root, in KB: busybox, the libraries ldd
+# names for it (the same list enter_ramfs copies) and this script. The applet
+# links cost nothing beside them. Measured 1.5 to 2 MB.
+ramfs_stage_kb() {
+	local f bytes=0 sz
+	for f in /bin/busybox $(ldd /bin/busybox 2>/dev/null | grep -oE '/[^ ]*\.so[^ ]*' | sort -u) "$0"; do
+		sz=$(stat -L -c %s "$f" 2>&3) && [ -n "$sz" ] && bytes=$((bytes + sz))
+	done
+	echo $(((bytes + 1023) / 1024))
 }
 
 # Members of the archive this run does not unpack, as tar options.

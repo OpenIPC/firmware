@@ -2237,6 +2237,88 @@ else
     bad "ubifs: hand-off staging, log='$(cat "$SB/tmp/flash.log")' init='$(cat "$SB/ram/sbin/init" 2>&1)' out='$OUT'"
 fi
 
+# --- #2536: the unpack, and the RAM root after it, measured against memory
+# they can actually have. A gk7205v500 built without CONFIG_SHMEM has ramfs
+# behind every tmpfs, and ramfs pages cannot be placed in CMA: it passed this
+# check with 99 MB "available", 98 MB of it free CMA, and was OOM-killed at the
+# hand-off with nothing written.
+REAL_STAT=$(command -v stat)
+# set_meminfo_cma <MemAvailable> <CmaFree>
+set_meminfo_cma() {
+    printf 'MemTotal:       %8d kB\nMemFree:        %8d kB\nMemAvailable:   %8d kB\nCmaTotal:       %8d kB\nCmaFree:        %8d kB\n' \
+        131072 "$1" "$1" 98304 "$2" > "$SB/proc/meminfo"
+}
+# What statfs says of /tmp on that kernel; every other stat call is the real one.
+stub_ramfs_tmp() {
+    stub stat "[ \"\$1 \$2 \$3\" = '-f -c %t' ] && { echo 858458f6; exit 0; }; exec $REAL_STAT \"\$@\""
+}
+
+reset_env; ubi_setup ubifs
+make_archive "$UFIT" "$UFS"
+STUB_PIVOT_RC=0
+stub_ramfs_tmp
+set_meminfo_cma 99000 98900
+run -z -f --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && nothing_ubi && ! handed_off \
+    && printf '%s' "$OUT" | grep -q "cannot use the 98900 KB free in the"; then
+    ok "ramfs /tmp: free CMA is not counted, so the unpack is refused before the hand-off"
+else
+    bad "ramfs /tmp + CMA -> expected a refusal, rc=$RC out='$OUT'"
+fi
+
+# The same numbers with a real tmpfs, whose pages CMA does take: no refusal.
+rm -f "$SB/bin/stat"
+reset_env; ubi_setup ubifs
+make_archive "$UFIT" "$UFS"
+STUB_PIVOT_RC=0
+set_meminfo_cma 99000 98900
+run -z -f --archive="$SB/tmp/fw.tgz"
+if handed_off && ! printf '%s' "$OUT" | grep -q "Not enough memory"; then
+    ok "...a real tmpfs may use that CMA, and the run hands off"
+else
+    bad "tmpfs /tmp + CMA must not be refused, rc=$RC out='$OUT'"
+fi
+
+# ...and ramfs on a kernel with no CMA changes nothing: MemAvailable is right.
+reset_env; ubi_setup ubifs
+make_archive "$UFIT" "$UFS"
+STUB_PIVOT_RC=0
+stub_ramfs_tmp
+set_meminfo 99000
+run -z -f --archive="$SB/tmp/fw.tgz"
+rm -f "$SB/bin/stat"
+if handed_off && ! printf '%s' "$OUT" | grep -q "Not enough memory"; then
+    ok "...nor is ramfs on a kernel without CMA"
+else
+    bad "ramfs /tmp without CMA must not be refused, rc=$RC out='$OUT'"
+fi
+
+# A run that must hand PID 1 over cannot fall back to flashing in place, so the
+# RAM root it stages after the unpack is reserved too. Learn the two figures
+# from a refusal, then sit between "image + reserve" and "+ the RAM root".
+reset_env; ubi_setup ubifs
+make_archive "$UFIT" "$UFS"
+set_meminfo 1
+run -z -f --archive="$SB/tmp/fw.tgz"
+n=$(printf '%s' "$OUT" | sed -n 's/.*KB -- \([0-9]*\) KB of image.*/\1/p' | head -1)
+s=$(printf '%s' "$OUT" | sed -n 's/.* and \([0-9]*\) KB for the RAM root.*/\1/p' | head -1)
+if [ -n "$n" ] && [ -n "$s" ] && [ "$s" -gt 1 ]; then
+    reset_env; ubi_setup ubifs
+    make_archive "$UFIT" "$UFS"
+    STUB_PIVOT_RC=0
+    set_meminfo $((n + 512 + s / 2))
+    run -z -f --archive="$SB/tmp/fw.tgz"
+    if [ "$RC" -ne 0 ] && nothing_ubi && ! handed_off \
+        && printf '%s' "$OUT" | grep -q "KB for the RAM root"; then
+        ok "a hand-off run reserves the RAM root it stages after the unpack"
+    else
+        bad "image+reserve fits but the RAM root does not -> expected a refusal, rc=$RC out='$OUT'"
+    fi
+else
+    bad "could not read the image and RAM-root figures from the refusal, n='$n' s='$s' out='$OUT'"
+fi
+set_meminfo
+
 # --- stage 2, as PID 1: release the old root, copy the settings out, rebuild
 # the volumes around the new image, put the settings back, reboot
 S2="_ramfs_phase=1 _handoff=1 ubi_layout=ubifs kernel_device=/rom/boot/uImage ubi_rootfs_dev=/dev/ubi0_0 ubi_data_dev=/dev/ubi0_1 model=gk7205v500 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1 overlay_kb=64"
