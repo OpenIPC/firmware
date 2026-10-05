@@ -2414,10 +2414,15 @@ Usage: $0 [options]
 Where:
   -k                    Update kernel from online repository.
   -r                    Update rootfs from online repository.
+                        On a UBIFS NAND camera the kernel is inside the
+                        rootfs, so -k and -r both write rootfs.ubifs.
       --url=[URL]       Custom URL to update from (.tgz format).
       --archive=[FILE]  Custom archive to update from (.tgz format).
-      --kernel=[FILE]   Update kernel from file (uImage format).
-      --rootfs=[FILE]   Update rootfs from file (squashfs format).
+      --kernel=[FILE]   Update kernel from file (uImage or FIT; zboot.img on
+                        Rockchip). Not on a UBIFS NAND camera: pass the
+                        rootfs.ubifs that carries the kernel with --rootfs.
+      --rootfs=[FILE]   Update rootfs from file (squashfs; rootfs.ubifs on a
+                        UBIFS NAND camera).
       --channel=[NAME]  Update from a named channel via the manifest
                         (nightly | latest). Default URL would be used
                         otherwise.
