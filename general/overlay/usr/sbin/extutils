@@ -45,6 +45,18 @@ majestic_write_path() {
 	[ "$other" = 1 ] || echo "$wp"
 }
 
+# Whether this call works on majestic's own config, i.e. names no other file
+# with -i/-o.
+majestic_own_file() {
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			-i | --input | -o | --output) return 1 ;;
+		esac
+		shift
+	done
+	return 0
+}
+
 # The majestic processes that can safely be told to reload.
 #
 # Process existence is not readiness. S95majestic starts it with
@@ -219,8 +231,11 @@ case "$CMD" in
 		# file that is not there but takes an empty one, which majestic also
 		# reads as "all defaults", so the first `cli -s` on a fresh camera has
 		# somewhere to write and a `cli -g` answers empty for an unset key, as it
-		# does for any key the file does not name.
-		[ -e "$MAJESTIC_CFG" ] || { : > "$MAJESTIC_CFG"; } 2>/dev/null
+		# does for any key the file does not name. A call that names another
+		# file with -i/-o leaves majestic's alone.
+		if [ ! -e "$MAJESTIC_CFG" ] && majestic_own_file "$@"; then
+			{ : > "$MAJESTIC_CFG"; } 2>/dev/null
+		fi
 
 		yaml-cli -i "$MAJESTIC_CFG" "$@"
 		rc=$?

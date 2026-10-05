@@ -12,6 +12,12 @@ echo BUILD_SHA=${BUILD_SHA:-${GIT_HASH-build}} >> ${FILE}
 echo BUILD_PLATFORM=${BUILD_PLATFORM:-${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}} >> ${FILE}
 date +TIME_STAMP=%s >> ${FILE}
 
+# The image ships no majestic.yaml: majestic runs on its own defaults until a
+# setting is saved. The package stopped installing one, but an output directory
+# built before that still holds it, and Buildroot does not reinstall a package
+# whose recipe changed, so it is removed here on every build.
+rm -f ${TARGET_DIR}/etc/majestic.yaml
+
 CONF="USES_GLIBC=y|OSDRV_T30=y|OSDRV_V85X=y|LIBV4L=y|MAVLINK_ROUTER=y|RUBYFPV=y|ONYXFPV=y|WIFIBROADCAST=y|WIFIBROADCAST_NG=y|AUDIO_PROCESSING_OPENIPC=y"
 if ! grep -qP ${CONF} ${BR2_CONFIG}; then
 	rm -f ${TARGET_DIR}/usr/lib/libstdc++*
