@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 2a38a27ba4764d4e2265a6f1753ecca0ef8a773f
+HISILICON_OPENSDK_VERSION = b0fc30f3fe7feb4b8e68ad89a108edf7314b3201
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -259,10 +259,11 @@ HISILICON_OPENSDK_SENSORS_hi3519dv500 = \
 	sony_imx515/libsns_imx515
 
 # gk7205v500 builds the V4 drivers (sensor/hi3516ev200) against the XMedia
-# API. Only the sensors GK7201V200 boards carry are installed: the lite
+# API. Only the sensors this family's boards carry are installed: the lite
 # rootfs has no room for all thirty. sc2336 still comes from the osdrv.
 HISILICON_OPENSDK_SENSORS_gk7205v500 = \
 	imagedesign_mis2008/libsns_mis2008 \
+	imagedesign_mis2009/libsns_mis2009 \
 	smart_sc223a/libsns_sc223a
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
