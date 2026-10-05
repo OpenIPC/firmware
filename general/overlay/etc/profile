@@ -44,8 +44,14 @@ set_fullname() {
 	printf '127.0.1.1\t%s\n' "$name" >> /etc/hosts
 }
 
+# majestic writes only the settings that differ from its defaults, and the
+# image ships no majestic.yaml, so the file on the camera is the list of changes.
 show_config() {
-	diff -L "Majestic changes" -U 3 /rom/etc/majestic.yaml /etc/majestic.yaml
+	if [ -s /etc/majestic.yaml ]; then
+		cat /etc/majestic.yaml
+	else
+		echo "Majestic is running on its defaults"
+	fi
 }
 
 show_fullname() {

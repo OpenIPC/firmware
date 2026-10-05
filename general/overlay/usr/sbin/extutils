@@ -214,6 +214,14 @@ case "$CMD" in
 			exit 1
 		fi
 
+		# The image ships no majestic.yaml: majestic runs on its own defaults and
+		# writes the file the first time a setting is saved. yaml-cli refuses a
+		# file that is not there but takes an empty one, which majestic also
+		# reads as "all defaults", so the first `cli -s` on a fresh camera has
+		# somewhere to write and a `cli -g` answers empty for an unset key, as it
+		# does for any key the file does not name.
+		[ -e "$MAJESTIC_CFG" ] || { : > "$MAJESTIC_CFG"; } 2>/dev/null
+
 		yaml-cli -i "$MAJESTIC_CFG" "$@"
 		rc=$?
 
