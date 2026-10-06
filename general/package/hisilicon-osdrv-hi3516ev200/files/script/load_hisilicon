@@ -12,7 +12,27 @@ chipid=$(ipcinfo --chip-name)
 # Memory config
 mem_start=0x40000000 # phy mem start
 
-mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+# DDR size in MiB. OpenIPC U-Boot measures it on every boot but only setenv()s
+# totalmem, so the variable reaches fw_printenv only if someone ran saveenv
+# from its console -- an env that U-Boot wrote fresh, as the NAND layout of
+# #2537 does, never has it. The old fallback of 64 then sent a 128 MB
+# hi3516ev300 to the hisi carve-out with mem=32M: 26 MB for Linux, a third of
+# the DDR unused, and too little tmpfs for sysupgrade to unpack a NAND image.
+# The kernel's memory node carries the same measurement (U-Boot rewrites it to
+# the DDR it probed), and left alone it still holds the DTS placeholder, 512M,
+# which is no measurement, so it is not used. Same fallback as gk7205v500's
+# load_goke (#2531); 64 stays the last resort.
+dt_mem_total() {
+	local reg
+	reg=$(hexdump -v -e '1/1 "%02x"' /proc/device-tree/memory/reg 2>/dev/null)
+	# One <base size> pair of 32-bit cells.
+	[ ${#reg} -eq 16 ] || return 0
+	reg=$((0x${reg#????????} / 1048576))
+	[ "$reg" -gt 0 ] && [ "$reg" -ne 512 ] && echo $reg
+}
+
+mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d 'M')
+[ -n "$mem_total" ] || mem_total=$(dt_mem_total)
 mem_total=${mem_total:=64}
 
 # Prefer kernel cmdline mem=NM -- that's the authoritative kernel/MMZ split,

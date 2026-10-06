@@ -1,5 +1,16 @@
 #!/bin/sh
 
+# The DDR size U-Boot measured, from the kernel's memory node, for an env that
+# has no totalmem saved -- see load_hisilicon, which calls this script with the
+# same fallback; without it here, `set_allocator cma` on a 128 MB part would
+# still write mem=64M.
+dt_mem_total() {
+  local reg
+  reg=$(hexdump -v -e '1/1 "%02x"' /proc/device-tree/memory/reg 2>/dev/null)
+  [ ${#reg} -eq 16 ] || return 0
+  reg=$((0x${reg#????????} / 1048576))
+  [ "$reg" -gt 0 ] && [ "$reg" -ne 512 ] && echo ${reg}M
+}
 
 get_env() {
   bootargs=$(fw_printenv -n bootargs)
@@ -10,12 +21,13 @@ get_env() {
   # could not attach ubi0 and panicked mounting its root (#2281).
   kept=$(echo ${bootargs} | awk 'BEGIN { RS = " " } { sub(/\n$/, ""); k = $0; sub(/=.*/, "", k); if ($0 != "" && k != "mem" && k != "mmz" && k != "mmz_allocator") printf "%s ", $0 }')
   osmem=$(fw_printenv -n osmem)
-  totalmem=$(fw_printenv -n totalmem)
+  totalmem=$(fw_printenv -n totalmem 2>/dev/null)
+  [ -n "$totalmem" ] || totalmem=$(dt_mem_total)
 }
 
 calc_mmz() {
   mem_start=0x40000000
-  mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+  mem_total=$(echo "$totalmem" | tr -d 'M')
   mem_total=${mem_total:=64}
   os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
   os_mem_size=${os_mem_size:=32}

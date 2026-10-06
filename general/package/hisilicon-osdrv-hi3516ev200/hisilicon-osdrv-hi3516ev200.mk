@@ -62,6 +62,13 @@ endif
 define HISILICON_OSDRV_HI3516EV200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/sensor/config/*.ini
+	# SP2305 answers with OmniVision's id, 0x2735 at 0x02/0x03, and no register
+	# tells the two parts apart, so ipctool reports it as ov2735 -- a name this
+	# family has no profile for, and majestic stops at "No matches for 'ov2735'".
+	# The only driver here for that id is libsns_sp2305, so either detected
+	# spelling (ov2735 from the u-boot env, ov2735_i2c from majestic's own
+	# probe) has to land on its profile.
+	ln -sf sp2305_i2c_1080p.ini $(TARGET_DIR)/etc/sensors/ov2735_i2c_1080p.ini
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/WDR
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/WDR $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/sensor/config/WDR/*.ini
