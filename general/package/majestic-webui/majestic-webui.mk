@@ -15,7 +15,9 @@ MAJESTIC_WEBUI_SOURCE = majestic-webui-dist.tar.gz
 MAJESTIC_WEBUI_LICENSE = MIT
 MAJESTIC_WEBUI_LICENSE_FILES = LICENSE
 
-ifeq ($(OPENIPC_VARIANT),fpv)
+# wfbng is the wfb-ng variant's name since OpenIPC/builder renamed fpv, which
+# says what the build carries; fpv stays for builds from before the rename.
+ifneq ($(filter fpv wfbng,$(OPENIPC_VARIANT)),)
 	VERSION = FPV
 else
 	VERSION = STANDARD

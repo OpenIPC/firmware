@@ -283,7 +283,7 @@ HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 # validated for fpv so far (PRs #2090, #2091, #2093, #2094). Other
 # sensors can be re-enabled per user request once their high-fps modes
 # are checked and the rootfs has room.
-ifeq ($(OPENIPC_VARIANT),fpv)
+ifneq ($(filter fpv wfbng,$(OPENIPC_VARIANT)),)
 ifneq ($(filter $(OPENIPC_SOC_FAMILY),hi3516ev200 gk7205v200),)
 HISILICON_OPENSDK_SENSORS = \
 	sony_imx307/libsns_imx307 \
