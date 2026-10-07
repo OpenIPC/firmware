@@ -12,11 +12,41 @@ chipid=$(ipcinfo --chip-name)
 # Memory config
 mem_start=0x40000000 # phy mem start
 
-mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+# DDR size in MiB. The totalmem env var when the bootloader keeps one; a vendor
+# U-Boot does not, and the old fallback of 64 then sat below the kernel's own
+# mem= (gk7205v510 under a vendor bootk boots mem=70M), so the MMZ size came out
+# negative and no media memory could be set up (#2523). Next best is the
+# kernel's memory node: OpenIPC U-Boot rewrites it to the DDR it probed, and an
+# ATAG_MEM from any U-Boot is merged into it the same way. Left alone it still
+# holds the DTS placeholder, 512M, which is no measurement, so it is not used.
+# 64 stays the last resort it always was.
+dt_mem_total() {
+	local reg
+	reg=$(hexdump -v -e '1/1 "%02x"' /proc/device-tree/memory/reg 2>/dev/null)
+	# One <base size> pair of 32-bit cells.
+	[ ${#reg} -eq 16 ] || return 0
+	reg=$((0x${reg#????????} / 1048576))
+	[ "$reg" -gt 0 ] && [ "$reg" -ne 512 ] && echo $reg
+}
+
+mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d 'M')
+[ -n "$mem_total" ] || mem_total=$(dt_mem_total)
 mem_total=${mem_total:=64}
 
 os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
+
+# The MMZ split must match the kernel's actual mem= (set by the defcfg cmdLine),
+# else the MMZ pool overlaps kernel RAM and xm_osal init fails with
+# "Conflict MMZ ... to kernel memory". The osmem env can disagree with mem=
+# (e.g. gk7205v510 boots mem=70M while osmem=32M), so prefer the kernel value
+# (an explicit -osmem arg below still wins).
+# Only for the xmedia carve-out: with mmz_allocator=cma, mem= is the whole DDR
+# and the MMZ is a CMA zone inside it, so there is no split to derive.
+if ! grep -q "mmz_allocator=cma" /proc/cmdline; then
+	_kmem=$(grep -oE 'mem=[0-9]+M' /proc/cmdline | head -1 | tr -dc '0-9')
+	[ -n "$_kmem" ] && os_mem_size=$_kmem
+fi
 
 YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 
@@ -44,27 +74,83 @@ calc_mmz_info() {
         echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
 }
 
+# xm_osal MUST be inserted before anything that modprobes a module depending on
+# it. modules.dep has `xm_sysconfig.ko: xm_osal.ko`, so a `modprobe
+# xm_sysconfig` first pulls xm_osal in with NO parameters -- and the modprobe
+# below then finds it loaded and silently does nothing, exiting 0, so the
+# `|| report_error` never fires either. xm_osal without `mmz=` prints `error
+# parameters`, creates no memory zone, and still says `osal 1.0 init success!`.
+# xm_sys's 31.5KB scaler-coefficient allocation then fails (`malloc buffer for
+# SYS sclcoeffset fail!`), its probe fails while insmod still returns 0, and
+# xm_rgn dereferences the NULL it gets back from CMPI_GetModuleFuncById(SYS) --
+# the `RGN_Init+0x1b` NULL oops at 0x0000000c reported on a GK7202V500 in #2428,
+# after which no vendor module loads and there is no video at all.
+# CMA is the default, as on gk7205v200: Linux gets the whole DDR and the MMZ
+# is a CMA zone reserved from mmz= on the command line. A command line that
+# names no allocator yet -- a fresh install, an env from before this -- is
+# rewritten here for the next boot; this boot keeps the carve-out. To stay on
+# the carve-out, name it: mmz_allocator=xmedia in bootargs.
+#
+# Every other bootargs token is kept, in order: rebuilding bootargs from a
+# fixed list once dropped ubi.mtd and left a NAND board unbootable (#2281).
+# Keys the extras variable sets are left to it, so it is not carried twice.
+check_allocator() {
+	grep -q mmz_allocator /proc/cmdline && return 0
+	# Only where the kernel can reserve the zone: this script also loads
+	# gk7201v200, whose kernel has no CMA.
+	grep -q '^CmaTotal:' /proc/meminfo || return 0
+	local bootargs extras kept osmem totalmem mmz_start mmz_size
+	bootargs=$(fw_printenv -n bootargs)
+	[ -n "$bootargs" ] || return 0
+	extras=$(fw_printenv -n extras)
+	kept=$(echo ${bootargs} | awk -v extras="${extras}" 'BEGIN { RS = " "; n = split(extras, e, " "); for (i = 1; i <= n; i++) { k = e[i]; sub(/=.*/, "", k); skip[k] = 1 } skip["mem"] = skip["mmz"] = skip["mmz_allocator"] = 1 } { sub(/\n$/, ""); k = $0; sub(/=.*/, "", k); if ($0 != "" && !(k in skip)) printf "%s ", $0 }')
+	osmem=$(fw_printenv -n osmem | tr -d 'M'); osmem=${osmem:-32}
+	totalmem=$mem_total
+	# The next boot gives Linux all of totalmem and the MMZ the rest above
+	# osmem; with nothing left above osmem, stay on the carve-out.
+	[ "$totalmem" -gt "$osmem" ] || return 0
+	mmz_start=$(echo "$mem_start $osmem" | awk '{ printf("0x%x00000\n", $1/1024/1024 + $2) }')
+	mmz_size=$((totalmem - osmem))M
+	echo "Media memory: switching to CMA from the next boot (mem=${totalmem}M)"
+	fw_setenv bootargs mem=${totalmem}M ${kept}mmz_allocator=cma mmz=anonymous,0,${mmz_start},${mmz_size} ${extras}
+}
+
 insert_osal() {
-	calc_mmz_info
-	modprobe xm_osal mmz_allocator=xmedia mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+	check_allocator
+	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
+	if [ -n "$MMZ" ] && grep -q "mmz_allocator=cma" /proc/cmdline; then
+		modprobe xm_osal mmz_allocator=cma mmz=$MMZ || report_error
+	else
+		calc_mmz_info
+		modprobe xm_osal mmz_allocator=xmedia mmz=anonymous,0,$mmz_start,$mmz_size || report_error
+	fi
 }
 
 insert_detect() {
-	modprobe xm_sysconfig chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
+	modprobe xm_sysconfig chip=${chipid} sensors=unknown g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insmod xm_base.ko
 	modprobe xm_isp
 	modprobe xm_isp_sensor_i2c
 	modprobe xm_isp_sensor_spi
 }
 
+# The from-source build (hisilicon-opensdk) installs xm_<m>.ko, but the module
+# inside registers as open_<m>, and rmmod and modprobe -r both want the
+# registered name: `rmmod xm_vi` fails with "No such file or directory" and
+# `modprobe -r xm_vi` exits 0 with the module still in. Try the registered
+# name first, then the name as given for a build that ships the vendor's own.
+unload() {
+	rmmod -w "open_${1#xm_}" 2>/dev/null || rmmod -w "$1"
+}
+
 remove_detect() {
-	rmmod -w xm_isp_sensor_spi
-	rmmod -w xm_isp_sensor_i2c
-	rmmod -w xm_isp
-	rmmod -w xm_base
-	rmmod -w xm_osal >/dev/null 2>&1
-	rmmod -w xm_sys_config
+	unload xm_isp_sensor_spi
+	unload xm_isp_sensor_i2c
+	unload xm_isp
+	unload xm_base
+	unload xm_sysconfig
+	unload xm_osal
 }
 
 insert_audio() {
@@ -78,12 +164,12 @@ insert_audio() {
 }
 
 remove_audio() {
-	rmmod -w xm_acodec
-	rmmod -w xm_adec
-	rmmod -w xm_aenc
-	rmmod -w xm_ao
-	rmmod -w xm_ai
-	rmmod -w xm_aio
+	unload xm_acodec
+	unload xm_adec
+	unload xm_aenc
+	unload xm_ao
+	unload xm_ai
+	unload xm_aio
 	echo "remove audio"
 }
 
@@ -101,8 +187,8 @@ insert_ko() {
 	if [ "$SENSOR" == "bt656" ] || [ "$SENSOR" == "jxf23_dc" ]; then
 		YUV_TYPE0=1
 	fi
-	modprobe xm_sysconfig chip=${chipid} sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insert_osal
+	modprobe xm_sysconfig chip=${chipid} sensors=$SENSOR g_cmos_yuv_flag=$YUV_TYPE0 board=${board}
 	insmod xm_base.ko
 	insmod xm_sys.ko
 	# insmod xm_tde.ko
@@ -135,33 +221,35 @@ insert_ko() {
 remove_ko() {
 	# rmmod -w xm_wdt
 	# rmmod -w xm_pm
+	# Dependents before what they depend on: venc holds rc, and sysconfig is
+	# held by sys and mipi_rx and itself holds osal.
 	remove_audio
-	rmmod -w xm_mipi_rx
+	unload xm_mipi_rx
 	# rmmod -w xm_isp_piris
 	# rmmod -w sil9024 &> /dev/null
-	rmmod -w xm_ive
-	rmmod -w xm_rc
-	rmmod -w xm_jpege
-	rmmod -w xm_h264e
-	rmmod -w xm_h265e
-	rmmod -w xm_venc
-	rmmod -w xm_vedu
-	rmmod -w xm_chnl
+	unload xm_isp_sensor_spi
+	unload xm_isp_sensor_i2c
+	unload xm_isp_pwm 2>/dev/null
+	unload xm_ive
+	unload xm_jpege
+	unload xm_h265e
+	unload xm_h264e
+	unload xm_venc
+	unload xm_rc
+	unload xm_vedu
+	unload xm_chnl
 	# rmmod -w gfbg
 	# rmmod -w xm_vo
-	rmmod -w xm_vpss
-	rmmod -w xm_isp
-	rmmod -w xm_vi
-	rmmod -w xm_vgs
-	rmmod -w xm_rgn
+	unload xm_vpss
+	unload xm_isp
+	unload xm_vi
+	unload xm_vgs
+	unload xm_rgn
 	# rmmod -w xm_tde
-	rmmod -w xm_isp_sensor_i2c &>/dev/null
-	rmmod -w xm_isp_sensor_spi &>/dev/null
-	rmmod -w xm_isp_pwm
-	rmmod -w xm_sys
-	rmmod -w xm_base
-	rmmod -w xm_osal
-	rmmod -w xm_sys_config
+	unload xm_sys
+	unload xm_base
+	unload xm_sysconfig
+	unload xm_osal
 }
 
 load_usage() {
@@ -243,12 +331,26 @@ for arg in $@; do
 	esac
 done
 #######################parse arg end########################
+# Nothing left above the kernel's memory for the MMZ. Loading on regardless
+# leaves xm_osal without a memory zone, and the vendor modules that something
+# else then pulls in oops on it (#2428, #2523), so stop here, loudly.
 if [ $os_mem_size -ge $mem_total ]; then
-	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
-	exit
+	echo "[err] os_mem[${os_mem_size}M] leaves no media memory in total_mem[${mem_total}M];" \
+		"set the DDR size: fw_setenv totalmem <MiB>M" >&2
+	exit 1
 fi
 
 #######################Action###############################
+
+# -r and -a remove the stack first, which needs a kernel that can unload
+# modules. Kernels for this family were built without CONFIG_MODULE_UNLOAD
+# before #2528, and on one of those rmmod fails on every module and -a would
+# then insmod over the ones still loaded.
+# /sys/module/<m>/refcnt only exists when unloading is supported.
+if [ $b_arg_remove -eq 1 ] && ! ls /sys/module/*/refcnt >/dev/null 2>&1; then
+	echo "[err] this kernel cannot unload modules: -r/-a are unavailable, reboot to reload" >&2
+	exit 1
+fi
 
 if [ $# -lt 1 ]; then
 	load_usage
@@ -256,6 +358,16 @@ if [ $# -lt 1 ]; then
 fi
 
 if [ $b_arg_insmod -eq 1 ]; then
+	# A failed probe used to be stored as sensor=unknown, and rcS exports the
+	# stored value into SENSOR before this ever runs -- so an already-latched
+	# camera arrives here with SENSOR=unknown, takes the "set manually" branch
+	# below, and never probes again however the real fault is fixed. Treat it
+	# as unset and drop it from the environment so this boot re-detects. #2428.
+	if [ "$SENSOR" = "unknown" ]; then
+		SENSOR=
+		fw_setenv sensor
+	fi
+
 	if [ -n "$SENSOR" ]; then
 		logger -s -p daemon.info -t goke "SENSOR: ${SENSOR}"
 	else
@@ -268,7 +380,15 @@ if [ $b_arg_insmod -eq 1 ]; then
 			export SENSOR=${SENSOR_DETECT:=unknown}
 			remove_detect
 			logger -s -p daemon.info -t goke "Get data from ipcinfo and set SENSOR as ${SENSOR}"
-			fw_setenv sensor $SENSOR && logger -s -p daemon.info -t goke "Writing ${SENSOR} to U-Boot ENV"
+			# Do not persist a failed detection. The fw_printenv branch above wins
+			# whenever `sensor` exists, so writing "unknown" here latches the camera
+			# into "SENSOR is not detected, aborting..." for good -- detection never
+			# runs again and nothing says why. Seen on a GK7202V500 in #2428.
+			# load_ingenic has always cleared the variable instead of storing the
+			# miss; this is the same behaviour, reached by not writing at all.
+			if [ "$SENSOR" != "unknown" ]; then
+				fw_setenv sensor $SENSOR && logger -s -p daemon.info -t goke "Writing ${SENSOR} to U-Boot ENV"
+			fi
 		fi
 	fi
 fi

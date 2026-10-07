@@ -1,0 +1,60 @@
+name: Developer / maintainer technical report
+description: A tracked investigation, a defect found in the tree, a CI or build problem.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form exists so that the other five do not have to fit everything.
+        It asks for a body and nothing else: a report that already knows which
+        file is wrong does not need a hardware questionnaire. You do not need
+        write access to use it - that is the point of it.
+
+        If you are reporting a problem with a camera rather than with the tree,
+        one of the other forms will get you an answer faster.
+
+  - type: textarea
+    id: body
+    attributes:
+      label: Report
+      description: >-
+        Whatever shape the problem has. If it is a defect, naming the file and
+        the mechanism is worth more than any template field.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: soc_vendor
+    attributes:
+      label: SoC vendor, if it is specific to one
+      options:
+        - Not SoC specific
+        - HiSilicon
+        - Goke
+        - SigmaStar
+        - Ingenic
+        - Xiongmai
+        - Fullhan
+        - Novatek
+        - Anyka
+        - Rockchip
+        - Ambarella
+        - GrainMedia
+        - Allwinner
+        - TI
+    validations:
+      required: false
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Logs, measurements, selector output, a self-test run.
+      render: shell
+
+  - type: upload
+    id: attachments
+    attributes:
+      label: Attachments
+    validations:
+      required: false
+      accept: ".log,.txt,.json,.csv,.zip,.gz,.png,.jpg,.jpeg,.webp"

@@ -1,0 +1,47 @@
+# CA operators whose roots a lite image keeps (#2508). filter-ca-bundle.py
+# keeps every root in overlay/etc/ssl/certs/ca-certificates.crt whose subject
+# O= starts with one of these lines, and drops the rest. Ultimate and every
+# other variant ship Mozilla's whole store.
+#
+# Names rather than fingerprints, so a Mozilla refresh (#2501) flows through:
+# a new root from a kept operator is kept without anyone touching this file.
+# An entry that matches nothing fails the build -- it means a refresh renamed
+# or dropped that operator, and on the ISRG or USERTrust line that is sysupgrade
+# losing GitHub.
+#
+# 53 of 121 roots, 42 KB of xz where the full store is 103 KB. Each line names
+# what was verified to chain to it on 2026-10-03; the rest are kept because
+# they issue for a large share of public sites.
+#
+# A camera that needs a dropped root can append its PEM to
+# /etc/ssl/certs/ca-certificates.crt. That copy lives on the overlay and
+# shadows every later refresh of the image's bundle until it is removed, and
+# a root mbedTLS cannot parse stops majestic at startup.
+
+# openipc.org, openipc.github.io, openipc.cloud, raw/objects/release-assets.
+# githubusercontent.com (sysupgrade), Let's Encrypt ACME (uacme), ntfy.sh,
+# hooks.slack.com, test.mosquitto.org -- and every Let's Encrypt site.
+Internet Security Research Group
+# github.com, api.github.com, codeload.github.com (sysupgrade); api.openweathermap.org
+The USERTRUST Network
+Sectigo
+COMODO CA
+# api.telegram.org
+GoDaddy.com
+Starfield Technologies
+# openipc.s3-eu-west-1.amazonaws.com, broker.hivemq.com
+Amazon
+# platform-api.max.ru, botapi.max.ru (Max)
+Hellenic Academic and Research Institutions
+# discord.com, google.com, cloud-api.yandex.net, webdav.yandex.ru
+GlobalSign
+Google Trust Services
+# api.pushover.net
+DigiCert
+QuoVadis
+Microsoft Corporation
+IdenTrust
+Certainly
+SSL Corporation
+Buypass
+Actalis

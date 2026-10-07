@@ -165,6 +165,16 @@ else
 endif
 else
 ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3516cv6xx")
+# The cv610 u-boot boots from a fixed table: 2048K(kernel) read whole by
+# `sf read ${kernaddr} ${kernsize}`, then 5120K(rootfs) at a fixed offset. The
+# combined firmware.bin hides both bounds, so on the 8 MiB part measure the two
+# halves against their slots here, where a PR sees it. 16 MiB is left on the
+# whole-blob figure: its kernel already overruns 2048K on master, and that is a
+# u-boot table question, not one a size check here can settle.
+ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
+	@$(call CHECK_SIZE,fitImage,2048)
+	@$(call CHECK_SIZE,rootfs.squashfs,5120)
+endif
 	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
 else ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3519dv500")
 	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
@@ -183,6 +193,18 @@ endif
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
 ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"rockchip" "sigmastar"),)
 	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
+else ifneq ($(wildcard $(PWD)/br-ext-chip-$(subst ",,$(BR2_OPENIPC_SOC_VENDOR))/board/$(subst ",,$(BR2_OPENIPC_SOC_FAMILY))/nand-fit.its),)
+# FIT NAND (board/<family>/nand-fit.its): the kernel lives inside the UBIFS
+# rootfs (/boot, see external.mk), so the package carries what sysupgrade
+# writes -- rootfs.ubifs -- plus rootfs.ubi for a fresh install, and fitImage
+# as the SoC witness sysupgrade reads beside a UBIFS rootfs. No volume bounds
+# either image: sysupgrade sizes the volumes to them. rootfs.ubi is the whole
+# UBI image a fresh install loads into RAM at 0x42000000 and writes from there,
+# so it is held to the 24M the installer stages (openipc.org's 0x1800000),
+# which still clears the relocated U-Boot at the top of a 64M part
+# (hi3516ev200).
+	@$(call CHECK_SIZE,rootfs.ubi,24576)
+	@$(call REPACK_NAND_FIT)
 else
 	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand)
 endif
@@ -296,9 +318,30 @@ define REPACK_FIRMWARE
 	$(if $(2),cd $(TARGET)/images && if test -e $(2); then mv -f $(2) $(2).$(BR2_OPENIPC_SOC_MODEL); fi)
 	$(if $(1),cd $(TARGET)/images && md5sum $(1).$(BR2_OPENIPC_SOC_MODEL) > $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum)
 	$(if $(2),cd $(TARGET)/images && md5sum $(2).$(BR2_OPENIPC_SOC_MODEL) > $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum)
-	$(if $(1),$(eval KERNEL = $(1).$(BR2_OPENIPC_SOC_MODEL) $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval KERNEL =))
-	$(if $(2),$(eval ROOTFS = $(2).$(BR2_OPENIPC_SOC_MODEL) $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval ROOTFS =))
+	$(if $(1),$(eval KERNEL = $(1).$(BR2_OPENIPC_SOC_MODEL)),$(eval KERNEL =))
+	$(if $(2),$(eval ROOTFS = $(2).$(BR2_OPENIPC_SOC_MODEL)),$(eval ROOTFS =))
+	$(if $(1),$(eval KERNEL_MD5 = $(1).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval KERNEL_MD5 =))
+	$(if $(2),$(eval ROOTFS_MD5 = $(2).$(BR2_OPENIPC_SOC_MODEL).md5sum),$(eval ROOTFS_MD5 =))
 	$(eval ARCHIVE = openipc.$(BR2_OPENIPC_SOC_MODEL)-$(3)-$(BR2_OPENIPC_VARIANT).tgz)
-	cd $(TARGET)/images && tar -czf $(ARCHIVE) $(KERNEL) $(ROOTFS)
+	# Checksums first, so an unpack that runs out of room in /tmp on a 32 MB
+	# camera loses the IMAGE and keeps the .md5sum that convicts it. The other
+	# order loses the checksum and leaves a short image that sysupgrade's
+	# `md5sum -c *.md5sum` then cannot see at all.
+	cd $(TARGET)/images && tar -czf $(ARCHIVE) $(KERNEL_MD5) $(ROOTFS_MD5) $(KERNEL) $(ROOTFS)
+	rm -f $(TARGET)/images/*.md5sum
+endef
+
+# The FIT NAND package: three images, so not REPACK_FIRMWARE's two. Copies
+# rather than renames -- rootfs.ubifs stays where buildroot left it, and the
+# NOR package built from the same tree does not share any of these names.
+NAND_FIT_IMAGES = fitImage rootfs.ubifs rootfs.ubi
+define REPACK_NAND_FIT
+	cd $(TARGET)/images && for f in $(NAND_FIT_IMAGES); do \
+		cp -f $$f $$f.$(BR2_OPENIPC_SOC_MODEL) && \
+		md5sum $$f.$(BR2_OPENIPC_SOC_MODEL) > $$f.$(BR2_OPENIPC_SOC_MODEL).md5sum || exit 1; done
+	# Checksums first, as in REPACK_FIRMWARE.
+	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-nand-$(BR2_OPENIPC_VARIANT).tgz \
+		$(foreach f,$(NAND_FIT_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL).md5sum) \
+		$(foreach f,$(NAND_FIT_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL))
 	rm -f $(TARGET)/images/*.md5sum
 endef

@@ -1,0 +1,135 @@
+#!/bin/sh
+
+read_subshell_pid() {
+	IFS=' ' read -r subshell_pid _ < /proc/self/stat
+}
+
+# The calling script must set $prog before using the logging functions below.
+log_message() {
+	logger -p "$1" -t "$prog" "$2"
+}
+
+log_warning() {
+	log_message daemon.warn "$1"
+}
+
+log_info() {
+	log_message daemon.info "$1"
+}
+
+is_priority() {
+	case "${1%%.*}" in
+		auth|authpriv|cron|daemon|ftp|kern|lpr|mail|mark|news|security|syslog|user|uucp|local0|local1|local2|local3|local4|local5|local6|local7)
+			case "${1#*.}" in
+				alert|crit|debug|emerg|err|error|info|none|notice|panic|warn|warning)
+					return 0
+					;;
+			esac
+			;;
+	esac
+
+	return 1
+}
+
+run_cmd() {
+	local run_cmd_msg="$1"
+	local run_cmd_var="$2"
+	shift 2
+
+	local run_cmd_fatal
+
+	case "$1" in
+		true|false)
+			run_cmd_fatal="$1"
+			shift
+			;;
+		*)
+			run_cmd_fatal=true
+			;;
+	esac
+
+	local run_cmd_priority
+
+	if is_priority "$1"; then
+		run_cmd_priority="$1"
+		shift
+	else
+		if [ "$run_cmd_fatal" = true ]; then
+			run_cmd_priority=daemon.err
+		else
+			run_cmd_priority=daemon.warning
+		fi
+	fi
+
+	local run_cmd_output
+	run_cmd_output=$("$@" 2>&1)
+	local run_cmd_rc=$?
+
+	if [ "$run_cmd_rc" -ne 0 ]; then
+		local subshell_pid
+		read_subshell_pid
+		local prog="${0##*/}[$subshell_pid]"
+
+		if [ -n "$run_cmd_msg" ]; then
+			log_message "$run_cmd_priority" "$run_cmd_msg"
+		fi
+
+		local symbol
+		[ -z "$run_cmd_output" ] && symbol="." || symbol=":"
+		log_message "$run_cmd_priority" "Command \`$*\` finished with code $run_cmd_rc$symbol"
+
+		if [ -n "$run_cmd_output" ]; then
+			printf '%s\n' "$run_cmd_output" |
+			while IFS= read -r line; do
+				log_message "$run_cmd_priority" "$line"
+			done
+
+			echo "$run_cmd_output" >&2
+		fi
+
+		if [ "$run_cmd_fatal" = false ]; then
+			return "$run_cmd_rc"
+		fi
+
+		exit "$run_cmd_rc"
+	fi
+
+	if [ -n "$run_cmd_var" ]; then
+		eval "$run_cmd_var=\"\$run_cmd_output\""
+	elif [ -n "$run_cmd_output" ]; then
+		echo "$run_cmd_output"
+	fi
+}
+
+kill_pid_file() {
+	local signal
+
+	local run_cmd_priority
+
+	if is_priority "$1"; then
+		run_cmd_priority="$1"
+		shift
+	else
+		run_cmd_priority=daemon.err
+	fi
+
+	if [ "${1:0:1}" = "-" ]; then
+		signal="$1"
+		shift
+	else
+		signal=-15
+	fi
+
+	[ -f "$1" ] || return 251
+	local pid=$(cat "$1" 2>/dev/null)
+	[ -n "$pid" ] && [ -d "/proc/$pid" ] || return 252
+	[ "$(cat "/proc/$pid/comm" 2>/dev/null)" = "$2" ] || return 253
+	run_cmd "" "" false "$run_cmd_priority" kill "$signal" "$pid" &&
+		run_cmd "" "" false "$run_cmd_priority" rm -f "$1"
+}
+
+case "${0##*/}" in
+	kill_pid_file)
+		kill_pid_file "$@"
+		;;
+esac

@@ -1,0 +1,74 @@
+From: nzzane <12163646+nzzane@users.noreply.github.com>
+Subject: [PATCH] mbedtls: build against mbedtls 2.25
+
+The mbedtls-openipc package is 2.25.0. Three things the backend expects
+from newer releases:
+
+- MBEDTLS_ERROR_ADD() appeared in 2.26; add the trivial definition.
+- mbedtls_mpi_random() appeared in 2.27; without it crypto_bignum_rand()
+  failed and SAE could not build its commit ("Unable to get randomness
+  for own scalar"). Do the same rejection sampling in [0, m) locally.
+- wpa_supplicant 2.11 calls crypto_rsa_key_read() for imsi_privacy_cert
+  under IEEE8021X_EAPOL, so the RSA helpers must be built for a station
+  too, not only for hostapd/EAP-SIM.
+
+--- a/src/crypto/crypto_mbedtls.c	2026-09-19 11:40:52.491615778 +1200
++++ b/src/crypto/crypto_mbedtls.c	2026-09-19 11:30:17.280352217 +1200
+@@ -205,8 +205,9 @@
+ 
+ #if defined(EAP_SIM) || defined(EAP_SIM_DYNAMIC) || defined(EAP_SERVER_SIM) \
+  || defined(EAP_AKA) || defined(EAP_AKA_DYNAMIC) || defined(EAP_SERVER_AKA) \
+- || defined(CONFIG_AP) || defined(HOSTAPD)
+-/* CONFIG_EAP_SIM=y CONFIG_EAP_AKA=y CONFIG_AP=y HOSTAPD */
++ || defined(CONFIG_AP) || defined(HOSTAPD) || defined(IEEE8021X_EAPOL)
++/* CONFIG_EAP_SIM=y CONFIG_EAP_AKA=y CONFIG_AP=y HOSTAPD; wpa_supplicant.c uses
++ * crypto_rsa_key_read() for imsi_privacy_cert under IEEE8021X_EAPOL */
+ #if defined(CRYPTO_RSA_OAEP_SHA256)
+ #define CRYPTO_MBEDTLS_CRYPTO_RSA
+ #endif
+@@ -1483,10 +1484,31 @@
+ 				  mbedtls_ctr_drbg_random,
+ 				  crypto_mbedtls_ctr_drbg()) ? -1 : 0;
+   #else
+-	/* (needed by EAP_PWD, SAE, DPP) */
+-	wpa_printf(MSG_ERROR,
+-	           "mbedtls 2.27.0 or later required for mbedtls_mpi_random()");
+-	return -1;
++	/* mbedtls < 2.27: uniform value in [0, m) by rejection sampling, the
++	 * way mbedtls_mpi_random() does it (needed by EAP_PWD, SAE, DPP).
++	 * The result is the secret SAE scalar, so compare in constant time
++	 * as upstream does. mbedtls_mpi_lt_mpi_ct() wants equal limb counts
++	 * and mbedtls_mpi_fill_random() resizes X to CHARS_TO_LIMBS(n_bytes),
++	 * which is never more than N->n, so growing X to N->n only pads. */
++	const mbedtls_mpi *N = (const mbedtls_mpi *)m;
++	mbedtls_mpi *X = (mbedtls_mpi *)r;
++	size_t n_bits = mbedtls_mpi_bitlen(N);
++	size_t n_bytes = (n_bits + 7) / 8;
++	unsigned lt = 0;
++	int count = 0;
++
++	if (n_bits == 0)
++		return -1;
++	do {
++		if (++count > 30 ||
++		    mbedtls_mpi_fill_random(X, n_bytes, mbedtls_ctr_drbg_random,
++					    crypto_mbedtls_ctr_drbg()) != 0 ||
++		    mbedtls_mpi_shift_r(X, 8 * n_bytes - n_bits) != 0 ||
++		    mbedtls_mpi_grow(X, N->n) != 0 ||
++		    mbedtls_mpi_lt_mpi_ct(X, N, &lt) != 0)
++			return -1;
++	} while (!lt);
++	return 0;
+   #endif
+ }
+ 
+@@ -2896,6 +2912,9 @@
+ #endif
+ 
+ #include <mbedtls/error.h>
++#ifndef MBEDTLS_ERROR_ADD /* mbedtls < 2.26 */
++#define MBEDTLS_ERROR_ADD(high, low) ((high) + (low))
++#endif
+ #include <mbedtls/oid.h>
+ static int crypto_mbedtls_pk_parse_subpubkey_compressed(mbedtls_pk_context *ctx, const u8 *der, size_t der_len)
+ {

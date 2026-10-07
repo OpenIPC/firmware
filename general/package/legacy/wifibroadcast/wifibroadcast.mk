@@ -13,7 +13,7 @@ ifeq ($(OPENIPC_SOC_FAMILY),hi3536dv100)
 	WIFIBROADCAST_UNIT = gs
 endif
 
-WIFIBROADCAST_DEPENDENCIES += libpcap libsodium iw
+WIFIBROADCAST_DEPENDENCIES += libpcap libsodium iw libevent-openipc
 
 define WIFIBROADCAST_BUILD_CMDS
 	$(MAKE) CC=$(TARGET_CC) CXX=$(TARGET_CXX) LDFLAGS=-s -C $(@D) all_bin

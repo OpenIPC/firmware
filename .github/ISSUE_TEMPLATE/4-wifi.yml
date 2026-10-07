@@ -1,0 +1,141 @@
+name: Wi-Fi or wireless adapter
+description: A Wi-Fi chip or dongle that is not recognised, not supported, or not stable.
+labels: ["category/WiFi"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The USB **VID:PID** is the field that matters most here. A chip's retail
+        name covers several different silicon parts and a driver is picked by
+        the id, not by the name printed on the module - #1972 turned entirely on
+        `0bda:f179` being an RTL8188FTV rather than the RTL8188FU the box said.
+
+        Most images ship no driver for your dongle on purpose: a driver is often
+        1.5 MB and a board may have 5120 KB of rootfs in total. Before asking
+        for a new one, check whether a package already exists in
+        [Adding a wifi driver](https://github.com/OpenIPC/wiki/blob/master/en/adding-wifi-driver.md)
+        and just needs enabling for your board.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the open **and closed** issues for this chip.
+          required: true
+        - label: >-
+            I checked the wiki's wifi-driver page to see whether a package for
+            this chip already exists.
+          required: true
+
+  - type: dropdown
+    id: soc_vendor
+    attributes:
+      label: SoC vendor
+      options:
+        - HiSilicon
+        - Goke
+        - SigmaStar
+        - Ingenic
+        - Xiongmai
+        - Fullhan
+        - Novatek
+        - Anyka
+        - Rockchip
+        - Ambarella
+        - GrainMedia
+        - Allwinner
+        - TI
+        - I don't know
+    validations:
+      required: true
+
+  - type: input
+    id: soc_model
+    attributes:
+      label: SoC model
+      placeholder: t31
+    validations:
+      required: true
+
+  - type: dropdown
+    id: wifi_attach
+    attributes:
+      label: How the Wi-Fi part is attached
+      options:
+        - External USB dongle
+        - Onboard, over USB
+        - Onboard, over SDIO
+        - I don't know
+    validations:
+      required: true
+
+  - type: input
+    id: wifi_ids
+    attributes:
+      label: "USB VID:PID, or the SDIO ids"
+      description: >-
+        From `lsusb` on the camera. If the camera cannot boot far enough to run
+        it, plug the dongle into a PC and read it there - the ids are the
+        dongle's, not the camera's.
+      placeholder: "0bda:f179"
+    validations:
+      required: true
+
+  - type: input
+    id: wifi_chip
+    attributes:
+      label: Chip marking
+      description: What is actually printed on the Wi-Fi chip, which is often not what the seller called it.
+      placeholder: RTL8188FTV, ATBM6441, AIC8800DL, MT7601U
+
+  - type: upload
+    id: wifi_photo
+    attributes:
+      label: Photo of the Wi-Fi chip
+      description: >-
+        Close up and in focus on the chip marking, plus the module from both
+        sides if it is a separate board. Sellers relabel these constantly, so
+        the photo settles what the listing cannot. Up to 10 MB.
+    validations:
+      required: true
+      accept: ".png,.jpg,.jpeg,.webp"
+
+  - type: textarea
+    id: lsusb_dmesg
+    attributes:
+      label: "`lsusb` and the kernel's view"
+      description: >-
+        Paste the output of `lsusb`, then
+        `dmesg | grep -iE 'usb|wlan|8188|8812|atbm|mt76|aic|ssv'`.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happens
+    attributes:
+      label: What happens
+      description: >-
+        No wlan0 at all, wlan0 appears but will not associate, associates and
+        then drops, throughput collapses under load. Say which, and after how
+        long.
+    validations:
+      required: true
+
+  - type: textarea
+    id: sysinfo
+    attributes:
+      label: Output of `sysinfo`
+      render: shell
+    validations:
+      required: true
+
+  - type: upload
+    id: attachments
+    attributes:
+      label: Other attachments
+      description: Full logs, `wpa_supplicant` output, board photos.
+    validations:
+      required: false
+      accept: ".log,.txt,.json,.csv,.zip,.gz,.png,.jpg,.jpeg,.webp"

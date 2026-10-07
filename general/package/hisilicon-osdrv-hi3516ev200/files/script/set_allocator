@@ -1,22 +1,33 @@
 #!/bin/sh
 
+# The DDR size U-Boot measured, from the kernel's memory node, for an env that
+# has no totalmem saved -- see load_hisilicon, which calls this script with the
+# same fallback; without it here, `set_allocator cma` on a 128 MB part would
+# still write mem=64M.
+dt_mem_total() {
+  local reg
+  reg=$(hexdump -v -e '1/1 "%02x"' /proc/device-tree/memory/reg 2>/dev/null)
+  [ ${#reg} -eq 16 ] || return 0
+  reg=$((0x${reg#????????} / 1048576))
+  [ "$reg" -gt 0 ] && [ "$reg" -ne 512 ] && echo ${reg}M
+}
 
 get_env() {
   bootargs=$(fw_printenv -n bootargs)
-  mem=$(echo ${bootargs} | awk -F '=' '$1=="mem"{print $2}' RS=' ')
-  console=$(echo ${bootargs} | awk -F '=' '$1=="console"{print $2}' RS=' ')
-  panic=$(echo ${bootargs} | awk -F '=' '$1=="panic"{print $2}' RS=' ')
-  rootfstype=$(echo ${bootargs} | awk -F '=' '$1=="rootfstype"{print $2}' RS=' ')
-  root=$(echo ${bootargs} | awk -F '=' '$1=="root"{print $2}' RS=' ')
-  init=$(echo ${bootargs} | awk -F '=' '$1=="init"{print $2}' RS=' ')
-  mtdparts=$(echo ${bootargs} | awk -F '=' '$1=="mtdparts"{print $2}' RS=' ')
+  # Everything already on the command line except the three arguments this
+  # script decides, in the order it was in. The script used to rebuild
+  # bootargs from a fixed list of keys instead, and silently dropped whatever
+  # was not on it -- ubi.mtd among them, so the next boot of a NAND/UBI board
+  # could not attach ubi0 and panicked mounting its root (#2281).
+  kept=$(echo ${bootargs} | awk 'BEGIN { RS = " " } { sub(/\n$/, ""); k = $0; sub(/=.*/, "", k); if ($0 != "" && k != "mem" && k != "mmz" && k != "mmz_allocator") printf "%s ", $0 }')
   osmem=$(fw_printenv -n osmem)
-  totalmem=$(fw_printenv -n totalmem)
+  totalmem=$(fw_printenv -n totalmem 2>/dev/null)
+  [ -n "$totalmem" ] || totalmem=$(dt_mem_total)
 }
 
 calc_mmz() {
   mem_start=0x40000000
-  mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+  mem_total=$(echo "$totalmem" | tr -d 'M')
   mem_total=${mem_total:=64}
   os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
   os_mem_size=${os_mem_size:=32}
@@ -30,7 +41,7 @@ if [[ "$1" == 'hisi' ]]; then
   echo "Allocator selected as hisi..."
   get_env
   mem=${osmem:=32M}
-  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=hisi"
+  newbootargs="mem=${mem} ${kept}mmz_allocator=hisi"
   echo ${newbootargs}
   fw_setenv bootargs ${newbootargs}
   #
@@ -39,7 +50,7 @@ elif [[ "$1" == 'cma'  ]]; then
   get_env
   calc_mmz
   mem=${totalmem:=64M}
-  newbootargs="mem=${mem} console=${console} panic=${panic} rootfstype=${rootfstype} root=${root} init=${init} mtdparts=${mtdparts} mmz_allocator=cma mmz=${mmz}"
+  newbootargs="mem=${mem} ${kept}mmz_allocator=cma mmz=${mmz}"
   fw_setenv bootargs ${newbootargs}
   echo ${newbootargs}
 else

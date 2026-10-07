@@ -159,6 +159,16 @@ insert_ko
 # SENSOR=${SENSOR:=imx307}
 #
 
+# A failed probe used to be stored as sensor=unknown, and rcS exports the
+# stored value into SENSOR before this ever runs -- so an already-latched
+# camera arrives here with SENSOR=unknown, takes the "set manually" branch
+# below, and never probes again however the real fault is fixed. Treat it
+# as unset and drop it from the environment so this boot re-detects. #2428.
+if [ "$SENSOR" = "unknown" ]; then
+	SENSOR=
+	fw_setenv sensor
+fi
+
 if [ -n "$SENSOR" ]; then
     logger -s -p daemon.info -t novatek "Manualy set SENSOR as ${SENSOR}"
 else
@@ -171,7 +181,15 @@ else
         SENSOR_DETECT=$(ipcinfo --short-sensor)
         export SENSOR=${SENSOR_DETECT:=unknown}
         logger -s -p daemon.info -t novatek "Get data from ipcinfo and set SENSOR as ${SENSOR}"
-        fw_setenv sensor $SENSOR && logger -s -p daemon.info -t novatek "Write detected ${SENSOR} to U-Boot ENV"
+        # Do not persist a failed detection. The fw_printenv branch above wins
+        # whenever `sensor` exists, so writing "unknown" here latches the camera
+        # into "SENSOR is not detected, aborting..." for good -- detection never
+        # runs again and nothing says why. Seen on a GK7202V500 in #2428.
+        # load_ingenic has always cleared the variable instead of storing the
+        # miss; this is the same behaviour, reached by not writing at all.
+        if [ "$SENSOR" != "unknown" ]; then
+        	fw_setenv sensor $SENSOR && logger -s -p daemon.info -t novatek "Write detected ${SENSOR} to U-Boot ENV"
+        fi
     fi
 fi
 

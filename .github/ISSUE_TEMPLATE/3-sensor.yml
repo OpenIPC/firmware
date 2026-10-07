@@ -1,0 +1,165 @@
+name: "Sensor: no image, a wrong image, or a sensor we do not support"
+description: The camera boots but the picture is missing, broken, or the sensor is not recognised.
+labels: ["category/Sensor"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read the sensor's part number off the die under a bright light and a
+        magnifier - the wiki has close-up photos to compare against in
+        [Visual sensor identification](https://github.com/OpenIPC/wiki/blob/master/en/visual_sensor_identification.md).
+        A guess here sends the whole investigation the wrong way.
+
+        Check [Supported sensors per SoC](https://github.com/OpenIPC/wiki/blob/master/en/guide-supported-sensors.md)
+        first. If the sensor is listed for your SoC but not working, that is a
+        bug and worth reporting. If it is not listed, this is a support request -
+        say so, and the vendor dump below is the single most useful thing you
+        can attach.
+
+        Note that OpenIPC does not port drivers for hardware nobody on the team
+        has. A dump that contains a working vendor driver is what makes a port
+        possible for someone who does have the board.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the open **and closed** issues for this sensor.
+          required: true
+        - label: I checked the supported-sensors list for my SoC.
+          required: true
+
+  - type: dropdown
+    id: soc_vendor
+    attributes:
+      label: SoC vendor
+      options:
+        - HiSilicon
+        - Goke
+        - SigmaStar
+        - Ingenic
+        - Xiongmai
+        - Fullhan
+        - Novatek
+        - Anyka
+        - Rockchip
+        - Ambarella
+        - GrainMedia
+        - Allwinner
+        - TI
+        - I don't know
+    validations:
+      required: true
+
+  - type: input
+    id: soc_model
+    attributes:
+      label: SoC model
+      placeholder: ssc377d
+    validations:
+      required: true
+
+  - type: input
+    id: sensor_model
+    attributes:
+      label: Sensor model
+      description: As marked on the die. If the marking is unreadable, say so here and lean on the photo.
+      placeholder: IMX335, SC4336P, GC2053, OS04D10
+    validations:
+      required: true
+
+  - type: upload
+    id: sensor_photo
+    attributes:
+      label: Close-up photo of the sensor
+      description: >-
+        The die marking, in focus and readable. This is the one upload this
+        form insists on: every other field can be re-asked in a comment, but
+        nobody can re-read a sensor they cannot see. Up to 10 MB.
+    validations:
+      required: true
+      accept: ".png,.jpg,.jpeg,.webp"
+
+  - type: dropdown
+    id: sensor_bus
+    attributes:
+      label: How the sensor is wired
+      options:
+        - MIPI
+        - DVP / parallel
+        - LVDS
+        - I don't know
+    validations:
+      required: true
+
+  - type: textarea
+    id: sensor_detect
+    attributes:
+      label: What the camera thinks the sensor is
+      description: >-
+        Output of `ipcinfo --short-sensor` and `ipcinfo --long-sensor`, plus
+        `fw_printenv -n sensor`. A detected value that disagrees with the
+        recorded one is itself the finding.
+      render: shell
+
+  - type: textarea
+    id: what_happens
+    attributes:
+      label: What the picture does
+      description: >-
+        Black frame, green frame, colour artefacts, nothing at all, works then
+        stops. Say which, and what you see in the WebUI versus over RTSP.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Startup log
+      description: >-
+        `logread | tail -200` after a fresh boot. The streamer's and the
+        driver's complaints about a sensor both land here.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: sysinfo
+    attributes:
+      label: Output of `sysinfo`
+      render: shell
+    validations:
+      required: true
+
+  - type: upload
+    id: vendor_dump
+    attributes:
+      label: Vendor firmware dump
+      description: >-
+        If the stock firmware drove this sensor, its dump contains the driver
+        and the register table that make it work, and that is what a port is
+        built from.
+
+        **A dump is a credential store** -- root password hash, the Wi-Fi
+        credentials the vendor firmware last used, the device key, the serial
+        and the MAC. Attaching it publishes all of that permanently. Change any
+        Wi-Fi password the camera knew first, or say in a comment that a dump is
+        available on request and a maintainer will arrange a private handover.
+
+        **Compress it** -- `.bin` and `.tar.gz` are both rejected here; use
+        `.zip` or `.gz`, 25 MB cap.
+        [Backing up your stock firmware](https://github.com/OpenIPC/wiki/blob/master/en/backup-stock-firmware.md)
+        has the procedure.
+    validations:
+      required: false
+      accept: ".zip,.gz"
+
+  - type: upload
+    id: attachments
+    attributes:
+      label: Other attachments
+      description: Board photos, full logs, a frame showing the problem.
+    validations:
+      required: false
+      accept: ".log,.txt,.json,.csv,.zip,.gz,.png,.jpg,.jpeg,.webp"

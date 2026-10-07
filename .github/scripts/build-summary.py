@@ -114,6 +114,15 @@ GRAMMARS = [
     ("headroom",
      re.compile(r"^(?P<board>\S+): (?P<image>\S+) has (?P<left>\d+)KB left of (?P<cap>\d+)KB$"),
      "-- headroom warning: "),
+    # echo "::warning::<board>: artifact upload failed, retrying in <s>s"
+    #
+    # Its own grammar rather than the `retry` one above, even though both
+    # describe an absorbed flake: `retry` drives the attempt COUNT, and the
+    # build ran exactly once on a board whose upload stuttered. Folding the
+    # two together would report a clean build as a second-attempt build.
+    ("upload_retry",
+     re.compile(r"^(?P<board>\S+): artifact upload failed, retrying in (?P<sleep>\d+)s$"),
+     "artifact upload failed, retrying in "),
 ]
 
 # Annotations build.yml emits that are deliberately NOT summarised: they cost a
@@ -250,6 +259,7 @@ def summarise_board(job, hits):
         "attempts": 1,
         "cause": None,
         "retry_causes": [],
+        "upload_retries": len(hits.get("upload_retry", [])),
         "headroom": [],
     }
 
@@ -398,7 +408,7 @@ def _board_list(boards, cap=8):
 def render(results, history, title, calls, notes):
     failed = [r for r in results if r["conclusion"] != "success"]
     passed = [r for r in results if r["conclusion"] == "success"]
-    flaked = [r for r in passed if r["attempts"] > 1]
+    flaked = [r for r in passed if r["attempts"] > 1 or r["upload_retries"]]
     total = len(results)
 
     out = [f"## {title}", ""]
@@ -435,8 +445,14 @@ def render(results, history, title, calls, notes):
                 "nightly red.", "",
                 "| Board | Attempts | Cause |", "|---|---:|---|"]
         for result in sorted(flaked, key=lambda r: -r["attempts"]):
-            causes = ", ".join(f"`{c}`" for c in result["retry_causes"]) or "—"
-            out.append(f"| `{result['board']}` | {result['attempts']} | {causes} |")
+            causes = [f"`{c}`" for c in result["retry_causes"]]
+            # Named, not counted: the artifact upload retries once and the
+            # build did not re-run, so this belongs beside the cause rather
+            # than in the Attempts column.
+            if result["upload_retries"]:
+                causes.append("`artifact-upload`")
+            out.append(f"| `{result['board']}` | {result['attempts']} "
+                       f"| {', '.join(causes) or '—'} |")
         out.append("")
 
     headroom = [(r["board"], image, left, cap)
@@ -479,7 +495,12 @@ def render(results, history, title, calls, notes):
 # --------------------------------------------------------------------------
 
 def _fixture_run():
-    """The 2026-08-12 shape: one cause, most of the matrix, plus a flake."""
+    """The 2026-08-12 shape: one cause, most of the matrix, plus the flakes.
+
+    Two flavours of flake, because they must not be read as one: a build the
+    retry loop absorbed, and an artifact upload that stuttered without the
+    build ever re-running.
+    """
     jobs = []
     for index in range(94):
         jobs.append({
@@ -502,6 +523,8 @@ def _fixture_run():
                                      "conclusion": "failure"}]},
         {"id": 2005, "name": "Firmware (dead01_lite)", "conclusion": "cancelled",
          "html_url": "u", "steps": []},
+        {"id": 2006, "name": "Firmware (slowup01_lite)", "conclusion": "success",
+         "html_url": "u", "steps": []},
         {"id": 9999, "name": "Publish releases", "conclusion": "success",
          "html_url": "u", "steps": []},
     ]
@@ -521,6 +544,7 @@ def _fixture_run():
     ]
     messages[2003] = ["fat01_lite: -- size exceeded by: 4KB — the image does not fit "
                       "its partition, which retrying cannot change"]
+    messages[2006] = ["slowup01_lite: artifact upload failed, retrying in 60s"]
     return jobs, messages
 
 
@@ -537,8 +561,8 @@ def self_test():
     by_board = {r["board"]: r for r in results}
 
     # 1. Every board job, and nothing else, becomes a row.
-    if len(results) != 99:
-        problems.append(f"expected 99 board rows, got {len(results)}")
+    if len(results) != 100:
+        problems.append(f"expected 100 board rows, got {len(results)}")
     if "Publish releases" in by_board:
         problems.append("a non-matrix job was counted as a board")
 
@@ -559,6 +583,17 @@ def self_test():
         problems.append(f"absorbed flake misread: {flake}")
     if flake["retry_causes"] != ["opus-1.4/downloaded"]:
         problems.append(f"repeated retry cause not deduplicated: {flake['retry_causes']}")
+
+    # 4b. An upload that stuttered is a flake too, but it is not a second
+    #     build: the board must be listed as having built once. Without this
+    #     the two retry annotations read as one bucket and a clean build gets
+    #     reported as a retried one.
+    slowup = by_board["slowup01_lite"]
+    if slowup["upload_retries"] != 1 or slowup["attempts"] != 1:
+        problems.append(f"upload retry misread: {slowup}")
+    if slowup["retry_causes"]:
+        problems.append("an upload retry was counted as a build retry: "
+                        f"{slowup['retry_causes']}")
 
     # 5. A deterministic size failure never claims to have been retried.
     fat = by_board["fat01_lite"]
@@ -604,14 +639,18 @@ def self_test():
 
     # 9. The report says the two things a reader is actually after.
     text = render(results, history, "t", 120, [])
-    for expected in ["97 of 99 boards failed", "majestic-webui-dist/target_installed",
-                     "Flakes the retry loop absorbed", "Headroom warnings",
-                     "120 API request(s)"]:
+    for expected in ["97 of 100 boards failed", "majestic-webui-dist/target_installed",
+                     "Flakes the retry loop absorbed", "`artifact-upload`",
+                     "Headroom warnings", "120 API request(s)"]:
         if expected not in text:
             problems.append(f"summary is missing {expected!r}")
     green = render([r for r in results if r["conclusion"] == "success"], [], "t", 3, [])
-    if "All 2 boards built." not in green:
+    if "All 3 boards built." not in green:
         problems.append("an all-green matrix does not say so")
+    # A green run still has to admit what it nearly was: the build flake and
+    # the upload flake both count towards that line.
+    if "2 needed a retry." not in green:
+        problems.append(f"an all-green matrix hid its absorbed flakes: {green!r}")
 
     # 10. A pull request's summary must not claim to be a nightly release.
     if report_title("schedule", "nightly-20260812-1fa881", "7") != "nightly-20260812-1fa881":

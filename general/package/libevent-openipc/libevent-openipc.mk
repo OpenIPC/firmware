@@ -80,4 +80,18 @@ endif
 
 LIBEVENT_OPENIPC_POST_INSTALL_TARGET_HOOKS += LIBEVENT_OPENIPC_DELETE_UNUSED
 
+# The toolchains carry a libevent of their own, its libevent_mbedtls linked
+# against the mbedTLS they shipped; with per-package directories it can win
+# the staging merge over this one. Take it out when this package builds one.
+ifeq ($(BR2_PACKAGE_LIBEVENT_OPENIPC),y)
+define LIBEVENT_OPENIPC_DROP_TOOLCHAIN_COPY
+	rm -rf $(STAGING_DIR)/usr/include/event2 $(STAGING_DIR)/usr/lib/cmake/libevent
+	rm -f $(STAGING_DIR)/usr/include/evdns.h $(STAGING_DIR)/usr/include/event.h \
+		$(STAGING_DIR)/usr/include/evhttp.h $(STAGING_DIR)/usr/include/evrpc.h \
+		$(STAGING_DIR)/usr/include/evutil.h $(STAGING_DIR)/usr/lib/libevent* \
+		$(STAGING_DIR)/usr/lib/pkgconfig/libevent*.pc
+endef
+TOOLCHAIN_EXTERNAL_CUSTOM_POST_INSTALL_STAGING_HOOKS += LIBEVENT_OPENIPC_DROP_TOOLCHAIN_COPY
+endif
+
 $(eval $(cmake-package))

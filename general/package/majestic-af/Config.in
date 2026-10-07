@@ -5,14 +5,16 @@ config BR2_PACKAGE_MAJESTIC_AF
 	  Out-of-core motor driver and autofocus engine for majestic, compiled
 	  from source. majestic loads /usr/lib/majestic-af.so at runtime when a
 	  motorized lens is declared and the majestic binary exports the plugin
-	  HAL seams; the contrast search, the motorized-lens UART actuator
-	  (XiongMai near-Pelco and standard Pelco-D), and the worker threads
-	  live here.
+	  HAL seams; the contrast search, the motorized-lens actuators, and the
+	  worker threads live here. Two actuator families are implemented: a UART
+	  wire for the XiongMai near-Pelco and standard Pelco-D lenses, and an
+	  MS41908M SPI stepper (isp.autofocus.actuator=ms41908) for the Hi3516A/D
+	  V100 boards whose zoom/focus lens is on SPI with no UART lens MCU.
 
-	  It is the ONLY writer on that UART, and it is now required for manual
-	  PTZ as well as autofocus: the WebUI asks majestic for a verb over its
-	  HTTP API rather than shipping its own Pelco scripts, which used to
-	  open the same tty behind the daemon's back. A camera with
+	  For the UART families it is the ONLY writer on that tty, and it is now
+	  required for manual PTZ as well as autofocus: the WebUI asks majestic
+	  for a verb over its HTTP API rather than shipping its own Pelco scripts,
+	  which used to open the same tty behind the daemon's back. A camera with
 	  ptz_control=pelco-d or pelco-xm and no driver keeps its pad but says
 	  what is missing, rather than claiming the camera has no PTZ.
 

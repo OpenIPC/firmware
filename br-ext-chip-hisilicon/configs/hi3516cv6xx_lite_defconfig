@@ -1,0 +1,100 @@
+# OpenIPC
+BR2_OPENIPC_SOC_VENDOR="hisilicon"
+BR2_OPENIPC_SOC_MODEL="hi3516cv6xx"
+BR2_OPENIPC_SOC_FAMILY="hi3516cv6xx"
+# One cv6xx image serves dies that report distinct ids (hi3516cv610,
+# hi3516cv608) via fw_printenv/ipcinfo. Upgrade identity comes from
+# BUILD_PLATFORM=hi3516cv6xx_lite; these aliases are a defensive route
+# for any image/camera that still surfaces the per-die id.
+BR2_OPENIPC_SOC_ALIASES="hi3516cv610 hi3516cv608"
+BR2_OPENIPC_VARIANT="lite"
+BR2_OPENIPC_FLASH_SIZE="8"
+# OPENIPC_MAJESTIC defaults to "lite", which is the only cv6xx majestic
+# flavor published to OpenIPC S3 — what this variant wants anyway.
+
+# Architecture
+BR2_arm=y
+BR2_cortex_a7=y
+BR2_ARM_EABI=y
+BR2_ARM_FPU_NEON_VFPV4=y
+BR2_ARM_INSTRUCTIONS_THUMB2=y
+
+# Toolchain
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
+BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/openipc/firmware/releases/download/$(OPENIPC_TOOLCHAIN).tgz"
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="arm-openipc-linux-musleabi"
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_5_10=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y
+BR2_GCC_VERSION_13_X=y
+BR2_TOOLCHAIN_EXTERNAL_CXX=y
+
+# Kernel
+BR2_LINUX_KERNEL=y
+BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
+BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/openipc/linux/archive/$(OPENIPC_KERNEL).tar.gz"
+BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
+BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/$(BR2_OPENIPC_SOC_MODEL).generic.config"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/post-image.sh"
+BR2_LINUX_KERNEL_ZIMAGE=y
+BR2_LINUX_KERNEL_XZ=y
+BR2_LINUX_KERNEL_UIMAGE_LOADADDR="0x40018000"
+BR2_LINUX_KERNEL_DTS_SUPPORT=y
+# BR2_LINUX_KERNEL_DTB_IS_SELF_BUILT is not set
+BR2_LINUX_KERNEL_INTREE_DTS_NAME="hi3516cv610-demb"
+
+# Filesystem
+BR2_PACKAGE_BUSYBOX_CONFIG="$(BR2_EXTERNAL)/package/busybox/busybox.config"
+BR2_PACKAGE_UBOOT_TOOLS=y
+# BR2_PACKAGE_IFUPDOWN_SCRIPTS is not set
+# Wireless stack omitted — openipc/linux hi3516cv6xx kernel has
+# CONFIG_WIRELESS off, so cfg80211/mac80211-dependent USB WiFi drivers
+# (mt7601u, rtl8188fu) and wpa_supplicant/wireless-tools have nothing
+# to bind to. Re-enable once the kernel config gains the wireless stack.
+BR2_TARGET_ROOTFS_CPIO=y
+BR2_TARGET_ROOTFS_SQUASHFS=y
+BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
+# 1 MiB blocks buy ~430 KiB over the 128 KiB default, measured across the
+# four sizes. The cost is decompression buffer per read on a 48 MiB part.
+BR2_TARGET_ROOTFS_SQUASHFS_BS_1024K=y
+# EXTREME_COMP is Buildroot's switch for the compressor's arch options; for
+# xz on ARM it is `-Xbcj arm,armthumb`, so mksquashfs tries the ARM branch
+# filters on each block and keeps whichever packs smaller. 52 KiB on this
+# rootfs, which is the erase block it needed. Nothing to pay at read time:
+# the kernel's xz decoder already carries XZ_DEC_ARM and XZ_DEC_ARMTHUMB.
+BR2_TARGET_ROOTFS_SQUASHFS_EXTREME_COMP=y
+
+# Packages
+BR2_PACKAGE_DROPBEAR_OPENIPC=y
+BR2_PACKAGE_HISILICON_OPENSDK=y
+BR2_PACKAGE_HISILICON_OSDRV_HI3516CV6XX=y
+BR2_PACKAGE_IPCTOOL=y
+# sysupgrade shells out to curl for the manifest probe and the release
+# download, over https. ultimate never states any of this: quirc and uacme
+# select libcurl, libwebsockets and mbedtls drag in zlib and the TLS backend.
+# lite ships none of those packages, so each has to be asked for by name --
+# without them the options below sit inside a disabled
+# `if BR2_PACKAGE_LIBCURL_OPENIPC`, curl is not built at all, and enabling
+# only the parent yields a curl linked TLS_NONE against an absent libz.
+BR2_PACKAGE_ZLIB=y
+BR2_PACKAGE_MBEDTLS_OPENIPC=y
+BR2_PACKAGE_LIBCURL_OPENIPC=y
+BR2_PACKAGE_LIBCURL_OPENIPC_MBEDTLS=y
+BR2_PACKAGE_LIBCURL_OPENIPC_CURL=y
+# BR2_PACKAGE_LIBCURL_OPENIPC_PROXY_SUPPORT is not set
+# BR2_PACKAGE_LIBCURL_OPENIPC_COOKIES_SUPPORT is not set
+# BR2_PACKAGE_LIBCURL_OPENIPC_EXTRA_PROTOCOLS_FEATURES is not set
+BR2_PACKAGE_LIBEVENT_OPENIPC=y
+BR2_PACKAGE_LIBOGG_OPENIPC=y
+BR2_PACKAGE_MAJESTIC=y
+BR2_PACKAGE_MAJESTIC_FONTS=y
+BR2_PACKAGE_MAJESTIC_WEBUI=y
+BR2_PACKAGE_OPUS_OPENIPC=y
+BR2_PACKAGE_OPUS_OPENIPC_FIXED_POINT=y
+BR2_PACKAGE_OPUS_OPENIPC_HISI_SHIM=y
+# protobuf-c is dynamically loaded by the cv6xx-flavored majestic binary
+# (libprotobuf-c.so.1 appears in DT_NEEDED but no other config selects
+# it — the vendor majestic build was linked against a private protobuf-c
+# version).
+BR2_PACKAGE_PROTOBUF_C=y
+BR2_PACKAGE_YAML_CLI=y

@@ -1,4 +1,5 @@
-# Drop whole-line comments and blank lines from a POSIX shell script.
+# Drop whole-line comments from a POSIX shell script.
+# Keep blank lines to preserve readability. See #2386.
 #
 # Comments are worth writing and worth keeping in the tree, but every byte of
 # them is also flashed to an 8MB camera. sysupgrade alone reached 52KB, 57% of
@@ -104,7 +105,7 @@ BEGIN { nd = 0; sq = 0; dq = 0; cont = 0; prev_cont = 0 }
 		next
 	}
 
-	if (/^[ \t]*$/) next
+	if (/^[ \t]*$/) { print; next }
 
 	code = code_of($0)
 	if (code ~ /^[ \t]*$/) next          # the line was only a comment

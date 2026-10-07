@@ -72,6 +72,14 @@ else
 	ok "plain and indented comment lines are dropped"
 fi
 
+# #2386: blank lines stay, so the shipped script keeps its paragraph breaks.
+printf '#!/bin/sh\necho one\n\necho two\n' > "$WORK/blank.sh"
+if [ "$(strip "$WORK/blank.sh" | wc -l)" = 4 ]; then
+	ok "blank lines survive"
+else
+	bad "a blank line was dropped"
+fi
+
 live=$(grep -c LIVE "$WORK/fixture.out")
 if [ "$live" = 6 ]; then
 	ok "heredoc bodies, multi-line strings and continuations are left alone (6/6)"

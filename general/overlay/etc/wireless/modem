@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# rndis_host always loads before usbserial: a modem that is already enumerated
+# when the generic serial driver arrives loses its RNDIS data interface to it,
+# and usb0 never appears.
 
 set_gpio() {
 	[ "$2" -eq 1 ] && gpio set $1 || gpio clear $1
@@ -23,8 +27,8 @@ fi
 # GK7205V200 Kafei with A7680C and usb0
 if [ "$1" = "a7680c-gk7205v200-kafei" ]; then
 	set_gpio 57 0
-	modprobe usbserial vendor=0x1e0e product=0x9011
 	modprobe rndis_host
+	modprobe usbserial vendor=0x1e0e product=0x9011
 	sleep 15
 	exit 0
 fi
@@ -32,8 +36,8 @@ fi
 # GK7205V200 Vixand with Quectel EC200N-CN and usb0
 if [ "$1" = "ec200n-gk7205v200-vixand" ]; then
 	set_gpio 0 0
-	modprobe usbserial vendor=0x2c7c product=0x6002
 	modprobe rndis_host
+	modprobe usbserial vendor=0x2c7c product=0x6002
 	sleep 10
 	exit 0
 fi
@@ -41,8 +45,8 @@ fi
 # T31 CamHi with Quectel EC200S-CN, EC200T-EU and usb0
 if [ "$1" = "ec200s-t31-camhi" ]; then
 	set_gpio 61 0
-	modprobe usbserial vendor=0x2c7c product=0x6026
 	modprobe rndis_host
+	modprobe usbserial vendor=0x2c7c product=0x6026
 	sleep 10
 	exit 0
 fi
@@ -50,8 +54,8 @@ fi
 # T31 CamHi with Quectel EC800G-CN and usb0
 if [ "$1" = "ec800g-t31-camhi" ]; then
 	set_gpio 61 0
-	modprobe usbserial vendor=0x2c7c product=0x904
 	modprobe rndis_host
+	modprobe usbserial vendor=0x2c7c product=0x904
 	sleep 10
 	exit 0
 fi
@@ -59,8 +63,8 @@ fi
 # T31 CamHi with Fibocom L610-CN and usb0
 if [ "$1" = "l610-t31-camhi" ]; then
 	set_gpio 61 0
-	modprobe usbserial vendor=0x1782 product=0x4d11
 	modprobe rndis_host
+	modprobe usbserial vendor=0x1782 product=0x4d11
 	sleep 10
 	echo "AT+GTRNDIS=1,2" >/dev/ttyUSB0
 	exit 0
@@ -69,8 +73,8 @@ fi
 # T31 CamHi with Fibocom L716-CN and usb0
 if [ "$1" = "l716-t31-camhi" ]; then
 	set_gpio 61 0
-	modprobe usbserial vendor=0x2cb7 product=0x0001
 	modprobe rndis_host
+	modprobe usbserial vendor=0x2cb7 product=0x0001
 	sleep 10
 	exit 0
 fi

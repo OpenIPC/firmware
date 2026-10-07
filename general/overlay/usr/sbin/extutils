@@ -45,6 +45,18 @@ majestic_write_path() {
 	[ "$other" = 1 ] || echo "$wp"
 }
 
+# Whether this call works on majestic's own config, i.e. names no other file
+# with -i/-o.
+majestic_own_file() {
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			-i | --input | -o | --output) return 1 ;;
+		esac
+		shift
+	done
+	return 0
+}
+
 # The majestic processes that can safely be told to reload.
 #
 # Process existence is not readiness. S95majestic starts it with
@@ -113,9 +125,46 @@ mac_is_own() { mac_is_valid "$1" && ! mac_is_placeholder "$1"; }
 # A locally administered unicast address: bit 1 of the first octet set, bit 0
 # clear. 02: is the lowest prefix that satisfies both, and holding it fixed
 # also makes a self-assigned address recognisable beside a real vendor OUI.
+#
+# The read is bounded because it runs at S30, ahead of everything after
+# S40network. A kernel with no entropy source yet blocks /dev/urandom until
+# its CRNG is ready: on a hi3516av100 _neo image under QEMU (no working arch
+# timer) that was 85 s, measured. -k for the reason udhcpc's ntpd call has
+# it: TERM alone bounds nothing against a process that does not act on it. A
+# camera whose store refuses the write mints again at every boot, so this is
+# paid every time, not once.
+#
+# The fallback is the address already on eth0, and only when it is locally
+# administered. Two things put one there. The kernel's own random pick, drawn
+# from its pool without waiting, is forced to the 02 prefix like a minted
+# address. An ethaddr= bootarg (openipc_ethaddr applies it to eth0; it is how
+# an NFS-root camera gets its address) is kept exactly: that is this camera's
+# address from its u-boot env, and rewriting it would persist a different one
+# for the next boot. A vendor OUI on eth0 is refused whichever way it came --
+# a u-boot default is shared fleet-wide, the placeholder being the known case,
+# and copying it is the duplicate-identity bug.
 mac_generate() {
-	generated=$(od -An -tx1 -N5 /dev/urandom | tr -d ' ' |
-		sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)$/02:\1:\2:\3:\4:\5/')
+	# The group redirect, not one on timeout: when the limit fires it is ash
+	# that reports the kill ("Terminated"), to its own stderr, and that line
+	# would land in the boot log.
+	generated=$( { timeout -k 1 3 od -An -tx1 -N5 /dev/urandom | tr -d ' ' |
+		sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\)$/02:\1:\2:\3:\4:\5/'; } 2>/dev/null)
+	if ! mac_is_own "$generated"; then
+		live=$(cat "/sys/class/net/eth0/address" 2>/dev/null)
+		bootarg=
+		for arg in $(cat /proc/cmdline 2>/dev/null); do
+			case "$arg" in ethaddr=*) bootarg=$(echo "${arg#ethaddr=}" | tr 'A-F' 'a-f') ;; esac
+		done
+		case "$live" in
+			[0-9a-f][26ae]:*)
+				if [ "$live" = "$bootarg" ]; then
+					generated=$live
+				else
+					generated=02:${live#??:}
+				fi
+				;;
+		esac
+	fi
 	# The pipeline reports sed's status, so a short read or a missing
 	# /dev/urandom comes back as success with nothing in it. That must not
 	# reach the store: `fw_setenv ethaddr ""` does not write an empty address,
@@ -175,6 +224,17 @@ case "$CMD" in
 		if [ -n "$wpath" ] && majestic_bad_path "$wpath"; then
 			echo "cli: '$wpath' is not a setting path, nothing written" >&2
 			exit 1
+		fi
+
+		# The image ships no majestic.yaml: majestic runs on its own defaults and
+		# writes the file the first time a setting is saved. yaml-cli refuses a
+		# file that is not there but takes an empty one, which majestic also
+		# reads as "all defaults", so the first `cli -s` on a fresh camera has
+		# somewhere to write and a `cli -g` answers empty for an unset key, as it
+		# does for any key the file does not name. A call that names another
+		# file with -i/-o leaves majestic's alone.
+		if [ ! -e "$MAJESTIC_CFG" ] && majestic_own_file "$@"; then
+			{ : > "$MAJESTIC_CFG"; } 2>/dev/null
 		fi
 
 		yaml-cli -i "$MAJESTIC_CFG" "$@"

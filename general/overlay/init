@@ -7,6 +7,69 @@ on_exit() {
 
 trap on_exit EXIT
 
+# True when the flash answers at the midpoint of the size the kernel believes it
+# has with the same bytes it holds at offset zero -- that is, the chip is half
+# that size and every address past its real end wraps back to the start.
+#
+# A kernel that sizes the chip wrongly puts rootfs_data partly or wholly on that
+# mirror. jffs2 then cannot mount it, and erasing it to format it erases the
+# bootloader, the environment, the kernel and the rootfs underneath the running
+# system: the camera works for this one boot and never again. The SigmaStar
+# kernels did this with any NOR part missing from their ID table, taking it for
+# 16 MB (OpenIPC/firmware#1938, #1998).
+#
+# Only reads. Partition positions come from sysfs, which the kernel fills in
+# for every partition. Where it does not, a partition is taken to follow the
+# one before it, as every OpenIPC layout has it. If anything here cannot be
+# worked out the answer is "no", which is the behaviour this replaced.
+flash_aliased() {
+	sysfs=false
+	if [ ! -d /sys/class/mtd ] && mount -t sysfs sysfs /sys 2>/dev/null; then
+		sysfs=true
+	fi
+	# "name offset size", one line per partition, in bytes.
+	geometry=$(awk 'NR > 1 {sub(":", "", $1); print $1, $2}' /proc/mtd | {
+		next=0
+		while read -r dev size; do
+			size=$((0x$size))
+			offset=$(cat /sys/class/mtd/$dev/offset 2>/dev/null)
+			[ -n "$offset" ] || offset=$next
+			echo "$dev $offset $size"
+			next=$((offset + size))
+		done
+	})
+	$sysfs && umount /sys
+
+	total=0
+	head_dev=
+	while read -r dev offset size; do
+		[ -n "$size" ] || continue
+		[ $((offset + size)) -gt $total ] && total=$((offset + size))
+		[ "$offset" -eq 0 ] && head_dev=$dev
+	done <<EOF
+$geometry
+EOF
+	half=$((total / 2))
+	[ -n "$head_dev" ] && [ $half -gt 0 ] && [ $((half % 65536)) -eq 0 ] || return 1
+
+	while read -r dev offset size; do
+		[ -n "$size" ] || continue
+		if [ $half -ge $offset ] && [ $half -lt $((offset + size)) ]; then
+			head=$(dd if=/dev/$head_dev bs=65536 count=1 2>/dev/null | md5sum)
+			mirror=$(dd if=/dev/$dev bs=65536 skip=$(((half - offset) / 65536)) count=1 2>/dev/null | md5sum)
+			# A read that failed and a block never written match anything
+			# like them, so neither can prove a mirror.
+			[ "$head" != "$(printf '' | md5sum)" ] || return 1
+			[ "$head" != "$(dd if=/dev/zero bs=65536 count=1 2>/dev/null | tr '\000' '\377' | md5sum)" ] || return 1
+			[ "$head" = "$mirror" ]
+			return
+		fi
+	done <<EOF
+$geometry
+EOF
+	return 1
+}
+
 mount -t proc proc /proc || exit 1
 grep -q overlay /proc/filesystems || exit 1
 
@@ -20,12 +83,31 @@ grep -qE 'root=[^ ]*(nfs|mmcblk|ram)' /proc/cmdline && is_flash_root=false
 grep -qE 'root=[^ ]*nfs' /proc/cmdline && is_nfs_root=true
 
 if $is_flash_root; then
-	if grep -q ubifs /proc/cmdline; then
-		mount -t ubifs ubi0:rootfs_data /overlay
+	# A UBI root -- a UBIFS rootfs, or a squashfs through ubiblock -- keeps its
+	# overlay in the rootfs_data UBI volume, as UBIFS. A ubiblock command line
+	# names no ubifs, and the jffs2 branch below would find gluebi's mtd for
+	# that volume, fail to mount jffs2 on it and erase it: the overlay and the
+	# camera's claim with it.
+	if grep -q ubifs /proc/cmdline || grep -qE 'root=/dev/ubiblock' /proc/cmdline; then
+		# Settings in RAM rather than a camera that does not boot: a volume that
+		# will not mount as UBIFS must not take PID 1 down with it.
+		if ! mount -t ubifs ubi0:rootfs_data /overlay && ! mount -t tmpfs tmpfs /overlay; then
+			echo "Cannot mount overlay."
+			exit 1
+		fi
 	else
 		mtdblkdev=$(awk -F ':' '/rootfs_data/ {print $1}' /proc/mtd | sed 's/mtd/mtdblock/')
 		mtdchrdev=$(grep 'rootfs_data' /proc/mtd | cut -d: -f1)
-		if ! mount -t jffs2 /dev/$mtdblkdev /overlay || dmesg | grep -q "jffs2.*: Magic bitmask.*not found"; then
+		# Before anything touches rootfs_data: mounting jffs2 on a mirror is
+		# already a write, since the scan queues every block it cannot parse
+		# for erasure.
+		if ! grep -q 'nand' /proc/cmdline && flash_aliased; then
+			echo "Flash is smaller than the kernel thinks: leaving it alone, settings will not persist."
+			if ! mount -t tmpfs tmpfs /overlay; then
+				echo "Cannot mount overlay."
+				exit 1
+			fi
+		elif ! mount -t jffs2 /dev/$mtdblkdev /overlay || dmesg | grep -q "jffs2.*: Magic bitmask.*not found"; then
 			mountpoint -q /overlay && umount /overlay
 			echo "Formatting flash..."
 			grep -q 'nand' /proc/cmdline || jffs2="-j"

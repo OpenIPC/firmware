@@ -1,0 +1,88 @@
+# Applies the platform:<Vendor> label from the "SoC vendor" dropdown the issue
+# forms ask for. Before the forms existed that label was set by hand, and 39 of
+# the last 300 issues carried platform:Unknown because nobody got to it -- which
+# is 13% of the tracker invisible to anyone filtering by silicon.
+#
+# Additive only. It never removes a label, so a maintainer who corrects the
+# vendor by hand is not overruled on the reporter's next edit.
+name: issue labeler
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+jobs:
+  platform-label:
+    name: platform label from the SoC dropdown
+    # Same guard the jobs in lint.yml, shell-tests.yml and build.yml carry: a
+    # clone should not spend the owner's Actions minutes relabelling their
+    # issues. There is no pull_request disjunct here because this never runs on
+    # one.
+    if: github.repository == 'OpenIPC/firmware'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // Issue forms render each field as "### <label>" followed by the
+            // value, so the dropdown is found by its heading. A reporter who
+            // used the free-form developer template has no such heading, and
+            // gets nothing -- which is correct, not a failure.
+            const VENDORS = [
+              'HiSilicon', 'Goke', 'SigmaStar', 'Ingenic', 'Xiongmai',
+              'Fullhan', 'Novatek', 'Anyka', 'Rockchip', 'Ambarella',
+              'GrainMedia', 'Allwinner', 'TI',
+            ];
+
+            // Exported shape is deliberately small: body in, label or null out.
+            // .github/scripts/lint-issue-forms.py --self-test exercises the
+            // same rules against synthetic bodies, which is how this is tested
+            // without opening throwaway issues on a public tracker.
+            function vendorLabel(body) {
+              if (!body) return null;
+              // Every match, not the first. A form renders its fields as
+              // `### <label>`, but nothing stops a reporter typing that same
+              // heading inside a free-form textarea -- and 6-dev.yml puts its
+              // Report field *before* the dropdown, so such a heading is read
+              // first and the issue gets a vendor nobody chose. An issue
+              // reporting a bug in these very forms would quote the heading,
+              // so this is not a contrived case. Bodies stay editable and this
+              // workflow also runs on `edited`, so the wrong label can arrive
+              // long after filing. Two or more matches means the body is
+              // ambiguous: label nothing and let a human decide, because a
+              // wrong platform label is worse than an absent one.
+              const matches = [...body.matchAll(/^###\s+SoC vendor\b.*$\n+([^\n]+)/gmi)];
+              if (matches.length !== 1) return null;
+              const answer = matches[0][1].trim();
+              // "_No response_" is what GitHub writes for a skipped optional
+              // field, and "Not SoC specific" is the developer form's own
+              // opt-out. Neither is an unknown platform; both mean no label.
+              if (/^_no response_$/i.test(answer)) return null;
+              if (/^not soc specific$/i.test(answer)) return null;
+              const hit = VENDORS.find(v => v.toLowerCase() === answer.toLowerCase());
+              return hit ? `platform:${hit}` : 'platform:Unknown';
+            }
+
+            const label = vendorLabel(context.payload.issue.body);
+            if (!label) {
+              core.info('no single SoC vendor field in this issue; nothing to label');
+              return;
+            }
+
+            const existing = (context.payload.issue.labels || []).map(l => l.name);
+            if (existing.some(n => n.startsWith('platform:'))) {
+              core.info(`already carries ${existing.filter(n => n.startsWith('platform:'))}; leaving it alone`);
+              return;
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: [label],
+            });
+            core.info(`applied ${label}`);

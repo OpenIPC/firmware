@@ -45,6 +45,13 @@ claimed() {
 # Mode is set before the rename because the new file carries its own, where the
 # old copy-over inherited the original's.
 #
+# The rename only protects a reader, not a power cut. The overlay is UBIFS on
+# NAND, which writes back; a rename that reaches flash before the new file's
+# data leaves /etc/passwd at 0 bytes, and nothing can log in again (#2522). So
+# the data is synced before the rename, and the rename after it, before anyone
+# is told the camera is set up. The sync after also carries the acceptance
+# record, written just before this on the claiming path.
+#
 # Failure is not fatal -- claimed() above already makes this transparent from
 # the next login on -- so every step is guarded and the stray is swept up.
 release() {
@@ -52,9 +59,10 @@ release() {
 	if awk -F: -v OFS=: -v sh="$SHELL_REAL" \
 		'$1 == "root" { $7 = sh } 1' /etc/passwd >"$tmp" 2>/dev/null &&
 		[ -s "$tmp" ]; then
-		chmod 644 "$tmp" 2>/dev/null && mv -f "$tmp" /etc/passwd 2>/dev/null
+		chmod 644 "$tmp" 2>/dev/null && sync && mv -f "$tmp" /etc/passwd 2>/dev/null
 	fi
 	rm -f "$tmp"
+	sync
 }
 
 # Already has an owner: get out of the way. A command execution is passed

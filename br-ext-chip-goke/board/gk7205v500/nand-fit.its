@@ -1,0 +1,52 @@
+/dts-v1/;
+
+/*
+ * Kernel of the gk7205v500-family NAND image: the zImage and its DTB,
+ * each hashed so U-Boot refuses a kernel that NAND has corrupted instead of
+ * booting it. Built by general/scripts/rootfs_script.sh (the "NAND FIT" step)
+ * from the kernel tree; external.mk puts it in the UBIFS rootfs as
+ * /boot/fitImage.
+ *
+ * No fdt load address: u-boot-xmedia relocates the DTB under bootm_size,
+ * inside the kernel's lowmem.
+ */
+/ {
+	/* "OpenIPC <soc>": sysupgrade's SoC check reads it (fit_soc). @SOC@ is
+	   filled in from OPENIPC_SOC_MODEL when the FIT is built. */
+	description = "OpenIPC @SOC@";
+	#address-cells = <1>;
+
+	images {
+		kernel {
+			description = "Linux";
+			data = /incbin/("zImage");
+			type = "kernel";
+			arch = "arm";
+			os = "linux";
+			compression = "none";
+			load = <0x40008000>;
+			entry = <0x40008000>;
+			hash-1 { algo = "crc32"; };
+			hash-2 { algo = "sha1"; };
+		};
+
+		fdt {
+			description = "xm720xxx-demb";
+			data = /incbin/("xm720xxx-demb.dtb");
+			type = "flat_dt";
+			arch = "arm";
+			compression = "none";
+			hash-1 { algo = "crc32"; };
+			hash-2 { algo = "sha1"; };
+		};
+	};
+
+	configurations {
+		default = "conf-1";
+		conf-1 {
+			description = "Linux + xm720xxx-demb";
+			kernel = "kernel";
+			fdt = "fdt";
+		};
+	};
+};
