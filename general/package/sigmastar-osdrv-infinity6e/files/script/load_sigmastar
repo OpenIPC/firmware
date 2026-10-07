@@ -14,7 +14,9 @@ detect_sensor() {
 	fi
 
 	SENSOR=$(ipcinfo -s)
-	if ! grep -q fpv /etc/os-release; then
+	# Not on an FPV build: fpv (renamed wfbng), apfpv, rubyfpv and waybeam
+	# detect the sensor on every boot rather than pin it.
+	if ! grep -q -E 'fpv|wfbng|waybeam' /etc/os-release; then
 		fw_setenv sensor "$SENSOR"
 	fi
 }
