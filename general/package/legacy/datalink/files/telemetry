@@ -60,7 +60,7 @@ case "$1" in
 			fi
 		fi
 	
-		if [ "$fw" = "fpv" ] || [ "$fw" = "venc" ]; then
+		if [ "$fw" = "fpv" ] || [ "$fw" = "wfbng" ] || [ "$fw" = "venc" ]; then
 			start_${unit}_telemetry
 		fi
 		;;

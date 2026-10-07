@@ -5,7 +5,9 @@
 ################################################################################
 
 RTL8733BU_OPENIPC_SITE = $(call github,openipc,realtek-wlan,$(RTL8733BU_OPENIPC_VERSION))
-ifneq ($(findstring fpv,$(OPENIPC_VARIANT)),)
+# Every FPV build: fpv/wfbng (wfb-ng), apfpv, rubyfpv, and waybeam, which
+# streams over wfb-ng too.
+ifneq ($(findstring fpv,$(OPENIPC_VARIANT))$(filter wfbng waybeam,$(OPENIPC_VARIANT)),)
 	RTL8733BU_OPENIPC_VERSION = rtl8733bu_fpv
 else
 	RTL8733BU_OPENIPC_VERSION = rtl8733bu

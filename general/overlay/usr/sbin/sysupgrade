@@ -60,7 +60,7 @@ abort_wait=${abort_wait:-5}
 # Route to firmware or builder manifest. A stock OpenIPC/firmware build
 # stamps BUILD_PLATFORM=${soc}_${variant} with variant in {lite,ultimate,
 # neo}. Anything else — a per-device override (${soc}_${variant}_${device},
-# two or more underscores) or a non-stock variant (${soc}_fpv etc.) — is
+# two or more underscores) or a non-stock variant (${soc}_wfbng etc.) — is
 # built by OpenIPC/builder. Pre-1.0.51 cameras lack BUILD_PLATFORM; fall
 # back to BUILD_OPTION (variant) alone.
 _plat=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
