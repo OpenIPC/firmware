@@ -18,6 +18,25 @@
  *
  * Step semantics (one "step" == one full 8-phase cycle) and the half-step
  * sequence are identical to general/package/gpio-motors/src/gpio-motors.c.
+ *
+ * A move from rest does not start at the delay it asks for. A stepper has a
+ * rate it can start at from standstill and a higher one it can run at once
+ * moving, and in between it misses steps: on a GK7205V510 pan/tilt head,
+ * 40-step moves started cold at 700us per micro-step lost 2-22 steps where
+ * 833us and slower lost none. So a move from rest starts at ramp_start_us
+ * and accelerates to its own delay over ramp_microsteps (constant
+ * acceleration: speed squared grows by the same amount every micro-step). A
+ * delay of ramp_start_us or longer runs flat, exactly as before.
+ *
+ * A caller that drives continuous motion as a train of short moves (the
+ * majestic-af plugin issues 2 steps per ioctl while a direction is held)
+ * must not be sent back to rest by every move. Each axis therefore keeps the
+ * coils energised for hold_ms after a move and remembers its direction and
+ * speed: a move in the same direction that starts within two micro-step
+ * periods of the last one carries on at that speed, and anything else - a
+ * reversal, a pause, released coils - ramps up again. Holding the field over
+ * the gap also stops the rotor where the last micro-step put it, rather than
+ * letting it coast on when a fast move ends.
  */
 #include <linux/delay.h>
 #include <linux/fs.h>
@@ -28,6 +47,9 @@
 #include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/uaccess.h>
+#include <linux/kernel.h>
+#include <linux/ktime.h>
+#include <linux/workqueue.h>
 
 #include "gpiostep.h"
 
@@ -43,6 +65,18 @@ MODULE_PARM_DESC(pan_gpios, "4 GPIO numbers for the pan coil");
 module_param_array(tilt_gpios, int, &n_tilt, 0444);
 MODULE_PARM_DESC(tilt_gpios, "4 GPIO numbers for the tilt coil");
 
+static int ramp_start_us = 2000;
+module_param(ramp_start_us, int, 0644);
+MODULE_PARM_DESC(ramp_start_us,
+		 "Per-micro-step delay a move from rest starts at, us (0 = no ramp)");
+static int ramp_microsteps = 64;
+module_param(ramp_microsteps, int, 0644);
+MODULE_PARM_DESC(ramp_microsteps,
+		 "Micro-steps to accelerate from ramp_start_us to a move's delay");
+static int hold_ms = 20;
+module_param(hold_ms, int, 0644);
+MODULE_PARM_DESC(hold_ms, "How long the coils stay energised after a move, ms");
+
 static const int step_seq[8][4] = {
 	{ 1, 0, 0, 0 }, { 1, 1, 0, 0 }, { 0, 1, 0, 0 }, { 0, 1, 1, 0 },
 	{ 0, 0, 1, 0 }, { 0, 0, 1, 1 }, { 0, 0, 0, 1 }, { 1, 0, 0, 1 }
@@ -53,7 +87,52 @@ static const int rev_step_seq[8][4] = {
 	{ 0, 1, 1, 0 }, { 0, 1, 0, 0 }, { 1, 1, 0, 0 }, { 1, 0, 0, 0 }
 };
 
-static DEFINE_MUTEX(gpiostep_lock);
+/* One coil and what it was last doing, under its own lock: a move on one axis
+ * must not hold up the other's coil release, so the ioctl takes each axis's
+ * lock only for that axis's part of the move. */
+struct axis {
+	struct mutex lock;
+	const int *pins;
+	bool energised;		/* field on since the last move */
+	int dir;		/* direction of the last move */
+	u64 speed2;		/* (micro-steps/s)^2 reached at its end */
+	int last_us;		/* its last micro-step delay */
+	ktime_t end;		/* when it ended */
+	struct delayed_work release;
+};
+
+static struct axis pan_axis = {
+	.lock = __MUTEX_INITIALIZER(pan_axis.lock), .pins = pan_gpios
+};
+static struct axis tilt_axis = {
+	.lock = __MUTEX_INITIALIZER(tilt_axis.lock), .pins = tilt_gpios
+};
+
+static void coil_off(struct axis *ax)
+{
+	int i;
+
+	for (i = 0; i < 4; i++)
+		gpio_set_value(ax->pins[i], 0);
+	ax->energised = false;
+	ax->dir = 0;
+}
+
+static void release_work(struct work_struct *w)
+{
+	struct axis *ax = container_of(to_delayed_work(w), struct axis, release);
+	s64 idle_ms;
+
+	mutex_lock(&ax->lock);
+	idle_ms = ktime_ms_delta(ktime_get(), ax->end);
+	if (ax->energised && idle_ms < hold_ms)
+		/* a move ran while this waited for the lock: hold on for it */
+		schedule_delayed_work(&ax->release,
+				      msecs_to_jiffies(hold_ms - idle_ms));
+	else if (ax->energised)
+		coil_off(ax);
+	mutex_unlock(&ax->lock);
+}
 
 /*
  * usleep_range() runs on hrtimers, but without CONFIG_HIGH_RES_TIMERS those
@@ -93,21 +172,79 @@ static void step_delay(int delay_us)
 	usleep_range(delay_us, delay_us + (delay_us >> 4) + 1);
 }
 
-static void axis_run(const int pins[4], int steps, int delay_us)
+/* Micro-steps per second at a delay, and back; a zero delay is "as fast as
+ * the loop goes", which no ramp can be computed towards. */
+static u64 speed_of(int delay_us)
+{
+	return delay_us > 0 ? 1000000 / delay_us : 0;
+}
+
+/* floor(sqrt(x)) over the whole u64 range: int_sqrt() takes an unsigned long,
+ * which is 32 bits here, and a fast delay's squared speed does not fit one. */
+static u32 isqrt64(u64 x)
+{
+	u64 r = 0, bit = 1ULL << 62;
+
+	while (bit > x)
+		bit >>= 2;
+	while (bit) {
+		if (x >= r + bit) {
+			x -= r + bit;
+			r = (r >> 1) + bit;
+		} else {
+			r >>= 1;
+		}
+		bit >>= 2;
+	}
+	return (u32)r;
+}
+
+static void axis_run(struct axis *ax, int steps, int delay_us)
 {
 	const int (*seq)[4] = (steps < 0) ? rev_step_seq : step_seq;
 	int remaining = abs(steps);
-	int micro, i;
+	int dir = steps < 0 ? -1 : 1;
+	u64 target2, start2, accel2, speed2;
+	bool ramp;
+	int micro, i, us;
 
 	if (remaining == 0)
 		return;
 
+	target2 = speed_of(delay_us) * speed_of(delay_us);
+	start2 = speed_of(ramp_start_us) * speed_of(ramp_start_us);
+	/* No ramp: none configured, a start rate that rounds to nothing (a
+	 * ramp_start_us over a second), a delay at or over the start's, or a
+	 * zero delay. */
+	ramp = ramp_start_us > 0 && ramp_microsteps > 0 && delay_us > 0 &&
+	       start2 > 0 && target2 > start2;
+	if (!ramp) {
+		accel2 = 0;
+		speed2 = target2;
+	} else {
+		/* At least 1, so a very long ramp is long rather than none. */
+		accel2 = max_t(u64, div_u64(target2 - start2, ramp_microsteps), 1);
+		speed2 = start2;
+		/* Still moving the same way: carry on at the speed it had. */
+		if (ax->energised && ax->dir == dir &&
+		    ktime_us_delta(ktime_get(), ax->end) <= 2 * ax->last_us)
+			speed2 = clamp(ax->speed2, start2, target2);
+	}
+
+	cancel_delayed_work(&ax->release);
+	us = delay_us;
 	micro = 0;
 	while (remaining > 0) {
 		for (i = 0; i < 4; i++)
-			gpio_set_value(pins[i], seq[micro][i]);
+			gpio_set_value(ax->pins[i], seq[micro][i]);
 
-		step_delay(delay_us);
+		if (ramp) {
+			us = (int)div_u64(1000000, isqrt64(speed2));
+			if (us < delay_us)
+				us = delay_us;
+			speed2 = min(speed2 + accel2, target2);
+		}
+		step_delay(us);
 
 		if (++micro >= 8) {
 			micro = 0;
@@ -115,9 +252,13 @@ static void axis_run(const int pins[4], int steps, int delay_us)
 		}
 	}
 
-	/* de-energise the coil when idle */
-	for (i = 0; i < 4; i++)
-		gpio_set_value(pins[i], 0);
+	ax->energised = true;
+	ax->dir = dir;
+	ax->speed2 = speed2;
+	ax->last_us = us;
+	ax->end = ktime_get();
+	/* de-energise the coil once the axis has been idle for hold_ms */
+	schedule_delayed_work(&ax->release, msecs_to_jiffies(max(hold_ms, 0)));
 }
 
 static long gpiostep_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
@@ -133,10 +274,12 @@ static long gpiostep_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 	if (m.delay_us < 0)
 		return -EINVAL;
 
-	mutex_lock(&gpiostep_lock);
-	axis_run(pan_gpios, m.pan, m.delay_us);
-	axis_run(tilt_gpios, m.tilt, m.delay_us);
-	mutex_unlock(&gpiostep_lock);
+	mutex_lock(&pan_axis.lock);
+	axis_run(&pan_axis, m.pan, m.delay_us);
+	mutex_unlock(&pan_axis.lock);
+	mutex_lock(&tilt_axis.lock);
+	axis_run(&tilt_axis, m.tilt, m.delay_us);
+	mutex_unlock(&tilt_axis.lock);
 
 	return 0;
 }
@@ -197,6 +340,9 @@ static int __init gpiostep_init(void)
 		return ret;
 	}
 
+	INIT_DELAYED_WORK(&pan_axis.release, release_work);
+	INIT_DELAYED_WORK(&tilt_axis.release, release_work);
+
 	ret = misc_register(&gpiostep_misc);
 	if (ret) {
 		free_coil(pan_gpios);
@@ -214,6 +360,10 @@ static int __init gpiostep_init(void)
 static void __exit gpiostep_exit(void)
 {
 	misc_deregister(&gpiostep_misc);
+	cancel_delayed_work_sync(&pan_axis.release);
+	cancel_delayed_work_sync(&tilt_axis.release);
+	coil_off(&pan_axis);
+	coil_off(&tilt_axis);
 	free_coil(pan_gpios);
 	free_coil(tilt_gpios);
 }
