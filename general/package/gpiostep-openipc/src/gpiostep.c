@@ -6,10 +6,10 @@
  * on Goke GK7205V510 cameras (model NC-IPTC2200_DL): two 4-wire stepper coils
  * driven over GPIO. The stepping runs entirely in kernel context with direct
  * gpio_set_value(), which avoids the syscall traffic of the userspace
- * gpio-motors tool. Timing granularity, however, is still bounded by the
- * tick on kernels without CONFIG_HIGH_RES_TIMERS - which is every kernel
- * that ships this package - so sub-tick delays busy-wait between scheduler
- * yields (see step_delay()).
+ * gpio-motors tool. Timing granularity depends on the kernel: with
+ * CONFIG_HIGH_RES_TIMERS (gk7205v500) every delay is a precise sleep; without
+ * it a sleep rounds up to the tick, so sub-tick delays busy-wait between
+ * scheduler yields (see step_delay()).
  *
  * Control is via a misc char device /dev/motorDev and a single ioctl. The pin
  * map defaults to the GK7205V510 layout and is overridable with module params:
@@ -58,10 +58,10 @@ static DEFINE_MUTEX(gpiostep_lock);
 /*
  * usleep_range() runs on hrtimers, but without CONFIG_HIGH_RES_TIMERS those
  * expire with jiffy granularity, so a sub-tick sleep rounds up to the next
- * tick (10ms at HZ=100) exactly like a userspace usleep - and every defconfig
- * that ships this package builds such a kernel. Busy-wait instead while the
- * requested delay is under a quarter tick, where that rounding would at least
- * quadruple the step period; from a quarter tick up, sleep and accept the
+ * tick (10ms at HZ=100) exactly like a userspace usleep. On such a kernel,
+ * busy-wait instead while the requested delay is under a quarter tick, where
+ * that rounding would at least quadruple the step period; from a quarter tick
+ * up, sleep and accept the
  * rounding, since the busy-wait cost grows with the delay while its benefit
  * shrinks. The cond_resched() keeps a move from monopolising the core: these
  * kernels are !SMP and !PREEMPT, so without it the encoder would not run at
