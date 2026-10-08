@@ -45,3 +45,36 @@ A "step" is one full 8-phase cycle, matching `gpio-motors`. The default pin map
 `/proc/devcfg` motor block on a GK7205V510. If a coil phase is reversed or
 motion is rough, try the vendor coil order `[0,2,1,3]`:
 `pan_gpios=3,72,4,73 tilt_gpios=69,58,59,57`.
+
+### Speed and the acceleration ramp
+
+A move from rest starts at `ramp_start_us` per micro-step and accelerates to
+the delay it asked for over `ramp_microsteps` micro-steps; a delay of
+`ramp_start_us` or longer runs flat. A move in the same direction that follows
+the previous one within two micro-step periods carries on at its speed, so a
+caller driving continuous motion as a train of short moves is not slowed to the
+start rate by every one. The coils stay energised for `hold_ms` after a move,
+which holds the rotor where the last micro-step left it, and are released after
+that.
+
+| parameter | default | |
+|---|---|---|
+| `ramp_start_us` | 2000 | delay a move from rest starts at; 0 turns the ramp off |
+| `ramp_microsteps` | 64 | micro-steps to reach the requested delay |
+| `hold_ms` | 20 | how long the coils stay on after a move |
+
+All three are writable at runtime under `/sys/module/gpiostep/parameters/`.
+
+Measured on a GK7205V510 pan/tilt head (40-step moves out and back, residual
+position read from the picture):
+
+| delay per micro-step | without the ramp | with the ramp |
+|---|---|---|
+| 833 us and slower | no steps lost | no steps lost |
+| 767 us | no steps lost | — |
+| 700 us | 2-22 steps lost per run | no steps lost |
+| 650 us | — | no steps lost (256-micro-step ramp) |
+| 600 us | — | steps lost |
+
+So the ramp moves the limit from the start-up rate to the rate the motors can
+run at, around 650 us here. 833 us (about 125 steps per second) leaves margin.
