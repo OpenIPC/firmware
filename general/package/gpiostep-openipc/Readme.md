@@ -9,13 +9,16 @@ implement the same 8-phase half-step sequence and the same
 `<pan> <tilt> <delay_ms>` command signature, so they can be compared 1:1. The
 difference: `gpio-motors` writes `/sys/class/gpio` from userspace, whereas
 `gpiostep` does `gpio_set_value()` directly in kernel context, which skips the
-per-write syscall cost. Timing granularity is the same for both: the kernels
-that ship this package have no high-resolution timers, so any sleep rounds up
-to a whole 10ms tick. Delays under a quarter tick therefore busy-wait between
-scheduler yields in `gpiostep` (see `step_delay()` in `src/gpiostep.c`); longer
-ones sleep and accept the rounding. The sub-tick pacing holds on an idle core:
-under load the yield after each micro-step can hand the core away for several
-ticks.
+per-write syscall cost.
+
+Timing depends on the kernel. The gk7205v500 kernel has high-resolution timers,
+so every microstep delay is a precise sleep: a pan costs the CPU next to
+nothing, and both axes run at the rate their delays ask for. On a kernel
+without them any sleep rounds up to a whole 10ms tick, so delays under a quarter
+tick busy-wait between scheduler yields (see `step_delay()` in
+`src/gpiostep.c`) and longer ones sleep and accept the rounding. There a pan at
+the GK7205V510's 2ms delay keeps the CPU busy for as long as it lasts, and the
+sub-tick pacing only holds on an idle core.
 
 ### Load
 
