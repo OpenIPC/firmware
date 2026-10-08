@@ -45,10 +45,9 @@ cat > "$SB/bin/fw_printenv" <<'EOF'
 #!/bin/sh
 echo imx335
 EOF
-cat > "$SB/bin/majestic" <<'EOF'
-#!/bin/sh
-echo 'Lite, master+0000000, 2026-01-01 00:00'
-EOF
+# majestic must never be run from here: S98crashlog runs while S95majestic is
+# starting the daemon, and a second majestic then can stop it. The stub says so.
+printf '#!/bin/sh\necho ran >> "%s/majestic-ran"\n' "$SB" > "$SB/bin/majestic"
 printf '#!/bin/sh\nexit 0\n' > "$SB/bin/logger"
 chmod +x "$SB/bin"/*
 
@@ -121,18 +120,29 @@ printf '%s' "$meta" | grep -q -E 'hunter2|streamkey|Front door|admin' || ok "no 
 sed -i 's/^utc=.*/utc=2026-01-01 00:00:01/' "$B/pending"
 crash "Oops two"
 run
-[ -s "$B/older/20260101000001.tar.gz" ] && ok "the earlier crash is kept, named by when it was captured" \
+[ -s "$B/older/000001-20260101000001.tar.gz" ] && ok "the earlier crash is kept, named by its order and when it was captured" \
     || bad "older/: $(ls "$B/older" 2>/dev/null)"
 gzip -dc "$B/crash.tar.gz" | tar -xOf - ./dmesg-ramoops-0 2>/dev/null | grep -q 'Oops two' \
     && ok "crash.tar.gz is the latest" || bad "crash.tar.gz is not the second crash"
+# The clock repeats -- no RTC, a reboot before the checkpoint -- and two
+# crashes share a capture time: neither overwrites the other.
 for i in 2 3; do
-    sed -i "s/^utc=.*/utc=2026-01-0$i 00:00:00/" "$B/pending"
+    sed -i "s/^utc=.*/utc=2026-01-02 00:00:00/" "$B/pending"
     crash "Oops $((i + 1))"
     run
 done
-[ "$(ls -1 "$B/older" | tr '\n' ' ')" = "20260102000000.tar.gz 20260103000000.tar.gz " ] \
-    && ok "at most two older crashes, the oldest dropped first" || bad "older/: $(ls "$B/older" | tr '\n' ' ')"
+[ "$(ls -1 "$B/older" | tr '\n' ' ')" = "000002-20260102000000.tar.gz 000003-20260102000000.tar.gz " ] \
+    && ok "at most two older crashes, the oldest dropped first, a repeated time no harm" || bad "older/: $(ls "$B/older" | tr '\n' ' ')"
 grep -q '^older=2$' "$B/pending" && ok "pending counts them" || bad "pending: $(cat "$B/pending")"
+
+# A reset after the bundle was published but before pstore was freed: the
+# same records come back on the next boot, and must not be rotated in again.
+gzip -dc "$B/crash.tar.gz" | tar -xOf - ./dmesg-ramoops-0 > "$SB/pstore/dmesg-ramoops-0"
+before=$(ls -1 "$B/older" | tr '\n' ' '); latest=$(md5sum < "$B/crash.tar.gz")
+run
+[ "$(ls -1 "$B/older" | tr '\n' ' ')" = "$before" ] && [ "$(md5sum < "$B/crash.tar.gz")" = "$latest" ] \
+    && ok "records already in the bundle are not kept twice" || bad "a re-harvest rotated: $(ls "$B/older" | tr '\n' ' ')"
+[ ! -e "$SB/pstore/dmesg-ramoops-0" ] && ok "and pstore is freed" || bad "the re-harvest left pstore full"
 
 # --- a capture that fails keeps the evidence --------------------------------
 if [ "$(id -u)" != 0 ]; then
@@ -147,6 +157,9 @@ if [ "$(id -u)" != 0 ]; then
 else
     echo "skip the unreadable-record case: root reads a mode-000 file"
 fi
+
+# --- the streamer is left alone ----------------------------------------------
+[ ! -e "$SB/majestic-ran" ] && ok "majestic is never run while it is starting" || bad "S98crashlog ran majestic"
 
 echo
 [ "$fail" -eq 0 ] && echo "all passed" || echo "$fail failed"

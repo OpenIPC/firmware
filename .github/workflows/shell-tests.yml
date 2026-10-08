@@ -193,6 +193,7 @@ jobs:
       - load-hisilicon-parsing
       - sysupgrade-verify
       - camera-mac
+      - crashlog-capture
       - excludes-report
       - ca-bundle-lite
       - shipped-shell-parse
@@ -209,7 +210,7 @@ jobs:
     steps:
       - name: Require every shell test to succeed
         run: |
-          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }} build-request=${{ needs.build-request.result }}"
+          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} crashlog=${{ needs.crashlog-capture.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }} build-request=${{ needs.build-request.result }}"
           # 'skipped' is not accepted, for the reason given in lint.yml: a
           # skipped job would take this context green having checked nothing.
           if [ "${{ needs.load-hisilicon-parsing.result }}" != "success" ]; then
@@ -223,6 +224,9 @@ jobs:
           fi
           if [ "${{ needs.camera-mac.result }}" != "success" ]; then
             echo "::error::the MAC the camera gives itself did not succeed"; exit 1
+          fi
+          if [ "${{ needs.crashlog-capture.result }}" != "success" ]; then
+            echo "::error::crash log capture did not succeed"; exit 1
           fi
           if [ "${{ needs.excludes-report.result }}" != "success" ]; then
             echo "::error::excludes lists report did not succeed"; exit 1

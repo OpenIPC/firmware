@@ -16,8 +16,8 @@
 # from growing without bound; each bundle is a few kilobytes.
 #
 # Each bundle carries meta.json beside the records: what was running when the
-# crash was harvested -- firmware build, kernel, command line, chip, sensor,
-# majestic version -- and the camera's majestic settings that differ from the
+# crash was harvested -- firmware build, kernel, command line, chip, sensor --
+# and the camera's majestic settings that differ from the
 # defaults, limited to the sections that shape the video pipeline and without
 # anything that names an account, a server or a secret. That is what it takes
 # to reproduce a crash on another camera of the same kind. The harvest runs on
@@ -35,6 +35,29 @@ KEEP=2
 # Nothing captured last boot -> ordinary boot, leave no trace.
 ls "$PSTORE"/dmesg-* >/dev/null 2>&1 || exit 0
 mkdir -p "$CRASH" 2>/dev/null || exit 0
+
+# A harvest cut short by a reset after the bundle was published but before
+# pstore was freed finds the same records again: they are in crash.tar.gz
+# already, so it only frees pstore. Rotating them would keep one crash twice
+# and could push a different one out past KEEP. The bundle itself is what is
+# compared, not a note about it, so no moment of the harvest is unsafe to be
+# reset in.
+same_records() {
+	[ -s "$CRASH/crash.tar.gz" ] || return 1
+	check=$CRASH/check
+	rm -rf "$check"
+	mkdir "$check" 2>/dev/null || return 1
+	gzip -dc "$CRASH/crash.tar.gz" > "$check/bundle.tar" 2>/dev/null &&
+		tar xf "$check/bundle.tar" -C "$check" 2>/dev/null &&
+		[ "$(cd "$check" && cat dmesg-* 2>/dev/null | md5sum)" = "$(cd "$PSTORE" && cat dmesg-* 2>/dev/null | md5sum)" ]
+	same=$?
+	rm -rf "$check"
+	return $same
+}
+if same_records; then
+	rm -f "$PSTORE"/dmesg-* 2>/dev/null
+	exit 0
+fi
 
 # A JSON string, from anything a shell variable can hold.
 jstr() {
@@ -76,6 +99,10 @@ os_value() {
 	sed -n "s/^$1=//p" /etc/os-release 2>/dev/null | tr -d '"' | head -n 1
 }
 
+# Not majestic's version: this runs while S95majestic is bringing the daemon
+# up, and a second majestic started then -- even for -v -- stopped the starting
+# daemon in two tries of three on a gk7205v300, leaving the camera without
+# video after every crash. The WebUI sends the version when it sends the crash.
 write_meta() {
 	soc=$(ipcinfo --chip-name 2>/dev/null)
 	[ "$(ipcinfo -v 2>/dev/null)" = sigmastar ] && soc=$(fw_printenv -n soc 2>/dev/null)
@@ -90,22 +117,25 @@ write_meta() {
 		printf '  "cmdline": %s,\n' "$(jstr "$(cat /proc/cmdline 2>/dev/null)")"
 		printf '  "soc": %s,\n' "$(jstr "$soc")"
 		printf '  "sensor": %s,\n' "$(jstr "$(fw_printenv -n sensor 2>/dev/null)")"
-		printf '  "majestic": %s,\n' "$(jstr "$(majestic -v 2>/dev/null | head -n 1)")"
 		printf '  "config": %s\n' "$(config_lines)"
 		printf '}\n'
 	} > "$1"
 }
 
 # Move the crash the owner has not dealt with out of the way of this one, and
-# drop the oldest beyond KEEP. Named by when it was captured, so the order of
-# the names is the order of the crashes.
+# drop the oldest beyond KEEP. Named by the order the crashes came in -- a
+# sequence kept beside them, not the clock, which a camera without an RTC
+# can repeat after a reboot -- and then by when it was captured, for a reader.
 keep_previous() {
 	[ -s "$CRASH/crash.tar.gz" ] || return 0
 	mkdir -p "$CRASH/older" 2>/dev/null || return 1
+	seq=$(cat "$CRASH/older/.seq" 2>/dev/null | tr -cd '0-9')
+	seq=$(( ${seq:-0} + 1 ))
+	echo "$seq" > "$CRASH/older/.seq" 2>/dev/null || return 1
 	when=$(sed -n 's/^utc=//p' "$CRASH/pending" 2>/dev/null | tr -cd '0-9')
-	[ -n "$when" ] || when=$(date -u -r "$CRASH/crash.tar.gz" '+%Y%m%d%H%M%S' 2>/dev/null)
-	[ -n "$when" ] || when=0
-	mv "$CRASH/crash.tar.gz" "$CRASH/older/$when.tar.gz" 2>/dev/null || return 1
+	name=$(printf '%06d-%s' "$seq" "${when:-0}")
+	[ -e "$CRASH/older/$name.tar.gz" ] && return 1
+	mv "$CRASH/crash.tar.gz" "$CRASH/older/$name.tar.gz" 2>/dev/null || return 1
 	n=$(ls -1 "$CRASH/older"/*.tar.gz 2>/dev/null | wc -l)
 	for f in $(ls -1 "$CRASH/older"/*.tar.gz 2>/dev/null | sort); do
 		[ "$n" -le "$KEEP" ] && break
