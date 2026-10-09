@@ -543,6 +543,12 @@ HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/$(HISILICON_OPENSDK_KVER)
 HISILICON_OPENSDK_XM_MODS = acodec adec aenc ai aio ao base chnl h264e h265e \
 	isp isp_sensor_i2c isp_sensor_spi ive jpege mipi_rx osal rc rgn sys \
 	sysconfig vedu venc vgs vi vpss wdt
+# Every V500-set die (GK7205V500/V510/V530, GK7202V330) has the NPU, and the
+# kbuild relinks it for that set only: the V200 one GK7201V200 takes ships no
+# npu object.
+ifneq ($(OPENIPC_SOC_MODEL),gk7201v200)
+HISILICON_OPENSDK_XM_MODS += npu
+endif
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \

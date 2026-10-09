@@ -102,6 +102,21 @@ define GOKE_OSDRV_GK7205V500_INSTALL_V200_LIBS
 endef
 endif
 
+# The NPU runtime, for the V500-set dies that carry one (xm_npu.ko comes from
+# hisilicon-opensdk): libxmedia_npu.so drives /dev/npu.0, libxmedia_cl.so
+# loads and runs a compiled .xmm graph on it, libxmedia_ai.so is the vendor's
+# person/face/car detector on top. Nothing in the image calls them yet, so
+# the lite boards skip the 370KB; ultimate gets them for user applications.
+ifeq ($(OPENIPC_VARIANT),ultimate)
+ifneq ($(OPENIPC_SOC_MODEL),gk7201v200)
+define GOKE_OSDRV_GK7205V500_INSTALL_NPU_LIBS
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libxmedia_npu.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libxmedia_cl.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libxmedia_ai.so
+endef
+endif
+endif
+
 define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/config/*.ini
@@ -220,6 +235,7 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 
 	$(GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS)
 	$(GOKE_OSDRV_GK7205V500_INSTALL_V200_LIBS)
+	$(GOKE_OSDRV_GK7205V500_INSTALL_NPU_LIBS)
 endef
 
 $(eval $(generic-package))
