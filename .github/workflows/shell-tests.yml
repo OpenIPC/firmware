@@ -70,6 +70,22 @@ jobs:
             general/package/openipc-failsafe/files/S98crashlog > /tmp/S98crashlog.stripped
           SRC=/tmp/S98crashlog.stripped bash .github/scripts/test_crashlog.sh
 
+  majestic-supervise:
+    name: majestic restarted after a crash, never in a loop
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/test_majestic_supervise.sh
+      - name: Re-run against the comment-stripped form
+        run: |
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/package/majestic/files/S95majestic > /tmp/S95majestic.stripped
+          SRC=/tmp/S95majestic.stripped bash .github/scripts/test_majestic_supervise.sh
+
   camera-mac:
     name: the MAC the camera gives itself
     if: >-
