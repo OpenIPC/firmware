@@ -10,6 +10,20 @@ DAEMON="majestic"
 DAEMON_PATH="/usr/bin/$DAEMON"
 DAEMON_ARGS="-s"
 
+# majestic is run by a small supervisor (this script, `supervise`), which
+# starts it again when it dies of a fault -- before, a crash left the camera
+# without video until someone restarted it by hand. It waits longer after each
+# crash, and after five in ten minutes it stops trying and leaves
+# /etc/crash/majestic.loop, which the web interface reports: a majestic that
+# dies at every start would otherwise hold the camera in a restart loop. The
+# dump majestic writes as it dies stays in /etc/crash for the crash report.
+SUPERVISOR=/var/run/majestic-supervise.pid
+CRASH=/etc/crash
+UPGRADE_LOCK=/tmp/sysupgrade.lock
+BACKOFF="5 30 120"
+WINDOW=600
+LIMIT=5
+
 # Find the daemon by executable, never through a pidfile. Given -p, busybox
 # start-stop-daemon inspects only the pid that file holds and never scans
 # /proc, so the moment that pid is stale it can no longer see the live daemon:
@@ -40,19 +54,87 @@ running() {
 # without this the daemon is dead every run; with it, it survives every run.
 start() {
 	echo -n "Starting $DAEMON: "
+	if running || supervising; then
+		echo "OK (already running)"
+		return 0
+	fi
+	if [ ! -x "$DAEMON_PATH" ]; then
+		echo "FAIL"
+		return 1
+	fi
+	# A start, by hand or at boot, is a fresh run: the note that the last one
+	# was given up on is about a majestic that is no longer there.
+	rm -f "$CRASH/majestic.loop"
 	(
 		trap '' HUP
-		start-stop-daemon -b -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- $DAEMON_ARGS
-	)
-	case $? in
-		0) echo "OK"; return 0 ;;
-		1) echo "OK (already running)"; return 0 ;;
-		*) echo "FAIL"; return 1 ;;
+		exec sh "$0" supervise
+	) </dev/null >/dev/null 2>&1 &
+	echo "OK"
+}
+
+# The supervisor's pid, if it is the supervisor still: a pid in a file can
+# have been reused by anything since.
+supervising() {
+	pid=$(cat "$SUPERVISOR" 2>/dev/null)
+	[ -n "$pid" ] && tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q " supervise"
+}
+
+# The signals a fault ends majestic with: SIGILL, SIGABRT, SIGBUS (7, and 10
+# on MIPS), SIGFPE, SIGSEGV -- and SIGKILL, which is how the kernel's
+# out-of-memory killer ends it. SIGTERM and SIGINT are someone stopping it,
+# and an exit of its own is its own decision: neither is restarted.
+crashed() {
+	case "$1" in
+		4 | 6 | 7 | 8 | 9 | 10 | 11) return 0 ;;
 	esac
+	return 1
+}
+
+supervise() {
+	trap '' HUP
+	# A stop while it waits ends the wait, not just the run after it.
+	trap 'kill $waiting 2>/dev/null; rm -f "$SUPERVISOR"; exit 0' TERM INT
+	echo $$ > "$SUPERVISOR"
+	waiting=
+	crashes=
+	while :; do
+		start-stop-daemon -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- $DAEMON_ARGS
+		rc=$?
+		[ "$rc" -gt 128 ] && crashed $((rc - 128)) || break
+		sig=$((rc - 128))
+		# An upgrade has the camera: it brings majestic back itself.
+		[ -f "$UPGRADE_LOCK" ] && break
+		now=$(cut -d. -f1 /proc/uptime)
+		recent=
+		n=0
+		for t in $crashes $now; do
+			if [ $((now - t)) -lt "$WINDOW" ]; then
+				recent="$recent $t"
+				n=$((n + 1))
+			fi
+		done
+		crashes=$recent
+		if [ "$n" -ge "$LIMIT" ]; then
+			mkdir -p "$CRASH"
+			printf 'utc=%s\ncrashes=%s\nsignal=%s\n' "$(date -u '+%Y-%m-%d %H:%M:%S')" "$n" "$sig" > "$CRASH/majestic.loop"
+			logger -t "$DAEMON" "crashed $n times in $((WINDOW / 60)) minutes (signal $sig); not starting it again" 2>/dev/null
+			break
+		fi
+		delay=$(echo $BACKOFF | cut -d' ' -f"$n")
+		[ -n "$delay" ] || delay=${BACKOFF##* }
+		logger -t "$DAEMON" "crashed (signal $sig); starting it again in ${delay}s" 2>/dev/null
+		sleep "$delay" &
+		waiting=$!
+		wait "$waiting"
+		waiting=
+	done
+	rm -f "$SUPERVISOR"
 }
 
 stop() {
 	echo -n "Stopping $DAEMON: "
+	# The supervisor first, so it does not start what is being stopped.
+	supervising && kill "$pid" 2>/dev/null
 	start-stop-daemon -K -q -x "$DAEMON_PATH"
 	i=0
 	while running && [ $i -lt 10 ]; do
@@ -63,13 +145,17 @@ stop() {
 		echo "FAIL"
 		return 1
 	fi
-	rm -f "/var/run/$DAEMON.pid"
+	rm -f "/var/run/$DAEMON.pid" "$SUPERVISOR"
 	echo "OK"
 }
 
 case "$1" in
 	start|stop)
 		$1
+		;;
+
+	supervise)
+		supervise
 		;;
 
 	restart)
