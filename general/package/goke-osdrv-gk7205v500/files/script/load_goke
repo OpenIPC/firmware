@@ -207,6 +207,8 @@ insert_ko() {
 	insmod xm_h265e.ko
 	insmod xm_jpege.ko
 	insmod xm_ive.ko save_power=0
+	# Built only for the V500-set dies, which all have the NPU.
+	[ -f xm_npu.ko ] && modprobe xm_npu
 	modprobe xm_isp_pwm
 	modprobe xm_isp_sensor_i2c
 	modprobe xm_isp_sensor_spi
@@ -230,6 +232,7 @@ remove_ko() {
 	unload xm_isp_sensor_spi
 	unload xm_isp_sensor_i2c
 	unload xm_isp_pwm 2>/dev/null
+	unload xm_npu 2>/dev/null
 	unload xm_ive
 	unload xm_jpege
 	unload xm_h265e

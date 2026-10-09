@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 77992b6cc53450c90f8940ed06ca3dfdd3260237
+HISILICON_OPENSDK_VERSION = 4e5359bdba93e5ea01e9481b03b0d8b8ea673202
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -543,6 +543,19 @@ HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/$(HISILICON_OPENSDK_KVER)
 HISILICON_OPENSDK_XM_MODS = acodec adec aenc ai aio ao base chnl h264e h265e \
 	isp isp_sensor_i2c isp_sensor_spi ive jpege mipi_rx osal rc rgn sys \
 	sysconfig vedu venc vgs vi vpss wdt
+# Every V500-set die (GK7205V500/V510/V530, GK7202V330) has the NPU, which
+# GK7201V200 lacks. Its driver (open_npu) and libxmedia_npu.so are built from
+# source; ultimate images get the library, beside the SDK's libxmedia_cl.so
+# and libxmedia_ai.so that goke-osdrv-gk7205v500 installs.
+ifneq ($(OPENIPC_SOC_MODEL),gk7201v200)
+HISILICON_OPENSDK_XM_MODS += npu
+ifeq ($(OPENIPC_VARIANT),ultimate)
+define HISILICON_OPENSDK_INSTALL_NPU_LIB
+	$(INSTALL) -D -m 0644 $(@D)/libraries/xmedia_npu/libxmedia_npu.so \
+		$(TARGET_DIR)/usr/lib/libxmedia_npu.so
+endef
+endif
+endif
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
@@ -553,6 +566,7 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 		$(INSTALL) -m 644 $(@D)/kernel/open_$${mod}.ko \
 			$(HISILICON_OPENSDK_KMOD_DST)/xm_$${mod}.ko || exit 1; \
 	done
+	$(HISILICON_OPENSDK_INSTALL_NPU_LIB)
 endef
 
 # For hi3516cv6xx: V5 — install opensdk .ko directly to hisilicon/ keeping
