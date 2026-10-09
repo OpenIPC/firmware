@@ -1,0 +1,14 @@
+#!/bin/sh
+# Stamp every kernel message with the seconds since boot, so the crash log
+# S98crashlog preserves says when in the camera's life it crashed -- an hour
+# after boot, or after a month of streaming -- which is the first question
+# about a crash and one the log cannot answer without them. Switched on here,
+# early in boot, rather than in the kernel config, so only the boards that
+# capture crashes change how their log reads.
+case "$1" in
+	start|"")
+		[ -w /sys/module/printk/parameters/time ] &&
+			echo Y > /sys/module/printk/parameters/time 2>/dev/null
+		;;
+esac
+exit 0

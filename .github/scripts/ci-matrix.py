@@ -193,7 +193,7 @@ NO_BUILD_SCRIPTS = {
     "lint-workflow-shell.py", "push_build.py", "soc_aliases.py",
     "test_automount.sh", "test_check_mac.sh", "test_excludes_report.sh",
     "test_load_hisilicon.sh", "test_push_build.py", "test_shell_parse.sh",
-    "test_strip_shell_comments.sh", "test_sysupgrade.sh",
+    "test_strip_shell_comments.sh", "test_sysupgrade.sh", "test_crashlog.sh",
     # build-one.yml's request parser and its test: dispatch and shell-tests
     # only, never part of a board build.
     "build_request.sh", "test_build_request.sh",
@@ -958,6 +958,7 @@ def self_test():
         ([".github/ISSUE_TEMPLATE/1-bug.yml"], 0, "an issue form never builds"),
         ([".github/scripts/test_sysupgrade.sh"], 0, "shell-tests fixture"),
         ([".github/scripts/test_check_mac.sh"], 0, "shell-tests: MAC derivation"),
+        ([".github/scripts/test_crashlog.sh"], 0, "shell-tests: crash log capture"),
         ([".github/scripts/test_strip_shell_comments.sh"], 0, "shell-tests: stripper"),
         ([".github/scripts/test_automount.sh"], 0, "shell-tests: automount"),
         ([".github/scripts/test_excludes_report.sh"], 0, "shell-tests: excludes"),

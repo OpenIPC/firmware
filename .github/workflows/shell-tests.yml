@@ -50,6 +50,26 @@ jobs:
             general/overlay/usr/sbin/sysupgrade > /tmp/sysupgrade.stripped
           SRC=/tmp/sysupgrade.stripped bash .github/scripts/test_sysupgrade.sh
 
+  crashlog-capture:
+    name: crash log capture
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/test_crashlog.sh
+
+      # S98crashlog ships comment-stripped, like sysupgrade and extutils, and
+      # runs on the boot after every crash: the stripped form is what decides
+      # whether the evidence survives.
+      - name: Re-run against the stripped form that actually ships
+        run: |
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/package/openipc-failsafe/files/S98crashlog > /tmp/S98crashlog.stripped
+          SRC=/tmp/S98crashlog.stripped bash .github/scripts/test_crashlog.sh
+
   camera-mac:
     name: the MAC the camera gives itself
     if: >-
@@ -173,6 +193,7 @@ jobs:
       - load-hisilicon-parsing
       - sysupgrade-verify
       - camera-mac
+      - crashlog-capture
       - excludes-report
       - ca-bundle-lite
       - shipped-shell-parse
@@ -189,7 +210,7 @@ jobs:
     steps:
       - name: Require every shell test to succeed
         run: |
-          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }} build-request=${{ needs.build-request.result }}"
+          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} crashlog=${{ needs.crashlog-capture.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }} build-request=${{ needs.build-request.result }}"
           # 'skipped' is not accepted, for the reason given in lint.yml: a
           # skipped job would take this context green having checked nothing.
           if [ "${{ needs.load-hisilicon-parsing.result }}" != "success" ]; then
@@ -203,6 +224,9 @@ jobs:
           fi
           if [ "${{ needs.camera-mac.result }}" != "success" ]; then
             echo "::error::the MAC the camera gives itself did not succeed"; exit 1
+          fi
+          if [ "${{ needs.crashlog-capture.result }}" != "success" ]; then
+            echo "::error::crash log capture did not succeed"; exit 1
           fi
           if [ "${{ needs.excludes-report.result }}" != "success" ]; then
             echo "::error::excludes lists report did not succeed"; exit 1

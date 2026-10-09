@@ -6,7 +6,7 @@ config BR2_PACKAGE_OPENIPC_FAILSAFE
 	  word and enables pstore/ramoops (currently Goke gk7205v200 and
 	  gk7205v300).
 
-	  Ships three pieces, none of which touch flash:
+	  Ships four pieces, none of which touch flash:
 
 	    - failsafe-rescue: brings a camera up on network + SSH only,
 	      skipping the SDK and streamer, when the bootloader has fallen
@@ -15,7 +15,10 @@ config BR2_PACKAGE_OPENIPC_FAILSAFE
 	      proven healthy, so a camera that boots but never streams still
 	      escalates to failsafe instead of looping forever;
 	    - S98crashlog: preserves the pstore crash log across a reboot for
-	      the owner-pull crash report.
+	      the owner-pull crash report, with what was running (meta.json)
+	      and up to two earlier crashes nobody has dismissed yet;
+	    - S01printktime: stamps kernel messages with the time since
+	      boot, so a preserved crash log says when the camera crashed.
 
 	  Enable it only on boards that reserve the counter; the address is
 	  read from the board DTS, so on an image that does not reserve it

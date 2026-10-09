@@ -17,6 +17,7 @@ OPENIPC_FAILSAFE_LICENSE = MIT
 define OPENIPC_FAILSAFE_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/files/bootcount-clear $(TARGET_DIR)/usr/sbin/bootcount-clear
 	$(INSTALL) -D -m 0755 $(@D)/files/failsafe-rescue $(TARGET_DIR)/usr/sbin/failsafe-rescue
+	$(INSTALL) -D -m 0755 $(@D)/files/S01printktime $(TARGET_DIR)/etc/init.d/S01printktime
 	$(INSTALL) -D -m 0755 $(@D)/files/S98crashlog $(TARGET_DIR)/etc/init.d/S98crashlog
 	$(INSTALL) -D -m 0755 $(@D)/files/S99bootok $(TARGET_DIR)/etc/init.d/S99bootok
 endef
