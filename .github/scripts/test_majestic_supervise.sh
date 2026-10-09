@@ -114,8 +114,13 @@ done
 reset segv
 touch "$SB/sysupgrade.lock"
 supervise
-[ "$(starts)" = 1 ] && [ ! -f "$SB/crash/majestic.loop" ] && ok "during an upgrade a crash is not restarted" \
+[ "$(starts)" = 0 ] && [ ! -f "$SB/crash/majestic.loop" ] && ok "during an upgrade majestic is not started" \
     || bad "upgrade: $(starts) starts"
+# ...nor when the upgrade begins while the supervisor waits after a crash.
+reset segv
+(sleep 1; touch "$SB/sysupgrade.lock") &
+TEST_BACKOFF="2" supervise
+[ "$(starts)" = 1 ] && ok "an upgrade that begins during the wait is not started over" || bad "upgrade in the wait: $(starts) starts"
 
 # 5. start and stop: the supervisor goes with majestic, and the pid with it.
 reset run
@@ -158,6 +163,36 @@ echo "$other" > "$SB/run/majestic-supervise.pid"
 sh "$SB/S95majestic" stop > /dev/null
 kill -0 "$other" 2>/dev/null && ok "stop does not kill whatever reused the supervisor's pid" || bad "stop killed pid $other"
 kill "$other" 2>/dev/null
+
+# 8. Nor whatever reused it with "supervise" at the end of its arguments.
+sh -c 'sleep 998; :' other supervise &
+other=$!
+echo "$other" > "$SB/run/majestic-supervise.pid"
+sh "$SB/S95majestic" stop > /dev/null
+kill -0 "$other" 2>/dev/null && ok "nor one whose last argument is supervise" || bad "stop killed pid $other"
+# Its sleep too: left behind, it would hold this script's output open.
+pkill -P "$other" 2>/dev/null
+kill "$other" 2>/dev/null
+
+# 9. Two starts at once, then a stop: nothing is left to start majestic.
+reset run
+sh "$SB/S95majestic" start > /dev/null &
+sh "$SB/S95majestic" start > /dev/null &
+wait
+sh "$SB/S95majestic" stop > /dev/null
+sleep 0.5
+if ! pgrep -f "$SB/S95majestic supervise" > /dev/null && ! pgrep -f "^sleep 1000" > /dev/null; then
+    ok "two starts at once leave one supervisor, which a stop ends"
+else
+    bad "after two starts and a stop: supervisors $(pgrep -f "$SB/S95majestic supervise" | tr '\n' ' ')"
+fi
+
+# 10. A stop at once after a start finds the supervisor.
+reset run
+sh "$SB/S95majestic" start > /dev/null; sh "$SB/S95majestic" stop > /dev/null
+sleep 1
+! pgrep -f "$SB/S95majestic supervise" > /dev/null && ! pgrep -f "^sleep 1000" > /dev/null \
+    && ok "a stop right after a start leaves nothing running" || bad "start then stop left something running"
 
 [ "$fail" -eq 0 ] && echo "all passed" || echo "$fail failed"
 exit "$fail"

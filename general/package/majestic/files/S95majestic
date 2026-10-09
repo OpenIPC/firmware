@@ -54,11 +54,14 @@ running() {
 # without this the daemon is dead every run; with it, it survives every run.
 start() {
 	echo -n "Starting $DAEMON: "
+	lock
 	if running || supervising; then
+		unlock
 		echo "OK (already running)"
 		return 0
 	fi
 	if [ ! -x "$DAEMON_PATH" ]; then
+		unlock
 		echo "FAIL"
 		return 1
 	fi
@@ -69,14 +72,47 @@ start() {
 		trap '' HUP
 		exec sh "$0" supervise
 	) </dev/null >/dev/null 2>&1 &
+	echo $! > "$SUPERVISOR"
+	# Returned only once the supervisor is the process the pid names, so a
+	# stop that follows at once finds it.
+	i=0
+	while ! supervising && [ $i -lt 50 ]; do
+		i=$((i + 1))
+		sleep 0.1
+	done
+	unlock
 	echo "OK"
+}
+
+# start and stop one at a time: two starts at once would leave a supervisor
+# no pid names, which a stop could then not end. The lock holds its holder's
+# pid, and is taken over only once that process is gone -- a start that was
+# killed -- never from one still running.
+lock() {
+	until mkdir "$SUPERVISOR.lock" 2>/dev/null; do
+		holder=$(cat "$SUPERVISOR.lock/pid" 2>/dev/null)
+		if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+			rm -rf "$SUPERVISOR.lock"
+			continue
+		fi
+		sleep 1
+	done
+	echo $$ > "$SUPERVISOR.lock/pid"
+}
+unlock() {
+	rm -rf "$SUPERVISOR.lock"
 }
 
 # The supervisor's pid, if it is the supervisor still: a pid in a file can
 # have been reused by anything since.
 supervising() {
 	pid=$(cat "$SUPERVISOR" 2>/dev/null)
-	[ -n "$pid" ] && tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q " supervise"
+	[ -n "$pid" ] || return 1
+	# This script, run as `supervise`: its last two arguments.
+	set -- $(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
+	[ $# -ge 2 ] || return 1
+	eval "script=\${$(($# - 1))} last=\${$#}"
+	[ "$last" = supervise ] && [ "${script##*/}" = "${0##*/}" ]
 }
 
 # The signals a fault ends majestic with: SIGILL, SIGABRT, SIGBUS (7, and 10
@@ -98,11 +134,13 @@ supervise() {
 	waiting=
 	crashes=
 	while :; do
+		# An upgrade has the camera: it brings majestic back itself. Asked
+		# before every start, the first and each one after a wait.
+		[ -f "$UPGRADE_LOCK" ] && break
 		start-stop-daemon -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- $DAEMON_ARGS
 		rc=$?
 		[ "$rc" -gt 128 ] && crashed $((rc - 128)) || break
 		sig=$((rc - 128))
-		# An upgrade has the camera: it brings majestic back itself.
 		[ -f "$UPGRADE_LOCK" ] && break
 		now=$(cut -d. -f1 /proc/uptime)
 		recent=
@@ -133,6 +171,7 @@ supervise() {
 
 stop() {
 	echo -n "Stopping $DAEMON: "
+	lock
 	# The supervisor first, so it does not start what is being stopped.
 	supervising && kill "$pid" 2>/dev/null
 	start-stop-daemon -K -q -x "$DAEMON_PATH"
@@ -142,10 +181,12 @@ stop() {
 		sleep 1
 	done
 	if running; then
+		unlock
 		echo "FAIL"
 		return 1
 	fi
 	rm -f "/var/run/$DAEMON.pid" "$SUPERVISOR"
+	unlock
 	echo "OK"
 }
 
