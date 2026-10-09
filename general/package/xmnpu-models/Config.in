@@ -1,0 +1,10 @@
+config BR2_PACKAGE_XMNPU_MODELS
+	bool "xmnpu-models"
+	default n
+	help
+	  YOLOv8n and YOLOv8s object detectors (people, vehicles, cats, dogs)
+	  compiled for the GK7205V5x0 NPU, for majestic's npuDetect. Installed
+	  into the NAND (UBIFS) rootfs only: they do not fit a NOR image.
+	  AGPL-3.0, from the Ultralytics weights.
+
+	  https://github.com/OpenIPC/xmnpu-models

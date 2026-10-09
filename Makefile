@@ -203,7 +203,17 @@ else ifneq ($(wildcard $(PWD)/br-ext-chip-$(subst ",,$(BR2_OPENIPC_SOC_VENDOR))/
 # so it is held to the 24M the installer stages (openipc.org's 0x1800000),
 # which still clears the relocated U-Boot at the top of a 64M part
 # (hi3516ev200).
+#
+# gk7205v500 is held to 32M instead: its ultimate build carries the NPU's
+# object detectors (xmnpu-models, 22 MB, NAND only), which take rootfs.ubi to
+# about 29.5M. Its parts have 128M of DDR, so the image still clears U-Boot,
+# but a fresh install has to stage at least 0x1E00000 for it -- the 0x1800000
+# above would truncate it. sysupgrade writes rootfs.ubifs and is unaffected.
+ifeq ($(BR2_OPENIPC_SOC_FAMILY),"gk7205v500")
+	@$(call CHECK_SIZE,rootfs.ubi,32768)
+else
 	@$(call CHECK_SIZE,rootfs.ubi,24576)
+endif
 	@$(call REPACK_NAND_FIT)
 else
 	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand)
