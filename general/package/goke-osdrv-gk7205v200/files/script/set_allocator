@@ -28,6 +28,16 @@ calc_mmz() {
 }
 
 
+# The zone `cma` would write, without writing it. The load script compares it
+# with the zone the kernel booted with: bootargs are written once, so an osmem
+# or totalmem changed afterwards never reached them on their own.
+if [ "$1" = 'mmz' ]; then
+  get_env
+  calc_mmz
+  echo "${mmz}"
+  exit 0
+fi
+
 if [[ "$1" == 'gk' ]]; then
   echo "Allocator selected as gk..."
   get_env
