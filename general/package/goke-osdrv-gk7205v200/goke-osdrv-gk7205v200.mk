@@ -38,14 +38,14 @@ GOKE_OSDRV_GK7205V200_IMX335_5M_SOCS = hi3516ev300 hi3516dv200 gk7205v300 gk7605
 
 ifneq ($(filter $(OPENIPC_SOC_MODEL),$(GOKE_OSDRV_GK7205V200_IMX335_5M_SOCS)),)
 define GOKE_OSDRV_GK7205V200_IMX335_LAYOUT
-	for d in $(TARGET_DIR)/etc/sensors $(TARGET_DIR)/etc/sensors/WDR; do \
+	for d in $(TARGET_DIR)/etc/sensors; do \
 		rm -f $$d/imx335_i2c_4M.ini; \
 		ln -sf imx335_i2c_5M.ini $$d/5M_imx335.ini; \
 	done
 endef
 else
 define GOKE_OSDRV_GK7205V200_IMX335_LAYOUT
-	for d in $(TARGET_DIR)/etc/sensors $(TARGET_DIR)/etc/sensors/WDR; do \
+	for d in $(TARGET_DIR)/etc/sensors; do \
 		mv -f $$d/4M_imx335_i2c.ini $$d/imx335_i2c_4M.ini; \
 		mv -f $$d/imx335_i2c_5M.ini $$d/5M_imx335.ini; \
 	done
@@ -56,8 +56,11 @@ define GOKE_OSDRV_GK7205V200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/config/*.ini
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/WDR
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/WDR $(GOKE_OSDRV_GK7205V200_PKGDIR)/files/sensor/config/WDR/*.ini
+	# No WDR/ copies of the IMX335 profiles: majestic switches the linear one
+	# to line WDR itself (isp.wdrMode), and a copy only drifted from it -- the
+	# 5M one ran the sensor at 15 fps where it does 22. Removed outright so a
+	# rebuild over an earlier target does not ship the old directory.
+	rm -rf $(TARGET_DIR)/etc/sensors/WDR
 	$(GOKE_OSDRV_GK7205V200_IMX335_LAYOUT)
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/high-fps

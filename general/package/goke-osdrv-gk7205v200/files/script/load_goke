@@ -106,6 +106,31 @@ check_allocator() {
 		else
 			set_allocator gk
 		fi
+	elif grep -q "mmz_allocator=cma" /proc/cmdline && \
+		[ -n "$(fw_printenv -n osmem 2>/dev/null)" ] && \
+		[ -n "$(fw_printenv -n totalmem 2>/dev/null)" ]; then
+		# bootargs carry the CMA zone the kernel reserves, and they are written
+		# once: set_allocator ran only while mmz_allocator was missing, so an
+		# osmem or totalmem changed afterwards never reached them. A 128 MB
+		# gk7205v300 booted on a 64 MB zone that way, beside an
+		# hi3516ev300 with the same osmem and the 96 MB it implies.
+		#
+		# Only with both values saved: set_allocator falls back to 64 MB of
+		# DDR without totalmem, and would take a 128 MB board's correct zone
+		# for a wrong one. And only to grow the zone -- a smaller one is said,
+		# never written, since a wrong guess there costs the camera its RAM.
+		booted=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
+		wanted=$(set_allocator mmz)
+		if [ -n "${wanted}" ] && [ "${booted}" != "${wanted}" ]; then
+			have=$(echo "${booted}" | awk -F ',' '{print $4+0}')
+			want=$(echo "${wanted}" | awk -F ',' '{print $4+0}')
+			if [ "${want}" -gt "${have}" ]; then
+				echo "MMZ zone ${booted} does not follow totalmem/osmem (${wanted}); bootargs corrected, the zone follows at the next boot"
+				set_allocator cma >/dev/null
+			else
+				echo "MMZ zone ${booted} is larger than totalmem/osmem give (${wanted}); left as it is -- run set_allocator cma to apply it"
+			fi
+		fi
 	fi
 }
 
