@@ -119,6 +119,18 @@ check_allocator() {
 		else
 			set_allocator hisi
 		fi
+	elif grep -q "mmz_allocator=cma" /proc/cmdline && [ -n "$(fw_printenv -n osmem 2>/dev/null)" ]; then
+		# bootargs carry the CMA zone the kernel reserves, and they are written
+		# once: set_allocator ran only while mmz_allocator was missing, so an
+		# osmem or totalmem changed afterwards never reached them. A 128 MB
+		# gk7205v300 booted on a 64 MB zone that way, beside an
+		# hi3516ev300 with the same osmem and the 96 MB it implies.
+		booted=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
+		wanted=$(set_allocator mmz)
+		if [ -n "${wanted}" ] && [ "${booted}" != "${wanted}" ]; then
+			echo "MMZ zone ${booted} does not follow totalmem/osmem (${wanted}); bootargs corrected, the zone follows at the next boot"
+			set_allocator cma >/dev/null
+		fi
 	fi
 }
 
