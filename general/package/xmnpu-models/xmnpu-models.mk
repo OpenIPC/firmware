@@ -6,7 +6,7 @@
 
 # Built and published by that repository's release workflow, never by hand:
 # each asset traces to the commit and run that compiled it.
-XMNPU_MODELS_VERSION = v5
+XMNPU_MODELS_VERSION = v6
 XMNPU_MODELS_SITE = https://github.com/OpenIPC/xmnpu-models/releases/download/$(XMNPU_MODELS_VERSION)
 XMNPU_MODELS_SOURCE = yolov8n.xmm
 # Each model's <name>.json is what majestic's object-detection presets mean
