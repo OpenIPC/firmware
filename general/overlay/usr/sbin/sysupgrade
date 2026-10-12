@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.70
+scr_version=1.0.71
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -84,6 +84,9 @@ case "$_plat" in
 esac
 MANIFEST_URL=${MANIFEST_URL:-https://openipc.github.io/${_manifest_repo}/manifest.flat}
 MANIFEST_CACHE=/tmp/manifest.flat
+# What this run unpacked into /tmp, one name per line as tar -v lists it, so a
+# refusal can take back exactly that and nothing else (discard_unpacked).
+UNPACKED_LIST=/tmp/sysupgrade.unpacked
 unset _osr _plat _manifest_repo
 # Every online fetch verifies the server's certificate against the bundle the
 # image ships at /etc/ssl/certs/ca-certificates.crt (libcurl's built-in default
@@ -123,6 +126,7 @@ die() {
 		# Nothing was written, so the camera is unchanged. The DRAM boot counter
 		# is cleared only on the flash path below (and clearing it is harmless
 		# even if no flash follows), so there is nothing to undo here.
+		discard_unpacked
 		restore_resources
 		# Only ever remove a lock this process owns. die() is reachable before
 		# create_lock has run (get_system_info, called from print_sysinfo, can
@@ -358,6 +362,7 @@ check_combined_fits() {
 preflight_image_sizes() {
 	if [ "1" = "$image_combined" ]; then
 		check_combined_fits "/tmp/firmware.bin.$model"
+		free_staged_archive
 		return 0
 	fi
 	# Present at all, first. An archive built for another camera unpacks
@@ -380,6 +385,7 @@ preflight_image_sizes() {
 		# the handed-off PID 1, where any refusal is a reboot.
 		is_ubifs "$(rootfs_image)" && verify_ubifs_rootfs "$(rootfs_image)"
 	fi
+	free_staged_archive
 	need_handoff && check_handoff
 	return 0
 }
@@ -541,6 +547,19 @@ fit_soc() {
 		awk '$1 == "OpenIPC" && NF == 2 { print $2; exit }'
 }
 
+# The BUILD_PLATFORM a NAND FIT was built with (its root openipc,platform,
+# "BUILD_PLATFORM=<platform>"), or nothing for a FIT from before it carried one.
+# The same witness as fit_soc, for the device profile: the UBIFS rootfs beside
+# it cannot say which profile it is without being mounted.
+fit_platform() {
+	[ -f "$1" ] || return 0
+	[ "$(xxd -p -l 4 "$1" 2>&3)" = "d00dfeed" ] || return 0
+	# Not anchored: the FDT property header (length, name offset) sits right
+	# before the value, and the name offset's last byte can be printable.
+	dd if="$1" bs=4096 count=1 2>&3 | tr -c 'A-Za-z0-9_=-' '\n' |
+		sed -n 's/.*BUILD_PLATFORM=\([A-Za-z0-9_-][A-Za-z0-9_-]*\)$/\1/p' | head -1
+}
+
 # A UBIFS image: the superblock node's magic (0x06101831, stored little-endian)
 # at offset 0.
 is_ubifs() {
@@ -595,10 +614,20 @@ verify_ubifs_rootfs() {
 	# the one witness a UBIFS rootfs has. Taken whether or not this run
 	# writes the kernel: the package carries it either way.
 	local fsoc=$(fit_soc "$(kernel_image)")
+	if [ "1" != "$skip_soc" ] && is_device_platform "$system_platform" && [ "1" != "$device_pinned" ]; then
+		# Named for this device by its download, or by the FIT beside it --
+		# without either, every local archive for a profile camera needed
+		# --force_soc, which also gives up the SoC check below. Compared past
+		# the SoC token, as check_platform does.
+		local fplat=$(fit_platform "$(kernel_image)")
+		[ -n "$fplat" ] ||
+			die "Cannot verify that a UBIFS rootfs is built for this camera's device profile ('$system_platform'): the FIT kernel beside it names no platform. Nothing was written. Pass --force_soc if you are sure it is."
+		[ "${fplat#*_}" = "${system_platform#*_}" ] ||
+			die "Wrong platform! The FIT kernel beside this UBIFS rootfs was built for '$fplat'; this camera runs '$system_platform', and the image would drop its device profile. Nothing was written. Pass --force_soc to flash it anyway."
+		echo "Device profile from the FIT kernel beside it: $fplat"
+	fi
 	if [ "1" = "$skip_soc" ]; then
 		echo_c 33 "Skipping the rootfs SoC pre-check (SoC validation disabled)."
-	elif is_device_platform "$system_platform" && [ "1" != "$device_pinned" ]; then
-		die "Cannot verify that a UBIFS rootfs is built for this camera's device profile ('$system_platform'). Nothing was written. Pass --force_soc if you are sure it is."
 	elif [ -n "$fsoc" ]; then
 		echo "SoC from the FIT kernel beside it: $fsoc"
 		check_soc "$fsoc"
@@ -1238,6 +1267,48 @@ remote_length_kb() {
 	[ -n "$n" ] && [ "$n" -gt 0 ] 2>&3 && echo $((n / 1024))
 }
 
+# An archive staged in /tmp is a second full-size copy of an image that is also
+# unpacked beside it, on the tmpfs the rest of the run still needs:
+# do_update_firmware dd's two more copies out of a combined image, and
+# verify_rootfs loop-mounts one. The WebUI's "install from a file" route puts it
+# there -- majestic writes the upload to /tmp and hands us the path -- so on a
+# camera where /tmp is half of 32 MB the archive is pure cost once the image is
+# known good. The online route never has one: it pipes curl straight into tar.
+#
+# Only under /tmp, and never a path the caller chose: --archive can name a file
+# on an SD card or a share, and that one is theirs. Freed once
+# preflight_image_sizes has passed the image, not after the checksum: a refusal
+# in between -- the wrong device profile, say -- left nothing to retry from, and
+# the unpacked images it did leave were no use to anybody. Nothing between the
+# two allocates in /tmp, so the peak is the unpack's, as before.
+# (OpenIPC/majestic-webui#474)
+#
+# Classified by where the file RESOLVES, not by how it was spelt.
+# "/tmp/../mnt/fw.tgz" matches the pattern and is a file on the SD card, so the
+# raw string would have deleted exactly the archive this guard exists to
+# protect. A path that cannot be resolved is left alone: not knowing where it
+# is, is not a reason to remove it.
+free_staged_archive() {
+	[ -n "$archive" ] || return 0
+	local resolved=$(readlink -f "$archive" 2>/dev/null)
+	case "$resolved" in /tmp/*) rm -f "$resolved" ;; esac
+}
+
+# Take back what download_firmware unpacked, for a run that ends without
+# writing: a refused image is no use to a retry, which unpacks it again, and on
+# a 60 MB tmpfs it is RAM -- 17 MB of it for a NAND package. Only the names tar
+# reported, and only plain names in /tmp itself, so a file the caller staged
+# there, or one some other process keeps there, is never touched.
+discard_unpacked() {
+	[ -f "$UNPACKED_LIST" ] || return 0
+	local f
+	while read -r f; do
+		f=${f#./}
+		case "$f" in "" | . | .. | */*) continue ;; esac
+		rm -f "/tmp/$f"
+	done < "$UNPACKED_LIST"
+	rm -f "$UNPACKED_LIST"
+}
 
 download_firmware() {
 	# A UBIFS NAND layout installs from the -nand- package; every other camera,
@@ -1250,7 +1321,7 @@ download_firmware() {
 	if [ -n "$archive" ]; then
 		[ ! -f "$archive" ] && die "File $archive not found"
 		check_unpack_room "$archive"
-		gzip -d "$archive" -c | tar xf - -C /tmp $(tar_excludes) && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
+		gzip -d "$archive" -c | tar xvf - -C /tmp $(tar_excludes) >"$UNPACKED_LIST" && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
 	else
 		if [ -n "$channel" ] || [ -n "$build_id" ]; then
 			fetch_manifest
@@ -1290,33 +1361,12 @@ download_firmware() {
 		# link completes. -m stays as a far outer backstop against a trickle that
 		# never trips the stall check.
 		curl --connect-timeout 30 $dl_meter --speed-limit 1024 --speed-time 60 -m 1800 \
-			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xf - -C /tmp $(tar_excludes) && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xvf - -C /tmp $(tar_excludes) >"$UNPACKED_LIST" && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	fi
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 		check_md5_covered
 	fi
-	# An archive staged in /tmp is now a second full-size copy of an image that
-	# is also unpacked beside it, on the tmpfs the rest of the run still needs:
-	# do_update_firmware dd's two more copies out of a combined image, and
-	# verify_rootfs loop-mounts one. The WebUI's "install from a file" route puts
-	# it there -- majestic writes the upload to /tmp and hands us the path -- so
-	# on a camera where /tmp is half of 32 MB the archive is pure cost from here
-	# on. The online route never has one: it pipes curl straight into tar.
-	#
-	# Only under /tmp, and never a path the caller chose: --archive can name a
-	# file on an SD card or a share, and that one is theirs. Freed after the
-	# checksum rather than after the extract, so a failed check still leaves
-	# something to retry from. (OpenIPC/majestic-webui#474)
-	#
-	# Classified by where the file RESOLVES, not by how it was spelt.
-	# "/tmp/../mnt/fw.tgz" matches the pattern and is a file on the SD card, so
-	# the raw string would have deleted exactly the archive this guard exists to
-	# protect. A path that cannot be resolved is left alone: not knowing where it
-	# is, is not a reason to remove it.
-	_resolved=$(readlink -f "$archive" 2>/dev/null)
-	case "$_resolved" in /tmp/*) rm -f "$_resolved" ;; esac
-	unset _resolved
 	# Combined image (FIT kernel + rootfs packed in one blob, e.g. cv6xx):
 	# flashed as a unit by do_update_firmware instead of the split path.
 	[ -f "/tmp/firmware.bin.$model" ] && image_combined=1
@@ -2919,8 +2969,12 @@ fi
 create_lock
 free_resources
 
+# A local archive is unpacked before check_sdcard: it is most often ON the card,
+# which check_sdcard unmounts, and an archive there was then "not found" every
+# time. Everything after the unpack reads /tmp, so the card can go afterwards.
+[ "1" = "$remote_update" ] && [ -n "$archive" ] && download_firmware
 [ "1" != "$skip_unmount" ] && check_sdcard
-[ "1" = "$remote_update" ] && download_firmware
+[ "1" = "$remote_update" ] && [ -z "$archive" ] && download_firmware
 
 # Now that every image is on the camera, and while the camera is still whole.
 preflight_image_sizes
