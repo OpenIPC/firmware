@@ -3,6 +3,26 @@ dev=$(fw_printenv -n wlandev)
 mac=$(fw_printenv -n wlanmac)
 net=$(fw_printenv -n netaddr_fallback)
 
+# Dual mode: a camera with a cable port and a configured WiFi keeps both up and
+# prefers the cable. eth0 gets DHCP whenever it has a link, and wlan0 joins as
+# well, its routes ranked behind (default.script's metric). The cable was
+# parked on a static 192.168.2.10 as soon as WiFi was configured, so a camera
+# moved onto a device profile that sets wlandev fell off the wired network it
+# was installed on. `fw_setenv netmode wifi` keeps that old layout.
+#
+# The watcher below is what makes the cable plug-and-play: it starts eth0's
+# DHCP once there is a link, releases the lease when the cable goes -- so
+# traffic moves to wlan0 within seconds -- and renews it when the cable comes
+# back. It polls carrier rather than leaning on ignore_routes_with_linkdown,
+# which the 3.x kernels in the tree do not have, and which would leave a pulled
+# cable's address and DNS in place. read and sleep are ash builtins, so a poll
+# forks nothing.
+WATCHER=/var/run/network-watch.pid
+FALLBACK=/var/run/network.fallback
+POLL=1
+DOWN_AFTER=2
+SETTLE=5
+
 set_wireless() {
 	path=/etc/wireless
 	if $path/usb "$dev" || $path/sdio "$dev"; then
@@ -20,10 +40,19 @@ set_wireless() {
 			[ -e /sys/class/net/eth0 ] && ifup eth0
 			return 0
 		fi
+		if dual; then
+			start_dual wlan0
+			return 0
+		fi
 		ifup wlan0
 	elif $path/modem "$dev"; then
 		ifup usb0
 		ifup eth1
+	elif dual; then
+		# WiFi was asked for and its driver did not load. The cable is all
+		# that is left, so it gets DHCP rather than a static address.
+		start_dual
+		return 0
 	fi
 	# get_mac, not fw_printenv: this branch never calls ifup eth0, so it is
 	# the only thing that puts a MAC on a wireless camera's wired port, and
@@ -32,8 +61,154 @@ set_wireless() {
 	[ -e /sys/class/net/eth0 ] && ifconfig eth0 "${net:-192.168.2.10}" hw ether "$(get_mac eth0)" up
 }
 
+dual() {
+	[ -e /sys/class/net/eth0 ] && [ "$(fw_printenv -n netmode 2>/dev/null)" != wifi ]
+}
+
+# $1: the WiFi interface to bring up beside the cable, if any.
+start_dual() {
+	echo "${net:-192.168.2.10}" > "$FALLBACK"
+	# With both ports on one subnet each must answer ARP for its own
+	# address only, or peers learn the WiFi MAC for the cable's address
+	# and the traffic the cable should carry goes over the air.
+	for i in eth0 $1; do
+		c=/proc/sys/net/ipv4/conf/$i
+		[ -w "$c/arp_ignore" ] && echo 1 > "$c/arp_ignore"
+		[ -w "$c/arp_announce" ] && echo 2 > "$c/arp_announce"
+	done
+	# Link up, no address yet: carrier is only reported on an interface
+	# that is up, and the watcher starts DHCP once it is. A camera with no
+	# cable in pays nothing at boot for a port it is not using.
+	ifconfig eth0 hw ether "$(get_mac eth0)" up
+	[ -n "$1" ] && ifup "$1"
+	watch_start
+}
+
+# The watcher's pid, if it is the watcher still: a pid in a file can have been
+# reused by anything since. As in S95majestic.
+watching() {
+	pid=$(cat "$WATCHER" 2>/dev/null)
+	[ -n "$pid" ] || return 1
+	set -- $(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
+	[ $# -ge 2 ] || return 1
+	eval "script=\${$(($# - 1))} last=\${$#}"
+	[ "$last" = watch ] && [ "${script##*/}" = "${0##*/}" ]
+}
+
+watch_start() {
+	watching && return 0
+	(
+		trap '' HUP
+		exec sh "$0" watch
+	) </dev/null >/dev/null 2>&1 &
+	echo $! > "$WATCHER"
+}
+
+watch_stop() {
+	if watching; then
+		kill "$pid" 2>/dev/null
+		# The TERM is taken only once an ifup in progress returns.
+		i=0
+		while kill -0 "$pid" 2>/dev/null && [ $i -lt 10 ]; do
+			i=$((i + 1))
+			sleep 1
+		done
+	fi
+	rm -f "$WATCHER"
+}
+
+# Signal eth0's udhcpc, and only a udhcpc: USR2 releases the lease (deconfig
+# drops the address, its routes and its DNS), USR1 asks for one again.
+dhcp_signal() {
+	upid=$(cat /var/run/udhcpc.eth0.pid 2>/dev/null)
+	[ -n "$upid" ] || return 0
+	comm=
+	read -r comm 2>/dev/null < "/proc/$upid/comm"
+	[ "$comm" = udhcpc ] && kill -"$1" "$upid" 2>/dev/null
+}
+
+# eth0's link, each poll: up (carrier), down (no carrier), admin (brought down
+# by hand -- the kernel has already flushed its routes, so nothing to do), or
+# gone.
+link_state() {
+	flags=
+	read -r flags 2>/dev/null < /sys/class/net/eth0/flags
+	if [ -z "$flags" ]; then
+		link=gone
+	elif [ $((flags & 1)) -eq 0 ]; then
+		link=admin
+	else
+		carrier=
+		read -r carrier 2>/dev/null < /sys/class/net/eth0/carrier
+		[ "$carrier" = 1 ] && link=up || link=down
+	fi
+}
+
+watch() {
+	trap '' HUP
+	trap 'rm -f "$WATCHER"; exit 0' TERM INT
+	echo $$ > "$WATCHER"
+	# pending: no DHCP yet. settling: the link was just bounced -- by
+	# ifup's hwaddress hook, or by hand -- and autonegotiation takes
+	# longer than DOWN_AFTER polls to bring carrier back, so a missing
+	# carrier counts only after SETTLE polls. Measured on an hi3516ev300:
+	# `ip link set eth0 up` had no carrier for about 2 s. up/down: the
+	# lease is held/released.
+	state=pending
+	lost=0
+	renew=
+	while :; do
+		link_state
+		case "$state:$link" in
+		pending:up)
+			ifup eth0
+			state=settling
+			renew=
+			lost=0
+			;;
+		settling:up)
+			# Brought down by hand, the kernel flushed eth0's routes;
+			# a renew puts the default route back.
+			[ -n "$renew" ] && dhcp_signal USR1
+			state=up
+			lost=0
+			;;
+		settling:down | up:down)
+			lost=$((lost + 1))
+			limit=$DOWN_AFTER
+			[ "$state" = settling ] && limit=$SETTLE
+			if [ $lost -ge $limit ]; then
+				logger -t network "eth0 link lost, releasing its lease; wlan0 carries the traffic"
+				dhcp_signal USR2
+				state=down
+				lost=0
+			fi
+			;;
+		down:up)
+			logger -t network "eth0 link back, renewing its lease"
+			dhcp_signal USR1
+			state=up
+			lost=0
+			;;
+		up:admin | settling:admin)
+			state=admin
+			;;
+		admin:up | admin:down)
+			state=settling
+			renew=1
+			lost=0
+			;;
+		*:up)
+			lost=0
+			;;
+		esac
+		sleep $POLL
+	done
+}
+
 start() {
 	echo "Starting network..."
+	rm -f "$FALLBACK"
 	ifup lo
 	if [ -n "$dev" ]; then
 		set_wireless
@@ -44,6 +219,9 @@ start() {
 
 stop() {
 	echo "Stopping network..."
+	# The watcher first, so it does not bring back what is being stopped.
+	watch_stop
+	rm -f "$FALLBACK"
 	ifdown lo
 	ifdown -f wlan0
 	ifdown -f usb0
@@ -59,6 +237,10 @@ case "$1" in
 	restart|reload)
 		stop
 		start
+		;;
+
+	watch)
+		watch
 		;;
 
 	*)
