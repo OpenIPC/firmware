@@ -51,6 +51,7 @@ rewrite() {
         -e "s|/sys/class/net|$SB/sys/class/net|g" \
         -e "s|/proc/sys/net|$SB/proc/sys/net|g" \
         -e "s|/etc/wireless|$SB/wireless|g" \
+        -e "s|/usr/share/udhcpc/default.script|$SB/default.script|g" \
         -e "s|^POLL=1$|POLL=0.1|" \
         -e "s|^DOWN_AFTER=2$|DOWN_AFTER=4|" \
         -e "s|^SETTLE=5$|SETTLE=10|" \
@@ -71,6 +72,8 @@ stub fw_printenv '[ "$1" = -n ] && shift
 [ -f "'"$SB"'/env/$1" ] && { cat "'"$SB"'/env/$1"; exit 0; }
 echo "## Error: \"$1\" not defined" >&2; exit 1'
 stub get_mac 'echo 00:11:22:33:44:55'
+# arping: the gateway answers unless $SB/no-arp says it does not.
+stub arping 'echo "arping $*" >> "'"$LOG"'"; [ ! -e "'"$SB"'/no-arp" ]'
 stub logger 'echo "logger $*" >> "'"$LOG"'"'
 stub ifconfig 'echo "ifconfig $*" >> "'"$LOG"'"'
 # route del fails, as it does once there is nothing left to delete: the
@@ -88,9 +91,11 @@ stub udhcpc 'trap "echo USR1 >> '"$SB"'/udhcpc.sig" USR1
 trap "echo USR2 >> '"$SB"'/udhcpc.sig" USR2
 while :; do sleep 0.05; done'
 # ip: route listings come from $SB/routes.<dev>; everything else is logged.
+# A full "ip -4|-6 route show" comes from $SB/routes.all4 / routes.all6.
 stub ip 'echo "ip $*" >> "'"$LOG"'"
-if [ "$1" = -4 ] && [ "$2" = route ] && [ "$3" = show ] && [ "$4" = dev ]; then
-    cat "'"$SB"'/routes.$5" 2>/dev/null
+if [ "$2" = route ] && [ "$3" = show ]; then
+    if [ "$4" = dev ]; then cat "'"$SB"'/routes.$5" 2>/dev/null
+    else cat "'"$SB"'/routes.all${1#-}" 2>/dev/null; fi
 fi
 exit 0'
 # /etc/wireless: "good-usb" loads through usb, "good-modem" through modem,
@@ -110,7 +115,7 @@ link() {   # link <flags> <carrier>
 reset() {
     $SHELL_UNDER_TEST "$SB/S40network" stop >/dev/null 2>&1
     pkill -f "$SB/bin/udhcpc" 2>/dev/null
-    rm -rf "$SB/env"/* "$SB/run"/* "$SB/tmp"/* "$SB/udhcpc.sig" "$SB"/routes.* "$SB/static"
+    rm -rf "$SB/env"/* "$SB/run"/* "$SB/tmp"/* "$SB/udhcpc.sig" "$SB"/routes.* "$SB/static" "$SB/no-arp"
     rm -f "$SB/proc/sys/net/ipv4/conf"/*/arp_*
     for i in eth0 wlan0; do
         : > "$SB/proc/sys/net/ipv4/conf/$i/arp_ignore"
@@ -295,33 +300,81 @@ else
 fi
 kill "$stranger" 2>/dev/null
 
-# A static eth0 stanza has no udhcpc to signal. Its gateway route would
-# outlive a pulled cable, so the address is flushed instead -- routes with it
-# -- and the stanza is applied again when the cable is back.
+# A static eth0 stanza has no udhcpc to signal. Its routes -- IPv4 and IPv6 --
+# are put aside and flushed when the cable goes, so a gateway route cannot
+# outlive the cable, and put back when it returns: no re-apply, no bounce of a
+# link that has just come back, no traffic lost on the way back.
 reset; setenv wlandev good-usb; setenv wlanssid Home
 touch "$SB/static"
+printf 'default via 10.216.128.1 dev eth0\n10.216.128.0/24 dev eth0 scope link  src 10.216.128.87\n10.216.128.0/24 dev wlan0 scope link  src 10.216.128.70  metric 10\n' > "$SB/routes.all4"
+printf '2001:db8::/64 dev eth0  metric 256\ndefault via 2001:db8::1 dev eth0  metric 1024\n' > "$SB/routes.all6"
 link 0x1003 1
 start
 wait_for 3 logged "ifup eth0"
 sleep 0.5
 link 0x1003 0
-if wait_for 3 logged "ip -4 addr flush dev eth0" && [ -z "$(sigs)" ]; then
-    ok "static eth0, cable pulled: its address is flushed, no udhcpc signalled"
+if wait_for 3 logged "ip -4 route flush dev eth0" && logged "ip -6 route flush dev eth0" &&
+    ! grep -q "addr flush" "$LOG" && [ -z "$(sigs)" ]; then
+    ok "static eth0, cable pulled: its IPv4 and IPv6 routes are flushed, the address kept"
 else
     bad "static release, log='$(cat "$LOG")' signals='$(sigs)'"
 fi
+# Carrier back, but the gateway not answering yet -- a switch port still
+# learning: the routes stay out, and WiFi keeps the traffic.
+touch "$SB/no-arp"
 link 0x1003 1
-if wait_for 3 logged "ifdown -f eth0" && wait_for 3 test "$(count "ifup eth0")" = 2; then
-    ok "static eth0, cable back: the stanza is applied again"
+sleep 1
+if grep -q "^arping .*-I eth0 10.216.128.1" "$LOG" && ! grep -q "^ip -4 route add" "$LOG"; then
+    ok "static eth0, carrier back before the gateway answers: its routes stay out"
 else
-    bad "static restore, ifup count=$(count "ifup eth0") log='$(cat "$LOG")'"
+    bad "routes restored before the gateway answered, log='$(cat "$LOG")'"
 fi
-# The re-apply bounces the link; that is settled, not taken for a pulled cable.
-link 0x1003 0; sleep 0.6; link 0x1003 1; sleep 0.5
-if [ "$(count "ip -4 addr flush dev eth0")" = 1 ]; then
-    ok "static eth0: the re-apply's link bounce is not taken for a pulled cable"
+rm -f "$SB/no-arp"
+if wait_for 3 logged "ip -4 route add default via 10.216.128.1 dev eth0"; then
+    a=$(grep -n "^ip -4 route add 10.216.128.0/24 dev eth0" "$LOG" | cut -d: -f1)
+    d=$(grep -n "^ip -4 route add default via 10.216.128.1 dev eth0" "$LOG" | cut -d: -f1)
+    if [ -n "$a" ] && [ "$a" -lt "$d" ] && ! grep -q "dev wlan0" <(grep "route add" "$LOG") &&
+        logged "ip -6 route add default via 2001:db8::1 dev eth0 metric 1024"; then
+        ok "static eth0, cable back: its routes come back, the subnet before the gateway, IPv6 too"
+    else
+        bad "static restore order, log='$(cat "$LOG")'"
+    fi
 else
-    bad "the bounce after a re-apply flushed again, log='$(cat "$LOG")'"
+    bad "static restore, log='$(cat "$LOG")'"
+fi
+if [ "$(count "ifup eth0")" = 1 ] && ! grep -q "^ifdown" "$LOG"; then
+    ok "static eth0, cable back: nothing re-applied, so the link is not bounced"
+else
+    bad "the static restore re-applied the stanza, log='$(cat "$LOG")'"
+fi
+
+# Brought down by hand there is nothing put aside -- the kernel flushed the
+# routes itself -- so the stanza is applied again.
+link 0x1002 0; sleep 0.5; link 0x1003 1
+if wait_for 3 logged "ifdown -f eth0"; then
+    ok "static eth0 brought down and up by hand: the stanza is applied again"
+else
+    bad "admin bounce of a static eth0, log='$(cat "$LOG")'"
+fi
+
+# A lease's DNS on file with no udhcpc left to release it -- the client died
+# after it bound: released as udhcpc would have, so the cable's servers do not
+# sit ahead of the WiFi's.
+reset; setenv wlandev good-usb; setenv wlanssid Home
+touch "$SB/static"
+mkdir -p "$SB/tmp/resolv.d"
+printf 'nameserver 10.216.128.1\n' > "$SB/tmp/resolv.d/00000.eth0"
+printf 'nameserver 192.168.1.1\n' > "$SB/tmp/resolv.d/00010.wlan0"
+link 0x1003 1
+start
+wait_for 3 logged "ifup eth0"
+sleep 0.5
+link 0x1003 0
+if wait_for 3 logged "ifconfig eth0 0.0.0.0" && [ ! -e "$SB/tmp/resolv.d/00000.eth0" ] &&
+    [ "$(cat "$SB/tmp/resolv.conf" 2>/dev/null)" = "nameserver 192.168.1.1" ]; then
+    ok "a dead udhcpc's lease on a pulled cable: released, its DNS gone from resolv.conf"
+else
+    bad "stale lease, log='$(cat "$LOG")' resolv='$(cat "$SB/tmp/resolv.conf" 2>/dev/null)'"
 fi
 
 # WiFi asked for, its driver missing: the cable gets DHCP, not a static address.
