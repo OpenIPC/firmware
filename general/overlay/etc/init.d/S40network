@@ -7,6 +7,19 @@ set_wireless() {
 	path=/etc/wireless
 	if $path/usb "$dev" || $path/sdio "$dev"; then
 		[ -n "$mac" ] && ip link set dev wlan0 address "$mac"
+		# A radio with no network to join is not a way in yet -- S97qrscan
+		# waits for credentials on exactly such a camera, and brings wlan0 up
+		# itself to try the ones it is shown -- so until there is a network
+		# the wired port keeps DHCP. A device profile that set wlandev on
+		# first boot otherwise left a camera on Ethernet at 192.168.2.10,
+		# unreachable from the network it was plugged into. wlan0 gets no
+		# DHCP of its own meanwhile, as qrscan's restore does not either: with
+		# no server on either side, both would take udhcpc's leasefail
+		# address, and the camera would answer on one subnet from two ports.
+		if [ -z "$(fw_printenv -n wlanssid 2>/dev/null)" ]; then
+			[ -e /sys/class/net/eth0 ] && ifup eth0
+			return 0
+		fi
 		ifup wlan0
 	elif $path/modem "$dev"; then
 		ifup usb0

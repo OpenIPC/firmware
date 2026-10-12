@@ -227,6 +227,9 @@ cat > "$SB/bin/umount" <<EOF
 #!/bin/bash
 # STUB_UMOUNT_BUSY: a card something still has open -- EBUSY, mount unchanged.
 [ -n "\${STUB_UMOUNT_BUSY:-}" ] && exit 1
+# STUB_UMOUNT_HIDES: the card's files go with it, as they do on a camera -- the
+# directory left behind is an empty mount point.
+[ -n "\${STUB_UMOUNT_HIDES:-}" ] && [ -d "\$1" ] && mv "\$1" "\$1.unmounted"
 if [ -n "\$1" ]; then
     grep -v " \$1 " "\$SDMOUNTS" > "\$SDMOUNTS.n" 2>/dev/null
     mv "\$SDMOUNTS.n" "\$SDMOUNTS" 2>/dev/null
@@ -499,6 +502,7 @@ run() {
         STUB_CURL_RC="${STUB_CURL_RC:-0}" \
         STUB_PREPARE="${STUB_PREPARE:-}" STUB_ABORT="${STUB_ABORT:-}" \
         STUB_UMOUNT_BUSY="${STUB_UMOUNT_BUSY:-}" \
+        STUB_UMOUNT_HIDES="${STUB_UMOUNT_HIDES:-}" \
         STUB_DL_BYTES="${STUB_DL_BYTES:-}" \
         STUB_ISIZE="${STUB_ISIZE:-}" \
         STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
@@ -529,7 +533,7 @@ reset_env() {
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB
-    unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY RUN_ENV FOLLOW_LOG STUB_UBI_SLOW
+    unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY STUB_UMOUNT_HIDES RUN_ENV FOLLOW_LOG STUB_UBI_SLOW
     rm -rf "$SB/sys"
     printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n::restart:/sbin/init\n' > "$SB/etc/inittab"
     rm -f "$SB"/tmp/*.gk7205v500
@@ -764,6 +768,28 @@ if [ "$RC" -eq 0 ] && [ -f "$SB/keep/fw.tgz" ]; then
 else
     bad "a /tmp/.. alias must not delete an outside archive, rc=$RC present=$([ -f "$SB/keep/fw.tgz" ] && echo yes || echo no)"
 fi
+
+# ...and an archive on the SD card is unpacked before check_sdcard takes the
+# card away. Unmounting first left "File ... not found" every time: the most
+# natural place to keep an offline image was the one place it could not be read
+# from.
+reset_env
+mkdir -p "$SB/mnt/mmcblk0p1"
+make_combined "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/firmware.bin.ssc338q"
+rm -f "$SB/tmp/firmware.bin.ssc338q"
+mv "$SB/tmp/fw.tgz" "$SB/mnt/mmcblk0p1/fw.tgz"
+echo "/dev/mmcblk0p1 on $SB/mnt/mmcblk0p1 type vfat (rw,relatime)" > "$SDMOUNTS"
+STUB_UMOUNT_HIDES=1
+run -z --archive="$SB/mnt/mmcblk0p1/fw.tgz"
+u=$(at "Local archive unpacked"); c=$(at "Unmounting SD card")
+if [ "$RC" -eq 0 ] && [ -n "$u" ] && [ -n "$c" ] && [ "$u" -lt "$c" ] &&
+    [ -f "$SB/mnt/mmcblk0p1.unmounted/fw.tgz" ]; then
+    ok "an archive on the SD card is unpacked before the card is unmounted, and kept"
+else
+    bad "archive on the SD card, rc=$RC unpacked@${u:-none} unmount@${c:-none} out='$OUT'"
+fi
+rm -rf "$SB/mnt"
 
 # --- an image shorter than its own superblock -------------------------------
 #
@@ -2606,6 +2632,90 @@ if printf '%s' "$OUT" | grep -q "SoC from the FIT kernel beside it: hi3516ev300"
 else
     bad "hi3516ev300 UBI-only, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
+# --- a device profile and a local UBIFS archive ----------------------------
+# The rootfs cannot be read without mounting it, so on a device profile only a
+# download under the device's own name used to count, and every local archive
+# needed --force_soc -- which gives up the SoC check as well. The NAND FIT now
+# carries the build's BUILD_PLATFORM (openipc,platform in nand-fit.its).
+# The value follows an FDT property header as it does in a real FIT: token,
+# length, then the name offset, whose last byte here is printable ('A').
+make_fit_plat() {
+    make_fit_soc "$1" "$2"
+    printf '\0\0\0\3\0\0\0\100\0\0\0\101BUILD_PLATFORM=%s\0' "$3" >> "$1"
+}
+# hisi_profile_archive <FIT platform, or empty>: a profile camera and a local
+# archive whose FIT names that platform; the loose images are removed, so what
+# /tmp holds afterwards is what the run left there.
+hisi_profile_archive() {
+    reset_env; ubi_setup_hisi
+    set_platform hi3516ev300_ultimate_acme-cam1 ultimate
+    if [ -n "$1" ]; then make_fit_plat "$HFIT" hi3516ev300 "$1"; else make_fit_soc "$HFIT" hi3516ev300; fi
+    make_ubifs "$HFS"
+    make_archive "$HFIT" "$HFS"
+    rm -f "$HFIT" "$HFS"
+    STUB_PIVOT_RC=0
+}
+
+hisi_profile_archive hi3516ev300_ultimate_acme-cam1
+run -z --archive="$SB/tmp/fw.tgz"
+if printf '%s' "$OUT" | grep -q "Device profile from the FIT kernel beside it: hi3516ev300_ultimate_acme-cam1" &&
+    printf '%s' "$OUT" | grep -q "SoC from the FIT kernel beside it: hi3516ev300" &&
+    handed_off && [ ! -f "$SB/tmp/fw.tgz" ]; then
+    ok "device profile + local UBIFS archive whose FIT names the device -> proceeds, SoC still checked"
+else
+    bad "the device's own local archive should pass, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# Another device's image, and what the refusal leaves: the archive, to retry
+# from, and none of what it unpacked -- on a camera that was 17 MB of a 60 MB
+# tmpfs, and the archive itself was already gone. A file somebody else keeps
+# in /tmp is not the unpack's to remove.
+hisi_profile_archive hi3516ev300_ultimate_other-cam2
+echo theirs > "$SB/tmp/not-from-the-archive"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "Wrong platform" && nothing_ubi && ! handed_off &&
+    [ -f "$SB/tmp/fw.tgz" ] && [ ! -e "$HFIT" ] && [ ! -e "$HFS" ] &&
+    [ ! -e "$SB/tmp/openipc.md5sum" ] && [ -f "$SB/tmp/not-from-the-archive" ]; then
+    ok "device profile + another device's UBIFS archive -> refused; archive kept, unpacked images removed"
+else
+    bad "another device's archive, rc=$RC archive=$([ -f "$SB/tmp/fw.tgz" ] && echo kept || echo gone) left=$(ls "$SB/tmp" | tr '\n' ' ') out='$OUT'"
+fi
+rm -f "$SB/tmp/not-from-the-archive"
+
+# The record of an unpack belongs to the run that made it. A second sysupgrade
+# that fails before unpacking anything must not act on another run's list --
+# here one at the name an earlier draft used, naming an image that run is about
+# to flash.
+reset_env
+echo "fitImage.hi3516ev300" > "$SB/tmp/sysupgrade.unpacked"
+echo running > "$SB/tmp/fitImage.hi3516ev300"
+run -z --archive="$SB/tmp/no-such.tgz"
+if [ "$RC" -ne 0 ] && [ -f "$SB/tmp/fitImage.hi3516ev300" ]; then
+    ok "a run that unpacked nothing leaves another run's images alone"
+else
+    bad "a failed run removed what it did not unpack, rc=$RC out='$OUT'"
+fi
+rm -f "$SB/tmp/sysupgrade.unpacked" "$SB/tmp/fitImage.hi3516ev300"
+
+# A FIT from before it carried a platform is no evidence either way.
+hisi_profile_archive ""
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "names no platform" && nothing_ubi; then
+    ok "device profile + UBIFS archive whose FIT names no platform -> refused"
+else
+    bad "a FIT with no platform proves nothing, rc=$RC out='$OUT'"
+fi
+
+# --force_soc still takes it, as the refusal says.
+hisi_profile_archive hi3516ev300_ultimate_other-cam2
+run -z --force_soc --archive="$SB/tmp/fw.tgz"
+if handed_off && printf '%s' "$OUT" | grep -q "Skipping the rootfs SoC pre-check"; then
+    ok "device profile + another device's UBIFS archive + --force_soc -> proceeds"
+else
+    bad "--force_soc should still override, rc=$RC out='$OUT'"
+fi
+rm -f "$HFIT" "$HFS"
+
 default_url_is "https://github.com/OpenIPC/firmware/releases/download/latest/openipc.hi3516ev300-nand-ultimate.tgz" \
     ubi_setup_hisi
 
@@ -2663,7 +2773,11 @@ else
 fi
 
 # --- the unpack leaves rootfs.ubi (fresh-install image) in the archive
+# An image that passes, so the run reaches the hand-off with what it unpacked
+# still in /tmp: a refused one takes its unpack back (discard_unpacked).
 reset_env; ubi_setup ubifs
+make_fit_soc "$UFIT" gk7205v500
+STUB_PIVOT_RC=0
 stage="$SB/stage"; rm -rf "$stage"; mkdir -p "$stage"
 cp "$UFIT" "$UFS" "$stage/"
 dd if=/dev/zero bs=1k count=64 of="$stage/rootfs.ubi.gk7205v500" 2>/dev/null

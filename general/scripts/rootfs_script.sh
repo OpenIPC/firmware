@@ -9,7 +9,8 @@ date +GITHUB_VERSION="\"${GIT_BRANCH-local}+${GIT_HASH-build}, %Y-%m-%d"\" >> ${
 echo BUILD_OPTION=${OPENIPC_VARIANT} >> ${FILE}
 echo BUILD_ID=${BUILD_ID:-local-$(date -u +%Y%m%d)-${GIT_HASH-build}} >> ${FILE}
 echo BUILD_SHA=${BUILD_SHA:-${GIT_HASH-build}} >> ${FILE}
-echo BUILD_PLATFORM=${BUILD_PLATFORM:-${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}} >> ${FILE}
+PLATFORM=${BUILD_PLATFORM:-${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}}
+echo BUILD_PLATFORM=${PLATFORM} >> ${FILE}
 date +TIME_STAMP=%s >> ${FILE}
 
 # The image ships no majestic.yaml: majestic runs on its own defaults until a
@@ -129,10 +130,12 @@ if [ -f "${NAND_FIT_ITS}" ] && grep -q "^BR2_TARGET_ROOTFS_UBI=y" "${BR2_CONFIG}
 	FIT_DIR="${BINARIES_DIR}/nand-fit"
 	rm -rf "${FIT_DIR}" && mkdir -p "${FIT_DIR}" || exit 1
 	# @SOC@ is the SoC the FIT is stamped with (sysupgrade's fit_soc reads it);
+	# @PLATFORM@ the BUILD_PLATFORM above (fit_platform reads that one);
 	# @DTB@ is for a family .its whose models each build their own
 	# <model>-demb.dtb (hi3516ev200 family). An .its naming its DTB outright
 	# has no @DTB@ and is copied as it is.
-	sed -e "s/@SOC@/${OPENIPC_SOC_MODEL}/" -e "s/@DTB@/${OPENIPC_SOC_MODEL}-demb.dtb/g" \
+	sed -e "s/@SOC@/${OPENIPC_SOC_MODEL}/" -e "s/@PLATFORM@/${PLATFORM}/" \
+		-e "s/@DTB@/${OPENIPC_SOC_MODEL}-demb.dtb/g" \
 		"${NAND_FIT_ITS}" > "${FIT_DIR}/nand-fit.its" || exit 1
 	cp "${KBOOT}/zImage" "${FIT_DIR}/" || { echo "NAND FIT: no zImage in ${KBOOT}" >&2; exit 1; }
 	# Every DTB the stamped .its names, from the kernel's dts output.
