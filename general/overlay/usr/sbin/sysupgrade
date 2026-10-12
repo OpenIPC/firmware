@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.69
+scr_version=1.0.70
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -53,6 +53,12 @@ WDOG_RELEASE=/tmp/.sysupgrade-wdog-release
 # boot. Overridable so the test harness can point both at its sandbox.
 UBI_SYS=${UBI_SYS:-/sys/class/ubi}
 INITTAB=${INITTAB:-/etc/inittab}
+# Where a handed-off flash phase writes its log, and the port that serves it.
+# The hand-off kills dropbear and majestic with everything else, so this is the
+# only way to watch a NAND flash without a serial cable -- see follow_start.
+# Set but empty turns it off; the test harness does that.
+FOLLOW_LOG=${FOLLOW_LOG-/tmp/upgrade.log}
+FOLLOW_PORT=${FOLLOW_PORT:-80}
 # Seconds the rootfs verify-mount may take before it is treated as unmountable.
 mount_wait=${mount_wait:-45}
 # Seconds the operator gets to Ctrl-C out of a run that will force a reboot.
@@ -243,7 +249,7 @@ rewrite_ubifs() {
 	fi
 	set_progress ubirsvol "$ubi" -n "$rid" -s "$size" ||
 		die "Resizing the rootfs volume to $size bytes failed."
-	set_progress ubiupdatevol "$ubi_rootfs_dev" "$x" ||
+	ubi_update "$ubi_rootfs_dev" "$x" ||
 		die "Writing $x to $ubi_rootfs_dev failed."
 	set_progress ubimkvol "$ubi" -N rootfs_data -m ||
 		die "Recreating the settings volume failed; the camera boots with its settings in RAM until it is reset."
@@ -1767,13 +1773,80 @@ hand_off_pid1() {
 	# the /sysupgrade.env that /sbin/init sources.
 	export -p > ./sysupgrade.env 2>&3
 	echo "export _handoff=1" >> ./sysupgrade.env
-	echo_c 37 "\nHanding PID 1 over to the RAM root; this console goes quiet until it does."
+	echo_c 37 "\nHanding PID 1 over to the RAM root."
+	# "This console goes quiet" was all it used to say, and over SSH it never
+	# came back: the hand-off kills dropbear, so a flash that went fine looked
+	# exactly like one that crashed. Say so, and where to watch instead.
+	local urls=$(follow_urls)
+	echo_c 33 "SSH, the WebUI and every other login end here; the flash carries on without them."
+	if [ -n "$urls" ]; then
+		echo_c 33 "Follow it from another machine (curl -sN, or a browser):"
+		echo_c 36 "$urls"
+	fi
+	echo_c 33 "Progress also goes to the serial console. The camera reboots by itself when it is done."
 	sync
 	busybox kill -QUIT 1
 	sleep "${handoff_wait:-30}"
 	echo_c 31 "PID 1 did not hand over; rebooting (nothing was flashed)"
 	./bin/busybox reboot -d 1 -f
 	exit 1
+}
+
+# Where follow_start will serve the log, one URL per line: every global IPv4
+# address the camera has, except Wi-Fi. The hand-off kills wpa_supplicant, which
+# takes the association with it, so a wlan address would only be a promise of a
+# connection that times out. A wired address outlives it (measured on
+# hi3516ev300 with udhcpc -R): the deconfig script udhcpc runs on its way out
+# lives in the old root, which pivot_root has already taken from it. Empty when
+# nothing will listen.
+follow_urls() {
+	[ -n "$FOLLOW_LOG" ] && [ -e ./bin/nc ] || return 0
+	local port=
+	[ "80" = "$FOLLOW_PORT" ] || port=":$FOLLOW_PORT"
+	ip -4 addr show scope global 2>&3 |
+		sed -n 's/.*inet \([0-9.]*\)\/.* \([^ ]*\)$/\1 \2/p' |
+		while read -r addr dev; do
+			case "$dev" in wl*) continue ;; esac
+			echo "  http://$addr$port/"
+		done
+}
+
+# Make a handed-off flash phase watchable. Called first thing as PID 1.
+#
+# From here every write goes to $FOLLOW_LOG, a file in the RAM /tmp: a file
+# cannot block and cannot raise SIGPIPE, so nothing that happens to a reader
+# can stall or kill PID 1 mid-write -- which a pipe through tee could. Readers
+# are separate processes that may die without consequence:
+#   - `tail -f` puts it back on the serial console, where it went before;
+#   - nc serves it on $FOLLOW_PORT, free now that majestic is gone, as a plain
+#     HTTP response that never ends, so curl, a browser and plain nc all show
+#     it as it grows. Colour codes and flashcp's \r updates are turned into
+#     plain lines on the way out, for the browser -- by tr, not by a regex RS:
+#     with one, busybox awk never passed on the last line before the reboot
+#     (measured on hi3516ev300).
+# Best effort throughout: when any piece is missing the flash runs as before.
+follow_start() {
+	[ -n "$FOLLOW_LOG" ] && : > "$FOLLOW_LOG" 2>&3 || return 0
+	busybox tail -n +1 -f "$FOLLOW_LOG" 2>&3 &
+	exec >> "$FOLLOW_LOG" 2>&1
+	follow_tail=1
+	# nc -e runs one per connection; it finds the log beside itself.
+	cat > "$FOLLOW_LOG.http" 2>&3 <<'EOF'
+#!/bin/sh
+printf 'HTTP/1.0 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nCache-Control: no-store\r\n\r\n'
+busybox tail -n +1 -f "${0%.http}" | busybox tr '\r' '\n' |
+	busybox awk '{ gsub(/\033\[[0-9;]*m/, ""); print; fflush() }'
+EOF
+	chmod +x "$FOLLOW_LOG.http" 2>&3 &&
+		busybox nc -ll -p "$FOLLOW_PORT" -e "$FOLLOW_LOG.http" 2>&3 &
+	echo_c 33 "sysupgrade $scr_version on $(hostname 2>&3): flashing from RAM"
+}
+
+# Give the readers time to pass the last lines on before the reboot cuts them
+# off: busybox `tail -f` looks for new data once a second.
+follow_flush() {
+	[ "1" = "$follow_tail" ] && sleep 2
+	return 0
 }
 
 # Second phase, as PID 1: let go of the old root so its UBI volumes close.
@@ -2153,9 +2226,58 @@ ubi_volume() {
 # anything else is an MTD partition and goes through flashcp as it always has.
 write_image() {
 	case "$2" in
-		/dev/ubi[0-9]*_[0-9]*) set_progress ubiupdatevol "$2" "$1" ;;
+		/dev/ubi[0-9]*_[0-9]*) ubi_update "$2" "$1" ;;
 		*) set_progress flashcp -v "$1" "$2" ;;
 	esac
+}
+
+# ubiupdatevol volume $1 from image $2, saying how far it has got.
+#
+# flashcp -v prints its own progress; busybox ubiupdatevol has no such option
+# and is silent for as long as the rootfs takes (4 s for 17 MB on hi3516ev300),
+# which made the one step that matters the one that looked hung. It moves the image onto its
+# stdin and reads it one LEB at a time, each written before the next is read,
+# so the file position of its fd 0 is how far the write has got, to within a
+# LEB. Read from outside, the write is the same call it always was.
+#
+# Not under -s: the WebUI counts set_progress's lines and expects only those.
+ubi_update() {
+	[ "1" = "$silent_update" ] && { set_progress ubiupdatevol "$1" "$2"; return; }
+	local size=$(stat -c %s "$2" 2>&3) pid st watcher
+	busybox ubiupdatevol "$1" "$2" &
+	pid=$!
+	ubi_progress "$pid" "$size" &
+	watcher=$!
+	wait "$pid"
+	st=$?
+	# It stops once the writer is reaped, which the wait above just did.
+	wait "$watcher"
+	[ "$st" -eq 0 ] && [ -n "$size" ] && echo "Written: 100% ($(mb "$size") MB)"
+	return "$st"
+}
+
+# Print the write's progress every second while it changes. $1 the writer's
+# pid, $2 the image's size in bytes.
+ubi_progress() {
+	local pid=$1 size=$2 pos pct last=
+	[ -n "$size" ] && [ "$size" -ge 100 ] || return 0
+	while [ -d "/proc/$pid" ]; do
+		pos=$(awk '$1 == "pos:" { print $2 }' "/proc/$pid/fdinfo/0" 2>&3)
+		if [ -n "$pos" ]; then
+			pct=$(( pos / (size / 100) ))
+			[ "$pct" -gt 99 ] && pct=99
+			[ "$pct" = "$last" ] ||
+				echo "Written: $pct% ($(mb "$pos") of $(mb "$size") MB)"
+			last=$pct
+		fi
+		sleep 1
+	done
+}
+
+# Bytes as megabytes to one decimal place, in integer arithmetic.
+mb() {
+	local t=$(( $1 * 10 / 1048576 ))
+	echo "$(( t / 10 )).$(( t % 10 ))"
 }
 
 # Record that a write is about to land on flash that backs the RUNNING
@@ -2520,6 +2642,7 @@ reboot_system() {
 		echo_c 31 "This camera has no shell, no SSH and no console until it reboots."
 	fi
 	echo_c 37 "\nUnconditional reboot"
+	follow_flush
 	# Let the dog go, without the magic 'V' -- see watchdog_keep.
 	[ -n "$wdog_keeper" ] && : > "$WDOG_RELEASE"
 	busybox reboot -d 1 -f
@@ -2713,6 +2836,7 @@ done
 # pivoted us here, and its results arrived in the environment. Go straight to
 # the writes; flash_and_reboot never returns.
 if [ "1" = "$_ramfs_phase" ]; then
+	[ "1" = "$_handoff" ] && follow_start
 	echo_c 34 "Flashing from RAM (pid $$)"
 	# pivot_root detached the tmpfs from the old root's $RAM_ROOT and parked that
 	# root at /mnt, so what is left there is the bare mount point enter_ramfs

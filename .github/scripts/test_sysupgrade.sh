@@ -281,8 +281,17 @@ case "$applet" in
     reboot)                 echo "reboot" >> "$FLASH_LOG"; exit 0 ;;
     # UBI volume writes, the PID 1 hand-off and the stage-2 unmount: logged
     # like flashcp, so a test can assert what reached which volume, in order.
+    # STUB_UBI_SLOW reads the image on fd 0 a slice at a time, the way the
+    # real one moves it there and reads it a LEB at a time, so the progress
+    # ubi_update reads off /proc/<pid>/fdinfo/0 has something to see.
     ubiupdatevol)           echo "ubiupdatevol $*" >> "$FLASH_LOG"
+                            if [ -n "$STUB_UBI_SLOW" ] && [ -f "$2" ]; then
+                                exec 0< "$2"
+                                while [ "$(dd bs=1024 count=1 2>/dev/null | wc -c)" -gt 0 ]; do sleep 0.4; done
+                            fi
                             [ "1" = "$STUB_FLASHCP_FAIL" ] && exit 1 ;;
+    # follow_start: the console tail and the log server, logged, not run.
+    tail|nc)                echo "$applet $*" >> "$FLASH_LOG" ;;
     kill|ubirmvol|ubirsvol|ubimkvol)
                             echo "$applet $*" >> "$FLASH_LOG" ;;
     umount)                 echo "$applet $*" >> "$FLASH_LOG"
@@ -495,6 +504,7 @@ run() {
         STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
         UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
         UBI_SYS="$SB/sys/class/ubi" INITTAB="$SB/etc/inittab" handoff_wait=0 \
+        FOLLOW_LOG="${FOLLOW_LOG:-}" STUB_UBI_SLOW="${STUB_UBI_SLOW:-}" \
         ${RUN_ENV:-} \
         sh "$SB/sysupgrade" "$@" 2>&1)
     RC=$?
@@ -519,7 +529,7 @@ reset_env() {
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB
-    unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY RUN_ENV
+    unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY RUN_ENV FOLLOW_LOG STUB_UBI_SLOW
     rm -rf "$SB/sys"
     printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n::restart:/sbin/init\n' > "$SB/etc/inittab"
     rm -f "$SB"/tmp/*.gk7205v500
@@ -2239,6 +2249,9 @@ if handed_off && nothing_ubi && [ -x "$SB/ram/sbin/init" ] && [ ! -e "$SB/ram/bi
     grep -q "_handoff=1" "$envf" 2>/dev/null && grep -q "_ramfs_phase=.1" "$envf" &&
     grep -q "ubi_rootfs_dev=./dev/ubi0_0" "$envf" && grep -q "sysupgrade.env" "$SB/ram/sbin/init"; then
     ok "ubifs: the RAM root is staged for PID 1 and SIGQUIT sent before any write"
+    printf '%s' "$OUT" | grep -q "SSH, the WebUI and every other login end here" &&
+        ok "ubifs: the hand-off says the session ends, rather than that it goes quiet" ||
+        bad "ubifs: hand-off must say the session ends, out='$OUT'"
 else
     bad "ubifs: hand-off staging, log='$(cat "$SB/tmp/flash.log")' init='$(cat "$SB/ram/sbin/init" 2>&1)' out='$OUT'"
 fi
@@ -2361,6 +2374,62 @@ if [ -n "$u" ] && [ -n "$bk" ] && [ -n "$rm" ] && [ -n "$rs" ] && [ -n "$w" ] &&
     ok "stage 2: settings copied, volumes resized to the image, settings restored, then reboot"
 else
     bad "stage 2 order release/copy/rmvol/rsvol/write/mkvol/restore/reboot = ${u:-none}/${bk:-none}/${rm:-none}/${rs:-none}/${w:-none}/${mk:-none}/${rs2:-none}/${b:-none} log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# --- the rootfs write says how far it has got: busybox ubiupdatevol does not,
+# and a NAND flash otherwise sat silent through the one step that matters
+reset_env; ubi_setup ubifs
+STUB_UBI_SLOW=1
+RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS"
+run
+if ubi_wrote "/dev/ubi0_0 $UFS" && rebooted &&
+    printf '%s\n' "$OUT" | grep -qE "^Written: [0-9]{1,2}% \([0-9.]+ of [0-9.]+ MB\)$" &&
+    printf '%s\n' "$OUT" | grep -q "^Written: 100%"; then
+    ok "stage 2: the rootfs write reports its progress, then 100%"
+else
+    bad "stage 2 progress, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+reset_env; ubi_setup ubifs
+STUB_UBI_SLOW=1 STUB_FLASHCP_FAIL=1
+RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS"
+run
+if printf '%s' "$OUT" | grep -q "Writing $UFS to /dev/ubi0_0 failed" &&
+    ! printf '%s' "$OUT" | grep -q "Written: 100%" && ! grep -q "ubimkvol" "$SB/tmp/flash.log"; then
+    ok "stage 2: a failed write is still a failure behind the progress, and never reads 100%"
+else
+    bad "stage 2 failed write behind progress, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+reset_env; ubi_setup ubifs
+STUB_UBI_SLOW=1
+RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS silent_update=1"
+run
+if ubi_wrote "/dev/ubi0_0 $UFS" && ! printf '%s' "$OUT" | grep -q "Written:"; then
+    ok "stage 2: under -s the WebUI gets set_progress's lines and nothing else"
+else
+    bad "stage 2 -s progress, out='$OUT'"
+fi
+
+# --- a handed-off flash phase logs to a file the console and nc both follow
+reset_env; ubi_setup ubifs
+FOLLOW_LOG="$SB/tmp/upgrade.log"; rm -f "$FOLLOW_LOG" "$FOLLOW_LOG.http"
+RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS"
+run
+if grep -q "Flashing from RAM" "$FOLLOW_LOG" && grep -q "Unconditional reboot" "$FOLLOW_LOG" &&
+    grep -q "^tail -n +1 -f $FOLLOW_LOG" "$SB/tmp/flash.log" &&
+    grep -q "^nc -ll -p 80 -e $FOLLOW_LOG.http" "$SB/tmp/flash.log" && [ -x "$FOLLOW_LOG.http" ] &&
+    head -1 "$FOLLOW_LOG.http" | grep -qx '#!/bin/sh' && grep -q 'HTTP/1.0 200 OK' "$FOLLOW_LOG.http" &&
+    ubi_wrote "/dev/ubi0_0 $UFS" && rebooted; then
+    ok "stage 2: the log goes to a file, the console tails it and nc serves it"
+else
+    bad "stage 2 follow log, log='$(cat "$SB/tmp/flash.log")' follow='$(cat "$FOLLOW_LOG" 2>&1)' out='$OUT'"
+fi
+reset_env; ubi_setup ubifs
+RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS"
+run
+if printf '%s' "$OUT" | grep -q "Flashing from RAM" && ! grep -qE "^(tail|nc) " "$SB/tmp/flash.log"; then
+    ok "stage 2: an empty FOLLOW_LOG leaves the output where it was"
+else
+    bad "stage 2 FOLLOW_LOG off, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
 # --- -r with -n: the new overlay is the wipe; nothing is copied or restored
@@ -2834,14 +2903,16 @@ fi
 # Every flashcp the script runs has to have its status read. A bare call
 # discards it and a pipeline hides it; either way a write that never happened is
 # announced as one that did (#2426).
-# write_image is the one place a write is not guarded on its own line: its
-# set_progress IS its return status, and its callers carry the `||` instead.
-wi_lines=$(awk '/^write_image\(\)/,/^}/ { print NR }' "$SRC")
+# write_image and ubi_update are the places a write is not guarded on its own
+# line: the write IS their return status, and their callers carry the `||`.
+wi_lines=$(awk '/^(write_image|ubi_update)\(\)/,/^}/ { print NR }' "$SRC")
 if grep -n 'set_progress \(flash\|ubiupdatevol\)' "$SRC" | grep -v '||' |
     grep -qvE "^($(echo $wi_lines | tr ' ' '|')):"; then
     bad "an unguarded set_progress write: $(grep -n 'set_progress \(flash\|ubiupdatevol\)' "$SRC" | grep -v '||')"
 elif grep -n 'write_image "' "$SRC" | grep -qv '||'; then
     bad "an unguarded write_image call: $(grep -n 'write_image "' "$SRC" | grep -v '||')"
+elif grep -n 'ubi_update "' "$SRC" | grep -v '||' | grep -qvE "^($(echo $wi_lines | tr ' ' '|')):"; then
+    bad "an unguarded ubi_update call: $(grep -n 'ubi_update "' "$SRC" | grep -v '||')"
 else
     ok "every flashcp/flash_eraseall write is followed by a status check"
 fi
