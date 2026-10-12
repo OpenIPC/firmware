@@ -19,18 +19,21 @@ RESOLV_CONF="/tmp/resolv.conf"
 
 [ -z "${IF_WAIT_DELAY}" ] && IF_WAIT_DELAY=10
 
-# Route metric: a camera with both a cable and a WiFi dongle keeps both up and
-# prefers the cable (S40network's dual mode), so wlan0's routes rank behind
-# everyone else's. Everything that is not WiFi keeps metric 0 and the exact
-# routes it always had. A `metric N` line in the interface's stanza overrides
-# this: ifupdown exports stanza options to udhcpc's environment as IF_<NAME>.
-metric=0
-case "$interface" in wlan*) metric=10 ;; esac
-case "$IF_METRIC" in '' | *[!0-9]*) ;; *) metric=$IF_METRIC ;; esac
-
 # Written by S40network in dual mode: eth0's address when no DHCP server
 # answers on the cable, the wired rescue address it always had.
 FALLBACK=/var/run/network.fallback
+
+# Route metric: in dual mode -- a cable and a configured WiFi, both up, the
+# cable preferred -- wlan0's routes rank behind everyone else's. Only there:
+# netmode=wifi and the modem layout park eth0 on a static fallback address
+# whose connected route is metric 0, so a wlan0 demoted beside it would lose
+# its own subnet to a dead port whenever the WiFi network used that subnet.
+# Outside dual mode every interface keeps metric 0 and the exact routes it
+# always had. A `metric N` line in the interface's stanza overrides this:
+# ifupdown exports stanza options to udhcpc's environment as IF_<NAME>.
+metric=0
+case "$interface" in wlan*) [ -s "$FALLBACK" ] && metric=10 ;; esac
+case "$IF_METRIC" in '' | *[!0-9]*) ;; *) metric=$IF_METRIC ;; esac
 
 # The kernel adds an interface's connected route at metric 0 whatever the
 # default route's metric is, so a wlan0 on the same subnet as eth0 would still

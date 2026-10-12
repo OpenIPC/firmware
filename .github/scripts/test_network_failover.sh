@@ -123,6 +123,7 @@ count()   { grep -cxF -- "$1" "$LOG"; }
 sigs()    { tr '\n' ' ' 2>/dev/null < "$SB/udhcpc.sig"; }
 got()     { grep -q "$1" "$SB/udhcpc.sig" 2>/dev/null; }
 watcher() { pgrep -f "$SB/S40network watch" | head -1; }
+watching() { [ -n "$(watcher)" ]; }
 start()   { $SHELL_UNDER_TEST "$SB/S40network" start >/dev/null 2>&1; }
 # wait_for <seconds> <command...>: poll until the command succeeds.
 wait_for() {
@@ -175,7 +176,7 @@ if logged "ifup wlan0" && logged "ifconfig eth0 hw ether 00:11:22:33:44:55 up" &
     [ "$(cat "$SB/run/network.fallback" 2>/dev/null)" = 10.9.8.7 ] &&
     [ "$(cat "$SB/proc/sys/net/ipv4/conf/eth0/arp_ignore")" = 1 ] &&
     [ "$(cat "$SB/proc/sys/net/ipv4/conf/wlan0/arp_announce")" = 2 ] &&
-    wait_for 2 test -n "$(watcher)"; then
+    wait_for 2 watching; then
     ok "dual: wlan0 joins, eth0 link up with no address, fallback and ARP set, watcher running"
 else
     bad "dual start, log='$(cat "$LOG")'"
@@ -312,7 +313,22 @@ ds() {   # ds <action> <interface> [VAR=value ...]
 }
 resolv() { cat "$SB/tmp/resolv.conf" 2>/dev/null; }
 
+# Outside dual mode -- netmode=wifi, the modem layout -- eth0 sits on a static
+# fallback whose connected route is metric 0. A wlan0 demoted beside it would
+# lose its own subnet to a dead port whenever the WiFi network used that
+# subnet, so there wlan0 keeps the metric-0 routes it always had.
 reset
+printf '192.168.2.0/24 scope link  src 192.168.2.50\n' > "$SB/routes.wlan0"
+ds bound wlan0 ip=192.168.2.50 subnet=255.255.255.0 router=192.168.2.1 dns="192.168.2.1"
+if logged "route add default gw 192.168.2.1 dev wlan0" && ! grep -q "^ip route del" "$LOG"; then
+    ok "outside dual mode wlan0 keeps metric 0 and its connected route"
+else
+    bad "wlan0 outside dual mode, log='$(cat "$LOG")'"
+fi
+
+# Dual mode from here on: S40network's marker is what default.script keys on.
+reset
+echo 192.168.2.10 > "$SB/run/network.fallback"
 ds bound eth0 ip=10.0.0.5 subnet=255.255.255.0 router=10.0.0.1 dns="10.0.0.1 1.1.1.1" domain=lan
 if logged "route add default gw 10.0.0.1 dev eth0" && ! grep -q "^ip route del" "$LOG" &&
     [ "$(resolv)" = "$(printf 'search lan\nnameserver 10.0.0.1\nnameserver 1.1.1.1')" ]; then
