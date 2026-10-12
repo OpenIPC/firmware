@@ -78,9 +78,10 @@ stub ifconfig 'echo "ifconfig $*" >> "'"$LOG"'"'
 stub route 'echo "route $*" >> "'"$LOG"'"; [ "$1" != del ]'
 stub ifdown 'echo "ifdown $*" >> "'"$LOG"'"'
 stub timeout 'exit 0'
-# ifup eth0 starts a udhcpc, as busybox ifupdown does.
+# ifup eth0 starts a udhcpc, as busybox ifupdown does -- unless $SB/static
+# says eth0's stanza is a static one.
 stub ifup 'echo "ifup $*" >> "'"$LOG"'"
-[ "$1" = eth0 ] && { "'"$SB"'/bin/udhcpc" & echo $! > "'"$SB"'/run/udhcpc.eth0.pid"; }
+[ "$1" = eth0 ] && [ ! -e "'"$SB"'/static" ] && { "'"$SB"'/bin/udhcpc" & echo $! > "'"$SB"'/run/udhcpc.eth0.pid"; }
 exit 0'
 # udhcpc: records the signals it gets.
 stub udhcpc 'trap "echo USR1 >> '"$SB"'/udhcpc.sig" USR1
@@ -109,7 +110,7 @@ link() {   # link <flags> <carrier>
 reset() {
     $SHELL_UNDER_TEST "$SB/S40network" stop >/dev/null 2>&1
     pkill -f "$SB/bin/udhcpc" 2>/dev/null
-    rm -rf "$SB/env"/* "$SB/run"/* "$SB/tmp"/* "$SB/udhcpc.sig" "$SB"/routes.*
+    rm -rf "$SB/env"/* "$SB/run"/* "$SB/tmp"/* "$SB/udhcpc.sig" "$SB"/routes.* "$SB/static"
     rm -f "$SB/proc/sys/net/ipv4/conf"/*/arp_*
     for i in eth0 wlan0; do
         : > "$SB/proc/sys/net/ipv4/conf/$i/arp_ignore"
@@ -293,6 +294,35 @@ else
     bad "stop killed the process a stale pidfile named"
 fi
 kill "$stranger" 2>/dev/null
+
+# A static eth0 stanza has no udhcpc to signal. Its gateway route would
+# outlive a pulled cable, so the address is flushed instead -- routes with it
+# -- and the stanza is applied again when the cable is back.
+reset; setenv wlandev good-usb; setenv wlanssid Home
+touch "$SB/static"
+link 0x1003 1
+start
+wait_for 3 logged "ifup eth0"
+sleep 0.5
+link 0x1003 0
+if wait_for 3 logged "ip -4 addr flush dev eth0" && [ -z "$(sigs)" ]; then
+    ok "static eth0, cable pulled: its address is flushed, no udhcpc signalled"
+else
+    bad "static release, log='$(cat "$LOG")' signals='$(sigs)'"
+fi
+link 0x1003 1
+if wait_for 3 logged "ifdown -f eth0" && wait_for 3 test "$(count "ifup eth0")" = 2; then
+    ok "static eth0, cable back: the stanza is applied again"
+else
+    bad "static restore, ifup count=$(count "ifup eth0") log='$(cat "$LOG")'"
+fi
+# The re-apply bounces the link; that is settled, not taken for a pulled cable.
+link 0x1003 0; sleep 0.6; link 0x1003 1; sleep 0.5
+if [ "$(count "ip -4 addr flush dev eth0")" = 1 ]; then
+    ok "static eth0: the re-apply's link bounce is not taken for a pulled cable"
+else
+    bad "the bounce after a re-apply flushed again, log='$(cat "$LOG")'"
+fi
 
 # WiFi asked for, its driver missing: the cable gets DHCP, not a static address.
 reset; setenv wlandev no-such-driver; setenv wlanssid Home

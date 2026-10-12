@@ -117,14 +117,40 @@ watch_stop() {
 	rm -f "$WATCHER"
 }
 
-# Signal eth0's udhcpc, and only a udhcpc: USR2 releases the lease (deconfig
-# drops the address, its routes and its DNS), USR1 asks for one again.
-dhcp_signal() {
+# eth0's udhcpc, and only a udhcpc: a pid in a file can have been reused.
+# A static stanza has none.
+dhcp_pid() {
 	upid=$(cat /var/run/udhcpc.eth0.pid 2>/dev/null)
-	[ -n "$upid" ] || return 0
+	[ -n "$upid" ] || return 1
 	comm=
 	read -r comm 2>/dev/null < "/proc/$upid/comm"
-	[ "$comm" = udhcpc ] && kill -"$1" "$upid" 2>/dev/null
+	[ "$comm" = udhcpc ]
+}
+
+# Take eth0 out of the way of wlan0. On DHCP, USR2 releases the lease
+# (deconfig drops the address, its routes and its DNS). A static address has
+# no lease, and its gateway route would outlive the cable and swallow the
+# traffic wlan0 could carry, so the address goes -- its routes with it -- and
+# the link stays up, where its carrier can still be read.
+eth0_release() {
+	if dhcp_pid; then
+		kill -USR2 "$upid" 2>/dev/null
+	else
+		ip -4 addr flush dev eth0
+	fi
+}
+
+# Bring eth0 back. On DHCP, USR1 asks for the lease again. A static stanza is
+# applied afresh, and that bounces the link through ifup's hwaddress hook:
+# returns 0 then, so the caller waits the bounce out.
+eth0_restore() {
+	if dhcp_pid; then
+		kill -USR1 "$upid" 2>/dev/null
+		return 1
+	fi
+	ifdown -f eth0 >/dev/null 2>&1
+	ifup eth0 >/dev/null 2>&1
+	return 0
 }
 
 # eth0's link, each poll: up (carrier), down (no carrier), admin (brought down
@@ -168,9 +194,12 @@ watch() {
 			;;
 		settling:up)
 			# Brought down by hand, the kernel flushed eth0's routes;
-			# a renew puts the default route back.
-			[ -n "$renew" ] && dhcp_signal USR1
+			# restoring puts the default route back.
 			state=up
+			if [ -n "$renew" ]; then
+				renew=
+				eth0_restore && state=settling
+			fi
 			lost=0
 			;;
 		settling:down | up:down)
@@ -178,16 +207,16 @@ watch() {
 			limit=$DOWN_AFTER
 			[ "$state" = settling ] && limit=$SETTLE
 			if [ $lost -ge $limit ]; then
-				logger -t network "eth0 link lost, releasing its lease; wlan0 carries the traffic"
-				dhcp_signal USR2
+				logger -t network "eth0 link lost, taking it down; wlan0 carries the traffic"
+				eth0_release
 				state=down
 				lost=0
 			fi
 			;;
 		down:up)
-			logger -t network "eth0 link back, renewing its lease"
-			dhcp_signal USR1
+			logger -t network "eth0 link back, bringing it up"
 			state=up
+			eth0_restore && state=settling
 			lost=0
 			;;
 		up:admin | settling:admin)
