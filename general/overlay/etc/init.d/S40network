@@ -18,6 +18,7 @@ net=$(fw_printenv -n netaddr_fallback)
 # cable's address and DNS in place. read and sleep are ash builtins, so a poll
 # forks nothing.
 WATCHER=/var/run/network-watch.pid
+ROUTES=/var/run/network-eth0.routes
 FALLBACK=/var/run/network.fallback
 POLL=1
 DOWN_AFTER=2
@@ -117,14 +118,79 @@ watch_stop() {
 	rm -f "$WATCHER"
 }
 
-# Signal eth0's udhcpc, and only a udhcpc: USR2 releases the lease (deconfig
-# drops the address, its routes and its DNS), USR1 asks for one again.
-dhcp_signal() {
+# eth0's udhcpc, and only a udhcpc: a pid in a file can have been reused.
+# A static stanza has none.
+dhcp_pid() {
 	upid=$(cat /var/run/udhcpc.eth0.pid 2>/dev/null)
-	[ -n "$upid" ] || return 0
+	[ -n "$upid" ] || return 1
 	comm=
 	read -r comm 2>/dev/null < "/proc/$upid/comm"
-	[ "$comm" = udhcpc ] && kill -"$1" "$upid" 2>/dev/null
+	[ "$comm" = udhcpc ]
+}
+
+# Take eth0 out of the way of wlan0.
+#
+# On DHCP, USR2 releases the lease: deconfig drops the address, its routes and
+# its DNS. With no udhcpc but a lease's DNS still on file -- the client died
+# after it bound -- the release is done as udhcpc would have done it, or the
+# cable's servers would sit ahead of the WiFi's with nothing behind them.
+#
+# A static stanza has no lease. Its routes, IPv4 and IPv6, are put aside and
+# flushed: a gateway route outlives the cable and swallows the traffic wlan0
+# could carry. The address and the link stay, so carrier can still be read and
+# nothing has to be re-applied when the cable is back.
+eth0_release() {
+	if dhcp_pid; then
+		kill -USR2 "$upid" 2>/dev/null
+		return
+	fi
+	set -- /tmp/resolv.d/*.eth0
+	if [ -e "$1" ]; then
+		interface=eth0 /usr/share/udhcpc/default.script deconfig >/dev/null 2>&1
+		return
+	fi
+	ip -4 route show | grep -E ' dev eth0( |$)' > "$ROUTES.4"
+	ip -6 route show 2>/dev/null | grep -E ' dev eth0( |$)' > "$ROUTES.6"
+	ip -4 route flush dev eth0
+	ip -6 route flush dev eth0 2>/dev/null
+}
+
+# Put eth0's routes back, connected ones first: a gateway is reachable only
+# once the route to its subnet exists. $1 is the address family.
+routes_back() {
+	[ -s "$ROUTES.$1" ] || return 0
+	grep -v '^default' "$ROUTES.$1" | while read -r r; do ip "-$1" route add $r 2>/dev/null; done
+	grep '^default' "$ROUTES.$1" | while read -r r; do ip "-$1" route add $r 2>/dev/null; done
+}
+
+# Bring eth0 back. Returns 1 when it is back, 0 when that bounced the link (the
+# caller waits the bounce out), 2 when it is not ready to come back yet.
+#
+# On DHCP, USR1 asks for the lease again, and a lease is itself proof the link
+# carries traffic. A static eth0 gets back the routes it was released with, but
+# only once its gateway answers through it: carrier is not forwarding -- a
+# switch port that has just come back holds frames for seconds while its bridge
+# learns, and a gateway route put back in that window took the traffic WiFi was
+# carrying fine (three pings lost, on the lab MikroTik). Re-applying the stanza
+# was worse: ifup's hwaddress hook bounces the link it has just regained. Only
+# when nothing was put aside (eth0 brought down by hand: the kernel flushed the
+# routes itself) is the stanza applied again.
+eth0_restore() {
+	if dhcp_pid; then
+		kill -USR1 "$upid" 2>/dev/null
+		return 1
+	fi
+	if [ -e "$ROUTES.4" ]; then
+		gw=$(awk '$1 == "default" { for (i = 2; i < NF; i++) if ($i == "via") { print $(i + 1); exit } }' "$ROUTES.4")
+		[ -z "$gw" ] || arping -q -c 1 -w 1 -I eth0 "$gw" >/dev/null 2>&1 || return 2
+		routes_back 4
+		routes_back 6
+		rm -f "$ROUTES.4" "$ROUTES.6"
+		return 1
+	fi
+	ifdown -f eth0 >/dev/null 2>&1
+	ifup eth0 >/dev/null 2>&1
+	return 0
 }
 
 # eth0's link, each poll: up (carrier), down (no carrier), admin (brought down
@@ -168,9 +234,12 @@ watch() {
 			;;
 		settling:up)
 			# Brought down by hand, the kernel flushed eth0's routes;
-			# a renew puts the default route back.
-			[ -n "$renew" ] && dhcp_signal USR1
+			# restoring puts the default route back.
 			state=up
+			if [ -n "$renew" ]; then
+				renew=
+				eth0_restore && state=settling
+			fi
 			lost=0
 			;;
 		settling:down | up:down)
@@ -178,16 +247,21 @@ watch() {
 			limit=$DOWN_AFTER
 			[ "$state" = settling ] && limit=$SETTLE
 			if [ $lost -ge $limit ]; then
-				logger -t network "eth0 link lost, releasing its lease; wlan0 carries the traffic"
-				dhcp_signal USR2
+				logger -t network "eth0 link lost, taking it down; wlan0 carries the traffic"
+				eth0_release
 				state=down
 				lost=0
 			fi
 			;;
 		down:up)
-			logger -t network "eth0 link back, renewing its lease"
-			dhcp_signal USR1
-			state=up
+			eth0_restore
+			case $? in
+			2) ;;
+			0) state=settling ;;
+			*) state=up ;;
+			esac
+			[ "$state" = down ] ||
+				logger -t network "eth0 link back, bringing it up"
 			lost=0
 			;;
 		up:admin | settling:admin)
@@ -208,7 +282,7 @@ watch() {
 
 start() {
 	echo "Starting network..."
-	rm -f "$FALLBACK"
+	rm -f "$FALLBACK" "$ROUTES.4" "$ROUTES.6"
 	ifup lo
 	if [ -n "$dev" ]; then
 		set_wireless
@@ -221,7 +295,7 @@ stop() {
 	echo "Stopping network..."
 	# The watcher first, so it does not bring back what is being stopped.
 	watch_stop
-	rm -f "$FALLBACK"
+	rm -f "$FALLBACK" "$ROUTES.4" "$ROUTES.6"
 	ifdown lo
 	ifdown -f wlan0
 	ifdown -f usb0
