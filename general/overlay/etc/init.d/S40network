@@ -5,31 +5,31 @@ net=$(fw_printenv -n netaddr_fallback)
 
 set_wireless() {
 	path=/etc/wireless
-	wired=static
 	if $path/usb "$dev" || $path/sdio "$dev"; then
 		[ -n "$mac" ] && ip link set dev wlan0 address "$mac"
-		ifup wlan0
 		# A radio with no network to join is not a way in yet -- S97qrscan
-		# waits for credentials on exactly such a camera -- so the wired
-		# port keeps DHCP until there is one. A device profile that set
-		# wlandev on first boot otherwise left a camera on Ethernet at
-		# 192.168.2.10, unreachable from the network it was plugged into.
-		[ -z "$(fw_printenv -n wlanssid 2>/dev/null)" ] && wired=dhcp
+		# waits for credentials on exactly such a camera, and brings wlan0 up
+		# itself to try the ones it is shown -- so until there is a network
+		# the wired port keeps DHCP. A device profile that set wlandev on
+		# first boot otherwise left a camera on Ethernet at 192.168.2.10,
+		# unreachable from the network it was plugged into. wlan0 gets no
+		# DHCP of its own meanwhile, as qrscan's restore does not either: with
+		# no server on either side, both would take udhcpc's leasefail
+		# address, and the camera would answer on one subnet from two ports.
+		if [ -z "$(fw_printenv -n wlanssid 2>/dev/null)" ]; then
+			[ -e /sys/class/net/eth0 ] && ifup eth0
+			return 0
+		fi
+		ifup wlan0
 	elif $path/modem "$dev"; then
 		ifup usb0
 		ifup eth1
 	fi
-	[ -e /sys/class/net/eth0 ] || return 0
-	if [ "$wired" = dhcp ]; then
-		ifup eth0
-	else
-		# get_mac, not fw_printenv: this branch never calls ifup eth0, so it
-		# is the only thing that puts a MAC on a wireless camera's wired
-		# port, and the environment is not the whole answer -- a board with
-		# no fw_setenv keeps its address in /etc/ethaddr instead, and get_mac
-		# knows both.
-		ifconfig eth0 "${net:-192.168.2.10}" hw ether "$(get_mac eth0)" up
-	fi
+	# get_mac, not fw_printenv: this branch never calls ifup eth0, so it is
+	# the only thing that puts a MAC on a wireless camera's wired port, and
+	# the environment is not the whole answer -- a board with no fw_setenv
+	# keeps its address in /etc/ethaddr instead, and get_mac knows both.
+	[ -e /sys/class/net/eth0 ] && ifconfig eth0 "${net:-192.168.2.10}" hw ether "$(get_mac eth0)" up
 }
 
 start() {

@@ -14,12 +14,6 @@
 	/* "OpenIPC <soc>": sysupgrade's SoC check reads it (fit_soc). @SOC@ is
 	   filled in from OPENIPC_SOC_MODEL when the FIT is built. */
 	description = "OpenIPC @SOC@";
-	/* The build's BUILD_PLATFORM, as /usr/lib/os-release has it. A UBIFS
-	   rootfs cannot be read without mounting it, so this is what tells
-	   sysupgrade (fit_platform) which device profile the pair was built
-	   for. The value names itself because the property name lives in the
-	   FIT's strings block, at the far end of the kernel. */
-	openipc,platform = "BUILD_PLATFORM=@PLATFORM@";
 	#address-cells = <1>;
 
 	images {

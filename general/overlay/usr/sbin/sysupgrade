@@ -85,8 +85,12 @@ esac
 MANIFEST_URL=${MANIFEST_URL:-https://openipc.github.io/${_manifest_repo}/manifest.flat}
 MANIFEST_CACHE=/tmp/manifest.flat
 # What this run unpacked into /tmp, one name per line as tar -v lists it, so a
-# refusal can take back exactly that and nothing else (discard_unpacked).
-UNPACKED_LIST=/tmp/sysupgrade.unpacked
+# refusal can take back exactly that and nothing else (discard_unpacked). Made
+# by mktemp when the unpack starts, never a fixed name: a fixed one could be a
+# link planted to redirect the write, and a second sysupgrade that fails --
+# before the lock, even -- would find the first run's list and delete that
+# run's images. Empty until this run has unpacked something.
+unpacked_list=
 unset _osr _plat _manifest_repo
 # Every online fetch verifies the server's certificate against the bundle the
 # image ships at /etc/ssl/certs/ca-certificates.crt (libcurl's built-in default
@@ -1300,14 +1304,15 @@ free_staged_archive() {
 # reported, and only plain names in /tmp itself, so a file the caller staged
 # there, or one some other process keeps there, is never touched.
 discard_unpacked() {
-	[ -f "$UNPACKED_LIST" ] || return 0
+	[ -n "$unpacked_list" ] && [ -f "$unpacked_list" ] || return 0
 	local f
 	while read -r f; do
 		f=${f#./}
 		case "$f" in "" | . | .. | */*) continue ;; esac
 		rm -f "/tmp/$f"
-	done < "$UNPACKED_LIST"
-	rm -f "$UNPACKED_LIST"
+	done < "$unpacked_list"
+	rm -f "$unpacked_list"
+	unpacked_list=
 }
 
 download_firmware() {
@@ -1318,10 +1323,12 @@ download_firmware() {
 		echo_c 31 "\nNote: the updater uses the NOR package for updating NAND"
 	echo_c 33 "\nFirmware"
 	osr=$(get_system_build)
+	unpacked_list=$(mktemp /tmp/sysupgrade.unpacked.XXXXXX) ||
+		die "Cannot create a file in /tmp to record the unpack in."
 	if [ -n "$archive" ]; then
 		[ ! -f "$archive" ] && die "File $archive not found"
 		check_unpack_room "$archive"
-		gzip -d "$archive" -c | tar xvf - -C /tmp $(tar_excludes) >"$UNPACKED_LIST" && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
+		gzip -d "$archive" -c | tar xvf - -C /tmp $(tar_excludes) >"$unpacked_list" && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
 	else
 		if [ -n "$channel" ] || [ -n "$build_id" ]; then
 			fetch_manifest
@@ -1361,7 +1368,7 @@ download_firmware() {
 		# link completes. -m stays as a far outer backstop against a trickle that
 		# never trips the stall check.
 		curl --connect-timeout 30 $dl_meter --speed-limit 1024 --speed-time 60 -m 1800 \
-			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xvf - -C /tmp $(tar_excludes) >"$UNPACKED_LIST" && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xvf - -C /tmp $(tar_excludes) >"$unpacked_list" && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	fi
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
@@ -2672,6 +2679,7 @@ reboot_system() {
 		# stopped has to come back rather than wait for a reboot that was
 		# explicitly declined.
 		restore_resources
+		rm -f "$unpacked_list"
 		rm $LOCK_FILE
 		return 0
 	fi

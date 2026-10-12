@@ -2682,6 +2682,21 @@ else
 fi
 rm -f "$SB/tmp/not-from-the-archive"
 
+# The record of an unpack belongs to the run that made it. A second sysupgrade
+# that fails before unpacking anything must not act on another run's list --
+# here one at the name an earlier draft used, naming an image that run is about
+# to flash.
+reset_env
+echo "fitImage.hi3516ev300" > "$SB/tmp/sysupgrade.unpacked"
+echo running > "$SB/tmp/fitImage.hi3516ev300"
+run -z --archive="$SB/tmp/no-such.tgz"
+if [ "$RC" -ne 0 ] && [ -f "$SB/tmp/fitImage.hi3516ev300" ]; then
+    ok "a run that unpacked nothing leaves another run's images alone"
+else
+    bad "a failed run removed what it did not unpack, rc=$RC out='$OUT'"
+fi
+rm -f "$SB/tmp/sysupgrade.unpacked" "$SB/tmp/fitImage.hi3516ev300"
+
 # A FIT from before it carried a platform is no evidence either way.
 hisi_profile_archive ""
 run -z --archive="$SB/tmp/fw.tgz"
