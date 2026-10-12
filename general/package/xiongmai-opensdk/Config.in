@@ -1,0 +1,9 @@
+config BR2_PACKAGE_XIONGMAI_OPENSDK
+	bool "xiongmai-opensdk"
+	default n
+	help
+	  Opensource Xiongmai SoCs SDK: the XM530 sensor libraries
+	  (libsns_X50_XM530.so, libsns_X123_XM530.so) and the ISP
+	  application layer (libispapp_XM530.so), built from source.
+
+	  https://github.com/OpenIPC/openxiongmai
