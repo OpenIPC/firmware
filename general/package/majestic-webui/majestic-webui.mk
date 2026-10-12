@@ -68,9 +68,25 @@ define MAJESTIC_WEBUI_FPV_FIXUP
 	rm -f $(TARGET_DIR)/usr/sbin/openwall
 endef
 
+# The SMS page and the two scripts behind it are for a board with a cellular
+# modem, so they ship only where a device profile sets
+# BR2_PACKAGE_MAJESTIC_WEBUI_SMS. The same six paths are listed in the WebUI's
+# sbin/updatewebui, which installs them only where the image itself carries
+# /usr/sbin/modem-at -- so this option is the one place the choice is made,
+# for an image and for every WebUI update laid over it.
+define MAJESTIC_WEBUI_SMS_FIXUP
+	rm -f $(TARGET_DIR)/var/www/cgi-bin/sms.cgi
+	rm -f $(TARGET_DIR)/var/www/cgi-bin/j/sms.cgi
+	rm -f $(TARGET_DIR)/var/www/a/sms.js
+	rm -f $(TARGET_DIR)/var/www/a/sms-pdu.js
+	rm -f $(TARGET_DIR)/usr/sbin/sms-forward
+	rm -f $(TARGET_DIR)/usr/sbin/modem-at
+endef
+
 define MAJESTIC_WEBUI_INSTALL_TARGET_CMDS
 	$(MAJESTIC_WEBUI_INSTALL)
 	$(MAJESTIC_WEBUI_$(VERSION)_FIXUP)
+	$(if $(BR2_PACKAGE_MAJESTIC_WEBUI_SMS),,$(MAJESTIC_WEBUI_SMS_FIXUP))
 endef
 
 $(eval $(generic-package))

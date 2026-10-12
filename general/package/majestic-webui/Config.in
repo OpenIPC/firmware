@@ -4,3 +4,15 @@ config BR2_PACKAGE_MAJESTIC_WEBUI
 	help
 	  Simple web interface.
 	  https://openipc.org
+
+if BR2_PACKAGE_MAJESTIC_WEBUI
+
+config BR2_PACKAGE_MAJESTIC_WEBUI_SMS
+	bool "SMS page"
+	help
+	  The SMS page: the inbox a cellular modem keeps, sending, USSD
+	  balance and package codes, and forwarding new messages to
+	  Telegram. Only of use on a board with a USB cellular modem, so it
+	  is left out unless a device profile asks for it.
+
+endif
