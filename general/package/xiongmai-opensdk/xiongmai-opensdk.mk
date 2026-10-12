@@ -5,7 +5,7 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_VERSION))
-XIONGMAI_OPENSDK_VERSION = 0d8a38b2ad2f8f6c0bd060e1098cde1df64e49c2
+XIONGMAI_OPENSDK_VERSION = cdc61345e53c7655bfb70df1c4cb47e9edf938bc
 
 XIONGMAI_OPENSDK_LICENSE = GPL-3.0
 XIONGMAI_OPENSDK_LICENSE_FILES = LICENSE
