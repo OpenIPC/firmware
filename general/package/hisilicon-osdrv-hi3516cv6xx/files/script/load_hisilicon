@@ -5,6 +5,8 @@
 
 SNS_TYPE0=sc4336p;
 SNS_TYPE1=sc4336p;
+SNS_SET0=0
+SNS_SET1=0
 SYS_PROFILE=0
 IR_AUTO=0
 DEBUG=1
@@ -251,6 +253,7 @@ function parse_arg()
 		if [ $b_arg_sensor0 -eq 1 ] ; then
 			b_arg_sensor0=0;
 			SNS_TYPE0=$arg;
+			SNS_SET0=1
 			# Mirror ev200: explicit sensor flag also seeds SENSOR
 			# so the auto-detect probe path is skipped.
 			export SENSOR=$arg
@@ -258,6 +261,7 @@ function parse_arg()
 		if [ $b_arg_sensor1 -eq 1 ] ; then
 			b_arg_sensor1=0;
 			SNS_TYPE1=$arg;
+			SNS_SET1=1
 		fi
 
 		if [ $b_arg_ir_auto -eq 1 ] ; then
@@ -386,9 +390,15 @@ fi
 
 if [ "$SENSOR" = "unknown" ]; then
 	exit 1
-else
-	if [ $b_arg_modprobe -eq 1 ]; then
-		cd /lib/modules/$(uname -r)/hisilicon
-		insert_ko
-	fi
+fi
+
+# open_sys_config takes the sensor clock and the MIPI/BT interface from these
+# names. The defaults are only good for the auto-detect probe above, so give
+# it the sensor this boot resolved unless -sensor0/-sensor1 named one.
+[ $SNS_SET0 -eq 0 ] && SNS_TYPE0=$SENSOR
+[ $SNS_SET1 -eq 0 ] && SNS_TYPE1=$SENSOR
+
+if [ $b_arg_modprobe -eq 1 ]; then
+	cd /lib/modules/$(uname -r)/hisilicon
+	insert_ko
 fi
