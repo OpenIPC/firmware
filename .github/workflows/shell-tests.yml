@@ -86,6 +86,25 @@ jobs:
             general/package/majestic/files/S95majestic > /tmp/S95majestic.stripped
           SRC=/tmp/S95majestic.stripped bash .github/scripts/test_majestic_supervise.sh
 
+  network-failover:
+    name: cable-primary networking and its carrier watcher
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/test_network_failover.sh
+      - name: Re-run against the comment-stripped forms
+        run: |
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/overlay/etc/init.d/S40network > /tmp/S40network.stripped
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/overlay/usr/share/udhcpc/default.script > /tmp/default.script.stripped
+          S40=/tmp/S40network.stripped DS=/tmp/default.script.stripped \
+            bash .github/scripts/test_network_failover.sh
+
   camera-mac:
     name: the MAC the camera gives itself
     if: >-
@@ -214,6 +233,7 @@ jobs:
       - ca-bundle-lite
       - shipped-shell-parse
       - build-request
+      - network-failover
     # always() so the gate reports when a needed job fails, but not on a run
     # whose jobs the guard above deliberately skipped. Upstream the added
     # disjunct is true, so this reduces to always().
@@ -226,7 +246,7 @@ jobs:
     steps:
       - name: Require every shell test to succeed
         run: |
-          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} crashlog=${{ needs.crashlog-capture.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }} build-request=${{ needs.build-request.result }}"
+          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} crashlog=${{ needs.crashlog-capture.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }} build-request=${{ needs.build-request.result }} network-failover=${{ needs.network-failover.result }}"
           # 'skipped' is not accepted, for the reason given in lint.yml: a
           # skipped job would take this context green having checked nothing.
           if [ "${{ needs.load-hisilicon-parsing.result }}" != "success" ]; then
@@ -237,6 +257,9 @@ jobs:
           fi
           if [ "${{ needs.build-request.result }}" != "success" ]; then
             echo "::error::build request parser tests did not succeed"; exit 1
+          fi
+          if [ "${{ needs.network-failover.result }}" != "success" ]; then
+            echo "::error::network failover tests did not succeed"; exit 1
           fi
           if [ "${{ needs.camera-mac.result }}" != "success" ]; then
             echo "::error::the MAC the camera gives itself did not succeed"; exit 1
