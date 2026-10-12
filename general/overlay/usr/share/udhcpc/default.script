@@ -105,7 +105,10 @@ case "$1" in
 		/sbin/ifconfig $interface up
 		/sbin/ifconfig $interface 0.0.0.0
 
-		# drop this interface's DNS
+		# A released lease takes its servers with it. musl reads only the
+		# first three nameservers and the cable's sort first, so left in
+		# place after the cable is pulled they would fill those slots with
+		# servers that can no longer answer and leave the WiFi's unread.
 		resolv_update del
 
 		if [ -x /usr/sbin/avahi-autoipd ]; then
