@@ -370,8 +370,13 @@ start
 wait_for 3 logged "ifup eth0"
 sleep 0.5
 link 0x1003 0
-if wait_for 3 logged "ifconfig eth0 0.0.0.0" && [ ! -e "$SB/tmp/resolv.d/00000.eth0" ] &&
-    [ "$(cat "$SB/tmp/resolv.conf" 2>/dev/null)" = "nameserver 192.168.1.1" ]; then
+# deconfig logs the ifconfig before it rewrites resolv.conf, so wait for the
+# whole end state, not just the log line.
+stale_released() {
+    logged "ifconfig eth0 0.0.0.0" && [ ! -e "$SB/tmp/resolv.d/00000.eth0" ] &&
+        [ "$(cat "$SB/tmp/resolv.conf" 2>/dev/null)" = "nameserver 192.168.1.1" ]
+}
+if wait_for 3 stale_released; then
     ok "a dead udhcpc's lease on a pulled cable: released, its DNS gone from resolv.conf"
 else
     bad "stale lease, log='$(cat "$LOG")' resolv='$(cat "$SB/tmp/resolv.conf" 2>/dev/null)'"
