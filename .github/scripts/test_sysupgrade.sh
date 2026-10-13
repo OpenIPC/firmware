@@ -2194,8 +2194,9 @@ reset_env; ubi_setup ubifs-kvol
 STUB_PIVOT_RC=0
 run -z --kernel="$UFIT" --rootfs="$UFS"
 if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired NAND layout with a separate kernel volume" &&
+    printf '%s' "$OUT" | grep -q "ipctool nand-migrate" &&
     nothing_ubi && ! handed_off && ! rebooted; then
-    ok "ubifs-kvol: refused before anything is touched, reinstall link given"
+    ok "ubifs-kvol: refused before anything is touched, nand-migrate and reinstall link given"
 else
     bad "ubifs-kvol must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
@@ -2728,7 +2729,9 @@ default_url_is "$F/openipc.ssc338q-nor-ultimate.tgz" ubi_setup ubiblock
 reset_env; UBLOCK_SOC=gk7205v500 ubi_setup ubiblock
 STUB_PIVOT_RC=0
 run -z --kernel="$UK" --rootfs="$US"
+# nand-migrate needs a FIT U-Boot, which a ubiblock camera does not have
 if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "retired NAND layout with a separate kernel volume" &&
+    ! printf '%s' "$OUT" | grep -q "nand-migrate" &&
     nothing_ubi && ! handed_off && ! rebooted; then
     ok "ubiblock on gk7205v500: refused before anything is touched, reinstall link given"
 else

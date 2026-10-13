@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.71
+scr_version=1.0.72
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -2958,8 +2958,17 @@ fi
 # that moved to the kernel-in-rootfs one: current images for them carry the
 # kernel inside the UBIFS rootfs and size the volumes to it. ubiblock stays
 # for the rest (nand_layout_moved).
+#
+# The first FIT layout (ubifs-kvol) can move over in place: its U-Boot is a
+# FIT NAND build, which loads a kernel from UBIFS, so `ipctool nand-migrate`
+# rewrites the rootfs, switches bootcmd and drops the kernel volume, with no
+# serial console (OpenIPC/ipctool#243). A ubiblock camera's U-Boot predates
+# FIT; that one is reinstalled from U-Boot.
+if { [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && [ "$ubi_layout" = "ubifs-kvol" ]; then
+	die "This camera uses the retired NAND layout with a separate kernel volume; current images carry the kernel inside the rootfs. Move it over without a serial console: copy rootfs.ubifs.* from its -nand- package to /tmp and run 'ipctool nand-migrate /tmp/rootfs.ubifs.<soc>' (it keeps U-Boot and the settings, and reboots), or reinstall it from U-Boot: https://openipc.org/cameras/vendors/$vendor/socs/$model -- nothing was written."
+fi
 if { [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } &&
-	{ [ "$ubi_layout" = "ubifs-kvol" ] || { [ "$ubi_layout" = "ubiblock" ] && nand_layout_moved; }; }; then
+	[ "$ubi_layout" = "ubiblock" ] && nand_layout_moved; then
 	die "This camera uses the retired NAND layout with a separate kernel volume; current images carry the kernel inside the rootfs. Reinstall it from U-Boot with the current NAND instructions: https://openipc.org/cameras/vendors/$vendor/socs/$model -- nothing was written."
 fi
 # On the ubifs layout the kernel is a file in the rootfs: there is no kernel
