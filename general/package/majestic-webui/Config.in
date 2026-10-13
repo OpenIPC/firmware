@@ -15,4 +15,13 @@ config BR2_PACKAGE_MAJESTIC_WEBUI_SMS
 	  Telegram. Only of use on a board with a USB cellular modem, so it
 	  is left out unless a device profile asks for it.
 
+config BR2_PACKAGE_MAJESTIC_WEBUI_PTZ
+	bool "PTZ controls"
+	default y if BR2_PACKAGE_GPIO_MOTORS || BR2_PACKAGE_MAJESTIC_AF
+	help
+	  The Live page's pan/tilt pad, zoom and focus buttons and
+	  follow mode. They move motors through gpio-motors or the
+	  majestic-af plugin, so the option is on wherever either is in
+	  the image; a board whose driver comes from elsewhere selects it.
+
 endif
