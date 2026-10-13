@@ -53,11 +53,16 @@ rewrite() {
         -e "s|/etc/wireless|$SB/wireless|g" \
         -e "s|/usr/share/udhcpc/default.script|$SB/default.script|g" \
         -e "s|^POLL=1$|POLL=0.1|" \
-        -e "s|^DOWN_AFTER=2$|DOWN_AFTER=4|" \
-        -e "s|^SETTLE=5$|SETTLE=10|" \
+        -e "s|^DOWN_AFTER=2$|DOWN_AFTER=10|" \
+        -e "s|^SETTLE=5$|SETTLE=30|" \
         "$1" > "$2"
     chmod +x "$2"
 }
+# The watcher polls every 0.1 s here, releases after DOWN_AFTER polls (1 s) and
+# after SETTLE polls (3 s) once eth0 is brought up by hand. The carrier changes
+# below sit well clear of both: a shared CI runner can stall this shell for a
+# good fraction of a second, so a gap under ~0.5 s either way makes a case
+# that passes or fails by load alone.
 rewrite "$S40" "$SB/S40network"
 rewrite "$DS" "$SB/default.script"
 for p in '^POLL=1$' '^DOWN_AFTER=2$' '^SETTLE=5$'; do
@@ -206,7 +211,7 @@ fi
 
 # A carrier blip shorter than DOWN_AFTER polls: nothing.
 sleep 0.3
-link 0x1003 0; sleep 0.15; link 0x1003 1; sleep 0.6
+link 0x1003 0; sleep 0.15; link 0x1003 1; sleep 1.5
 if [ -z "$(sigs)" ]; then
     ok "a one-poll carrier blip releases nothing"
 else
@@ -252,7 +257,7 @@ fi
 # renew that puts back the routes the kernel flushed.
 : > "$SB/udhcpc.sig"
 link 0x1002 0; sleep 0.5
-link 0x1003 0; sleep 0.6
+link 0x1003 0; sleep 1.5
 link 0x1003 1
 if wait_for 3 got USR1 && [ "$(sigs)" = "USR1 " ]; then
     ok "admin up with slow autonegotiation: renewed, never released"
@@ -264,7 +269,7 @@ fi
 : > "$SB/udhcpc.sig"
 link 0x1002 0; sleep 0.5
 link 0x1003 0
-if wait_for 3 got USR2; then
+if wait_for 6 got USR2; then
     ok "admin up with no cable: released after the settle time"
 else
     bad "admin up with no cable, signals='$(sigs)'"
@@ -313,8 +318,9 @@ start
 wait_for 3 logged "ifup eth0"
 sleep 0.5
 link 0x1003 0
-if wait_for 3 logged "ip -4 route flush dev eth0" && logged "ip -6 route flush dev eth0" &&
-    ! grep -q "addr flush" "$LOG" && [ -z "$(sigs)" ]; then
+# The IPv6 flush follows the IPv4 one, so wait for both.
+both_flushed() { logged "ip -4 route flush dev eth0" && logged "ip -6 route flush dev eth0"; }
+if wait_for 3 both_flushed && ! grep -q "addr flush" "$LOG" && [ -z "$(sigs)" ]; then
     ok "static eth0, cable pulled: its IPv4 and IPv6 routes are flushed, the address kept"
 else
     bad "static release, log='$(cat "$LOG")' signals='$(sigs)'"
@@ -330,7 +336,12 @@ else
     bad "routes restored before the gateway answered, log='$(cat "$LOG")'"
 fi
 rm -f "$SB/no-arp"
-if wait_for 3 logged "ip -4 route add default via 10.216.128.1 dev eth0"; then
+# IPv6 routes come back after the IPv4 ones, so wait for the last of them.
+all_back() {
+    logged "ip -4 route add default via 10.216.128.1 dev eth0" &&
+        logged "ip -6 route add default via 2001:db8::1 dev eth0 metric 1024"
+}
+if wait_for 3 all_back; then
     a=$(grep -n "^ip -4 route add 10.216.128.0/24 dev eth0" "$LOG" | cut -d: -f1)
     d=$(grep -n "^ip -4 route add default via 10.216.128.1 dev eth0" "$LOG" | cut -d: -f1)
     if [ -n "$a" ] && [ "$a" -lt "$d" ] && ! grep -q "dev wlan0" <(grep "route add" "$LOG") &&
@@ -370,8 +381,13 @@ start
 wait_for 3 logged "ifup eth0"
 sleep 0.5
 link 0x1003 0
-if wait_for 3 logged "ifconfig eth0 0.0.0.0" && [ ! -e "$SB/tmp/resolv.d/00000.eth0" ] &&
-    [ "$(cat "$SB/tmp/resolv.conf" 2>/dev/null)" = "nameserver 192.168.1.1" ]; then
+# deconfig logs the ifconfig before it rewrites resolv.conf, so wait for the
+# whole end state, not just the log line.
+stale_released() {
+    logged "ifconfig eth0 0.0.0.0" && [ ! -e "$SB/tmp/resolv.d/00000.eth0" ] &&
+        [ "$(cat "$SB/tmp/resolv.conf" 2>/dev/null)" = "nameserver 192.168.1.1" ]
+}
+if wait_for 3 stale_released; then
     ok "a dead udhcpc's lease on a pulled cable: released, its DNS gone from resolv.conf"
 else
     bad "stale lease, log='$(cat "$LOG")' resolv='$(cat "$SB/tmp/resolv.conf" 2>/dev/null)'"

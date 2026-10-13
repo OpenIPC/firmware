@@ -29,11 +29,11 @@ define XIONGMAI_OSDRV_XM530_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(XIONGMAI_OSDRV_XM530_PKGDIR)/files/script/load*
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(XIONGMAI_OSDRV_XM530_PKGDIR)/files/script/wifi
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(XIONGMAI_OSDRV_XM530_PKGDIR)/files/sensor/*.so
-
+	# Only the vendor ISP library, which has no source. libsns_X50_XM530.so,
+	# libsns_X123_XM530.so and libispapp_XM530.so are built from source by
+	# xiongmai-opensdk.
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(XIONGMAI_OSDRV_XM530_PKGDIR)/files/lib/*.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(XIONGMAI_OSDRV_XM530_PKGDIR)/files/lib/libisp_XM530.so
 endef
 
 $(eval $(generic-package))

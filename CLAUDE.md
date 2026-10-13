@@ -209,6 +209,15 @@ in its own header, and `build-summary.py --self-test` only matters if you edit `
 git diff --name-only origin/master | python3 .github/scripts/ci-matrix.py --stdin
 ```
 
+A change to `general/package/Config.in` builds every board unless the selector can see that it
+only adds or drops `source` lines. CI reads that from the pull request's diff. To get the same
+answer locally, pass the diff:
+
+```sh
+git diff origin/master -- general/package/Config.in > /tmp/index.diff
+git diff --name-only origin/master | python3 .github/scripts/ci-matrix.py --stdin --index-diff /tmp/index.diff
+```
+
 ### With a camera
 
 CI proves an image builds. Only your board proves it boots and streams. The pull request template
