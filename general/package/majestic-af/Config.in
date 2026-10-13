@@ -8,7 +8,7 @@ config BR2_PACKAGE_MAJESTIC_AF
 	  HAL seams; the contrast search, the motorized-lens actuators, and the
 	  worker threads live here. Two actuator families are implemented: a UART
 	  wire for the XiongMai near-Pelco and standard Pelco-D lenses, and an
-	  MS41908M SPI stepper (isp.autofocus.actuator=ms41908) for the Hi3516A/D
+	  MS41908M SPI stepper (ptz.actuator=ms41908) for the Hi3516A/D
 	  V100 boards whose zoom/focus lens is on SPI with no UART lens MCU.
 
 	  For the UART families it is the ONLY writer on that tty, and it is now
