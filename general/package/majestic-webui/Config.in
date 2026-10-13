@@ -24,4 +24,11 @@ config BR2_PACKAGE_MAJESTIC_WEBUI_PTZ
 	  majestic-af plugin, so the option is on wherever either is in
 	  the image; a board whose driver comes from elsewhere selects it.
 
+config BR2_PACKAGE_MAJESTIC_WEBUI_FPV
+	bool "FPV (wfb-ng) settings page"
+	default y if BR2_OPENIPC_VARIANT = "fpv" || BR2_OPENIPC_VARIANT = "wfbng"
+	help
+	  The WFB settings page for wfb-ng video links. On by default for
+	  the fpv and wfbng variants, which are what carry wfb-ng.
+
 endif

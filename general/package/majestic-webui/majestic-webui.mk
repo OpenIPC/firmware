@@ -17,6 +17,8 @@ MAJESTIC_WEBUI_LICENSE_FILES = LICENSE
 
 # wfbng is the wfb-ng variant's name since OpenIPC/builder renamed fpv, which
 # says what the build carries; fpv stays for builds from before the rename.
+# Only FPV has a fixup of its own now; the FPV page that STANDARD used to strip
+# is BR2_PACKAGE_MAJESTIC_WEBUI_FPV, below.
 ifneq ($(filter fpv wfbng,$(OPENIPC_VARIANT)),)
 	VERSION = FPV
 else
@@ -41,12 +43,19 @@ endef
 # wfb.cgi now. Both spellings are listed and both must stay for a while: the
 # dist tarball is a rolling release off that repo's master, so an image built
 # today gets the new name and one rebuilt from an older tag gets the old one,
-# and a standard build must not ship the page either way. j/locale_fpv.cgi and
-# p/header_fpv.cgi went in OpenIPC/majestic-webui#141 and are dropped here.
-define MAJESTIC_WEBUI_STANDARD_FIXUP
+# and a build without the page must not ship it either way. j/locale_fpv.cgi
+# and p/header_fpv.cgi went in OpenIPC/majestic-webui#141 and are dropped here.
+#
+# The page is BR2_PACKAGE_MAJESTIC_WEBUI_FPV, on by default for the fpv and
+# wfbng variants -- what it was keyed on before it was an option -- and a
+# profile can still set it either way. a/wfb.js is the page's own script; it
+# used to ship on every build. The WebUI's sbin/updatewebui lists the same
+# files and installs them only where the image carries p/fpv_common.cgi.
+define MAJESTIC_WEBUI_FPV_PAGE_FIXUP
 	rm -f $(TARGET_DIR)/var/www/cgi-bin/wfb.cgi
 	rm -f $(TARGET_DIR)/var/www/cgi-bin/fpv-wfb.cgi
 	rm -f $(TARGET_DIR)/var/www/cgi-bin/p/fpv_common.cgi
+	rm -f $(TARGET_DIR)/var/www/a/wfb.js
 endef
 
 # The two variant overrides this used to install are gone upstream: header_fpv
@@ -110,6 +119,7 @@ define MAJESTIC_WEBUI_INSTALL_TARGET_CMDS
 	$(MAJESTIC_WEBUI_$(VERSION)_FIXUP)
 	$(if $(BR2_PACKAGE_MAJESTIC_WEBUI_SMS),,$(MAJESTIC_WEBUI_SMS_FIXUP))
 	$(if $(BR2_PACKAGE_MAJESTIC_WEBUI_PTZ),,$(MAJESTIC_WEBUI_PTZ_FIXUP))
+	$(if $(BR2_PACKAGE_MAJESTIC_WEBUI_FPV),,$(MAJESTIC_WEBUI_FPV_PAGE_FIXUP))
 endef
 
 $(eval $(generic-package))
