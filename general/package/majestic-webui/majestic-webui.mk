@@ -83,10 +83,33 @@ define MAJESTIC_WEBUI_SMS_FIXUP
 	rm -f $(TARGET_DIR)/usr/sbin/modem-at
 endef
 
+# The PTZ controls are code for moving motors, and only an image with a motor
+# driver can move one: gpio-motors, or the majestic-af plugin for the Pelco,
+# MS41908 and gpiostep backends. BR2_PACKAGE_MAJESTIC_WEBUI_PTZ follows those
+# two by default. The same eight paths are listed in the WebUI's
+# sbin/updatewebui, which installs them only where the image carries
+# /usr/bin/gpio-motors or /usr/lib/majestic-af.so.
+#
+# p/motor.cgi is emptied, never removed: live.cgi pulls it in with <%in %>,
+# which haserl opens while parsing the page, before any shell around it runs,
+# so a missing file is an error on the Live page whatever the camera's PTZ
+# settings say. The WebUI reads an empty one as "no PTZ".
+define MAJESTIC_WEBUI_PTZ_FIXUP
+	rm -f $(TARGET_DIR)/var/www/a/preview-ptz.js
+	rm -f $(TARGET_DIR)/var/www/a/ptz-stick.js
+	rm -f $(TARGET_DIR)/var/www/a/ptz-centre.js
+	rm -f $(TARGET_DIR)/var/www/a/ptz-follow.js
+	rm -f $(TARGET_DIR)/var/www/a/ptz-speed.js
+	rm -f $(TARGET_DIR)/var/www/a/af-state.js
+	[ ! -e $(TARGET_DIR)/var/www/cgi-bin/p/motor.cgi ] || : >$(TARGET_DIR)/var/www/cgi-bin/p/motor.cgi
+	rm -f $(TARGET_DIR)/var/www/cgi-bin/j/ptz.cgi
+endef
+
 define MAJESTIC_WEBUI_INSTALL_TARGET_CMDS
 	$(MAJESTIC_WEBUI_INSTALL)
 	$(MAJESTIC_WEBUI_$(VERSION)_FIXUP)
 	$(if $(BR2_PACKAGE_MAJESTIC_WEBUI_SMS),,$(MAJESTIC_WEBUI_SMS_FIXUP))
+	$(if $(BR2_PACKAGE_MAJESTIC_WEBUI_PTZ),,$(MAJESTIC_WEBUI_PTZ_FIXUP))
 endef
 
 $(eval $(generic-package))
