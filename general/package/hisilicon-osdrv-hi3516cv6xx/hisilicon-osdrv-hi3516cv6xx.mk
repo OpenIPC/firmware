@@ -53,7 +53,7 @@ HISILICON_OSDRV_HI3516CV6XX_MPP_LIBS = \
 # Sensor .so blobs shipped from vendor flash where the openhisilicon
 # V5 SDK has no source mirror. Extracted from the original CV608 DEMO
 # board flash (Hi3516CV610_MPP_V1.0.1.0 B040, Sep 2024). Source-built
-# sensors (gc4023, os04d10, sc4336p, sc450ai, sc500ai, sc431hai) come
+# sensors (gc2083, gc4023, os04d10, sc4336p, sc450ai, sc500ai, sc431hai) come
 # from hisilicon-opensdk and are not duplicated here.
 HISILICON_OSDRV_HI3516CV6XX_SENSOR_BLOBS = \
 	libsns_imx307.so \
