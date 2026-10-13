@@ -89,6 +89,11 @@ endef
 # two by default. The same eight paths are listed in the WebUI's
 # sbin/updatewebui, which installs them only where the image carries
 # /usr/bin/gpio-motors or /usr/lib/majestic-af.so.
+#
+# p/motor.cgi is emptied, never removed: live.cgi pulls it in with <%in %>,
+# which haserl opens while parsing the page, before any shell around it runs,
+# so a missing file is an error on the Live page whatever the camera's PTZ
+# settings say. The WebUI reads an empty one as "no PTZ".
 define MAJESTIC_WEBUI_PTZ_FIXUP
 	rm -f $(TARGET_DIR)/var/www/a/preview-ptz.js
 	rm -f $(TARGET_DIR)/var/www/a/ptz-stick.js
@@ -96,7 +101,7 @@ define MAJESTIC_WEBUI_PTZ_FIXUP
 	rm -f $(TARGET_DIR)/var/www/a/ptz-follow.js
 	rm -f $(TARGET_DIR)/var/www/a/ptz-speed.js
 	rm -f $(TARGET_DIR)/var/www/a/af-state.js
-	rm -f $(TARGET_DIR)/var/www/cgi-bin/p/motor.cgi
+	[ ! -e $(TARGET_DIR)/var/www/cgi-bin/p/motor.cgi ] || : >$(TARGET_DIR)/var/www/cgi-bin/p/motor.cgi
 	rm -f $(TARGET_DIR)/var/www/cgi-bin/j/ptz.cgi
 endef
 
