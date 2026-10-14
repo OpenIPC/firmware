@@ -296,6 +296,8 @@ UNBUILT_FAMILIES = {
 # would spend flash on a radio that is not there. A mainline board with a
 # driver choosing it would take it off this list.
 NOT_BUILT = {
+    # Manual stock-ABI diagnostics; no supported board enables these tools.
+    "nt98513-diagnostics",
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x", "atbm-wifi",
     "aura-httpd", "baresip-openipc", "comgt", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",

@@ -1,0 +1,14 @@
+config BR2_PACKAGE_NT98513_DIAGNOSTICS
+	bool "nt98513-diagnostics"
+	depends on BR2_mipsel
+	depends on BR2_MIPS_CPU_MIPS32R2
+	depends on BR2_MIPS_OABI32
+	help
+	  Optional manual diagnostics for the recovered NT98513 stock
+	  Linux userspace ABI. Builds three freestanding static MIPS32r2
+	  O32 soft-float tools; the rootfs libc float ABI is not used.
+	  Requires a GNU/Clang compiler accepting the checked target flags.
+	  No services, device nodes, firmware or board support are installed.
+	  Build success does not establish compatible hardware or drivers.
+
+	  https://github.com/OpenIPC/ipctool
