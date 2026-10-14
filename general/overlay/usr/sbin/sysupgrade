@@ -139,6 +139,12 @@ die() {
 		# And only while it still names this process: a stale lock can be
 		# taken over, so "it was mine" is not the same as "it is mine".
 		[ "1" = "$lock_owned" ] && [ "$(cat $LOCK_FILE 2>/dev/null)" = "$$" ] && rm -f $LOCK_FILE
+		restore_majestic
+		# A WebUI that lost this log when majestic was stopped for its memory
+		# never saw the line above; the camera's own log is where the page can
+		# still find it, and syslogd is back by now.
+		[ "1" = "$majestic_stopped" ] && [ "1" = "$web_update" ] &&
+			logger -p user.err -t sysupgrade "upgrade refused, nothing was written: $1"
 	fi
 	exit 1
 }
@@ -1109,7 +1115,7 @@ stop_majestic_for_memory() {
 	# A second for majestic to forward the line above before it goes: it is
 	# the last the WebUI sees of this run.
 	if [ "1" = "$web_update" ]; then
-		echo_c 33 "This page loses the log here; the camera reboots on its own once the flash is done."
+		echo_c 33 "This page loses the log here. If the upgrade goes ahead, the camera reboots on its own when it is done; if it is still short, nothing is written, majestic comes back, and the reason is in the camera's log."
 		sleep 2
 	fi
 	/etc/init.d/S95majestic stop >/dev/null 2>&1
@@ -1711,19 +1717,33 @@ restore_resources() {
 	# A majestic we prepared over the API is in upgrade mode with no watcher of
 	# its own -- nobody else will bring its video back -- so ask it to leave.
 	# Only if that fails is it restarted.
+	#
+	# A start or a restart is only decided here and carried out by
+	# restore_majestic(), once the caller has released the lock: the majestic
+	# supervisor (S95majestic) will not start majestic while an upgrade holds
+	# /tmp/sysupgrade.lock, so a start from here leaves the camera up with no
+	# majestic and no WebUI.
+	majestic_pending=
 	if [ "1" = "$majestic_stopped" ]; then
 		# Stopped for its memory (stop_majestic_for_memory): nothing is left
 		# to leave upgrade mode, so it is started afresh, supervisor and all.
-		/etc/init.d/S95majestic start >/dev/null 2>&1
+		majestic_pending=start
 	elif [ "1" = "$majestic_prepared" ] && majestic_api abort; then
 		echo "majestic restarted its video"
 	elif [ "1" != "$majestic_prepared" ] && [ -f "$MAJESTIC_OWNER" ] &&
 		pidof majestic >/dev/null 2>&1; then
 		echo "majestic is restoring itself; leaving it running"
 	elif [ -x /etc/init.d/S95majestic ]; then
-		/etc/init.d/S95majestic restart >/dev/null 2>&1
+		majestic_pending=restart
 	fi
 	services_stopped=
+	return 0
+}
+
+# What restore_resources() decided for majestic, after the lock is gone.
+restore_majestic() {
+	[ -n "$majestic_pending" ] && /etc/init.d/S95majestic "$majestic_pending" >/dev/null 2>&1
+	majestic_pending=
 	return 0
 }
 
@@ -2780,6 +2800,7 @@ reboot_system() {
 		restore_resources
 		rm -f "$unpacked_list"
 		rm $LOCK_FILE
+		restore_majestic
 		return 0
 	fi
 	if [ "1" = "$skip_reboot" ] && [ "1" = "$live_flash_dirty" ]; then

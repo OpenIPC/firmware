@@ -83,7 +83,13 @@ done
 # it leaves, for the tests of stop_majestic_for_memory.
 cat > "$SB/etc/init.d/S95majestic" <<'STUB'
 #!/bin/sh
-echo "S95majestic $1" >> "$FLASH_LOG"
+# The supervisor will not start majestic while an upgrade holds the lock, so a
+# start or restart made under it is logged as such.
+if [ "$1" != stop ] && [ -f "$STUB_LOCK" ]; then
+    echo "S95majestic $1 (under the upgrade lock)" >> "$FLASH_LOG"
+else
+    echo "S95majestic $1" >> "$FLASH_LOG"
+fi
 if [ "$1" = stop ] && [ -n "$STUB_MEM_AFTER_STOP" ]; then
     printf 'MemTotal: 131072 kB\nMemFree: %d kB\nMemAvailable: %d kB\n' \
         "$STUB_MEM_AFTER_STOP" "$STUB_MEM_AFTER_STOP" > "$STUB_MEMINFO"
@@ -156,6 +162,8 @@ stub ipcinfo    'case "$1" in -v) echo "${STUB_VENDOR:-sigmastar}";; -F) echo "$
 # majestic is running when a test says so, and only then: the host's own
 # pidof would otherwise decide.
 stub pidof '[ "$1" = majestic ] && [ -n "$STUB_MAJESTIC_PID" ] && { echo "$STUB_MAJESTIC_PID"; exit 0; }; exit 1'
+# Into the flash log, not the host's syslog.
+stub logger 'echo "logger $*" >> "$FLASH_LOG"'
 # `upgrade` is the URL a builder profile writes on first boot; unset models
 # the env that lost it, or never had it (#2484).
 stub fw_printenv '
@@ -521,6 +529,7 @@ run() {
         STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
         UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
         STUB_MEM_AFTER_STOP="${STUB_MEM_AFTER_STOP:-}" STUB_MEMINFO="$SB/proc/meminfo" \
+        STUB_LOCK="$SB/tmp/sysupgrade.lock" \
         STUB_MAJESTIC_PID="${STUB_MAJESTIC_PID:-}" \
         FLASH_RAM_FLOOR_KB="${FLASH_RAM_FLOOR_KB:-2048}" \
         UBI_SYS="$SB/sys/class/ubi" INITTAB="$SB/etc/inittab" handoff_wait=0 \
@@ -974,10 +983,25 @@ STUB_MAJESTIC_PID=901 STUB_MEM_AFTER_STOP=8300
 run -z --web -k -r
 if [ "$RC" -ne 0 ] && nothing_wrote &&
     printf '%s' "$OUT" | grep -q "8300 KB free with majestic stopped" &&
-    grep -q "S95majestic start" "$SB/tmp/flash.log"; then
+    grep -qx "S95majestic start" "$SB/tmp/flash.log"; then
     ok "still short with majestic stopped -> refused, and majestic started again"
 else
-    bad "short even without majestic -> expected a refusal and a restart, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
+    bad "short even without majestic -> expected a refusal and a start, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
+fi
+# After the lock is gone, or the supervisor declines and the camera is left
+# with no majestic and no WebUI.
+if ! grep -q "under the upgrade lock" "$SB/tmp/flash.log" &&
+    [ "$(logged_at "S95majestic start")" -gt 0 ] 2>/dev/null; then
+    ok "...after the upgrade lock is released, so the supervisor starts it"
+else
+    bad "majestic must be started after the lock is released, log='$(cat "$SB/tmp/flash.log")'"
+fi
+# The page lost the log before the refusal, so the camera's log carries it.
+if grep -q "^logger .*upgrade refused, nothing was written: Not enough memory to unpack" "$SB/tmp/flash.log" &&
+    ! printf '%s' "$OUT" | grep -q "the camera reboots on its own once"; then
+    ok "...and the refusal goes to syslog, with no reboot promised before the retry"
+else
+    bad "a refusal after majestic was stopped must reach syslog, out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
 fi
 
 # Never the majestic that pets the watchdog: nothing would pet it until the
@@ -2964,9 +2988,14 @@ awk '/^create_lock\(\)/,/^}/' "$SRC" | grep -q 'lock_owned=1' \
 awk '/^die\(\)/,/^}/' "$SRC" | grep -q 'restore_resources' \
     && ok "die() restarts the services free_resources stopped" \
     || bad "a pre-flash die() leaves syslog/klogd/ntpd/cron stopped on a camera that stays up"
-awk '/^restore_resources\(\)/,/^}/' "$SRC" | grep -q 'S95majestic restart' \
+awk '/^restore_resources\(\)/,/^}/' "$SRC" | grep -q 'majestic_pending=restart' \
+    && awk '/^restore_majestic\(\)/,/^}/' "$SRC" | grep -q 'S95majestic "$majestic_pending"' \
     && ok "restore_resources restarts majestic rather than starting it" \
     || bad "SIGQUIT leaves majestic running without an SDK; 'start' is a no-op, it needs 'restart'"
+# ...and only once the lock is gone, which the supervisor waits for.
+awk '/^die\(\)/,/^}/' "$SRC" | awk '/rm -f \$LOCK_FILE/ { l = NR } /restore_majestic/ { m = NR } END { exit !(l && m > l) }' \
+    && ok "die() brings majestic back after releasing the lock" \
+    || bad "die() must call restore_majestic after removing \$LOCK_FILE"
 # The breadcrumb pair (#2415, #2417). Its whole value rests on ORDER: the line
 # has to leave before syslogd stops, or a camera that never comes back takes the
 # explanation with it. A later reshuffle of free_resources() that moved the
