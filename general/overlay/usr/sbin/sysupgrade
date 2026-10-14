@@ -1118,7 +1118,24 @@ stop_majestic_for_memory() {
 		echo_c 33 "This page loses the log here. If the upgrade goes ahead, the camera reboots on its own when it is done; if it is still short, nothing is written, majestic comes back, and the reason is in the camera's log."
 		sleep 2
 	fi
-	/etc/init.d/S95majestic stop >/dev/null 2>&1
+	# From here the camera has no majestic and this run holds the lock its
+	# supervisor waits on, so every way out has to go through die(), which
+	# puts both back: an interrupt included, until the flash phase takes the
+	# signals away for good. Not once it has: the floor is asked from inside
+	# enter_ramfs, past that point, and an interrupt that reached die() from
+	# there on could reboot the camera halfway through the erase (#2024). And
+	# a reader of this output that went with majestic must not take the run
+	# down with a SIGPIPE.
+	trap '' PIPE
+	[ "1" = "$signals_ignored" ] ||
+		trap 'die "Interrupted, with majestic stopped for the upgrade."' INT TERM HUP
+	if ! /etc/init.d/S95majestic stop >/dev/null 2>&1; then
+		# Still running, in upgrade mode, and its supervisor gone: nothing
+		# was freed, and only a restart brings its video back.
+		majestic_stop_failed=1
+		echo_c 33 "majestic did not stop; carrying on without the memory it holds."
+		return 1
+	fi
 	majestic_stopped=1
 	sync
 	echo 3 > /proc/sys/vm/drop_caches
@@ -1183,7 +1200,9 @@ CMA (MMZ) area, so that is not counted."
 	need_handoff && stage=$(ramfs_stage_kb)
 	want=$((need + UNPACK_RESERVE_KB + stage))
 	[ "$want" -lt "$avail" ] && return 0
-	if stop_majestic_for_memory "$((want - avail))" && usable_ram; then
+	if stop_majestic_for_memory "$((want - avail))"; then
+		# A second reading that will not parse is no opinion, as the first is.
+		usable_ram || return 0
 		avail=$ram_kb
 		[ "$want" -lt "$avail" ] && return 0
 	fi
@@ -1226,7 +1245,8 @@ check_flash_ram() {
 	avail=$ram_kb
 	echo "RAM left to flash from: $avail KB${ram_cma_kb:+ (free CMA not counted: $ram_cma_kb KB)}"
 	[ "$avail" -ge "$FLASH_RAM_FLOOR_KB" ] && return 0
-	if stop_majestic_for_memory "$((FLASH_RAM_FLOOR_KB - avail))" && usable_ram; then
+	if stop_majestic_for_memory "$((FLASH_RAM_FLOOR_KB - avail))"; then
+		usable_ram || return 0
 		avail=$ram_kb
 		echo "RAM left to flash from: $avail KB with majestic stopped"
 		[ "$avail" -ge "$FLASH_RAM_FLOOR_KB" ] && return 0
@@ -1728,6 +1748,10 @@ restore_resources() {
 		# Stopped for its memory (stop_majestic_for_memory): nothing is left
 		# to leave upgrade mode, so it is started afresh, supervisor and all.
 		majestic_pending=start
+	elif [ "1" = "$majestic_stop_failed" ]; then
+		# A stop that timed out took the supervisor and left majestic in
+		# upgrade mode, where a start is a no-op.
+		majestic_pending=restart
 	elif [ "1" = "$majestic_prepared" ] && majestic_api abort; then
 		echo "majestic restarted its video"
 	elif [ "1" != "$majestic_prepared" ] && [ -f "$MAJESTIC_OWNER" ] &&
@@ -3156,6 +3180,7 @@ fi
 # partition partially erased and unbootable. SIG_IGN is inherited across
 # fork+exec, so this also shields the busybox flashcp child. See issue #2024.
 trap '' HUP INT TERM PIPE
+signals_ignored=1
 echo_c 37 "\nProtected: flashing continues even if this terminal disconnects."
 
 # Only a run that rewrites the flash the camera is served from needs to leave

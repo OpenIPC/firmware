@@ -90,7 +90,10 @@ if [ "$1" != stop ] && [ -f "$STUB_LOCK" ]; then
 else
     echo "S95majestic $1" >> "$FLASH_LOG"
 fi
-if [ "$1" = stop ] && [ -n "$STUB_MEM_AFTER_STOP" ]; then
+[ "$1" = stop ] && [ -n "$STUB_STOP_FAILS" ] && exit 1
+if [ "$1" = stop ] && [ "$STUB_MEM_AFTER_STOP" = unreadable ]; then
+    : > "$STUB_MEMINFO"
+elif [ "$1" = stop ] && [ -n "$STUB_MEM_AFTER_STOP" ]; then
     printf 'MemTotal: 131072 kB\nMemFree: %d kB\nMemAvailable: %d kB\n' \
         "$STUB_MEM_AFTER_STOP" "$STUB_MEM_AFTER_STOP" > "$STUB_MEMINFO"
 fi
@@ -530,6 +533,7 @@ run() {
         UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
         STUB_MEM_AFTER_STOP="${STUB_MEM_AFTER_STOP:-}" STUB_MEMINFO="$SB/proc/meminfo" \
         STUB_LOCK="$SB/tmp/sysupgrade.lock" \
+        STUB_STOP_FAILS="${STUB_STOP_FAILS:-}" \
         STUB_MAJESTIC_PID="${STUB_MAJESTIC_PID:-}" \
         FLASH_RAM_FLOOR_KB="${FLASH_RAM_FLOOR_KB:-2048}" \
         UBI_SYS="$SB/sys/class/ubi" INITTAB="$SB/etc/inittab" handoff_wait=0 \
@@ -558,7 +562,7 @@ reset_env() {
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB FLASH_RAM_FLOOR_KB
-    unset STUB_MEM_AFTER_STOP STUB_MAJESTIC_PID WDOG WDOG_PROC
+    unset STUB_MEM_AFTER_STOP STUB_MAJESTIC_PID STUB_STOP_FAILS WDOG WDOG_PROC
     unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY STUB_UMOUNT_HIDES RUN_ENV FOLLOW_LOG STUB_UBI_SLOW
     rm -rf "$SB/sys"
     printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n::restart:/sbin/init\n' > "$SB/etc/inittab"
@@ -1003,6 +1007,50 @@ if grep -q "^logger .*upgrade refused, nothing was written: Not enough memory to
 else
     bad "a refusal after majestic was stopped must reach syslog, out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
 fi
+
+# A stop that timed out freed nothing and took the supervisor: no retry on
+# memory that was never given back, and a restart, not a start, to bring the
+# video back.
+reset_env
+set_meminfo 8192
+STUB_DL_BYTES=8691055
+STUB_MAJESTIC_PID=901 STUB_MEM_AFTER_STOP=16000 STUB_STOP_FAILS=1
+run -z --web -k -r
+if [ "$RC" -ne 0 ] && nothing_wrote &&
+    printf '%s' "$OUT" | grep -q "majestic did not stop" &&
+    printf '%s' "$OUT" | grep -q "Not enough memory to unpack" &&
+    grep -qx "S95majestic restart" "$SB/tmp/flash.log"; then
+    ok "a stop that fails is not retried on, and majestic is restarted"
+else
+    bad "failed stop -> expected a refusal and a restart, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# A reading after the stop that will not parse is no reason to refuse, as the
+# first is not.
+reset_env
+set_meminfo 8192
+STUB_DL_BYTES=8691055
+STUB_MAJESTIC_PID=901 STUB_MEM_AFTER_STOP=unreadable
+run -z --web -k -r
+if grep -q "S95majestic stop" "$SB/tmp/flash.log" &&
+    ! printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "an unreadable /proc/meminfo after the stop is no opinion either"
+else
+    bad "unreadable meminfo after the stop -> expected no refusal, rc=$RC out='$OUT'"
+fi
+
+# Once majestic is stopped every way out must go through die(), which puts it
+# and the lock back -- an interrupt too, until the flash phase ignores them.
+awk '/^stop_majestic_for_memory\(\)/,/^}/' "$SRC" | grep -q "trap 'die .*' INT TERM HUP" \
+    && ok "an interrupt after majestic is stopped goes through die()" \
+    || bad "stop_majestic_for_memory must trap INT/TERM/HUP to die()"
+# ...but never once the flash phase has taken them away: the floor is asked
+# from inside enter_ramfs, and a die() from an interrupt there could reboot
+# the camera halfway through the erase (#2024).
+awk '/^stop_majestic_for_memory\(\)/,/^}/' "$SRC" | grep -B1 "trap 'die " | grep -q 'signals_ignored' \
+    && grep -A1 "^trap '' HUP INT TERM PIPE" "$SRC" | grep -q '^signals_ignored=1' \
+    && ok "...and leaves the flash phase's protection alone" \
+    || bad "the die() trap must not be installed once signals are ignored for the flash"
 
 # Never the majestic that pets the watchdog: nothing would pet it until the
 # RAM phase. /dev/null stands in for the device -- a character device the
