@@ -10,6 +10,9 @@ BR2_ARM_INSTRUCTIONS_THUMB2=y
 
 # Toolchain
 BR2_TOOLCHAIN_EXTERNAL=y
+# Without CUSTOM, a hard-float ARM config falls to Buildroot's default
+# external toolchain -- Arm's glibc one -- and never fetches the URL below.
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
 BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
 BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/openipc/firmware/releases/download/$(OPENIPC_TOOLCHAIN).tgz"
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="arm-openipc-linux-musleabihf"
@@ -27,12 +30,12 @@ BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/openipc/linux/archive/$(OPENIPC_KERNEL).tar.gz"
 BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
 BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/gk7206v100.generic.config"
+# The SDK kernel's own `make uImage` already appends xmorca.dtb
+# (lotus/scripts/uimage_dtb.sh), so Buildroot's appended-DTB uImage is not
+# used: it looks for the dtb under arch/arm/boot/dts and names the result
+# uImage.xmorca.
 BR2_LINUX_KERNEL_UIMAGE=y
 BR2_LINUX_KERNEL_XZ=y
-BR2_LINUX_KERNEL_DTS_SUPPORT=y
-BR2_LINUX_KERNEL_INTREE_DTS_NAME="xmorca"
-BR2_LINUX_KERNEL_APPENDED_DTB=y
-BR2_LINUX_KERNEL_APPENDED_UIMAGE=y
 
 # Filesystem
 BR2_PACKAGE_BUSYBOX_CONFIG="$(BR2_EXTERNAL)/package/busybox/busybox.config"
