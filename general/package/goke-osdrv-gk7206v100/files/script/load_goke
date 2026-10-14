@@ -9,16 +9,36 @@
 # pin muxing lives in the device tree, MIPI RX inside xm_vi, and the sensor
 # libraries drive I2C from userspace, so nothing here needs to know the
 # sensor.
+#
+# The modules are hisilicon-opensdk's open_* builds of the SDK's xm_* set,
+# loaded by name so modprobe resolves what each one needs.
 
 # Memory config
 mem_start=0x40000000 # phy mem start
 
-# DDR size in MiB. Every die has its DDR in the package, so the part number
-# fixes it: 512Mb DDR2 on V10/V10B, 1Gb DDR3L on V11/V11A/V11AT, 2Gb DDR3L
-# on V12A. The totalmem env still wins when set. The device tree cannot
-# say: its memory node is the SDK's 3 GiB placeholder.
+# DDR size in MiB. Every die has its DDR in the package: 512Mb DDR2 on
+# V10/V10B, 1Gb DDR3L on V11/V11A/V11AT, 2Gb DDR3L on V12A. Neither the
+# kernel nor the chip ID register reports the size, so, in order:
+#   - the totalmem env, when the bootloader or the user keeps one;
+#   - the device-tree memory node, but only once a bootloader has written the
+#     probed size into it: as built it is the SDK's 3 GiB placeholder, and
+#     nothing in this family has more than 256 MiB;
+#   - the part number in the soc env, normalised the way S31hostname does it
+#     (any case, and the SDK's xm7206 spelling);
+#   - 64 MiB, the smallest die, said out loud: on a larger die it leaves most
+#     of the media memory unused, and the check below stops on a mem= it
+#     cannot fit under.
+dt_mem_total() {
+	local reg
+	reg=$(hexdump -v -e '1/1 "%02x"' /proc/device-tree/memory/reg 2>/dev/null)
+	# One <base size> pair of 32-bit cells.
+	[ ${#reg} -eq 16 ] || return 0
+	reg=$((0x${reg#????????} / 1048576))
+	[ "$reg" -gt 0 ] && [ "$reg" -le 256 ] && echo $reg
+}
+
 soc_mem_total() {
-	case "$(fw_printenv -n soc 2>/dev/null)" in
+	case "$(fw_printenv -n soc 2>/dev/null | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9]//g; s/^xm/gk/')" in
 	gk7206v12a) echo 256 ;;
 	gk7206v11 | gk7206v11a | gk7206v11at) echo 128 ;;
 	gk7206v10 | gk7206v10b) echo 64 ;;
@@ -26,8 +46,13 @@ soc_mem_total() {
 }
 
 mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d 'M')
+[ -n "$mem_total" ] || mem_total=$(dt_mem_total)
 [ -n "$mem_total" ] || mem_total=$(soc_mem_total)
-mem_total=${mem_total:=64}
+if [ -z "$mem_total" ]; then
+	mem_total=64
+	logger -s -p daemon.warn -t goke \
+		"DDR size unknown, assuming ${mem_total}M; set it with: fw_setenv totalmem <MiB>M"
+fi
 
 os_mem_size=$(fw_printenv -n osmem 2>/dev/null | tr -d 'M')
 os_mem_size=${os_mem_size:=32}
@@ -36,8 +61,6 @@ os_mem_size=${os_mem_size:=32}
 # that counts (an explicit -osmem below still wins).
 _kmem=$(grep -oE 'mem=[0-9]+M' /proc/cmdline | head -1 | tr -dc '0-9')
 [ -n "$_kmem" ] && os_mem_size=$_kmem
-
-cd /lib/modules/$(uname -r)/goke/
 
 report_error() {
 	echo "******* Error: There's something wrong, please check! *****"
@@ -51,7 +74,32 @@ calc_mmz_info() {
 	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
 }
 
-# xm_osal first and with its parameters: every other module depends on it,
+load() {
+	modprobe "$@" || report_error
+}
+
+# rmmod, not modprobe -r: that also drops dependencies left unused, which
+# would take open_osal out from under the teardown order below.
+unload() {
+	rmmod -w "$1"
+}
+
+# Modules a build can leave out (DISABLE_PM, DISABLE_VO, DISABLE_TDE).
+installed() {
+	grep -q "/$1.ko:" /lib/modules/$(uname -r)/modules.dep
+}
+
+load_opt() {
+	installed "$1" || return 0
+	load "$@"
+}
+
+unload_opt() {
+	installed "$1" || return 0
+	unload "$1"
+}
+
+# open_osal first and with its parameters: every other module depends on it,
 # and a modprobe that pulls it in as a dependency loads it with no memory
 # zone at all. The SDK's built-in bootargs carry their own mmz=; use that
 # when it is there.
@@ -61,93 +109,78 @@ insert_osal() {
 		calc_mmz_info
 		MMZ=anonymous,0,$mmz_start,$mmz_size
 	fi
-	modprobe xm_osal mmz_allocator=xmedia mmz=$MMZ || report_error
-}
-
-# hisilicon-opensdk installs xm_<m>.ko, but the module inside registers as
-# open_<m>, and rmmod wants the registered name. Try that first, then the
-# name as given for a build that ships the vendor's own.
-unload() {
-	rmmod -w "open_${1#xm_}" 2>/dev/null || rmmod -w "$1"
-}
-
-# Modules a build can leave out (DISABLE_PM, DISABLE_VO, DISABLE_TDE).
-insert_opt() {
-	local mod=$1
-	shift
-	[ -f "$mod.ko" ] || return 0
-	insmod "$mod.ko" "$@"
+	load open_osal mmz_allocator=xmedia mmz=$MMZ
 }
 
 insert_audio() {
-	insmod xm_acomm.ko
-	insmod xm_aio.ko
-	insmod xm_ao.ko
-	insmod xm_ai.ko
-	insmod xm_aenc.ko
-	insmod xm_adec.ko
+	load open_acomm
+	load open_aio
+	load open_ao
+	load open_ai
+	load open_aenc
+	load open_adec
 }
 
 remove_audio() {
-	unload xm_adec
-	unload xm_aenc
-	unload xm_ai
-	unload xm_ao
-	unload xm_aio
-	unload xm_acomm
+	unload open_adec
+	unload open_aenc
+	unload open_ai
+	unload open_ao
+	unload open_aio
+	unload open_acomm
 }
 
 insert_ko() {
 	insert_osal
-	insmod xm_common.ko
-	insert_opt xm_pm
-	insmod xm_vgs.ko
-	insert_opt xm_tde
-	insert_opt xm_region
-	insmod xm_isp.ko
-	insmod xm_vpss.ko
-	insmod xm_npu.ko
-	insmod xm_vi.ko
-	insmod xm_chnl.ko
-	insmod xm_vedu.ko
-	insmod xm_rc.ko
-	insmod xm_jpege.ko
-	insmod xm_h265e.ko
-	insmod xm_h264e.ko
-	insmod xm_venc.ko
-	insert_opt xm_vo
-	insert_opt xm_fb fb_vram="gfbg:vram0_size:3600"
-	insmod xm_cipher_drv.ko
+	load open_common
+	load_opt open_pm
+	load open_vgs
+	load_opt open_tde
+	load_opt open_region
+	load open_isp
+	load open_vpss
+	load open_npu
+	load open_vi
+	load open_chnl
+	load open_vedu
+	load open_rc
+	load open_jpege
+	load open_h265e
+	load open_h264e
+	load open_venc
+	load_opt open_vo
+	load_opt open_fb fb_vram="gfbg:vram0_size:3600"
+	load open_cipher_drv
 	# Node count kept at the SDK's default 64 to save memory (8..512).
-	insmod xm_ive.ko
+	load open_ive
 	insert_audio
-	insert_opt xm_adc
+	load_opt open_adc
 }
 
 remove_ko() {
-	unload xm_adc 2>/dev/null
+	unload_opt open_adc
 	remove_audio
-	unload xm_ive
-	unload xm_cipher_drv
-	unload xm_fb 2>/dev/null
-	unload xm_vo 2>/dev/null
-	unload xm_venc
-	unload xm_h264e
-	unload xm_h265e
-	unload xm_jpege
-	unload xm_rc
-	unload xm_vedu
-	unload xm_chnl
-	unload xm_vi
-	unload xm_npu
-	unload xm_vpss
-	unload xm_isp
-	unload xm_region 2>/dev/null
-	unload xm_tde 2>/dev/null
-	unload xm_vgs
-	unload xm_pm 2>/dev/null
-	unload xm_common
-	unload xm_osal
+	unload open_ive
+	unload open_cipher_drv
+	unload_opt open_fb
+	unload_opt open_vo
+	unload open_venc
+	unload open_h264e
+	unload open_h265e
+	unload open_jpege
+	unload open_rc
+	unload open_vedu
+	unload open_chnl
+	unload open_vi
+	unload open_npu
+	unload open_vpss
+	unload open_isp
+	unload_opt open_region
+	unload_opt open_tde
+	unload open_vgs
+	unload_opt open_pm
+	unload open_common
+	unload open_osal
 }
 
 load_usage() {
@@ -198,7 +231,7 @@ if [ $# -lt 1 ]; then
 	exit 0
 fi
 
-# Nothing left above the kernel's memory for the MMZ: xm_osal would come up
+# Nothing left above the kernel's memory for the MMZ: open_osal would come up
 # without a memory zone and the first media module would fail on it.
 if ! grep -q 'mmz=' /proc/cmdline && [ $os_mem_size -ge $mem_total ]; then
 	echo "[err] os_mem[${os_mem_size}M] leaves no media memory in total_mem[${mem_total}M];" \

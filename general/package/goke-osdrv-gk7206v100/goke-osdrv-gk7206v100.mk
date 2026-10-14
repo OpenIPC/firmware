@@ -6,8 +6,9 @@
 
 GOKE_OSDRV_GK7206V100_VERSION =
 GOKE_OSDRV_GK7206V100_SITE =
-GOKE_OSDRV_GK7206V100_LICENSE = MIT
-GOKE_OSDRV_GK7206V100_LICENSE_FILES = LICENSE
+# The vendor's binaries, redistributed as the SDK publishes them; the SDK
+# repository states no license for them, so none is claimed here.
+GOKE_OSDRV_GK7206V100_LICENSE = PROPRIETARY
 # hisilicon-opensdk links its dump tools against these.
 GOKE_OSDRV_GK7206V100_INSTALL_STAGING = YES
 
@@ -27,7 +28,8 @@ GOKE_OSDRV_GK7206V100_DEPENDENCIES = uclibc-compat
 # Only what the SDK has no source for is here. hisilicon-opensdk builds the
 # rest from the SDK's own source: the kernel modules it can (relinking the
 # others), the libsns_* sensor drivers, libxmedia_msensor, libxmedia_svp and
-# the VI/VPSS/VO dump tools.
+# the VI/VPSS/VO dump tools (built, not installed: capture tools belong in
+# ipctool).
 #
 # The libraries declare no NEEDED on one another -- the SDK leaves it to the
 # program to link every one -- and musl binds every symbol at load time, so a

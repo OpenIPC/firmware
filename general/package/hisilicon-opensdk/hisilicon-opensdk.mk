@@ -600,26 +600,22 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(HISILICON_OPENSDK_INSTALL_NPU_LIB)
 endef
 
-# For gk7206v100 (GK7206V1): the same xm_*.ko scheme as gk7205v500, under the
-# names the SDK's load script (and our load_goke) use. Stripped as on cv6xx:
-# Buildroot's target-finalize leaves *.ko alone.
+# For gk7206v100 (GK7206V1): install the open_*.ko as built, as for cv6xx --
+# load_goke reaches them with `modprobe open_<m>`, which resolves the
+# dependencies between them. Stripped as on cv6xx: Buildroot's
+# target-finalize leaves *.ko alone.
 #
-# Beside them, the SDK userspace that has source and so is built here rather
-# than shipped by goke-osdrv-gk7206v100: libxmedia_msensor (the IMU API) on
-# every image; libxmedia_svp (the NPU detection framework) and the six
-# VI/VPSS/VO dump tools on ultimate, where the user programs that would call
-# them have room.
+# Beside them goes libxmedia_msensor (the IMU API), built here from the SDK's
+# source rather than shipped by goke-osdrv-gk7206v100, and on ultimate
+# libxmedia_svp (the NPU detection framework) for user programs. The SDK's
+# VI/VPSS/VO dump tools are built too but not installed: capture tools belong
+# in ipctool.
 else ifeq ($(OPENIPC_SOC_FAMILY),gk7206v100)
 HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/$(HISILICON_OPENSDK_KVER)/goke
 ifeq ($(OPENIPC_VARIANT),ultimate)
 define HISILICON_OPENSDK_INSTALL_GK7206_EXTRAS
 	$(INSTALL) -D -m 0644 $(@D)/libraries/gk7206v100/xmedia_svp/libxmedia_svp.so \
 		$(TARGET_DIR)/usr/lib/libxmedia_svp.so
-	for t in vi_bayer_dump vi_chn_dump vpss_ichn_dump vpss_ochn_dump \
-		vo_chn_dump vo_layer_dump; do \
-		$(INSTALL) -D -m 0755 $(@D)/libraries/gk7206v100/dump_tools/$${t} \
-			$(TARGET_DIR)/usr/bin/$${t} || exit 1; \
-	done
 endef
 endif
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
@@ -633,9 +629,8 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	for ko in $(@D)/kernel/open_*.ko; do \
 		[ -f $${ko} ] || continue; \
-		mod=$$(basename $${ko} .ko); \
 		$(TARGET_STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note $${ko}; \
-		$(INSTALL) -m 644 $${ko} $(HISILICON_OPENSDK_KMOD_DST)/xm_$${mod#open_}.ko || exit 1; \
+		$(INSTALL) -m 644 -t $(HISILICON_OPENSDK_KMOD_DST) $${ko} || exit 1; \
 	done
 endef
 
@@ -802,8 +797,9 @@ endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
 endif
 
-# For gk7205v500 and gk7206v100: every module is renamed into goke/, so none
-# of the source-named copies in extra/ is reachable; drop them all.
+# For gk7205v500 and gk7206v100: every module is installed again into goke/
+# (renamed, or stripped), so the copies the kernel-module install left in
+# extra/ are duplicates; drop them all.
 ifneq ($(filter $(OPENIPC_SOC_FAMILY),gk7205v500 gk7206v100),)
 define HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V500
 	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
