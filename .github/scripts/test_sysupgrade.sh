@@ -507,6 +507,7 @@ run() {
         STUB_ISIZE="${STUB_ISIZE:-}" \
         STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
         UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
+        FLASH_RAM_FLOOR_KB="${FLASH_RAM_FLOOR_KB:-2048}" \
         UBI_SYS="$SB/sys/class/ubi" INITTAB="$SB/etc/inittab" handoff_wait=0 \
         FOLLOW_LOG="${FOLLOW_LOG:-}" STUB_UBI_SLOW="${STUB_UBI_SLOW:-}" \
         ${RUN_ENV:-} \
@@ -532,7 +533,7 @@ reset_env() {
     unset STUB_UPGRADE STUB_IMG_PLATFORM STUB_DL_FILE
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
-    unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB
+    unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB FLASH_RAM_FLOOR_KB
     unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY STUB_UMOUNT_HIDES RUN_ENV FOLLOW_LOG STUB_UBI_SLOW
     rm -rf "$SB/sys"
     printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n::restart:/sbin/init\n' > "$SB/etc/inittab"
@@ -1620,6 +1621,43 @@ else
 fi
 rm -f "$SB/bin/rmdir"
 
+# --- RAM left once the flash phase is staged ---------------------------------
+#
+# A gk7201v200 upgraded through the WebUI with ~500 KB left at the pivot hung
+# at rootfs erase block 17 of 77: what was still running from the old root
+# faulted on the squashfs being erased, and nothing rebooted it. Short of the
+# floor the run is refused before anything moves -- not handed to the in-place
+# fallback, which would flash with even less in RAM.
+# rmdir stubbed for the reason the test above gives.
+stub rmdir 'echo "rmdir $*" >> "$FLASH_LOG"; exit 0'
+reset_env
+set_meminfo 1500
+run -z --kernel="$K" --rootfs="$R"
+rm -f "$SB/bin/rmdir"
+if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted &&
+    ! grep -q "pivot_root" "$SB/tmp/flash.log" &&
+    printf '%s' "$OUT" | grep -q "Not enough memory left to flash safely: 1500 KB"; then
+    ok "too little RAM left at the pivot refuses before anything is written"
+else
+    bad "short RAM at the pivot -> expected a refusal, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
+fi
+if grep -q "^rmdir .*/ram$" "$SB/tmp/flash.log"; then
+    ok "...and takes the staged RAM root back down"
+else
+    bad "a refused pivot left its RAM root behind, log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# The floor itself is enough.
+reset_env
+set_meminfo 2048
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && rebooted &&
+    printf '%s' "$OUT" | grep -q "RAM left to flash from: 2048 KB"; then
+    ok "exactly the floor is let through, and the figure is logged"
+else
+    bad "RAM at the floor -> expected a flash, rc=$RC out='$OUT'"
+fi
+
 # --- the pivot is entered only when it is needed (issue #2416) --------------
 #
 # There is no way back out of the ramfs. The shell, /etc, dropbear and getty are
@@ -2337,6 +2375,33 @@ if handed_off && ! printf '%s' "$OUT" | grep -q "Not enough memory"; then
     ok "...nor is ramfs on a kernel without CMA"
 else
     bad "ramfs /tmp without CMA must not be refused, rc=$RC out='$OUT'"
+fi
+
+# The RAM left at the pivot is counted the same way: 3000 KB "available", 2000
+# of it free CMA a ramfs kernel cannot use, is 1000 KB, under the floor.
+stub rmdir 'echo "rmdir $*" >> "$FLASH_LOG"; exit 0'
+reset_env
+stub_ramfs_tmp
+set_meminfo_cma 3000 2000
+run -z --kernel="$K" --rootfs="$R"
+rm -f "$SB/bin/stat" "$SB/bin/rmdir"
+if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted &&
+    printf '%s' "$OUT" | grep -q "RAM left to flash from: 1000 KB (free CMA not counted: 2000 KB)" &&
+    printf '%s' "$OUT" | grep -q "Not enough memory left to flash safely: 1000 KB"; then
+    ok "ramfs /tmp: free CMA is not counted at the pivot either"
+else
+    bad "ramfs /tmp + CMA at the pivot -> expected a refusal, rc=$RC out='$OUT'"
+fi
+
+# ...and a real tmpfs with the same numbers has its 3000 KB.
+reset_env
+set_meminfo_cma 3000 2000
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 &&
+    printf '%s' "$OUT" | grep -q "RAM left to flash from: 3000 KB$"; then
+    ok "...while a real tmpfs counts that CMA, and flashes"
+else
+    bad "tmpfs /tmp + CMA at the pivot must not be refused, rc=$RC out='$OUT'"
 fi
 
 # A run that must hand PID 1 over cannot fall back to flashing in place, so the
