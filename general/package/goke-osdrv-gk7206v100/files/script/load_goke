@@ -1,0 +1,215 @@
+#!/bin/sh
+#
+# This is part of OpenIPC.org project | 2026.10.14
+#
+# Module loader for the GK7206V1 family (gk7206v100: GK7206V10/V10B/V11/
+# V11A/V11AT/V12A). Order and parameters follow the SDK's own `load` script
+# (ShiMetaPi GK7206 SDK, source/gmp/ko/linux-5.10.y/.../load). Unlike the
+# gk7205 families there is no sys_config, mipi_rx or sensor-bus module:
+# pin muxing lives in the device tree, MIPI RX inside xm_vi, and the sensor
+# libraries drive I2C from userspace, so nothing here needs to know the
+# sensor.
+
+# Memory config
+mem_start=0x40000000 # phy mem start
+
+# DDR size in MiB. Every die has its DDR in the package, so the part number
+# fixes it: 512Mb DDR2 on V10/V10B, 1Gb DDR3L on V11/V11A/V11AT, 2Gb DDR3L
+# on V12A. The totalmem env still wins when set. The device tree cannot
+# say: its memory node is the SDK's 3 GiB placeholder.
+soc_mem_total() {
+	case "$(fw_printenv -n soc 2>/dev/null)" in
+	gk7206v12a) echo 256 ;;
+	gk7206v11 | gk7206v11a | gk7206v11at) echo 128 ;;
+	gk7206v10 | gk7206v10b) echo 64 ;;
+	esac
+}
+
+mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d 'M')
+[ -n "$mem_total" ] || mem_total=$(soc_mem_total)
+mem_total=${mem_total:=64}
+
+os_mem_size=$(fw_printenv -n osmem 2>/dev/null | tr -d 'M')
+os_mem_size=${os_mem_size:=32}
+
+# The MMZ sits above the kernel's mem=, so the kernel's value is the one
+# that counts (an explicit -osmem below still wins).
+_kmem=$(grep -oE 'mem=[0-9]+M' /proc/cmdline | head -1 | tr -dc '0-9')
+[ -n "$_kmem" ] && os_mem_size=$_kmem
+
+cd /lib/modules/$(uname -r)/goke/
+
+report_error() {
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+calc_mmz_info() {
+	mmz_start=$(echo "$mem_start $os_mem_size" |
+		awk '{ printf("0x%x00000\n", $1/1024/1024 + $2) }')
+	mmz_size=$((mem_total - os_mem_size))M
+	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+}
+
+# xm_osal first and with its parameters: every other module depends on it,
+# and a modprobe that pulls it in as a dependency loads it with no memory
+# zone at all. The SDK's built-in bootargs carry their own mmz=; use that
+# when it is there.
+insert_osal() {
+	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
+	if [ -z "$MMZ" ]; then
+		calc_mmz_info
+		MMZ=anonymous,0,$mmz_start,$mmz_size
+	fi
+	modprobe xm_osal mmz_allocator=xmedia mmz=$MMZ || report_error
+}
+
+# hisilicon-opensdk installs xm_<m>.ko, but the module inside registers as
+# open_<m>, and rmmod wants the registered name. Try that first, then the
+# name as given for a build that ships the vendor's own.
+unload() {
+	rmmod -w "open_${1#xm_}" 2>/dev/null || rmmod -w "$1"
+}
+
+# Modules a build can leave out (DISABLE_PM, DISABLE_VO, DISABLE_TDE).
+insert_opt() {
+	local mod=$1
+	shift
+	[ -f "$mod.ko" ] || return 0
+	insmod "$mod.ko" "$@"
+}
+
+insert_audio() {
+	insmod xm_acomm.ko
+	insmod xm_aio.ko
+	insmod xm_ao.ko
+	insmod xm_ai.ko
+	insmod xm_aenc.ko
+	insmod xm_adec.ko
+}
+
+remove_audio() {
+	unload xm_adec
+	unload xm_aenc
+	unload xm_ai
+	unload xm_ao
+	unload xm_aio
+	unload xm_acomm
+}
+
+insert_ko() {
+	insert_osal
+	insmod xm_common.ko
+	insert_opt xm_pm
+	insmod xm_vgs.ko
+	insert_opt xm_tde
+	insert_opt xm_region
+	insmod xm_isp.ko
+	insmod xm_vpss.ko
+	insmod xm_npu.ko
+	insmod xm_vi.ko
+	insmod xm_chnl.ko
+	insmod xm_vedu.ko
+	insmod xm_rc.ko
+	insmod xm_jpege.ko
+	insmod xm_h265e.ko
+	insmod xm_h264e.ko
+	insmod xm_venc.ko
+	insert_opt xm_vo
+	insert_opt xm_fb fb_vram="gfbg:vram0_size:3600"
+	insmod xm_cipher_drv.ko
+	# Node count kept at the SDK's default 64 to save memory (8..512).
+	insmod xm_ive.ko
+	insert_audio
+	insert_opt xm_adc
+}
+
+remove_ko() {
+	unload xm_adc 2>/dev/null
+	remove_audio
+	unload xm_ive
+	unload xm_cipher_drv
+	unload xm_fb 2>/dev/null
+	unload xm_vo 2>/dev/null
+	unload xm_venc
+	unload xm_h264e
+	unload xm_h265e
+	unload xm_jpege
+	unload xm_rc
+	unload xm_vedu
+	unload xm_chnl
+	unload xm_vi
+	unload xm_npu
+	unload xm_vpss
+	unload xm_isp
+	unload xm_region 2>/dev/null
+	unload xm_tde 2>/dev/null
+	unload xm_vgs
+	unload xm_pm 2>/dev/null
+	unload xm_common
+	unload xm_osal
+}
+
+load_usage() {
+	echo "Usage:  ./load_goke [-option]"
+	echo "options:"
+	echo "    -i                       insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a                       remove modules first, then insert modules"
+	echo "    -osmem os_mem_size       kernel memory in MiB [default: mem= from the cmdline]"
+	echo "    -h                       help information"
+	echo -e "for example: ./load_goke -i -osmem 32\n"
+}
+
+######################parse arg###################################
+b_arg_insmod=0
+b_arg_remove=0
+b_arg_os_mem=0
+
+for arg in $@; do
+	if [ $b_arg_os_mem -eq 1 ]; then
+		b_arg_os_mem=0
+		os_mem_size=${arg%M}
+	fi
+
+	case $arg in
+	"-i")
+		b_arg_insmod=1
+		;;
+	"-r")
+		b_arg_remove=1
+		;;
+	"-a")
+		b_arg_insmod=1
+		b_arg_remove=1
+		;;
+	"-h")
+		load_usage
+		;;
+	"-osmem")
+		b_arg_os_mem=1
+		;;
+	esac
+done
+#######################parse arg end########################
+
+if [ $# -lt 1 ]; then
+	load_usage
+	exit 0
+fi
+
+# Nothing left above the kernel's memory for the MMZ: xm_osal would come up
+# without a memory zone and the first media module would fail on it.
+if ! grep -q 'mmz=' /proc/cmdline && [ $os_mem_size -ge $mem_total ]; then
+	echo "[err] os_mem[${os_mem_size}M] leaves no media memory in total_mem[${mem_total}M];" \
+		"set the DDR size: fw_setenv totalmem <MiB>M" >&2
+	exit 1
+fi
+
+if [ $b_arg_remove -eq 1 ]; then
+	remove_ko
+fi
+
+if [ $b_arg_insmod -eq 1 ]; then
+	insert_ko
+fi

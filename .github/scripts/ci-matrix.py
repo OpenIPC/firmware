@@ -87,6 +87,10 @@ ALL_BOARDS = [
     # gk7205v510 is firmware-identical to gk7205v500 --- built once and served
     # via gk7205v500's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "gk7201v200_lite", "gk7205v500_lite",
+    # Goke [GK7206V100]
+    # gk7206v10/v10b/v11/v11a/v11at are firmware-identical to gk7206v12a ---
+    # served via gk7206v100's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
+    "gk7206v100_lite",
     # Allwinner
     "v851s_lite",
     # Fullhan
@@ -929,15 +933,16 @@ def self_test():
         (["general/package/hisilicon-osdrv-hi3516ev200/files/script/load_hisilicon"],
          8, "osdrv narrows to its family"),
         (["general/package/hisilicon-opensdk/hisilicon-opensdk.mk"],
-         47, "opensdk spans HiSilicon and Goke"),
+         48, "opensdk spans HiSilicon and Goke"),
         (["general/package/goke-osdrv-gk7205v200/Config.in"], 7, "goke osdrv"),
         (["general/package/hisilicon-osdrv-hi3520dv200/files/script/load_hisilicon"],
          1, "single-board osdrv"),
         # The two edge kinds the closure depends on. uclibc-compat is reached
-        # only through a .mk _DEPENDENCIES line and sigmastar-osdrv-sensors only
-        # through a Config.in select; either one missing zeroes them out.
+        # through a .mk _DEPENDENCIES line from the three hi3516cv100 boards
+        # (gk7206v100 selects it too, the fourth), and sigmastar-osdrv-sensors
+        # only through a Config.in select; either kind missing drops the count.
         (["general/package/uclibc-compat/src/uclibc-compat-static.c"],
-         3, "reached via .mk _DEPENDENCIES"),
+         4, "reached via .mk _DEPENDENCIES"),
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
          24, "reached via Config.in select"),
         # Shared packages narrow too, just barely.

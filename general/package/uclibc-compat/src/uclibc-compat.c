@@ -20,6 +20,7 @@
 
 #define _GNU_SOURCE
 #include <errno.h>
+#include <math.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -179,10 +180,15 @@ const int16_t *__ctype_tolower = &__uclibc_ctype_tolower_data[128];
 __attribute__((visibility("default")))
 FILE *__stdin = NULL;
 
+/* __stdout -- the same, for stdout (GK7206's libxmedia_npu.so). */
+__attribute__((visibility("default")))
+FILE *__stdout = NULL;
+
 __attribute__((constructor))
 static void __uclibc_compat_init(void)
 {
 	__stdin = stdin;
+	__stdout = stdout;
 }
 
 /*
@@ -302,6 +308,30 @@ __attribute__((visibility("default")))
 int __fputc_unlocked(int c, FILE *stream)
 {
 	return fputc(c, stream);
+}
+
+/*
+ * __isinf / __isinff / __isnan -- uclibc's out-of-line backends for the
+ * isinf()/isnan() macros, which musl expands inline and so does not export.
+ * GK7206's flatcc runtime and VQE VAD import them. Same return contract:
+ * __isinf is -1/1 for -inf/+inf, 0 otherwise.
+ */
+__attribute__((visibility("default")))
+int __isinf(double x)
+{
+	return isinf(x) ? (signbit(x) ? -1 : 1) : 0;
+}
+
+__attribute__((visibility("default")))
+int __isinff(float x)
+{
+	return isinf(x) ? (signbit(x) ? -1 : 1) : 0;
+}
+
+__attribute__((visibility("default")))
+int __isnan(double x)
+{
+	return isnan(x);
 }
 
 /* _stdlib_mb_cur_max -- uclibc internal, return 1 for C/POSIX locale */
