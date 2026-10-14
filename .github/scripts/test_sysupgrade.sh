@@ -79,8 +79,18 @@ for s in S99rc.local S60crond S49ntpd S02klogd S01syslogd; do
 done
 # This one logs: whether majestic is put back is a behaviour worth asserting,
 # not just a service that had to exist for the script not to trip over it.
-printf '#!/bin/sh\necho "S95majestic $1" >> "$FLASH_LOG"\nexit 0\n' \
-    > "$SB/etc/init.d/S95majestic"; chmod +x "$SB/etc/init.d/S95majestic"
+# A stop can be given back as memory: STUB_MEM_AFTER_STOP is the MemAvailable
+# it leaves, for the tests of stop_majestic_for_memory.
+cat > "$SB/etc/init.d/S95majestic" <<'STUB'
+#!/bin/sh
+echo "S95majestic $1" >> "$FLASH_LOG"
+if [ "$1" = stop ] && [ -n "$STUB_MEM_AFTER_STOP" ]; then
+    printf 'MemTotal: 131072 kB\nMemFree: %d kB\nMemAvailable: %d kB\n' \
+        "$STUB_MEM_AFTER_STOP" "$STUB_MEM_AFTER_STOP" > "$STUB_MEMINFO"
+fi
+exit 0
+STUB
+chmod +x "$SB/etc/init.d/S95majestic"
 
 # ramfs_unwind verifies the restore by reading /proc/mounts before it lets the
 # in-place fallback run, and enter_ramfs consults it to decide whether a leftover
@@ -143,6 +153,9 @@ set_cmdline "$CMDLINE_FLASH"
 stub() { printf '#!/bin/bash\n%s\n' "$2" > "$SB/bin/$1"; chmod +x "$SB/bin/$1"; }
 
 stub ipcinfo    'case "$1" in -v) echo "${STUB_VENDOR:-sigmastar}";; -F) echo "${STUB_FLASH:-nor}";; esac'
+# majestic is running when a test says so, and only then: the host's own
+# pidof would otherwise decide.
+stub pidof '[ "$1" = majestic ] && [ -n "$STUB_MAJESTIC_PID" ] && { echo "$STUB_MAJESTIC_PID"; exit 0; }; exit 1'
 # `upgrade` is the URL a builder profile writes on first boot; unset models
 # the env that lost it, or never had it (#2484).
 stub fw_printenv '
@@ -507,6 +520,8 @@ run() {
         STUB_ISIZE="${STUB_ISIZE:-}" \
         STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
         UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
+        STUB_MEM_AFTER_STOP="${STUB_MEM_AFTER_STOP:-}" STUB_MEMINFO="$SB/proc/meminfo" \
+        STUB_MAJESTIC_PID="${STUB_MAJESTIC_PID:-}" \
         FLASH_RAM_FLOOR_KB="${FLASH_RAM_FLOOR_KB:-2048}" \
         UBI_SYS="$SB/sys/class/ubi" INITTAB="$SB/etc/inittab" handoff_wait=0 \
         FOLLOW_LOG="${FOLLOW_LOG:-}" STUB_UBI_SLOW="${STUB_UBI_SLOW:-}" \
@@ -534,6 +549,7 @@ reset_env() {
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB FLASH_RAM_FLOOR_KB
+    unset STUB_MEM_AFTER_STOP STUB_MAJESTIC_PID WDOG WDOG_PROC
     unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY STUB_UMOUNT_HIDES RUN_ENV FOLLOW_LOG STUB_UBI_SLOW
     rm -rf "$SB/sys"
     printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n::restart:/sbin/init\n' > "$SB/etc/inittab"
@@ -919,23 +935,69 @@ else
     bad "8487 KB into 8192 KB -> expected a refusal, rc=$RC out='$OUT'"
 fi
 
-# The advice has to be reachable. A WebUI run is the only one with majestic
-# still resident, so it is the only one told to go and use a shell; saying that
-# to somebody already in one would be noise.
-printf '%s' "$OUT" | grep -q "from ssh or the serial console" \
-    && ok "...and says where the missing memory is" \
-    || bad "a --web refusal should point at the shell path, out='$OUT'"
+# majestic is most of what is missing, on either path: in upgrade mode it locks
+# itself into RAM (11476 KB available on a gk7201v200, 18888 KB with it
+# stopped). Short of memory, a run stops it and asks again rather than refuse.
+reset_env
+set_meminfo 8192
+STUB_DL_BYTES=8691055
+STUB_MAJESTIC_PID=901 STUB_MEM_AFTER_STOP=16000
+run -z --web -k -r
+if grep -q "S95majestic stop" "$SB/tmp/flash.log" &&
+    ! printf '%s' "$OUT" | grep -q "Not enough memory to unpack" &&
+    printf '%s' "$OUT" | grep -q "stopping it, which gives back what it holds in RAM" &&
+    printf '%s' "$OUT" | grep -q "This page loses the log here"; then
+    ok "a WebUI run short of memory stops majestic and goes on to unpack"
+else
+    bad "short + majestic running -> expected majestic stopped and no refusal, rc=$RC out='$OUT'"
+fi
 
 reset_env
 set_meminfo 8192
 STUB_DL_BYTES=8691055
+STUB_MAJESTIC_PID=901 STUB_MEM_AFTER_STOP=16000
 run -z -k -r
-if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "Not enough memory to unpack" &&
-    ! printf '%s' "$OUT" | grep -q "from ssh or the serial console"; then
-    ok "...but a console run is not told to go and find a console"
+if grep -q "S95majestic stop" "$SB/tmp/flash.log" &&
+    ! printf '%s' "$OUT" | grep -q "Not enough memory to unpack" &&
+    ! printf '%s' "$OUT" | grep -q "This page loses the log"; then
+    ok "...and so does a console run, which is not told about a page it has not got"
 else
-    bad "a non-web refusal should not carry the --web advice, rc=$RC out='$OUT'"
+    bad "console run short + majestic running -> expected it stopped, rc=$RC out='$OUT'"
 fi
+
+# Still short with majestic stopped: refused as before, and majestic is put
+# back, since the camera is staying up.
+reset_env
+set_meminfo 8192
+STUB_DL_BYTES=8691055
+STUB_MAJESTIC_PID=901 STUB_MEM_AFTER_STOP=8300
+run -z --web -k -r
+if [ "$RC" -ne 0 ] && nothing_wrote &&
+    printf '%s' "$OUT" | grep -q "8300 KB free with majestic stopped" &&
+    grep -q "S95majestic start" "$SB/tmp/flash.log"; then
+    ok "still short with majestic stopped -> refused, and majestic started again"
+else
+    bad "short even without majestic -> expected a refusal and a restart, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# Never the majestic that pets the watchdog: nothing would pet it until the
+# RAM phase. /dev/null stands in for the device -- a character device the
+# sandbox can name -- and a fake /proc gives pid 4242 an fd on it.
+mkdir -p "$SB/wdproc/4242/fd"
+ln -sf /dev/null "$SB/wdproc/4242/fd/3"
+reset_env
+set_meminfo 8192
+STUB_DL_BYTES=8691055
+STUB_MAJESTIC_PID=4242 STUB_MEM_AFTER_STOP=16000
+WDOG=/dev/null WDOG_PROC="$SB/wdproc"
+run -z --web -k -r
+if [ "$RC" -ne 0 ] && ! grep -q "S95majestic stop" "$SB/tmp/flash.log" &&
+    printf '%s' "$OUT" | grep -q "Not enough memory to unpack"; then
+    ok "...but a majestic holding the watchdog is left running, and the run refused"
+else
+    bad "majestic owns the watchdog -> expected it left alone, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
+fi
+rm -rf "$SB/wdproc"
 
 # --- #2484: a builder device profile must not be traded for the generic image
 #
@@ -1656,6 +1718,20 @@ if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && rebooted &&
     ok "exactly the floor is let through, and the figure is logged"
 else
     bad "RAM at the floor -> expected a flash, rc=$RC out='$OUT'"
+fi
+
+# Short at the pivot too, and majestic is what gives it back: the floor is
+# asked again with majestic stopped, and the run flashes.
+reset_env
+set_meminfo 1500
+STUB_MAJESTIC_PID=901 STUB_MEM_AFTER_STOP=4000
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && rebooted &&
+    grep -q "S95majestic stop" "$SB/tmp/flash.log" &&
+    printf '%s' "$OUT" | grep -q "RAM left to flash from: 4000 KB with majestic stopped"; then
+    ok "short at the pivot -> majestic stopped, and the flash goes on"
+else
+    bad "short at the pivot with majestic running -> expected a flash, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
 fi
 
 # --- the pivot is entered only when it is needed (issue #2416) --------------

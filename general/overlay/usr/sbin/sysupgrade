@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.73
+scr_version=1.0.74
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -1081,6 +1081,44 @@ usable_ram() {
 	ram_cma_kb=$cma
 }
 
+# Stop majestic to give the upgrade the memory it holds, when the upgrade is
+# short of it. $1 is the shortfall in KB, for the log.
+#
+# majestic in upgrade mode -- the WebUI's, and the one free_resources asks for
+# on a console run -- has stopped its video, but what is left of it is locked
+# in RAM (VmLck in /proc/<pid>/status), and that is the memory a small camera
+# is missing. Measured on a gk7201v200 (28 MB): MemAvailable 15664 KB with
+# majestic running, 11476 KB in upgrade mode with 7072 KB of it locked, 18888
+# KB with it stopped.
+# An hi3516ev200 that had hung in the RAM phase through the WebUI was then
+# refused over ssh, 607 KB short of the unpack, and went through only after a
+# reboot.
+#
+# Only on a shortfall: majestic is what streams this log to the WebUI, so a
+# camera with room keeps its progress bar. Never when majestic holds the
+# watchdog -- the RAM-phase keeper takes over only a dog whose owner is gone,
+# and nothing pets it between here and the pivot. Once per run.
+stop_majestic_for_memory() {
+	local pid
+	[ "1" = "$majestic_stopped" ] && return 1
+	pid=$(pidof majestic 2>/dev/null) || return 1
+	if [ -n "$wdog_owner_pid" ]; then
+		case " $pid " in *" $wdog_owner_pid "*) return 1 ;; esac
+	fi
+	echo_c 33 "\nShort of memory by $1 KB with majestic running: stopping it, which gives back what it holds in RAM."
+	# A second for majestic to forward the line above before it goes: it is
+	# the last the WebUI sees of this run.
+	if [ "1" = "$web_update" ]; then
+		echo_c 33 "This page loses the log here; the camera reboots on its own once the flash is done."
+		sleep 2
+	fi
+	/etc/init.d/S95majestic stop >/dev/null 2>&1
+	majestic_stopped=1
+	sync
+	echo 3 > /proc/sys/vm/drop_caches
+	return 0
+}
+
 # Will the unpack fit in the RAM this camera has left? $1 KB, $2 what to call
 # the source in the message.
 #
@@ -1102,9 +1140,11 @@ usable_ram() {
 # why this has to be asked BEFORE the unpack: afterwards there is nobody left to
 # ask it to.
 #
-# --web is what makes it reachable at all. Every other path has free_resources
-# kill majestic first, and majestic's 3.7 MB is most of the shortfall: the same
-# 8510 KB unpack with majestic stopped and 9544 KB free finished rc=0.
+# majestic is most of the shortfall, on every path: the WebUI's leaves it
+# streaming this log, and a console run asks it into the same upgrade mode,
+# which keeps it locked in RAM. The same 8510 KB unpack with majestic stopped and
+# 9544 KB free finished rc=0 -- so a shortfall stops it before refusing
+# (stop_majestic_for_memory).
 #
 # df is the wrong question and was the only one being asked. tmpfs is sized at
 # half of RAM and charges nothing until it is written, so that same camera
@@ -1137,20 +1177,16 @@ CMA (MMZ) area, so that is not counted."
 	need_handoff && stage=$(ramfs_stage_kb)
 	want=$((need + UNPACK_RESERVE_KB + stage))
 	[ "$want" -lt "$avail" ] && return 0
-	# Said differently depending on who is asking, because the two callers have
-	# different ways out. A WebUI run has majestic resident and a shell has not,
-	# so the advice that works for one is noise to the other.
+	if stop_majestic_for_memory "$((want - avail))" && usable_ram; then
+		avail=$ram_kb
+		[ "$want" -lt "$avail" ] && return 0
+	fi
 	local out="Not enough memory to unpack $src: it needs $want KB -- $need KB of image
 plus $UNPACK_RESERVE_KB KB for the tools unpacking it"
 	[ "$stage" -gt 0 ] && out="$out and $stage KB for the RAM root
 the flash phase runs from"
-	out="$out -- and this camera has $avail KB free.
+	out="$out -- and this camera has $avail KB free${majestic_stopped:+ with majestic stopped}.
 /tmp is a tmpfs, so the unpacked image is RAM.$why Nothing was written."
-	if [ "1" = "$web_update" ]; then
-		die "$out
-Run 'sysupgrade -k -r' from ssh or the serial console instead: that path stops
-majestic first, and majestic is where the missing memory is."
-	fi
 	die "$out"
 }
 
@@ -1184,12 +1220,14 @@ check_flash_ram() {
 	avail=$ram_kb
 	echo "RAM left to flash from: $avail KB${ram_cma_kb:+ (free CMA not counted: $ram_cma_kb KB)}"
 	[ "$avail" -ge "$FLASH_RAM_FLOOR_KB" ] && return 0
+	if stop_majestic_for_memory "$((FLASH_RAM_FLOOR_KB - avail))" && usable_ram; then
+		avail=$ram_kb
+		echo "RAM left to flash from: $avail KB with majestic stopped"
+		[ "$avail" -ge "$FLASH_RAM_FLOOR_KB" ] && return 0
+	fi
 	flash_ram_refusal="Not enough memory left to flash safely: $avail KB once the flash phase
-is staged in RAM, and it needs $FLASH_RAM_FLOOR_KB KB so the processes still running
+is staged in RAM${majestic_stopped:+ and majestic stopped}, and it needs $FLASH_RAM_FLOOR_KB KB so the processes still running
 from the old rootfs are not paged out while it is erased. Nothing was written."
-	[ "1" = "$web_update" ] && flash_ram_refusal="$flash_ram_refusal
-Run 'sysupgrade -k -r' from ssh or the serial console instead: that path stops
-majestic first, and majestic is where the missing memory is."
 	return 1
 }
 
@@ -1673,7 +1711,11 @@ restore_resources() {
 	# A majestic we prepared over the API is in upgrade mode with no watcher of
 	# its own -- nobody else will bring its video back -- so ask it to leave.
 	# Only if that fails is it restarted.
-	if [ "1" = "$majestic_prepared" ] && majestic_api abort; then
+	if [ "1" = "$majestic_stopped" ]; then
+		# Stopped for its memory (stop_majestic_for_memory): nothing is left
+		# to leave upgrade mode, so it is started afresh, supervisor and all.
+		/etc/init.d/S95majestic start >/dev/null 2>&1
+	elif [ "1" = "$majestic_prepared" ] && majestic_api abort; then
 		echo "majestic restarted its video"
 	elif [ "1" != "$majestic_prepared" ] && [ -f "$MAJESTIC_OWNER" ] &&
 		pidof majestic >/dev/null 2>&1; then
