@@ -2377,6 +2377,33 @@ else
     bad "ramfs /tmp without CMA must not be refused, rc=$RC out='$OUT'"
 fi
 
+# The RAM left at the pivot is counted the same way: 3000 KB "available", 2000
+# of it free CMA a ramfs kernel cannot use, is 1000 KB, under the floor.
+stub rmdir 'echo "rmdir $*" >> "$FLASH_LOG"; exit 0'
+reset_env
+stub_ramfs_tmp
+set_meminfo_cma 3000 2000
+run -z --kernel="$K" --rootfs="$R"
+rm -f "$SB/bin/stat" "$SB/bin/rmdir"
+if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted &&
+    printf '%s' "$OUT" | grep -q "RAM left to flash from: 1000 KB (free CMA not counted: 2000 KB)" &&
+    printf '%s' "$OUT" | grep -q "Not enough memory left to flash safely: 1000 KB"; then
+    ok "ramfs /tmp: free CMA is not counted at the pivot either"
+else
+    bad "ramfs /tmp + CMA at the pivot -> expected a refusal, rc=$RC out='$OUT'"
+fi
+
+# ...and a real tmpfs with the same numbers has its 3000 KB.
+reset_env
+set_meminfo_cma 3000 2000
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 &&
+    printf '%s' "$OUT" | grep -q "RAM left to flash from: 3000 KB$"; then
+    ok "...while a real tmpfs counts that CMA, and flashes"
+else
+    bad "tmpfs /tmp + CMA at the pivot must not be refused, rc=$RC out='$OUT'"
+fi
+
 # A run that must hand PID 1 over cannot fall back to flashing in place, so the
 # RAM root it stages after the unpack is reserved too. Learn the two figures
 # from a refusal, then sit between "image + reserve" and "+ the RAM root".
