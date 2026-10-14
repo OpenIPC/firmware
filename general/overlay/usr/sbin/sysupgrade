@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.72
+scr_version=1.0.73
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -1144,6 +1144,43 @@ majestic first, and majestic is where the missing memory is."
 	die "$out"
 }
 
+# Is there RAM left to flash from, once the RAM root is staged? Called by
+# enter_ramfs before it moves anything; on a refusal the reason is left in
+# $flash_ram_refusal for it to raise once the stage is torn down.
+#
+# check_unpack_ram above leaves the stage out on purpose, and the unpack can
+# pass it with only its 512 KB to spare. The stage then takes ~1.3 MB of what
+# is left, and what goes short is not the flash phase itself -- it is in RAM --
+# but everything still running from the old root: PID 1, dropbear, the majestic
+# supervisor. Their pages are reclaimed, and once the rootfs erase starts they
+# fault back in from a squashfs that is no longer there. Reproduced on a
+# gk7201v200 through the WebUI with ~500 KB left at the pivot: kernel written,
+# then the console filled with "SQUASHFS error: Unable to read data cache
+# entry" for one block of the old root and the rootfs erase never got past
+# block 17 of 77. No watchdog rebooted it; the camera came back only through
+# U-Boot. The same run went through with 2108 KB left here, and with ~4 MB.
+# --web is the path that gets here, because majestic stays resident.
+#
+# Fails open, like check_unpack_ram: no MemAvailable is no opinion.
+#
+# Overridable so the test harness can pin the boundary.
+FLASH_RAM_FLOOR_KB=${FLASH_RAM_FLOOR_KB:-2048}
+check_flash_ram() {
+	local avail
+	flash_ram_refusal=
+	avail=$(awk '/^MemAvailable:/ { print $2; exit }' /proc/meminfo 2>&3)
+	[ -n "$avail" ] && [ "$avail" -gt 0 ] 2>&3 || return 0
+	echo "RAM left to flash from: $avail KB"
+	[ "$avail" -ge "$FLASH_RAM_FLOOR_KB" ] && return 0
+	flash_ram_refusal="Not enough memory left to flash safely: $avail KB once the flash phase
+is staged in RAM, and it needs $FLASH_RAM_FLOOR_KB KB so the processes still running
+from the old rootfs are not paged out while it is erased. Nothing was written."
+	[ "1" = "$web_update" ] && flash_ram_refusal="$flash_ram_refusal
+Run 'sysupgrade -k -r' from ssh or the serial console instead: that path stops
+majestic first, and majestic is where the missing memory is."
+	return 1
+}
+
 # Whether /tmp is ramfs underneath: what "tmpfs" is on a kernel built without
 # CONFIG_SHMEM, and what statfs then reports (RAMFS_MAGIC). Anything else,
 # including a stat that will not answer, is a real tmpfs.
@@ -1994,6 +2031,14 @@ enter_ramfs() {
 	chmod +x "$RAM_ROOT/sysupgrade" 2>/dev/null
 	if [ "handoff" = "$1" ]; then
 		stage_handoff || return 1
+	fi
+	# The last moment to refuse: the stage is built, nothing has moved and
+	# nothing is written. Not `return 1` -- the in-place fallback that would
+	# take runs the shell itself off the flash being erased, which is the same
+	# failure with less in RAM.
+	if ! check_flash_ram; then
+		ramfs_discard
+		die "$flash_ram_refusal"
 	fi
 
 	# Carry over the mounts the flash still needs: /dev for the MTD nodes, /proc

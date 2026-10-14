@@ -507,6 +507,7 @@ run() {
         STUB_ISIZE="${STUB_ISIZE:-}" \
         STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
         UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
+        FLASH_RAM_FLOOR_KB="${FLASH_RAM_FLOOR_KB:-2048}" \
         UBI_SYS="$SB/sys/class/ubi" INITTAB="$SB/etc/inittab" handoff_wait=0 \
         FOLLOW_LOG="${FOLLOW_LOG:-}" STUB_UBI_SLOW="${STUB_UBI_SLOW:-}" \
         ${RUN_ENV:-} \
@@ -532,7 +533,7 @@ reset_env() {
     unset STUB_UPGRADE STUB_IMG_PLATFORM STUB_DL_FILE
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
-    unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB
+    unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB FLASH_RAM_FLOOR_KB
     unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY STUB_UMOUNT_HIDES RUN_ENV FOLLOW_LOG STUB_UBI_SLOW
     rm -rf "$SB/sys"
     printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n::restart:/sbin/init\n' > "$SB/etc/inittab"
@@ -1619,6 +1620,43 @@ else
     bad "failed pivot left RAM_ROOT behind, log='$(cat "$SB/tmp/flash.log")'"
 fi
 rm -f "$SB/bin/rmdir"
+
+# --- RAM left once the flash phase is staged ---------------------------------
+#
+# A gk7201v200 upgraded through the WebUI with ~500 KB left at the pivot hung
+# at rootfs erase block 17 of 77: what was still running from the old root
+# faulted on the squashfs being erased, and nothing rebooted it. Short of the
+# floor the run is refused before anything moves -- not handed to the in-place
+# fallback, which would flash with even less in RAM.
+# rmdir stubbed for the reason the test above gives.
+stub rmdir 'echo "rmdir $*" >> "$FLASH_LOG"; exit 0'
+reset_env
+set_meminfo 1500
+run -z --kernel="$K" --rootfs="$R"
+rm -f "$SB/bin/rmdir"
+if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted &&
+    ! grep -q "pivot_root" "$SB/tmp/flash.log" &&
+    printf '%s' "$OUT" | grep -q "Not enough memory left to flash safely: 1500 KB"; then
+    ok "too little RAM left at the pivot refuses before anything is written"
+else
+    bad "short RAM at the pivot -> expected a refusal, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
+fi
+if grep -q "^rmdir .*/ram$" "$SB/tmp/flash.log"; then
+    ok "...and takes the staged RAM root back down"
+else
+    bad "a refused pivot left its RAM root behind, log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# The floor itself is enough.
+reset_env
+set_meminfo 2048
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && rebooted &&
+    printf '%s' "$OUT" | grep -q "RAM left to flash from: 2048 KB"; then
+    ok "exactly the floor is let through, and the figure is logged"
+else
+    bad "RAM at the floor -> expected a flash, rc=$RC out='$OUT'"
+fi
 
 # --- the pivot is entered only when it is needed (issue #2416) --------------
 #
