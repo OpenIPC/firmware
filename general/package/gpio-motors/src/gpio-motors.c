@@ -15,6 +15,13 @@ int PAN_FDS[4] = {-1, -1, -1, -1};
 int TILT_FDS[4] = {-1, -1, -1, -1};
 int SELECT_FD = -1;
 
+/* End switches, from fw env `ptz_limits`: "pan+ pan- tilt+ tilt- [active]"
+ * (pan+ = the switch hit by a positive pan move). -1 = none. Inputs are
+ * active-low (0 = hit) unless a 5th value of 1 says active-high. */
+int LIM_PINS[4] = {-1, -1, -1, -1};
+int LIM_FDS[4] = {-1, -1, -1, -1};
+int LIM_ACTIVE = 0;
+
 /* CLOCK_MONOTONIC resolution, read once in main(): 1ns on kernels with
  * high-resolution timers, one jiffy (10ms at HZ=100) without them */
 long CLOCK_RES_NS = 0;
@@ -66,6 +73,14 @@ void gpio_clean(int error) {
 		gpio_release(SELECT_PIN);
 	}
 
+	for (int i = 0; i < 4; i++) {
+		if (LIM_FDS[i] != -1) {
+			close(LIM_FDS[i]);
+		}
+		/* limit pins are left exported as inputs: harmless, and avoids
+		 * re-export churn on every move */
+	}
+
 	if (error) {
 		exit(EXIT_FAILURE);
 	}
@@ -113,6 +128,73 @@ void gpio_set(int fd, int pin, int value) {
 	if (lseek(fd, 0, SEEK_SET) == -1 || write(fd, value ? "1" : "0", 1) != 1) {
 		printf("Unable to set value of GPIO %d: [%d] %s\n", pin, errno, strerror(errno));
 		gpio_clean(1);
+	}
+}
+
+/* export a limit switch as an input; an already-exported pin is fine */
+int limit_open(int pin) {
+	char path[64];
+	FILE *file = fopen("/sys/class/gpio/export", "w");
+	if (file) {
+		fprintf(file, "%d", pin);
+		fclose(file);
+	}
+	snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/direction", pin);
+	file = fopen(path, "w");
+	if (file) {
+		fprintf(file, "in");
+		fclose(file);
+	}
+	snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/value", pin);
+	int fd = open(path, O_RDONLY);
+	if (fd == -1) {
+		printf("Unable to open limit switch GPIO %d: [%d] %s (ignoring it)\n", pin, errno, strerror(errno));
+	}
+	return fd;
+}
+
+/* 1 when the switch for this direction is pressed; idx = axis*2 + (steps<0) */
+int limit_hit(int idx) {
+	int fd = LIM_FDS[idx];
+	if (fd == -1) {
+		return 0;
+	}
+	char c;
+	if (lseek(fd, 0, SEEK_SET) == -1 || read(fd, &c, 1) != 1) {
+		return 0;
+	}
+	return (c - '0') == LIM_ACTIVE;
+}
+
+void limits_config() {
+	FILE *fp = popen("fw_printenv -n ptz_limits 2>/dev/null", "r");
+	if (fp == NULL) {
+		return;
+	}
+	char line[64];
+	if (fgets(line, sizeof(line), fp) != NULL) {
+		int value[5], count = 0;
+		char *token = strtok(line, " ");
+		while (token != NULL && count < 5) {
+			value[count++] = atoi(token);
+			token = strtok(NULL, " ");
+		}
+		if (count >= 4) {
+			for (int i = 0; i < 4; i++) {
+				LIM_PINS[i] = value[i];
+			}
+			if (count == 5) {
+				LIM_ACTIVE = value[4] ? 1 : 0;
+			}
+		} else {
+			printf("ptz_limits: expected 4 or 5 values, got %d - limits disabled\n", count);
+		}
+	}
+	pclose(fp);
+	for (int i = 0; i < 4; i++) {
+		if (LIM_PINS[i] >= 0) {
+			LIM_FDS[i] = limit_open(LIM_PINS[i]);
+		}
 	}
 }
 
@@ -208,9 +290,51 @@ void delay_us(long us) {
 	}
 }
 
+/* Reverse out of a pressed end switch until it releases, then a few steps
+ * more for margin, so the head never rests on the switch. Bounded, so a
+ * switch that never releases (broken wire) cannot run the head away. */
+#define BACKOFF_MAX_STEPS 40
+#define BACKOFF_MARGIN_STEPS 3
+
+void axis_backoff(const int pins[4], const int fds[4], int level, int steps, int delay, int lim) {
+	const int (*seq)[4] = (steps < 0) ? STEP_SEQUENCE : REVERSE_STEP_SEQUENCE;	/* opposite of the move */
+	int done = 0, released_at = -1, micro = 0;
+
+	while (done < BACKOFF_MAX_STEPS) {
+		if (released_at < 0 && !limit_hit(lim)) {
+			released_at = done;
+		}
+		if (released_at >= 0 && done - released_at >= BACKOFF_MARGIN_STEPS) {
+			break;
+		}
+		for (int i = 0; i < 4; i++) {
+			gpio_set(fds[i], pins[i], seq[micro][i]);
+		}
+		delay_us(delay);
+		if (++micro >= 8) {
+			micro = 0;
+			++done;
+		}
+	}
+	for (int i = 0; i < 4; i++) {
+		gpio_set(fds[i], pins[i], 0);
+	}
+	if (released_at < 0) {
+		printf("%s: end switch still pressed after backing off %d steps - check the switch\n", level ? "tilt" : "pan", done);
+	} else {
+		printf("%s: backed off %d steps clear of the switch\n", level ? "tilt" : "pan", done);
+	}
+}
+
 void axis_run(const int pins[4], const int fds[4], int level, int steps, int delay) {
 	int remaining = abs(steps);
 	if (remaining == 0) {
+		return;
+	}
+	int lim = level * 2 + (steps < 0 ? 1 : 0);	/* level doubles as the axis index: 0 pan, 1 tilt */
+	if (limit_hit(lim)) {
+		printf("%s: already at %s end stop\n", level ? "tilt" : "pan", steps < 0 ? "negative" : "positive");
+		axis_backoff(pins, fds, level, steps, delay, lim);
 		return;
 	}
 
@@ -222,6 +346,11 @@ void axis_run(const int pins[4], const int fds[4], int level, int steps, int del
 
 	int micro = 0;
 	while (remaining > 0) {
+		if (limit_hit(lim)) {
+			printf("%s: end stop reached, %d steps not done\n", level ? "tilt" : "pan", remaining);
+			axis_backoff(pins, fds, level, steps, delay, lim);
+			break;
+		}
 		for (int i = 0; i < 4; i++) {
 			gpio_set(fds[i], pins[i], seq[micro][i]);
 		}
@@ -239,8 +368,20 @@ void axis_run(const int pins[4], const int fds[4], int level, int steps, int del
 }
 
 int main(int argc, char *argv[]) {
+	if (argc == 2 && strcmp(argv[1], "status") == 0) {
+		limits_config();
+		const char *name[4] = {"pan+", "pan-", "tilt+", "tilt-"};
+		for (int i = 0; i < 4; i++) {
+			if (LIM_PINS[i] < 0) {
+				printf("%-5s none\n", name[i]);
+			} else {
+				printf("%-5s gpio%-3d %s\n", name[i], LIM_PINS[i], limit_hit(i) ? "PRESSED" : "free");
+			}
+		}
+		return 0;
+	}
 	if (argc != 4) {
-		fprintf(stderr, "Usage: %s <pan steps> <tilt steps> <delay (ms)>\n", argv[0]);
+		fprintf(stderr, "Usage: %s <pan steps> <tilt steps> <delay (ms)>\n       %s status\n", argv[0], argv[0]);
 		return 1;
 	}
 
@@ -259,6 +400,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	gpio_config();
+	limits_config();
 	for (int i = 0; i < 4; i++) {
 		gpio_export(PAN_PINS[i]);
 		gpio_export(TILT_PINS[i]);
