@@ -86,12 +86,16 @@ Add a fifth value of `1` for active-high. Without `ptz_limits` nothing changes.
   When it closes, the axis stops and prints `end stop reached, N steps not done`.
 - The axis then backs off until the switch releases, plus 3 steps of margin.
   The back-off is capped at 40 steps, so a switch that never releases cannot
-  run the head away. It prints a warning instead.
+  run the head away. It prints a warning instead. The back-off also stops if
+  the switch at the other end closes.
 - A move away from a pressed switch always runs.
 - A switch that cannot be read counts as not pressed.
 - A pin that is also in `ptz_gpio`, or that is listed for both ends, disables
   all limits with a message. One shared switch cannot tell which end is
-  pressed.
+  pressed. So does any value that is not a whole number, a pin below `-1`, a
+  polarity other than `0` or `1`, or more than five values.
+- A switch pin that something else already exported as an output (an IR-cut
+  pin, for example) is not touched and counts as unreadable.
 
 `gpio-motors status` prints each switch and whether it is pressed. Use it to
 check the wiring and polarity before moving the head.
