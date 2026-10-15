@@ -185,8 +185,11 @@ int fstat64(int fd, void *b)        { return fstat(fd, b); }
  *    the oldest HiSilicon SoCs, where VI/ISP init issues many register mmaps
  *    and an earlier "prefer SP+8" heuristic mis-mapped a register page ->
  *    external abort).  For musl code in the executable SP+4 is padding and
- *    the real low offset is at SP+8, used when SP+4 is unaligned.  The
- *    kernel still validates, so the worst case is a one-off EINVAL.
+ *    the real low offset is at SP+8, used when SP+4 is unaligned.  That
+ *    padding is often 0, and 0 is page-aligned, so musl code in the
+ *    executable that maps at a nonzero offset silently gets offset 0.
+ *    Such code must not call mmap(): issue SYS_mmap2 itself, as majestic
+ *    does for /dev/mem.
  *
  * The mapping itself goes through the next mmap in the lookup chain rather
  * than straight to the kernel: under AddressSanitizer that is its
@@ -202,7 +205,17 @@ int fstat64(int fd, void *b)        { return fstat(fd, b); }
 #include <sys/auxv.h>
 #include <sys/types.h>
 
-#ifndef SYS_mmap2
+/* The two-slot reading is an ILP32 little-endian fact: there a 64-bit off_t
+ * follows fd as padding, low word, high word.  On a 64-bit target uClibc and
+ * musl agree -- one register-sized slot -- so the offset is read once and the
+ * caller never needs classifying. */
+#if __SIZEOF_POINTER__ == 4 && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define UCC_DUAL_ABI 1
+#else
+#define UCC_DUAL_ABI 0
+#endif
+
+#if UCC_DUAL_ABI && !defined(SYS_mmap2)
 #define SYS_mmap2 192
 #endif
 
@@ -216,6 +229,7 @@ __attribute__((constructor)) static void ucc_resolve_next_mmap(void)
 		dlsym(RTLD_NEXT, "mmap");
 }
 
+#if UCC_DUAL_ABI
 enum ucc_caller { UCC_CALLER_EXEC, UCC_CALLER_UCLIBC, UCC_CALLER_MUSL };
 
 struct ucc_lookup {
@@ -289,15 +303,23 @@ static uint64_t ucc_offset(const void *caller, uint32_t sp4, uint32_t sp8,
 	}
 }
 
+#endif
+
 static void *ucc_mmap(void *addr, size_t len, int prot, int flags, int fd,
 		      uint64_t offset)
 {
 	if (ucc_next_mmap)
 		return ucc_next_mmap(addr, len, prot, flags, fd, (off_t)offset);
+#if UCC_DUAL_ABI
 	return (void *)syscall(SYS_mmap2, addr, len, prot, flags, fd,
 			       (unsigned long)(offset >> 12));
+#else
+	return (void *)syscall(SYS_mmap, addr, len, prot, flags, fd,
+			       (off_t)offset);
+#endif
 }
 
+#if UCC_DUAL_ABI
 void *mmap(void *addr, size_t len, int prot, int flags, int fd, ...)
 {
 	va_list ap;
@@ -321,3 +343,22 @@ void *mmap64(void *addr, size_t len, int prot, int flags, int fd, ...)
 	return ucc_mmap(addr, len, prot, flags, fd,
 			ucc_offset(__builtin_return_address(0), sp4, sp8, sp12));
 }
+#else
+void *mmap(void *addr, size_t len, int prot, int flags, int fd, ...)
+{
+	va_list ap;
+	va_start(ap, fd);
+	off_t offset = va_arg(ap, off_t);
+	va_end(ap);
+	return ucc_mmap(addr, len, prot, flags, fd, (uint64_t)offset);
+}
+
+void *mmap64(void *addr, size_t len, int prot, int flags, int fd, ...)
+{
+	va_list ap;
+	va_start(ap, fd);
+	off_t offset = va_arg(ap, off_t);
+	va_end(ap);
+	return ucc_mmap(addr, len, prot, flags, fd, (uint64_t)offset);
+}
+#endif

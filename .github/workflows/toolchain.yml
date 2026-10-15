@@ -88,12 +88,16 @@ jobs:
           LIST
           )
           SEL=${PLATFORMS:-$ALL}
+          # Only the curated list: two boards outside it can share one
+          # toolchain, and their jobs would race for the same release asset.
           for p in ${SEL}; do
-            ls br-ext-*/configs/"${p}"_defconfig >/dev/null 2>&1 || {
-              echo "::error::no defconfig for ${p}"
+            printf '%s\n' ${ALL} | grep -qx "${p}" || {
+              echo "::error::${p} is not a toolchain platform; pick from the list in this workflow"
               exit 1
             }
           done
+          dup=$(printf '%s\n' ${SEL} | sort | uniq -d)
+          [ -z "${dup}" ] || { echo "::error::named twice: ${dup}"; exit 1; }
           echo "platforms=$(printf '%s\n' ${SEL} | jq -Rnc '[inputs]')" >> ${GITHUB_OUTPUT}
 
   toolchain:
