@@ -349,7 +349,9 @@ insert_ko() {
 	#insmod gpioi2c.ko
 	#insmod gpioi2c_ex.ko
 	insmod pwm.ko
-	insmod hi_adc.ko
+	# modprobe finds it by its file name; unloading it needs its module
+	# name, open_adc (see remove_ko)
+	modprobe hi_adc
 	#insmod sil9024.ko norm=5   #720P@60fps
 
 	insert_sns >/dev/null
