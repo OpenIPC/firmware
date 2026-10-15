@@ -23,8 +23,16 @@ GOKE_OSDRV_GK7205V500_INSTALL_STAGING = YES
 # has shipped its own libhi_* shims since the family was added.
 #
 # Only a majestic image can use them, so the three lite boards that share this
-# package do not pay the 32KB.
-ifeq ($(BR2_PACKAGE_MAJESTIC),y)
+# package do not pay the 32KB. They go in as majestic's own post-install hook
+# rather than in this package's install step: turning majestic on in an
+# existing build reinstalls majestic, but leaves this package's install stamp
+# alone, so a gate in here shipped majestic without the libraries it needs to
+# start (#2607). Buildroot parses every package's .mk whether it is selected or
+# not, so the hook is keyed on this package as well as on majestic. Otherwise
+# every majestic board would get these shims, and on gk7205v200 they would
+# replace that package's own libhi_*.so with ones that forward to a
+# libxmedia_api.so those images do not have.
+ifeq ($(BR2_PACKAGE_GOKE_OSDRV_GK7205V500)$(BR2_PACKAGE_MAJESTIC),yy)
 define GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_ae.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_awb.so
@@ -34,6 +42,7 @@ define GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_mpi.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libvqe.so
 endef
+MAJESTIC_POST_INSTALL_TARGET_HOOKS += GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS
 endif
 
 # GK7201V200 takes its vendor modules from hisilicon-opensdk instead: the
@@ -234,7 +243,6 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libxmedia_qr.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libxmedia_tde.so
 
-	$(GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS)
 	$(GOKE_OSDRV_GK7205V500_INSTALL_V200_LIBS)
 	$(GOKE_OSDRV_GK7205V500_INSTALL_NPU_LIBS)
 endef
