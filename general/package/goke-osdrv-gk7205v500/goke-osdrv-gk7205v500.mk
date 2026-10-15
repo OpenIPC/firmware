@@ -27,8 +27,12 @@ GOKE_OSDRV_GK7205V500_INSTALL_STAGING = YES
 # rather than in this package's install step: turning majestic on in an
 # existing build reinstalls majestic, but leaves this package's install stamp
 # alone, so a gate in here shipped majestic without the libraries it needs to
-# start (#2607).
-ifeq ($(BR2_PACKAGE_MAJESTIC),y)
+# start (#2607). Buildroot parses every package's .mk whether it is selected or
+# not, so the hook is keyed on this package as well as on majestic. Otherwise
+# every majestic board would get these shims, and on gk7205v200 they would
+# replace that package's own libhi_*.so with ones that forward to a
+# libxmedia_api.so those images do not have.
+ifeq ($(BR2_PACKAGE_GOKE_OSDRV_GK7205V500)$(BR2_PACKAGE_MAJESTIC),yy)
 define GOKE_OSDRV_GK7205V500_INSTALL_MAJESTIC_LIBS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_ae.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/libhi_awb.so
