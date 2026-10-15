@@ -75,6 +75,13 @@ for s in S29pstore S38mdev S31hostname S40network S01syslogd S02klogd S50dropbea
 	fi
 done
 
+# The failed boot's own log, as S03pmsglog kept it in the pmsg ring across
+# the reset that brought the camera here: what majestic and the kernel said
+# before the boot that never settled ended. Without it the breadcrumb below is
+# all a report can say. Kept beside it, overlay only; crashlog-send sends both.
+[ -s /sys/fs/pstore/pmsg-ramoops-0 ] && mkdir -p /etc/crash 2>/dev/null &&
+	cp /sys/fs/pstore/pmsg-ramoops-0 /etc/crash/failsafe.log 2>/dev/null
+
 # Leave a breadcrumb the WebUI reads on the next normal boot, so a fault that
 # left no pstore panic -- a service that simply never came up -- still shows the
 # owner "this camera recovered from a crash". Overlay-only, no flash.

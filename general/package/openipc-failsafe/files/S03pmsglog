@@ -1,0 +1,36 @@
+#!/bin/sh
+# Keep this boot's log where the next boot can read it.
+#
+# A camera that hangs or is reset without a kernel oops -- majestic wedged until
+# the watchdog fires, a service that never comes up -- leaves no pstore record,
+# and syslogd's buffer dies with the reset. Two such boots in a row are a boot
+# loop: U-Boot falls into failsafe, and all the report can say is that it
+# happened. So the system log, which carries klogd's kernel lines at every level
+# as well as majestic's own, is copied into /dev/pmsg0, a ring in the reserved
+# RAM that survives a warm reset (the board DTS sizes it). On the next boot
+# pstore shows it as pmsg-ramoops-0: failsafe-rescue keeps it as the failed
+# boot's log, and S98crashlog puts it beside an oops.
+#
+# After S01syslogd and S02klogd: logread reads syslogd's buffer, and klogd is
+# what feeds the kernel into it. Inert on a kernel without a pmsg zone.
+DAEMON=logread
+PIDFILE=/var/run/pmsglog.pid
+
+case "$1" in
+	start|"")
+		[ -c /dev/pmsg0 ] || exit 0
+		printf "Starting pmsg log: "
+		start-stop-daemon -b -S -q -m -p "$PIDFILE" -x /bin/sh -- \
+			-c "exec $DAEMON -f > /dev/pmsg0"
+		case $? in
+			0) echo "OK" ;;
+			1) echo "OK (already running)" ;;
+			*) echo "FAIL" ;;
+		esac
+		;;
+	stop)
+		start-stop-daemon -K -q -p "$PIDFILE" 2>/dev/null
+		rm -f "$PIDFILE"
+		;;
+esac
+exit 0

@@ -145,6 +145,15 @@ keep_previous() {
 	return 0
 }
 
+# The log of the boot that crashed, as S03pmsglog kept it in the pmsg ring:
+# what majestic and the services were doing up to the oops, which the kernel's
+# own record does not show. Best-effort -- an image without the pmsg zone has
+# none, and the crash is worth keeping without it.
+copy_syslog() {
+	[ -s "$PSTORE/pmsg-ramoops-0" ] || return 0
+	cp "$PSTORE/pmsg-ramoops-0" "$1" 2>/dev/null || rm -f "$1"
+}
+
 # busybox tar has no built-in -z, and piping tar into gzip would hide tar's exit
 # status behind gzip's -- a partial read could then produce a nonempty archive
 # that looks like success. So stage the records and meta.json in a directory,
@@ -156,6 +165,7 @@ rm -rf "$stage" "$CRASH/crash.tar.tmp" "$CRASH/crash.tar.tmp.gz" 2>/dev/null
 if mkdir "$stage" 2>/dev/null &&
 	cp "$PSTORE"/dmesg-* "$stage"/ 2>/dev/null &&
 	{ write_meta "$stage/meta.json" 2>/dev/null || rm -f "$stage/meta.json"; true; } &&
+	{ copy_syslog "$stage/syslog"; true; } &&
 	tar cf "$CRASH/crash.tar.tmp" -C "$stage" . 2>/dev/null &&
 	gzip -f "$CRASH/crash.tar.tmp" 2>/dev/null &&
 	[ -s "$CRASH/crash.tar.tmp.gz" ] &&
