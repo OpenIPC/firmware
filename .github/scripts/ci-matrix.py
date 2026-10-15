@@ -51,6 +51,8 @@ ALL_BOARDS = [
     "ssc333_lite", "ssc335_lite", "ssc335de_lite", "ssc337_lite", "ssc337de_lite",
     # Sigmastar [I6C]
     "ssc377_lite", "ssc377d_lite", "ssc377de_lite", "ssc377qe_lite",
+    # SSC377D FPV variants maintained in this project fork.
+    "ssc377d_apfpv", "ssc377d_fpv", "ssc377d_fpv_pixelpilot",
     "ssc378de_lite", "ssc378qe_lite",
     # Sigmastar [I6E]
     "ssc30kd_lite", "ssc30kq_lite", "ssc338q_lite",
@@ -232,6 +234,9 @@ SMOKE_BOARDS = [
     "hi3516av300_neo",        # the neo variant, and the gnueabi toolchain
     "hi3519dv500_ultimate",   # the only aarch64 board
     "gk7205v200_lite",        # Goke
+    "ssc377d_apfpv",         # SSC377D APFPV variant
+    "ssc377d_fpv",           # SSC377D FPV variant
+    "ssc377d_fpv_pixelpilot",# SSC377D PixelPilot FPV variant
     "ssc338q_lite",           # SigmaStar
     "t31_lite",               # Ingenic, the only mips
     "rv1126_lite",            # Rockchip, and UBI with no squashfs
@@ -296,21 +301,21 @@ UNBUILT_FAMILIES = {
 # would spend flash on a radio that is not there. A mainline board with a
 # driver choosing it would take it off this list.
 NOT_BUILT = {
-    "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x", "atbm-wifi",
+    "aic8800-openipc", "allwinner-osdrv-v83x", "atbm-wifi",
     "aura-httpd", "baresip-openipc", "comgt", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "hisilicon-osdrv-hi3536dv100", "i2c-telemetry",
-    "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
+    "libhv-openipc", "libre-openipc", "libsrt-openipc",
     "matter",
-    "mavfwd", "mdnsd-openipc", "mini", "mqtt-bot", "msposd", "n3n-openipc", "nabto",
+    "mdnsd-openipc", "mini", "mqtt-bot", "n3n-openipc", "nabto",
     "netblink", "node-exporter", "ntfy", "onvif-simple-server", "openipc-nfs-root",
     "osd-openipc", "rtl8188eus-openipc", "rtl8192eu-openipc", "rtl8811cu-openipc",
-    "rtl8812au", "rtl8812au-openipc", "rtl88x2eu-openipc", "rtw-hostapd", "rubyfpv",
+    "rtw-hostapd", "rubyfpv",
     "siproxd-openipc", "ssv615x-openipc", "ssv635x-openipc", "txw8301-openipc",
     "uqmi-openipc", "usb-dual-role", "vdec-openipc", "venc-openipc",
     "w1-ds18b20", "waybeam", "wpa_supplicant-openipc",
     "webface",
-    "webrtc-audio-processing-openipc", "wifibroadcast-ng", "wq9001", "yaml-cli-multi",
+    "webrtc-audio-processing-openipc", "wq9001",
 }
 
 # Directories under general/package/ that hold no Buildroot package: all-patches
@@ -888,9 +893,9 @@ def self_test():
         (["general/package/uclibc-compat/src/uclibc-compat-static.c"],
          3, "reached via .mk _DEPENDENCIES"),
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
-         24, "reached via Config.in select"),
+         27, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 89, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 92, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -980,7 +985,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         89, "markdown inside a package is that package"),
+         92, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],
