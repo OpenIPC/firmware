@@ -349,6 +349,7 @@ insert_ko() {
 	#insmod gpioi2c.ko
 	#insmod gpioi2c_ex.ko
 	insmod pwm.ko
+	insmod hi_adc.ko
 	#insmod sil9024.ko norm=5   #720P@60fps
 
 	insert_sns >/dev/null
@@ -370,6 +371,7 @@ remove_ko() {
 	# rmmod -w sil9024 &> /dev/null
 	rmmod -w hi_i2c.ko &>/dev/null
 	rmmod -w pwm
+	rmmod -w open_adc
 	#rmmod -w gpioi2c
 
 	rmmod -w hi3518_ive
