@@ -114,11 +114,25 @@ define MAJESTIC_WEBUI_PTZ_FIXUP
 	rm -f $(TARGET_DIR)/var/www/cgi-bin/j/ptz.cgi
 endef
 
+# The Counting page reads what majestic's object detection counts, so it is of
+# use only on an image with a detection model: BR2_PACKAGE_MAJESTIC_WEBUI_COUNTING
+# follows xmnpu-models and cpu-models by default. The same three paths are
+# listed in the WebUI's sbin/updatewebui, which installs them only where the
+# image carries the page itself (/var/www/cgi-bin/counting.cgi). The Settings
+# page's line and zone editor is not part of it: it is drawn only where
+# majestic has a counting section.
+define MAJESTIC_WEBUI_COUNTING_FIXUP
+	rm -f $(TARGET_DIR)/var/www/cgi-bin/counting.cgi
+	rm -f $(TARGET_DIR)/var/www/a/counting.js
+	rm -f $(TARGET_DIR)/var/www/a/counting-data.js
+endef
+
 define MAJESTIC_WEBUI_INSTALL_TARGET_CMDS
 	$(MAJESTIC_WEBUI_INSTALL)
 	$(MAJESTIC_WEBUI_$(VERSION)_FIXUP)
 	$(if $(BR2_PACKAGE_MAJESTIC_WEBUI_SMS),,$(MAJESTIC_WEBUI_SMS_FIXUP))
 	$(if $(BR2_PACKAGE_MAJESTIC_WEBUI_PTZ),,$(MAJESTIC_WEBUI_PTZ_FIXUP))
+	$(if $(BR2_PACKAGE_MAJESTIC_WEBUI_COUNTING),,$(MAJESTIC_WEBUI_COUNTING_FIXUP))
 	$(if $(BR2_PACKAGE_MAJESTIC_WEBUI_FPV),,$(MAJESTIC_WEBUI_FPV_PAGE_FIXUP))
 endef
 
