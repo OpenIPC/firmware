@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 4f0b5d48c182ca530894b6a90a502a0488a6a990
+HISILICON_OPENSDK_VERSION = 4cdb9ae28858c292710e9f82498ac8305052b505
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -449,6 +449,7 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_rtc.ko           $(HISILICON_OPENSDK_KMOD_DST)/hi_rtc.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_wdt.ko           $(HISILICON_OPENSDK_KMOD_DST)/wdt.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_pwm.ko           $(HISILICON_OPENSDK_KMOD_DST)/pwm.ko
+	$(INSTALL) -m 644 $(@D)/kernel/open_adc.ko           $(HISILICON_OPENSDK_KMOD_DST)/hi_adc.ko
 	$(INSTALL) -m 644 $(@D)/kernel/open_acodec.ko        $(HISILICON_OPENSDK_KMOD_DST)/acodec.ko
 	for mod in base sys isp vpss venc h264e jpege rc chnl ive vda group sio \
 		ai ao aenc adec; do \
