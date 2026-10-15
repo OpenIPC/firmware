@@ -24,6 +24,17 @@ config BR2_PACKAGE_MAJESTIC_WEBUI_PTZ
 	  majestic-af plugin, so the option is on wherever either is in
 	  the image; a board whose driver comes from elsewhere selects it.
 
+config BR2_PACKAGE_MAJESTIC_WEBUI_COUNTING
+	bool "Counting page"
+	default y if BR2_PACKAGE_XMNPU_MODELS || BR2_PACKAGE_CPU_MODELS
+	help
+	  The Counting page: people crossing lines in and out, who is in
+	  each zone and for how long, by the hour and by the day. Counting
+	  runs on majestic's object detection, so the option is on wherever
+	  the image carries a detection model (xmnpu-models for the NPU,
+	  cpu-models for the CPU); without one there is nothing to count
+	  with.
+
 config BR2_PACKAGE_MAJESTIC_WEBUI_FPV
 	bool "FPV (wfb-ng) settings page"
 	default y if BR2_OPENIPC_VARIANT = "fpv" || BR2_OPENIPC_VARIANT = "wfbng"
