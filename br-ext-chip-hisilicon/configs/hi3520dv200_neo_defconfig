@@ -38,9 +38,9 @@ BR2_PACKAGE_BUSYBOX_CONFIG="$(BR2_EXTERNAL)/package/busybox/busybox.config"
 BR2_PACKAGE_UBOOT_TOOLS=y
 BR2_PACKAGE_ZLIB=y
 # BR2_PACKAGE_IFUPDOWN_SCRIPTS is not set
-# WireGuard is built into the kernel (CONFIG_WIREGUARD), but wireguard-tools
-# needs kernel headers >= 3.10 and this toolchain ships 3.0, so Buildroot
-# drops it; not selected here rather than silently missing.
+# Buildroot's wireguard-tools needs headers >= 3.10 and this toolchain
+# ships 3.0; the kernel side is CONFIG_WIREGUARD=m.
+BR2_PACKAGE_WIREGUARD_TOOLS_OPENIPC=y
 # BR2_PACKAGE_WIREGUARD_LINUX_COMPAT is not set
 BR2_TARGET_ROOTFS_CPIO=y
 BR2_TARGET_ROOTFS_SQUASHFS=y
