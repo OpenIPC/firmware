@@ -131,34 +131,51 @@ void gpio_set(int fd, int pin, int value) {
 	}
 }
 
+/* 1 when the pin's sysfs direction reads "in", 0 otherwise (also when the
+ * pin is not exported) */
+int gpio_is_input(int pin, int *exported) {
+	char path[64], dir[8] = "";
+	snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/direction", pin);
+	FILE *file = fopen(path, "r");
+	*exported = file != NULL;
+	if (file == NULL) {
+		return 0;
+	}
+	if (fgets(dir, sizeof(dir), file) == NULL) {
+		dir[0] = '\0';
+	}
+	fclose(file);
+	return strncmp(dir, "in", 2) == 0;
+}
+
 /* Open a limit switch for reading. A pin nobody has exported is exported
  * and made an input. An already-exported pin keeps its direction: if it is
  * an output, something is driving it (a coil of a move in progress, or the
  * IR-cut), and turning it into an input would cut that off, so it is
- * refused instead. */
+ * refused instead. Either way the pin is used only once its direction reads
+ * back as "in". */
 int limit_open(int pin) {
-	char path[64], dir[8] = "";
-	snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/direction", pin);
-	FILE *file = fopen(path, "r");
-	if (file) {
-		if (fgets(dir, sizeof(dir), file) == NULL) {
-			dir[0] = '\0';
-		}
-		fclose(file);
-		if (strncmp(dir, "in", 2) != 0) {
+	char path[64];
+	int exported;
+	if (!gpio_is_input(pin, &exported)) {
+		if (exported) {
 			printf("ptz_limits: gpio%d is exported as an output - ignoring it\n", pin);
 			return -1;
 		}
-	} else {
-		file = fopen("/sys/class/gpio/export", "w");
+		FILE *file = fopen("/sys/class/gpio/export", "w");
 		if (file) {
 			fprintf(file, "%d", pin);
 			fclose(file);
 		}
+		snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/direction", pin);
 		file = fopen(path, "w");
 		if (file) {
 			fprintf(file, "in");
 			fclose(file);
+		}
+		if (!gpio_is_input(pin, &exported)) {
+			printf("ptz_limits: unable to make gpio%d an input - ignoring it\n", pin);
+			return -1;
 		}
 	}
 	snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/value", pin);
@@ -169,17 +186,23 @@ int limit_open(int pin) {
 	return fd;
 }
 
-/* 1 when the switch for this direction is pressed; idx = axis*2 + (steps<0) */
-int limit_hit(int idx) {
+/* 1 pressed, 0 free, -1 unreadable; idx = axis*2 + (steps<0) */
+int limit_read(int idx) {
 	int fd = LIM_FDS[idx];
 	if (fd == -1) {
-		return 0;
+		return -1;
 	}
 	char c;
 	if (lseek(fd, 0, SEEK_SET) == -1 || read(fd, &c, 1) != 1) {
-		return 0;
+		return -1;
 	}
 	return (c - '0') == LIM_ACTIVE;
+}
+
+/* 1 when the switch for this direction is pressed; a switch that cannot be
+ * read counts as not pressed, so a bad input never blocks a move */
+int limit_hit(int idx) {
+	return limit_read(idx) == 1;
 }
 
 int motor_pin(int pin) {
@@ -453,10 +476,10 @@ int main(int argc, char *argv[]) {
 		for (int i = 0; i < 4; i++) {
 			if (LIM_PINS[i] < 0) {
 				printf("%-5s none\n", name[i]);
-			} else if (LIM_FDS[i] == -1) {
-				printf("%-5s gpio%-3d unreadable (counts as not pressed)\n", name[i], LIM_PINS[i]);
 			} else {
-				printf("%-5s gpio%-3d %s\n", name[i], LIM_PINS[i], limit_hit(i) ? "PRESSED" : "free");
+				int state = limit_read(i);
+				printf("%-5s gpio%-3d %s\n", name[i], LIM_PINS[i],
+					state < 0 ? "unreadable (counts as not pressed)" : state ? "PRESSED" : "free");
 			}
 		}
 		return 0;
