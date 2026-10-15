@@ -158,6 +158,20 @@ else
     echo "skip the unreadable-record case: root reads a mode-000 file"
 fi
 
+# --- the log of the boot that crashed ---------------------------------------
+# S03pmsglog keeps the system log in the pmsg ring; the crash bundle carries it
+# as syslog, what majestic and the services said up to the oops. (The first
+# crash above had none and its bundle held exactly the record and meta.json.)
+printf 'Oct 15 09:00:01 cam user.err majestic[812]: the pipeline did not start\n' > "$SB/pstore/pmsg-ramoops-0"
+crash "Oops with a log"
+run
+case " $(listing "$B/crash.tar.gz")" in
+    *" syslog "*) ok "the boot's log rides with the crash as syslog" ;;
+    *) bad "no syslog in the bundle: $(listing "$B/crash.tar.gz")" ;;
+esac
+gzip -dc "$B/crash.tar.gz" | tar -xOf - ./syslog 2>/dev/null | grep -q 'the pipeline did not start' \
+    && ok "and it is that boot's log" || bad "syslog is not the pmsg record"
+
 # --- the streamer is left alone ----------------------------------------------
 [ ! -e "$SB/majestic-ran" ] && ok "majestic is never run while it is starting" || bad "S98crashlog ran majestic"
 

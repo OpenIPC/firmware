@@ -1,0 +1,43 @@
+#!/bin/sh
+# Keep this boot's log where the next boot can read it.
+#
+# A camera that hangs or is reset without a kernel oops -- majestic wedged until
+# the watchdog fires, a service that never comes up -- leaves no pstore record,
+# and syslogd's buffer dies with the reset. Two such boots in a row are a boot
+# loop: U-Boot falls into failsafe, and all the report can say is that it
+# happened. So the system log, which carries klogd's kernel lines at every level
+# as well as majestic's own, is copied into /dev/pmsg0, a ring in the reserved
+# RAM that survives a warm reset (the board DTS sizes it). On the next boot
+# pstore shows it as pmsg-ramoops-0: failsafe-rescue keeps it as the failed
+# boot's log, and S98crashlog puts it beside an oops.
+#
+# After S01syslogd and S02klogd. S01syslogd starts the daemon in the background,
+# so its buffer may not exist yet: wait for logread to find it, then copy with
+# -F, which writes the buffer so far before following it -- busybox's -f follows
+# from the end and would lose everything logged before this point. Should
+# logread ever exit, it is started again with -f, so nothing is written twice.
+# Nothing stops it: it ends with the system, and with it the last line it kept.
+# Inert on a kernel without a pmsg zone.
+case "$1" in
+	start|"") ;;
+	*) exit 0 ;;
+esac
+
+[ -c /dev/pmsg0 ] || exit 0
+
+printf "Starting pmsg log: "
+(
+	i=0
+	until logread >/dev/null 2>&1; do
+		i=$((i + 1))
+		[ "$i" -gt 10 ] && exit 0
+		sleep 1
+	done
+	logread -F
+	while :; do
+		sleep 1
+		logread -f
+	done
+) < /dev/null > /dev/pmsg0 2>/dev/null &
+echo "OK"
+exit 0
