@@ -20,6 +20,7 @@ on:
           # green run that means nothing.
           - ingenic-t31
           - hisilicon-hi3516ev200
+          - xiongmai-xm530
 
 env:
   TAG_NAME: toolchain-asan
@@ -58,6 +59,8 @@ jobs:
           # share one toolchain, `make toolname` names it after the family, and
           # the guard below is what would catch it if that ever stopped holding.
           hisilicon-hi3516ev200) BOARD=hi3516ev300_lite ;;
+          # Serves xm550 as well, which is an alias of the xm530 image.
+          xiongmai-xm530) BOARD=xm530_lite ;;
           *) echo "::error::no defconfig mapped for ${{inputs.family}}"; exit 1 ;;
           esac
           NAME=$(make BOARD="${BOARD}" toolname)
