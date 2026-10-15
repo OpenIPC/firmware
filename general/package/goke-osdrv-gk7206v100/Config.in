@@ -1,0 +1,11 @@
+config BR2_PACKAGE_GOKE_OSDRV_GK7206V100
+	bool "goke-osdrv-gk7206v100"
+	# The SDK's libraries are built -mfloat-abi=hard; a soft-float program
+	# would pass their float arguments in the wrong registers.
+	depends on BR2_ARM_EABIHF
+	select BR2_PACKAGE_UCLIBC_COMPAT
+	help
+	  goke-osdrv-gk7206v100 - Goke GK7206V1 (XMedia Lotus SDK) userspace
+	  libraries and module loader
+
+	  https://github.com/ShiMetaPi/shimetapi_pico_gx

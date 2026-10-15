@@ -1,0 +1,248 @@
+#!/bin/sh
+#
+# This is part of OpenIPC.org project | 2026.10.14
+#
+# Module loader for the GK7206V1 family (gk7206v100: GK7206V10/V10B/V11/
+# V11A/V11AT/V12A). Order and parameters follow the SDK's own `load` script
+# (ShiMetaPi GK7206 SDK, source/gmp/ko/linux-5.10.y/.../load). Unlike the
+# gk7205 families there is no sys_config, mipi_rx or sensor-bus module:
+# pin muxing lives in the device tree, MIPI RX inside xm_vi, and the sensor
+# libraries drive I2C from userspace, so nothing here needs to know the
+# sensor.
+#
+# The modules are hisilicon-opensdk's open_* builds of the SDK's xm_* set,
+# loaded by name so modprobe resolves what each one needs.
+
+# Memory config
+mem_start=0x40000000 # phy mem start
+
+# DDR size in MiB. Every die has its DDR in the package: 512Mb DDR2 on
+# V10/V10B, 1Gb DDR3L on V11/V11A/V11AT, 2Gb DDR3L on V12A. Neither the
+# kernel nor the chip ID register reports the size, so, in order:
+#   - the totalmem env, when the bootloader or the user keeps one;
+#   - the device-tree memory node, but only once a bootloader has written the
+#     probed size into it: as built it is the SDK's 3 GiB placeholder, and
+#     nothing in this family has more than 256 MiB;
+#   - the part number in the soc env, normalised the way S31hostname does it
+#     (any case, and the SDK's xm7206 spelling);
+#   - 64 MiB, the smallest die, said out loud: on a larger die it leaves most
+#     of the media memory unused, and the check below stops on a mem= it
+#     cannot fit under.
+dt_mem_total() {
+	local reg
+	reg=$(hexdump -v -e '1/1 "%02x"' /proc/device-tree/memory/reg 2>/dev/null)
+	# One <base size> pair of 32-bit cells.
+	[ ${#reg} -eq 16 ] || return 0
+	reg=$((0x${reg#????????} / 1048576))
+	[ "$reg" -gt 0 ] && [ "$reg" -le 256 ] && echo $reg
+}
+
+soc_mem_total() {
+	case "$(fw_printenv -n soc 2>/dev/null | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9]//g; s/^xm/gk/')" in
+	gk7206v12a) echo 256 ;;
+	gk7206v11 | gk7206v11a | gk7206v11at) echo 128 ;;
+	gk7206v10 | gk7206v10b) echo 64 ;;
+	esac
+}
+
+mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d 'M')
+[ -n "$mem_total" ] || mem_total=$(dt_mem_total)
+[ -n "$mem_total" ] || mem_total=$(soc_mem_total)
+if [ -z "$mem_total" ]; then
+	mem_total=64
+	logger -s -p daemon.warn -t goke \
+		"DDR size unknown, assuming ${mem_total}M; set it with: fw_setenv totalmem <MiB>M"
+fi
+
+os_mem_size=$(fw_printenv -n osmem 2>/dev/null | tr -d 'M')
+os_mem_size=${os_mem_size:=32}
+
+# The MMZ sits above the kernel's mem=, so the kernel's value is the one
+# that counts (an explicit -osmem below still wins).
+_kmem=$(grep -oE 'mem=[0-9]+M' /proc/cmdline | head -1 | tr -dc '0-9')
+[ -n "$_kmem" ] && os_mem_size=$_kmem
+
+report_error() {
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+calc_mmz_info() {
+	mmz_start=$(echo "$mem_start $os_mem_size" |
+		awk '{ printf("0x%x00000\n", $1/1024/1024 + $2) }')
+	mmz_size=$((mem_total - os_mem_size))M
+	echo "mmz_start: $mmz_start, mmz_size: $mmz_size"
+}
+
+load() {
+	modprobe "$@" || report_error
+}
+
+# rmmod, not modprobe -r: that also drops dependencies left unused, which
+# would take open_osal out from under the teardown order below.
+unload() {
+	rmmod -w "$1"
+}
+
+# Modules a build can leave out (DISABLE_PM, DISABLE_VO, DISABLE_TDE).
+installed() {
+	grep -q "/$1.ko:" /lib/modules/$(uname -r)/modules.dep
+}
+
+load_opt() {
+	installed "$1" || return 0
+	load "$@"
+}
+
+unload_opt() {
+	installed "$1" || return 0
+	unload "$1"
+}
+
+# open_osal first and with its parameters: every other module depends on it,
+# and a modprobe that pulls it in as a dependency loads it with no memory
+# zone at all. The SDK's built-in bootargs carry their own mmz=; use that
+# when it is there.
+insert_osal() {
+	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
+	if [ -z "$MMZ" ]; then
+		calc_mmz_info
+		MMZ=anonymous,0,$mmz_start,$mmz_size
+	fi
+	load open_osal mmz_allocator=xmedia mmz=$MMZ
+}
+
+insert_audio() {
+	load open_acomm
+	load open_aio
+	load open_ao
+	load open_ai
+	load open_aenc
+	load open_adec
+}
+
+remove_audio() {
+	unload open_adec
+	unload open_aenc
+	unload open_ai
+	unload open_ao
+	unload open_aio
+	unload open_acomm
+}
+
+insert_ko() {
+	insert_osal
+	load open_common
+	load_opt open_pm
+	load open_vgs
+	load_opt open_tde
+	load_opt open_region
+	load open_isp
+	load open_vpss
+	load open_npu
+	load open_vi
+	load open_chnl
+	load open_vedu
+	load open_rc
+	load open_jpege
+	load open_h265e
+	load open_h264e
+	load open_venc
+	load_opt open_vo
+	load_opt open_fb fb_vram="gfbg:vram0_size:3600"
+	load open_cipher_drv
+	# Node count kept at the SDK's default 64 to save memory (8..512).
+	load open_ive
+	insert_audio
+	load_opt open_adc
+}
+
+remove_ko() {
+	unload_opt open_adc
+	remove_audio
+	unload open_ive
+	unload open_cipher_drv
+	unload_opt open_fb
+	unload_opt open_vo
+	unload open_venc
+	unload open_h264e
+	unload open_h265e
+	unload open_jpege
+	unload open_rc
+	unload open_vedu
+	unload open_chnl
+	unload open_vi
+	unload open_npu
+	unload open_vpss
+	unload open_isp
+	unload_opt open_region
+	unload_opt open_tde
+	unload open_vgs
+	unload_opt open_pm
+	unload open_common
+	unload open_osal
+}
+
+load_usage() {
+	echo "Usage:  ./load_goke [-option]"
+	echo "options:"
+	echo "    -i                       insert modules"
+	echo "    -r                       remove modules"
+	echo "    -a                       remove modules first, then insert modules"
+	echo "    -osmem os_mem_size       kernel memory in MiB [default: mem= from the cmdline]"
+	echo "    -h                       help information"
+	echo -e "for example: ./load_goke -i -osmem 32\n"
+}
+
+######################parse arg###################################
+b_arg_insmod=0
+b_arg_remove=0
+b_arg_os_mem=0
+
+for arg in $@; do
+	if [ $b_arg_os_mem -eq 1 ]; then
+		b_arg_os_mem=0
+		os_mem_size=${arg%M}
+	fi
+
+	case $arg in
+	"-i")
+		b_arg_insmod=1
+		;;
+	"-r")
+		b_arg_remove=1
+		;;
+	"-a")
+		b_arg_insmod=1
+		b_arg_remove=1
+		;;
+	"-h")
+		load_usage
+		;;
+	"-osmem")
+		b_arg_os_mem=1
+		;;
+	esac
+done
+#######################parse arg end########################
+
+if [ $# -lt 1 ]; then
+	load_usage
+	exit 0
+fi
+
+# Nothing left above the kernel's memory for the MMZ: open_osal would come up
+# without a memory zone and the first media module would fail on it.
+if ! grep -q 'mmz=' /proc/cmdline && [ $os_mem_size -ge $mem_total ]; then
+	echo "[err] os_mem[${os_mem_size}M] leaves no media memory in total_mem[${mem_total}M];" \
+		"set the DDR size: fw_setenv totalmem <MiB>M" >&2
+	exit 1
+fi
+
+if [ $b_arg_remove -eq 1 ]; then
+	remove_ko
+fi
+
+if [ $b_arg_insmod -eq 1 ]; then
+	insert_ko
+fi
