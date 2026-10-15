@@ -77,7 +77,7 @@ ALL_BOARDS = [
     # Hisilicon [HI3519V101]
     "hi3516av200_lite", "hi3516av200_neo", "hi3519v101_lite",
     # Hisilicon [misc]
-    "hi3520dv200_lite", "hi3536cv100_lite", "hi3536dv100_lite",
+    "hi3520dv200_lite", "hi3520dv200_neo", "hi3536cv100_lite", "hi3536dv100_lite",
     # Goke [GK710X]
     "gk7102_lite", "gk7102s_lite",
     # Goke [GK7205V200]
