@@ -1,84 +1,124 @@
 name: toolchain
 on:
   workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Boards to rebuild and replace, space-separated (empty: build every toolchain not yet published)'
+        required: false
+        default: ''
+        type: string
 
 env:
   TAG_NAME: toolchain
 
 jobs:
+  select:
+    name: Select platforms
+    runs-on: ubuntu-22.04
+    outputs:
+      platforms: ${{steps.select.outputs.platforms}}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # Naming platforms is how one toolchain gets rebuilt after a change to
+      # what it bundles (the uClibc compat archive, say): the full run below
+      # skips every toolchain already published, so it would never replace one.
+      - name: Select platforms
+        id: select
+        env:
+          PLATFORMS: ${{inputs.platforms}}
+        run: |
+          set -eu
+          ALL=$(sed -e 's/#.*//' <<'LIST'
+          # Sigmastar
+          ssc325_lite
+          ssc335_lite
+          ssc377_lite
+          ssc338q_lite
+
+          # Hisilicon
+          hi3516av100_lite
+          hi3516cv100_lite
+          hi3516cv200_lite
+          hi3516cv300_lite
+          hi3516cv500_lite
+          hi3516cv6xx_ultimate
+          # aarch64 musl toolchain, built from a decoupled toolchain-only
+          # config (see configs/hi3519dv500_toolchain_defconfig).
+          hi3519dv500_toolchain
+          hi3516ev200_lite
+          hi3519v101_lite
+          hi3520dv200_lite
+          hi3536cv100_lite
+          hi3536dv100_lite
+
+          # Goke
+          gk7102_lite
+          gk7205v200_lite
+          gk7205v500_lite
+          gk7206v100_lite
+
+          # Ingenic
+          t20_lite
+          t21_lite
+          t31_lite
+          t40_lite
+
+          # Allwinner
+          v851s_lite
+
+          # Fullhan
+          fh8852v100_lite
+          fh8852v200_lite
+
+          # Grainmedia
+          gm8136_lite
+
+          # Novatek
+          nt98562_lite
+
+          # Rockchip
+          rv1106_lite
+          rv1126_lite
+
+          # Xiongmai
+          xm510_lite
+          xm530_lite
+          LIST
+          )
+          SEL=${PLATFORMS:-$ALL}
+          for p in ${SEL}; do
+            ls br-ext-*/configs/"${p}"_defconfig >/dev/null 2>&1 || {
+              echo "::error::no defconfig for ${p}"
+              exit 1
+            }
+          done
+          echo "platforms=$(printf '%s\n' ${SEL} | jq -Rnc '[inputs]')" >> ${GITHUB_OUTPUT}
+
   toolchain:
     name: Toolchain
+    needs: select
     runs-on: ubuntu-22.04
 
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          # Sigmastar
-          - ssc325_lite
-          - ssc335_lite
-          - ssc377_lite
-          - ssc338q_lite
-
-          # Hisilicon
-          - hi3516av100_lite
-          - hi3516cv100_lite
-          - hi3516cv200_lite
-          - hi3516cv300_lite
-          - hi3516cv500_lite
-          - hi3516cv6xx_ultimate
-          # aarch64 musl toolchain, built from a decoupled toolchain-only
-          # config (see configs/hi3519dv500_toolchain_defconfig).
-          - hi3519dv500_toolchain
-          - hi3516ev200_lite
-          - hi3519v101_lite
-          - hi3520dv200_lite
-          - hi3536cv100_lite
-          - hi3536dv100_lite
-
-          # Goke
-          - gk7102_lite
-          - gk7205v200_lite
-          - gk7205v500_lite
-          - gk7206v100_lite
-
-          # Ingenic
-          - t20_lite
-          - t21_lite
-          - t31_lite
-          - t40_lite
-
-          # Allwinner
-          - v851s_lite
-
-          # Fullhan
-          - fh8852v100_lite
-          - fh8852v200_lite
-
-          # Grainmedia
-          - gm8136_lite
-
-          # Novatek
-          - nt98562_lite
-
-          # Rockchip
-          - rv1106_lite
-          - rv1126_lite
-
-          # Xiongmai
-          - xm510_lite
-          - xm530_lite
+        platform: ${{fromJSON(needs.select.outputs.platforms)}}
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Build toolchain
+        env:
+          PLATFORMS: ${{inputs.platforms}}
         run: |
           GCC=$(make BOARD=${{matrix.platform}} toolname).tgz
           URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}/${GCC}
           echo ${URL}
-          if ! wget -q --spider ${URL}; then
+          # A named platform is rebuilt even when published: that is why it was named.
+          if [ -n "${PLATFORMS}" ] || ! wget -q --spider ${URL}; then
             make BOARD=${{matrix.platform}} toolchain
             SDK=$(find output/images -name *_sdk-buildroot.tar.gz)
             mv ${SDK} ${GCC}
