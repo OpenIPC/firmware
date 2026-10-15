@@ -265,6 +265,9 @@ chmod +x "$SB/bin/umount"
 # host cannot really pivot, and the fallback is the safety property that matters
 # most here (a camera that cannot build a ramfs must still upgrade).
 stub pivot_root 'echo "pivot_root $*" >> "$FLASH_LOG"; exit ${STUB_PIVOT_RC:-1}'
+# enter_ramfs proves the staged root can run before it moves anything; an
+# unprivileged host cannot chroot, so that probe answers STUB_CHROOT_RC (#2605).
+stub chroot     'echo "chroot $*" >> "$FLASH_LOG"; exit ${STUB_CHROOT_RC:-0}'
 stub losetup    'case "$1" in -f) echo /dev/loop0;; -d) echo "losetup -d $2" >> "$FLASH_LOG";; esac; exit 0'
 
 # download_firmware runs `md5sum -s -c`. -s (silent) is a busybox extension; GNU
@@ -513,6 +516,7 @@ run() {
         abort_wait=0 RAM_ROOT="$SB/ram" \
         WDOG="${WDOG:-$SB/dev/watchdog}" WDOG_PROC="${WDOG_PROC:-$SB/proc}" \
         STUB_PIVOT_RC="${STUB_PIVOT_RC:-1}" \
+        STUB_CHROOT_RC="${STUB_CHROOT_RC:-0}" \
         STUB_MOUNT="${STUB_MOUNT:-ok}" STUB_VENDOR="${STUB_VENDOR:-sigmastar}" \
         STUB_SOC="${STUB_SOC:-ssc338q}" \
         STUB_IMG_SOC="${STUB_IMG_SOC:-ssc338q}" \
@@ -1737,6 +1741,89 @@ else
     bad "--no_ramfs -> expected no pivot but a normal flash, log='$(cat "$SB/tmp/flash.log")'"
 fi
 
+# A uClibc image has no ldd, so it staged busybox without a loader and the
+# re-exec into the RAM root died "not found" with nothing left to fall back to
+# (#2605). The staged root is now made to run something first; when it cannot,
+# that is a refusal to pivot, not a reboot.
+reset_env
+STUB_CHROOT_RC=1
+STUB_PIVOT_RC=0
+run -z --kernel="$K" --rootfs="$R"
+if grep -q "^chroot .*/ram .*/busybox true" "$SB/tmp/flash.log" &&
+    ! grep -q "pivot_root" "$SB/tmp/flash.log" && flashed /dev/mtd3 && rebooted; then
+    ok "a staged root that cannot run is not pivoted into; the flash goes on in place"
+else
+    bad "unrunnable ramfs -> expected no pivot and an in-place flash, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+STUB_CHROOT_RC=0
+STUB_PIVOT_RC=1
+
+# Which libraries to stage, read from the ELF when there is no ldd to ask.
+# Exercised on a fixture rather than the host's busybox, whose libraries live
+# wherever the host distribution keeps them.
+LIBFX="$SB/libfx"
+mkdir -p "$LIBFX/lib" "$LIBFX/usr/lib"
+: > "$LIBFX/lib/ld-uClibc-1.0.45.so"
+ln -sf ld-uClibc-1.0.45.so "$LIBFX/lib/ld-uClibc.so.0"
+: > "$LIBFX/lib/libuClibc-1.0.45.so"
+ln -sf libuClibc-1.0.45.so "$LIBFX/lib/libc.so.0"
+printf 'libgcc_s.so.1\n' > "$LIBFX/usr/lib/libgcc_s.so.1"
+# What `strings` sees in a uClibc busybox: PT_INTERP, then .dynstr. libm.so.0
+# is named but absent, standing in for anything that only looks like a library.
+printf '\177ELF\n%s\nlibc.so.0\nlibm.so.0\nbusybox: applet not found\n' \
+    "$LIBFX/lib/ld-uClibc.so.0" > "$LIBFX/busybox"
+# ...and the C library itself names libgcc_s, which it dlopens for unwinding.
+printf 'libgcc_s.so.1\n' >> "$LIBFX/lib/libuClibc-1.0.45.so"
+libs=$( exec 3>/dev/null; ELF_LIB_DIRS="$LIBFX/lib $LIBFX/usr/lib"
+    eval "$(awk '/^elf_libs\(\)/,/^}/' "$SRC")"
+    for f in $(elf_libs "$LIBFX/busybox"); do echo "$f"; elf_libs "$f"; done | sort -u )
+if printf '%s\n' "$libs" | grep -qx "$LIBFX/lib/ld-uClibc.so.0" &&
+    printf '%s\n' "$libs" | grep -qx "$LIBFX/lib/libc.so.0" &&
+    printf '%s\n' "$libs" | grep -qx "$LIBFX/usr/lib/libgcc_s.so.1" &&
+    ! printf '%s\n' "$libs" | grep -q "libm"; then
+    ok "without ldd, the loader and the libraries are read out of the ELF (#2605)"
+else
+    bad "elf_libs on a uClibc-shaped busybox gave: $(printf '%s ' $libs)"
+fi
+# busybox_libs keeps asking ldd first, and only an empty answer -- no ldd, or
+# one that fails -- sends it to the ELF.
+libs=$( exec 3>/dev/null; PATH="$SB/nolddbin:$PATH"; mkdir -p "$SB/nolddbin"
+    printf '#!/bin/sh\nexit 1\n' > "$SB/nolddbin/ldd"; chmod +x "$SB/nolddbin/ldd"
+    eval "$(awk '/^busybox_libs\(\)/,/^}/' "$SRC")"
+    elf_libs() { [ "$1" = /bin/busybox ] && echo /lib/ld-fallback.so.1; }
+    busybox_libs )
+[ "$libs" = "/lib/ld-fallback.so.1" ] \
+    && ok "an ldd that answers nothing falls back to reading the ELF" \
+    || bad "busybox_libs with a silent ldd gave '$libs'"
+
+# Where a local image is after the pivot: the old root sits at /mnt, so an SD
+# card at /mnt/mmcblk0p1 is /mnt/mnt/mmcblk0p1 from inside it (#2605). /tmp
+# alone is carried across whole.
+PAP_FN=$(awk '/^path_after_pivot\(\)/,/^}/' "$SRC")
+pap() ( exec 3>/dev/null; cd "${2:-/}"; eval "$PAP_FN"; path_after_pivot "$1" )
+mkdir -p "$SB/rel"
+if [ "$(pap /tmp/rootfs.squashfs.gm8135)" = "/tmp/rootfs.squashfs.gm8135" ] &&
+    [ "$(pap /mnt/mmcblk0p1/rootfs.squashfs.gm8135)" = "/mnt/mnt/mmcblk0p1/rootfs.squashfs.gm8135" ] &&
+    [ "$(pap /root/uImage)" = "/mnt/root/uImage" ] &&
+    [ -z "$(pap "")" ]; then
+    ok "a local image is looked for where the pivot put it; /tmp stays where it was"
+else
+    bad "path_after_pivot: /tmp->'$(pap /tmp/x)' /mnt/mmc->'$(pap /mnt/mmcblk0p1/x)' /root->'$(pap /root/x)'"
+fi
+case "$(pap rootfs.squashfs "$SB/rel")" in
+    /mnt/*/rel/rootfs.squashfs | /tmp/*/rel/rootfs.squashfs)
+        ok "a relative image path is made absolute before enter_ramfs leaves its cwd" ;;
+    *)  bad "relative path after the pivot: '$(pap rootfs.squashfs "$SB/rel")'" ;;
+esac
+# The first phase keeps flashing from the path it was given: only the RAM phase
+# adopts the rewritten one, so a pivot that fails still finds its images.
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -qE '^\s*(kernel|rootfs)_file=' \
+    && bad "enter_ramfs must not rewrite kernel_file/rootfs_file; the in-place fallback still needs them" \
+    || ok "a failed pivot falls back with the image paths it was given"
+grep -q 'kernel_file=\$ramfs_kernel_file' "$SRC" && grep -q 'rootfs_file=\$ramfs_rootfs_file' "$SRC" \
+    && ok "the RAM phase flashes from the paths as the pivot left them" \
+    || bad "the RAM phase must adopt ramfs_kernel_file/ramfs_rootfs_file"
+
 # A pivot that did not happen must still hand the old root back as it found it.
 # The shipped rootfs has no /ram, so the directory enter_ramfs makes lands in the
 # overlay's upper layer and stays there: every upgrade since the pivot landed
@@ -2363,6 +2450,27 @@ if [ -n "$u" ] && [ -n "$k" ] && [ -n "$r" ] && [ "$u" -lt "$k" ] && [ "$k" -lt 
 else
     bad "stage 2 ubiblock order ${u:-none}/${k:-none}/${r:-none} log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
+
+# A hand-off lets go of the old root -- an SD card behind it included -- before
+# the first write, so an image there would be gone when the flash looks for it.
+# Only a path outside /tmp shows that, and the sandbox lives under /tmp.
+OUTSIDE=$(mktemp -d "${HOME:-/root}/.sysupgrade-test.XXXXXX" 2>/dev/null)
+case "$(realpath "${OUTSIDE:-/tmp}" 2>/dev/null)" in
+    /tmp/* | /tmp | "")
+        ok "hand-off with an image outside /tmp: skipped, no directory outside /tmp to stage one in" ;;
+    *)
+        reset_env; ubi_setup ubiblock
+        cp "$US" "$OUTSIDE/"
+        STUB_PIVOT_RC=0
+        run -z --kernel="$UK" --rootfs="$OUTSIDE/$(basename "$US")"
+        if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "copy it into /tmp" &&
+            nothing_ubi && ! handed_off && ! grep -q pivot_root "$SB/tmp/flash.log"; then
+            ok "hand-off: an image the old root takes with it is refused before anything moves (#2605)"
+        else
+            bad "hand-off with an image outside /tmp must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+        fi ;;
+esac
+[ -n "$OUTSIDE" ] && rm -rf "$OUTSIDE"
 
 # --- ubifs: the kernel is a file in the rootfs, so -k writes the rootfs
 reset_env; ubi_setup ubifs
@@ -3084,9 +3192,21 @@ awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q '^\s*exec ' \
 awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'chroot' \
     && ok "enter_ramfs chroots (pivot_root alone does not move this process's root)" \
     || bad "enter_ramfs must chroot after pivot_root"
-awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'ldd ' \
+awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'busybox_libs' \
     && ok "enter_ramfs stages the shared libraries busybox needs" \
     || bad "busybox is dynamically linked; staging it without its libs gives an unrunnable ramfs"
+# ...and the same list is what the RAM check counts, or a uClibc camera is
+# measured for a stage it is not given.
+awk '/^ramfs_stage_kb\(\)/,/^}/' "$SRC" | grep -q 'busybox_libs' \
+    && ok "ramfs_stage_kb counts what enter_ramfs stages" \
+    || bad "ramfs_stage_kb must count busybox_libs, the list enter_ramfs copies"
+# The probe that the staged root runs has to come before anything moves: after
+# the pivot a missing loader is an exec with no root left to return to (#2605).
+c=$(awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -n 'chroot "\$RAM_ROOT" /bin/busybox true' | head -1 | cut -d: -f1)
+m=$(awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -n 'mount -o move /dev' | head -1 | cut -d: -f1)
+[ -n "$c" ] && [ -n "$m" ] && [ "$c" -lt "$m" ] \
+    && ok "enter_ramfs proves the staged root runs before it moves a mount" \
+    || bad "enter_ramfs must chroot-probe the staged root before the mount moves (probe=${c:-none} move=${m:-none})"
 for m in /dev /proc /tmp; do
     awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q "mount -o move $m" \
         && ok "enter_ramfs carries $m into the new root" \
