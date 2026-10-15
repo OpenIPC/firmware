@@ -166,7 +166,17 @@ int limit_hit(int idx) {
 	return (c - '0') == LIM_ACTIVE;
 }
 
-void limits_config() {
+int motor_pin(int pin) {
+	for (int i = 0; i < 4; i++) {
+		if (PAN_PINS[i] == pin || TILT_PINS[i] == pin) {
+			return 1;
+		}
+	}
+	return pin == SELECT_PIN;
+}
+
+/* check_motor_pins is 0 only for `status`, which runs without ptz_gpio */
+void limits_config(int check_motor_pins) {
 	FILE *fp = popen("fw_printenv -n ptz_limits 2>/dev/null", "r");
 	if (fp == NULL) {
 		return;
@@ -174,10 +184,11 @@ void limits_config() {
 	char line[64];
 	if (fgets(line, sizeof(line), fp) != NULL) {
 		int value[5], count = 0;
-		char *token = strtok(line, " ");
+		/* tabs too: the env is typed by hand */
+		char *token = strtok(line, " \t\n");
 		while (token != NULL && count < 5) {
 			value[count++] = atoi(token);
-			token = strtok(NULL, " ");
+			token = strtok(NULL, " \t\n");
 		}
 		if (count >= 4) {
 			for (int i = 0; i < 4; i++) {
@@ -191,6 +202,27 @@ void limits_config() {
 		}
 	}
 	pclose(fp);
+
+	/* A switch pin that is also a coil would be read back as the coil's own
+	 * output and stop or reverse the head at random. One pin shared by both
+	 * ends of an axis cannot tell which end is pressed, so the back-off could
+	 * drive into the stop it should leave. Refuse both rather than guess. */
+	for (int i = 0; i < 4; i++) {
+		if (LIM_PINS[i] < 0) {
+			continue;
+		}
+		int bad = check_motor_pins && motor_pin(LIM_PINS[i]);
+		for (int j = 0; j < i; j++) {
+			bad |= LIM_PINS[j] == LIM_PINS[i];
+		}
+		if (bad) {
+			printf("ptz_limits: gpio%d is a motor pin or listed twice - limits disabled\n", LIM_PINS[i]);
+			for (int k = 0; k < 4; k++) {
+				LIM_PINS[k] = -1;
+			}
+			return;
+		}
+	}
 	for (int i = 0; i < 4; i++) {
 		if (LIM_PINS[i] >= 0) {
 			LIM_FDS[i] = limit_open(LIM_PINS[i]);
@@ -331,6 +363,13 @@ void axis_run(const int pins[4], const int fds[4], int level, int steps, int del
 	if (remaining == 0) {
 		return;
 	}
+	/* select first: the back-off below drives the coils too, and on a
+	 * shared-coil head they still belong to the other axis until here */
+	if (SELECT_PIN != -1) {
+		gpio_set(SELECT_FD, SELECT_PIN, level);
+		delay_us(100);
+	}
+
 	int lim = level * 2 + (steps < 0 ? 1 : 0);	/* level doubles as the axis index: 0 pan, 1 tilt */
 	if (limit_hit(lim)) {
 		printf("%s: already at %s end stop\n", level ? "tilt" : "pan", steps < 0 ? "negative" : "positive");
@@ -339,10 +378,6 @@ void axis_run(const int pins[4], const int fds[4], int level, int steps, int del
 	}
 
 	const int (*seq)[4] = (steps < 0) ? REVERSE_STEP_SEQUENCE : STEP_SEQUENCE;
-	if (SELECT_PIN != -1) {
-		gpio_set(SELECT_FD, SELECT_PIN, level);
-		delay_us(100);
-	}
 
 	int micro = 0;
 	while (remaining > 0) {
@@ -369,7 +404,7 @@ void axis_run(const int pins[4], const int fds[4], int level, int steps, int del
 
 int main(int argc, char *argv[]) {
 	if (argc == 2 && strcmp(argv[1], "status") == 0) {
-		limits_config();
+		limits_config(0);
 		const char *name[4] = {"pan+", "pan-", "tilt+", "tilt-"};
 		for (int i = 0; i < 4; i++) {
 			if (LIM_PINS[i] < 0) {
@@ -400,7 +435,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	gpio_config();
-	limits_config();
+	limits_config(1);
 	for (int i = 0; i < 4; i++) {
 		gpio_export(PAN_PINS[i]);
 		gpio_export(TILT_PINS[i]);
