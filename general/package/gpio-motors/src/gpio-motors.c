@@ -232,7 +232,7 @@ void limits_config(int check_motor_pins) {
 			char *end;
 			errno = 0;
 			long v = strtol(token, &end, 10);
-			ok = count < 5 && *end == '\0' && errno == 0 && v >= -1 && v <= 9999 &&
+			ok = count < 5 && *end == '\0' && errno == 0 && v >= -1 && v <= INT_MAX &&
 				(count < 4 || v == 0 || v == 1);
 			if (ok) {
 				value[count++] = (int)v;
