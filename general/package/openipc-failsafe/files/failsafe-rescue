@@ -79,6 +79,9 @@ done
 # the reset that brought the camera here: what majestic and the kernel said
 # before the boot that never settled ended. Without it the breadcrumb below is
 # all a report can say. Kept beside it, overlay only; crashlog-send sends both.
+# An earlier fall's copy goes first, so a note is never beside another boot's
+# log when this one left none.
+rm -f /etc/crash/failsafe.log 2>/dev/null
 [ -s /sys/fs/pstore/pmsg-ramoops-0 ] && mkdir -p /etc/crash 2>/dev/null &&
 	cp /sys/fs/pstore/pmsg-ramoops-0 /etc/crash/failsafe.log 2>/dev/null
 
