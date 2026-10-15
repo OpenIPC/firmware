@@ -1957,9 +1957,11 @@ check_handoff() {
 		die "This run must rewrite a mounted UBI volume, and only PID 1 can let go of it: $INITTAB has no '::restart:/sbin/init' entry to hand it off with. Nothing was written."
 	# release_old_root lets go of everything behind /mnt before the first
 	# write, an SD card included, so only an image in /tmp is still there to
-	# flash from (#2605).
+	# flash from (#2605). Only an image this run will write: on the ubifs
+	# layout a --kernel given beside --rootfs is dropped, not flashed.
 	local f
-	for f in "$kernel_file" "$rootfs_file"; do
+	for f in "$([ "1" = "$update_kernel" ] && echo "$kernel_file")" \
+		"$([ "1" = "$update_rootfs" ] && echo "$rootfs_file")"; do
 		case "$(path_after_pivot "$f")" in
 			/mnt/*) die "$f will not be reachable once the old root is released; copy it into /tmp and give that path instead. Nothing was written." ;;
 		esac

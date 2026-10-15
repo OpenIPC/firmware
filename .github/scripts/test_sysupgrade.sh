@@ -2468,6 +2468,19 @@ case "$(realpath "${OUTSIDE:-/tmp}" 2>/dev/null)" in
             ok "hand-off: an image the old root takes with it is refused before anything moves (#2605)"
         else
             bad "hand-off with an image outside /tmp must be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+        fi
+        # ...but only an image the run will write. On ubifs a --kernel beside
+        # --rootfs is dropped (the kernel is inside the rootfs), so where that
+        # one lives cannot matter.
+        reset_env; ubi_setup ubifs
+        make_fit_soc "$UFIT" gk7205v500
+        cp "$UFIT" "$OUTSIDE/"
+        STUB_PIVOT_RC=0
+        run -z --force_soc --kernel="$OUTSIDE/$(basename "$UFIT")" --rootfs="$UFS"
+        if handed_off && ! printf '%s' "$OUT" | grep -q "copy it into /tmp"; then
+            ok "hand-off: a --kernel the ubifs layout drops is not held against the run"
+        else
+            bad "ubifs: an unused --kernel outside /tmp must not refuse the run, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
         fi ;;
 esac
 [ -n "$OUTSIDE" ] && rm -rf "$OUTSIDE"
