@@ -706,20 +706,19 @@ endef
 
 # hi3536dv100: the NVR's whole module set comes from openhisilicon -- OSAL and
 # wdt from the SDK's source, the MPP modules relinked from the SDK's .ko files
-# (OpenIPC/openhisilicon#266, #268). load_hisilicon insmods by the vendor file
-# names, so each open_<m>.ko is installed under that name; only the ones it
+# (OpenIPC/openhisilicon#266, #268). Installed as open_*.ko, which
+# load_hisilicon reaches with `modprobe open_<m>`, as on cv6xx; only the ones it
 # loads ship. Stripped as on cv6xx: target-finalize leaves *.ko alone.
 else ifeq ($(OPENIPC_SOC_FAMILY),hi3536dv100)
 HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
-HISILICON_OPENSDK_HI3536DV100_KO = osal:hi_osal wdt:wdt hifb:hifb acodec:hi_acodec \
-	$(foreach m,base sys vdec vfmw jpegd tde region vgs vpss vou hdmi venc \
-		chnl jpege aio ai ao aenc adec,$(m):hi3536dv100_$(m))
+HISILICON_OPENSDK_HI3536DV100_KO = osal wdt base sys vdec vfmw jpegd tde region \
+	vgs vpss vou hifb hdmi venc chnl jpege aio ai ao aenc adec acodec
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
-	for p in $(HISILICON_OPENSDK_HI3536DV100_KO); do \
+	for m in $(HISILICON_OPENSDK_HI3536DV100_KO); do \
 		$(TARGET_STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note \
-			-o $(HISILICON_OPENSDK_KMOD_DST)/$${p#*:}.ko $(@D)/kernel/open_$${p%%:*}.ko || exit 1; \
-		chmod 644 $(HISILICON_OPENSDK_KMOD_DST)/$${p#*:}.ko; \
+			-o $(HISILICON_OPENSDK_KMOD_DST)/open_$$m.ko $(@D)/kernel/open_$$m.ko || exit 1; \
+		chmod 644 $(HISILICON_OPENSDK_KMOD_DST)/open_$$m.ko; \
 	done
 endef
 
