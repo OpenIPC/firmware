@@ -31,7 +31,7 @@ trap 'rm -rf "$SB"' EXIT
 
 # The function alone, out of the script: init itself runs as PID 1 and mounts
 # things at the top level, so it cannot be sourced.
-sed -n '/^overlay_is_ours() {/,/^}/p' "$SRC" > "$SB/fn.sh"
+{ grep '^OVERLAY_MARK=' "$SRC"; sed -n '/^overlay_is_ours() {/,/^}/p' "$SRC"; } > "$SB/fn.sh"
 [ -s "$SB/fn.sh" ] || { echo "FAIL overlay_is_ours() not found in $SRC"; exit 1; }
 # shellcheck disable=SC1091
 . "$SB/fn.sh"
@@ -57,8 +57,11 @@ expect() {
 
 # ---------------------------------------------------------------------------
 # Part 1: the decision
+expect ours     "$(partition .openipc-overlay mark)"  "an overlay init has marked is ours, before any setting is in it"
+expect ours     "$(partition eula-accepted claim)"    "a claimed camera's overlay is ours"
+expect ours     "$(partition majestic.yaml cfg)"      "an overlay holding a saved majestic setting is ours"
 expect ours     "$(partition fake-hwclock.data hw)"   "an overlay fake-hwclock has saved to is ours"
-expect ours     "$(partition dropbear_ed25519_host_key db)" "an overlay holding dropbear's host keys is ours"
+expect not-ours "$(partition dropbear_ed25519_host_key db)" "dropbear's keys alone are not ours: vendor firmware ships dropbear too"
 expect not-ours "$(partition '' blank)"               "erased flash is not ours (and formatting it costs nothing)"
 expect not-ours "$(partition 'Config/SensorType.bat' vendor)" "a vendor's leftovers are not ours"
 expect not-ours "$SB/does-not-exist"                  "an unreadable partition is not ours: the format decides, as before"
@@ -67,10 +70,15 @@ expect not-ours "$SB/does-not-exist"                  "an unreadable partition i
 # Part 2: drift. The format must stay behind the check, and the branch that
 # keeps an unreadable overlay must fall back to RAM rather than give up.
 body=$(sed -n '/Magic bitmask/,/^elif \$is_nfs_root/p' "$SRC")
-if echo "$body" | awk '/overlay_is_ours/ {g=NR} /flash_eraseall/ {e=NR} END {exit !(g && e && g < e)}'; then
+if echo "$body" | awk '/overlay_is_ours/ && !g {g=NR} /flash_eraseall/ && !e {e=NR} END {exit !(g && e && g < e)}'; then
 	ok "flash_eraseall is reached only after overlay_is_ours"
 else
 	bad "flash_eraseall is no longer gated on overlay_is_ours in $SRC"
+fi
+if grep -q '> "/overlay/$OVERLAY_MARK"' "$SRC"; then
+	ok "init marks the overlay as ours once it is mounted"
+else
+	bad "init no longer writes \$OVERLAY_MARK into a mounted overlay in $SRC"
 fi
 if echo "$body" | grep -q 'mount -t tmpfs tmpfs /overlay'; then
 	ok "an overlay this kernel cannot mount falls back to tmpfs"

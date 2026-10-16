@@ -198,6 +198,7 @@ NO_BUILD_SCRIPTS = {
     "test_automount.sh", "test_check_mac.sh", "test_excludes_report.sh",
     "test_load_hisilicon.sh", "test_push_build.py", "test_shell_parse.sh",
     "test_strip_shell_comments.sh", "test_sysupgrade.sh", "test_crashlog.sh", "test_majestic_supervise.sh",
+    "test_init_overlay.sh",
     # build-one.yml's request parser and its test: dispatch and shell-tests
     # only, never part of a board build.
     "build_request.sh", "test_build_request.sh",
@@ -1021,6 +1022,7 @@ def self_test():
         ([".github/scripts/test_excludes_report.sh"], 0, "shell-tests: excludes"),
         ([".github/scripts/test_ca_bundle_lite.sh"], 0, "shell-tests: lite CA bundle"),
         ([".github/scripts/test_network_failover.sh"], 0, "shell-tests: network failover"),
+        ([".github/scripts/test_init_overlay.sh"], 0, "shell-tests: init overlay"),
         ([".github/workflows/toolchain-asan.yml"], 0, "ASan toolchain is dispatch-only"),
         ([".github/workflows/vendor-abi.yml"], 0, "the advisory ABI audit"),
         ([".github/workflows/lint.yml"], 0, "the workflow linter never builds"),
