@@ -28,8 +28,14 @@ define SIGMASTAR_OSDRV_INFINITY6E_LIBRARIES
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(SIGMASTAR_OSDRV_INFINITY6E_PKGDIR)/files/lib/*
 endef
 
+# majestic links none of these, so its images skip them; another streamer
+# needs them. Installed at target-finalize rather than in this package's
+# install step, because finalize re-runs on every build: turning majestic off
+# in an existing build reinstalls nothing here, and an install-step gate left
+# that image with no SDK libraries at all (#2607 fixed the same kind of
+# gate in goke-osdrv-gk7205v500).
 ifneq ($(BR2_PACKAGE_MAJESTIC),y)
-SIGMASTAR_OSDRV_INFINITY6E_POST_INSTALL_TARGET_HOOKS += SIGMASTAR_OSDRV_INFINITY6E_LIBRARIES
+SIGMASTAR_OSDRV_INFINITY6E_TARGET_FINALIZE_HOOKS += SIGMASTAR_OSDRV_INFINITY6E_LIBRARIES
 endif
 
 $(eval $(generic-package))
