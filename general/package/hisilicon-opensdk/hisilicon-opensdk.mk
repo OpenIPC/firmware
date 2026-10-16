@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 4cdb9ae28858c292710e9f82498ac8305052b505
+HISILICON_OPENSDK_VERSION = bb710cb077367d304f7a9073e2558426219bf922
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -31,6 +31,9 @@ HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3516cv300
 endif
 ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3520DV200),y)
 HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3520dv200
+endif
+ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3536DV100),y)
+HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3536dv100
 endif
 ifeq ($(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV6XX),y)
 HISILICON_OPENSDK_DEPENDENCIES += hisilicon-osdrv-hi3516cv6xx
@@ -117,6 +120,13 @@ endef
 # CHIPARCH, so the default `make all` would try every subdir and fail.
 # Override the build step to a no-op until the userspace mirror lands.
 ifeq ($(OPENIPC_SOC_FAMILY),hi3520dv200)
+define HISILICON_OPENSDK_BUILD_CMDS
+	@:
+endef
+endif
+# hi3536dv100 is kernel-only too: the SDK has no userspace source, and its
+# libraries ship from hisilicon-osdrv-hi3536dv100.
+ifeq ($(OPENIPC_SOC_FAMILY),hi3536dv100)
 define HISILICON_OPENSDK_BUILD_CMDS
 	@:
 endef
@@ -694,6 +704,25 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 $(@D)/kernel/open_nvp6134_ex.ko    $(HISILICON_OPENSDK_KMOD_DST)/nvp6134_ex.ko
 endef
 
+# hi3536dv100: the NVR's whole module set comes from openhisilicon -- OSAL and
+# wdt from the SDK's source, the MPP modules relinked from the SDK's .ko files
+# (OpenIPC/openhisilicon#266, #268). load_hisilicon insmods by the vendor file
+# names, so each open_<m>.ko is installed under that name; only the ones it
+# loads ship. Stripped as on cv6xx: target-finalize leaves *.ko alone.
+else ifeq ($(OPENIPC_SOC_FAMILY),hi3536dv100)
+HISILICON_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
+HISILICON_OPENSDK_HI3536DV100_KO = osal:hi_osal wdt:wdt hifb:hifb acodec:hi_acodec \
+	$(foreach m,base sys vdec vfmw jpegd tde region vgs vpss vou hdmi venc \
+		chnl jpege aio ai ao aenc adec,$(m):hi3536dv100_$(m))
+define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
+	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
+	for p in $(HISILICON_OPENSDK_HI3536DV100_KO); do \
+		$(TARGET_STRIP) --strip-unneeded --remove-section=.comment --remove-section=.note \
+			-o $(HISILICON_OPENSDK_KMOD_DST)/$${p#*:}.ko $(@D)/kernel/open_$${p%%:*}.ko || exit 1; \
+		chmod 644 $(HISILICON_OPENSDK_KMOD_DST)/$${p#*:}.ko; \
+	done
+endef
+
 else
 define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
@@ -766,7 +795,7 @@ define HISILICON_OPENSDK_PRUNE_CV6XX_LITE
 endef
 endif
 
-ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300 hi3520dv200 hi3516cv6xx hi3519dv500,$(OPENIPC_SOC_FAMILY)),)
+ifneq ($(filter hi3516cv500 hi3516cv200 hi3516cv100 hi3516av100 hi3519v101 hi3516cv300 hi3520dv200 hi3536dv100 hi3516cv6xx hi3519dv500,$(OPENIPC_SOC_FAMILY)),)
 define HISILICON_OPENSDK_FINALIZE_MODULES
 	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
 	rm -rf $(TARGET_DIR)/lib/modules/*/extra/open_*.ko
