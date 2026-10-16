@@ -126,6 +126,26 @@ jobs:
             general/overlay/usr/sbin/extutils > /tmp/extutils.stripped
           SRC=/tmp/extutils.stripped bash .github/scripts/test_check_mac.sh
 
+  init-overlay:
+    name: init keeps an overlay it cannot mount
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/test_init_overlay.sh
+
+      # /init is comment-stripped into every image and decides, on every boot
+      # of every camera, whether rootfs_data is erased. The stripped form is
+      # the one that has to get that right.
+      - name: Re-run against the stripped form that actually ships
+        run: |
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/overlay/init > /tmp/init.stripped
+          SRC=/tmp/init.stripped bash .github/scripts/test_init_overlay.sh
+
   # Only sysupgrade was ever parse-checked; every other script in the image --
   # the init scripts, /etc/profile, /init on initramfs boards, the vendor load_*
   # scripts that insert the SoC drivers -- reached cameras without anything
@@ -228,6 +248,7 @@ jobs:
       - load-hisilicon-parsing
       - sysupgrade-verify
       - camera-mac
+      - init-overlay
       - crashlog-capture
       - excludes-report
       - ca-bundle-lite
@@ -246,7 +267,7 @@ jobs:
     steps:
       - name: Require every shell test to succeed
         run: |
-          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} crashlog=${{ needs.crashlog-capture.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }} build-request=${{ needs.build-request.result }} network-failover=${{ needs.network-failover.result }}"
+          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} init-overlay=${{ needs.init-overlay.result }} crashlog=${{ needs.crashlog-capture.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }} build-request=${{ needs.build-request.result }} network-failover=${{ needs.network-failover.result }}"
           # 'skipped' is not accepted, for the reason given in lint.yml: a
           # skipped job would take this context green having checked nothing.
           if [ "${{ needs.load-hisilicon-parsing.result }}" != "success" ]; then
@@ -263,6 +284,9 @@ jobs:
           fi
           if [ "${{ needs.camera-mac.result }}" != "success" ]; then
             echo "::error::the MAC the camera gives itself did not succeed"; exit 1
+          fi
+          if [ "${{ needs.init-overlay.result }}" != "success" ]; then
+            echo "::error::init keeping an overlay it cannot mount did not succeed"; exit 1
           fi
           if [ "${{ needs.crashlog-capture.result }}" != "success" ]; then
             echo "::error::crash log capture did not succeed"; exit 1
