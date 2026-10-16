@@ -70,6 +70,26 @@ EOF
 	return 1
 }
 
+# True when rootfs_data holds this firmware's own settings, which must never
+# be erased just because this kernel cannot read them.
+#
+# jffs2 keeps a file's name uncompressed in its directory-entry node, so the
+# names below are visible in the raw partition, and they are ones every OpenIPC
+# overlay gets within a boot or two and no vendor firmware writes:
+# fake-hwclock saves /etc/fake-hwclock.data, and dropbear makes its host keys
+# under /etc/dropbear. An entry deleted since is still there until jffs2
+# reclaims its block, which only makes the answer more often yes.
+#
+# What this protects: a kernel built without an option the overlay was written
+# with refuses the whole filesystem -- an xattr node is JFFS2_FEATURE_INCOMPAT,
+# so a kernel without CONFIG_JFFS2_FS_XATTR fails the mount ("Incompatible
+# feature node") -- and the branch below then erased it. That took every
+# setting and the root password with it on an XM510 moved from a kernel with
+# xattrs to one without (#2606 turned them on there). Reads only.
+overlay_is_ours() {
+	grep -qs -e 'fake-hwclock.data' -e 'dropbear_' "$1"
+}
+
 mount -t proc proc /proc || exit 1
 grep -q overlay /proc/filesystems || exit 1
 
@@ -108,13 +128,35 @@ if $is_flash_root; then
 				exit 1
 			fi
 		elif ! mount -t jffs2 /dev/$mtdblkdev /overlay || dmesg | grep -q "jffs2.*: Magic bitmask.*not found"; then
-			mountpoint -q /overlay && umount /overlay
-			echo "Formatting flash..."
-			grep -q 'nand' /proc/cmdline || jffs2="-j"
-			flash_eraseall $jffs2 /dev/$mtdchrdev
-			if ! mount -t jffs2 /dev/$mtdblkdev /overlay && ! mount -t tmpfs tmpfs /overlay; then
-				echo "Cannot mount overlay."
-				exit 1
+			# The format below is for a partition that is not ours to keep: a
+			# vendor's leftovers on a camera just converted, or one that never
+			# held a filesystem. Our own overlay is kept either way. If it
+			# mounted, the complaint was about stray blocks -- a power cut in
+			# the middle of an erase leaves one -- and jffs2 reclaims those
+			# itself. If it did not, this kernel cannot read it, and erasing
+			# it would lose the settings for a kernel that can.
+			if overlay_is_ours /dev/$mtdchrdev; then
+				if ! mountpoint -q /overlay; then
+					# The kernel's own reason. 3.x prints the feature refusal with no
+					# "jffs2:" prefix, so it is matched by its words.
+					why=$(dmesg | grep -m1 -E "Incompatible feature node|jffs2.*(not mount|error)" | sed 's/^\[[^]]*\] //')
+					msg="rootfs_data holds this camera's settings, but this kernel cannot mount them${why:+ ($why)}. Leaving them untouched: settings are in RAM until a kernel that can read them boots, or 'firstboot' erases them."
+					echo "$msg"
+					echo "<3>init: $msg" > /dev/kmsg 2>/dev/null
+					if ! mount -t tmpfs tmpfs /overlay; then
+						echo "Cannot mount overlay."
+						exit 1
+					fi
+				fi
+			else
+				mountpoint -q /overlay && umount /overlay
+				echo "Formatting flash..."
+				grep -q 'nand' /proc/cmdline || jffs2="-j"
+				flash_eraseall $jffs2 /dev/$mtdchrdev
+				if ! mount -t jffs2 /dev/$mtdblkdev /overlay && ! mount -t tmpfs tmpfs /overlay; then
+					echo "Cannot mount overlay."
+					exit 1
+				fi
 			fi
 		fi
 	fi

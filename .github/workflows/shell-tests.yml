@@ -126,6 +126,26 @@ jobs:
             general/overlay/usr/sbin/extutils > /tmp/extutils.stripped
           SRC=/tmp/extutils.stripped bash .github/scripts/test_check_mac.sh
 
+  init-overlay:
+    name: init keeps an overlay it cannot mount
+    if: >-
+      github.repository == 'OpenIPC/firmware' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && !github.event.repository.private)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash .github/scripts/test_init_overlay.sh
+
+      # /init is comment-stripped into every image and decides, on every boot
+      # of every camera, whether rootfs_data is erased. The stripped form is
+      # the one that has to get that right.
+      - name: Re-run against the stripped form that actually ships
+        run: |
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/overlay/init > /tmp/init.stripped
+          SRC=/tmp/init.stripped bash .github/scripts/test_init_overlay.sh
+
   # Only sysupgrade was ever parse-checked; every other script in the image --
   # the init scripts, /etc/profile, /init on initramfs boards, the vendor load_*
   # scripts that insert the SoC drivers -- reached cameras without anything
