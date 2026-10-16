@@ -1,4 +1,9 @@
 config BR2_PACKAGE_MSPOSD
 	bool "msposd"
+	# On the Hi3536DV100 NVR msposd draws on the hifb layer (/dev/fb0), which
+	# exists only once that package's load_hisilicon has loaded hifb.ko.
+	select BR2_PACKAGE_HISILICON_OSDRV_HI3536DV100 if BR2_OPENIPC_SOC_FAMILY = "hi3536dv100"
 	help
 	  OpenIPC implementation of MSP Displayport OSD.
+
+	  https://github.com/OpenIPC/msposd
