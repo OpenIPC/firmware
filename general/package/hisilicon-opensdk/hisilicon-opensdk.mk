@@ -265,7 +265,6 @@ HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 	soi_jxh42/libsns_jxh42 \
 	sony_imx222/libsns_imx222
 HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
-	galaxycore_gc2083/libsns_gc2083 \
 	galaxycore_gc4023/libsns_gc4023 \
 	omnivision_os04d10/libsns_os04d10 \
 	smart_sc431hai/libsns_sc431hai \
