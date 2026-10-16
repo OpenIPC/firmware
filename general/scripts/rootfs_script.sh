@@ -49,6 +49,25 @@ fi
 # to bring its lite board back under the cap. Kept wherever kmod is installed.
 if [ -z "$(find ${TARGET_DIR}/bin ${TARGET_DIR}/sbin ${TARGET_DIR}/usr/bin ${TARGET_DIR}/usr/sbin -name kmod -type f 2>/dev/null)" ]; then
 	rm -f ${TARGET_DIR}/lib/modules/*/modules.*.bin ${TARGET_DIR}/lib/modules/*/modules.builtin.modinfo
+
+	# busybox opens modules.symbols only for a "symbol:X" request, which only
+	# symbol_request(X) makes, and that macro leaves the literal in its caller.
+	# With none in the kernel or in a shipped module the file is dead weight:
+	# 12KB on hi3516cv6xx, 1.5KB of squashfs, part of what brought its lite
+	# board back under the cap. Kept if the kernel cannot be found to check.
+	vmlinux=$(ls ${BUILD_DIR:-/nonexistent}/linux-*/vmlinux 2>/dev/null | head -n1)
+	if [ -n "${vmlinux}" ] && ! grep -qaF 'symbol:' "${vmlinux}" &&
+		! grep -rqaF 'symbol:' --exclude='modules.*' ${TARGET_DIR}/lib/modules 2>/dev/null; then
+		rm -f ${TARGET_DIR}/lib/modules/*/modules.symbols
+	fi
+fi
+
+# The overlay's WireGuard client drives wg, which only wireguard-tools installs.
+# Without it /usr/sbin/wireguard can never bring wg0 up, so it goes with its
+# init script and interface stanza: 0.7KB of squashfs on hi3516cv6xx lite.
+if ! grep -q '^BR2_PACKAGE_WIREGUARD_TOOLS=y' ${BR2_CONFIG}; then
+	rm -f ${TARGET_DIR}/usr/sbin/wireguard ${TARGET_DIR}/etc/init.d/S98wireguard \
+		${TARGET_DIR}/etc/network/interfaces.d/wg0
 fi
 
 LIST="${BR2_EXTERNAL_GENERAL_PATH}/scripts/excludes/${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}.list"

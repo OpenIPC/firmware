@@ -1,7 +1,10 @@
 config BR2_PACKAGE_HISILICON_OSDRV_HI3536DV100
 	bool "hisilicon-osdrv-hi3536dv100"
+	depends on BR2_LINUX_KERNEL
+	select BR2_PACKAGE_HISILICON_OPENSDK
 	help
-	  hisilicon-osdrv-hi3536dv100 - Hisilicon kernel modules
-	  and libs.
+	  hisilicon-osdrv-hi3536dv100 - Hisilicon libraries and the
+	  load_hisilicon script. The kernel modules come from
+	  hisilicon-opensdk, which this selects.
 
 	  https://openipc.org
