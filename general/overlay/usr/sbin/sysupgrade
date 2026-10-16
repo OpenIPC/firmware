@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.74
+scr_version=1.0.75
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -20,6 +20,10 @@ RAM_ROOT=${RAM_ROOT:-/ram}
 # "/mntram". Both would fail quietly, so normalise an override rather than
 # trusting whoever set it.
 case "$RAM_ROOT" in /*) ;; *) RAM_ROOT="/$RAM_ROOT" ;; esac
+# Where elf_libs looks a bare DT_NEEDED name up, in the loader's own order.
+# Overridable for the same reason RAM_ROOT is: the test harness's host keeps
+# its libraries elsewhere.
+ELF_LIB_DIRS=${ELF_LIB_DIRS:-/lib /usr/lib}
 # A writable descriptor on the real /dev/null, opened once while /dev is still
 # certainly the devtmpfs.
 #
@@ -1264,16 +1268,51 @@ tmpfs_is_ramfs() {
 	[ "$(stat -f -c %t /tmp 2>&3)" = "858458f6" ]
 }
 
+# The libraries busybox loads, as absolute paths: what enter_ramfs stages
+# beside it and ramfs_stage_kb counts. ldd where it answers. A uClibc image has
+# none at all -- not a busybox applet, not in the toolchain sysroot -- so the
+# RAM root went without a loader and the re-exec into it died "not found"
+# (#2605). There the names come out of the ELF itself, read twice so the
+# libraries' own needs come too: see elf_libs.
+busybox_libs() {
+	local libs f
+	libs=$(ldd /bin/busybox 2>&3 | grep -oE '/[^ ]*\.so[^ ]*')
+	if [ -z "$libs" ]; then
+		libs=$(elf_libs /bin/busybox)
+		for f in $libs; do
+			libs="$libs $(elf_libs "$f")"
+		done
+	fi
+	[ -n "$libs" ] && printf '%s\n' $libs | sort -u
+	return 0
+}
+
+# What one ELF asks the loader for, without a loader to ask. PT_INTERP is a
+# plain path string, and every DT_NEEDED a bare "libX.so.N" in .dynstr, so
+# `strings` sees both. Anything that merely looks like one is dropped by the
+# existence check: it costs a lookup, never a wrong copy.
+elf_libs() {
+	local s d
+	for s in $(strings "$1" 2>&3 | grep -E '^/[^ ]*/ld[^/ ]*\.so[.0-9]*$'); do
+		[ -f "$s" ] && echo "$s"
+	done
+	for s in $(strings "$1" 2>&3 | grep -E '^lib[^/ ]*\.so(\.[0-9]+)*$'); do
+		for d in $ELF_LIB_DIRS; do
+			[ -f "$d/$s" ] && { echo "$d/$s"; break; }
+		done
+	done
+}
+
 # What enter_ramfs stages into the RAM root, in KB, counted the way the RAM is
-# taken: busybox, the libraries ldd names for it (the same list enter_ramfs
-# copies) and this script, each rounded up to whole pages; on ramfs a page for
+# taken: busybox, busybox_libs (the same list enter_ramfs copies) and this
+# script, each rounded up to whole pages; on ramfs a page for
 # every applet link as well, because a ramfs symlink keeps its target in a page
 # of its own (227 links, 908 KB, on a gk7205v510) where a real tmpfs keeps a
 # short one inline; and 16 KB for the directories, sysupgrade.env and the
 # /sbin/init the hand-off writes.
 ramfs_stage_kb() {
 	local f sz kb=16 links
-	for f in /bin/busybox $(ldd /bin/busybox 2>/dev/null | grep -oE '/[^ ]*\.so[^ ]*' | sort -u) "$0"; do
+	for f in /bin/busybox $(busybox_libs) "$0"; do
 		sz=$(stat -L -c %s "$f" 2>&3) && [ -n "$sz" ] && kb=$((kb + (sz + 4095) / 4096 * 4))
 	done
 	if tmpfs_is_ramfs; then
@@ -1916,6 +1955,17 @@ check_handoff() {
 		die "No pivot_root: this run must rewrite a mounted UBI volume, which needs it. Nothing was written."
 	inittab_hands_off ||
 		die "This run must rewrite a mounted UBI volume, and only PID 1 can let go of it: $INITTAB has no '::restart:/sbin/init' entry to hand it off with. Nothing was written."
+	# release_old_root lets go of everything behind /mnt before the first
+	# write, an SD card included, so only an image in /tmp is still there to
+	# flash from (#2605). Only an image this run will write: on the ubifs
+	# layout a --kernel given beside --rootfs is dropped, not flashed.
+	local f
+	for f in "$([ "1" = "$update_kernel" ] && echo "$kernel_file")" \
+		"$([ "1" = "$update_rootfs" ] && echo "$rootfs_file")"; do
+		case "$(path_after_pivot "$f")" in
+			/mnt/*) die "$f will not be reachable once the old root is released; copy it into /tmp and give that path instead. Nothing was written." ;;
+		esac
+	done
 	return 0
 }
 
@@ -2059,6 +2109,22 @@ release_old_root() {
 	echo 3 > /proc/sys/vm/drop_caches 2>&3
 }
 
+# A local image path as the RAM phase will see it. pivot_root parks the old
+# root at /mnt, so an image on the SD card at /mnt/mmcblk0p1 is reached at
+# /mnt/mnt/mmcblk0p1 from there, and a relative one not at all once enter_ramfs
+# has cd'd away (#2605). /tmp is the exception: enter_ramfs moves that mount
+# across whole. Empty in, empty out.
+path_after_pivot() {
+	[ -n "$1" ] || return 0
+	local p
+	p=$(realpath "$1" 2>&3) || p=$1
+	case "$p" in
+		/tmp/*) echo "$p" ;;
+		/*) echo "/mnt$p" ;;
+		*) echo "/mnt$(pwd)/$p" ;;
+	esac
+}
+
 # Move the whole flashing phase into a RAM filesystem and re-exec there, so that
 # nothing it needs afterwards lives on the partition it is about to overwrite.
 #
@@ -2102,9 +2168,11 @@ enter_ramfs() {
 	# busybox is dynamically linked here, so the loader and every library it
 	# names have to come too, or the re-exec dies with the rootfs still mapped.
 	cp /bin/busybox "$RAM_ROOT/bin/" 2>/dev/null || return 1
+	# Plain cp follows a link, so a chain like ld-uClibc.so.0 -> .so.1 ->
+	# -1.0.45.so lands as one file under the name the ELF asks for.
 	local lib
-	for lib in $(ldd /bin/busybox 2>/dev/null | grep -oE '/[^ ]*\.so[^ ]*'); do
-		[ -f "$lib" ] && cp "$lib" "$RAM_ROOT/lib/" 2>/dev/null
+	for lib in $(busybox_libs); do
+		cp "$lib" "$RAM_ROOT/lib/" 2>/dev/null
 	done
 	# busybox dispatches on argv[0], so without symlinks every tool the flash
 	# phase reaches for -- od, xxd, cut, grep, losetup, flashcp -- is simply "not
@@ -2127,6 +2195,10 @@ enter_ramfs() {
 	done
 	cp "$0" "$RAM_ROOT/sysupgrade" 2>/dev/null || return 1
 	chmod +x "$RAM_ROOT/sysupgrade" 2>/dev/null
+	# Can the staged root run anything at all? Asked now, while nothing has
+	# moved and a refusal still falls back: past the pivot the same missing
+	# loader only shows as an exec that fails with no root to return to (#2605).
+	chroot "$RAM_ROOT" /bin/busybox true 2>/dev/null || return 1
 	if [ "handoff" = "$1" ]; then
 		stage_handoff || return 1
 	fi
@@ -2138,6 +2210,13 @@ enter_ramfs() {
 		ramfs_discard
 		die "$flash_ram_refusal"
 	fi
+
+	# Where --kernel / --rootfs will be once the old root sits at /mnt, worked
+	# out while /tmp is still where the caller named it. Not kernel_file and
+	# rootfs_file themselves: a pivot that fails below falls back to flashing
+	# from here, where the original paths are still right.
+	ramfs_kernel_file=$(path_after_pivot "$kernel_file")
+	ramfs_rootfs_file=$(path_after_pivot "$rootfs_file")
 
 	# Carry over the mounts the flash still needs: /dev for the MTD nodes, /proc
 	# for get_device and sysrq, /tmp for the unpacked images. Moving rather than
@@ -2182,6 +2261,9 @@ enter_ramfs() {
 	export ubi_layout ubi_rootfs_dev ubi_data_dev UBI_SYS INITTAB overlay_kb
 	# archive: verify_ubifs_rootfs does not count a local archive as pinned.
 	export archive
+	# ramfs_kernel_file/ramfs_rootfs_file: the image paths as the pivot will
+	# leave them, worked out above before the mounts moved.
+	export ramfs_kernel_file ramfs_rootfs_file
 
 	cd "$RAM_ROOT" || { ramfs_unwind; return 1; }
 	# After this the old root is at ./mnt and still mounted — deliberately: the
@@ -3060,6 +3142,8 @@ if [ "1" = "$_ramfs_phase" ]; then
 	# Handed off: this is PID 1 now, and nothing else is left running from the
 	# old root, so it can finally be let go -- see need_handoff.
 	[ "1" = "$_handoff" ] && release_old_root
+	[ -n "$ramfs_kernel_file" ] && kernel_file=$ramfs_kernel_file
+	[ -n "$ramfs_rootfs_file" ] && rootfs_file=$ramfs_rootfs_file
 	flash_and_reboot
 fi
 
