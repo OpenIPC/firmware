@@ -6,7 +6,7 @@
 
 # Use the project-maintained fork for SSC377D FPV fixes and pin the source for reproducible builds.
 MSPOSD_SITE = $(call github,litvinroman60-cpu,msposd,$(MSPOSD_VERSION))
-MSPOSD_VERSION = 4d3bc6bc4432a6c635ba6ef637a78c910b3cf74e
+MSPOSD_VERSION = f2dd9bbdca4c57f1c3aebb7006ef4e1fe4d71c7e
 MSPOSD_DEPENDENCIES = libevent-openipc
 
 ifeq ($(OPENIPC_SOC_FAMILY),gk7205v200)
