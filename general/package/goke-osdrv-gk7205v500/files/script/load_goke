@@ -109,6 +109,12 @@ check_allocator() {
 	# The next boot gives Linux all of totalmem and the MMZ the rest above
 	# osmem; with nothing left above osmem, stay on the carve-out.
 	[ "$totalmem" -gt "$osmem" ] || return 0
+	# CMA was measured on 128 MB (a V510: Linux 28 MB -> 125 MB, #2526). A
+	# 64 MB board has a 32 MB zone either way, and a 4 MP pipeline fills most
+	# of it, so CMA would lend Linux little while every media allocation would
+	# depend on migrating pages out first. Until it is measured there, 64 MB
+	# and less stay on the carve-out (majestic#350).
+	[ "$totalmem" -gt 64 ] || return 0
 	mmz_start=$(echo "$mem_start $osmem" | awk '{ printf("0x%x00000\n", $1/1024/1024 + $2) }')
 	mmz_size=$((totalmem - osmem))M
 	echo "Media memory: switching to CMA from the next boot (mem=${totalmem}M)"
