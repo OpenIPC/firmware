@@ -178,6 +178,21 @@ endif
 	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
 else ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3519dv500")
 	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
+else ifneq ($(and $(filter "gk7205v200",$(BR2_OPENIPC_SOC_FAMILY)),$(wildcard $(TARGET)/images/firmware.bin)),)
+# gk7205v200-family NOR ships twice. The plain package is the fixed-slot one,
+# uImage and rootfs, unchanged: every camera in the field upgrades from it with
+# its own sysupgrade, and the openipc.org installer reads it. The -split package
+# is firmware.bin (board/gk7205v200/post-image.sh), FIT and squashfs back to back
+# in one "firmware" partition the kernel splits at boot, for a bootloader that
+# boots that layout; only its whole is bounded: the chip, less boot and env
+# (320K) and the smallest overlay worth keeping (256K).
+ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
+	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,5120,nor)
+else
+	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,8192,nor)
+endif
+	@$(call CHECK_SIZE,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024 - 576))
+	@$(call REPACK_NOR_SPLIT)
 else ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
 	@$(call PREPARE_REPACK,firmware.bin,8192,,,nor)
 else
@@ -338,6 +353,17 @@ define REPACK_FIRMWARE
 	# order loses the checksum and leaves a short image that sysupgrade's
 	# `md5sum -c *.md5sum` then cannot see at all.
 	cd $(TARGET)/images && tar -czf $(ARCHIVE) $(KERNEL_MD5) $(ROOTFS_MD5) $(KERNEL) $(ROOTFS)
+	rm -f $(TARGET)/images/*.md5sum
+endef
+
+# The split NOR package: firmware.bin alone, under its own name so a sysupgrade
+# that predates the layout never sees it. Copies, as REPACK_NAND_FIT does.
+define REPACK_NOR_SPLIT
+	cd $(TARGET)/images && cp -f firmware.bin firmware.bin.$(BR2_OPENIPC_SOC_MODEL) && \
+		md5sum firmware.bin.$(BR2_OPENIPC_SOC_MODEL) > firmware.bin.$(BR2_OPENIPC_SOC_MODEL).md5sum
+	# Checksums first, as in REPACK_FIRMWARE.
+	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-nor-$(BR2_OPENIPC_VARIANT)-split.tgz \
+		firmware.bin.$(BR2_OPENIPC_SOC_MODEL).md5sum firmware.bin.$(BR2_OPENIPC_SOC_MODEL)
 	rm -f $(TARGET)/images/*.md5sum
 endef
 
