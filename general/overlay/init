@@ -88,6 +88,37 @@ EOF
 # feature node") -- and the branch below then erased it. That took every
 # setting and the root password with it on an XM510 moved from a kernel with
 # xattrs to one without (#2606 turned them on there). Reads only.
+# Settings an upgrade moved. On the split NOR layout (one "firmware" partition
+# the kernel divides at boot) an upgrade that changes the images moves where
+# rootfs_data starts, so sysupgrade stages the settings at the new start as
+# "OPENIPC-OVL1", a 12-digit length and a gzipped tar. Restore them into a
+# freshly erased overlay before it is mounted. Until the erase, a power cut
+# leaves the blob in place and the next boot does this again.
+overlay_carry_in() {
+	local chr=$1 blk=$2 len blocks
+	[ "$(dd if="$chr" bs=12 count=1 2>/dev/null)" = "OPENIPC-OVL1" ] || return 0
+	# Decimal with leading zeros, which $(( )) would read as octal.
+	len=$(dd if="$chr" bs=24 count=1 2>/dev/null | tail -c 12 | sed 's/^0*//')
+	len=${len:-0}
+	blocks=$(((24 + len + 65535) / 65536))
+	if [ "$len" -eq 0 ]; then
+		# sysupgrade -n: a clean overlay, nothing to restore.
+		echo "Clearing settings after an upgrade..."
+		flash_eraseall -j "$chr"
+		return 0
+	fi
+	echo "Restoring settings carried over by an upgrade..."
+	mount -t tmpfs tmpfs /overlay || return 0
+	dd if="$chr" bs=65536 count=$blocks 2>/dev/null | tail -c +25 | head -c "$len" > /overlay/settings.tgz
+	flash_eraseall -j "$chr"
+	if mount -t jffs2 "$blk" /mnt; then
+		gunzip -c /overlay/settings.tgz | tar -x -C /mnt && echo "Settings restored."
+		sync
+		umount /mnt
+	fi
+	umount /overlay
+}
+
 OVERLAY_MARK=.openipc-overlay
 overlay_is_ours() {
 	grep -qs -e "$OVERLAY_MARK" -e 'eula-accepted' -e 'majestic.yaml' \
@@ -125,6 +156,7 @@ if $is_flash_root; then
 		# Before anything touches rootfs_data: mounting jffs2 on a mirror is
 		# already a write, since the scan queues every block it cannot parse
 		# for erasure.
+		grep -q 'nand' /proc/cmdline || overlay_carry_in /dev/$mtdchrdev /dev/$mtdblkdev
 		if ! grep -q 'nand' /proc/cmdline && flash_aliased; then
 			echo "Flash is smaller than the kernel thinks: leaving it alone, settings will not persist."
 			if ! mount -t tmpfs tmpfs /overlay; then

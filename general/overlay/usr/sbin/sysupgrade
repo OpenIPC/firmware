@@ -57,6 +57,11 @@ WDOG_RELEASE=/tmp/.sysupgrade-wdog-release
 # boot. Overridable so the test harness can point both at its sandbox.
 UBI_SYS=${UBI_SYS:-/sys/class/ubi}
 INITTAB=${INITTAB:-/etc/inittab}
+# Where MTD publishes its partitions, and the block devices the split NOR
+# layout is written through. Overridable for the same reason.
+MTD_SYS=${MTD_SYS:-/sys/class/mtd}
+MTDBLOCK=${MTDBLOCK:-/dev/mtdblock}
+MTDCHR=${MTDCHR:-/dev/mtd}
 # Where a handed-off flash phase writes its log, and the port that serves it.
 # The hand-off kills dropbear and majestic with everything else, so this is the
 # only way to watch a NAND flash without a serial cable -- see follow_start.
@@ -340,6 +345,17 @@ fit_split_blocks() {
 check_combined_fits() {
 	local x=$1
 	[ -f "$x" ] || return 0
+	if nor_split_image "$x"; then
+		local ovl=$(nor_split_overlay_at "$x") end=$(nor_split_end)
+		[ $((ovl + 65536)) -le "$end" ] ||
+			die "$x does not fit the flash with room for settings: it ends at $(printf 0x%x "$ovl"), the flash at $(printf 0x%x "$end"). Nothing was written."
+		return 0
+	fi
+	# A split-layout image on a camera of that family whose bootloader does not
+	# boot the layout: the FIT would land in a kernel slot U-Boot cannot boot.
+	if nor_split_family && ! nor_split_boot && nor_split_overlay_at "$x" >/dev/null; then
+		die "This firmware is for the split NOR layout, which this camera's bootloader does not boot. Update the bootloader first (https://openipc.org). Nothing was written."
+	fi
 	local kdev=$(get_device "kernel")
 	local rdev=$(get_device "rootfs")
 	if [ "$kdev" = "/dev/" ] || [ "$rdev" = "/dev/" ]; then
@@ -378,6 +394,13 @@ preflight_image_sizes() {
 		check_combined_fits "/tmp/firmware.bin.$model"
 		free_staged_archive
 		return 0
+	fi
+	# A camera on the split layout has no kernel or rootfs slot to write: its
+	# "kernel" and "rootfs" are what the running kernel carved out of the
+	# current image, and a uImage or squashfs written into them would sit where
+	# no boot looks for it.
+	if { [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && nor_split_running; then
+		die "This camera runs the split NOR layout and upgrades from firmware.bin (openipc.$model-nor-$(get_system_build)-split.tgz), not a separate kernel and rootfs. Nothing was written."
 	fi
 	# Present at all, first. An archive built for another camera unpacks
 	# fine and holds nothing named for this $model; the image checks found
@@ -756,6 +779,179 @@ do_update_rootfs() {
 	echo_c 32 "RootFS updated to ${rootfs_version:-unknown}"
 }
 
+# --- Split NOR layout (gk7205v200 family) -----------------------------------
+#
+# firmware.bin -- a hashed FIT, then the squashfs at the next 64 KiB boundary --
+# is written whole at 0x50000. U-Boot passes Linux one "firmware" partition
+# from there to the end of the chip, and the kernel divides it at boot
+# (mtdsplit): "kernel" is the FIT, "rootfs" the squashfs, "rootfs_data" the rest
+# from the squashfs end rounded up to 64 KiB. Nothing has a slot of its own, so
+# an upgrade that changes either image moves where the overlay starts.
+#
+# The settings cross that boundary as a blob written at the new overlay start:
+# "OPENIPC-OVL1", the length in 12 decimal digits, then a gzipped tar of the
+# overlay. /init finds it before it mounts rootfs_data, restores it into a
+# freshly erased overlay, and only then does the camera have its settings back.
+# A power cut before that leaves the blob where it is, and the next boot does it
+# again.
+
+# The bootloader boots this layout: it says so on the kernel command line.
+nor_split_boot() {
+	grep -q 'openipc_nor_fit=1' /proc/cmdline
+}
+
+# "mtdN offset size" for the partitions that together cover 0x50000 to the end
+# of the chip without overlapping: the "firmware" partition alone when it
+# reaches the end (the split layout), else kernel, rootfs and rootfs_data back to
+# back (fixed slots, on the way to the split layout). From sysfs, which the
+# ramfs pivot carries along; nothing printed means neither shape is there.
+nor_split_devs() {
+	local d n o z end=0 chip=0
+	for d in "$MTD_SYS"/mtd*; do
+		case "$d" in *ro) continue ;; esac
+		[ -r "$d/offset" ] || continue
+		o=$(cat "$d/offset") z=$(cat "$d/size")
+		[ $((o + z)) -gt "$chip" ] && chip=$((o + z))
+	done
+	[ "$chip" -gt 0 ] || return 1
+	for n in firmware kernel rootfs rootfs_data; do
+		for d in "$MTD_SYS"/mtd*; do
+			case "$d" in *ro) continue ;; esac
+			[ "$(cat "$d/name" 2>/dev/null)" = "$n" ] || continue
+			eval "${n}_dev=${d##*/} ${n}_off=$(cat "$d/offset") ${n}_size=$(cat "$d/size")"
+			break
+		done
+	done
+	if [ -n "$firmware_dev" ] && [ "$firmware_off" -eq $((0x50000)) ] &&
+		[ $((firmware_off + firmware_size)) -eq "$chip" ]; then
+		echo "$firmware_dev $firmware_off $firmware_size"
+		return 0
+	fi
+	[ -n "$kernel_dev" ] && [ -n "$rootfs_dev" ] && [ -n "$rootfs_data_dev" ] || return 1
+	[ "$kernel_off" -eq $((0x50000)) ] &&
+		[ "$rootfs_off" -eq $((kernel_off + kernel_size)) ] &&
+		[ "$rootfs_data_off" -eq $((rootfs_off + rootfs_size)) ] &&
+		[ $((rootfs_data_off + rootfs_data_size)) -eq "$chip" ] || return 1
+	echo "$kernel_dev $kernel_off $kernel_size"
+	echo "$rootfs_dev $rootfs_off $rootfs_size"
+	echo "$rootfs_data_dev $rootfs_data_off $rootfs_data_size"
+}
+
+# Where the kernel will start rootfs_data for image $1, as an absolute flash
+# offset: the squashfs at the FIT rounded up to 64 KiB, plus its bytes_used
+# (superblock offset 40, little-endian) rounded up to 64 KiB.
+nor_split_overlay_at() {
+	local blocks le used
+	blocks=$(fit_split_blocks "$1") || return 1
+	[ "$(xxd -p -l 4 -s $((blocks * 65536)) "$1" 2>&3)" = "68737173" ] || return 1
+	le=$(xxd -p -l 4 -s $((blocks * 65536 + 40)) "$1" 2>&3 |
+		sed 's/\(..\)\(..\)\(..\)\(..\)/\4\3\2\1/')
+	used=$((0x${le:-0}))
+	[ "$used" -gt 0 ] || return 1
+	echo $((0x50000 + blocks * 65536 + (used + 65535) / 65536 * 65536))
+}
+
+# The end of the area nor_split_devs covers.
+nor_split_end() {
+	nor_split_devs | awk 'END { if (NR) print $2 + $3 }'
+}
+
+# Write $1 at absolute offset $2 through the partitions nor_split_devs lists,
+# 64 KiB blocks through mtdblock (which erases each block it writes).
+#
+# mtdblock writes into a cache of one erase block and puts it on the chip when a
+# write lands in another block, on a flush, or on the device's last close. On
+# the way from fixed slots the old root squashfs still holds "rootfs" open, so
+# dd's close is not the last, and a plain sync does not flush it: the last block
+# written -- the settings blob -- stayed in RAM and was gone at the reboot
+# (GK7205V300). dd's fsync sends the flush. The result is then read back past
+# mtdblock, through the MTD character device, so a write that did not reach the
+# chip fails here instead of being reported done.
+nor_write_at() {
+	local f=$1 at=$2 len dev off size from to
+	len=$(stat -c %s "$f") || return 1
+	nor_split_devs | while read -r dev off size; do
+		from=$((at > off ? at : off))
+		to=$((at + len < off + size ? at + len : off + size))
+		[ "$from" -lt "$to" ] || continue
+		dd if="$f" of="$MTDBLOCK${dev#mtd}" bs=65536 \
+			skip=$(((from - at) / 65536)) seek=$(((from - off) / 65536)) \
+			count=$(((to - from + 65535) / 65536)) conv=notrunc,fsync 2>&3 || exit 1
+	done || return 1
+	sync
+	[ "$(nor_read_at "$at" "$len" | md5sum | cut -d' ' -f1)" = "$(md5sum < "$f" | cut -d' ' -f1)" ]
+}
+
+# $2 bytes from absolute offset $1, read through the MTD character devices:
+# what is on the chip, past any cache mtdblock keeps.
+nor_read_at() {
+	local at=$1 left=$2 dev off size n
+	nor_split_devs | while read -r dev off size; do
+		[ "$left" -gt 0 ] || break
+		[ "$at" -ge "$off" ] && [ "$at" -lt $((off + size)) ] || continue
+		n=$((off + size - at)); [ "$n" -gt "$left" ] && n=$left
+		dd if="$MTDCHR${dev#mtd}" bs=65536 skip=$(((at - off) / 65536)) \
+			count=$((((at - off) % 65536 + n + 65535) / 65536)) 2>&3 |
+			tail -c +$(((at - off) % 65536 + 1)) | head -c "$n"
+		at=$((at + n)); left=$((left - n))
+	done
+}
+
+# SoCs whose NOR firmware is built for the split layout (board/gk7205v200).
+nor_split_family() {
+	case "${soc:-$model}" in
+		gk7205v200|gk7205v210|gk7205v300|gk7202v300|gk7605v100) return 0 ;;
+	esac
+	return 1
+}
+
+# Running from the split layout: one "firmware" partition from 0x50000 to the
+# end of the chip, the kernel's own partitions inside it.
+nor_split_running() {
+	nor_split_boot && [ "$(nor_split_devs | wc -l)" -eq 1 ]
+}
+
+# The image is one for the split layout and the bootloader boots it.
+nor_split_image() {
+	nor_split_boot && [ -n "$(nor_split_devs)" ] && nor_split_overlay_at "$1" >/dev/null
+}
+
+do_update_firmware_split() {
+	local x=$1 ovl end blob=/tmp/overlay.blob tgz=/tmp/overlay.tgz mp
+	echo "Split NOR layout: firmware.bin at 0x50000, the kernel divides it at boot"
+	[ "$(fit_soc "$x")" = "$model" ] ||
+		die "$x is built for $(fit_soc "$x"), this camera is a $model. Nothing was written."
+	ovl=$(nor_split_overlay_at "$x") || die "$x is not a FIT followed by a squashfs. Nothing was written."
+	end=$(nor_split_end)
+	[ -n "$end" ] || die "The flash layout is neither the split one nor fixed slots this upgrade can turn into it. Nothing was written."
+	rm -f "$blob" "$tgz"
+	quiesce_overlay
+	mp=$(awk -v d="$(get_device rootfs_data | sed 's|/dev/mtd|/dev/mtdblock|')" '$1 == d { print $2; exit }' /proc/mounts)
+	if [ "1" != "$clear_overlay" ] && [ -n "$mp" ]; then
+		tar -C "$mp" -cf - . 2>&3 | gzip > "$tgz" ||
+			die "Could not copy the settings into RAM. Nothing was written; -n upgrades without them."
+	else
+		# Length 0: the first boot erases the overlay and restores nothing.
+		: > "$tgz"
+	fi
+	printf 'OPENIPC-OVL1%012d' "$(stat -c %s "$tgz")" > "$blob"
+	cat "$tgz" >> "$blob" && rm -f "$tgz"
+	# To a whole 64 KiB block (busybox truncate has no %SIZE).
+	local bsz=$(stat -c %s "$blob")
+	head -c $(((65536 - bsz % 65536) % 65536)) /dev/zero >> "$blob"
+	[ $((ovl + $(stat -c %s "$blob"))) -le "$end" ] ||
+		die "The new firmware and the settings do not fit the flash ($(( (ovl + $(stat -c %s "$blob") - 0x50000) / 1024 )) KB of $(( (end - 0x50000) / 1024 )) KB). Nothing was written; -n upgrades without the settings."
+	mark_live_flash_dirty
+	echo "Writing $x at 0x50000"
+	nor_write_at "$x" $((0x50000)) || die "Writing $x failed: the flash does not read back as the image."
+	nor_write_at "$blob" "$ovl" ||
+		die "Writing the settings at $(printf 0x%x "$ovl") failed; the camera starts from defaults."
+	rm -f "$blob"
+	overlay_recreated=1
+	echo "Settings staged at $(printf 0x%x "$ovl") for the first boot"
+	echo_c 32 "Firmware updated"
+}
+
 do_update_firmware() {
 	# A combined image bundles the FIT kernel (DTB magic d00dfeed) and the
 	# rootfs squashfs in one blob — the rootfs packed right after the FIT at a
@@ -772,6 +968,11 @@ do_update_firmware() {
 	echo_c 33 "\nFirmware (combined image)"
 	echo "Update firmware from $x"
 	[ ! -f "$x" ] && die "File $x not found"
+
+	if nor_split_image "$x"; then
+		do_update_firmware_split "$x"
+		return 0
+	fi
 
 	if [ "$(get_device "kernel")" != "/dev/" ] && [ "$(get_device "rootfs")" != "/dev/" ]; then
 		# Split at the FIT boundary, then hand each slice to the split flow.
@@ -2759,7 +2960,12 @@ default_upgrade_url() {
 	esac
 	osr=$(get_system_build)
 	case "$osr" in lite|ultimate|neo) repo=firmware ;; esac
-	echo "https://github.com/OpenIPC/$repo/releases/download/latest/openipc.$model-$(pkg_flash)-$osr.tgz"
+	# A bootloader that boots the split NOR layout takes firmware.bin, from its
+	# own archive: the plain one keeps the fixed-slot images every older
+	# camera and installer expects.
+	local split=
+	[ "$repo" = firmware ] && [ "$(pkg_flash)" = nor ] && nor_split_family && nor_split_boot && split=-split
+	echo "https://github.com/OpenIPC/$repo/releases/download/latest/openipc.$model-$(pkg_flash)-$osr$split.tgz"
 }
 
 is_device_platform() {

@@ -3131,6 +3131,202 @@ fi
 
 # ---------------------------------------------------------------------------
 echo
+# --- the split NOR layout (Goke gk7205v200 family) ---------------------------
+# One "firmware" partition from 0x50000 to the end of the chip; the kernel
+# divides it at boot into the FIT, the squashfs after it and rootfs_data from
+# the squashfs end. sysupgrade writes firmware.bin through mtdblock and stages
+# the settings at the new overlay start, where /init restores them. The
+# mtdblock "devices" are sparse files here, so a test reads back what landed
+# where.
+
+# make_split_fw <file> <soc> <fit blocks> <squashfs bytes_used>: a FIT naming
+# the SoC, padded to whole 64 KiB blocks, then the squashfs, as post-image.sh
+# packs firmware.bin.
+make_split_fw() {
+    local tot=$(($3 * 65536 - 100))
+    printf '\xd0\x0d\xfe\xed' > "$1"
+    printf %b "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' $(((tot >> 24) & 255)) \
+        $(((tot >> 16) & 255)) $(((tot >> 8) & 255)) $((tot & 255)))" >> "$1"
+    dd if=/dev/zero bs=1 count=56 >> "$1" 2>/dev/null
+    printf 'description\0OpenIPC %s\0' "$2" >> "$1"
+    truncate -s $(($3 * 65536)) "$1"
+    make_squashfs "$SB/tmp/split.sqfs" "$4"
+    cat "$SB/tmp/split.sqfs" >> "$1"; rm -f "$SB/tmp/split.sqfs"
+    truncate -s $((($(stat -c %s "$1") + 65535) / 65536 * 65536)) "$1"
+}
+
+# set_split_mtd <layout> <chip bytes>: /proc/mtd, /sys/class/mtd and the
+# mtdblock files for "split" (firmware and the children the kernel made) or
+# "fixed" (kernel 2M, rootfs 5M, rootfs_data to the end, plus the overlapping
+# firmware alias the fixed-slot command line also carries). The children of
+# the split layout sit at the offsets an image of 30 + 40 blocks gives.
+set_split_mtd() {
+    local chip=$2 i=0 spec name off size
+    rm -rf "$SB/sys/class/mtd" "$SB/dev"; mkdir -p "$SB/sys/class/mtd" "$SB/dev"
+    printf 'dev:    size   erasesize  name\n' > "$SB/proc/mtd"
+    if [ "$1" = split ]; then
+        set -- u-boot:0:0x40000 env:0x40000:0x10000 firmware:0x50000:$((chip - 0x50000)) \
+            kernel:0x50000:0x1e0000 rootfs:0x230000:0x280000 \
+            rootfs_data:0x4b0000:$((chip - 0x4b0000))
+    else
+        set -- u-boot:0:0x40000 env:0x40000:0x10000 kernel:0x50000:0x200000 \
+            rootfs:0x250000:0x500000 firmware:0x50000:0x700000 \
+            rootfs_data:0x750000:$((chip - 0x750000))
+    fi
+    for spec in "$@"; do
+        name=${spec%%:*}; spec=${spec#*:}; off=$((${spec%%:*})); size=$((${spec#*:}))
+        mkdir -p "$SB/sys/class/mtd/mtd$i" "$SB/sys/class/mtd/mtd${i}ro"
+        echo "$name" > "$SB/sys/class/mtd/mtd$i/name"
+        echo "$off" > "$SB/sys/class/mtd/mtd$i/offset"
+        echo "$size" > "$SB/sys/class/mtd/mtd$i/size"
+        printf 'mtd%d: %08x 00010000 "%s"\n' "$i" "$size" "$name" >> "$SB/proc/mtd"
+        truncate -s "$size" "$SB/dev/mtdblock$i"
+        i=$((i + 1))
+    done
+}
+
+# split_env <layout> [chip]: a gk7205v200 running from that layout, its overlay
+# mounted in the sandbox with a marker in it, on a bootloader that boots the
+# split layout.
+split_env() {
+    reset_env
+    set_platform gk7205v200_lite
+    STUB_SOC=gk7205v200; STUB_IMG_SOC=gk7205v200; STUB_VENDOR=goke
+    set_split_mtd "$1" "${2:-0x800000}"
+    set_cmdline 'mem=32M console=ttyAMA0,115200 panic=20 rootfstype=squashfs root=/dev/mtdblock4 init=/init mtdparts=sfc:256k(u-boot),64k(env),-(firmware) mmz_allocator=gk openipc_nor_fit=1'
+    rm -rf "$SB/overlay"; mkdir -p "$SB/overlay/etc"; echo kept > "$SB/overlay/etc/marker"
+    printf 'tmpfs %s/tmp tmpfs rw 0 0\n/dev/mtdblock5 %s/overlay jffs2 rw 0 0\n' "$SB" "$SB" \
+        > "$SB/proc/mounts"
+    # The MTD character devices read the same files: here the chip is what
+    # mtdblock wrote.
+    RUN_ENV="MTD_SYS=$SB/sys/class/mtd MTDBLOCK=$SB/dev/mtdblock MTDCHR=$SB/dev/mtdblock"
+    make_split_fw "$SB/tmp/firmware.bin.gk7205v200" gk7205v200 "${SPLIT_FIT_BLOCKS:-30}" \
+        "${SPLIT_SQ_USED:-$((40 * 65536 - 4000))}"
+    make_archive "$SB/tmp/firmware.bin.gk7205v200"
+}
+# The bytes at absolute flash offset $2 in mtdblock$1, which starts at $3.
+flash_at() { xxd -p -l "$4" -s $(($2 - $3)) "$SB/dev/mtdblock$1"; }
+# The settings blob at absolute offset $2 in mtdblock$1 (starting at $3): its
+# length field, and the files of the tar it carries.
+blob_len() { dd if="$SB/dev/mtdblock$1" bs=1 skip=$(($2 - $3 + 12)) count=12 2>/dev/null; }
+blob_files() {
+    local n=$((10#$(blob_len "$@")))
+    dd if="$SB/dev/mtdblock$1" bs=1 skip=$(($2 - $3 + 24)) count="$n" 2>/dev/null | tar tzf - 2>/dev/null
+}
+FW_HEAD=$(printf 'd00dfeed%08x' $((30 * 65536 - 100)))
+OVL=$((0x50000 + 70 * 65536))
+
+split_env split
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] &&
+    [ "$(flash_at 2 $((0x50000 + 30 * 65536)) 0x50000 4)" = 68737173 ] &&
+    [ "$(dd if="$SB/dev/mtdblock2" bs=1 skip=$((OVL - 0x50000)) count=12 2>/dev/null)" = OPENIPC-OVL1 ] &&
+    blob_files 2 "$OVL" 0x50000 | grep -q 'etc/marker' && nothing_wrote && rebooted; then
+    ok "split layout: firmware.bin at 0x50000, the settings staged where rootfs_data will start"
+else
+    bad "split layout upgrade, rc=$RC head=$(flash_at 2 0x50000 0x50000 8) out='$OUT'"
+fi
+if printf '%s' "$OUT" | grep -q "Settings staged at $(printf 0x%x "$OVL")"; then
+    ok "split layout: the overlay offset is the FIT and the squashfs, each to 64 KiB"
+else
+    bad "split layout: expected the settings at $(printf 0x%x "$OVL"), out='$OUT'"
+fi
+
+# -n: a blob of length 0, which /init takes as "erase, restore nothing".
+split_env split
+run -z -n --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(blob_len 2 "$OVL" 0x50000)" = 000000000000 ]; then
+    ok "split layout -n: an empty settings blob, so the first boot starts clean"
+else
+    bad "split layout -n, rc=$RC len='$(blob_len 2 "$OVL" 0x50000)' out='$OUT'"
+fi
+
+# From fixed slots: the image runs on from the kernel slot into the rootfs one,
+# and the settings land in the old rootfs, where the new rootfs_data starts.
+split_env fixed
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] &&
+    [ "$(flash_at 2 $((0x50000 + 30 * 65536)) 0x50000 4)" = 68737173 ] &&
+    [ "$(dd if="$SB/dev/mtdblock3" bs=1 skip=$((OVL - 0x250000)) count=12 2>/dev/null)" = OPENIPC-OVL1 ] &&
+    blob_files 3 "$OVL" 0x250000 | grep -q 'etc/marker' &&
+    [ "$(xxd -p -l 4 "$SB/dev/mtdblock4")" = 00000000 ] && nothing_wrote; then
+    ok "fixed slots -> split: written across kernel and rootfs, the firmware alias left alone"
+else
+    bad "fixed -> split, rc=$RC out='$OUT'"
+fi
+
+# The same on a bootloader that cannot boot the split layout: nothing written.
+split_env fixed
+set_cmdline 'mem=32M console=ttyAMA0,115200 panic=20 rootfstype=squashfs root=/dev/mtdblock3 init=/init mtdparts=sfc:256k(boot),64k(env),2048k(kernel),5120k(rootfs),-(rootfs_data) mmz_allocator=gk'
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "Update the bootloader first" &&
+    [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote && ! rebooted; then
+    ok "split image on an old bootloader: refused, nothing written, no reboot"
+else
+    bad "split image on an old bootloader must be refused, rc=$RC out='$OUT'"
+fi
+
+# An image that leaves no block for the settings is refused before the write.
+SPLIT_SQ_USED=$((93 * 65536)) split_env split
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "room for settings" &&
+    [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote; then
+    ok "split layout: an image that fills the flash is refused, nothing written"
+else
+    bad "split layout: an oversized image must be refused, rc=$RC out='$OUT'"
+fi
+
+# Another SoC's image: refused before anything is written.
+split_env split
+make_split_fw "$SB/tmp/firmware.bin.gk7205v200" gk7205v300 30 $((40 * 65536 - 4000))
+make_archive "$SB/tmp/firmware.bin.gk7205v200"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote; then
+    ok "split layout: another SoC's firmware.bin is refused, nothing written"
+else
+    bad "split layout: wrong SoC must be refused, rc=$RC out='$OUT'"
+fi
+# What mtdblock accepted is not what reached the chip (its cache was never
+# written out): the read back through the MTD character device says so, and the
+# run does not report the firmware written.
+split_env split
+mkdir -p "$SB/stale"
+for i in 0 1 2 3 4 5; do truncate -s "$(stat -c %s "$SB/dev/mtdblock$i")" "$SB/stale/mtd$i"; done
+RUN_ENV="$RUN_ENV MTDCHR=$SB/stale/mtd"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "does not read back as the image" &&
+    ! printf '%s' "$OUT" | grep -q "Firmware updated"; then
+    ok "split layout: a write that never reached the chip is caught by the read-back"
+else
+    bad "split layout: a stale chip must fail the write, rc=$RC out='$OUT'"
+fi
+rm -rf "$SB/stale"
+
+# A camera on the split layout has no slots for a separate kernel and rootfs.
+split_env split
+make_uimage "$SB/tmp/uImage.gk7205v200" gk7205v200
+make_rootfs "$SB/tmp/rootfs.squashfs.gk7205v200"
+rm -f "$SB/tmp/firmware.bin.gk7205v200"
+run -z --kernel="$SB/tmp/uImage.gk7205v200" --rootfs="$SB/tmp/rootfs.squashfs.gk7205v200"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "openipc.gk7205v200-nor-lite-split.tgz" &&
+    nothing_wrote && [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && ! rebooted; then
+    ok "split layout: a separate kernel and rootfs are refused, the -split archive named"
+else
+    bad "split layout: kernel+rootfs must be refused, rc=$RC out='$OUT'"
+fi
+unset STUB_SOC STUB_IMG_SOC STUB_VENDOR
+rm -rf "$SB/overlay" "$SB/dev"
+
+# The default URL: the -split archive only for a bootloader that boots it. The
+# plain one stays the fixed-slot package every older camera upgrades from.
+SPLIT_CMDLINE='mem=32M console=ttyAMA0,115200 root=/dev/mtdblock4 mtdparts=sfc:256k(u-boot),64k(env),-(firmware) openipc_nor_fit=1'
+default_url_is "$F/openipc.gk7205v200-nor-lite-split.tgz" \
+    eval 'set_platform gk7205v200_lite; STUB_SOC=gk7205v200; set_cmdline "$SPLIT_CMDLINE"'
+default_url_is "$F/openipc.gk7205v200-nor-lite.tgz" \
+    eval 'set_platform gk7205v200_lite; STUB_SOC=gk7205v200'
+default_url_is "$F/openipc.ssc338q-nor-lite.tgz" eval 'set_cmdline "$SPLIT_CMDLINE"'
+unset STUB_SOC
+
 echo "=== Part 2: invariants in $SRC ==="
 
 # An option named in a user-facing message must exist in the parser.

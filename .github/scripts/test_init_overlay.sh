@@ -14,6 +14,8 @@
 # uncompressed in its directory entries. Part 1 runs the real function against
 # synthetic partitions; part 2 pins that the format is still gated on it.
 #
+# Part 3 runs the settings carry-over a split-NOR upgrade leaves behind.
+#
 # Pure shell, no root, no QEMU.
 
 set -u
@@ -85,6 +87,61 @@ if echo "$body" | grep -q 'mount -t tmpfs tmpfs /overlay'; then
 else
 	bad "no tmpfs fallback for an unmountable overlay in $SRC"
 fi
+
+# ---------------------------------------------------------------------------
+# Part 3: settings carried over by a split-NOR sysupgrade. The blob sits where
+# rootfs_data now starts: "OPENIPC-OVL1", a 12-digit decimal length, a gzipped
+# tar. The function runs for real; mount, umount and flash_eraseall are stubs
+# that log, and /overlay and /mnt are moved into the sandbox.
+sed -n '/^overlay_carry_in() {/,/^}/p' "$SRC" |
+	sed -e "s| /overlay| $SB/ovl|g; s|/overlay/|$SB/ovl/|g; s| /mnt| $SB/mnt|g" > "$SB/carry.sh"
+[ -s "$SB/carry.sh" ] || { echo "FAIL overlay_carry_in() not found in $SRC"; exit 1; }
+mount() { echo "mount $*" >> "$SB/log"; mkdir -p "${!#}"; }
+umount() { echo "umount $*" >> "$SB/log"; }
+flash_eraseall() { echo "flash_eraseall $*" >> "$SB/log"; rm -rf "$SB/mnt"; }
+sync() { :; }
+# shellcheck disable=SC1091
+. "$SB/carry.sh"
+# blob <file> <tgz or empty>: the blob at the start of a 192 KiB partition of
+# old data, so a length read wrong reads that.
+blob() {
+	head -c 196608 /dev/zero | tr '\000' '\132' > "$1"
+	{ printf 'OPENIPC-OVL1%012d' "$(stat -c %s "${2:-/dev/null}" 2>/dev/null || echo 0)"
+	  [ -n "${2:-}" ] && cat "$2"; } | dd of="$1" conv=notrunc 2>/dev/null
+}
+carry() { rm -rf "$SB/mnt" "$SB/ovl" "$SB/log"; : > "$SB/log"; OUT=$(overlay_carry_in "$1" "$SB/blk" 2>&1); }
+
+mkdir -p "$SB/settings/etc"; echo kept > "$SB/settings/etc/marker"
+# Past one erase block, so the length decides how much of the partition is read.
+head -c 70000 /dev/urandom > "$SB/settings/etc/big"
+tar -C "$SB/settings" -czf "$SB/settings.tgz" .
+blob "$SB/part" "$SB/settings.tgz"
+carry "$SB/part"
+if [ "$(cat "$SB/mnt/etc/marker" 2>/dev/null)" = kept ] && cmp -s "$SB/mnt/etc/big" "$SB/settings/etc/big" &&
+	grep -q "flash_eraseall -j $SB/part" "$SB/log" && echo "$OUT" | grep -q "Settings restored"; then
+	ok "a carried-over blob is restored into a freshly erased rootfs_data"
+else
+	bad "carry-over restore, out='$OUT' log='$(cat "$SB/log")'"
+fi
+e=$(grep -n flash_eraseall "$SB/log" | cut -d: -f1); m=$(grep -n "mount -t jffs2" "$SB/log" | cut -d: -f1)
+[ -n "$e" ] && [ -n "$m" ] && [ "$e" -lt "$m" ] \
+	&& ok "...the erase comes before the jffs2 mount" \
+	|| bad "carry-over must erase before it mounts, log='$(cat "$SB/log")'"
+
+blob "$SB/part" ""
+carry "$SB/part"
+if grep -q "flash_eraseall -j $SB/part" "$SB/log" && ! grep -q "jffs2" "$SB/log" &&
+	echo "$OUT" | grep -q "Clearing settings"; then
+	ok "a blob of length 0 (sysupgrade -n) erases and restores nothing"
+else
+	bad "length-0 blob, out='$OUT' log='$(cat "$SB/log")'"
+fi
+
+head -c 196608 /dev/zero | tr '\000' '\377' > "$SB/part"
+carry "$SB/part"
+[ ! -s "$SB/log" ] && [ -z "$OUT" ] \
+	&& ok "no blob: rootfs_data is left to the usual mount" \
+	|| bad "without a blob nothing may be touched, log='$(cat "$SB/log")'"
 
 echo
 [ "$fail" -eq 0 ] && echo "All init overlay checks passed." || echo "$fail check(s) failed."
