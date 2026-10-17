@@ -93,10 +93,14 @@ fi
 # rootfs_data now starts: "OPENIPC-OVL1", a 12-digit decimal length, a gzipped
 # tar. The function runs for real; mount, umount and flash_eraseall are stubs
 # that log, and /overlay and /mnt are moved into the sandbox.
-sed -n '/^overlay_carry_in() {/,/^}/p' "$SRC" |
+sed -n '/^overlay_carry_in() {/,/^}/p; /^carry_report() {/,/^}/p' "$SRC" |
 	sed -e "s| /overlay| $SB/ovl|g; s|/overlay/|$SB/ovl/|g; s| /mnt| $SB/mnt|g" > "$SB/carry.sh"
 [ -s "$SB/carry.sh" ] || { echo "FAIL overlay_carry_in() not found in $SRC"; exit 1; }
-mount() { echo "mount $*" >> "$SB/log"; mkdir -p "${!#}"; }
+mount() {
+	echo "mount $*" >> "$SB/log"
+	[ "$2" = tmpfs ] && [ -n "${TMPFS_FAILS:-}" ] && return 1
+	mkdir -p "${!#}"
+}
 umount() { echo "umount $*" >> "$SB/log"; }
 flash_eraseall() { echo "flash_eraseall $*" >> "$SB/log"; rm -rf "$SB/mnt"; }
 sync() { :; }
@@ -109,7 +113,10 @@ blob() {
 	{ printf 'OPENIPC-OVL1%012d' "$(stat -c %s "${2:-/dev/null}" 2>/dev/null || echo 0)"
 	  [ -n "${2:-}" ] && cat "$2"; } | dd of="$1" conv=notrunc 2>/dev/null
 }
-carry() { rm -rf "$SB/mnt" "$SB/ovl" "$SB/log"; : > "$SB/log"; OUT=$(overlay_carry_in "$1" "$SB/blk" 2>&1); }
+carry() {
+	rm -rf "$SB/mnt" "$SB/ovl" "$SB/log"; : > "$SB/log"
+	OUT=$(overlay_carry_in "$1" "$SB/blk" 2>&1); RC=$?
+}
 
 mkdir -p "$SB/settings/etc"; echo kept > "$SB/settings/etc/marker"
 # Past one erase block, so the length decides how much of the partition is read.
@@ -137,11 +144,55 @@ else
 	bad "length-0 blob, out='$OUT' log='$(cat "$SB/log")'"
 fi
 
+# A damaged archive: reported, and nothing erased -- the usual mount decides.
+blob "$SB/part" "$SB/settings.tgz"
+printf 'XXXX' | dd of="$SB/part" bs=1 seek=40 conv=notrunc 2>/dev/null
+carry "$SB/part"
+if [ "$RC" -eq 0 ] && ! grep -q flash_eraseall "$SB/log" && echo "$OUT" | grep -q "damaged"; then
+	ok "a damaged carry-over is reported and nothing is erased"
+else
+	bad "damaged carry-over, rc=$RC out='$OUT' log='$(cat "$SB/log")'"
+fi
+
+# A length past what the partition holds: kept for the next boot (rc 1).
+blob "$SB/part" "$SB/settings.tgz"
+printf 'OPENIPC-OVL1%012d' 999999 | dd of="$SB/part" conv=notrunc 2>/dev/null
+carry "$SB/part"
+if [ "$RC" -eq 1 ] && ! grep -q flash_eraseall "$SB/log"; then
+	ok "a short read keeps the blob for the next boot, nothing erased"
+else
+	bad "short read, rc=$RC out='$OUT' log='$(cat "$SB/log")'"
+fi
+
+# No RAM for the archive: kept for the next boot too.
+blob "$SB/part" "$SB/settings.tgz"
+TMPFS_FAILS=1 carry "$SB/part"
+if [ "$RC" -eq 1 ] && ! grep -q flash_eraseall "$SB/log"; then
+	ok "no tmpfs: the blob is kept for the next boot, nothing erased"
+else
+	bad "tmpfs failure, rc=$RC out='$OUT' log='$(cat "$SB/log")'"
+fi
+
 head -c 196608 /dev/zero | tr '\000' '\377' > "$SB/part"
 carry "$SB/part"
 [ ! -s "$SB/log" ] && [ -z "$OUT" ] \
 	&& ok "no blob: rootfs_data is left to the usual mount" \
 	|| bad "without a blob nothing may be touched, log='$(cat "$SB/log")'"
+
+# Drift: the carry-over runs only where the alias guard allows, and a blob it
+# kept sends init to a RAM overlay rather than the jffs2 path that formats.
+call=$(sed -n '/aliased=false/,/elif ! mount -t jffs2/p' "$SRC")
+if echo "$call" | grep -q 'flash_aliased' && echo "$call" | grep -q '! \$aliased' &&
+	echo "$call" | awk '/flash_aliased/ && !a {a=NR} /overlay_carry_in/ && !c {c=NR} END {exit !(a && c && a < c)}'; then
+	ok "the carry-over runs after the alias check, and only on flash that is not aliased"
+else
+	bad "overlay_carry_in must come after flash_aliased and be skipped on aliased flash in $SRC"
+fi
+if echo "$call" | grep -q 'carried" = 1' && echo "$call" | grep -q 'mount -t tmpfs tmpfs /overlay'; then
+	ok "a kept blob boots on a RAM overlay"
+else
+	bad "a carry-over kept for the next boot must not reach the jffs2 mount in $SRC"
+fi
 
 echo
 [ "$fail" -eq 0 ] && echo "All init overlay checks passed." || echo "$fail check(s) failed."

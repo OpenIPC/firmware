@@ -240,6 +240,8 @@ if [ "$head" = "1" ]; then
     exit 0
 fi
 [ "$out" = "-" ] && [ -n "${STUB_DL_FILE:-}" ] && cat "$STUB_DL_FILE"
+# fetch_manifest: the channel/build index, when a test supplies one.
+case "$out" in *manifest.flat) [ -n "${STUB_MANIFEST:-}" ] && cp "$STUB_MANIFEST" "$out" ;; esac
 exit "${STUB_CURL_RC:-0}"'
 # check_sdcard re-reads `mount` after every umount, so a static pair of stubs
 # would spin forever: the unmount has to actually change what mount reports.
@@ -3269,7 +3271,7 @@ fi
 # An image that leaves no block for the settings is refused before the write.
 SPLIT_SQ_USED=$((93 * 65536)) split_env split
 run -z --archive="$SB/tmp/fw.tgz"
-if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "room for settings" &&
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "settings do not fit" &&
     [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote; then
     ok "split layout: an image that fills the flash is refused, nothing written"
 else
@@ -3281,11 +3283,49 @@ split_env split
 make_split_fw "$SB/tmp/firmware.bin.gk7205v200" gk7205v300 30 $((40 * 65536 - 4000))
 make_archive "$SB/tmp/firmware.bin.gk7205v200"
 run -z --archive="$SB/tmp/fw.tgz"
-if [ "$RC" -ne 0 ] && [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote; then
-    ok "split layout: another SoC's firmware.bin is refused, nothing written"
+if [ "$RC" -ne 0 ] && [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote &&
+    ! rebooted; then
+    ok "split layout: another SoC's firmware.bin is refused before the pivot, nothing written, no reboot"
 else
     bad "split layout: wrong SoC must be refused, rc=$RC out='$OUT'"
 fi
+# Bytes past the squashfs: not what post-image.sh packs, and they would run
+# into the settings. Refused before anything moves.
+split_env split
+head -c 131072 /dev/urandom >> "$SB/tmp/firmware.bin.gk7205v200"
+make_archive "$SB/tmp/firmware.bin.gk7205v200"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "runs past the end of its squashfs" &&
+    [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote && ! rebooted; then
+    ok "split layout: a firmware.bin with bytes past its squashfs is refused, no reboot"
+else
+    bad "split layout: trailing bytes must be refused, rc=$RC out='$OUT'"
+fi
+
+# Settings that do not fit what the image leaves: refused before the pivot.
+SPLIT_SQ_USED=$((92 * 65536)) split_env split
+head -c 200000 /dev/urandom > "$SB/overlay/etc/noise"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "settings do not fit" &&
+    [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote && ! rebooted; then
+    ok "split layout: settings too big for the space left are refused before the pivot"
+else
+    bad "split layout: oversized settings must be refused unwritten, rc=$RC out='$OUT'"
+fi
+
+# Any other combined image on a camera already on the split layout: its
+# "firmware" partition is the whole flash after env.
+split_env split
+make_combined "$SB/tmp/firmware.bin.gk7205v200"
+make_archive "$SB/tmp/firmware.bin.gk7205v200"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "not a split-layout firmware.bin" &&
+    [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote && ! rebooted; then
+    ok "split layout: a combined image of another shape is refused, nothing written"
+else
+    bad "split layout: a non-split combined image must be refused, rc=$RC out='$OUT'"
+fi
+
 # What mtdblock accepted is not what reached the chip (its cache was never
 # written out): the read back through the MTD character device says so, and the
 # run does not report the firmware written.
@@ -3325,6 +3365,25 @@ default_url_is "$F/openipc.gk7205v200-nor-lite-split.tgz" \
 default_url_is "$F/openipc.gk7205v200-nor-lite.tgz" \
     eval 'set_platform gk7205v200_lite; STUB_SOC=gk7205v200'
 default_url_is "$F/openipc.ssc338q-nor-lite.tgz" eval 'set_cmdline "$SPLIT_CMDLINE"'
+# --channel resolves the plain package from the manifest; a camera that boots
+# the split layout fetches the -split one beside it.
+printf '@channel stable nightly-1\nnightly-1 gk7205v200_lite nor %s\n' \
+    "$F/openipc.gk7205v200-nor-lite.tgz" > "$SB/manifest.flat"
+for c in split plain; do
+    reset_env; set_meminfo 8192; STUB_DL_BYTES=8691055
+    set_platform gk7205v200_lite; STUB_SOC=gk7205v200
+    [ "$c" = split ] && set_cmdline "$SPLIT_CMDLINE"
+    RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+    run -z --channel=stable
+    want="$F/openipc.gk7205v200-nor-lite.tgz"
+    [ "$c" = split ] && want="$F/openipc.gk7205v200-nor-lite-split.tgz"
+    if printf '%s' "$OUT" | grep -qF "Download from $want" && nothing_wrote; then
+        ok "--channel, $c bootloader -> $want"
+    else
+        bad "--channel, $c bootloader: expected 'Download from $want', rc=$RC out='$OUT'"
+    fi
+done
+rm -f "$SB/manifest.flat"
 unset STUB_SOC
 
 echo "=== Part 2: invariants in $SRC ==="

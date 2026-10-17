@@ -476,8 +476,11 @@ jobs:
           TIME=$(date -d @${SECONDS} +%M:%S)
           echo TIME=${TIME} >> ${GITHUB_ENV}
 
-          NORFW=$(find output/images -name openipc*nor*)
-          if [ -e ${NORFW} ]; then
+          # The plain NOR package. gk7205v200-family boards build a -split
+          # one beside it (Makefile REPACK_NOR_SPLIT), and two paths here made
+          # the test below fail and the upload step skip.
+          NORFW=$(find output/images -name 'openipc*nor*' ! -name '*-split.tgz' | head -1)
+          if [ -n "${NORFW}" ] && [ -e "${NORFW}" ]; then
             echo NORFW=${NORFW} >> ${GITHUB_ENV}
           fi
 

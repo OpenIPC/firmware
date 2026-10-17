@@ -346,11 +346,23 @@ check_combined_fits() {
 	local x=$1
 	[ -f "$x" ] || return 0
 	if nor_split_image "$x"; then
-		local ovl=$(nor_split_overlay_at "$x") end=$(nor_split_end)
-		[ $((ovl + 65536)) -le "$end" ] ||
-			die "$x does not fit the flash with room for settings: it ends at $(printf 0x%x "$ovl"), the flash at $(printf 0x%x "$end"). Nothing was written."
+		# Everything do_update_firmware_split refuses, refused here, before
+		# the pivot: after it every refusal is a reboot.
+		local ovl=$(nor_split_overlay_at "$x") end=$(nor_split_end) blob
+		[ "$(fit_soc "$x")" = "$model" ] ||
+			die "$x is built for $(fit_soc "$x"), this camera is a $model. Nothing was written."
+		[ $((0x50000 + $(stat -c %s "$x"))) -le "$ovl" ] ||
+			die "$x runs past the end of its squashfs ($(printf 0x%x "$ovl")): not a firmware.bin as the build packs it. Nothing was written."
+		blob=$(nor_split_blob_size)
+		[ $((ovl + blob)) -le "$end" ] ||
+			die "$x and the settings do not fit the flash: the image ends at $(printf 0x%x "$ovl"), the settings need $((blob / 1024)) KB, the flash ends at $(printf 0x%x "$end"). Nothing was written; -n upgrades without the settings."
 		return 0
 	fi
+	# A camera on the split layout takes nothing else: its "firmware"
+	# partition is the whole flash after env, and the generic path below
+	# would write any blob over it.
+	nor_split_running &&
+		die "$x is not a split-layout firmware.bin for this camera (a FIT, then a squashfs). Nothing was written."
 	# A split-layout image on a camera of that family whose bootloader does not
 	# boot the layout: the FIT would land in a kernel slot U-Boot cannot boot.
 	if nor_split_family && ! nor_split_boot && nor_split_overlay_at "$x" >/dev/null; then
@@ -911,6 +923,33 @@ nor_split_running() {
 	nor_split_boot && [ "$(nor_split_devs | wc -l)" -eq 1 ]
 }
 
+# This camera installs from the -split package: NOR, a SoC built for the
+# layout, and a bootloader that boots it.
+nor_split_wanted() {
+	[ "$(pkg_flash)" = nor ] && nor_split_family && nor_split_boot
+}
+
+# The -split package's URL for a plain firmware package's, else the URL as it
+# is: openipc.<soc>-nor-<variant>.tgz becomes ...-<variant>-split.tgz.
+nor_split_url() {
+	if nor_split_wanted; then
+		echo "$1" | sed 's|\(/openipc\.[^/]*-nor-[a-z0-9]*\)\.tgz$|\1-split.tgz|'
+	else
+		echo "$1"
+	fi
+}
+
+# The settings blob this run will write, in bytes: the header, the gzipped tar
+# of the overlay, whole 64 KiB blocks; one block for -n.
+nor_split_blob_size() {
+	local mp n=0
+	mp=$(awk -v d="$(get_device rootfs_data | sed 's|/dev/mtd|/dev/mtdblock|')" '$1 == d { print $2; exit }' /proc/mounts)
+	if [ "1" != "$clear_overlay" ] && [ -n "$mp" ]; then
+		n=$(tar -C "$mp" -cf - . 2>&3 | gzip | wc -c)
+	fi
+	echo $(((24 + n + 65535) / 65536 * 65536))
+}
+
 # The image is one for the split layout and the bootloader boots it.
 nor_split_image() {
 	nor_split_boot && [ -n "$(nor_split_devs)" ] && nor_split_overlay_at "$1" >/dev/null
@@ -922,6 +961,8 @@ do_update_firmware_split() {
 	[ "$(fit_soc "$x")" = "$model" ] ||
 		die "$x is built for $(fit_soc "$x"), this camera is a $model. Nothing was written."
 	ovl=$(nor_split_overlay_at "$x") || die "$x is not a FIT followed by a squashfs. Nothing was written."
+	[ $((0x50000 + $(stat -c %s "$x"))) -le "$ovl" ] ||
+		die "$x runs past the end of its squashfs. Nothing was written."
 	end=$(nor_split_end)
 	[ -n "$end" ] || die "The flash layout is neither the split one nor fixed slots this upgrade can turn into it. Nothing was written."
 	rm -f "$blob" "$tgz"
@@ -973,6 +1014,7 @@ do_update_firmware() {
 		do_update_firmware_split "$x"
 		return 0
 	fi
+	nor_split_running && die "$x is not a split-layout firmware.bin for this camera. Nothing was written."
 
 	if [ "$(get_device "kernel")" != "/dev/" ] && [ "$(get_device "rootfs")" != "/dev/" ]; then
 		# Split at the FIT boundary, then hand each slice to the split flow.
@@ -1695,6 +1737,9 @@ download_firmware() {
 			if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
 			url=$(resolve_url "$build_id" "$platform" "$(pkg_flash)")
 			[ -z "$url" ] && die "No artifact for $platform in $build_id"
+			# The manifest lists the plain package, which older cameras
+			# install from; the -split one sits beside it under its own name.
+			url=$(nor_split_url "$url")
 			echo "Resolved $build_id for $platform"
 			device_pinned=1
 		fi
@@ -2963,9 +3008,9 @@ default_upgrade_url() {
 	# A bootloader that boots the split NOR layout takes firmware.bin, from its
 	# own archive: the plain one keeps the fixed-slot images every older
 	# camera and installer expects.
-	local split=
-	[ "$repo" = firmware ] && [ "$(pkg_flash)" = nor ] && nor_split_family && nor_split_boot && split=-split
-	echo "https://github.com/OpenIPC/$repo/releases/download/latest/openipc.$model-$(pkg_flash)-$osr$split.tgz"
+	local u="https://github.com/OpenIPC/$repo/releases/download/latest/openipc.$model-$(pkg_flash)-$osr.tgz"
+	[ "$repo" = firmware ] && u=$(nor_split_url "$u")
+	echo "$u"
 }
 
 is_device_platform() {
