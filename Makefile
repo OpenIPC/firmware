@@ -180,16 +180,21 @@ else ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3519dv500")
 	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
 else ifneq ($(and $(filter "gk7205v200",$(BR2_OPENIPC_SOC_FAMILY)),$(wildcard $(TARGET)/images/firmware.bin)),)
 # gk7205v200-family NOR ships twice. The plain package is the fixed-slot one,
-# uImage and rootfs, unchanged: every camera in the field upgrades from it with
-# its own sysupgrade, and the openipc.org installer reads it. The -split package
-# is firmware.bin (board/gk7205v200/post-image.sh), FIT and squashfs back to back
-# in one "firmware" partition the kernel splits at boot, for a bootloader that
-# boots that layout; only its whole is bounded: the chip, less boot and env
-# (320K) and the smallest overlay worth keeping (256K).
+# uImage and rootfs: cameras whose sysupgrade predates the split layout upgrade
+# from it. The -split package is firmware.bin (board/gk7205v200/post-image.sh),
+# the same uImage and the squashfs back to back in one "firmware" partition the
+# kernel splits at boot, whatever bootloader loaded it; only its whole is
+# bounded: the chip, less boot and env (320K) and the smallest overlay worth
+# keeping (256K).
+#
+# The uImage stays a 64 KiB block short of its 2 MiB slot (1984K). The kernel,
+# U-Boot and sysupgrade tell the layouts apart by where the squashfs is: at the
+# block right after the uImage is the split layout, at the slot boundary fixed
+# slots. A fixed-slot uImage ending in the slot's last block would be both.
 ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
-	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,5120,nor)
+	@$(call PREPARE_REPACK,uImage,1984,rootfs.squashfs,5120,nor)
 else
-	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,8192,nor)
+	@$(call PREPARE_REPACK,uImage,1984,rootfs.squashfs,8192,nor)
 endif
 	@$(call CHECK_SIZE,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024 - 576))
 	@$(call REPACK_NOR_SPLIT)
