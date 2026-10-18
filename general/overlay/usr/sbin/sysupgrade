@@ -1894,6 +1894,27 @@ free_resources() {
 			sleep 1
 		fi
 	fi
+	# vigil (the NVR application) records to the card check_sdcard unmounts and
+	# holds the media memory; it has no prepare endpoint, so it is stopped, and
+	# restore_resources() brings it back if nothing is flashed -- only if it was
+	# running: one stopped on purpose, or given up on after a crash loop, stays
+	# down. Running means vigild, or its supervisor between two of them (in a
+	# crash back-off, or restarting it for a card that turned up): that one
+	# would see the lock, give up, and leave the NVR dark. A stop that fails has already ended its supervisor, so it gets a
+	# restart; if it still holds the card, check_sdcard's umount refuses and the
+	# run stops there, naming it, with nothing written.
+	# The pid is checked for being there first: busybox ash's `kill -0 ""`
+	# succeeds, so a missing pidfile would read as a live supervisor.
+	vigil_sup=$(cat /var/run/vigil-supervise.pid 2>/dev/null)
+	if [ -x /etc/init.d/S95vigil ] && { pidof vigild >/dev/null 2>&1 ||
+		{ [ -n "$vigil_sup" ] && kill -0 "$vigil_sup" 2>/dev/null; }; }; then
+		if /etc/init.d/S95vigil stop >/dev/null 2>&1; then
+			vigil_stopped=1
+		else
+			vigil_stop_failed=1
+			echo_c 33 "vigil did not stop; carrying on, it is restarted if nothing is written."
+		fi
+	fi
 	/etc/init.d/S99rc.local stop
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
@@ -2053,6 +2074,9 @@ restore_resources() {
 	elif [ -x /etc/init.d/S95majestic ]; then
 		majestic_pending=restart
 	fi
+	vigil_pending=
+	[ "1" = "$vigil_stopped" ] && vigil_pending=start
+	[ "1" = "$vigil_stop_failed" ] && vigil_pending=restart
 	services_stopped=
 	return 0
 }
@@ -2061,6 +2085,10 @@ restore_resources() {
 restore_majestic() {
 	[ -n "$majestic_pending" ] && /etc/init.d/S95majestic "$majestic_pending" >/dev/null 2>&1
 	majestic_pending=
+	# vigil's supervisor waits on the same lock (S95vigil), so its start is
+	# carried out here too, once the lock is gone.
+	[ -n "$vigil_pending" ] && /etc/init.d/S95vigil "$vigil_pending" >/dev/null 2>&1
+	vigil_pending=
 	return 0
 }
 

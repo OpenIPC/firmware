@@ -1,0 +1,20 @@
+# vigil: cameras shown on HDMI (in tile order, up to four) and recorded.
+#
+# Each camera is a URL:
+#   rtsp://[user:pass@]host[:554]/path
+#   netip://[user:pass@]host[:34567]/[?ch=N&stream=main|extra]
+# Quote a URL that contains '&' or '#'.
+#
+#cameras:
+#  - rtsp://admin:12345@192.168.1.10/stream=0
+#  - "netip://admin:@192.168.1.11:34567/?ch=0&stream=main"
+cameras: []
+
+record:
+  # A directory on a disk or card (e.g. /mnt/sda1/rec). Empty: no recording.
+  # RAM (/tmp) and the flash root are refused: recordings would fill them.
+  path: ""
+  # Segment length in seconds, and segments kept per camera (0 = all; the
+  # oldest are deleted anyway when the disk runs low).
+  segment: 60
+  keep: 0
