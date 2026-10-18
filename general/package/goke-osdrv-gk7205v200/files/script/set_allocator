@@ -44,7 +44,10 @@ if [ -d /sys/module/goke_mem/parameters ] && [ -n "$(cat /sys/module/goke_mem/pa
     else
       newbootargs="mem=${os} ${kept}mmz_allocator=$1 osmem=${os} ${extras}"
     fi
-    fw_setenv bootargs ${newbootargs}
+    if ! fw_setenv bootargs ${newbootargs}; then
+      echo "Could not write bootargs; nothing changes at the next boot."
+      exit 1
+    fi
     echo ${newbootargs}
     echo "Applies at the next boot. Now: DRAM $(cat $p/dram)M, OS $(cat $p/osmem)M, $(cat $p/allocator), mmz=$(cat $p/mmz)"
     exit 0

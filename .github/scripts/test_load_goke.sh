@@ -6,11 +6,13 @@
 # with exactly that and never touches the U-Boot environment. Without it (an
 # older kernel) the zone still comes from bootargs and totalmem/osmem.
 #
-# Runs the real script with no arguments -- it prints "osal: <args>" and stops
-# at its usage text -- against stub fw_printenv/fw_setenv/ipcinfo/modprobe, a
-# fake parameters directory and a fake command line. Under busybox sh and awk,
-# as on the camera: the zone arithmetic feeds awk 0x40000000, which busybox
-# awk reads as hex and gawk/mawk as 0.
+# Runs the real script the way S70vendor does at boot (load_goke -i, here with
+# the sensor given so nothing is probed), under busybox sh and awk as on the
+# camera: the zone arithmetic feeds awk 0x40000000, which busybox awk reads as
+# hex and gawk/mawk as 0. The script is sourced from a wrapper that defines
+# modprobe, fw_setenv, fw_printenv and ipcinfo as shell functions -- busybox
+# sh runs its own applets ahead of anything on PATH, but not ahead of
+# functions -- so every module load and environment write is recorded.
 
 set -eu
 
@@ -19,7 +21,7 @@ if ! command -v busybox >/dev/null 2>&1; then
 	exit 1
 fi
 
-script=general/package/goke-osdrv-gk7205v200/files/script/load_goke
+script=$(pwd)/general/package/goke-osdrv-gk7205v200/files/script/load_goke
 fail=0
 ok()  { echo "ok   $*"; }
 bad() { echo "FAIL $*"; fail=$((fail + 1)); }
@@ -28,35 +30,29 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/bin"
 
-cat >"$work/bin/fw_printenv" <<'EOF'
-#!/bin/sh
-[ "$1" = -n ] && shift
-sed -n "s/^$1=//p" "$ENV_FILE" | grep . || exit 1
+cat >"$work/wrapper" <<'EOF'
+modprobe() { echo "modprobe $*" >>"$CALLS"; }
+fw_setenv() { echo "fw_setenv $*" >>"$CALLS"; }
+fw_printenv() { [ "$1" = -n ] && shift; sed -n "s/^$1=//p" "$ENV_FILE" | grep . || return 1; }
+ipcinfo() { echo gk7205v300; }
+logger() { :; }
+set -- -i -sensor imx307
+. "$SCRIPT"
 EOF
-cat >"$work/bin/fw_setenv" <<'EOF'
+# set_allocator is a script of its own, called from the older kernel's path
+cat >"$work/bin/set_allocator" <<'EOF'
 #!/bin/sh
-echo "fw_setenv $*" >>"$WRITES"
+echo "set_allocator $*" >>"$CALLS"
 EOF
-cat >"$work/bin/modprobe" <<'EOF'
-#!/bin/sh
-echo "modprobe $*" >>"$WRITES"
-EOF
-cat >"$work/bin/ipcinfo" <<'EOF'
-#!/bin/sh
-echo gk7205v300
-EOF
-cat >"$work/bin/awk" <<'EOF'
-#!/bin/sh
-exec busybox awk "$@"
-EOF
-chmod +x "$work/bin/"*
+chmod +x "$work/bin/set_allocator"
 
-# run CMDLINE ENV [DRAM OSMEM ALLOCATOR MMZ]: the osal line, writes in $work/writes
+# run CMDLINE ENV [DRAM OSMEM ALLOCATOR MMZ]: the open_osal arguments loaded;
+# every call is left in $work/calls
 run() {
 	printf '%s\n' "$1" >"$work/cmdline"
 	printf '%s\n' "$2" | tr ' ' '\n' >"$work/env"
-	rm -rf "$work/params" "$work/writes"
-	: >"$work/writes"
+	rm -rf "$work/params"
+	: >"$work/calls"
 	if [ $# -gt 2 ]; then
 		mkdir -p "$work/params"
 		echo "$3" >"$work/params/dram"
@@ -64,9 +60,10 @@ run() {
 		echo "$5" >"$work/params/allocator"
 		echo "$6" >"$work/params/mmz"
 	fi
-	PATH="$work/bin:$PATH" ENV_FILE="$work/env" WRITES="$work/writes" \
-		LOAD_GOKE_CMDLINE="$work/cmdline" LOAD_GOKE_MEM="$work/params" \
-		busybox sh "$script" 2>&1 | sed -n 's/^osal: //p'
+	(cd "$work" && PATH="$work/bin:$PATH" SCRIPT="$script" CALLS="$work/calls" \
+		ENV_FILE="$work/env" LOAD_GOKE_CMDLINE="$work/cmdline" LOAD_GOKE_MEM="$work/params" \
+		busybox sh "$work/wrapper" >"$work/out" 2>&1) || true
+	sed -n 's/^modprobe open_osal //p' "$work/calls"
 }
 
 expect() {
@@ -74,7 +71,11 @@ expect() {
 }
 
 no_writes() {
-	if [ -s "$work/writes" ]; then bad "$1 -- wrote: $(cat "$work/writes")"; else ok "$1"; fi
+	if grep -q -E '^(fw_setenv|set_allocator) ' "$work/calls"; then
+		bad "$1 -- wrote: $(grep -E '^(fw_setenv|set_allocator) ' "$work/calls" | tr '\n' ';')"
+	else
+		ok "$1"
+	fi
 }
 
 echo "=== a kernel that lays memory out itself ==="
@@ -113,12 +114,13 @@ got=$(run "mem=39M mmz_allocator=gk" "osmem=32M")
 expect "anony=1 mmz_allocator=gk mmz=anonymous,0,0x42700000,25M" "$got" \
 	"a vendor U-Boot's mem=39M: the zone starts above it"
 
-echo
-echo "=== the boot path never writes the environment on a goke_mem kernel ==="
-if grep -q '\[ -n "\$kernel_alloc" \] || check_allocator' "$script"; then
-	ok "insert_osal skips check_allocator when the kernel laid memory out"
+got=$(run "mem=32M console=ttyAMA0,115200" "osmem=32M totalmem=128M")
+expect "anony=1 mmz_allocator=gk mmz=anonymous,0,0x42000000,96M" "$got" \
+	"no mmz_allocator yet: this boot on the gk zone"
+if grep -q '^set_allocator cma' "$work/calls"; then
+	ok "an older kernel without mmz_allocator still has set_allocator pick it"
 else
-	bad "insert_osal must skip check_allocator (and its fw_setenv) on a goke_mem kernel"
+	bad "an older kernel without mmz_allocator: set_allocator not run -- $(tr '\n' ';' <"$work/calls")"
 fi
 
 echo
