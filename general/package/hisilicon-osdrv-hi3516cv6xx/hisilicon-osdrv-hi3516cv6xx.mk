@@ -72,9 +72,6 @@ define HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/*.ini
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/modes
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/modes $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/modes/*.ini
-	# The presets directory was called high-fps/ earlier in this series;
-	# remove it so a rebuild over an older target does not ship both.
-	rm -rf $(TARGET_DIR)/etc/sensors/high-fps
 endef
 endif
 
