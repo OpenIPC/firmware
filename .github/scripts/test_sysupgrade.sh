@@ -3141,16 +3141,17 @@ echo
 # mtdblock "devices" are sparse files here, so a test reads back what landed
 # where.
 
-# make_split_fw <file> <soc> <fit blocks> <squashfs bytes_used>: a FIT naming
-# the SoC, padded to whole 64 KiB blocks, then the squashfs, as post-image.sh
-# packs firmware.bin.
+# make_split_fw <file> <soc> <kernel blocks> <squashfs bytes_used>: a uImage
+# named for the SoC whose header and data end inside its last 64 KiB block,
+# then the squashfs at the next block, as post-image.sh packs firmware.bin.
 make_split_fw() {
-    local tot=$(($3 * 65536 - 100))
-    printf '\xd0\x0d\xfe\xed' > "$1"
-    printf %b "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' $(((tot >> 24) & 255)) \
-        $(((tot >> 16) & 255)) $(((tot >> 8) & 255)) $((tot & 255)))" >> "$1"
-    dd if=/dev/zero bs=1 count=56 >> "$1" 2>/dev/null
-    printf 'description\0OpenIPC %s\0' "$2" >> "$1"
+    local size=$(($3 * 65536 - 64 - 100))
+    printf '\x27\x05\x19\x56' > "$1"
+    dd if=/dev/zero bs=1 count=8 >> "$1" 2>/dev/null                  # 4..11
+    printf %b "$(printf '\\x%02x\\x%02x\\x%02x\\x%02x' $(((size >> 24) & 255)) \
+        $(((size >> 16) & 255)) $(((size >> 8) & 255)) $((size & 255)))" >> "$1"  # 12..15
+    dd if=/dev/zero bs=1 count=16 >> "$1" 2>/dev/null                 # 16..31
+    printf 'Linux-4.9.37-%s' "$2" >> "$1"                              # 32.. name
     truncate -s $(($3 * 65536)) "$1"
     make_squashfs "$SB/tmp/split.sqfs" "$4"
     cat "$SB/tmp/split.sqfs" >> "$1"; rm -f "$SB/tmp/split.sqfs"
@@ -3195,7 +3196,8 @@ split_env() {
     set_platform gk7205v200_lite
     STUB_SOC=gk7205v200; STUB_IMG_SOC=gk7205v200; STUB_VENDOR=goke
     set_split_mtd "$1" "${2:-0x800000}"
-    set_cmdline 'mem=32M console=ttyAMA0,115200 panic=20 rootfstype=squashfs root=/dev/mtdblock4 init=/init mtdparts=sfc:256k(u-boot),64k(env),-(firmware) mmz_allocator=gk openipc_nor_fit=1'
+    # What OpenIPC U-Boot passes on the split layout: nothing about the flash.
+    set_cmdline 'mem=32M console=ttyAMA0,115200 panic=20 rootfstype=squashfs init=/init mmz_allocator=gk'
     rm -rf "$SB/overlay"; mkdir -p "$SB/overlay/etc"; echo kept > "$SB/overlay/etc/marker"
     printf 'tmpfs %s/tmp tmpfs rw 0 0\n/dev/mtdblock5 %s/overlay jffs2 rw 0 0\n' "$SB" "$SB" \
         > "$SB/proc/mounts"
@@ -3215,7 +3217,7 @@ blob_files() {
     local n=$((10#$(blob_len "$@")))
     dd if="$SB/dev/mtdblock$1" bs=1 skip=$(($2 - $3 + 24)) count="$n" 2>/dev/null | tar tzf - 2>/dev/null
 }
-FW_HEAD=$(printf 'd00dfeed%08x' $((30 * 65536 - 100)))
+FW_HEAD=$(printf '27051956%08x' 0)
 OVL=$((0x50000 + 70 * 65536))
 
 split_env split
@@ -3257,15 +3259,16 @@ else
     bad "fixed -> split, rc=$RC out='$OUT'"
 fi
 
-# The same on a bootloader that cannot boot the split layout: nothing written.
+# The same under an older bootloader, which spells out the fixed slots: any
+# U-Boot that loads the kernel from 0x50000 boots the split layout, since the
+# kernel finds its own partitions, so nothing about the bootloader is asked.
 split_env fixed
 set_cmdline 'mem=32M console=ttyAMA0,115200 panic=20 rootfstype=squashfs root=/dev/mtdblock3 init=/init mtdparts=sfc:256k(boot),64k(env),2048k(kernel),5120k(rootfs),-(rootfs_data) mmz_allocator=gk'
 run -z --archive="$SB/tmp/fw.tgz"
-if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "Update the bootloader first" &&
-    [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote && ! rebooted; then
-    ok "split image on an old bootloader: refused, nothing written, no reboot"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] && rebooted; then
+    ok "split image under an older bootloader's fixed-slot command line: installed"
 else
-    bad "split image on an old bootloader must be refused, rc=$RC out='$OUT'"
+    bad "split image under an older bootloader must install, rc=$RC out='$OUT'"
 fi
 
 # An image that leaves no block for the settings is refused before the write.
@@ -3357,30 +3360,26 @@ fi
 unset STUB_SOC STUB_IMG_SOC STUB_VENDOR
 rm -rf "$SB/overlay" "$SB/dev"
 
-# The default URL: the -split archive only for a bootloader that boots it. The
-# plain one stays the fixed-slot package every older camera upgrades from.
-SPLIT_CMDLINE='mem=32M console=ttyAMA0,115200 root=/dev/mtdblock4 mtdparts=sfc:256k(u-boot),64k(env),-(firmware) openipc_nor_fit=1'
+# The default URL: the -split archive for the family, whatever the bootloader;
+# every other SoC keeps the plain package.
 default_url_is "$F/openipc.gk7205v200-nor-lite-split.tgz" \
-    eval 'set_platform gk7205v200_lite; STUB_SOC=gk7205v200; set_cmdline "$SPLIT_CMDLINE"'
-default_url_is "$F/openipc.gk7205v200-nor-lite.tgz" \
     eval 'set_platform gk7205v200_lite; STUB_SOC=gk7205v200'
-default_url_is "$F/openipc.ssc338q-nor-lite.tgz" eval 'set_cmdline "$SPLIT_CMDLINE"'
-# --channel resolves the plain package from the manifest; a camera that boots
-# the split layout fetches the -split one beside it.
-printf '@channel stable nightly-1\nnightly-1 gk7205v200_lite nor %s\n' \
-    "$F/openipc.gk7205v200-nor-lite.tgz" > "$SB/manifest.flat"
-for c in split plain; do
+default_url_is "$F/openipc.ssc338q-nor-lite.tgz" true
+# --channel resolves the plain package from the manifest; the family fetches
+# the -split one beside it.
+printf '@channel stable nightly-1\nnightly-1 gk7205v200_lite nor %s\nnightly-1 ssc338q_lite nor %s\n' \
+    "$F/openipc.gk7205v200-nor-lite.tgz" "$F/openipc.ssc338q-nor-lite.tgz" > "$SB/manifest.flat"
+for c in gk7205v200 ssc338q; do
     reset_env; set_meminfo 8192; STUB_DL_BYTES=8691055
-    set_platform gk7205v200_lite; STUB_SOC=gk7205v200
-    [ "$c" = split ] && set_cmdline "$SPLIT_CMDLINE"
+    set_platform ${c}_lite; STUB_SOC=$c
     RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
     run -z --channel=stable
-    want="$F/openipc.gk7205v200-nor-lite.tgz"
-    [ "$c" = split ] && want="$F/openipc.gk7205v200-nor-lite-split.tgz"
+    want="$F/openipc.$c-nor-lite.tgz"
+    [ "$c" = gk7205v200 ] && want="$F/openipc.gk7205v200-nor-lite-split.tgz"
     if printf '%s' "$OUT" | grep -qF "Download from $want" && nothing_wrote; then
-        ok "--channel, $c bootloader -> $want"
+        ok "--channel, $c -> $want"
     else
-        bad "--channel, $c bootloader: expected 'Download from $want', rc=$RC out='$OUT'"
+        bad "--channel, $c: expected 'Download from $want', rc=$RC out='$OUT'"
     fi
 done
 rm -f "$SB/manifest.flat"

@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.75
+scr_version=1.0.76
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -349,8 +349,8 @@ check_combined_fits() {
 		# Everything do_update_firmware_split refuses, refused here, before
 		# the pivot: after it every refusal is a reboot.
 		local ovl=$(nor_split_overlay_at "$x") end=$(nor_split_end) blob
-		[ "$(fit_soc "$x")" = "$model" ] ||
-			die "$x is built for $(fit_soc "$x"), this camera is a $model. Nothing was written."
+		[ "$(nor_split_soc "$x")" = "$model" ] ||
+			die "$x is built for $(nor_split_soc "$x"), this camera is a $model. Nothing was written."
 		[ $((0x50000 + $(stat -c %s "$x"))) -le "$ovl" ] ||
 			die "$x runs past the end of its squashfs ($(printf 0x%x "$ovl")): not a firmware.bin as the build packs it. Nothing was written."
 		blob=$(nor_split_blob_size)
@@ -362,12 +362,7 @@ check_combined_fits() {
 	# partition is the whole flash after env, and the generic path below
 	# would write any blob over it.
 	nor_split_running &&
-		die "$x is not a split-layout firmware.bin for this camera (a FIT, then a squashfs). Nothing was written."
-	# A split-layout image on a camera of that family whose bootloader does not
-	# boot the layout: the FIT would land in a kernel slot U-Boot cannot boot.
-	if nor_split_family && ! nor_split_boot && nor_split_overlay_at "$x" >/dev/null; then
-		die "This firmware is for the split NOR layout, which this camera's bootloader does not boot. Update the bootloader first (https://openipc.org). Nothing was written."
-	fi
+		die "$x is not a split-layout firmware.bin for this camera (a uImage, then a squashfs). Nothing was written."
 	local kdev=$(get_device "kernel")
 	local rdev=$(get_device "rootfs")
 	if [ "$kdev" = "/dev/" ] || [ "$rdev" = "/dev/" ]; then
@@ -793,10 +788,11 @@ do_update_rootfs() {
 
 # --- Split NOR layout (gk7205v200 family) -----------------------------------
 #
-# firmware.bin -- a hashed FIT, then the squashfs at the next 64 KiB boundary --
-# is written whole at 0x50000. U-Boot passes Linux one "firmware" partition
-# from there to the end of the chip, and the kernel divides it at boot
-# (mtdsplit): "kernel" is the FIT, "rootfs" the squashfs, "rootfs_data" the rest
+# firmware.bin -- the uImage, then the squashfs at the next 64 KiB boundary --
+# is written whole at 0x50000, where every U-Boot loads the kernel from. The
+# kernel's device tree has one "firmware" partition from there to the end of
+# the chip, which it divides at boot (mtdsplit), whatever the bootloader
+# passes: "kernel" is the uImage, "rootfs" the squashfs, "rootfs_data" the rest
 # from the squashfs end rounded up to 64 KiB. Nothing has a slot of its own, so
 # an upgrade that changes either image moves where the overlay starts.
 #
@@ -807,9 +803,19 @@ do_update_rootfs() {
 # A power cut before that leaves the blob where it is, and the next boot does it
 # again.
 
-# The bootloader boots this layout: it says so on the kernel command line.
-nor_split_boot() {
-	grep -q 'openipc_nor_fit=1' /proc/cmdline
+# The kernel image of a split firmware.bin, in whole 64 KiB blocks: the uImage
+# header (64 bytes, magic 0x27051956) plus its data size (bytes 12..15,
+# big-endian). The squashfs starts right after it.
+nor_split_blocks() {
+	[ "$(xxd -p -l 4 "$1" 2>&3)" = "27051956" ] || return 1
+	local size=$((0x$(xxd -p -l 4 -s 12 "$1" 2>&3)))
+	[ "$size" -gt 0 ] || return 1
+	echo $(((64 + size + 65535) / 65536))
+}
+
+# The SoC a uImage was built for: its name field, "Linux-<version>-<soc>".
+nor_split_soc() {
+	od -j 32 -N 32 -S 1 -A n "$1" 2>&3 | cut -d- -f3 | tr -d ' '
 }
 
 # "mtdN offset size" for the partitions that together cover 0x50000 to the end
@@ -850,11 +856,11 @@ nor_split_devs() {
 }
 
 # Where the kernel will start rootfs_data for image $1, as an absolute flash
-# offset: the squashfs at the FIT rounded up to 64 KiB, plus its bytes_used
+# offset: the squashfs at the uImage rounded up to 64 KiB, plus its bytes_used
 # (superblock offset 40, little-endian) rounded up to 64 KiB.
 nor_split_overlay_at() {
 	local blocks le used
-	blocks=$(fit_split_blocks "$1") || return 1
+	blocks=$(nor_split_blocks "$1") || return 1
 	[ "$(xxd -p -l 4 -s $((blocks * 65536)) "$1" 2>&3)" = "68737173" ] || return 1
 	le=$(xxd -p -l 4 -s $((blocks * 65536 + 40)) "$1" 2>&3 |
 		sed 's/\(..\)\(..\)\(..\)\(..\)/\4\3\2\1/')
@@ -920,13 +926,14 @@ nor_split_family() {
 # Running from the split layout: one "firmware" partition from 0x50000 to the
 # end of the chip, the kernel's own partitions inside it.
 nor_split_running() {
-	nor_split_boot && [ "$(nor_split_devs | wc -l)" -eq 1 ]
+	nor_split_family && [ "$(nor_split_devs | wc -l)" -eq 1 ]
 }
 
-# This camera installs from the -split package: NOR, a SoC built for the
-# layout, and a bootloader that boots it.
+# This camera installs from the -split package: NOR and a SoC built for the
+# layout. Any bootloader will do: the kernel sits at 0x50000 as it does in the
+# fixed slots, and it finds its own partitions.
 nor_split_wanted() {
-	[ "$(pkg_flash)" = nor ] && nor_split_family && nor_split_boot
+	[ "$(pkg_flash)" = nor ] && nor_split_family
 }
 
 # The -split package's URL for a plain firmware package's, else the URL as it
@@ -950,17 +957,18 @@ nor_split_blob_size() {
 	echo $(((24 + n + 65535) / 65536 * 65536))
 }
 
-# The image is one for the split layout and the bootloader boots it.
+# The image is one for the split layout, for a camera of that family whose
+# flash is laid out as either layout.
 nor_split_image() {
-	nor_split_boot && [ -n "$(nor_split_devs)" ] && nor_split_overlay_at "$1" >/dev/null
+	nor_split_family && [ -n "$(nor_split_devs)" ] && nor_split_overlay_at "$1" >/dev/null
 }
 
 do_update_firmware_split() {
 	local x=$1 ovl end blob=/tmp/overlay.blob tgz=/tmp/overlay.tgz mp
 	echo "Split NOR layout: firmware.bin at 0x50000, the kernel divides it at boot"
-	[ "$(fit_soc "$x")" = "$model" ] ||
-		die "$x is built for $(fit_soc "$x"), this camera is a $model. Nothing was written."
-	ovl=$(nor_split_overlay_at "$x") || die "$x is not a FIT followed by a squashfs. Nothing was written."
+	[ "$(nor_split_soc "$x")" = "$model" ] ||
+		die "$x is built for $(nor_split_soc "$x"), this camera is a $model. Nothing was written."
+	ovl=$(nor_split_overlay_at "$x") || die "$x is not a uImage followed by a squashfs. Nothing was written."
 	[ $((0x50000 + $(stat -c %s "$x"))) -le "$ovl" ] ||
 		die "$x runs past the end of its squashfs. Nothing was written."
 	end=$(nor_split_end)
