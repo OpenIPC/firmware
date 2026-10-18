@@ -187,14 +187,15 @@ else ifneq ($(and $(filter "gk7205v200",$(BR2_OPENIPC_SOC_FAMILY)),$(wildcard $(
 # bounded: the chip, less boot and env (320K) and the smallest overlay worth
 # keeping (256K).
 #
-# The uImage stays a 64 KiB block short of its 2 MiB slot (1984K). The kernel,
+# The uImage stays a 64 KiB block short of its 2 MiB slot: under 1984K, which
+# CHECK_SIZE, counting whole KB, enforces as 1983K. The kernel,
 # U-Boot and sysupgrade tell the layouts apart by where the squashfs is: at the
 # block right after the uImage is the split layout, at the slot boundary fixed
 # slots. A fixed-slot uImage ending in the slot's last block would be both.
 ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
-	@$(call PREPARE_REPACK,uImage,1984,rootfs.squashfs,5120,nor)
+	@$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,5120,nor)
 else
-	@$(call PREPARE_REPACK,uImage,1984,rootfs.squashfs,8192,nor)
+	@$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,8192,nor)
 endif
 	@$(call CHECK_SIZE,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024 - 576))
 	@$(call REPACK_NOR_SPLIT)

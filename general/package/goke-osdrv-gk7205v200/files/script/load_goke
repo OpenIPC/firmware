@@ -465,17 +465,13 @@ if [ "$b_arg_insmod" = "1" ]; then
     modprobe open_hwrng 2>/dev/null
 fi
 
-if [ $os_mem_size -ge $mem_total ]; then
-	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
-	exit
-fi
-
 # The kernel holds what mem= on its command line gave it, whatever osmem says:
 # a bootloader other than OpenIPC's -- a vendor U-Boot keeps its own osmem --
 # builds that command line from an environment this one does not read, and an
 # MMZ laid over the kernel's own memory crashes the first media module that
 # touches it. With the cma allocator mem= is the whole DDR and mmz= the zone,
-# so only the gk one is corrected.
+# so only the gk one is corrected -- before the check below, which then bounds
+# the corrected size.
 if ! grep -q "mmz_allocator=cma" /proc/cmdline; then
 	booted_mem=$(awk -F '=' '$1=="mem"{print $2+0; exit}' RS=" " /proc/cmdline)
 	if [ -n "${booted_mem}" ] && [ "${booted_mem}" -gt 0 ] && [ "${booted_mem}" != "${os_mem_size}" ]; then
@@ -483,6 +479,11 @@ if ! grep -q "mmz_allocator=cma" /proc/cmdline; then
 		os_mem_size=${booted_mem}
 	fi
 fi
+if [ $os_mem_size -ge $mem_total ]; then
+	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+	exit
+fi
+
 calc_mmz_info
 
 #######################Action###############################
