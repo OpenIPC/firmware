@@ -88,16 +88,20 @@ lock() {
 	nopid=0
 	until mkdir "$SUPERVISOR.lock" 2>/dev/null; do
 		holder=$(cat "$SUPERVISOR.lock/pid" 2>/dev/null)
+		# Removed only if it still names what was judged stale: another
+		# command reclaiming the same lock may have taken it in between.
 		if [ -n "$holder" ]; then
 			nopid=0
 			if ! kill -0 "$holder" 2>/dev/null; then
-				rm -rf "$SUPERVISOR.lock"
+				[ "$(cat "$SUPERVISOR.lock/pid" 2>/dev/null)" = "$holder" ] &&
+					rm -rf "$SUPERVISOR.lock"
 				continue
 			fi
 		else
 			nopid=$((nopid + 1))
 			if [ "$nopid" -ge 5 ]; then
-				rm -rf "$SUPERVISOR.lock"
+				[ -z "$(cat "$SUPERVISOR.lock/pid" 2>/dev/null)" ] &&
+					rm -rf "$SUPERVISOR.lock"
 				nopid=0
 				continue
 			fi
@@ -138,18 +142,23 @@ crashed() {
 # a filesystem from the list below. RAM (tmpfs, ramfs) would eat the memory the
 # decoders and the system need, the flash root (squashfs, overlay, jffs2,
 # ubifs) would wear out and fill, and virtual ones (proc, sysfs, devtmpfs)
-# hold nothing. The longest mount point that is a prefix wins.
+# hold nothing; and it must be mounted read-write. The longest mount point
+# that is a prefix wins.
 recordable() {
 	# /proc/mounts escapes space, tab, newline and backslash in a mount point
 	# as \040, \011, \012 and \134; decoded before the comparison, or a disk
 	# mounted at "/mnt/Disk One" could never be recorded to.
-	awk -v p="$1" '
+	# The path goes in through the environment: awk -v would interpret the
+	# backslashes in it as escapes.
+	VIGIL_REC="$1" awk '
+		BEGIN { p = ENVIRON["VIGIL_REC"] }
 		{ m = $2
 		  gsub(/\\040/, " ", m); gsub(/\\011/, "\t", m); gsub(/\\012/, "\n", m)
 		  gsub(/\\134/, "\\", m)
 		  if (p == m || index(p, m == "/" ? "/" : m "/") == 1)
-			if (length(m) > length(best)) { best = m; fs = $3 } }
-		END { exit !(best != "" && best != "/" && fs ~ /^(vfat|msdos|exfat|ext[234]|f2fs|xfs|btrfs|ntfs|ntfs3|fuseblk|nfs|nfs4|cifs|smb3)$/) }
+			if (length(m) > length(best)) { best = m; fs = $3; opts = "," $4 "," } }
+		END { exit !(best != "" && best != "/" && opts !~ /,ro,/ &&
+			fs ~ /^(vfat|msdos|exfat|ext[234]|f2fs|xfs|btrfs|ntfs|ntfs3|fuseblk|nfs|nfs4|cifs|smb3)$/) }
 	' /proc/mounts
 }
 

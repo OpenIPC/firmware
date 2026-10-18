@@ -271,6 +271,7 @@ jobs:
       - shipped-shell-parse
       - build-request
       - network-failover
+      - vigil-supervise
     # always() so the gate reports when a needed job fails, but not on a run
     # whose jobs the guard above deliberately skipped. Upstream the added
     # disjunct is true, so this reduces to always().
@@ -283,7 +284,7 @@ jobs:
     steps:
       - name: Require every shell test to succeed
         run: |
-          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} init-overlay=${{ needs.init-overlay.result }} crashlog=${{ needs.crashlog-capture.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }} build-request=${{ needs.build-request.result }} network-failover=${{ needs.network-failover.result }}"
+          echo "load-hisilicon=${{ needs.load-hisilicon-parsing.result }} sysupgrade=${{ needs.sysupgrade-verify.result }} camera-mac=${{ needs.camera-mac.result }} init-overlay=${{ needs.init-overlay.result }} crashlog=${{ needs.crashlog-capture.result }} excludes=${{ needs.excludes-report.result }} ca-bundle=${{ needs.ca-bundle-lite.result }} shell-parse=${{ needs.shipped-shell-parse.result }} build-request=${{ needs.build-request.result }} network-failover=${{ needs.network-failover.result }} vigil=${{ needs.vigil-supervise.result }}"
           # 'skipped' is not accepted, for the reason given in lint.yml: a
           # skipped job would take this context green having checked nothing.
           if [ "${{ needs.load-hisilicon-parsing.result }}" != "success" ]; then
@@ -297,6 +298,9 @@ jobs:
           fi
           if [ "${{ needs.network-failover.result }}" != "success" ]; then
             echo "::error::network failover tests did not succeed"; exit 1
+          fi
+          if [ "${{ needs.vigil-supervise.result }}" != "success" ]; then
+            echo "::error::S95vigil supervisor tests did not succeed"; exit 1
           fi
           if [ "${{ needs.camera-mac.result }}" != "success" ]; then
             echo "::error::the MAC the camera gives itself did not succeed"; exit 1

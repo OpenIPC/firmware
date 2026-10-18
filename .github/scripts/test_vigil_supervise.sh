@@ -38,13 +38,15 @@ chmod +x "$SB/S95vigil"
 
 # A disk, a RAM disk and the flash root, as /proc/mounts would list them.
 # A mount point with a space in it is listed with the space escaped (\040).
-mkdir -p "$SB/Disk One"
+mkdir -p "$SB/Disk One" "$SB/rocard/rec" "$SB/back\\slash/rec"
 cat > "$SB/mounts" <<EOF
 /dev/root / squashfs ro 0 0
 tmpfs $SB/ram tmpfs rw 0 0
 /dev/sda1 $SB/disk ext4 rw 0 0
 /dev/sdb1 $SB/Disk\\040One ext4 rw 0 0
 proc $SB/proc proc rw 0 0
+/dev/sdc1 $SB/rocard vfat ro,relatime 0 0
+/dev/sdd1 $SB/back\\134slash ext4 rw 0 0
 EOF
 cp "$SB/mounts" "$SB/mounts.boot"
 
@@ -175,6 +177,17 @@ reset exit
 echo "$SB/proc/self" > "$SB/cfg/.record.path"
 supervise
 [ "$(args)" = "-s -o none" ] && ok "a directory on proc (not a disk, card or share) is refused" || bad "proc path: $(args)"
+
+reset exit
+echo "$SB/rocard/rec" > "$SB/cfg/.record.path"
+supervise
+[ "$(args)" = "-s -o none" ] && ok "a card mounted read-only is refused" || bad "read-only card: $(args)"
+
+reset exit
+echo "$SB/back\\slash/rec" > "$SB/cfg/.record.path"
+supervise
+[ "$(sed -n 3p "$SB/args")" = "$SB/back\\slash/rec" ] && ok "a disk mounted at a path with a backslash is recorded to" \
+    || bad "backslash mount point: $(args)"
 
 reset exit
 touch "$SB/cfg/.broken"
