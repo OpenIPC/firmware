@@ -28,6 +28,9 @@ UPGRADE_LOCK=/tmp/sysupgrade.lock
 BACKOFF="5 30 120"
 WINDOW=600
 LIMIT=5
+# vigil: how often a configured recording directory that is not there yet (a
+# card or disk still to be mounted) is looked for while vigild runs without it.
+CARD_POLL=10
 
 # Find the daemon by executable, never through a pidfile. Given -p, busybox
 # start-stop-daemon inspects only the pid that file holds and never scans
@@ -121,8 +124,14 @@ crashed() {
 # recordings would eat the memory the decoders and the system need, or wear
 # out and fill the flash. The longest mount point that is a prefix wins.
 recordable() {
+	# /proc/mounts escapes space, tab, newline and backslash in a mount point
+	# as \040, \011, \012 and \134; decoded before the comparison, or a disk
+	# mounted at "/mnt/Disk One" could never be recorded to.
 	awk -v p="$1" '
-		{ m = $2; if (p == m || index(p, m == "/" ? "/" : m "/") == 1)
+		{ m = $2
+		  gsub(/\\040/, " ", m); gsub(/\\011/, "\t", m); gsub(/\\012/, "\n", m)
+		  gsub(/\\134/, "\\", m)
+		  if (p == m || index(p, m == "/" ? "/" : m "/") == 1)
 			if (length(m) > length(best)) { best = m; fs = $3 } }
 		END { exit !(best != "" && best != "/" && fs !~ /^(tmpfs|ramfs|devtmpfs|overlay|squashfs|jffs2|ubifs)$/) }
 	' /proc/mounts
@@ -136,25 +145,44 @@ recordable() {
 vigil_config() {
 	cams=$(yaml-cli -i "$CONFIG" -g .cameras 2>/dev/null)
 	rec_dir= rec_seg= rec_keep=
-	path=$(yaml-cli -i "$CONFIG" -g .record.path 2>/dev/null)
-	[ -n "$path" ] || return 0
-	real=$(readlink -f "$path" 2>/dev/null)
+	rec_path=$(yaml-cli -i "$CONFIG" -g .record.path 2>/dev/null)
+	[ -n "$rec_path" ] || return 0
+	real=$(readlink -f "$rec_path" 2>/dev/null)
 	if [ -n "$real" ] && [ -d "$real" ] && recordable "$real"; then
 		rec_dir=$real
 		rec_seg=$(yaml-cli -i "$CONFIG" -g .record.segment 2>/dev/null)
 		rec_keep=$(yaml-cli -i "$CONFIG" -g .record.keep 2>/dev/null)
-	else
-		logger -t vigil "not recording: $path is not a directory on a disk or card" 2>/dev/null
+	elif [ "$1" != quiet ]; then
+		logger -t vigil "not recording: $rec_path is not a directory on a disk or card" 2>/dev/null
 	fi
+}
+
+# vigil: while vigild runs without the recording directory it was configured
+# with, look for it every CARD_POLL seconds: a card or disk mounted after boot
+# (the automounter knows nothing of vigil) would otherwise go unused until
+# someone restarted it. Once the directory is usable, vigild is ended and
+# the supervisor, seeing the note, starts it again with it.
+card_watch() {
+	trap 'exit 0' TERM
+	while sleep "$CARD_POLL"; do
+		vigil_config quiet
+		[ -n "$rec_dir" ] || continue
+		: > "$SUPERVISOR.card"
+		logger -t vigil "$rec_path is available now; starting vigild again to record into it" 2>/dev/null
+		start-stop-daemon -K -q -x "$DAEMON_PATH"
+		return 0
+	done
 }
 
 supervise() {
 	trap '' HUP
 	# A stop while it waits ends the wait, not just the run after it.
-	trap 'kill $waiting 2>/dev/null; rm -f "$SUPERVISOR"; exit 0' TERM INT
+	trap 'kill $waiting $watcher 2>/dev/null; rm -f "$SUPERVISOR" "$SUPERVISOR.card"; exit 0' TERM INT
 	echo $$ > "$SUPERVISOR"
 	waiting=
+	watcher=
 	crashes=
+	rm -f "$SUPERVISOR.card"
 	while :; do
 		# An upgrade has the board: it reboots it when done. Asked
 		# before every start, the first and each one after a wait.
@@ -173,8 +201,20 @@ supervise() {
 		else
 			set -- "$@" -o none
 		fi
+		if [ -z "$rec_dir" ] && [ -n "$rec_path" ]; then
+			card_watch &
+			watcher=$!
+		fi
 		start-stop-daemon -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- "$@"
 		rc=$?
+		[ -n "$watcher" ] && kill "$watcher" 2>/dev/null
+		watcher=
+		# vigil: ended by card_watch because its recording directory turned
+		# up -- a fresh start, not a crash and not a stop.
+		if [ -f "$SUPERVISOR.card" ]; then
+			rm -f "$SUPERVISOR.card"
+			continue
+		fi
 		if ! { [ "$rc" -gt 128 ] && crashed $((rc - 128)); }; then
 			# vigil: an exit of its own is not restarted, but is said: an NVR
 			# with a blank screen should leave a reason in the log.

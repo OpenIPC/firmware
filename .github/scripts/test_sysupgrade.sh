@@ -164,7 +164,7 @@ stub() { printf '#!/bin/bash\n%s\n' "$2" > "$SB/bin/$1"; chmod +x "$SB/bin/$1"; 
 stub ipcinfo    'case "$1" in -v) echo "${STUB_VENDOR:-sigmastar}";; -F) echo "${STUB_FLASH:-nor}";; esac'
 # majestic is running when a test says so, and only then: the host's own
 # pidof would otherwise decide.
-stub pidof '[ "$1" = majestic ] && [ -n "$STUB_MAJESTIC_PID" ] && { echo "$STUB_MAJESTIC_PID"; exit 0; }; exit 1'
+stub pidof '[ "$1" = majestic ] && [ -n "$STUB_MAJESTIC_PID" ] && { echo "$STUB_MAJESTIC_PID"; exit 0; }; [ "$1" = vigild ] && [ -n "$STUB_VIGILD_PID" ] && { echo "$STUB_VIGILD_PID"; exit 0; }; exit 1'
 # Into the flash log, not the host's syslog.
 stub logger 'echo "logger $*" >> "$FLASH_LOG"'
 # `upgrade` is the URL a builder profile writes on first boot; unset models
@@ -541,6 +541,7 @@ run() {
         STUB_LOCK="$SB/tmp/sysupgrade.lock" \
         STUB_STOP_FAILS="${STUB_STOP_FAILS:-}" \
         STUB_MAJESTIC_PID="${STUB_MAJESTIC_PID:-}" \
+        STUB_VIGILD_PID="${STUB_VIGILD_PID:-}" STUB_VIGIL_STOP_FAILS="${STUB_VIGIL_STOP_FAILS:-}" \
         FLASH_RAM_FLOOR_KB="${FLASH_RAM_FLOOR_KB:-2048}" \
         UBI_SYS="$SB/sys/class/ubi" INITTAB="$SB/etc/inittab" handoff_wait=0 \
         FOLLOW_LOG="${FOLLOW_LOG:-}" STUB_UBI_SLOW="${STUB_UBI_SLOW:-}" \
@@ -569,6 +570,7 @@ reset_env() {
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB FLASH_RAM_FLOOR_KB
     unset STUB_MEM_AFTER_STOP STUB_MAJESTIC_PID STUB_STOP_FAILS WDOG WDOG_PROC
+    unset STUB_VIGILD_PID STUB_VIGIL_STOP_FAILS
     unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY STUB_UMOUNT_HIDES RUN_ENV FOLLOW_LOG STUB_UBI_SLOW
     rm -rf "$SB/sys"
     printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n::restart:/sbin/init\n' > "$SB/etc/inittab"
@@ -2085,11 +2087,13 @@ if [ "$1" != stop ] && [ -f "$STUB_LOCK" ]; then
 else
     echo "S95vigil $1" >> "$FLASH_LOG"
 fi
+[ "$1" = stop ] && [ -n "$STUB_VIGIL_STOP_FAILS" ] && exit 1
 exit 0
 STUB
 chmod +x "$SB/etc/init.d/S95vigil"
 
 reset_env
+STUB_VIGILD_PID=4242
 : > "$SD/autoupdate-rootfs.img"
 printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
 run -z --kernel="$K" --rootfs="$R"
@@ -2105,9 +2109,33 @@ if ! grep -q "S95vigil start (under the upgrade lock)" "$SB/tmp/flash.log"; then
 else
     bad "vigil was started under the upgrade lock; S95vigil declines that and the NVR stays blank"
 fi
+
+# Not running when the upgrade began -- stopped on purpose, or given up on
+# after a crash loop: left alone, and not started by a refused upgrade.
+reset_env
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && ! grep -q "S95vigil" "$SB/tmp/flash.log"; then
+    ok "a vigil that was not running is neither stopped nor started by a refused upgrade"
+else
+    bad "vigil not running -> log='$(grep S95vigil "$SB/tmp/flash.log" | tr '\n' ';')'"
+fi
+
+# A stop that fails has ended the supervisor already: a refused upgrade
+# restarts it rather than starting a vigild that never went away.
+reset_env
+STUB_VIGILD_PID=4242 STUB_VIGIL_STOP_FAILS=1
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && grep -qx "S95vigil restart" "$SB/tmp/flash.log"; then
+    ok "a vigil that would not stop is restarted when the upgrade is refused"
+else
+    bad "failed vigil stop -> rc=$RC log='$(grep S95vigil "$SB/tmp/flash.log" | tr '\n' ';')'"
+fi
 rm -f "$SD/autoupdate-rootfs.img"
 
 reset_env
+STUB_VIGILD_PID=4242
 printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
 run -z --kernel="$K" --rootfs="$R"
 if [ "$RC" -eq 0 ] && grep -qx "S95vigil stop" "$SB/tmp/flash.log" &&

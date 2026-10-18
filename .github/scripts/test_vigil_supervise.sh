@@ -29,18 +29,23 @@ sed -e "s|DAEMON_PATH=\"/usr/bin/\$DAEMON\"|DAEMON_PATH=\"$SB/bin/vigild\"|" \
     -e "s|UPGRADE_LOCK=/tmp/sysupgrade.lock|UPGRADE_LOCK=$SB/sysupgrade.lock|" \
     -e "s|BACKOFF=\"5 30 120\"|BACKOFF=\"\${TEST_BACKOFF:-0 0 0}\"|" \
     -e "s|/proc/mounts|$SB/mounts|" \
+    -e "s|CARD_POLL=10|CARD_POLL=1|" \
     "$SRC" > "$SB/S95vigil"
-for p in 'DAEMON_PATH="/usr/bin/$DAEMON"' /var/run/ CRASH=/etc/crash UPGRADE_LOCK=/tmp/sysupgrade.lock 'BACKOFF="5 30 120"' /proc/mounts; do
+for p in 'DAEMON_PATH="/usr/bin/$DAEMON"' /var/run/ CRASH=/etc/crash UPGRADE_LOCK=/tmp/sysupgrade.lock 'BACKOFF="5 30 120"' /proc/mounts CARD_POLL=10; do
     grep -qF "$p" "$SRC" || bad "$p is gone from S95vigil; this test is testing nothing there"
 done
 chmod +x "$SB/S95vigil"
 
 # A disk, a RAM disk and the flash root, as /proc/mounts would list them.
+# A mount point with a space in it is listed with the space escaped (\040).
+mkdir -p "$SB/Disk One"
 cat > "$SB/mounts" <<EOF
 /dev/root / squashfs ro 0 0
 tmpfs $SB/ram tmpfs rw 0 0
 /dev/sda1 $SB/disk ext4 rw 0 0
+/dev/sdb1 $SB/Disk\\040One ext4 rw 0 0
 EOF
+cp "$SB/mounts" "$SB/mounts.boot"
 
 # vigild: counts its starts, keeps its arguments one per line, then does what
 # $SB/mode says.
@@ -173,7 +178,38 @@ supervise
 [ "$(sed -n 3p "$SB/args")" = "$SB/disk/real" ] && ok "a link within the disk is followed, and vigild gets where it leads" \
     || bad "alias path: $(args)"
 
-# 5. start and stop.
+reset exit
+mkdir -p "$SB/Disk One/rec"
+echo "$SB/Disk One/rec" > "$SB/cfg/.record.path"
+supervise
+[ "$(sed -n 3p "$SB/args")" = "$SB/Disk One/rec" ] && ok "a disk mounted at a path with a space (escaped in /proc/mounts) is recorded to" \
+    || bad "escaped mount point: $(args)"
+
+# 5. A card mounted after vigild started: found, and vigild started again with it.
+reset run
+echo "$SB/card/rec" > "$SB/cfg/.record.path"
+sh "$SB/S95vigil" start > /dev/null
+for _ in $(seq 50); do [ "$(starts)" -ge 1 ] && break; sleep 0.1; done
+first=$(args)
+mkdir -p "$SB/card/rec"
+echo "/dev/mmcblk0p1 $SB/card vfat rw 0 0" >> "$SB/mounts"
+for _ in $(seq 60); do [ "$(starts)" -ge 2 ] && break; sleep 0.1; done
+sleep 0.3
+if [ "$first" = "-s -o none" ] && [ "$(starts)" = 2 ] && [ "$(sed -n 3p "$SB/args")" = "$SB/card/rec" ]; then
+    ok "a card mounted later is found, and vigild is started again to record to it"
+else
+    bad "late card: first '$first', starts $(starts), now '$(args)'"
+fi
+if pgrep -f "$SB/S95vigil supervise" > /dev/null && [ ! -f "$SB/crash/vigil.loop" ]; then
+    ok "...by the same supervisor, with no crash counted"
+else
+    bad "late card: supervisor gone or a crash counted"
+fi
+sh "$SB/S95vigil" stop > /dev/null
+sleep 0.5
+cp "$SB/mounts.boot" "$SB/mounts"
+
+# 6. start and stop.
 reset run
 echo "utc=2026-01-01 00:00:00" > "$SB/crash/vigil.loop"
 sh "$SB/S95vigil" start > /dev/null
