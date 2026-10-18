@@ -66,6 +66,7 @@ sed -e 's|"$1/etc/os-release"|"${1:-@SB@}@OSRELEASE@"|g' \
     -e "s|/proc/meminfo|@SB@/proc/meminfo|g" \
     -e "s|/proc/sys/vm/drop_caches|@SB@/tmp/drop_caches|g" \
     -e "s|/etc/init.d/|@SB@/etc/init.d/|g" \
+    -e "s|/var/run/vigil-supervise.pid|@SB@/tmp/vigil-supervise.pid|g" \
     -e "s|/bin/busybox|@SB@/bin/busybox|g" \
     -e "s|@OSRELEASE@|/etc/os-release|g" \
     -e "s|@SB@|$SB|g" \
@@ -2119,6 +2120,24 @@ if [ "$RC" -ne 0 ] && ! grep -q "S95vigil" "$SB/tmp/flash.log"; then
     ok "a vigil that was not running is neither stopped nor started by a refused upgrade"
 else
     bad "vigil not running -> log='$(grep S95vigil "$SB/tmp/flash.log" | tr '\n' ';')'"
+fi
+
+# vigil's supervisor between two vigilds -- in a crash back-off, or starting
+# it again for a card that turned up -- has no vigild to find, but it is
+# vigil running all the same: left alone it would see the lock and give up.
+reset_env
+sleep 60 &
+supervisor_pid=$!
+echo "$supervisor_pid" > "$SB/tmp/vigil-supervise.pid"
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+run -z --kernel="$K" --rootfs="$R"
+kill "$supervisor_pid" 2>/dev/null
+rm -f "$SB/tmp/vigil-supervise.pid"
+if [ "$RC" -ne 0 ] && grep -qx "S95vigil stop" "$SB/tmp/flash.log" &&
+    grep -qx "S95vigil start" "$SB/tmp/flash.log"; then
+    ok "a supervisor with no vigild at that moment is stopped and started again too"
+else
+    bad "supervisor only -> rc=$RC log='$(grep S95vigil "$SB/tmp/flash.log" | tr '\n' ';')'"
 fi
 
 # A stop that fails has ended the supervisor already: a refused upgrade

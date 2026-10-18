@@ -21,7 +21,7 @@ bad() { echo "FAIL $*"; fail=$((fail + 1)); }
 
 SB=$(mktemp -d)
 trap 'pkill -f "$SB/" 2>/dev/null; rm -rf "$SB"' EXIT
-mkdir -p "$SB/bin" "$SB/run" "$SB/crash" "$SB/cfg" "$SB/disk" "$SB/ram"
+mkdir -p "$SB/bin" "$SB/run" "$SB/crash" "$SB/cfg" "$SB/disk" "$SB/ram" "$SB/proc/self"
 
 sed -e "s|DAEMON_PATH=\"/usr/bin/\$DAEMON\"|DAEMON_PATH=\"$SB/bin/vigild\"|" \
     -e "s|/var/run/|$SB/run/|g" \
@@ -44,6 +44,7 @@ cat > "$SB/mounts" <<EOF
 tmpfs $SB/ram tmpfs rw 0 0
 /dev/sda1 $SB/disk ext4 rw 0 0
 /dev/sdb1 $SB/Disk\\040One ext4 rw 0 0
+proc $SB/proc proc rw 0 0
 EOF
 cp "$SB/mounts" "$SB/mounts.boot"
 
@@ -83,9 +84,14 @@ case "$mode" in
         exit 0 ;;
 esac
 EOF
-# yaml-cli -i FILE -g .a.b: the value is the file $SB/cfg/.a.b, absent = not set.
+# yaml-cli -i FILE -g .a.b: the value is the file $SB/cfg/.a.b, absent = not set;
+# with $SB/cfg/.broken present it fails to parse, as the real one does.
 cat > "$SB/bin/yaml-cli" <<EOF
 #!/bin/sh
+if [ -f "$SB/cfg/.broken" ]; then
+    echo "Parse error: while parsing a block collection at line 2, column 3" >&2
+    exit 1
+fi
 [ "\$3" = -g ] && [ -f "$SB/cfg/\$4" ] && cat "$SB/cfg/\$4"
 EOF
 printf '#!/bin/sh\necho "$*" >> "%s/log"\n' "$SB" > "$SB/bin/logger"
@@ -163,6 +169,21 @@ ln -s "$SB/ram" "$SB/disk/rec"
 echo "$SB/disk/rec" > "$SB/cfg/.record.path"
 supervise
 [ "$(args)" = "-s -o none" ] && ok "a link on the disk that leads to tmpfs is refused" || bad "linked path: $(args)"
+
+reset exit
+echo "$SB/proc/self" > "$SB/cfg/.record.path"
+supervise
+[ "$(args)" = "-s -o none" ] && ok "a directory on proc (not a disk, card or share) is refused" || bad "proc path: $(args)"
+
+reset exit
+touch "$SB/cfg/.broken"
+supervise
+if [ "$(args)" = "-s -o none" ] && grep -q "cannot read .*Parse error" "$SB/log" 2>/dev/null; then
+    ok "a configuration yaml-cli cannot parse is said in the log, not taken for an empty one"
+else
+    bad "broken config: args '$(args)', log '$(cat "$SB/log" 2>/dev/null)'"
+fi
+rm -f "$SB/cfg/.broken"
 
 reset exit
 mkdir -p "$SB/flash"

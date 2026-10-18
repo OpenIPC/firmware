@@ -120,9 +120,11 @@ crashed() {
 	return 1
 }
 
-# vigil: the mount that holds $1 is refused when it is RAM or the flash root:
-# recordings would eat the memory the decoders and the system need, or wear
-# out and fill the flash. The longest mount point that is a prefix wins.
+# vigil: the mount that holds $1 must be a disk, a card or a network share --
+# a filesystem from the list below. RAM (tmpfs, ramfs) would eat the memory the
+# decoders and the system need, the flash root (squashfs, overlay, jffs2,
+# ubifs) would wear out and fill, and virtual ones (proc, sysfs, devtmpfs)
+# hold nothing. The longest mount point that is a prefix wins.
 recordable() {
 	# /proc/mounts escapes space, tab, newline and backslash in a mount point
 	# as \040, \011, \012 and \134; decoded before the comparison, or a disk
@@ -133,7 +135,7 @@ recordable() {
 		  gsub(/\\134/, "\\", m)
 		  if (p == m || index(p, m == "/" ? "/" : m "/") == 1)
 			if (length(m) > length(best)) { best = m; fs = $3 } }
-		END { exit !(best != "" && best != "/" && fs !~ /^(tmpfs|ramfs|devtmpfs|overlay|squashfs|jffs2|ubifs)$/) }
+		END { exit !(best != "" && best != "/" && fs ~ /^(vfat|msdos|exfat|ext[234]|f2fs|xfs|btrfs|ntfs|ntfs3|fuseblk|nfs|nfs4|cifs|smb3)$/) }
 	' /proc/mounts
 }
 
@@ -143,7 +145,14 @@ recordable() {
 # as one argument. It is resolved first, so a link from a card to /tmp is
 # judged by where it lands, and that resolved path is what vigild gets.
 vigil_config() {
-	cams=$(yaml-cli -i "$CONFIG" -g .cameras 2>/dev/null)
+	# yaml-cli exits 1 for a key that is absent (no cameras, no recording --
+	# the shipped default) and for a file it cannot open or parse alike; only
+	# its message tells them apart, and the second is worth a line in the log.
+	cams=$(yaml-cli -i "$CONFIG" -g .cameras 2>"$SUPERVISOR.err")
+	if [ "$1" != quiet ] && grep -qE 'Parse error|Failed to open' "$SUPERVISOR.err" 2>/dev/null; then
+		logger -t vigil "cannot read $CONFIG ($(head -1 "$SUPERVISOR.err")); starting with no cameras and no recording" 2>/dev/null
+	fi
+	rm -f "$SUPERVISOR.err"
 	rec_dir= rec_seg= rec_keep=
 	rec_path=$(yaml-cli -i "$CONFIG" -g .record.path 2>/dev/null)
 	[ -n "$rec_path" ] || return 0
