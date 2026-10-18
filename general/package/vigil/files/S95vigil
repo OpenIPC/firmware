@@ -80,13 +80,27 @@ start() {
 # start and stop one at a time: two starts at once would leave a supervisor
 # no pid names, which a stop could then not end. The lock holds its holder's
 # pid, and is taken over only once that process is gone -- a start that was
-# killed -- never from one still running.
+# killed -- never from one still running. vigil: a holder writes its pid the
+# moment after its mkdir, so a lock still without one after five seconds was
+# left by a command killed in between, and is taken over too; otherwise every
+# later start and stop would wait on it forever.
 lock() {
+	nopid=0
 	until mkdir "$SUPERVISOR.lock" 2>/dev/null; do
 		holder=$(cat "$SUPERVISOR.lock/pid" 2>/dev/null)
-		if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
-			rm -rf "$SUPERVISOR.lock"
-			continue
+		if [ -n "$holder" ]; then
+			nopid=0
+			if ! kill -0 "$holder" 2>/dev/null; then
+				rm -rf "$SUPERVISOR.lock"
+				continue
+			fi
+		else
+			nopid=$((nopid + 1))
+			if [ "$nopid" -ge 5 ]; then
+				rm -rf "$SUPERVISOR.lock"
+				nopid=0
+				continue
+			fi
 		fi
 		sleep 1
 	done

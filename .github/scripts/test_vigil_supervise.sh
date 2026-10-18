@@ -230,7 +230,19 @@ sh "$SB/S95vigil" stop > /dev/null
 sleep 0.5
 cp "$SB/mounts.boot" "$SB/mounts"
 
-# 6. start and stop.
+# 6. A lock left with no pid -- its command killed between mkdir and writing
+#    its pid -- is taken over after a short grace, not waited on forever.
+reset run
+mkdir -p "$SB/run/vigil-supervise.pid.lock"
+if timeout 15 sh "$SB/S95vigil" start > /dev/null; then
+    ok "a lock its owner never wrote a pid into is taken over"
+else
+    bad "start waited on a pid-less lock"
+fi
+sh "$SB/S95vigil" stop > /dev/null
+sleep 0.5
+
+# 7. start and stop.
 reset run
 echo "utc=2026-01-01 00:00:00" > "$SB/crash/vigil.loop"
 sh "$SB/S95vigil" start > /dev/null
