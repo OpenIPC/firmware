@@ -19,7 +19,7 @@ get_env() {
   # bootargs from a fixed list of keys instead, and silently dropped whatever
   # was not on it -- ubi.mtd among them, so the next boot of a NAND/UBI board
   # could not attach ubi0 and panicked mounting its root (#2281).
-  kept=$(echo ${bootargs} | awk 'BEGIN { RS = " " } { sub(/\n$/, ""); k = $0; sub(/=.*/, "", k); if ($0 != "" && k != "mem" && k != "mmz" && k != "mmz_allocator") printf "%s ", $0 }')
+  kept=$(echo ${bootargs} | awk 'BEGIN { RS = " " } { sub(/\n$/, ""); k = $0; sub(/=.*/, "", k); if ($0 != "" && k != "mem" && k != "mmz" && k != "mmz_allocator" && k != "osmem") printf "%s ", $0 }')
   osmem=$(fw_printenv -n osmem)
   totalmem=$(fw_printenv -n totalmem 2>/dev/null)
   [ -n "$totalmem" ] || totalmem=$(dt_mem_total)
@@ -36,6 +36,42 @@ calc_mmz() {
   mmz=anonymous,0,$mmz_start,$mmz_size
 }
 
+
+# A kernel with hisi_mem measures DRAM and picks the allocator and the OS share
+# itself, at every boot, under any bootloader; nothing has to be written for a
+# camera to come up right. Here the user overrides it: mmz_allocator= and
+# osmem= go on the command line, which that kernel reads, and mem= stays the
+# OS share for a kernel without it. `auto` drops the override.
+if [ -d /sys/module/hisi_mem/parameters ] && [ -n "$(cat /sys/module/hisi_mem/parameters/allocator 2>/dev/null)" ]; then
+  p=/sys/module/hisi_mem/parameters
+  case "$1" in
+  hisi|cma|auto)
+    get_env
+    os=${2:-${osmem:-32M}}
+    if [ "$1" = auto ]; then
+      newbootargs="mem=${os} ${kept}"
+    else
+      newbootargs="mem=${os} ${kept}mmz_allocator=$1 osmem=${os}"
+    fi
+    if ! fw_setenv bootargs ${newbootargs}; then
+      echo "Could not write bootargs; nothing changes at the next boot."
+      exit 1
+    fi
+    echo ${newbootargs}
+    echo "Applies at the next boot. Now: DRAM $(cat $p/dram)M, OS $(cat $p/osmem)M, $(cat $p/allocator), mmz=$(cat $p/mmz)"
+    exit 0
+    ;;
+  mmz)
+    cat $p/mmz
+    exit 0
+    ;;
+  *)
+    echo "Usage: set_allocator hisi|cma [osmem] | auto | mmz"
+    echo "Now: DRAM $(cat $p/dram)M, OS $(cat $p/osmem)M, $(cat $p/allocator), mmz=$(cat $p/mmz)"
+    exit 1
+    ;;
+  esac
+fi
 
 # The zone `cma` would write, without writing it. The load script compares it
 # with the zone the kernel booted with: bootargs are written once, so an osmem

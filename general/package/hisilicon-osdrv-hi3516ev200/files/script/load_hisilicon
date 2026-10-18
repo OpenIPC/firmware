@@ -11,6 +11,14 @@ chipid=$(ipcinfo --chip-name)
 
 # Memory config
 mem_start=0x40000000 # phy mem start
+proc_cmdline=${LOAD_HISILICON_CMDLINE:-/proc/cmdline}
+
+# A kernel that measures DRAM and lays it out itself (hisi_mem, OpenIPC/linux)
+# publishes the result: the DRAM size and OS share in MiB, the allocator, and
+# the zone as osal takes it. Its layout is the one this boot runs with, under
+# any bootloader, so nothing below reads or writes the U-Boot environment.
+hisi_mem=${LOAD_HISILICON_MEM:-/sys/module/hisi_mem/parameters}
+kernel_alloc=$(cat "$hisi_mem/allocator" 2>/dev/null)
 
 # DDR size in MiB. OpenIPC U-Boot measures it on every boot but only setenv()s
 # totalmem, so the variable reaches fw_printenv only if someone ran saveenv
@@ -31,23 +39,29 @@ dt_mem_total() {
 	[ "$reg" -gt 0 ] && [ "$reg" -ne 512 ] && echo $reg
 }
 
-mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d 'M')
-[ -n "$mem_total" ] || mem_total=$(dt_mem_total)
-mem_total=${mem_total:=64}
+if [ -n "$kernel_alloc" ]; then
+	mem_total=$(cat "$hisi_mem/dram")
+	os_mem_size=$(cat "$hisi_mem/osmem")
+	kernel_mmz=$(cat "$hisi_mem/mmz")
+else
+	mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d 'M')
+	[ -n "$mem_total" ] || mem_total=$(dt_mem_total)
+	mem_total=${mem_total:=64}
 
-# Prefer kernel cmdline mem=NM -- that's the authoritative kernel/MMZ split,
-# but only when it's a strict subset of total RAM. With mmz_allocator=cma
-# (V4 CMA layouts), bootargs typically pass mem=<totalmem> with the MMZ
-# chunk CMA-reserved within that range; in that case mem= is no longer an
-# OS/MMZ split and we must fall through to the U-Boot osmem env.
-os_mem_size=$(awk 'BEGIN{RS=" "} /^mem=[0-9]+M/{gsub(/^mem=|M.*$/,""); print; exit}' /proc/cmdline)
-if [ -n "$os_mem_size" ] && [ "$os_mem_size" -ge "$mem_total" ]; then
-	os_mem_size=""
+	# Prefer kernel cmdline mem=NM -- that's the authoritative kernel/MMZ split,
+	# but only when it's a strict subset of total RAM. With mmz_allocator=cma
+	# (V4 CMA layouts), bootargs typically pass mem=<totalmem> with the MMZ
+	# chunk CMA-reserved within that range; in that case mem= is no longer an
+	# OS/MMZ split and we must fall through to the U-Boot osmem env.
+	os_mem_size=$(awk 'BEGIN{RS=" "} /^mem=[0-9]+M/{gsub(/^mem=|M.*$/,""); print; exit}' $proc_cmdline)
+	if [ -n "$os_mem_size" ] && [ "$os_mem_size" -ge "$mem_total" ]; then
+		os_mem_size=""
+	fi
+	if [ -z "$os_mem_size" ]; then
+		os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
+	fi
+	os_mem_size=${os_mem_size:=32}
 fi
-if [ -z "$os_mem_size" ]; then
-	os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
-fi
-os_mem_size=${os_mem_size:=32}
 
 YUV_TYPE0=0 # 0 -- raw, 1 --DC, 2 --bt1120, 3 --bt656
 
@@ -111,15 +125,17 @@ report_error() {
 	exit 1
 }
 
+# Kernels without hisi_mem only: the allocator and zone come from bootargs,
+# which set_allocator rewrites for the next boot.
 check_allocator() {
-	allocator=$(grep mmz_allocator /proc/cmdline)
+	allocator=$(grep mmz_allocator $proc_cmdline)
 	if [ -z "${allocator}" ]; then
 		if [ ${mem_total} -ge 128 ]; then
 			set_allocator cma
 		else
 			set_allocator hisi
 		fi
-	elif grep -q "mmz_allocator=cma" /proc/cmdline && \
+	elif grep -q "mmz_allocator=cma" $proc_cmdline && \
 		[ -n "$(fw_printenv -n osmem 2>/dev/null)" ] && \
 		[ -n "$(fw_printenv -n totalmem 2>/dev/null)" ]; then
 		# bootargs carry the CMA zone the kernel reserves, and they are written
@@ -132,7 +148,7 @@ check_allocator() {
 		# DDR without totalmem, and would take a 128 MB board's correct zone
 		# for a wrong one. And only to grow the zone -- a smaller one is said,
 		# never written, since a wrong guess there costs the camera its RAM.
-		booted=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
+		booted=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " $proc_cmdline)
 		wanted=$(set_allocator mmz)
 		if [ -n "${wanted}" ] && [ "${booted}" != "${wanted}" ]; then
 			have=$(echo "${booted}" | awk -F ',' '{print $4+0}')
@@ -148,14 +164,8 @@ check_allocator() {
 }
 
 insert_osal() {
-	check_allocator
-
-	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
-	if [ -z "$MMZ" ]; then
-		modprobe open_osal anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size || report_error
-	else
-		modprobe open_osal anony=1 mmz_allocator=cma mmz=$MMZ || report_error
-	fi
+	[ -n "$kernel_alloc" ] || check_allocator
+	modprobe open_osal $osal_args || report_error
 }
 
 insert_detect() {
@@ -433,12 +443,24 @@ fi
 
 
 
-if [ $os_mem_size -ge $mem_total ]; then
-	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
-	exit
-fi
+if [ -n "$kernel_alloc" ]; then
+	echo "Memory laid out by the kernel: DRAM ${mem_total}M, OS ${os_mem_size}M, ${kernel_alloc}"
+	osal_args="anony=1 mmz_allocator=$kernel_alloc mmz=$kernel_mmz"
+else
+	if [ $os_mem_size -ge $mem_total ]; then
+		echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+		exit
+	fi
 
-calc_mmz_info
+	calc_mmz_info
+	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " $proc_cmdline)
+	if [ -z "$MMZ" ]; then
+		osal_args="anony=1 mmz_allocator=hisi mmz=anonymous,0,$mmz_start,$mmz_size"
+	else
+		osal_args="anony=1 mmz_allocator=cma mmz=$MMZ"
+	fi
+fi
+echo "osal: $osal_args"
 
 #######################Action###############################
 
