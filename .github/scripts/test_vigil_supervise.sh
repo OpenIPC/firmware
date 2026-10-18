@@ -61,6 +61,7 @@ case "\$(cat "$SB/mode")" in
     exit) exit 0 ;;
     noso) exit 127 ;;
     run) exec sleep 1000 ;;
+    deaf) trap '' TERM; exec sleep 1000 ;;
 esac
 EOF
 cat > "$SB/bin/start-stop-daemon" <<'EOF'
@@ -242,7 +243,22 @@ fi
 sh "$SB/S95vigil" stop > /dev/null
 sleep 0.5
 
-# 7. start and stop.
+# 7. A vigild that ignores SIGTERM is killed, so stop succeeds and leaves
+#    nothing running unsupervised.
+reset deaf
+sh "$SB/S95vigil" start > /dev/null
+for _ in $(seq 50); do [ "$(starts)" -ge 1 ] && break; sleep 0.1; done
+sleep 0.3
+out=$(timeout 30 sh "$SB/S95vigil" stop)
+sleep 0.3
+if [ "$out" = "Stopping vigild: OK" ] && ! pgrep -f "^sleep 1000" > /dev/null; then
+    ok "a vigild that ignores SIGTERM is killed, and stop succeeds"
+else
+    bad "deaf vigild: stop said '$out', still running: $(pgrep -f '^sleep 1000')"
+fi
+pkill -f "^sleep 1000" 2>/dev/null
+
+# 8. start and stop.
 reset run
 echo "utc=2026-01-01 00:00:00" > "$SB/crash/vigil.loop"
 sh "$SB/S95vigil" start > /dev/null

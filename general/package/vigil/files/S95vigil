@@ -285,6 +285,20 @@ stop() {
 		i=$((i + 1))
 		sleep 1
 	done
+	# vigil: one that has not ended ten seconds after SIGTERM is hung, and a
+	# failed stop would leave it running with its supervisor already gone --
+	# nothing to restart it if it then crashes, and sysupgrade's restart of it
+	# failing the same way. SIGKILL leaves the media hardware as a crash does,
+	# which every start already recovers from (it is how each crash restart
+	# begins), so it is used before giving up.
+	if running; then
+		start-stop-daemon -K -s 9 -q -x "$DAEMON_PATH"
+		i=0
+		while running && [ $i -lt 5 ]; do
+			i=$((i + 1))
+			sleep 1
+		done
+	fi
 	if running; then
 		unlock
 		echo "FAIL"
