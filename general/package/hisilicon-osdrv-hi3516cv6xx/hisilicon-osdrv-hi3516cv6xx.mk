@@ -74,6 +74,16 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 		$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/$(lib) ; \
 	)
 
+	# Sensor profiles. majestic, given no isp.sensorConfig, takes the one
+	# file in /etc/sensors whose name starts with the detected sensor, so
+	# imx335_i2c_5M.ini is the default. The alternate imx335 modes live in
+	# high-fps/ and are named without the imx335_i2c_ prefix so they cannot
+	# be picked up by auto-selection.
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/*.ini
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/high-fps
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/high-fps $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/high-fps/*.ini
+
 	# ipctool's i2c probe reports the OmniVision OS02M10 chip ID
 	# (0x5302) as "SP2308" (rebadged SuperPix marker — same silicon).
 	# Symlink so devices whose u-boot env still carries that legacy
