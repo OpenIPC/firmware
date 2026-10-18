@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 0c1caed5922465fa7cf6a2330442093f0c4ddcb9
+HISILICON_OPENSDK_VERSION = cffc152310bc42309327919453eba7e6d6752a38
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -270,7 +270,8 @@ HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
 	smart_sc431hai/libsns_sc431hai \
 	smart_sc4336p/libsns_sc4336p \
 	smart_sc450ai/libsns_sc450ai \
-	smart_sc500ai/libsns_sc500ai
+	smart_sc500ai/libsns_sc500ai \
+	sony_imx335/libsns_imx335
 HISILICON_OPENSDK_SENSORS_hi3519dv500 = \
 	gst_412c/libsns_gst412c \
 	omnivision_os04a10/libsns_os04a10 \
@@ -306,6 +307,9 @@ HISILICON_OPENSDK_SENSORS_gk7206v100 = \
 	smartsens_sc500ai/libsns_sc500ai \
 	sony_imx307/libsns_imx307
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
+
+# sony_imx335 is the source-built driver from the pinned openhisilicon
+# tree (upstream since OpenIPC/openhisilicon#270); no local injection hook.
 
 # fpv variant on V4 (hi3516ev200 + gk7205v200): restrict to the high-fps
 # Sony sensors only. FPV cameras are permanently paired with one sensor;
