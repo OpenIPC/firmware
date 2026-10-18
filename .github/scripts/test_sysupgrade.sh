@@ -2072,6 +2072,52 @@ else
     bad "clean card -> expected the run to proceed, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
 
+# --- vigil, the NVR application, gives the card up and comes back -----------
+# vigil records to the card check_sdcard unmounts, and has no prepare endpoint
+# for free_resources to call, so it is stopped there. A run that refuses before
+# writing has to start it again -- and only once the lock is gone, or its
+# supervisor (S95vigil, like S95majestic) declines the start and the NVR stays
+# blank. A run that flashes leaves it to the reboot.
+cat > "$SB/etc/init.d/S95vigil" <<'STUB'
+#!/bin/sh
+if [ "$1" != stop ] && [ -f "$STUB_LOCK" ]; then
+    echo "S95vigil $1 (under the upgrade lock)" >> "$FLASH_LOG"
+else
+    echo "S95vigil $1" >> "$FLASH_LOG"
+fi
+exit 0
+STUB
+chmod +x "$SB/etc/init.d/S95vigil"
+
+reset_env
+: > "$SD/autoupdate-rootfs.img"
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && grep -qx "S95vigil stop" "$SB/tmp/flash.log" &&
+    grep -qx "S95vigil start" "$SB/tmp/flash.log" &&
+    [ "$(logged_at "S95vigil stop")" -lt "$(logged_at "S95vigil start")" ]; then
+    ok "a refused upgrade stops vigil for the card, then starts it again"
+else
+    bad "refused upgrade with vigil -> log='$(grep S95vigil "$SB/tmp/flash.log" | tr '\n' ';')'"
+fi
+if ! grep -q "S95vigil start (under the upgrade lock)" "$SB/tmp/flash.log"; then
+    ok "...after the lock is gone, so its supervisor starts it"
+else
+    bad "vigil was started under the upgrade lock; S95vigil declines that and the NVR stays blank"
+fi
+rm -f "$SD/autoupdate-rootfs.img"
+
+reset_env
+printf '/dev/mmcblk0p1 on %s type vfat (rw,relatime)\n' "$SD" > "$SDMOUNTS"
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && grep -qx "S95vigil stop" "$SB/tmp/flash.log" &&
+    ! grep -q "S95vigil start" "$SB/tmp/flash.log"; then
+    ok "an upgrade that flashes stops vigil and leaves its start to the reboot"
+else
+    bad "flashing upgrade with vigil -> rc=$RC log='$(grep S95vigil "$SB/tmp/flash.log" | tr '\n' ';')'"
+fi
+rm -f "$SB/etc/init.d/S95vigil"
+
 # --- majestic frees its video over the API (prepare / abort) ----------------
 # The order is: majestic stops video (prepare), the card is unmounted and the
 # image fetched into the RAM that freed, then flash. A majestic that answers

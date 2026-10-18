@@ -1894,6 +1894,12 @@ free_resources() {
 			sleep 1
 		fi
 	fi
+	# vigil (the NVR application) records to the card check_sdcard unmounts and
+	# holds the media memory; it has no prepare endpoint, so it is stopped, and
+	# restore_resources() brings it back if nothing is flashed.
+	if [ -x /etc/init.d/S95vigil ] && /etc/init.d/S95vigil stop >/dev/null 2>&1; then
+		vigil_stopped=1
+	fi
 	/etc/init.d/S99rc.local stop
 	/etc/init.d/S60crond stop
 	/etc/init.d/S49ntpd stop
@@ -2053,6 +2059,8 @@ restore_resources() {
 	elif [ -x /etc/init.d/S95majestic ]; then
 		majestic_pending=restart
 	fi
+	vigil_pending=
+	[ "1" = "$vigil_stopped" ] && vigil_pending=start
 	services_stopped=
 	return 0
 }
@@ -2061,6 +2069,10 @@ restore_resources() {
 restore_majestic() {
 	[ -n "$majestic_pending" ] && /etc/init.d/S95majestic "$majestic_pending" >/dev/null 2>&1
 	majestic_pending=
+	# vigil's supervisor waits on the same lock (S95vigil), so its start is
+	# carried out here too, once the lock is gone.
+	[ -n "$vigil_pending" ] && /etc/init.d/S95vigil "$vigil_pending" >/dev/null 2>&1
+	vigil_pending=
 	return 0
 }
 

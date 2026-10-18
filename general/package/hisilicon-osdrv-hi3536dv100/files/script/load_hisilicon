@@ -25,13 +25,6 @@ os_mem_size=${os_mem_size:=32}
 mmz_start=0
 mmz_size=0
 
-MEM_ALL=256
-MEM_START=0x800
-MEM_SAMALL_LIN=0x1
-MEM_MODE=0
-b_arg_demb=1
-VOU_LEN=22
-
 report_error() {
   echo "******* Error: There's something wrong, please check! *****"
   exit 1
@@ -64,24 +57,26 @@ remove_audio() {
 }
 
 insert_ko() {
-  HVRMEM=`cat /proc/cmdline  | awk '{print $1}' | sed s/mem=//`
-  HVRMEM_OS=`echo $HVRMEM | sed s/M//`
-
-  MEM_LEN=`echo "$MEM_ALL $HVRMEM_OS $VOU_LEN"|awk '{printf("%d",$1-$2-$3)}'`M
-  VOU_START=`echo "$MEM_START $HVRMEM_OS $MEM_LEN "|awk '{printf("0x%03x00000",$1+$2+$3)}'`
-  MEM_START=`echo "$MEM_START $MEM_SAMALL_LIN $HVRMEM_OS"|awk '{printf("0x%03x00000",$1+$2*$3)}'`
-  VOU_LEN=`echo $VOU_LEN`M
-
-  echo MEM_START=$MEM_START HVRMEM=$HVRMEM MEM_LEN=$MEM_LEN VOU_START=$VOU_START VOU_LEN=$VOU_LEN
-
-  modprobe open_osal mmz=anonymous,0,$mmz_start,$mmz_size:vou,0,$VOU_START,$VOU_LEN anony=1 || report_error
+  # One zone for everything. The SDK's script also carves a 22M "vou" zone
+  # out of the top of RAM, but this script places the anonymous zone over
+  # all of it, so OSAL rejects the second one on every boot ("Conflict MMZ",
+  # seen on a 256M board with mem=128M) and runs with the anonymous zone
+  # alone -- which is also what VO, hifb and the decoders have been using.
+  modprobe open_osal mmz=anonymous,0,$mmz_start,$mmz_size anony=1 || report_error
   modprobe open_base
   modprobe open_sys mem_total=$mem_total
   if [[ $? -ne 0 ]]; then
     exit;
   fi
 
-  modprobe open_vdec VBSource=0 u32ProtocolSwitch=0 StreamCompaMode=1 MiniBufMode=0
+  # VBSource=0: decoded pictures come from the common VB pool the
+  # application configures (vdec-openipc does). vigil instead gives each
+  # decoder a private pool sized from that camera's SPS (VBSource=1,
+  # HI_MPI_VDEC_SetChnVBCnt): one common pool sized for the largest camera
+  # does not fit two 5 MP streams in a 128M MMZ.
+  vdec_vb=0
+  [ -x /usr/bin/vigild ] && vdec_vb=1
+  modprobe open_vdec VBSource=$vdec_vb u32ProtocolSwitch=0 StreamCompaMode=1 MiniBufMode=0
   modprobe open_vfmw
   modprobe open_jpegd
   modprobe open_tde

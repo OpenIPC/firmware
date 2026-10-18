@@ -1,0 +1,17 @@
+config BR2_PACKAGE_VIGIL
+	bool "vigil"
+	depends on BR2_OPENIPC_SOC_FAMILY = "hi3536dv100"
+	depends on BR2_LINUX_KERNEL
+	depends on !BR2_PACKAGE_MAJESTIC
+	select BR2_PACKAGE_HISILICON_OSDRV_HI3536DV100
+	select BR2_PACKAGE_YAML_CLI
+	help
+	  vigil - DVR/NVR application: network cameras (RTSP, NETIP)
+	  decoded to HDMI in a 2x2 view with a status UI, and recorded
+	  without re-encoding.
+
+	  Installs /usr/bin/vigild, /etc/init.d/S95vigil (started at
+	  boot and restarted after a crash, as majestic is) and
+	  /etc/vigil.yaml (cameras and recording).
+
+	  https://github.com/OpenIPC/vigil

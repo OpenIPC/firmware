@@ -1,0 +1,260 @@
+#!/bin/sh
+
+# The control of this daemon is S95majestic's, kept the same on purpose:
+# one supervisor that restarts it after a crash with a growing wait, gives up
+# after a crash loop and leaves a note in /etc/crash, and stays out of the way
+# of an upgrade. What differs is marked "vigil:".
+
+# rcS exports TZ once at boot, so a later edit to /etc/TZ is shadowed by the
+# stale value inherited from it. Re-read it here so a restart picks up the new
+# zone (the clock in the UI, recording file names) without a reboot.
+[ -r /etc/TZ ] && export TZ=$(cat /etc/TZ)
+
+DAEMON="vigild"
+DAEMON_PATH="/usr/bin/$DAEMON"
+# vigil: the arguments come from this file, read again before every start
+# (vigil_config); -s sends vigild's log, and the SDK's, to syslog.
+CONFIG=/etc/vigil.yaml
+
+# vigild is run by a small supervisor (this script, `supervise`), which starts
+# it again when it dies of a fault: an NVR that crashed would otherwise show
+# nothing and record nothing until someone restarted it by hand. It waits
+# longer after each crash, and after five in ten minutes it stops trying and
+# leaves /etc/crash/vigil.loop: a vigild that dies at every start would
+# otherwise hold the board in a restart loop.
+SUPERVISOR=/var/run/vigil-supervise.pid
+CRASH=/etc/crash
+UPGRADE_LOCK=/tmp/sysupgrade.lock
+BACKOFF="5 30 120"
+WINDOW=600
+LIMIT=5
+
+# Find the daemon by executable, never through a pidfile. Given -p, busybox
+# start-stop-daemon inspects only the pid that file holds and never scans
+# /proc, so the moment that pid is stale it can no longer see the live daemon:
+# -S would start a SECOND vigild, which fails on the busy video layer, and -K
+# without -x signals whatever unrelated process has since reused the pid. -x
+# scans every process instead.
+running() {
+	start-stop-daemon -t -K -q -x "$DAEMON_PATH"
+}
+
+# Started with SIGHUP ignored, because the disposition survives exec(): a
+# stray `killall -HUP` (meant for majestic-style reloads) would otherwise
+# terminate vigild, which has no use for the signal.
+start() {
+	echo -n "Starting $DAEMON: "
+	lock
+	if running || supervising; then
+		unlock
+		echo "OK (already running)"
+		return 0
+	fi
+	if [ ! -x "$DAEMON_PATH" ]; then
+		unlock
+		echo "FAIL"
+		return 1
+	fi
+	# A start, by hand or at boot, is a fresh run: the note that the last one
+	# was given up on is about a vigild that is no longer there.
+	rm -f "$CRASH/vigil.loop"
+	(
+		trap '' HUP
+		exec sh "$0" supervise
+	) </dev/null >/dev/null 2>&1 &
+	echo $! > "$SUPERVISOR"
+	# Returned only once the supervisor is the process the pid names, so a
+	# stop that follows at once finds it.
+	i=0
+	while ! supervising && [ $i -lt 50 ]; do
+		i=$((i + 1))
+		sleep 0.1
+	done
+	unlock
+	echo "OK"
+}
+
+# start and stop one at a time: two starts at once would leave a supervisor
+# no pid names, which a stop could then not end. The lock holds its holder's
+# pid, and is taken over only once that process is gone -- a start that was
+# killed -- never from one still running.
+lock() {
+	until mkdir "$SUPERVISOR.lock" 2>/dev/null; do
+		holder=$(cat "$SUPERVISOR.lock/pid" 2>/dev/null)
+		if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+			rm -rf "$SUPERVISOR.lock"
+			continue
+		fi
+		sleep 1
+	done
+	echo $$ > "$SUPERVISOR.lock/pid"
+}
+unlock() {
+	rm -rf "$SUPERVISOR.lock"
+}
+
+# The supervisor's pid, if it is the supervisor still: a pid in a file can
+# have been reused by anything since.
+supervising() {
+	pid=$(cat "$SUPERVISOR" 2>/dev/null)
+	[ -n "$pid" ] || return 1
+	# This script, run as `supervise`: its last two arguments.
+	set -- $(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
+	[ $# -ge 2 ] || return 1
+	eval "script=\${$(($# - 1))} last=\${$#}"
+	[ "$last" = supervise ] && [ "${script##*/}" = "${0##*/}" ]
+}
+
+# The signals a fault ends vigild with: SIGILL, SIGABRT, SIGBUS (7, and 10
+# on MIPS), SIGFPE, SIGSEGV -- and SIGKILL, which is how the kernel's
+# out-of-memory killer ends it. SIGTERM and SIGINT are someone stopping it,
+# and an exit of its own is its own decision (e.g. no MPP modules): neither is
+# restarted.
+crashed() {
+	case "$1" in
+		4 | 6 | 7 | 8 | 9 | 10 | 11) return 0 ;;
+	esac
+	return 1
+}
+
+# vigil: the mount that holds $1 is refused when it is RAM or the flash root:
+# recordings would eat the memory the decoders and the system need, or wear
+# out and fill the flash. The longest mount point that is a prefix wins.
+recordable() {
+	awk -v p="$1" '
+		{ m = $2; if (p == m || index(p, m == "/" ? "/" : m "/") == 1)
+			if (length(m) > length(best)) { best = m; fs = $3 } }
+		END { exit !(best != "" && best != "/" && fs !~ /^(tmpfs|ramfs|devtmpfs|overlay|squashfs|jffs2|ubifs)$/) }
+	' /proc/mounts
+}
+
+# vigil: what $CONFIG asks for, read again before every start. Camera URLs
+# carry no whitespace (they go to the caller word-split, with globbing off:
+# URLs carry '?'); the recording directory may, so it is kept apart and passed
+# as one argument. It is resolved first, so a link from a card to /tmp is
+# judged by where it lands, and that resolved path is what vigild gets.
+vigil_config() {
+	cams=$(yaml-cli -i "$CONFIG" -g .cameras 2>/dev/null)
+	rec_dir= rec_seg= rec_keep=
+	path=$(yaml-cli -i "$CONFIG" -g .record.path 2>/dev/null)
+	[ -n "$path" ] || return 0
+	real=$(readlink -f "$path" 2>/dev/null)
+	if [ -n "$real" ] && [ -d "$real" ] && recordable "$real"; then
+		rec_dir=$real
+		rec_seg=$(yaml-cli -i "$CONFIG" -g .record.segment 2>/dev/null)
+		rec_keep=$(yaml-cli -i "$CONFIG" -g .record.keep 2>/dev/null)
+	else
+		logger -t vigil "not recording: $path is not a directory on a disk or card" 2>/dev/null
+	fi
+}
+
+supervise() {
+	trap '' HUP
+	# A stop while it waits ends the wait, not just the run after it.
+	trap 'kill $waiting 2>/dev/null; rm -f "$SUPERVISOR"; exit 0' TERM INT
+	echo $$ > "$SUPERVISOR"
+	waiting=
+	crashes=
+	while :; do
+		# An upgrade has the board: it reboots it when done. Asked
+		# before every start, the first and each one after a wait.
+		[ -f "$UPGRADE_LOCK" ] && break
+		vigil_config
+		set -f
+		set -- -s
+		for url in $cams; do
+			set -- "$@" -c "$url"
+		done
+		set +f
+		if [ -n "$rec_dir" ]; then
+			set -- "$@" -o "$rec_dir"
+			[ -n "$rec_seg" ] && set -- "$@" -S "$rec_seg"
+			[ -n "$rec_keep" ] && set -- "$@" -K "$rec_keep"
+		else
+			set -- "$@" -o none
+		fi
+		start-stop-daemon -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- "$@"
+		rc=$?
+		if ! { [ "$rc" -gt 128 ] && crashed $((rc - 128)); }; then
+			# vigil: an exit of its own is not restarted, but is said: an NVR
+			# with a blank screen should leave a reason in the log.
+			[ "$rc" -ne 0 ] && [ "$rc" -le 128 ] &&
+				logger -t vigil "vigild exited with status $rc; not starting it again" 2>/dev/null
+			break
+		fi
+		sig=$((rc - 128))
+		[ -f "$UPGRADE_LOCK" ] && break
+		now=$(cut -d. -f1 /proc/uptime)
+		recent=
+		n=0
+		for t in $crashes $now; do
+			if [ $((now - t)) -lt "$WINDOW" ]; then
+				recent="$recent $t"
+				n=$((n + 1))
+			fi
+		done
+		crashes=$recent
+		if [ "$n" -ge "$LIMIT" ]; then
+			mkdir -p "$CRASH"
+			printf 'utc=%s\ncrashes=%s\nsignal=%s\n' "$(date -u '+%Y-%m-%d %H:%M:%S')" "$n" "$sig" > "$CRASH/vigil.loop"
+			logger -t vigil "crashed $n times in $((WINDOW / 60)) minutes (signal $sig); not starting it again" 2>/dev/null
+			break
+		fi
+		delay=$(echo $BACKOFF | cut -d' ' -f"$n")
+		[ -n "$delay" ] || delay=${BACKOFF##* }
+		logger -t vigil "crashed (signal $sig); starting it again in ${delay}s" 2>/dev/null
+		sleep "$delay" &
+		waiting=$!
+		wait "$waiting"
+		waiting=
+	done
+	rm -f "$SUPERVISOR"
+}
+
+stop() {
+	echo -n "Stopping $DAEMON: "
+	lock
+	# The supervisor first, so it does not start what is being stopped.
+	supervising && kill "$pid" 2>/dev/null
+	start-stop-daemon -K -q -x "$DAEMON_PATH"
+	i=0
+	while running && [ $i -lt 10 ]; do
+		i=$((i + 1))
+		sleep 1
+	done
+	if running; then
+		unlock
+		echo "FAIL"
+		return 1
+	fi
+	rm -f "/var/run/$DAEMON.pid" "$SUPERVISOR"
+	unlock
+	echo "OK"
+}
+
+case "$1" in
+	start|stop)
+		$1
+		;;
+
+	supervise)
+		supervise
+		;;
+
+	restart)
+		stop || exit 1
+		sleep 3
+		start
+		;;
+
+	reload)
+		# vigil: no reload signal; a new configuration needs a fresh start.
+		stop || exit 1
+		start
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart|reload}"
+		exit 1
+		;;
+esac
