@@ -59,6 +59,25 @@ HISILICON_OSDRV_HI3516CV6XX_SENSOR_BLOBS = \
 	libsns_imx307.so \
 	libsns_os02m10.so
 
+# hi3516cv6xx_lite ships the same 5120 KB squashfs slot on an 8 MB NOR part
+# that master is already 0.68 KB short of (CI run 39116182919), so the IMX335
+# profiles stay with hi3516cv6xx_ultimate (16 MB). The driver itself is dropped
+# from the sensor list in hisilicon-opensdk.mk; here only the profiles go away,
+# which is why the gate is repeated: a profile without its driver is dead weight.
+ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3516cv6xx/lite)
+HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES =
+else
+define HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/*.ini
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/modes
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/modes $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/modes/*.ini
+	# The presets directory was called high-fps/ earlier in this series;
+	# remove it so a rebuild over an older target does not ship both.
+	rm -rf $(TARGET_DIR)/etc/sensors/high-fps
+endef
+endif
+
 define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
@@ -76,13 +95,11 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 
 	# Sensor profiles. majestic, given no isp.sensorConfig, takes the one
 	# file in /etc/sensors whose name starts with the detected sensor, so
-	# imx335_i2c_5M.ini is the default. The alternate imx335 modes live in
-	# high-fps/ and are named without the imx335_i2c_ prefix so they cannot
-	# be picked up by auto-selection.
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/*.ini
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/high-fps
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/high-fps $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/high-fps/*.ini
+	# imx335_i2c_5M.ini is the default. The alternate modes live in modes/
+	# and are named without the imx335_i2c_ prefix so they cannot be picked
+	# up by auto-selection. Their rates are the ones the T6 crop timing
+	# actually reaches (1520p 30, flex 1920x1080 30, full10 40), not "high fps".
+	$(HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES)
 
 	# ipctool's i2c probe reports the OmniVision OS02M10 chip ID
 	# (0x5302) as "SP2308" (rebadged SuperPix marker — same silicon).

@@ -308,8 +308,15 @@ HISILICON_OPENSDK_SENSORS_gk7206v100 = \
 	sony_imx307/libsns_imx307
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
-# sony_imx335 is the source-built driver from the pinned openhisilicon
-# tree (upstream since OpenIPC/openhisilicon#270); no local injection hook.
+# hi3516cv6xx_lite is an 8 MB NOR part with a 5120 KB squashfs slot, and master
+# already fills 5119.32 KB of it (CI run 39116182919: "0KB left"). The IMX335
+# module is ~20 KB compressed and does not fit; 5 MP also needs osmem=64M, which
+# rules out most lite-class cv610 boards. hi3516cv6xx_ultimate is 16 MB and had
+# ~1.1 MB spare, so it keeps the sensor. Filtered here, at selection time, so an
+# image and its sysupgrade payload stay in step; a finalize-hook rm -f would not.
+ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3516cv6xx/lite)
+HISILICON_OPENSDK_SENSORS := $(filter-out sony_imx335/libsns_imx335,$(HISILICON_OPENSDK_SENSORS))
+endif
 
 # fpv variant on V4 (hi3516ev200 + gk7205v200): restrict to the high-fps
 # Sony sensors only. FPV cameras are permanently paired with one sensor;
