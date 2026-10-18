@@ -3,7 +3,7 @@
 # the reboot (a panic/oops, via kmsg_dump -- independent of the muted console)
 # is readable at /sys/fs/pstore. Without this the records are held in the
 # reserved RAM region but never exposed. Inert on a kernel built without pstore.
-# The backing RAM region is set up in the goke set_allocator (ramoops.* bootargs).
+# The backing RAM region is the ramoops node the board device tree reserves.
 case "$1" in
 	start)
 		if grep -q pstore /proc/filesystems; then

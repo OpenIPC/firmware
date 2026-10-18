@@ -23,6 +23,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash .github/scripts/test_load_hisilicon.sh
+      # load_goke runs under busybox sh and awk on the camera, and its zone
+      # arithmetic depends on busybox awk reading hex.
+      - name: Install busybox
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq busybox-static
+      - run: bash .github/scripts/test_load_goke.sh
 
   sysupgrade-verify:
     name: sysupgrade rootfs verification
