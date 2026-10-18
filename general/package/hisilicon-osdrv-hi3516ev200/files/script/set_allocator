@@ -50,8 +50,17 @@ if [ -d /sys/module/hisi_mem/parameters ] && [ -n "$(cat /sys/module/hisi_mem/pa
     os=${2:-${osmem:-32M}}
     if [ "$1" = auto ]; then
       newbootargs="mem=${os} ${kept}"
+    elif [ "$1" = cma ]; then
+      # The zone written out, with mem= the whole DRAM: the form a kernel
+      # without the probe needs to pick cma, which this kernel takes as an
+      # explicit layout. Whole 4 MiB units, as CMA reserves them.
+      dram=$(cat $p/dram)
+      osm=$(( ($(echo ${os} | tr -d 'M') + 3) / 4 * 4 ))
+      zone=$(printf 'anonymous,0,0x%x,%dM' $(( 0x40000000 + osm * 1048576 )) $(( dram - osm )))
+      newbootargs="mem=${dram}M ${kept}mmz_allocator=cma mmz=${zone}"
     else
-      newbootargs="mem=${os} ${kept}mmz_allocator=$1 osmem=${os}"
+      # mem= is the OS share for a kernel without the probe, osmem= for this one.
+      newbootargs="mem=${os} ${kept}mmz_allocator=hisi osmem=${os}"
     fi
     if ! fw_setenv bootargs ${newbootargs}; then
       echo "Could not write bootargs; nothing changes at the next boot."
