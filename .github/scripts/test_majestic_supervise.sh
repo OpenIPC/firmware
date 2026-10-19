@@ -65,7 +65,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 case "$mode" in
-    start) exec "$exe" "$@" ;;
+    start) [ -f "${SB_DIR}/slowstart" ] && sleep 1; exec "$exe" "$@" ;;
     stop)
         pids=$(pgrep -f "^/bin/sh $exe|^sleep 1000" 2>/dev/null)
         [ -n "$pids" ] || exit 1
@@ -76,7 +76,7 @@ esac
 EOF
 printf '#!/bin/sh\necho "$*" >> "%s/log"\n' "$SB" > "$SB/bin/logger"
 chmod +x "$SB/bin"/*
-export PATH="$SB/bin:$PATH"
+export PATH="$SB/bin:$PATH" SB_DIR="$SB"
 
 starts() { [ -f "$SB/starts" ] && wc -l < "$SB/starts" | tr -d ' ' || echo 0; }
 reset() { rm -f "$SB/starts" "$SB/log" "$SB/crash"/* "$SB/sysupgrade.lock" "$SB/run"/*; echo "$1" > "$SB/mode"; }
@@ -193,6 +193,44 @@ sh "$SB/S95majestic" start > /dev/null; sh "$SB/S95majestic" stop > /dev/null
 sleep 1
 ! pgrep -f "$SB/S95majestic supervise" > /dev/null && ! pgrep -f "^sleep 1000" > /dev/null \
     && ok "a stop right after a start leaves nothing running" || bad "start then stop left something running"
+
+# 11. A lock left with no pid -- its start or stop killed between mkdir and
+#     writing its pid -- is taken over after a short grace, not waited on
+#     forever (#2630).
+reset run
+mkdir -p "$SB/run/majestic-supervise.pid.lock"
+if timeout 15 sh "$SB/S95majestic" start > /dev/null; then
+    ok "a lock its owner never wrote a pid into is taken over"
+else
+    bad "start waited on a pid-less lock"
+    rm -rf "$SB/run/majestic-supervise.pid.lock"      # or the stop below waits on it too
+fi
+timeout 30 sh "$SB/S95majestic" stop > /dev/null
+sleep 0.5
+
+# 12. A stop that lands while the supervisor is launching majestic, then a start
+#     at once: one supervisor, one majestic, and the pid file names the live
+#     supervisor -- the old one neither leaves majestic unwatched nor removes
+#     the new one's pid file (#2630).
+reset run
+touch "$SB/slowstart"
+sh "$SB/S95majestic" start > /dev/null
+sleep 0.3                       # inside the slowed launch
+sh "$SB/S95majestic" stop > /dev/null
+sh "$SB/S95majestic" start > /dev/null
+rm -f "$SB/slowstart"
+sleep 2
+sups=$(pgrep -f "$SB/S95majestic supervise" | wc -l)
+daemons=$(pgrep -f "^sleep 1000" | wc -l)
+named=$(cat "$SB/run/majestic-supervise.pid" 2>/dev/null)
+if [ "$sups" = 1 ] && [ "$daemons" = 1 ] && [ -n "$named" ] && kill -0 "$named" 2>/dev/null &&
+    pgrep -f "$SB/S95majestic supervise" | grep -qx "$named"; then
+    ok "a stop during a launch, then a start: one supervisor, one majestic, and its pid file"
+else
+    bad "stop during launch then start: supervisors $sups, daemons $daemons, pid file '$named'"
+fi
+sh "$SB/S95majestic" stop > /dev/null
+sleep 0.5
 
 [ "$fail" -eq 0 ] && echo "all passed" || echo "$fail failed"
 exit "$fail"
