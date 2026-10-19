@@ -1,5 +1,23 @@
 #!/bin/sh
 
+# The DDR size the bootloader passed, from the kernel's memory node, for an
+# env that has no totalmem saved; without it, `set_allocator cma` on a 128 MB
+# part would write mem=64M.
+dt_mem_total() {
+  local reg size
+  reg=$(hexdump -v -e '1/1 "%02x"' ${SET_ALLOCATOR_DT_MEMORY:-/proc/device-tree/memory/reg} 2>/dev/null)
+  case ${#reg} in
+  # One address and one size cell (32-bit ARM). 512M there is the device
+  # tree's own placeholder, which a bootloader passing ATAGs leaves alone.
+  16) size=$((0x${reg#????????} / 1048576))
+      [ "$size" -ne 512 ] || return 0 ;;
+  # Two of each (arm64), from the bootloader's own fixup; it may start the
+  # bank above firmware it keeps, so round up to whole 64 MiB.
+  32) size=$(( (0x${reg#????????????????} / 1048576 + 63) / 64 * 64 )) ;;
+  *) return 0 ;;
+  esac
+  [ "$size" -gt 0 ] && echo ${size}M
+}
 
 get_env() {
   bootargs=$(fw_printenv -n bootargs)
@@ -8,14 +26,15 @@ get_env() {
   # bootargs from a fixed list of keys instead, and silently dropped whatever
   # was not on it -- ubi.mtd among them, so the next boot of a NAND/UBI board
   # could not attach ubi0 and panicked mounting its root (#2281).
-  kept=$(echo ${bootargs} | awk 'BEGIN { RS = " " } { sub(/\n$/, ""); k = $0; sub(/=.*/, "", k); if ($0 != "" && k != "mem" && k != "mmz" && k != "mmz_allocator") printf "%s ", $0 }')
+  kept=$(echo ${bootargs} | awk 'BEGIN { RS = " " } { sub(/\n$/, ""); k = $0; sub(/=.*/, "", k); if ($0 != "" && k != "mem" && k != "mmz" && k != "mmz_allocator" && k != "osmem") printf "%s ", $0 }')
   osmem=$(fw_printenv -n osmem)
-  totalmem=$(fw_printenv -n totalmem)
+  totalmem=$(fw_printenv -n totalmem 2>/dev/null)
+  [ -n "$totalmem" ] || totalmem=$(dt_mem_total)
 }
 
 calc_mmz() {
   mem_start=0x40000000
-  mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+  mem_total=$(echo "$totalmem" | tr -d 'M')
   mem_total=${mem_total:=64}
   os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
   os_mem_size=${os_mem_size:=32}
@@ -25,11 +44,78 @@ calc_mmz() {
 }
 
 
-if [[ "$1" == 'hisi' ]]; then
-  echo "Allocator selected as hisi..."
+# A kernel with hisi_mem measures DRAM and picks the allocator and the OS share
+# itself, at every boot, under any bootloader; nothing has to be written for a
+# camera to come up right. Here the user overrides it: mmz_allocator= and
+# osmem= go on the command line, which that kernel reads, and mem= stays the
+# OS share for a kernel without it. `auto` drops the override.
+p=${SET_ALLOCATOR_MEM:-/sys/module/hisi_mem/parameters}
+if [ -d $p ] && [ -n "$(cat $p/allocator 2>/dev/null)" ]; then
+  case "$1" in
+  ot|cma|auto)
+    get_env
+    # The share asked for, else the one this boot runs with, in whole MiB:
+    # a bare number would reach mem= as bytes, and the camera would not boot.
+    os=${2:-$(cat $p/osmem)M}
+    n=${os%M}
+    case "$n" in
+    ''|*[!0-9]*) n=0 ;;
+    esac
+    if [ "$n" -lt 32 ] || [ $((n + 8)) -gt "$(cat $p/dram)" ]; then
+      echo "osmem must be a size in MiB from 32M to $(( $(cat $p/dram) - 8 ))M, not '${os}'"
+      exit 1
+    fi
+    os=${n}M
+    if [ "$1" = auto ]; then
+      newbootargs="mem=${os} ${kept}"
+    elif [ "$1" = cma ]; then
+      # The zone written out, with mem= the whole DRAM: the form a kernel
+      # without the probe needs to pick cma, which this kernel takes as an
+      # explicit layout -- the OS share is then whatever lies below the zone,
+      # so no osmem= goes with it. Whole 4 MiB units, as CMA reserves them.
+      dram=$(cat $p/dram)
+      osm=$(( (n + 3) / 4 * 4 ))
+      zone=$(printf 'anonymous,0,0x%x,%dM' $(( 0x40000000 + osm * 1048576 )) $(( dram - osm )))
+      newbootargs="mem=${dram}M ${kept}mmz_allocator=cma mmz=${zone}"
+    else
+      # mem= is the OS share for a kernel without the probe, osmem= for this one.
+      newbootargs="mem=${os} ${kept}mmz_allocator=ot osmem=${os}"
+    fi
+    if ! fw_setenv bootargs ${newbootargs}; then
+      echo "Could not write bootargs; nothing changes at the next boot."
+      exit 1
+    fi
+    echo ${newbootargs}
+    echo "Applies at the next boot. Now: DRAM $(cat $p/dram)M, OS $(cat $p/osmem)M, $(cat $p/allocator), mmz=$(cat $p/mmz)"
+    exit 0
+    ;;
+  mmz)
+    cat $p/mmz
+    exit 0
+    ;;
+  *)
+    echo "Usage: set_allocator ot|cma [osmem] | auto | mmz"
+    echo "Now: DRAM $(cat $p/dram)M, OS $(cat $p/osmem)M, $(cat $p/allocator), mmz=$(cat $p/mmz)"
+    exit 1
+    ;;
+  esac
+fi
+
+# The zone `cma` would write, without writing it. The load script compares it
+# with the zone the kernel booted with: bootargs are written once, so an osmem
+# or totalmem changed afterwards never reached them on their own.
+if [ "$1" = 'mmz' ]; then
+  get_env
+  calc_mmz
+  echo "${mmz}"
+  exit 0
+fi
+
+if [[ "$1" == 'ot' ]]; then
+  echo "Allocator selected as ot..."
   get_env
   mem=${osmem:=32M}
-  newbootargs="mem=${mem} ${kept}mmz_allocator=hisi"
+  newbootargs="mem=${mem} ${kept}mmz_allocator=ot"
   echo ${newbootargs}
   fw_setenv bootargs ${newbootargs}
   #
@@ -42,6 +128,6 @@ elif [[ "$1" == 'cma'  ]]; then
   fw_setenv bootargs ${newbootargs}
   echo ${newbootargs}
 else
-  echo "NO or WRONG allocator, please select hisi or cma."
+  echo "NO or WRONG allocator, please select ot or cma."
   exit 1
 fi

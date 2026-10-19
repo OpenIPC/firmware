@@ -79,6 +79,7 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/script/load*
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/script/set_allocator
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
 	$(foreach lib,$(HISILICON_OSDRV_HI3516CV6XX_MPP_LIBS), \

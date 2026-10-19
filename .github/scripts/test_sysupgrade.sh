@@ -205,11 +205,13 @@ for a in "$@"; do
         exit 0 ;;
     esac
 done
-out=""; prev=""; ranged=0; head=0
+out=""; prev=""; ranged=0; head=0; w=0; url=""
 for a in "$@"; do
     [ "$prev" = "-o" ] && out=$a
     [ "$a" = "-r" ] && ranged=1
     [ "$a" = "-sIL" ] && head=1
+    [ "$a" = "-w" ] && w=1
+    case "$a" in http*://*) url=$a ;; esac
     prev=$a
 done
 if [ "$ranged" = "1" ]; then
@@ -229,6 +231,15 @@ if [ "$ranged" = "1" ]; then
     else
         printf 501
     fi
+    exit 0
+fi
+if [ "$head" = "1" ] && [ "$w" = "1" ]; then
+    # url_exists: the status alone. A -split package exists only where the
+    # release publishes one (STUB_SPLIT_PUBLISHED); everything else does.
+    case "$url" in
+    *-split.tgz) [ -n "${STUB_SPLIT_PUBLISHED:-}" ] && printf 200 || printf 404 ;;
+    *) printf 200 ;;
+    esac
     exit 0
 fi
 if [ "$head" = "1" ]; then
@@ -484,9 +495,9 @@ make_squashfs() {
     dd if=/dev/zero bs=1 count=$((ondisk - 48)) >> "$1" 2>/dev/null
 }
 
-# A combined image (cv6xx): the FIT and the rootfs squashfs in one blob, rootfs
-# packed after the FIT at a 64K-aligned offset. do_update_firmware splits it on
-# the FIT totalsize (header bytes 4..7, big-endian) — one 64K block here.
+# A FIT and a squashfs in one blob, the squashfs 64K after the FIT: the shape
+# hi3516cv6xx and hi3519dv500 once shipped as firmware.bin. Not a split-layout
+# image (that is a uImage, then the squashfs), so sysupgrade refuses it.
 make_combined() {
     printf '\xd0\x0d\xfe\xed' > "$1"                        # FIT magic
     printf '\x00\x01\x00\x00' >> "$1"                       # totalsize 0x10000
@@ -537,6 +548,7 @@ run() {
         STUB_DL_BYTES="${STUB_DL_BYTES:-}" \
         STUB_ISIZE="${STUB_ISIZE:-}" \
         STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
+        STUB_SPLIT_PUBLISHED="${STUB_SPLIT_PUBLISHED:-}" \
         UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
         STUB_MEM_AFTER_STOP="${STUB_MEM_AFTER_STOP:-}" STUB_MEMINFO="$SB/proc/meminfo" \
         STUB_LOCK="$SB/tmp/sysupgrade.lock" \
@@ -729,38 +741,6 @@ else
     bad "name-pinned archive should not be refused, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
 
-# --- the combined image (cv6xx: FIT + rootfs in one blob) -------------------
-# do_update_firmware splits the blob and writes the two partitions separately.
-# Master verified the rootfs only after the FIT had been committed, so this path
-# carried the same half-flash as the split path -- unreported until review.
-reset_env
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
-run -z --archive="$SB/tmp/fw.tgz"
-if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && flashed /dev/mtd3; then
-    ok "combined image, mount ok -> split, kernel and rootfs both flashed"
-else
-    bad "combined image -> expected both flashed, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
-fi
-v=$(at "Verifying rootfs from"); k=$(at "Update kernel from")
-if [ -n "$v" ] && [ -n "$k" ] && [ "$v" -lt "$k" ]; then
-    ok "combined image: rootfs is verified BEFORE the FIT is flashed"
-else
-    bad "combined path must verify before the FIT write -- verify@${v:-none} kernel@${k:-none}"
-fi
-
-# The combined half-flash itself: a foreign image must cost nothing.
-reset_env
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
-STUB_IMG_SOC=gk7205v300
-run -z --archive="$SB/tmp/fw.tgz"
-if [ "$RC" -ne 0 ] && nothing_wrote; then
-    ok "combined image, wrong SoC -> refused, FIT never written"
-else
-    bad "combined + wrong SoC -> expected refusal with no write, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
-fi
-
 # --- the staged archive is not kept ----------------------------------------
 # The WebUI's "install from a file" route uploads the .tgz into /tmp and then
 # points --archive at it, so from the unpack onwards /tmp holds the image twice
@@ -770,8 +750,7 @@ fi
 # literal in the script under test, so the guard fires exactly as it would on a
 # camera.
 reset_env
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/uImage.ssc338q" "$SB/tmp/rootfs.squashfs.ssc338q"
 run -z --archive="$SB/tmp/fw.tgz"
 if [ "$RC" -eq 0 ] && [ ! -f "$SB/tmp/fw.tgz" ]; then
     ok "an archive staged in /tmp is freed once it has been unpacked"
@@ -783,8 +762,7 @@ fi
 # deleting the operator's own copy of an image is not this script's business.
 reset_env
 mkdir -p "$SB/keep"
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/uImage.ssc338q" "$SB/tmp/rootfs.squashfs.ssc338q"
 mv "$SB/tmp/fw.tgz" "$SB/keep/fw.tgz"
 run -z --archive="$SB/keep/fw.tgz"
 if [ "$RC" -eq 0 ] && [ -f "$SB/keep/fw.tgz" ]; then
@@ -798,8 +776,7 @@ fi
 # this guard exists not to delete.
 reset_env
 mkdir -p "$SB/keep"
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/uImage.ssc338q" "$SB/tmp/rootfs.squashfs.ssc338q"
 mv "$SB/tmp/fw.tgz" "$SB/keep/fw.tgz"
 run -z --archive="$SB/tmp/../keep/fw.tgz"
 if [ "$RC" -eq 0 ] && [ -f "$SB/keep/fw.tgz" ]; then
@@ -814,9 +791,8 @@ fi
 # from.
 reset_env
 mkdir -p "$SB/mnt/mmcblk0p1"
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
-rm -f "$SB/tmp/firmware.bin.ssc338q"
+make_archive "$SB/tmp/uImage.ssc338q" "$SB/tmp/rootfs.squashfs.ssc338q"
+rm -f "$SB/tmp/uImage.ssc338q" "$SB/tmp/rootfs.squashfs.ssc338q"
 mv "$SB/tmp/fw.tgz" "$SB/mnt/mmcblk0p1/fw.tgz"
 echo "/dev/mmcblk0p1 on $SB/mnt/mmcblk0p1 type vfat (rw,relatime)" > "$SDMOUNTS"
 STUB_UMOUNT_HIDES=1
@@ -1456,56 +1432,6 @@ else
     bad "root-type probe must anchor to root=; decoy substrings fooled it, log='$(cat "$SB/tmp/flash.log")'"
 fi
 
-# The combined image (cv6xx) reaches the rootfs by both of its paths.
-reset_env
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
-run -z --archive="$SB/tmp/fw.tgz" -x
-if flashed /dev/mtd2 && flashed /dev/mtd3 && rebooted; then
-    ok "-x + combined image, split path -> reboots anyway"
-else
-    bad "-x + combined split -> expected both flashed and a reboot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
-fi
-
-# No separate kernel/rootfs partitions: one whole-blob write to "firmware",
-# which overlaps the running rootfs.
-reset_env
-set_mtd <<'EOF'
-dev:    size   erasesize  name
-mtd0: 00040000 00010000 "boot"
-mtd1: 00010000 00010000 "env"
-mtd2: 00700000 00010000 "firmware"
-EOF
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
-run -z --archive="$SB/tmp/fw.tgz" -x
-if flashed /dev/mtd2 && rebooted; then
-    ok "-x + combined image, whole-blob path -> reboots anyway"
-else
-    bad "-x + combined whole-blob -> expected flash and reboot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
-fi
-
-# A write that FAILS is not a write that did not happen: flashcp erases before
-# it writes, so a partition left half-erased is every bit as unreadable. This
-# is why the run is marked dirty before the write, not after -- do_update_firmware
-# reaches reboot_system through `|| die` precisely here.
-reset_env
-set_mtd <<'EOF'
-dev:    size   erasesize  name
-mtd0: 00040000 00010000 "boot"
-mtd1: 00010000 00010000 "env"
-mtd2: 00700000 00010000 "firmware"
-EOF
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
-STUB_FLASHCP_FAIL=1
-run -z --archive="$SB/tmp/fw.tgz" -x
-if [ "$RC" -ne 0 ] && rebooted; then
-    ok "-x + write started then failed -> reboots anyway (partial erase is fatal too)"
-else
-    bad "-x + failed write -> expected a reboot despite the failure, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
-fi
-
 # --wipe_overlay erases "rootfs_data" -- the rw jffs2 that is the upperdir of
 # the running overlay, so overlayfs consults it for every lookup. Erasing it
 # live breaks the camera just as thoroughly as rewriting the lowerdir.
@@ -1669,26 +1595,6 @@ else
 fi
 rm -f "$SB/tmp/sysupgrade.lock"
 
-# The whole-blob layout is the one that reaches die() after a write
-# (`flashcp ... || die`); on the split path a failed flashcp is not fatal at all.
-# Same setup as the -x case above, minus the -x: the default path must reboot
-# from here for the same reason, and this is what the fix must not regress.
-reset_env
-set_mtd <<'EOF'
-dev:    size   erasesize  name
-mtd0: 00040000 00010000 "boot"
-mtd1: 00010000 00010000 "env"
-mtd2: 00700000 00010000 "firmware"
-EOF
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
-STUB_FLASHCP_FAIL=1
-run -z --archive="$SB/tmp/fw.tgz"
-if [ "$RC" -ne 0 ] && rebooted; then
-    ok "die() after a write started -> still reboots (partial erase is not survivable)"
-else
-    bad "post-write die -> expected a reboot, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
-fi
 
 # ---------------------------------------------------------------------------
 echo
@@ -2403,46 +2309,6 @@ if [ "$RC" -ne 0 ] && nothing_wrote; then
     ok "a kernel too big for its partition is refused with nothing written"
 else
     bad "oversized kernel -> expected a clean refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
-fi
-
-# A combined image has to be measured before the pivot too, and both of its
-# shapes are measurable there: whole-blob against the firmware partition...
-reset_env
-set_mtd <<'EOF'
-dev:    size   erasesize  name
-mtd0: 00040000 00010000 "boot"
-mtd1: 00010000 00010000 "env"
-mtd2: 00001000 00010000 "firmware"
-EOF
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
-run -z --archive="$SB/tmp/fw.tgz"
-if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted \
-    && printf '%s' "$OUT" | grep -q "does not fit its partition"; then
-    ok "an oversized whole-blob combined image is refused before the pivot"
-else
-    bad "oversized combined blob -> expected a clean refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
-fi
-
-# ...and on a split layout, each slice against its own partition, measured at
-# the same 64K-aligned FIT boundary do_update_firmware cuts on. The rootfs slice
-# is the one that used to be found only after the kernel had been committed.
-reset_env
-set_mtd <<'EOF'
-dev:    size   erasesize  name
-mtd0: 00040000 00010000 "boot"
-mtd1: 00010000 00010000 "env"
-mtd2: 00200000 00010000 "kernel"
-mtd3: 00001000 00010000 "rootfs"
-mtd4: 00100000 00010000 "rootfs_data"
-EOF
-make_combined "$SB/tmp/firmware.bin.ssc338q"
-make_archive "$SB/tmp/firmware.bin.ssc338q"
-run -z --archive="$SB/tmp/fw.tgz"
-if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted; then
-    ok "an oversized rootfs slice of a combined image is refused before the kernel is written"
-else
-    bad "oversized combined rootfs slice -> expected a clean refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
 
 # It must fail OPEN. The check is an early warning in front of flashcp's own
@@ -3226,10 +3092,10 @@ fi
 
 # ---------------------------------------------------------------------------
 echo
-# --- the split NOR layout (Goke gk7205v200 family) ---------------------------
-# One "firmware" partition from 0x50000 to the end of the chip; the kernel
-# divides it at boot into the FIT, the squashfs after it and rootfs_data from
-# the squashfs end. sysupgrade writes firmware.bin through mtdblock and stages
+# --- the split NOR layout ----------------------------------------------------
+# One "firmware" partition from the firmware area (0x50000, or after a larger
+# boot area) to the end of the chip; the kernel divides it at boot into the
+# uImage, the squashfs after it and rootfs_data from the squashfs end. sysupgrade writes firmware.bin through mtdblock and stages
 # the settings at the new overlay start, where /init restores them. The
 # mtdblock "devices" are sparse files here, so a test reads back what landed
 # where.
@@ -3251,23 +3117,26 @@ make_split_fw() {
     truncate -s $((($(stat -c %s "$1") + 65535) / 65536 * 65536)) "$1"
 }
 
-# set_split_mtd <layout> <chip bytes>: /proc/mtd, /sys/class/mtd and the
-# mtdblock files for "split" (firmware and the children the kernel made) or
+# set_split_mtd <layout> <chip bytes> [base]: /proc/mtd, /sys/class/mtd and
+# the mtdblock files for "split" (firmware and the children the kernel made) or
 # "fixed" (kernel 2M, rootfs 5M, rootfs_data to the end, plus the overlapping
-# firmware alias the fixed-slot command line also carries). The children of
-# the split layout sit at the offsets an image of 30 + 40 blocks gives.
+# firmware alias the fixed-slot command line also carries), with the firmware
+# area at base (0x50000: 256K boot, 64K env; else the boot area and a 256K env
+# before it). The children of the split layout sit at the offsets an image of
+# 30 + 40 blocks gives.
 set_split_mtd() {
-    local chip=$2 i=0 spec name off size
+    local chip=$2 b=$((${3:-0x50000})) i=0 spec name off size env
     rm -rf "$SB/sys/class/mtd" "$SB/dev"; mkdir -p "$SB/sys/class/mtd" "$SB/dev"
     printf 'dev:    size   erasesize  name\n' > "$SB/proc/mtd"
+    if [ "$b" -eq $((0x50000)) ]; then env=0x10000; else env=0x40000; fi
     if [ "$1" = split ]; then
-        set -- u-boot:0:0x40000 env:0x40000:0x10000 firmware:0x50000:$((chip - 0x50000)) \
-            kernel:0x50000:0x1e0000 rootfs:0x230000:0x280000 \
-            rootfs_data:0x4b0000:$((chip - 0x4b0000))
+        set -- u-boot:0:$((b - env)) env:$((b - env)):$env firmware:$b:$((chip - b)) \
+            kernel:$b:0x1e0000 rootfs:$((b + 0x1e0000)):0x280000 \
+            rootfs_data:$((b + 0x460000)):$((chip - b - 0x460000))
     else
-        set -- u-boot:0:0x40000 env:0x40000:0x10000 kernel:0x50000:0x200000 \
-            rootfs:0x250000:0x500000 firmware:0x50000:0x700000 \
-            rootfs_data:0x750000:$((chip - 0x750000))
+        set -- u-boot:0:$((b - env)) env:$((b - env)):$env kernel:$b:0x200000 \
+            rootfs:$((b + 0x200000)):0x500000 firmware:$b:0x700000 \
+            rootfs_data:$((b + 0x700000)):$((chip - b - 0x700000))
     fi
     for spec in "$@"; do
         name=${spec%%:*}; spec=${spec#*:}; off=$((${spec%%:*})); size=$((${spec#*:}))
@@ -3281,14 +3150,14 @@ set_split_mtd() {
     done
 }
 
-# split_env <layout> [chip]: a gk7205v200 running from that layout, its overlay
+# split_env <layout> [chip] [base]: a gk7205v200 running from that layout, its overlay
 # mounted in the sandbox with a marker in it, on a bootloader that boots the
 # split layout.
 split_env() {
     reset_env
     set_platform gk7205v200_lite
     STUB_SOC=gk7205v200; STUB_IMG_SOC=gk7205v200; STUB_VENDOR=goke
-    set_split_mtd "$1" "${2:-0x800000}"
+    set_split_mtd "$1" "${2:-0x800000}" "${3:-0x50000}"
     # What OpenIPC U-Boot passes on the split layout: nothing about the flash.
     set_cmdline 'mem=32M console=ttyAMA0,115200 panic=20 rootfstype=squashfs init=/init mmz_allocator=gk'
     rm -rf "$SB/overlay"; mkdir -p "$SB/overlay/etc"; echo kept > "$SB/overlay/etc/marker"
@@ -3324,7 +3193,7 @@ else
     bad "split layout upgrade, rc=$RC head=$(flash_at 2 0x50000 0x50000 8) out='$OUT'"
 fi
 if printf '%s' "$OUT" | grep -q "Settings staged at $(printf 0x%x "$OVL")"; then
-    ok "split layout: the overlay offset is the FIT and the squashfs, each to 64 KiB"
+    ok "split layout: the overlay offset is the uImage and the squashfs, each to 64 KiB"
 else
     bad "split layout: expected the settings at $(printf 0x%x "$OVL"), out='$OUT'"
 fi
@@ -3438,6 +3307,49 @@ else
 fi
 rm -rf "$SB/stale"
 
+# The write reaches the flash the camera runs from, so the run reboots whatever
+# happens after it started: done (-x included, which otherwise skips the
+# reboot), or failed half way -- a half-written image is no more bootable than
+# an erased one.
+split_env split
+run -z --archive="$SB/tmp/fw.tgz" -x
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] && rebooted; then
+    ok "split layout -x: written, and the run reboots anyway"
+else
+    bad "split layout -x: expected the image written and a reboot, rc=$RC out='$OUT'"
+fi
+split_env split
+mkdir -p "$SB/stale"
+for i in 0 1 2 3 4 5; do truncate -s "$(stat -c %s "$SB/dev/mtdblock$i")" "$SB/stale/mtd$i"; done
+RUN_ENV="$RUN_ENV MTDCHR=$SB/stale/mtd"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && rebooted; then
+    ok "split layout: a write that started and failed still reboots"
+else
+    bad "split layout: a failed write must reboot, rc=$RC out='$OUT'"
+fi
+rm -rf "$SB/stale"
+
+# The firmware area starts where the board puts it: a boot area larger than
+# 256K (hi3519dv500's signed boot image needs 512K, then a 256K environment)
+# puts it at 0xc0000, and the image and the settings land relative to that.
+split_env split 0x1000000 0xc0000
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -q "firmware.bin at 0xc0000" &&
+    [ "$(flash_at 2 0xc0000 0xc0000 8)" = "$FW_HEAD" ] &&
+    [ "$(dd if="$SB/dev/mtdblock2" bs=1 skip=$((70 * 65536)) count=12 2>/dev/null)" = OPENIPC-OVL1 ]; then
+    ok "split layout at 0xc0000: firmware.bin there, the settings 70 blocks after it"
+else
+    bad "split layout at 0xc0000: expected the image at 0xc0000, rc=$RC out='$OUT'"
+fi
+split_env fixed 0x1000000 0xc0000
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0xc0000 0xc0000 8)" = "$FW_HEAD" ]; then
+    ok "fixed slots at 0xc0000 -> split: written where the kernel slot starts"
+else
+    bad "fixed slots at 0xc0000: expected the image at 0xc0000, rc=$RC out='$OUT'"
+fi
+
 # A camera on the split layout has no slots for a separate kernel and rootfs.
 split_env split
 make_uimage "$SB/tmp/uImage.gk7205v200" gk7205v200
@@ -3453,22 +3365,28 @@ fi
 unset STUB_SOC STUB_IMG_SOC STUB_VENDOR
 rm -rf "$SB/overlay" "$SB/dev"
 
-# The default URL: the -split archive for the family, whatever the bootloader;
-# every other SoC keeps the plain package.
+# The default URL: the -split archive wherever the release publishes one for the
+# camera, whatever its SoC or bootloader; the plain package otherwise.
 default_url_is "$F/openipc.gk7205v200-nor-lite-split.tgz" \
-    eval 'set_platform gk7205v200_lite; STUB_SOC=gk7205v200'
+    eval 'set_platform gk7205v200_lite; STUB_SOC=gk7205v200; STUB_SPLIT_PUBLISHED=1'
+default_url_is "$F/openipc.hi3516cv6xx-nor-lite-split.tgz" \
+    eval 'set_platform hi3516cv6xx_lite; STUB_SOC=hi3516cv6xx; STUB_SPLIT_PUBLISHED=1'
+unset STUB_SPLIT_PUBLISHED
 default_url_is "$F/openipc.ssc338q-nor-lite.tgz" true
 # --channel resolves the plain package from the manifest; the family fetches
-# the -split one beside it.
-printf '@channel stable nightly-1\nnightly-1 gk7205v200_lite nor %s\nnightly-1 ssc338q_lite nor %s\n' \
-    "$F/openipc.gk7205v200-nor-lite.tgz" "$F/openipc.ssc338q-nor-lite.tgz" > "$SB/manifest.flat"
-for c in gk7205v200 ssc338q; do
+# the -split one beside it. A board that publishes only the split package
+# (hi3516cv6xx) is listed under nor_split, and that is what it resolves to.
+printf '@channel stable nightly-1\nnightly-1 gk7205v200_lite nor %s\nnightly-1 ssc338q_lite nor %s\nnightly-1 hi3516cv6xx_lite nor_split %s\n' \
+    "$F/openipc.gk7205v200-nor-lite.tgz" "$F/openipc.ssc338q-nor-lite.tgz" \
+    "$F/openipc.hi3516cv6xx-nor-lite-split.tgz" > "$SB/manifest.flat"
+for c in gk7205v200 ssc338q hi3516cv6xx; do
     reset_env; set_meminfo 8192; STUB_DL_BYTES=8691055
     set_platform ${c}_lite; STUB_SOC=$c
+    STUB_SPLIT_PUBLISHED=; [ "$c" = gk7205v200 ] && STUB_SPLIT_PUBLISHED=1
     RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
     run -z --channel=stable
     want="$F/openipc.$c-nor-lite.tgz"
-    [ "$c" = gk7205v200 ] && want="$F/openipc.gk7205v200-nor-lite-split.tgz"
+    [ "$c" = ssc338q ] || want="$F/openipc.$c-nor-lite-split.tgz"
     if printf '%s' "$OUT" | grep -qF "Download from $want" && nothing_wrote; then
         ok "--channel, $c -> $want"
     else
@@ -3476,7 +3394,7 @@ for c in gk7205v200 ssc338q; do
     fi
 done
 rm -f "$SB/manifest.flat"
-unset STUB_SOC
+unset STUB_SOC STUB_SPLIT_PUBLISHED
 
 echo "=== Part 2: invariants in $SRC ==="
 
@@ -3740,11 +3658,6 @@ if awk '/^set_progress\(\)/,/^}/' "$SRC" | grep -qF 'return ${st:-1}'; then
 else
     bad "set_progress swallows the write's status in silent mode; every '|| die' behind it is dead code"
 fi
-# do_update_firmware and the pre-check must cut a combined image at the same
-# place, or the pre-check measures a rootfs slice that is not the one written.
-[ "$(grep -c 'fit_split_blocks' "$SRC")" -ge 3 ] \
-    && ok "the combined-image split boundary has one definition" \
-    || bad "the 64K FIT boundary is computed in more than one place; they will disagree"
 # check_image_fits runs inside the pivot as the backstop for the combined-image
 # split, and the staged root has only the applets enter_ramfs links by name.
 awk '/^enter_ramfs\(\)/,/^}/' "$SRC" | grep -q 'stat sync tail' \
@@ -3865,7 +3778,7 @@ fi
 
 # Every write that lands on flash the camera is running from has to be marked,
 # and the one that does not must stay unmarked or -x loses its only real use.
-for fn in do_update_rootfs do_update_firmware do_wipe_overlay; do
+for fn in do_update_rootfs do_update_firmware_split do_wipe_overlay; do
     if sed -n "/^${fn}()/,/^}/p" "$SRC" | grep -q 'mark_live_flash_dirty'; then
         ok "$fn marks the live flash dirty"
     else

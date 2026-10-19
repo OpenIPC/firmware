@@ -17,50 +17,41 @@ chipid=$(ipcinfo --chip-name)
 socmodel=$(fw_printenv -n socmodel)
 
 # Memory config
-mem_start=$(grep "System RAM" /proc/iomem | awk -F'[- :]' '{print "0x"$1}')
+proc_cmdline=${LOAD_HISILICON_CMDLINE:-/proc/cmdline}
+mem_start=$(grep "System RAM" ${LOAD_HISILICON_IOMEM:-/proc/iomem} | awk -F'[- :]' '{print "0x"$1}')
 
-mem_total=$(fw_printenv -n totalmem | tr -d 'M')
-mem_total=${mem_total:=64}
+# A kernel that measures DRAM and lays it out itself (hisi_mem, OpenIPC/linux)
+# publishes the result: the DRAM size and OS share in MiB, the allocator, and
+# the zone as open_mmz takes it. Its layout is the one this boot runs with,
+# under any bootloader, so nothing below reads or writes the U-Boot environment.
+hisi_mem=${LOAD_HISILICON_MEM:-/sys/module/hisi_mem/parameters}
+kernel_alloc=$(cat "$hisi_mem/allocator" 2>/dev/null)
+if [ -n "$kernel_alloc" ]; then
+	mem_total=$(cat "$hisi_mem/dram")
+	os_mem_size=$(cat "$hisi_mem/osmem")
+	kernel_mmz=$(cat "$hisi_mem/mmz")
+else
+	mem_total=$(fw_printenv -n totalmem | tr -d 'M')
+	mem_total=${mem_total:=64}
 
-os_mem_size=$(awk 'BEGIN{RS=" "} /^mem=[0-9]+M/{gsub(/^mem=|M.*$/,""); print; exit}' /proc/cmdline)
-if [ -n "$os_mem_size" ] && [ "$os_mem_size" -ge "$mem_total" ]; then
-	os_mem_size=""
+	os_mem_size=$(awk 'BEGIN{RS=" "} /^mem=[0-9]+M/{gsub(/^mem=|M.*$/,""); print; exit}' $proc_cmdline)
+	if [ -n "$os_mem_size" ] && [ "$os_mem_size" -ge "$mem_total" ]; then
+		os_mem_size=""
+	fi
+	if [ -z "$os_mem_size" ]; then
+		os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
+	fi
+	os_mem_size=${os_mem_size:=32}
 fi
-if [ -z "$os_mem_size" ]; then
-	os_mem_size=$(fw_printenv -n osmem | tr -d 'M')
-fi
-os_mem_size=${os_mem_size:=32}
 
 report_error() {
 	echo "******* Error: There's something wrong, please check! *****"
 	exit 1
 }
 
-set_allocator() {
-	fw_setenv mmz_allocator "$1" >/dev/null 2>&1
-}
-
-check_allocator() {
-	allocator=$(grep mmz_allocator /proc/cmdline)
-	if [ -z "${allocator}" ]; then
-		if [ ${mem_total} -ge 128 ]; then
-			set_allocator cma
-		else
-			set_allocator ot
-		fi
-	fi
-}
-
 insert_osal() {
-	check_allocator
 	modprobe open_osal proc_show=${DEBUG}
-
-	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " /proc/cmdline)
-	if [ -z "$MMZ" ]; then
-		modprobe open_mmz anony=1 mmz_allocator=ot mmz=anonymous,0,$mmz_start,$mmz_size mem_process_isolation=$((1 - DEBUG)) || report_error
-	else
-		modprobe open_mmz anony=1 mmz_allocator=cma mmz=$MMZ mem_process_isolation=$((1 - DEBUG)) || report_error
-	fi
+	modprobe open_mmz $mmz_args mem_process_isolation=$((1 - DEBUG)) || report_error
 }
 
 function insert_audio()
@@ -346,12 +337,24 @@ if [ $b_arg_remove -eq 1 ]; then
 	remove_ko;
 fi
 #######################parse arg end########################
-if [ $os_mem_size -ge $mem_total ]; then
-	echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
-	exit
-fi
+if [ -n "$kernel_alloc" ]; then
+	echo "Memory laid out by the kernel: DRAM ${mem_total}M, OS ${os_mem_size}M, ${kernel_alloc}"
+	mmz_args="anony=1 mmz_allocator=$kernel_alloc mmz=$kernel_mmz"
+else
+	if [ $os_mem_size -ge $mem_total ]; then
+		echo "[err] os_mem[$os_mem_size], over total_mem[$mem_total]"
+		exit
+	fi
 
-calc_mmz_info
+	calc_mmz_info
+	MMZ=$(awk -F '=' '$1=="mmz"{print $2}' RS=" " $proc_cmdline)
+	if [ -z "$MMZ" ]; then
+		mmz_args="anony=1 mmz_allocator=ot mmz=anonymous,0,$mmz_start,$mmz_size"
+	else
+		mmz_args="anony=1 mmz_allocator=cma mmz=$MMZ"
+	fi
+fi
+echo "mmz: $mmz_args"
 
 # A failed probe used to be stored as sensor=unknown, and rcS exports the
 # stored value into SENSOR before this ever runs -- so an already-latched

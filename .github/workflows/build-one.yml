@@ -193,7 +193,10 @@ jobs:
           # The plain NOR package. gk7205v200-family boards build a -split
           # one beside it (Makefile REPACK_NOR_SPLIT), and two paths here made
           # the test below fail and the upload step skip.
+          # A board that publishes only the split package (hi3516cv6xx,
+          # hi3519dv500) has no plain one: then that is its NOR package.
           NORFW=$(find output/images -name 'openipc*nor*' ! -name '*-split.tgz' | head -1)
+          [ -n "${NORFW}" ] || NORFW=$(find output/images -name 'openipc*nor*-split.tgz' | head -1)
           if [ -n "${NORFW}" ] && [ -e "${NORFW}" ]; then
             echo NORFW=${NORFW} >> ${GITHUB_ENV}
           fi
