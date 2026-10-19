@@ -1,0 +1,99 @@
+#!/bin/sh
+#
+# AK3918AV130 driver bring-up. The order and the per-sensor arguments follow
+# the vendor's own usr/sbin/main.sh and rootfs/scripts/sensor/*.sh in the
+# AnyCloud39AV130 SDK. ak_eth and ak_mci are not here: networking and the SD
+# card are needed before S70vendor runs this, so the package's post-build hook
+# lists them in /etc/modules for S35modules instead.
+
+vendor=$(ipcinfo -v)
+
+log_vendor() {
+	logger -s -p daemon.info -t "${vendor:-anyka}" "$1"
+}
+
+load() {
+	mod=$1
+	shift
+	grep -q "^${mod} " /proc/modules && return 0
+	# modprobe, not insmod: ak_hcd needs usbcore, which the kernel builds as
+	# a module, and modules.dep knows that.
+	modprobe "${mod}" "$@"
+}
+
+load_sensor() {
+	case "$1" in
+		gc1084)
+			load sensor_gc1084
+			;;
+		gc2053)
+			# The SDK drives the GC2053 with the GC2063 module at 0x37.
+			load sensor_gc2063 SENSOR_I2C_ADDR=0x37
+			;;
+		gc2063)
+			load sensor_gc2063
+			;;
+		gc20c3)
+			load sensor_gc20c3
+			;;
+		gc3003)
+			load sensor_gc3003
+			;;
+		sc3332)
+			load sensor_sc3332
+			;;
+		*)
+			return 1
+			;;
+	esac
+}
+
+insert_ko() {
+	load ak_i2c
+	load ak_efuse
+	load ak_rtc
+	load ak_leds
+	load ak_pcm
+	load ak_ion
+	load ak_uio
+	load ak_hcd
+
+	load ak_isp
+	SENSOR=$(fw_printenv -n sensor 2>/dev/null)
+	if [ -n "${SENSOR}" ]; then
+		log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
+	else
+		SENSOR=$(ipcinfo --short-sensor 2>/dev/null)
+		[ -n "${SENSOR}" ] && log_vendor "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+	fi
+	SENSOR=$(echo "${SENSOR}" | tr 'A-Z' 'a-z')
+	if ! load_sensor "${SENSOR}"; then
+		log_vendor "No driver for sensor '${SENSOR}', video is not started"
+		return 0
+	fi
+
+	load ak_venc_adapter
+	load ak_venc_bridge
+}
+
+remove_ko() {
+	for mod in ak_venc_bridge ak_venc_adapter sensor_gc1084 sensor_gc2063 \
+		sensor_gc20c3 sensor_gc3003 sensor_sc3332 ak_isp; do
+		grep -q "^${mod} " /proc/modules && rmmod "${mod}"
+	done
+}
+
+case "$1" in
+	-i)
+		insert_ko
+		;;
+
+	-r)
+		remove_ko
+		;;
+
+	*)
+		echo "Usage: $0 {-i|-r}"
+		exit 1
+		;;
+esac
