@@ -252,8 +252,9 @@ if timeout 15 sh "$SB/S95vigil" start > /dev/null; then
     ok "a lock its owner never wrote a pid into is taken over"
 else
     bad "start waited on a pid-less lock"
+    rm -rf "$SB/run/vigil-supervise.pid.lock"      # or the stop below waits on it too
 fi
-sh "$SB/S95vigil" stop > /dev/null
+timeout 30 sh "$SB/S95vigil" stop > /dev/null
 sleep 0.5
 
 # 7. A vigild that ignores SIGTERM is killed, so stop succeeds and leaves
@@ -271,23 +272,10 @@ else
 fi
 pkill -f "^sleep 1000" 2>/dev/null
 
-# 8a. A lock left with no pid -- its start or stop killed between mkdir and
-#      writing its pid -- is taken over after a short grace, not waited on
-#      forever (#2630).
-reset run
-mkdir -p "$SB/run/vigil-supervise.pid.lock"
-if timeout 15 sh "$SB/S95vigil" start > /dev/null; then
-    ok "a lock its owner never wrote a pid into is taken over"
-else
-    bad "start waited on a pid-less lock"
-fi
-sh "$SB/S95vigil" stop > /dev/null
-sleep 0.5
-
-# 8b. A stop that lands while the supervisor is launching vigild, then a start
-#      at once: one supervisor, one vigild, and the pid file names the live
-#      supervisor -- the old one neither leaves vigild unwatched nor removes
-#      the new one's pid file (#2630).
+# 8. A stop that lands while the supervisor is launching vigild, then a start
+#     at once: one supervisor, one vigild, and the pid file names the live
+#     supervisor -- the old one neither leaves vigild unwatched nor removes
+#     the new one's pid file (#2630).
 reset run
 touch "$SB/slowstart"
 sh "$SB/S95vigil" start > /dev/null

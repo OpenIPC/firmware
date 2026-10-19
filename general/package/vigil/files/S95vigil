@@ -322,7 +322,9 @@ stop() {
 			sleep 1
 		done
 	fi
-	if running; then
+	# A supervisor still alive at the cutoff could yet launch a daemon:
+	# not stopped, and its pid file stays for the next stop to find it.
+	if running || { [ -n "$sup" ] && kill -0 "$sup" 2>/dev/null; }; then
 		unlock
 		echo "FAIL"
 		return 1

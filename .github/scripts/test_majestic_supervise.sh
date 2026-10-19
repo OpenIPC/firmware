@@ -203,8 +203,9 @@ if timeout 15 sh "$SB/S95majestic" start > /dev/null; then
     ok "a lock its owner never wrote a pid into is taken over"
 else
     bad "start waited on a pid-less lock"
+    rm -rf "$SB/run/majestic-supervise.pid.lock"      # or the stop below waits on it too
 fi
-sh "$SB/S95majestic" stop > /dev/null
+timeout 30 sh "$SB/S95majestic" stop > /dev/null
 sleep 0.5
 
 # 12. A stop that lands while the supervisor is launching majestic, then a start
