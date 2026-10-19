@@ -187,6 +187,7 @@ else
 endif
 endif
 	@$(call CHECK_SIZE,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024 - $$(( $(or $(BR2_OPENIPC_NOR_FIRMWARE_OFFSET),0x50000) / 1024 )) - 256))
+	@$(call CHECK_KERNEL_READ)
 	@$(call REPACK_NOR_SPLIT)
 else
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
@@ -320,6 +321,17 @@ endef
 # 2026-08-18. 32KB is the threshold because what tips these boards is a change
 # to the shared overlay, which is single-digit KB at a time; a board under that
 # is a couple of ordinary commits from red, and a board over it is not.
+# The uImage at the start of firmware.bin against what a bootloader in the field
+# reads from there to boot it (BR2_OPENIPC_NOR_KERNEL_READ_SIZE), in bytes: one
+# byte over is a kernel read short and a failed CRC.
+define CHECK_KERNEL_READ
+	size=$$(stat -c %s $(TARGET)/images/uImage) || exit 1; \
+	limit=$$(( $(or $(BR2_OPENIPC_NOR_KERNEL_READ_SIZE),0x200000) )); \
+	echo "- uImage: [$$((size / 1024))KB/$$((limit / 1024))KB read by the bootloader]"; \
+	if test $$size -gt $$limit; then \
+		echo "-- size exceeded by: $$((size - limit)) bytes; bootloaders reading $$((limit / 1024))KB would cut it short"; exit 1; fi
+endef
+
 define CHECK_SIZE
 	$(eval FILE_SIZE = $(shell expr $(shell stat -c %s $(TARGET)/images/$(1) || echo 0) / 1024))
 	if test $(FILE_SIZE) -eq 0; then exit 1; fi

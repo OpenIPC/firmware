@@ -36,6 +36,17 @@ config BR2_OPENIPC_NOR_FIRMWARE_OFFSET
 	  boot + 64K of environment; a SoC whose signed boot image is larger
 	  sets its own (hi3519dv500: 512K + 256K, 0xC0000).
 
+config BR2_OPENIPC_NOR_KERNEL_READ_SIZE
+	hex "How much of the firmware partition a bootloader reads to boot"
+	default 0x200000
+	help
+	  The split image boots under any bootloader that reads a uImage from
+	  the start of the firmware partition and bootm's it, and the ones in
+	  the field read a fixed amount there: 2 MiB, the fixed-slot kernel
+	  slot (hi3516cv6xx's published U-Boot until it scanned the flash, and
+	  vendor ones); 6 MiB on hi3519dv500's. A uImage larger than this is
+	  read short by them and fails its CRC, so the build refuses it.
+
 config BR2_OPENIPC_NOR_FIXED_PACKAGE
 	bool "Also ship the fixed-slot NOR package"
 	help

@@ -127,12 +127,15 @@ jobs:
             #   its own partitions (mtdsplit), and rootfs_data starts where the
             #   image ends. So only the whole has to fit the part, with an erase
             #   block to spare for the settings; there are no slots to measure
-            #   it against. The boot area is the board's, and the only thing
-            #   here that differs between SoCs.
+            #   it against. Except the uImage: bootloaders in the field read a
+            #   fixed amount from the firmware offset to boot it (the
+            #   BR2_OPENIPC_NOR_KERNEL_READ_SIZE the build checks), and one
+            #   past it is read short. The boot area and that read are the
+            #   board's, and the only things here that differ between SoCs.
             split_layout() {
               case "$1" in
-                hi3516cv6xx) boot_kib=256 env_kib=64 ;;
-                hi3519dv500) boot_kib=512 env_kib=256 ;;
+                hi3516cv6xx) boot_kib=256 env_kib=64 read_kib=2048 ;;
+                hi3519dv500) boot_kib=512 env_kib=256 read_kib=6144 ;;
                 *) echo "::error::create_split: no NOR boot area known for $1"; return 1 ;;
               esac
             }
@@ -140,7 +143,7 @@ jobs:
             create_split() {
               local uboot="$1" soc="$2" variant="$3" tag="$4" nor="$5"
               local release="target/openipc-${tag}-nor-${variant}.bin"
-              local boot_kib env_kib off fw fw_kib ub_kib ksz k_kib used end_kib got
+              local boot_kib env_kib read_kib off fw fw_kib ub_kib ksz k_kib used end_kib got
               split_layout "$soc" || return 1
               off=$(( boot_kib + env_kib ))
 
@@ -190,6 +193,10 @@ jobs:
 
               if [ "$ub_kib" -gt "$boot_kib" ]; then
                 echo "::error::${soc}_${variant}: ${uboot} is ${ub_kib} KiB, the boot partition is ${boot_kib} KiB (the env sits behind it)"
+                return 1
+              fi
+              if [ "$(( 64 + ksz ))" -gt "$(( read_kib * 1024 ))" ]; then
+                echo "::error::${soc}_${variant}: the uImage is $(( 64 + ksz )) bytes, more than the ${read_kib} KiB a bootloader reads from the firmware offset"
                 return 1
               fi
               if [ "$fw_kib" -gt "$end_kib" ]; then
