@@ -93,6 +93,11 @@ ALL_BOARDS = [
     "gk7206v100_lite",
     # Allwinner
     "v851s_lite",
+    # Anyka [AK3918EV300]
+    # One 4.4.302 kernel and toolchain for every AK39 part. ak3918av130_lite
+    # is in UNBUILT_BOARDS until its prebuilt SDK modules have run on a camera.
+    "ak3910_lite", "ak3918_lite", "ak3918ev200_lite", "ak3918ev300_lite",
+    "ak3916ev300_lite", "ak3918ev331_lite",
     # Fullhan
     "fh8852v100_lite", "fh8852v200_lite",
     # Grainmedia
@@ -143,6 +148,14 @@ UNBUILT_BOARDS = {
     "hi3516ev300_dev": "variant 'dev', not a standard matrix variant",
     "hi3516ev300_glibc": "variant 'glibc', not a standard matrix variant",
     "t31glibc_lite": "glibc toolchain variant of t31_lite",
+
+    # Real, and built locally. The other Anyka boards build every driver from
+    # source; this one's ISP, encoder, Ethernet and SD drivers are the
+    # AnyCloud39AV130 SDK's prebuilt modules, matched to the family kernel by
+    # vermagic and a struct-layout probe rather than by a boot (see
+    # general/package/anyka-osdrv-ak3918av130/anyka-osdrv-ak3918av130.mk). It
+    # joins ALL_BOARDS once those modules have run on an AV130 camera.
+    "ak3918av130_lite": "prebuilt SDK modules not yet run on an AV130 camera",
 
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
@@ -245,6 +258,7 @@ SMOKE_BOARDS = [
     "nt98566_lite",           # Novatek
     "fh8852v200_lite",        # Fullhan
     "v851s_lite",             # Allwinner
+    "ak3918ev300_lite",       # Anyka, the one 4.4 kernel's EV300/EV330 image
     "xm530_lite",             # Xiongmai
 ]
 
@@ -255,10 +269,6 @@ SMOKE_BOARDS = [
 UNBUILT_FAMILIES = {
     ("br-ext-chip-allwinner", "v83x"),
     ("br-ext-chip-ambarella", "s3l"),
-    # No toolchain.anyka-ak3918ev300 is published yet, so a CI build of any
-    # Anyka board would stop at the toolchain download. They join ALL_BOARDS
-    # once toolchain.yml has built and released it.
-    ("br-ext-chip-anyka", "ak3918ev300"),
     ("br-ext-chip-fullhan", "fh8833v100"),
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
@@ -305,11 +315,11 @@ UNBUILT_FAMILIES = {
 # would spend flash on a radio that is not there. A mainline board with a
 # driver choosing it would take it off this list.
 #
-# anyka-osdrv-ak3918av130 is here because its family is in UNBUILT_FAMILIES,
-# waiting for a published toolchain, and because its prebuilt SDK modules are
-# matched to the kernel by vermagic and a struct-layout probe, not by a boot
-# (see its .mk). It leaves this list when ak3918av130_lite joins ALL_BOARDS,
-# which waits for those modules to have run on an AV130 camera.
+# anyka-osdrv-ak3918av130 is selected only by ak3918av130_lite, which is in
+# UNBUILT_BOARDS: its prebuilt SDK modules are matched to the kernel by
+# vermagic and a struct-layout probe, not by a boot (see its .mk). It leaves
+# this list when that board joins ALL_BOARDS, which waits for those modules
+# to have run on an AV130 camera.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x",
     "anyka-osdrv-ak3918av130", "atbm-wifi",
