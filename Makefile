@@ -323,9 +323,14 @@ endef
 # is a couple of ordinary commits from red, and a board over it is not.
 # The uImage at the start of firmware.bin against what a bootloader in the field
 # reads from there to boot it (BR2_OPENIPC_NOR_KERNEL_READ_SIZE), in bytes: one
-# byte over is a kernel read short and a failed CRC.
+# byte over is a kernel read short and a failed CRC. Measured as a bootloader
+# sees it, from firmware.bin's own uImage header (64 bytes, then the data size
+# big-endian at byte 12): the fixed-slot package's repack has already renamed
+# images/uImage on the boards that ship one.
 define CHECK_KERNEL_READ
-	size=$$(stat -c %s $(TARGET)/images/uImage) || exit 1; \
+	hex=$$(od -An -tx1 -j12 -N4 $(TARGET)/images/firmware.bin | tr -d ' \n'); \
+	test -n "$$hex" || exit 1; \
+	size=$$((64 + 0x$$hex)); \
 	limit=$$(( $(or $(BR2_OPENIPC_NOR_KERNEL_READ_SIZE),0x200000) )); \
 	echo "- uImage: [$$((size / 1024))KB/$$((limit / 1024))KB read by the bootloader]"; \
 	if test $$size -gt $$limit; then \
