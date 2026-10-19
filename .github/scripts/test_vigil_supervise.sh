@@ -78,7 +78,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 case "$mode" in
-    start) exec "$exe" "$@" ;;
+    start) [ -f "${SB_DIR}/slowstart" ] && sleep 1; exec "$exe" "$@" ;;
     stop)
         pids=$(pgrep -f "^/bin/sh $exe|^sleep 1000" 2>/dev/null)
         [ -n "$pids" ] || exit 1
@@ -99,7 +99,7 @@ fi
 EOF
 printf '#!/bin/sh\necho "$*" >> "%s/log"\n' "$SB" > "$SB/bin/logger"
 chmod +x "$SB/bin"/*
-export PATH="$SB/bin:$PATH"
+export PATH="$SB/bin:$PATH" SB_DIR="$SB"
 
 starts() { [ -f "$SB/starts" ] && wc -l < "$SB/starts" | tr -d ' ' || echo 0; }
 reset() {
@@ -271,7 +271,44 @@ else
 fi
 pkill -f "^sleep 1000" 2>/dev/null
 
-# 8. start and stop.
+# 8a. A lock left with no pid -- its start or stop killed between mkdir and
+#      writing its pid -- is taken over after a short grace, not waited on
+#      forever (#2630).
+reset run
+mkdir -p "$SB/run/vigil-supervise.pid.lock"
+if timeout 15 sh "$SB/S95vigil" start > /dev/null; then
+    ok "a lock its owner never wrote a pid into is taken over"
+else
+    bad "start waited on a pid-less lock"
+fi
+sh "$SB/S95vigil" stop > /dev/null
+sleep 0.5
+
+# 8b. A stop that lands while the supervisor is launching vigild, then a start
+#      at once: one supervisor, one vigild, and the pid file names the live
+#      supervisor -- the old one neither leaves vigild unwatched nor removes
+#      the new one's pid file (#2630).
+reset run
+touch "$SB/slowstart"
+sh "$SB/S95vigil" start > /dev/null
+sleep 0.3                       # inside the slowed launch
+sh "$SB/S95vigil" stop > /dev/null
+sh "$SB/S95vigil" start > /dev/null
+rm -f "$SB/slowstart"
+sleep 2
+sups=$(pgrep -f "$SB/S95vigil supervise" | wc -l)
+daemons=$(pgrep -f "^sleep 1000" | wc -l)
+named=$(cat "$SB/run/vigil-supervise.pid" 2>/dev/null)
+if [ "$sups" = 1 ] && [ "$daemons" = 1 ] && [ -n "$named" ] && kill -0 "$named" 2>/dev/null &&
+    pgrep -f "$SB/S95vigil supervise" | grep -qx "$named"; then
+    ok "a stop during a launch, then a start: one supervisor, one vigild, and its pid file"
+else
+    bad "stop during launch then start: supervisors $sups, daemons $daemons, pid file '$named'"
+fi
+sh "$SB/S95vigil" stop > /dev/null
+sleep 0.5
+
+# 9. start and stop.
 reset run
 echo "utc=2026-01-01 00:00:00" > "$SB/crash/vigil.loop"
 sh "$SB/S95vigil" start > /dev/null

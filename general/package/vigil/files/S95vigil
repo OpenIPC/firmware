@@ -209,7 +209,9 @@ card_watch() {
 supervise() {
 	trap '' HUP
 	# A stop while it waits ends the wait, not just the run after it.
-	trap 'kill $waiting $watcher 2>/dev/null; rm -f "$SUPERVISOR" "$SUPERVISOR.card"; exit 0' TERM INT
+	# The pidfile goes only while it still names this supervisor: by then a
+	# new start may have written its own.
+	trap 'kill $waiting $watcher 2>/dev/null; rm -f "$SUPERVISOR.card"; release; exit 0' TERM INT
 	echo $$ > "$SUPERVISOR"
 	waiting=
 	watcher=
@@ -280,17 +282,29 @@ supervise() {
 		wait "$waiting"
 		waiting=
 	done
-	rm -f "$SUPERVISOR"
+	release
+}
+
+release() {
+	[ "$(cat "$SUPERVISOR" 2>/dev/null)" = "$$" ] && rm -f "$SUPERVISOR"
+	return 0
 }
 
 stop() {
 	echo -n "Stopping $DAEMON: "
 	lock
-	# The supervisor first, so it does not start what is being stopped.
-	supervising && kill "$pid" 2>/dev/null
-	start-stop-daemon -K -q -x "$DAEMON_PATH"
+	# The supervisor first, so it does not start what is being stopped. It
+	# may be caught between its checks and the launch, starting a daemon after
+	# the first signal -- so the daemon is asked again every second -- and it
+	# exits only once that daemon has ended. The lock is held until the
+	# supervisor is gone too, or a start right after this one could race its
+	# last steps and lose its own pidfile (#2630).
+	sup=
+	supervising && sup=$pid
+	[ -n "$sup" ] && kill "$sup" 2>/dev/null
 	i=0
-	while running && [ $i -lt 10 ]; do
+	while { running || { [ -n "$sup" ] && kill -0 "$sup" 2>/dev/null; }; } && [ $i -lt 10 ]; do
+		start-stop-daemon -K -q -x "$DAEMON_PATH"
 		i=$((i + 1))
 		sleep 1
 	done

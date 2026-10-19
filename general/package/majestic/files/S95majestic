@@ -87,13 +87,31 @@ start() {
 # start and stop one at a time: two starts at once would leave a supervisor
 # no pid names, which a stop could then not end. The lock holds its holder's
 # pid, and is taken over only once that process is gone -- a start that was
-# killed -- never from one still running.
+# killed -- never from one still running. A holder writes its pid the moment
+# after its mkdir, so a lock still without one after five seconds was left by
+# a command killed in between, and is taken over too; otherwise every later
+# start and stop would wait on it forever (#2630).
 lock() {
+	nopid=0
 	until mkdir "$SUPERVISOR.lock" 2>/dev/null; do
 		holder=$(cat "$SUPERVISOR.lock/pid" 2>/dev/null)
-		if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
-			rm -rf "$SUPERVISOR.lock"
-			continue
+		# Removed only if it still names what was judged stale: another
+		# command reclaiming the same lock may have taken it in between.
+		if [ -n "$holder" ]; then
+			nopid=0
+			if ! kill -0 "$holder" 2>/dev/null; then
+				[ "$(cat "$SUPERVISOR.lock/pid" 2>/dev/null)" = "$holder" ] &&
+					rm -rf "$SUPERVISOR.lock"
+				continue
+			fi
+		else
+			nopid=$((nopid + 1))
+			if [ "$nopid" -ge 5 ]; then
+				[ -z "$(cat "$SUPERVISOR.lock/pid" 2>/dev/null)" ] &&
+					rm -rf "$SUPERVISOR.lock"
+				nopid=0
+				continue
+			fi
 		fi
 		sleep 1
 	done
@@ -129,7 +147,9 @@ crashed() {
 supervise() {
 	trap '' HUP
 	# A stop while it waits ends the wait, not just the run after it.
-	trap 'kill $waiting 2>/dev/null; rm -f "$SUPERVISOR"; exit 0' TERM INT
+	# The pidfile goes only while it still names this supervisor: by then a
+	# new start may have written its own.
+	trap 'kill $waiting 2>/dev/null; release; exit 0' TERM INT
 	echo $$ > "$SUPERVISOR"
 	waiting=
 	crashes=
@@ -166,17 +186,29 @@ supervise() {
 		wait "$waiting"
 		waiting=
 	done
-	rm -f "$SUPERVISOR"
+	release
+}
+
+release() {
+	[ "$(cat "$SUPERVISOR" 2>/dev/null)" = "$$" ] && rm -f "$SUPERVISOR"
+	return 0
 }
 
 stop() {
 	echo -n "Stopping $DAEMON: "
 	lock
-	# The supervisor first, so it does not start what is being stopped.
-	supervising && kill "$pid" 2>/dev/null
-	start-stop-daemon -K -q -x "$DAEMON_PATH"
+	# The supervisor first, so it does not start what is being stopped. It
+	# may be caught between its checks and the launch, starting a daemon after
+	# the first signal -- so the daemon is asked again every second -- and it
+	# exits only once that daemon has ended. The lock is held until the
+	# supervisor is gone too, or a start right after this one could race its
+	# last steps and lose its own pidfile (#2630).
+	sup=
+	supervising && sup=$pid
+	[ -n "$sup" ] && kill "$sup" 2>/dev/null
 	i=0
-	while running && [ $i -lt 10 ]; do
+	while { running || { [ -n "$sup" ] && kill -0 "$sup" 2>/dev/null; }; } && [ $i -lt 10 ]; do
+		start-stop-daemon -K -q -x "$DAEMON_PATH"
 		i=$((i + 1))
 		sleep 1
 	done
