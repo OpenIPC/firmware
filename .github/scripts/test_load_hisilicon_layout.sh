@@ -1,5 +1,5 @@
 #!/bin/sh
-# load_hisilicon (hi3516ev200, hi3519dv500): the media memory
+# load_hisilicon (hi3516ev200, hi3516cv6xx, hi3519dv500): the media memory
 # zone it loads, and that it loads it without writing the U-Boot environment;
 # and that set_allocator, the user's override, writes only bootargs that boot.
 #
@@ -209,9 +209,11 @@ check() {
 }
 
 check hisilicon-osdrv-hi3516ev200 hi3516ev300 imx307 open_osal hisi yes
+check hisilicon-osdrv-hi3516cv6xx hi3516cv610 sc4336p open_mmz ot no
 check hisilicon-osdrv-hi3519dv500 hi3519dv500 sc450ai open_mmz ot no
 
 check_set_allocator hisilicon-osdrv-hi3516ev200 hisi
+check_set_allocator hisilicon-osdrv-hi3516cv6xx ot
 check_set_allocator hisilicon-osdrv-hi3519dv500 ot
 
 echo

@@ -327,58 +327,22 @@ check_image_fits() {
 	check_size_fits "$(stat -c %s "$f" 2>/dev/null)" "$2" "$3" "$f"
 }
 
-# Where do_update_firmware cuts a combined image: the FIT totalsize (header
-# bytes 4-7, big-endian) rounded up to the 64K erase block. Shared with the size
-# pre-check, which has to measure the same two pieces before either is written —
-# two copies of this arithmetic would be two chances to disagree about where the
-# rootfs starts.
-fit_split_blocks() {
-	local hex=$(xxd -p -l 4 -s 4 "$1" 2>/dev/null)
-	local fitsz=$((0x${hex:-0}))
-	[ "$fitsz" -gt 0 ] || return 1
-	echo $(((fitsz + 65535) / 65536))
-}
-
-# A combined image is one blob that do_update_firmware either writes whole to a
-# "firmware" partition or cuts in two for separate kernel and rootfs partitions,
-# picking by layout. Both shapes are measurable here, before the pivot.
+# firmware.bin is the split layout's one image (a uImage, then the squashfs),
+# measured here, before the pivot: everything do_update_firmware_split refuses,
+# refused while the camera is still whole.
 check_combined_fits() {
-	local x=$1
+	local x=$1 ovl end blob
 	[ -f "$x" ] || return 0
-	if nor_split_image "$x"; then
-		# Everything do_update_firmware_split refuses, refused here, before
-		# the pivot: after it every refusal is a reboot.
-		local ovl=$(nor_split_overlay_at "$x") end=$(nor_split_end) blob
-		[ "$(nor_split_soc "$x")" = "$model" ] ||
-			die "$x is built for $(nor_split_soc "$x"), this camera is a $model. Nothing was written."
-		[ $((0x50000 + $(stat -c %s "$x"))) -le "$ovl" ] ||
-			die "$x runs past the end of its squashfs ($(printf 0x%x "$ovl")): not a firmware.bin as the build packs it. Nothing was written."
-		blob=$(nor_split_blob_size)
-		[ $((ovl + blob)) -le "$end" ] ||
-			die "$x and the settings do not fit the flash: the image ends at $(printf 0x%x "$ovl"), the settings need $((blob / 1024)) KB, the flash ends at $(printf 0x%x "$end"). Nothing was written; -n upgrades without the settings."
-		return 0
-	fi
-	# A camera on the split layout takes nothing else: its "firmware"
-	# partition is the whole flash after env, and the generic path below
-	# would write any blob over it.
-	nor_split_running &&
-		die "$x is not a split-layout firmware.bin for this camera (a uImage, then a squashfs). Nothing was written."
-	local kdev=$(get_device "kernel")
-	local rdev=$(get_device "rootfs")
-	if [ "$kdev" = "/dev/" ] || [ "$rdev" = "/dev/" ]; then
-		check_image_fits "$x" "$(get_device "firmware")" firmware
-		return 0
-	fi
-	local blocks total
-	# Not a FIT at all is do_update_firmware's error to raise, with its own
-	# message; here it just means there is nothing to measure.
-	blocks=$(fit_split_blocks "$x") || return 0
-	total=$(stat -c %s "$x" 2>/dev/null)
-	[ -n "$total" ] || return 0
-	local ksz=$((blocks * 65536))
-	check_size_fits "$ksz" "$kdev" kernel "the FIT in $x"
-	[ "$total" -gt "$ksz" ] || return 0
-	check_size_fits "$((total - ksz))" "$rdev" rootfs "the rootfs in $x"
+	nor_split_image "$x" ||
+		die "$x is not a split-layout firmware.bin for this camera (a uImage, then a squashfs), or the flash is laid out neither as the split layout nor as fixed slots. Nothing was written."
+	ovl=$(nor_split_overlay_at "$x") end=$(nor_split_end)
+	[ "$(nor_split_soc "$x")" = "$model" ] ||
+		die "$x is built for $(nor_split_soc "$x"), this camera is a $model. Nothing was written."
+	[ $(($(nor_split_base) + $(stat -c %s "$x"))) -le "$ovl" ] ||
+		die "$x runs past the end of its squashfs ($(printf 0x%x "$ovl")): not a firmware.bin as the build packs it. Nothing was written."
+	blob=$(nor_split_blob_size)
+	[ $((ovl + blob)) -le "$end" ] ||
+		die "$x and the settings do not fit the flash: the image ends at $(printf 0x%x "$ovl"), the settings need $((blob / 1024)) KB, the flash ends at $(printf 0x%x "$end"). Nothing was written; -n upgrades without the settings."
 }
 
 # Every image this run will write, judged against its partition while the camera
@@ -441,7 +405,7 @@ do_update_kernel() {
 	echo "Update kernel from $x"
 	[ ! -f "$x" ] && die "File $x not found"
 	if [ "1" != "$skip_soc" ]; then
-		# A FIT image (DTB magic d00dfeed, e.g. the cv6xx kernel) carries
+		# A FIT image (DTB magic d00dfeed, e.g. a NAND /boot/fitImage) carries
 		# neither a uImage SoC name at offset 32 nor a uImage timestamp at
 		# offset 8: the legacy probes would misfire (ksoc garbage -> false
 		# "Wrong SoC!"; identical bogus values -> false "Same version", kernel
@@ -582,8 +546,8 @@ Nothing was written. Download it again -- a truncated image loses its .md5sum wi
 # A legacy uImage carries it in its name field (do_update_kernel reads it at
 # offset 32); a FIT has none of its own, so the NAND FIT is described as
 # "OpenIPC <soc>" (board/<family>/nand-fit.its, stamped at build time). The
-# description is in the FIT's first few hundred bytes. A FIT without one -- the
-# cv6xx kernel -- answers nothing, and no conclusion is drawn from that.
+# description is in the FIT's first few hundred bytes. A FIT without one
+# answers nothing, and no conclusion is drawn from that.
 fit_soc() {
 	[ -f "$1" ] || return 0
 	[ "$(xxd -p -l 4 "$1" 2>&3)" = "d00dfeed" ] || return 0
@@ -786,10 +750,11 @@ do_update_rootfs() {
 	echo_c 32 "RootFS updated to ${rootfs_version:-unknown}"
 }
 
-# --- Split NOR layout (gk7205v200 family) -----------------------------------
+# --- Split NOR layout -------------------------------------------------------
 #
 # firmware.bin -- the uImage, then the squashfs at the next 64 KiB boundary --
-# is written whole at 0x50000, where every U-Boot loads the kernel from. The
+# is written whole where the board's "firmware" partition starts (0x50000, or
+# after a larger boot area), where every U-Boot loads the kernel from. The
 # kernel's device tree has one "firmware" partition from there to the end of
 # the chip, which it divides at boot (mtdsplit), whatever the bootloader
 # passes: "kernel" is the uImage, "rootfs" the squashfs, "rootfs_data" the rest
@@ -818,10 +783,11 @@ nor_split_soc() {
 	od -j 32 -N 32 -S 1 -A n "$1" 2>&3 | cut -d- -f3 | tr -d ' '
 }
 
-# "mtdN offset size" for the partitions that together cover 0x50000 to the end
-# of the chip without overlapping: the "firmware" partition alone when it
-# reaches the end (the split layout), else kernel, rootfs and rootfs_data back to
-# back (fixed slots, on the way to the split layout). From sysfs, which the
+# "mtdN offset size" for the partitions that together cover the firmware area
+# to the end of the chip without overlapping: the "firmware" partition alone
+# when it reaches the end (the split layout), else kernel, rootfs and
+# rootfs_data back to back (fixed slots, on the way to the split layout). The
+# area starts where the board puts it; nothing here assumes where. From sysfs, which the
 # ramfs pivot carries along; nothing printed means neither shape is there.
 nor_split_devs() {
 	local d n o z end=0 chip=0
@@ -840,13 +806,13 @@ nor_split_devs() {
 			break
 		done
 	done
-	if [ -n "$firmware_dev" ] && [ "$firmware_off" -eq $((0x50000)) ] &&
+	if [ -n "$firmware_dev" ] && [ "$firmware_off" -gt 0 ] &&
 		[ $((firmware_off + firmware_size)) -eq "$chip" ]; then
 		echo "$firmware_dev $firmware_off $firmware_size"
 		return 0
 	fi
 	[ -n "$kernel_dev" ] && [ -n "$rootfs_dev" ] && [ -n "$rootfs_data_dev" ] || return 1
-	[ "$kernel_off" -eq $((0x50000)) ] &&
+	[ "$kernel_off" -gt 0 ] &&
 		[ "$rootfs_off" -eq $((kernel_off + kernel_size)) ] &&
 		[ "$rootfs_data_off" -eq $((rootfs_off + rootfs_size)) ] &&
 		[ $((rootfs_data_off + rootfs_data_size)) -eq "$chip" ] || return 1
@@ -866,7 +832,12 @@ nor_split_overlay_at() {
 		sed 's/\(..\)\(..\)\(..\)\(..\)/\4\3\2\1/')
 	used=$((0x${le:-0}))
 	[ "$used" -gt 0 ] || return 1
-	echo $((0x50000 + blocks * 65536 + (used + 65535) / 65536 * 65536))
+	echo $(($(nor_split_base) + blocks * 65536 + (used + 65535) / 65536 * 65536))
+}
+
+# Where the area nor_split_devs covers starts: where firmware.bin goes.
+nor_split_base() {
+	nor_split_devs | awk 'NR == 1 { print $2 }'
 }
 
 # The end of the area nor_split_devs covers.
@@ -915,32 +886,29 @@ nor_read_at() {
 	done
 }
 
-# SoCs whose NOR firmware is built for the split layout (board/gk7205v200).
-nor_split_family() {
-	case "${soc:-$model}" in
-		gk7205v200|gk7205v210|gk7205v300|gk7202v300|gk7605v100) return 0 ;;
-	esac
-	return 1
-}
-
-# Running from the split layout: one "firmware" partition from 0x50000 to the
-# end of the chip, the kernel's own partitions inside it.
+# Running from the split layout: one "firmware" partition from the firmware
+# area to the end of the chip, the kernel's own partitions inside it.
 nor_split_running() {
-	nor_split_family && [ "$(nor_split_devs | wc -l)" -eq 1 ]
+	[ "$(nor_split_devs | wc -l)" -eq 1 ]
 }
 
-# This camera installs from the -split package: NOR and a SoC built for the
-# layout. Any bootloader will do: the kernel sits at 0x50000 as it does in the
-# fixed slots, and it finds its own partitions.
-nor_split_wanted() {
-	[ "$(pkg_flash)" = nor ] && nor_split_family
+# Whether $1 answers with a 2xx, redirects followed.
+url_exists() {
+	curl --connect-timeout 30 -m 60 -sIL -o /dev/null -w '%{http_code}' \
+		$(tls_opts "$1") "$1" 2>&3 | grep -q '^2'
 }
 
-# The -split package's URL for a plain firmware package's, else the URL as it
-# is: openipc.<soc>-nor-<variant>.tgz becomes ...-<variant>-split.tgz.
+# The -split package's URL for a plain firmware package's, when the release
+# carries one for this camera, else the URL as it is:
+# openipc.<soc>-nor-<variant>.tgz becomes ...-<variant>-split.tgz. A board
+# built for the split layout publishes it, whatever its SoC; any bootloader
+# boots it, as the kernel sits where the fixed slots put it and finds its own
+# partitions.
 nor_split_url() {
-	if nor_split_wanted; then
-		echo "$1" | sed 's|\(/openipc\.[^/]*-nor-[a-z0-9]*\)\.tgz$|\1-split.tgz|'
+	local split
+	split=$(echo "$1" | sed 's|\(/openipc\.[^/]*-nor-[a-z0-9]*\)\.tgz$|\1-split.tgz|')
+	if [ "$(pkg_flash)" = nor ] && [ "$split" != "$1" ] && url_exists "$split"; then
+		echo "$split"
 	else
 		echo "$1"
 	fi
@@ -957,19 +925,20 @@ nor_split_blob_size() {
 	echo $(((24 + n + 65535) / 65536 * 65536))
 }
 
-# The image is one for the split layout, for a camera of that family whose
-# flash is laid out as either layout.
+# The image is one for the split layout, for a camera whose flash is laid out
+# as either layout.
 nor_split_image() {
-	nor_split_family && [ -n "$(nor_split_devs)" ] && nor_split_overlay_at "$1" >/dev/null
+	[ -n "$(nor_split_devs)" ] && nor_split_overlay_at "$1" >/dev/null
 }
 
 do_update_firmware_split() {
-	local x=$1 ovl end blob=/tmp/overlay.blob tgz=/tmp/overlay.tgz mp
-	echo "Split NOR layout: firmware.bin at 0x50000, the kernel divides it at boot"
+	local x=$1 ovl end base blob=/tmp/overlay.blob tgz=/tmp/overlay.tgz mp
+	base=$(nor_split_base)
+	echo "Split NOR layout: firmware.bin at $(printf 0x%x "$base"), the kernel divides it at boot"
 	[ "$(nor_split_soc "$x")" = "$model" ] ||
 		die "$x is built for $(nor_split_soc "$x"), this camera is a $model. Nothing was written."
 	ovl=$(nor_split_overlay_at "$x") || die "$x is not a uImage followed by a squashfs. Nothing was written."
-	[ $((0x50000 + $(stat -c %s "$x"))) -le "$ovl" ] ||
+	[ $((base + $(stat -c %s "$x"))) -le "$ovl" ] ||
 		die "$x runs past the end of its squashfs. Nothing was written."
 	end=$(nor_split_end)
 	[ -n "$end" ] || die "The flash layout is neither the split one nor fixed slots this upgrade can turn into it. Nothing was written."
@@ -989,10 +958,10 @@ do_update_firmware_split() {
 	local bsz=$(stat -c %s "$blob")
 	head -c $(((65536 - bsz % 65536) % 65536)) /dev/zero >> "$blob"
 	[ $((ovl + $(stat -c %s "$blob"))) -le "$end" ] ||
-		die "The new firmware and the settings do not fit the flash ($(( (ovl + $(stat -c %s "$blob") - 0x50000) / 1024 )) KB of $(( (end - 0x50000) / 1024 )) KB). Nothing was written; -n upgrades without the settings."
+		die "The new firmware and the settings do not fit the flash ($(( (ovl + $(stat -c %s "$blob") - base) / 1024 )) KB of $(( (end - base) / 1024 )) KB). Nothing was written; -n upgrades without the settings."
 	mark_live_flash_dirty
-	echo "Writing $x at 0x50000"
-	nor_write_at "$x" $((0x50000)) || die "Writing $x failed: the flash does not read back as the image."
+	echo "Writing $x at $(printf 0x%x "$base")"
+	nor_write_at "$x" "$base" || die "Writing $x failed: the flash does not read back as the image."
 	nor_write_at "$blob" "$ovl" ||
 		die "Writing the settings at $(printf 0x%x "$ovl") failed; the camera starts from defaults."
 	rm -f "$blob"
@@ -1002,58 +971,13 @@ do_update_firmware_split() {
 }
 
 do_update_firmware() {
-	# A combined image bundles the FIT kernel (DTB magic d00dfeed) and the
-	# rootfs squashfs in one blob — the rootfs packed right after the FIT at a
-	# 64K-aligned offset (see the cv6xx board post-image.sh).
-	#
-	# Prefer the traditional NON-overlapping split: slice the blob at the FIT
-	# boundary and write the FIT to the kernel partition and the rootfs to the
-	# rootfs partition (each flashcp stays within its own partition and U-Boot
-	# reads them from those fixed offsets). Only when the flash has no separate
-	# kernel/rootfs partitions — a pure combined layout — fall back to a single
-	# whole-blob write to the "firmware" partition (which on cv6xx overlaps
-	# kernel+rootfs and is meant for whole-image programming).
 	local x=/tmp/firmware.bin.$model
-	echo_c 33 "\nFirmware (combined image)"
+	echo_c 33 "\nFirmware (split NOR image)"
 	echo "Update firmware from $x"
 	[ ! -f "$x" ] && die "File $x not found"
-
-	if nor_split_image "$x"; then
-		do_update_firmware_split "$x"
-		return 0
-	fi
-	nor_split_running && die "$x is not a split-layout firmware.bin for this camera. Nothing was written."
-
-	if [ "$(get_device "kernel")" != "/dev/" ] && [ "$(get_device "rootfs")" != "/dev/" ]; then
-		# Split at the FIT boundary, then hand each slice to the split flow.
-		# Assigned on its own line: `local v=$(cmd)` reports local's status, not
-		# the command's, so the `||` would never fire.
-		local blocks
-		blocks=$(fit_split_blocks "$x") || die "Not a FIT combined image: $x"
-		echo "Split combined image: FIT $((blocks * 65536))B -> kernel, remainder -> rootfs"
-		dd if="$x" bs=65536 count="$blocks" of=/tmp/uImage.$model 2>/dev/null
-		dd if="$x" bs=65536 skip="$blocks" of=/tmp/rootfs.squashfs.$model 2>/dev/null
-		# kernel_follows: the kernel is flashed unconditionally on the next line,
-		# whether or not update_kernel is set (a plain `sysupgrade -r` reaches here
-		# with it unset). Tell verify_rootfs so it weighs the same SoC evidence as
-		# --url/--channel do, instead of refusing with advice that is a no-op here.
-		verify_rootfs "/tmp/rootfs.squashfs.$model" kernel_follows
-		# Both slices are judged before either is written, for the same reason
-		# verify_rootfs runs first: the kernel goes down first, so a rootfs slice
-		# that cannot fit must be found while nothing is committed.
-		check_image_fits "/tmp/rootfs.squashfs.$model" "$(get_device "rootfs")" rootfs
-		do_update_kernel "/tmp/uImage.$model"
-		do_update_rootfs "/tmp/rootfs.squashfs.$model"
-		return 0
-	fi
-
-	local fw_dev=$(get_device "firmware")
-	[ "$fw_dev" = "/dev/" ] && die "No kernel/rootfs or firmware partition to flash"
-	echo "Combined partition $fw_dev"
-	check_image_fits "$x" "$fw_dev" firmware
-	mark_live_flash_dirty
-	set_progress flashcp -v "$x" "$fw_dev" || die "flashcp to $fw_dev failed"
-	echo_c 32 "Firmware updated"
+	nor_split_image "$x" ||
+		die "$x is not a split-layout firmware.bin for this camera. Nothing was written."
+	do_update_firmware_split "$x"
 }
 
 # Stop the kernel writing to the overlay before erasing the medium under it.
@@ -1200,9 +1124,13 @@ resolve_channel() {
 }
 
 # resolve_url <build_id> <platform> <flash>  -> echoes a URL
+# The plain package for flash $3; for nor, a board that publishes only the
+# split NOR package (hi3516cv6xx, hi3519dv500) is found under nor_split.
 resolve_url() {
-	awk -v b="$1" -v p="$2" -v f="$3" \
-		'$1==b && $2==p && $3==f { print $NF; exit }' "$MANIFEST_CACHE"
+	awk -v b="$1" -v p="$2" -v f="$3" '
+		$1==b && $2==p && $3==f { print $NF; found = 1; exit }
+		$1==b && $2==p && f=="nor" && $3=="nor_split" && split_url=="" { split_url = $NF }
+		END { if (!found && split_url != "") print split_url }' "$MANIFEST_CACHE"
 }
 
 # Rewrite $model from a retired/shared SoC id to the canonical model an
@@ -1780,8 +1708,8 @@ download_firmware() {
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 		check_md5_covered
 	fi
-	# Combined image (FIT kernel + rootfs packed in one blob, e.g. cv6xx):
-	# flashed as a unit by do_update_firmware instead of the split path.
+	# The split NOR image (a uImage and the rootfs in one firmware.bin):
+	# flashed as a unit by do_update_firmware.
 	[ -f "/tmp/firmware.bin.$model" ] && image_combined=1
 }
 
@@ -3156,9 +3084,9 @@ Manifest URL: \$MANIFEST_URL (default: $MANIFEST_URL)
 # And a kernel write is live too on a board with no separate "kernel" partition:
 # kernel_device is then the combined "firmware" partition (get_system_info's
 # fallback), which overlaps the rootfs. Without that last clause a local
-# `--kernel=... -x` on a cv6xx-shaped layout would skip the pivot and rewrite
-# the running filesystem in place -- the majestic-webui#120 failure, reached
-# from the one path that looks harmless.
+# `--kernel=... -x` on such a layout would skip the pivot and rewrite the
+# running filesystem in place -- the majestic-webui#120 failure, reached from
+# the one path that looks harmless.
 rewrites_live_flash() {
 	[ "1" = "$root_on_flash" ] || return 1
 	[ "1" = "$update_rootfs" ] && return 0
@@ -3240,8 +3168,8 @@ if [ "1" = "$_ramfs_phase" ] && [ "1" = "$wdog_userspace_owned" ]; then
 	wdog_keeper=$!
 fi
 if [ "1" = "$image_combined" ]; then
-	# One blob covers both kernel and rootfs; any of -k/-r/--url/--channel
-	# maps to a single combined write.
+	# One image covers both kernel and rootfs; any of -k/-r/--url/--channel
+	# maps to a single write.
 	{ [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && do_update_firmware
 else
 	# Verify the rootfs BEFORE the first write. The kernel is flashed first, and
@@ -3443,7 +3371,8 @@ if [ "1" = "$list_only" ]; then
 	platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
 	if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
 	here=$(get_build_id)
-	builds=$(awk -v p="$platform" -v f="$(pkg_flash)" '$2==p && $3==f { print $1 }' "$MANIFEST_CACHE" \
+	builds=$(awk -v p="$platform" -v f="$(pkg_flash)" \
+		'$2==p && ($3==f || (f=="nor" && $3=="nor_split")) && !seen[$1]++ { print $1 }' "$MANIFEST_CACHE" \
 		| head -n "${list_n:-20}")
 	if [ -z "$builds" ]; then
 		echo_c 33 "\nNo builds available for $platform yet."

@@ -164,43 +164,31 @@ else
 	@$(call PREPARE_REPACK,uImage,16384,,,nfs-root)
 endif
 else
-ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3516cv6xx")
-# The cv610 u-boot boots from a fixed table: 2048K(kernel) read whole by
-# `sf read ${kernaddr} ${kernsize}`, then 5120K(rootfs) at a fixed offset. The
-# combined firmware.bin hides both bounds, so on the 8 MiB part measure the two
-# halves against their slots here, where a PR sees it. 16 MiB is left on the
-# whole-blob figure: its kernel already overruns 2048K on master, and that is a
-# u-boot table question, not one a size check here can settle.
-ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
-	@$(call CHECK_SIZE,fitImage,2048)
-	@$(call CHECK_SIZE,rootfs.squashfs,5120)
-endif
-	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
-else ifeq ($(BR2_OPENIPC_SOC_FAMILY),"hi3519dv500")
-	@$(call PREPARE_REPACK,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024),,,nor)
-else ifneq ($(and $(filter "gk7205v200",$(BR2_OPENIPC_SOC_FAMILY)),$(wildcard $(TARGET)/images/firmware.bin)),)
-# gk7205v200-family NOR ships twice. The plain package is the fixed-slot one,
-# uImage and rootfs: cameras whose sysupgrade predates the split layout upgrade
-# from it. The -split package is firmware.bin (board/gk7205v200/post-image.sh),
-# the same uImage and the squashfs back to back in one "firmware" partition the
-# kernel splits at boot, whatever bootloader loaded it; only its whole is
-# bounded: the chip, less boot and env (320K) and the smallest overlay worth
-# keeping (256K).
+ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
+# The NOR split layout (general/scripts/post-image-split.sh): firmware.bin is
+# the uImage and the squashfs back to back in one "firmware" partition the
+# kernel splits at boot, whatever bootloader loaded it, shipped as the -split
+# package. Only its whole is bounded: the chip, less what comes before the
+# firmware partition (BR2_OPENIPC_NOR_FIRMWARE_OFFSET) and the smallest overlay
+# worth keeping (256K).
 #
-# The uImage stays a 64 KiB block short of its 2 MiB slot: under 1984K, which
-# CHECK_SIZE, counting whole KB, enforces as 1983K. The kernel,
-# U-Boot and sysupgrade tell the layouts apart by where the squashfs is: at the
-# block right after the uImage is the split layout, at the slot boundary fixed
-# slots. A fixed-slot uImage ending in the slot's last block would be both.
+# A board whose older cameras upgrade from fixed slots also ships those, the
+# plain package of uImage and rootfs. The uImage stays a 64 KiB block short of
+# its 2 MiB slot: under 1984K, which CHECK_SIZE, counting whole KB, enforces as
+# 1983K. The kernel, U-Boot and sysupgrade tell the layouts apart by where the
+# squashfs is: at the block right after the uImage is the split layout, at the
+# slot boundary fixed slots. A fixed-slot uImage ending in the slot's last block
+# would be both.
+ifeq ($(BR2_OPENIPC_NOR_FIXED_PACKAGE),y)
 ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
 	@$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,5120,nor)
 else
 	@$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,8192,nor)
 endif
-	@$(call CHECK_SIZE,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024 - 576))
+endif
+	@$(call CHECK_SIZE,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024 - $$(( $(or $(BR2_OPENIPC_NOR_FIRMWARE_OFFSET),0x50000) / 1024 )) - 256))
+	@$(call CHECK_KERNEL_READ)
 	@$(call REPACK_NOR_SPLIT)
-else ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
-	@$(call PREPARE_REPACK,firmware.bin,8192,,,nor)
 else
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
 ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
@@ -333,6 +321,22 @@ endef
 # 2026-08-18. 32KB is the threshold because what tips these boards is a change
 # to the shared overlay, which is single-digit KB at a time; a board under that
 # is a couple of ordinary commits from red, and a board over it is not.
+# The uImage at the start of firmware.bin against what a bootloader in the field
+# reads from there to boot it (BR2_OPENIPC_NOR_KERNEL_READ_SIZE), in bytes: one
+# byte over is a kernel read short and a failed CRC. Measured as a bootloader
+# sees it, from firmware.bin's own uImage header (64 bytes, then the data size
+# big-endian at byte 12): the fixed-slot package's repack has already renamed
+# images/uImage on the boards that ship one.
+define CHECK_KERNEL_READ
+	hex=$$(od -An -tx1 -j12 -N4 $(TARGET)/images/firmware.bin | tr -d ' \n'); \
+	test -n "$$hex" || exit 1; \
+	size=$$((64 + 0x$$hex)); \
+	limit=$$(( $(or $(BR2_OPENIPC_NOR_KERNEL_READ_SIZE),0x200000) )); \
+	echo "- uImage: [$$((size / 1024))KB/$$((limit / 1024))KB read by the bootloader]"; \
+	if test $$size -gt $$limit; then \
+		echo "-- size exceeded by: $$((size - limit)) bytes; bootloaders reading $$((limit / 1024))KB would cut it short"; exit 1; fi
+endef
+
 define CHECK_SIZE
 	$(eval FILE_SIZE = $(shell expr $(shell stat -c %s $(TARGET)/images/$(1) || echo 0) / 1024))
 	if test $(FILE_SIZE) -eq 0; then exit 1; fi

@@ -32,7 +32,11 @@ import soc_aliases  # noqa: E402
 REPO = os.environ.get("GITHUB_REPOSITORY", "OpenIPC/firmware")
 RETENTION = 90
 TAG_RE = re.compile(r"^nightly-(\d{8})-([0-9a-f]{7})$")
-ASSET_RE = re.compile(r"^openipc\.([^.]+)-(nor|nand)-(lite|ultimate|neo)\.tgz$")
+# A board on the split NOR layout publishes openipc.<soc>-nor-<variant>-split.tgz
+# (one firmware.bin), beside the plain package or -- hi3516cv6xx, hi3519dv500 --
+# instead of it. It is listed under its own flash key, nor_split: consumers
+# match the flash column exactly, so one that asks for "nor" never takes it.
+ASSET_RE = re.compile(r"^openipc\.([^.]+)-(nor|nand)-(lite|ultimate|neo)(-split)?\.tgz$")
 
 # Retry budget for transient GitHub API failures (HTTP 401 Bad credentials,
 # 5xx, rate-limit) observed on workflow_run-triggered runs 2026-05-23.
@@ -99,7 +103,11 @@ def parse_asset(name: str) -> tuple[str, str] | None:
     m = ASSET_RE.match(name)
     if not m:
         return None
-    soc, flash, variant = m.groups()
+    soc, flash, variant, split = m.groups()
+    if split:
+        if flash != "nor":
+            return None
+        flash = "nor_split"
     return f"{soc}_{variant}", flash
 
 
