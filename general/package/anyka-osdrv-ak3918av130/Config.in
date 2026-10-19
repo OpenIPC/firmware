@@ -1,0 +1,10 @@
+config BR2_PACKAGE_ANYKA_OSDRV_AK3918AV130
+	bool "anyka-osdrv-ak3918av130"
+	depends on BR2_LINUX_KERNEL
+	help
+	  anyka-osdrv-ak3918av130 - Anyka AK3918AV130 kernel modules: ISP,
+	  video encoder, audio, Ethernet, SD card and the sensor drivers,
+	  as shipped prebuilt for 4.4.302-cip94 in the AnyCloud39AV130 SDK,
+	  and the load_anyka script that brings them up.
+
+	  https://openipc.org

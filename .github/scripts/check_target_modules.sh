@@ -39,6 +39,7 @@ check_module() {
 	fi
 }
 
+check_module BR2_PACKAGE_ANYKA_OSDRV_AK3918AV130 anyka/ak_isp.ko
 check_module BR2_PACKAGE_WIREGUARD_LINUX_COMPAT wireguard.ko
 check_module BR2_PACKAGE_XIONGMAI_OSDRV_XM530 xiongmai/sdio0_sd.ko
 

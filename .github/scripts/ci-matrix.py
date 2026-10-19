@@ -255,6 +255,9 @@ SMOKE_BOARDS = [
 UNBUILT_FAMILIES = {
     ("br-ext-chip-allwinner", "v83x"),
     ("br-ext-chip-ambarella", "s3l"),
+    # No toolchain.anyka-ak3918ev300 is published yet, so a CI build of any
+    # Anyka board would stop at the toolchain download. They join ALL_BOARDS
+    # once toolchain.yml has built and released it.
     ("br-ext-chip-anyka", "ak3918ev300"),
     ("br-ext-chip-fullhan", "fh8833v100"),
     ("br-ext-chip-sigmastar", "infinity3"),
@@ -301,8 +304,15 @@ UNBUILT_FAMILIES = {
 # ships no Wi-Fi driver to use it with, so flipping a mainline board to it
 # would spend flash on a radio that is not there. A mainline board with a
 # driver choosing it would take it off this list.
+#
+# anyka-osdrv-ak3918av130 is here because its family is in UNBUILT_FAMILIES,
+# waiting for a published toolchain, and because its prebuilt SDK modules are
+# matched to the kernel by vermagic and a struct-layout probe, not by a boot
+# (see its .mk). It leaves this list when ak3918av130_lite joins ALL_BOARDS,
+# which waits for those modules to have run on an AV130 camera.
 NOT_BUILT = {
-    "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x", "atbm-wifi",
+    "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x",
+    "anyka-osdrv-ak3918av130", "atbm-wifi",
     "aura-httpd", "baresip-openipc", "comgt", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
