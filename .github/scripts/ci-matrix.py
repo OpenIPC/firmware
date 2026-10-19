@@ -255,6 +255,9 @@ SMOKE_BOARDS = [
 UNBUILT_FAMILIES = {
     ("br-ext-chip-allwinner", "v83x"),
     ("br-ext-chip-ambarella", "s3l"),
+    # No toolchain.anyka-ak3918ev300 is published yet, so a CI build of any
+    # Anyka board would stop at the toolchain download. They join ALL_BOARDS
+    # once toolchain.yml has built and released it.
     ("br-ext-chip-anyka", "ak3918ev300"),
     ("br-ext-chip-fullhan", "fh8833v100"),
     ("br-ext-chip-sigmastar", "infinity3"),
