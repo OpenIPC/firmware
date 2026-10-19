@@ -305,9 +305,11 @@ UNBUILT_FAMILIES = {
 # would spend flash on a radio that is not there. A mainline board with a
 # driver choosing it would take it off this list.
 #
-# anyka-osdrv-ak3918av130 is here only because its family is in
-# UNBUILT_FAMILIES, waiting for a published toolchain; it leaves this list
-# when ak3918av130_lite joins ALL_BOARDS.
+# anyka-osdrv-ak3918av130 is here because its family is in UNBUILT_FAMILIES,
+# waiting for a published toolchain, and because its prebuilt SDK modules are
+# matched to the kernel by vermagic and a struct-layout probe, not by a boot
+# (see its .mk). It leaves this list when ak3918av130_lite joins ALL_BOARDS,
+# which waits for those modules to have run on an AV130 camera.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x",
     "anyka-osdrv-ak3918av130", "atbm-wifi",
