@@ -1,15 +1,22 @@
 #!/bin/sh
 
-# The DDR size U-Boot measured, from the kernel's memory node, for an env that
-# has no totalmem saved -- see load_hisilicon, which calls this script with the
-# same fallback; without it here, `set_allocator cma` on a 128 MB part would
-# still write mem=64M.
+# The DDR size the bootloader passed, from the kernel's memory node, for an
+# env that has no totalmem saved; without it, `set_allocator cma` on a 128 MB
+# part would write mem=64M.
 dt_mem_total() {
-  local reg
-  reg=$(hexdump -v -e '1/1 "%02x"' /proc/device-tree/memory/reg 2>/dev/null)
-  [ ${#reg} -eq 16 ] || return 0
-  reg=$((0x${reg#????????} / 1048576))
-  [ "$reg" -gt 0 ] && [ "$reg" -ne 512 ] && echo ${reg}M
+  local reg size
+  reg=$(hexdump -v -e '1/1 "%02x"' ${SET_ALLOCATOR_DT_MEMORY:-/proc/device-tree/memory/reg} 2>/dev/null)
+  case ${#reg} in
+  # One address and one size cell (32-bit ARM). 512M there is the device
+  # tree's own placeholder, which a bootloader passing ATAGs leaves alone.
+  16) size=$((0x${reg#????????} / 1048576))
+      [ "$size" -ne 512 ] || return 0 ;;
+  # Two of each (arm64), from the bootloader's own fixup; it may start the
+  # bank above firmware it keeps, so round up to whole 64 MiB.
+  32) size=$(( (0x${reg#????????????????} / 1048576 + 63) / 64 * 64 )) ;;
+  *) return 0 ;;
+  esac
+  [ "$size" -gt 0 ] && echo ${size}M
 }
 
 get_env() {
@@ -42,20 +49,32 @@ calc_mmz() {
 # camera to come up right. Here the user overrides it: mmz_allocator= and
 # osmem= go on the command line, which that kernel reads, and mem= stays the
 # OS share for a kernel without it. `auto` drops the override.
-if [ -d /sys/module/hisi_mem/parameters ] && [ -n "$(cat /sys/module/hisi_mem/parameters/allocator 2>/dev/null)" ]; then
-  p=/sys/module/hisi_mem/parameters
+p=${SET_ALLOCATOR_MEM:-/sys/module/hisi_mem/parameters}
+if [ -d $p ] && [ -n "$(cat $p/allocator 2>/dev/null)" ]; then
   case "$1" in
   ot|cma|auto)
     get_env
-    os=${2:-${osmem:-32M}}
+    # The share asked for, else the one this boot runs with, in whole MiB:
+    # a bare number would reach mem= as bytes, and the camera would not boot.
+    os=${2:-$(cat $p/osmem)M}
+    n=${os%M}
+    case "$n" in
+    ''|*[!0-9]*) n=0 ;;
+    esac
+    if [ "$n" -lt 32 ] || [ $((n + 8)) -gt "$(cat $p/dram)" ]; then
+      echo "osmem must be a size in MiB from 32M to $(( $(cat $p/dram) - 8 ))M, not '${os}'"
+      exit 1
+    fi
+    os=${n}M
     if [ "$1" = auto ]; then
       newbootargs="mem=${os} ${kept}"
     elif [ "$1" = cma ]; then
       # The zone written out, with mem= the whole DRAM: the form a kernel
       # without the probe needs to pick cma, which this kernel takes as an
-      # explicit layout. Whole 4 MiB units, as CMA reserves them.
+      # explicit layout -- the OS share is then whatever lies below the zone,
+      # so no osmem= goes with it. Whole 4 MiB units, as CMA reserves them.
       dram=$(cat $p/dram)
-      osm=$(( ($(echo ${os} | tr -d 'M') + 3) / 4 * 4 ))
+      osm=$(( (n + 3) / 4 * 4 ))
       zone=$(printf 'anonymous,0,0x%x,%dM' $(( 0x40000000 + osm * 1048576 )) $(( dram - osm )))
       newbootargs="mem=${dram}M ${kept}mmz_allocator=cma mmz=${zone}"
     else

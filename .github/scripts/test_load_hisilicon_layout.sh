@@ -1,6 +1,7 @@
 #!/bin/sh
 # load_hisilicon (hi3516ev200, hi3516cv6xx, hi3519dv500): the media memory
-# zone it loads, and that it loads it without writing the U-Boot environment.
+# zone it loads, and that it loads it without writing the U-Boot environment;
+# and that set_allocator, the user's override, writes only bootargs that boot.
 #
 # A kernel with hisi_mem measures DRAM and lays it out itself, and publishes
 # the result under /sys/module/hisi_mem/parameters; load_hisilicon then loads
@@ -68,6 +69,73 @@ run() {
 		LOAD_HISILICON_IOMEM="$work/iomem" \
 		busybox sh "$work/wrapper" >"$work/out" 2>&1) || true
 	sed -n "s/^modprobe $module //p" "$work/calls" | sed 's/ mem_process_isolation=[0-9]*$//'
+}
+
+cat >"$work/sa_wrapper" <<'EOF'
+fw_setenv() { echo "fw_setenv $*" >>"$CALLS"; }
+fw_printenv() { [ "$1" = -n ] && shift; sed -n "s/^$1=//p" "$ENV_FILE" | grep . || return 1; }
+. "$SCRIPT"
+EOF
+
+# sa ENV DT [DRAM OSMEM ALLOCATOR MMZ] -- ARGS: set_allocator ARGS; prints the
+# bootargs it wrote, or "refused" when it wrote none. ENV is "key=value" lines
+# joined by '|'; DT the memory node's reg as printf escapes ('' for none).
+sa() {
+	printf '%s\n' "$1" | tr '|' '\n' >"$work/env"
+	rm -f "$work/dtmem"
+	[ -z "$2" ] || printf "$2" >"$work/dtmem"
+	shift 2
+	rm -rf "$work/params"
+	: >"$work/calls"
+	if [ "$1" != -- ]; then
+		mkdir -p "$work/params"
+		echo "$1" >"$work/params/dram"
+		echo "$2" >"$work/params/osmem"
+		echo "$3" >"$work/params/allocator"
+		echo "$4" >"$work/params/mmz"
+		shift 4
+	fi
+	shift
+	(cd "$work" && SCRIPT="$sa_script" CALLS="$work/calls" ENV_FILE="$work/env" \
+		SET_ALLOCATOR_MEM="$work/params" SET_ALLOCATOR_DT_MEMORY="$work/dtmem" \
+		busybox sh "$work/sa_wrapper" "$@" >"$work/out" 2>&1) || true
+	if grep -q '^fw_setenv bootargs ' "$work/calls"; then
+		sed -n 's/^fw_setenv bootargs //p' "$work/calls"
+	else
+		echo refused
+	fi
+}
+
+# check_set_allocator PACKAGE CARVE: the user's override, on a kernel with
+# hisi_mem (512M, cma, OS 128M) and on an older one
+check_set_allocator() {
+	sa_script=$(pwd)/general/package/$1/files/script/set_allocator
+	carve=$2
+	env="bootargs=console=ttyAMA0,115200 mem=32M|osmem=32M"
+	params="512 128 cma anonymous,0,0x48000000,384M"
+
+	echo
+	echo "=== $1: set_allocator ==="
+	expect "mem=48M console=ttyAMA0,115200 mmz_allocator=$carve osmem=48M" \
+		"$(sa "$env" '' $params -- "$carve" 48)" \
+		"$carve 48: whole MiB, a bare number taken as MiB"
+	expect refused "$(sa "$env" '' $params -- "$carve" 48K)" \
+		"$carve 48K: refused, not written as a byte count"
+	expect refused "$(sa "$env" '' $params -- "$carve" 16M)" \
+		"$carve 16M: refused, below the 32M the kernel takes"
+	expect refused "$(sa "$env" '' $params -- "$carve" 508M)" \
+		"$carve 508M of 512M: refused, nothing left for the zone"
+	expect "mem=512M console=ttyAMA0,115200 mmz_allocator=cma mmz=anonymous,0,0x48000000,384M" \
+		"$(sa "$env" '' $params -- cma)" \
+		"cma: the zone above the OS share this boot runs with"
+	# An older kernel, no totalmem: the size from the memory node. arm64's
+	# two cells, as a bootloader that keeps 0x30000 for ATF fixes them up.
+	expect "mem=512M console=ttyAMA0,115200 mmz_allocator=cma mmz=anonymous,0,0x42000000,480M" \
+		"$(sa "$env" '\0\0\0\0\100\003\0\0\0\0\0\0\037\375\0\0' -- cma)" \
+		"an older arm64 kernel: 512M from a two-cell memory node"
+	expect "mem=64M console=ttyAMA0,115200 mmz_allocator=cma mmz=anonymous,0,0x42000000,32M" \
+		"$(sa "$env" '\100\0\0\0\040\0\0\0' -- cma)" \
+		"an older 32-bit kernel: a one-cell 512M is the placeholder, not the DRAM"
 }
 
 expect() {
@@ -143,6 +211,10 @@ check() {
 check hisilicon-osdrv-hi3516ev200 hi3516ev300 imx307 open_osal hisi yes
 check hisilicon-osdrv-hi3516cv6xx hi3516cv610 sc4336p open_mmz ot no
 check hisilicon-osdrv-hi3519dv500 hi3519dv500 sc450ai open_mmz ot no
+
+check_set_allocator hisilicon-osdrv-hi3516ev200 hisi
+check_set_allocator hisilicon-osdrv-hi3516cv6xx ot
+check_set_allocator hisilicon-osdrv-hi3519dv500 ot
 
 echo
 if [ "$fail" -eq 0 ]; then
