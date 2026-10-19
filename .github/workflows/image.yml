@@ -140,7 +140,17 @@ jobs:
             # do_update_firmware does and put each half where the env looks.
             hisi_layout() {
               case "$1" in
-                hi3516cv6xx) boot_kib=256 kern_kib=2048 fw_kib=7168 ;;
+                hi3516cv6xx)
+                  boot_kib=256 kern_kib=2048
+                  # The bootloader rewrites mtdparts for the part it finds at
+                  # boot: on 16 MiB the rootfs slot behind the 2048 KiB kernel
+                  # is 7104 KiB (a 9152 KiB firmware partition), on 8 MiB it
+                  # stays the 5120 KiB the compiled-in table names.
+                  case "$2" in
+                    ultimate) fw_kib=9152 ;;
+                    *)        fw_kib=7168 ;;
+                  esac
+                  ;;
                 *) echo "::error::create_hisi: no NOR layout known for $1"; return 1 ;;
               esac
             }
@@ -149,7 +159,7 @@ jobs:
               local uboot="$1" soc="$2" variant="$3" tag="$4" off="$5" nor="${6:-16384}"
               local release="target/openipc-${tag}-nor-${variant}.bin"
               local boot_kib kern_kib fw_kib fw fitsz fit_kib rootsz root_kib ub_kib got
-              hisi_layout "$soc" || return 1
+              hisi_layout "$soc" "$variant" || return 1
 
               rm -rf output; mkdir -p output target
               if ! wget -nv "$UBOOT_URL/$uboot" -O "output/$uboot"; then
@@ -260,18 +270,15 @@ jobs:
             # reached, nothing would publish for anyone. Collect instead: every
             # target gets its turn, what did assemble ships (Upload runs on
             # failure too), and the step still goes red so the refusal is seen.
-            # lite only. The table above is what the shipped u-boot declares,
-            # and it is the same table on an 8 MiB part and a 16 MiB one --
-            # there is one boot binary per DDR binning, not one per part size.
-            # So the firmware partition is 7168 KiB either way, and the cv6xx
-            # ultimate blob is 9152 KiB: it does not fit the partition at all,
-            # let alone the 5120 KiB rootfs slot inside it. FLASH_SIZE="16"
-            # buys it nothing, because the rest of the chip is rootfs_data.
-            # #2448 added the bounds checks that report this; it is not a
-            # regression they introduced. Re-add ultimate here when a u-boot
-            # ships whose mtdparts matches a 16 MiB part -- tracked in #2460.
+            # The compiled-in table above is what the bootloader starts with;
+            # at boot it scans the part and rebuilds mtdparts for what it
+            # found, so on a 16 MiB chip the rootfs slot grows to 7104 KiB
+            # (9152 KiB firmware partition) regardless of the 5120 KiB it was
+            # built with. Assemble ultimate onto 16 MiB accordingly; #2448's
+            # bounds checks still measure against the partition the bootloader
+            # names. The dv500 ultimate images stay out -- tracked in #2460.
             hisi_failed=
-            for variant in lite; do
+            for variant in lite ultimate; do
               case $variant in lite) nor=8192 ;; *) nor=16384 ;; esac
               create_hisi boot-hi3516cv610-10b-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr2-64m  320 "$nor" || hisi_failed=1
               create_hisi boot-hi3516cv610-20s-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr3-128m 320 "$nor" || hisi_failed=1
@@ -302,11 +309,10 @@ jobs:
       # one. The ${{ }} is load-bearing: a bare `!` starts a YAML tag.
       # `image` is a fixed tag and Upload only adds or replaces the files this
       # run produced, so an asset we stop assembling would sit on the release
-      # for good. These six are exactly that: published before #2448 taught
-      # create_hisi to measure each half against the partition it goes into,
-      # and mis-laid by the arithmetic it replaced -- a FIT past the end of the
-      # kernel slot, a rootfs written over rootfs_data. Withdrawing them by
-      # name, tolerating absence, keeps the release from offering an image this
+      # for good. These two are the dv500 ultimate images: no bootloader
+      # declares room for their 14464 KiB blob, so the loop above leaves
+      # them out. Withdrawing them by name, tolerating absence, keeps the
+      # release from offering an image this
       # workflow no longer builds. Drop a name from the list when its loop
       # comes back (#2460).
       - name: Withdraw images this workflow no longer assembles
@@ -314,11 +320,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for asset in openipc-hi3516cv610-ddr2-64m-nor-ultimate.bin \
-                       openipc-hi3516cv610-ddr3-128m-nor-ultimate.bin \
-                       openipc-hi3516cv610-ddr3-512m-nor-ultimate.bin \
-                       openipc-hi3516cv608-nor-ultimate.bin \
-                       openipc-hi3519dv500-dmeb-nor-ultimate.bin \
+          for asset in openipc-hi3519dv500-dmeb-nor-ultimate.bin \
                        openipc-hi3519dv500-dmebpro-nor-ultimate.bin; do
             if gh release delete-asset image "$asset" --yes \
                  --repo "$GITHUB_REPOSITORY" 2>/dev/null; then
