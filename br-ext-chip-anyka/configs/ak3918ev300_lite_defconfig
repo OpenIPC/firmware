@@ -40,11 +40,9 @@ BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
 BR2_OPENIPC_SOC_VENDOR="anyka"
 BR2_OPENIPC_SOC_MODEL="ak3918ev300"
 BR2_OPENIPC_SOC_FAMILY="ak3918ev300"
-# One image serves every 64 MB EV300/EV330 package: Anyka's own SDK builds
-# its EV300 boards from the ak39ev330 dtsi, the chip-ID registers differ only
-# in revision, and the kernel names them all AK39EV330 in /proc/cpuinfo.
-# AK3916EV300 keeps its own defconfig from before the parts were merged.
-BR2_OPENIPC_SOC_ALIASES="ak3918ev330 ak3916ev330 ak3919ev300 ak3919ev330 ak39ev330"
+# AnyCloud39EV300 silicon (chip ID 0x20160100). AK3919EV300 is the same die
+# with 128 MB, which this 64 MB image runs within.
+BR2_OPENIPC_SOC_ALIASES="ak3919ev300"
 BR2_OPENIPC_VARIANT="lite"
 BR2_OPENIPC_FLASH_SIZE="8"
 

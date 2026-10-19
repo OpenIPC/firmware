@@ -97,7 +97,7 @@ ALL_BOARDS = [
     # One 4.4.302 kernel and toolchain for every AK39 part. ak3918av130_lite
     # is in UNBUILT_BOARDS until its prebuilt SDK modules have run on a camera.
     "ak3910_lite", "ak3918_lite", "ak3918ev200_lite", "ak3918ev300_lite",
-    "ak3916ev300_lite", "ak3918ev331_lite",
+    "ak3916ev300_lite", "ak3918ev330_lite", "ak3918ev331_lite",
     # Fullhan
     "fh8852v100_lite", "fh8852v200_lite",
     # Grainmedia
@@ -258,7 +258,7 @@ SMOKE_BOARDS = [
     "nt98566_lite",           # Novatek
     "fh8852v200_lite",        # Fullhan
     "v851s_lite",             # Allwinner
-    "ak3918ev300_lite",       # Anyka, the one 4.4 kernel's EV300/EV330 image
+    "ak3918ev330_lite",       # Anyka, the one 4.4 kernel's EV330 image
     "xm530_lite",             # Xiongmai
 ]
 
