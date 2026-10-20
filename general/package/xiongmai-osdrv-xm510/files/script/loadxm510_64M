@@ -82,7 +82,8 @@ insert_ko()
 		insmod xm510_rgn.ko
 		insmod xm510_h264.ko
 		insmod xm_rtc.ko
-		insmod xm_wdt.ko
+		# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko: see
+		# OpenIPC/firmware#2611.
 
 		#insert_audio
 		echo "==== Your input Sensor type is $SNS_A ===="
@@ -91,7 +92,6 @@ insert_ko()
 remove_ko()
 {
 	remove_audio
-	rmmod -w xm_wdt
 	rmmod -w xm_rtc
 	rmmod -w xm510_h264
 	rmmod -w xm510_rgn

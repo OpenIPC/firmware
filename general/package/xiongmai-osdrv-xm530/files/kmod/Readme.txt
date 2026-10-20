@@ -19,8 +19,7 @@
 |   |-- xm530_vo.ko
 |   |-- xm_i2c.ko
 |   |-- xm_i2s.ko
-|   |-- xm_rtc.ko
-|   `-- xm_wdt.ko
+|   `-- xm_rtc.ko
 |-- readme.txt
 |-- rtl8188 
 |   |-- 8188eu.ko
