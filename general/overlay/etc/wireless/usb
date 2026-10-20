@@ -47,6 +47,14 @@ if [ "$1" = "atbm603x-generic-usb" ]; then
 	exit 0
 fi
 
+# Generic RDA5995
+# rdawfmac waits for its chip at load and fails when none attaches, so its
+# status is whether there is a wlan0.
+if [ "$1" = "rda5995-generic" ]; then
+	modprobe rdawfmac
+	exit $?
+fi
+
 # GK7205V200 CamHi
 if [ "$1" = "mt7601u-gk7205v200-camhi" ]; then
 	set_gpio 9 0

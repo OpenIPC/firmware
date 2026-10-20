@@ -4,7 +4,13 @@ case "$1" in
 	start)
 		echo "Loading vendor modules..."
 		vendor=$(ipcinfo -v)
-		load_"$vendor" -i
+		# A family whose drivers are all built into the kernel ships no
+		# load script; say so rather than "load_<vendor>: not found".
+		if command -v load_"$vendor" >/dev/null; then
+			load_"$vendor" -i
+		else
+			echo "No load_$vendor on this image, nothing to load"
+		fi
 		;;
 
 	stop)
