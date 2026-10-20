@@ -30,7 +30,12 @@ echo "*** FAILSAFE: bringing up network + SSH only, services skipped ***"
 # are gone for good, not merely delayed. Reordering is free here because this
 # list is hand-written rather than a directory glob. S31hostname comes first
 # for the same reason: syslogd samples the hostname once, at startup.
-for s in S29pstore S38mdev S31hostname S40network S01syslogd S02klogd S50dropbear; do
+#
+# S02sysctl goes first: /etc/sysctl.conf narrows serial SysRq, and a rescue
+# session is when someone is plugging a UART adapter in, whose BREAK and stray
+# byte would otherwise run any key -- reboot, crash, kill-all, or a thaw that
+# never returns on the pre-4.9 kernels.
+for s in S02sysctl S29pstore S38mdev S31hostname S40network S01syslogd S02klogd S50dropbear; do
 	[ -x "/etc/init.d/$s" ] || continue
 	"/etc/init.d/$s" start
 
