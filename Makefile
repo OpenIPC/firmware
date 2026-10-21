@@ -199,6 +199,9 @@ else
 	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,8192,nor)
 endif
 endif
+endif
+# A NOR+NAND build (ultimate with BR2_TARGET_ROOTFS_UBI) packages its NAND
+# image whichever NOR layout it ships.
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
 ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"rockchip" "sigmastar"),)
 	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
@@ -230,7 +233,6 @@ endif
 endif
 ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
 	@$(call PREPARE_REPACK,uImage,16384,,,initramfs)
-endif
 endif
 endif
 
