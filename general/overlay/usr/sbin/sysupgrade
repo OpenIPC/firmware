@@ -3105,7 +3105,9 @@ default_upgrade_url() {
 	# own archive: the plain one keeps the fixed-slot images every older
 	# camera and installer expects.
 	local u="https://github.com/OpenIPC/$repo/releases/download/latest/openipc.$model-$(pkg_flash)-$osr.tgz"
-	[ "$repo" = firmware ] && u=$(nor_split_url "$u")
+	# Wherever the archive lives: a board built split-only (hi3516ev300,
+	# hi3518ev300, hi3516cv6xx) publishes -split for dev and glibc too.
+	u=$(nor_split_url "$u")
 	echo "$u"
 }
 
