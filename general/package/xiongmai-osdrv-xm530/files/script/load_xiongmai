@@ -109,6 +109,23 @@ make_symlink() {
 	fi
 }
 
+# The Dashboard, the default hostname (S31hostname) and extutils read the
+# sensor out of the U-Boot environment, which every other vendor's load script
+# fills in. This one never did, so every Xiongmai camera showed "unknown" there
+# whatever ipcinfo detected (OpenIPC/openxiongmai#8). Probed once the sensor
+# clock and I2C are up, and written only when the variable is missing: a value
+# already there is the owner's, and a failed probe is never stored, which would
+# latch it (#2428).
+record_sensor() {
+	command -v fw_setenv >/dev/null 2>&1 || return 0
+	[ -n "$(fw_printenv -n sensor 2>/dev/null)" ] && return 0
+	local sensor
+	sensor=$(ipcinfo --short-sensor 2>/dev/null)
+	case "$sensor" in "" | unknown) return 0 ;; esac
+	fw_setenv sensor "$sensor" &&
+		logger -s -p daemon.info -t xiongmai "Writing $sensor to U-Boot ENV"
+}
+
 load_usage() {
 	echo "Usage: $0 [-option]"
 	echo "options:"
@@ -123,6 +140,7 @@ if [ "$1" = "-i" ]; then
 	cd $MODULE
 	insert_ko
 	make_symlink
+	record_sensor
 fi
 
 if [ "$1" = "-r" ]; then
