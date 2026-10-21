@@ -1199,6 +1199,18 @@ above could not see this file. The download is incomplete. Nothing was written."
 	done
 }
 
+# What unpacking archive $1 puts in /tmp, in KB: the part of it this run keeps,
+# sized from the gzip trailer. Fails when the trailer will not read.
+archive_unpack_kb() {
+	local sz need
+	sz=$(stat -c %s "$1" 2>&3) || return 1
+	[ -n "$sz" ] && [ "$sz" -gt 4 ] 2>&3 || return 1
+	# The last four bytes of a gzip stream are the uncompressed size.
+	need=$(od -An -tu4 -j $((sz - 4)) -N4 "$1" 2>&3 | awk '{print $1; exit}')
+	[ -n "$need" ] && [ "$need" -gt 0 ] 2>&3 || return 1
+	unpacked_part_kb $((need / 1024)) unpacked
+}
+
 # Will the unpack fit in /tmp?
 #
 # Asked only on an archive route, where the .tgz and everything inside it have
@@ -1216,13 +1228,9 @@ above could not see this file. The download is incomplete. Nothing was written."
 # Refuses only on arithmetic it actually has: a gzip trailer that will not read
 # or a df that will not parse means proceed.
 check_unpack_room() {
-	local a=$1 sz need free
-	sz=$(stat -c %s "$a" 2>&3) || return 0
-	[ -n "$sz" ] && [ "$sz" -gt 4 ] 2>&3 || return 0
-	# The last four bytes of a gzip stream are the uncompressed size.
-	need=$(od -An -tu4 -j $((sz - 4)) -N4 "$a" 2>&3 | awk '{print $1; exit}')
-	[ -n "$need" ] && [ "$need" -gt 0 ] 2>&3 || return 0
-	need=$(($(unpacked_part_kb $((need / 1024)) unpacked) * 1024))
+	local a=$1 need free
+	need=$(archive_unpack_kb "$a") || return 0
+	need=$((need * 1024))
 	# The same archive has to fit twice over: once in the tmpfs, and once in the
 	# RAM that tmpfs is made of. They are different numbers -- see
 	# check_unpack_ram -- and either can be the one that binds.
@@ -1232,8 +1240,31 @@ check_unpack_room() {
 	free=$(df -k /tmp 2>&3 | awk 'END { print $(NF - 2) }')
 	[ -n "$free" ] && [ "$free" -gt 0 ] 2>&3 || return 0
 	[ "$((need / 1024))" -lt "$free" ] && return 0
+	grow_tmp "$((need / 1024))" "$free" && return 0
 	die "No room to unpack $a in /tmp: needs $((need / 1024)) KB, $free KB free.
 Use 'sysupgrade --channel nightly' instead -- it streams and stages no second copy."
+}
+
+# Raise /tmp's own cap when that cap is all that is short.
+#
+# tmpfs defaults to half of RAM, and a cap is not memory: it is a ceiling on
+# pages taken as they are written. On an XM510 at its stock mem=18M that ceiling
+# is 7804 KB, and an archive plus its images is 8341 KB, so every archive
+# upgrade was refused (#2618) while the RAM behind /tmp could hold it. Raised by
+# what is missing plus the tools' reserve, and only when RAM was measured to
+# hold that much -- check_unpack_ram has already counted it and stopped majestic
+# if that was needed. A ramfs has no cap, and a RAM figure nobody could read is
+# no grounds to raise one. Put back by restore_resources on a run that stays up.
+grow_tmp() {
+	local need=$1 free=$2 size
+	tmpfs_is_ramfs && return 1
+	usable_ram || return 1
+	[ "$((need + UNPACK_RESERVE_KB))" -lt "$ram_kb" ] || return 1
+	size=$(df -k /tmp 2>&3 | awk 'END { print $(NF - 4) }')
+	[ -n "$size" ] && [ "$size" -gt 0 ] 2>&3 || return 1
+	mount -o remount,size=$((size + need - free + UNPACK_RESERVE_KB))k /tmp 2>&3 || return 1
+	tmp_cap_kb=$size
+	echo "Raised the /tmp cap from $size KB to $((size + need - free + UNPACK_RESERVE_KB)) KB for the unpack: $ram_kb KB of RAM is there to back it."
 }
 
 # What the run still needs for itself while that tmpfs is full, in KB.
@@ -1254,13 +1285,41 @@ Use 'sysupgrade --channel nightly' instead -- it streams and stages no second co
 # Overridable so the test harness can pin the boundary.
 UNPACK_RESERVE_KB=${UNPACK_RESERVE_KB:-512}
 
-# What /tmp can still be given, in KB, into $ram_kb: MemAvailable, less the
-# free CMA where tmpfs is ramfs (see check_unpack_ram), whose amount is then
-# left in $ram_cma_kb. Fails when MemAvailable cannot be read, which both
-# callers take as no opinion.
+# What MemAvailable would say, on a kernel too old to say it: 3.14 added the
+# line, so XM510 (3.0), XM530 (3.10) and hi3516cv100 (3.0.8) never had it, and
+# every RAM guard here stood down on them -- an XM510 then lost its rootfs
+# mid-erase (#2647) and could not install an archive at all (#2618). The same
+# arithmetic si_mem_available() does: free pages above the low watermark, plus
+# the file page cache and reclaimable slab, each less the part reclaim cannot
+# have (half, capped at the watermark). The low watermark is min_free_kbytes
+# plus a quarter, as the kernel derives it. Fails when a field is missing.
+mem_available_estimate() {
+	local minfree
+	minfree=$(cat /proc/sys/vm/min_free_kbytes 2>&3)
+	[ -n "$minfree" ] && [ "$minfree" -ge 0 ] 2>&3 || return 1
+	awk -v minfree="$minfree" '
+		/^MemFree:/        { free = $2; n++ }
+		/^Active\(file\):/  { pc += $2; n++ }
+		/^Inactive\(file\):/ { pc += $2; n++ }
+		/^SReclaimable:/   { sl = $2; n++ }
+		END {
+			if (n < 4) exit 1
+			wl = int(minfree * 5 / 4)
+			a = free - wl
+			h = int(pc / 2); a += pc - (h < wl ? h : wl)
+			h = int(sl / 2); a += sl - (h < wl ? h : wl)
+			print (a > 0 ? a : 0)
+		}' /proc/meminfo 2>&3
+}
+
+# What /tmp can still be given, in KB, into $ram_kb: MemAvailable (estimated
+# where the kernel does not report it), less the free CMA where tmpfs is ramfs
+# (see check_unpack_ram), whose amount is then left in $ram_cma_kb. Fails when
+# neither can be read, which both callers take as no opinion.
 usable_ram() {
 	local cma
 	ram_kb=$(awk '/^MemAvailable:/ { print $2; exit }' /proc/meminfo 2>&3)
+	[ -n "$ram_kb" ] || ram_kb=$(mem_available_estimate)
 	ram_cma_kb=
 	[ -n "$ram_kb" ] && [ "$ram_kb" -gt 0 ] 2>&3 || return 1
 	tmpfs_is_ramfs || return 0
@@ -1268,6 +1327,22 @@ usable_ram() {
 	[ -n "$cma" ] && [ "$cma" -gt 0 ] 2>&3 || return 0
 	ram_kb=$((ram_kb > cma ? ram_kb - cma : 0))
 	ram_cma_kb=$cma
+}
+
+# Whether the archive this run unpacks will not fit in RAM beside majestic,
+# by $majestic_short_kb. Only an archive already staged in /tmp counts -- one
+# behind the old root or still to be downloaded is measured where it lands --
+# and a RAM figure nobody can read is no reason to stop anything.
+majestic_short_for_archive() {
+	local need
+	majestic_short_kb=
+	case "$archive" in /tmp/*) ;; *) return 1 ;; esac
+	pidof majestic >/dev/null 2>&1 || return 1
+	need=$(archive_unpack_kb "$archive") || return 1
+	usable_ram || return 1
+	need=$((need + UNPACK_RESERVE_KB))
+	[ "$need" -lt "$ram_kb" ] && return 1
+	majestic_short_kb=$((need - ram_kb))
 }
 
 # Stop majestic to give the upgrade the memory it holds, when the upgrade is
@@ -1291,7 +1366,14 @@ stop_majestic_for_memory() {
 	local pid
 	[ "1" = "$majestic_stopped" ] && return 1
 	pid=$(pidof majestic 2>/dev/null) || return 1
-	if [ -n "$wdog_owner_pid" ]; then
+	# "releases": free_resources' early stop, before upgrade mode. majestic's
+	# own stop gives its watchdog back with the magic close, so stopping the
+	# owner there leaves nothing armed; and its ownership is already recorded,
+	# so where a driver ignores the magic close the RAM-phase keeper takes the
+	# device over from the pivot -- the unpack before it is seconds against
+	# majestic's 300 s. Later stops come after upgrade mode let go of the
+	# watchdog, and keep the guard.
+	if [ -n "$wdog_owner_pid" ] && [ "releases" != "$2" ]; then
 		case " $pid " in *" $wdog_owner_pid "*) return 1 ;; esac
 	fi
 	echo_c 33 "\nShort of memory by $1 KB with majestic running: stopping it, which gives back what it holds in RAM."
@@ -1814,7 +1896,22 @@ free_resources() {
 	# (restore_resources). A majestic too old to have the endpoint gets the
 	# SIGQUIT it always got.
 	if [ "1" != "$web_update" ]; then
-		if majestic_api prepare; then
+		# An archive already in /tmp that cannot be unpacked beside majestic
+		# gets majestic stopped by check_unpack_ram anyway -- and asking it
+		# into upgrade mode first is what this costs on a camera that tight.
+		# On an XM510 at mem=18M, a majestic started a minute earlier, with
+		# the 4 MB archive in a tmpfs nothing can reclaim, faulted its own
+		# pages back after drop_caches during prepare and was OOM-killed;
+		# the run died with it, leaving the lock and no majestic (#2618).
+		#
+		# The watchdog owner is recorded first, so the RAM-phase keeper still
+		# arms if majestic was it. A stop that is refused or fails falls back
+		# to prepare, as if nothing had been measured.
+		wdog_owner_pid=$(watchdog_owner) && wdog_userspace_owned=1
+		if majestic_short_for_archive &&
+			stop_majestic_for_memory "$majestic_short_kb" releases; then
+			:
+		elif majestic_api prepare; then
 			majestic_prepared=1
 			echo "majestic stopped its video for the upgrade"
 		else
@@ -1892,10 +1989,14 @@ free_resources() {
 	# Said out loud either way: a camera that comes back from a flash with a
 	# corrupted rootfs needs this line to tell an unfed-dog reset apart from a
 	# bad image, and it costs one scan of /proc on the normal system.
+	# Asked again, now that the services are down; an owner recorded before an
+	# early majestic stop above keeps the keeper armed.
 	wdog_owner_pid=$(watchdog_owner) && wdog_userspace_owned=1
 	echo_c 34 "\nWatchdog:"
-	if [ "1" = "$wdog_userspace_owned" ]; then
+	if [ "1" = "$wdog_userspace_owned" ] && [ -n "$wdog_owner_pid" ]; then
 		echo "$WDOG: pid $wdog_owner_pid feeds it; taken over if that dies"
+	elif [ "1" = "$wdog_userspace_owned" ]; then
+		echo "$WDOG: majestic fed it and was stopped for memory; taken over at the flash"
 	else
 		[ -c "$WDOG" ] && echo "$WDOG: nobody feeds it; left alone" || echo "none"
 	fi
@@ -1914,6 +2015,8 @@ free_resources() {
 #
 # Started low-number-first, the reverse of the order they were stopped in.
 restore_resources() {
+	# Best effort: a /tmp still holding more than the old cap keeps the new one.
+	[ -n "$tmp_cap_kb" ] && mount -o remount,size=${tmp_cap_kb}k /tmp 2>&3
 	[ "1" = "$services_stopped" ] || return 0
 	echo_c 37 "\nRestarting the services stopped for the upgrade"
 	local s
@@ -3147,8 +3250,10 @@ reboot_system() {
 		# Same reasoning as die(): this run stays up, so what free_resources
 		# stopped has to come back rather than wait for a reboot that was
 		# explicitly declined.
+		# The images first, as die() does: they are of no further use, and
+		# while they sit in /tmp a cap raised for them cannot be put back.
+		discard_unpacked
 		restore_resources
-		rm -f "$unpacked_list"
 		rm $LOCK_FILE
 		restore_majestic
 		return 0
