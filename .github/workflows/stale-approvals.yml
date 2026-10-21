@@ -1,0 +1,101 @@
+# Delete fork-PR workflow runs still waiting for approval once their PR is gone.
+#
+# Why: fork PRs need a maintainer's approval for every run they trigger, and
+# qodo-gate fires on every review and review comment, so each review round on
+# a fork PR leaves runs nobody approves (the one gate run that matters gets
+# approved; the rest are noise). On merge GitHub closes the pending
+# pull_request runs but NOT the pull_request_review_comment ones: those sit
+# until GitHub expires them 30 days later, records the expiry as a failure,
+# and mails a "run failed" notification for each. That is what #2463's author
+# got a month after the merge -- six qodo-gate runs, "30d 0h 5m", and nothing
+# had ever run. A deleted run never expires, so it never notifies.
+#
+# The rule is the same in both arms: a run awaiting approval whose branch is
+# not the head of any OPEN pull request belongs to a closed one and is deleted.
+# Matching by branch rather than by the PR's commit list also catches runs on
+# SHAs a force-push dropped from the PR; refusing any branch an open PR uses
+# means two forks that both push "master" can never cost a live PR its runs.
+#
+# pull_request_target is safe here: nothing is checked out, the job only calls
+# the API, and the branch name -- contributor-controlled -- reaches the shell
+# through env and jq --arg, never through ${{ }} interpolation into the script.
+name: stale-approvals
+on:
+  pull_request_target:
+    types: [closed]
+  # Backstop for PRs closed before this workflow existed, or whose closed
+  # event was missed. Runs a week old are well inside the 30-day expiry and
+  # long past the point anyone approves them.
+  schedule:
+    - cron: '30 5 * * 1'  # Mondays 05:30 UTC, after cleanup.yml
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List what would be deleted, delete nothing'
+        type: boolean
+        default: true
+
+permissions:
+  actions: write
+  pull-requests: read
+
+concurrency:
+  group: stale-approvals
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    name: Delete runs awaiting approval on closed PRs
+    if: github.repository == 'OpenIPC/firmware' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Delete stale runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          # Empty outside pull_request_target: sweep every branch instead.
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+
+          open_heads=$(gh api "repos/$REPO/pulls?state=open&per_page=100" \
+            --paginate --jq '.[].head.ref')
+
+          if [ -n "$BRANCH" ]; then
+            runs=$(gh api -X GET "repos/$REPO/actions/runs" --paginate \
+              -f status=action_required -f branch="$BRANCH" -F per_page=100 \
+              --jq '.workflow_runs[] | [.id, .head_branch, .name, .event] | @tsv')
+          else
+            cutoff=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+            runs=$(gh api -X GET "repos/$REPO/actions/runs" --paginate \
+              -f status=action_required -F per_page=100 \
+              --jq ".workflow_runs[] | select(.created_at < \"$cutoff\")
+                | [.id, .head_branch, .name, .event] | @tsv")
+          fi
+
+          deleted=0 kept=0 failed=0
+          while IFS=$'\t' read -r id branch name event; do
+            [ -n "$id" ] || continue
+            if printf '%s\n' "$open_heads" | grep -qxF -- "$branch"; then
+              kept=$((kept + 1))
+              continue
+            fi
+            if [ "$DRY_RUN" = true ]; then
+              echo "would delete $id  $name ($event) on $branch"
+              deleted=$((deleted + 1))
+            elif gh api -X DELETE "repos/$REPO/actions/runs/$id" >/dev/null; then
+              echo "deleted $id  $name ($event) on $branch"
+              deleted=$((deleted + 1))
+            else
+              # Best-effort, one run at a time: a run approved or expired
+              # between the listing and the delete must not abort the rest.
+              echo "could not delete $id ($name on $branch)"
+              failed=$((failed + 1))
+            fi
+          done <<EOF
+          $runs
+          EOF
+
+          echo "deleted=$deleted kept-for-open-PR=$kept failed=$failed dry_run=$DRY_RUN"

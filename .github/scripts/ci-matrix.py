@@ -192,8 +192,8 @@ UNBUILT_BOARDS = {
 NO_BUILD_WORKFLOWS = {
     "build-one.yml", "cleanup.yml", "gcc-compat.yml", "image.yml",
     "issue-labeler.yml", "lint.yml", "manifest.yml", "qodo-gate.yml",
-    "shell-tests.yml", "toolchain-asan.yml", "toolchain.yml", "uboot.yml",
-    "vendor-abi.yml",
+    "shell-tests.yml", "stale-approvals.yml", "toolchain-asan.yml",
+    "toolchain.yml", "uboot.yml", "vendor-abi.yml",
 }
 
 # Same for .github/scripts/.
@@ -1031,6 +1031,7 @@ def self_test():
         (["CLAUDE.md"], 0, "agent instructions are markdown"),
         ([".github/workflows/qodo-gate.yml"], 0, "review gate never builds"),
         ([".github/workflows/issue-labeler.yml"], 0, "the issue labeller never builds"),
+        ([".github/workflows/stale-approvals.yml"], 0, "the run pruner never builds"),
         ([".github/scripts/lint-issue-forms.py"], 0, "the issue-form linter never builds"),
         ([".github/ISSUE_TEMPLATE/config.yml"], 0, "issue templates never build"),
         ([".github/ISSUE_TEMPLATE/1-bug.yml"], 0, "an issue form never builds"),
