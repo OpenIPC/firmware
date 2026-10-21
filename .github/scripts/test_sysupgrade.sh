@@ -93,6 +93,9 @@ else
     echo "S95majestic $1" >> "$FLASH_LOG"
 fi
 [ "$1" = stop ] && [ -n "$STUB_STOP_FAILS" ] && exit 1
+# A stopped majestic holds no file any more, the watchdog included.
+[ "$1" = stop ] && [ -n "$STUB_MAJESTIC_PID" ] && [ -n "$WDOG_PROC" ] &&
+    rm -rf "$WDOG_PROC/$STUB_MAJESTIC_PID"
 if [ "$1" = stop ] && [ "$STUB_MEM_AFTER_STOP" = unreadable ]; then
     : > "$STUB_MEMINFO"
 elif [ "$1" = stop ] && [ -n "$STUB_MEM_AFTER_STOP" ]; then
@@ -940,6 +943,37 @@ if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && grep -q "S95majestic stop" "$SB/tmp/f
 else
     bad "short archive -> expected majestic stopped instead of prepared, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
 fi
+# majestic owning the watchdog does not keep it from that stop: its own stop
+# releases the device with the magic close. But the ownership is recorded
+# first, so the RAM-phase keeper still arms in case a driver ignores it.
+mkdir -p "$SB/wdproc/901/fd"
+ln -sf /dev/null "$SB/wdproc/901/fd/3"
+reset_env
+make_archive "$K" "$R"
+set_meminfo 100
+STUB_MAJESTIC_PID=901 STUB_MEM_AFTER_STOP=60000
+WDOG=/dev/null WDOG_PROC="$SB/wdproc"
+run -z --archive="$SB/tmp/fw.tgz"
+if grep -q "S95majestic stop" "$SB/tmp/flash.log" && ! grep -q "majestic_api prepare" "$SB/tmp/flash.log" &&
+    printf '%s' "$OUT" | grep -q "majestic fed it and was stopped for memory; taken over at the flash"; then
+    ok "an owning majestic is stopped early too, and its ownership still arms the keeper"
+else
+    bad "owning majestic, short archive -> expected an early stop with the keeper armed, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
+fi
+rm -rf "$SB/wdproc"
+
+# A stop that does not happen falls back to prepare, as if nothing were short.
+reset_env
+make_archive "$K" "$R"
+set_meminfo 100
+STUB_MAJESTIC_PID=901 STUB_STOP_FAILS=1 STUB_MEM_AFTER_STOP=60000
+run -z --archive="$SB/tmp/fw.tgz"
+if grep -q "majestic_api prepare" "$SB/tmp/flash.log"; then
+    ok "...and a majestic that will not stop is still asked to prepare"
+else
+    bad "failed early stop -> expected the prepare fallback, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
 # ...and one with room leaves majestic to prepare, as before.
 reset_env
 make_archive "$K" "$R"
