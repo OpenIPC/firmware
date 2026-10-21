@@ -5,6 +5,13 @@ case "$1" in
 		echo "Starting mdev..."
 		echo /sbin/mdev > /proc/sys/kernel/hotplug
 		mdev -s
+		# Whatever was plugged in at power-on was announced before mdev became
+		# the hotplug helper, and mdev -s walks only devices with a node, not
+		# the USB interfaces a driver binds to. Announce them again, so a phone
+		# already tethering at boot gets its driver like one plugged in later.
+		for uevent in /sys/bus/usb/devices/*:*/uevent; do
+			[ -w "$uevent" ] && echo add > "$uevent"
+		done
 		;;
 
 	stop)
