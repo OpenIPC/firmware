@@ -3546,7 +3546,14 @@ default_url_is "$F/openipc.gk7205v200-nor-lite-split.tgz" \
     eval 'set_platform gk7205v200_lite; STUB_SOC=gk7205v200; STUB_SPLIT_PUBLISHED=1'
 default_url_is "$F/openipc.hi3516cv6xx-nor-lite-split.tgz" \
     eval 'set_platform hi3516cv6xx_lite; STUB_SOC=hi3516cv6xx; STUB_SPLIT_PUBLISHED=1'
+# dev and glibc live in the builder repo; a split-only board publishes -split
+# there too (hi3516ev300, hi3518ev300), and the camera must ask for it.
+default_url_is "$B/openipc.hi3516ev300-nor-dev-split.tgz" \
+    eval 'set_platform hi3516ev300_dev dev; STUB_SOC=hi3516ev300; STUB_SPLIT_PUBLISHED=1'
 unset STUB_SPLIT_PUBLISHED
+default_url_is "$B/openipc.hi3516ev300-nor-dev.tgz" \
+    eval 'set_platform hi3516ev300_dev dev; STUB_SOC=hi3516ev300'
+
 default_url_is "$F/openipc.ssc338q-nor-lite.tgz" true
 # --channel resolves the plain package from the manifest; the family fetches
 # the -split one beside it. A board that publishes only the split package
