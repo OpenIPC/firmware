@@ -2152,6 +2152,35 @@ need_handoff() {
 	return 1
 }
 
+# Should this run hand PID 1 off even though it could write in place? Any run
+# that rewrites the rootfs, where it can.
+#
+# On NOR a squashfs can be rewritten while it is mounted, so the hand-off was
+# kept for UBI, where it is the only way. But everything still running from the
+# old root then goes on running from it through the erase, and free_resources
+# has dropped the page cache: whatever it runs next faults in from flash that is
+# being wiped. Most of those processes die harmlessly. PID 1 does not -- busybox
+# init woke to reap one, faulted on its own text and took SIGBUS, and the
+# kernel's "Attempted to kill init!" rebooted an XM510 with its rootfs half
+# written, in three runs of four (#2647). The free-RAM floor does not cover it:
+# what it counts as reclaimable is exactly those pages.
+#
+# Unlike need_handoff this is a preference, not a requirement: an image without
+# the ::restart: entry, a run without a RAM root, or an image only reachable
+# behind the old root flashes as it did before.
+want_handoff() {
+	need_handoff && return 0
+	[ "1" = "$update_rootfs" ] || return 1
+	[ "1" = "$skip_ramfs" ] && return 1
+	command -v pivot_root >/dev/null 2>&1 || return 1
+	inittab_hands_off || return 1
+	local f
+	for f in "$([ "1" = "$update_kernel" ] && echo "$kernel_file")" "$rootfs_file"; do
+		case "$(path_after_pivot "$f")" in /mnt/*) return 1 ;; esac
+	done
+	return 0
+}
+
 # Can PID 1 be handed off at all? Asked before anything is written, where a
 # refusal still leaves the camera exactly as it was.
 #
@@ -3502,6 +3531,10 @@ elif need_handoff; then
 	enter_ramfs handoff
 	ramfs_discard
 	die "Could not move the flash phase into RAM; a mounted UBI volume cannot be rewritten without it. Nothing was written."
+elif want_handoff; then
+	# On success this never returns. A hand-off that could not be staged or
+	# pivoted falls back as any failed pivot does: tidy up and flash in place.
+	enter_ramfs handoff || ramfs_discard
 elif ! enter_ramfs; then
 	# The pivot did not take, so the in-place flash below needs none of what was
 	# staged for it. enter_ramfs bails out from a dozen places and cannot tidy up

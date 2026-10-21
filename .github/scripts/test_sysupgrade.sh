@@ -1804,6 +1804,72 @@ else
     bad "short at the pivot with majestic running -> expected a flash, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
 fi
 
+# --- NOR: a rootfs write hands PID 1 off too (#2647) ------------------------
+#
+# A squashfs on NOR can be rewritten while it is mounted, but busybox init keeps
+# running from it through the erase. free_resources has dropped the page cache,
+# so the next time init runs -- to reap one of the old root's processes dying
+# of SIGBUS -- it faults its own text in from flash being wiped, and the
+# kernel's "Attempted to kill init!" reboots with the rootfs half written. On an
+# XM510 that was three runs of four.
+nor_handed_off() { grep -q "^kill -QUIT 1" "$SB/tmp/flash.log"; }
+reset_env
+STUB_PIVOT_RC=0
+run -z --kernel="$K" --rootfs="$R"
+envf="$SB/ram/sysupgrade.env"
+if nor_handed_off && nothing_wrote && [ -x "$SB/ram/sbin/init" ] &&
+    grep -q "_handoff=1" "$envf" 2>/dev/null && ! grep -q "ubi_layout=.[a-z]" "$envf"; then
+    ok "NOR: a rootfs write hands PID 1 off before anything is written (#2647)"
+else
+    bad "NOR rootfs write -> expected the hand-off, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# An image whose inittab has no ::restart: cannot hand off. That is no reason to
+# refuse on NOR -- it is written as it always was, from a plain RAM root.
+reset_env
+STUB_PIVOT_RC=0
+printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n' > "$SB/etc/inittab"
+run -z --kernel="$K" --rootfs="$R"
+if ! nor_handed_off && grep -q "pivot_root" "$SB/tmp/flash.log" && [ ! -e "$SB/ram/sbin/init" ]; then
+    ok "NOR without ::restart: still moves into a plain RAM root, not refused"
+else
+    bad "NOR without ::restart: -> expected the plain pivot, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# Neither does an image the hand-off would take with the old root: an SD card
+# goes behind /mnt and init's exec would leave it there.
+reset_env
+STUB_PIVOT_RC=0
+OUTSIDE="$SB/sdcard"; mkdir -p "$OUTSIDE"; cp "$R" "$OUTSIDE/"
+run -z --rootfs="$OUTSIDE/$(basename "$R")"
+if ! nor_handed_off && grep -q "pivot_root" "$SB/tmp/flash.log"; then
+    ok "NOR with the image outside /tmp is not handed off, and still pivots"
+else
+    bad "NOR image outside /tmp -> expected the plain pivot, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+rm -rf "$OUTSIDE"
+
+# A kernel-only write leaves the running rootfs alone and stays in place.
+reset_env
+STUB_PIVOT_RC=0
+run -z --kernel="$K"
+if ! nor_handed_off && ! grep -q "pivot_root" "$SB/tmp/flash.log" && flashed /dev/mtd2 && rebooted; then
+    ok "NOR kernel-only: no hand-off, no pivot"
+else
+    bad "NOR kernel-only -> expected an in-place write, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# The second phase, as PID 1 on NOR: the old root goes before the first write.
+reset_env
+RUN_ENV="_ramfs_phase=1 _handoff=1 kernel_device=/dev/mtd2 update_kernel=1 update_rootfs=1 kernel_file=$K rootfs_file=$R model=ssc338q skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
+run
+u=$(logged_at "umount -l /mnt"); k=$(logged_at "flashcp .*/dev/mtd2"); r=$(logged_at "flashcp .*/dev/mtd3")
+if [ -n "$u" ] && [ -n "$k" ] && [ -n "$r" ] && [ "$u" -lt "$k" ] && [ "$k" -lt "$r" ] && rebooted; then
+    ok "stage 2 (NOR): old root released, then kernel and rootfs written"
+else
+    bad "NOR stage 2 -> expected umount -l /mnt before both writes, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
 # --- the pivot is entered only when it is needed (issue #2416) --------------
 #
 # There is no way back out of the ramfs. The shell, /etc, dropbear and getty are
