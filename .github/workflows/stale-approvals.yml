@@ -78,7 +78,14 @@ jobs:
           deleted=0 kept=0 failed=0
           while IFS=$'\t' read -r id branch name event; do
             [ -n "$id" ] || continue
-            if printf '%s\n' "$open_heads" | grep -qxF -- "$branch"; then
+            # A here-string, not printf | grep -q: grep -q exits at the first
+            # match, printf takes SIGPIPE on a list past the pipe buffer, and
+            # pipefail turns that into 141 -- a branch an open PR uses read as
+            # unmatched, and its runs deleted. Only grep's own "no match" (1)
+            # lets a run go; anything else keeps it.
+            rc=0
+            grep -qxF -- "$branch" <<<"$open_heads" || rc=$?
+            if [ "$rc" -ne 1 ]; then
               kept=$((kept + 1))
               continue
             fi
