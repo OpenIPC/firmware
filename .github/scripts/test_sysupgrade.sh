@@ -64,6 +64,7 @@ sed -e 's|"$1/etc/os-release"|"${1:-@SB@}@OSRELEASE@"|g' \
     -e "s|/proc/cmdline|@SB@/proc/cmdline|g" \
     -e "s|/proc/mounts|@SB@/proc/mounts|g" \
     -e "s|/proc/meminfo|@SB@/proc/meminfo|g" \
+    -e "s|/proc/sys/vm/min_free_kbytes|@SB@/proc/min_free_kbytes|g" \
     -e "s|/proc/sys/vm/drop_caches|@SB@/tmp/drop_caches|g" \
     -e "s|/etc/init.d/|@SB@/etc/init.d/|g" \
     -e "s|/var/run/vigil-supervise.pid|@SB@/tmp/vigil-supervise.pid|g" \
@@ -587,6 +588,7 @@ reset_env() {
     unset STUB_PREPARE STUB_ABORT STUB_UMOUNT_BUSY STUB_UMOUNT_HIDES RUN_ENV FOLLOW_LOG STUB_UBI_SLOW
     rm -rf "$SB/sys"
     printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n::restart:/sbin/init\n' > "$SB/etc/inittab"
+    echo 540 > "$SB/proc/min_free_kbytes"
     rm -f "$SB"/tmp/*.gk7205v500
     set_meminfo
     : > "$SDMOUNTS"
@@ -888,16 +890,89 @@ run -z --archive="$SB/tmp/fw.tgz"
 # image the cases above have to catch, so refuse while the numbers are still
 # knowable. #2425 frees the archive after the unpack, which cannot help the
 # unpack itself.
+# A kernel that reports neither MemAvailable nor the fields to estimate it
+# leaves no RAM figure, so the cap stands: nothing says it may be raised.
 reset_env
 make_archive "$K" "$R"
 stub df 'echo "Filesystem 1K-blocks Used Available Use% Mounted on"; echo "tmpfs 13564 13560 4 99% /tmp"'
+printf 'MemTotal: 131072 kB\nMemFree: 65536 kB\n' > "$SB/proc/meminfo"
 run -z --archive="$SB/tmp/fw.tgz"
-if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "No room to unpack"; then
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -q "No room to unpack" &&
+    ! grep -q "remount.*size=" "$SB/tmp/flash.log"; then
     ok "an unpack that cannot fit is refused before it truncates an image"
 else
     bad "full /tmp -> expected a refusal, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
 fi
 rm -f "$SB/bin/df"
+
+# ...but a cap is not memory. tmpfs takes pages only as they are written, and
+# defaults to half of RAM: on an XM510 at mem=18M that is 7804 KB against the
+# 8341 KB an archive and its images need together, so no archive could be
+# installed there at all (#2618). Where RAM was measured to hold the unpack,
+# the cap is raised for the run instead.
+reset_env
+make_archive "$K" "$R"
+stub df 'echo "Filesystem 1K-blocks Used Available Use% Mounted on"; echo "tmpfs 13564 13560 4 99% /tmp"'
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && rebooted &&
+    grep -q "^remount -o remount,size=[0-9]*k .*/tmp$" "$SB/tmp/flash.log" &&
+    printf '%s' "$OUT" | grep -q "Raised the .*/tmp cap from 13564 KB to [0-9]* KB"; then
+    ok "a /tmp short only by its cap is raised when RAM can back it (#2618)"
+else
+    bad "/tmp cap with RAM to spare -> expected the cap raised and a flash, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
+fi
+rm -f "$SB/bin/df"
+
+# An archive in /tmp that cannot be unpacked beside majestic gets majestic
+# stopped by check_unpack_ram anyway; asking it into upgrade mode first is
+# what an XM510 at mem=18M could not afford -- majestic, a minute old, was
+# OOM-killed during prepare and the run died with it (#2618). So it is
+# stopped up front instead, and never asked to prepare.
+reset_env
+make_archive "$K" "$R"
+set_meminfo 100           # the sandbox archive unpacks to about 20 KB
+STUB_MAJESTIC_PID=901 STUB_MEM_AFTER_STOP=60000
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && grep -q "S95majestic stop" "$SB/tmp/flash.log" &&
+    ! grep -q "majestic_api prepare" "$SB/tmp/flash.log" &&
+    printf '%s' "$OUT" | grep -q "Short of memory by [0-9]* KB with majestic running"; then
+    ok "an archive that cannot unpack beside majestic stops it before prepare (#2618)"
+else
+    bad "short archive -> expected majestic stopped instead of prepared, rc=$RC out='$OUT' log='$(cat "$SB/tmp/flash.log")'"
+fi
+# ...and one with room leaves majestic to prepare, as before.
+reset_env
+make_archive "$K" "$R"
+STUB_MAJESTIC_PID=901
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && grep -q "majestic_api prepare" "$SB/tmp/flash.log" &&
+    ! grep -q "S95majestic stop" "$SB/tmp/flash.log"; then
+    ok "...while an archive with room leaves majestic to prepare"
+else
+    bad "archive with room -> expected prepare, not a stop, rc=$RC log='$(cat "$SB/tmp/flash.log")'"
+fi
+
+# A kernel before 3.14 has no MemAvailable. It is estimated the way
+# si_mem_available() computes it -- here from what a lab XM510 (3.0.101)
+# reported: free 1516 - low watermark 675 (540 min_free + a quarter), file
+# cache 7684 - 675, reclaimable slab 904 - 452 = 8302 KB.
+reset_env
+printf 'MemTotal: 15608 kB\nMemFree: 1516 kB\nBuffers: 2232 kB\nCached: 5548 kB\nActive(file): 1936 kB\nInactive(file): 5748 kB\nShmem: 96 kB\nSReclaimable: 904 kB\n' > "$SB/proc/meminfo"
+run -z --kernel="$K" --rootfs="$R"
+if printf '%s' "$OUT" | grep -q "RAM left to flash from: 8302 KB"; then
+    ok "no MemAvailable (kernel < 3.14): estimated as si_mem_available() would"
+else
+    bad "MemAvailable estimate -> expected 8302 KB, out='$(printf '%s' "$OUT" | grep -i 'RAM left')'"
+fi
+# ...and a meminfo missing a field it needs is still no opinion.
+reset_env
+printf 'MemTotal: 15608 kB\nMemFree: 1516 kB\nActive(file): 1936 kB\nInactive(file): 5748 kB\n' > "$SB/proc/meminfo"
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && ! printf '%s' "$OUT" | grep -q "RAM left to flash from"; then
+    ok "...and a meminfo it cannot estimate from is no opinion, not a refusal"
+else
+    bad "partial meminfo -> expected no RAM figure and a flash, rc=$RC out='$OUT'"
+fi
 
 # Fails open, like every other measurement in this script: a df that will not
 # answer is not grounds to refuse an upgrade.
