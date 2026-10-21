@@ -4,7 +4,7 @@
 #
 ################################################################################
 
-RDA5995_OPENIPC_VERSION = 593c3184ae3f84c563b1704f6ad24879f122634b
+RDA5995_OPENIPC_VERSION = 06fd4b61252788bc46a66c88fd2773493ab5dd2a
 RDA5995_OPENIPC_SITE = $(call github,openipc,rda-wlan,$(RDA5995_OPENIPC_VERSION))
 
 # Rdamicro's permission notice heads every source file; the module
