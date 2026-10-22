@@ -21,6 +21,8 @@ define CPU_MODELS_EXTRACT_CMDS
 endef
 
 define CPU_MODELS_INSTALL_TARGET_CMDS
+	# v1's blob, which the engine no longer reads, out of a reused target
+	rm -f $(TARGET_DIR)/usr/share/majestic/person.pdnet
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/share/majestic
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/share/majestic \
 		$(@D)/person.qnet $(@D)/person.json $(@D)/drum.qnet
