@@ -209,7 +209,7 @@ NO_BUILD_SCRIPTS = {
     "test_ca_bundle_lite.sh", "test_network_failover.sh",
     "lint-workflow-shell.py", "push_build.py", "soc_aliases.py",
     "test_automount.sh", "test_check_mac.sh", "test_excludes_report.sh",
-    "test_load_hisilicon.sh", "test_load_goke.sh", "test_load_hisilicon_layout.sh", "test_push_build.py", "test_shell_parse.sh",
+    "test_load_hisilicon.sh", "test_load_goke.sh", "test_load_novatek.sh", "test_load_hisilicon_layout.sh", "test_push_build.py", "test_shell_parse.sh",
     "test_strip_shell_comments.sh", "test_sysupgrade.sh", "test_crashlog.sh", "test_majestic_supervise.sh",
     "test_vigil_supervise.sh",
     "test_init_overlay.sh",
