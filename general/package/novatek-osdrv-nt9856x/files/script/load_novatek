@@ -164,8 +164,20 @@ check_mem() {
 	reg=/proc/device-tree/memory/reg
 	[ -r $reg ] || return 0
 	dt_mem=$(( 0x$(hexdump -ve '1/1 "%02x"' $reg | cut -c9-16) >> 20 ))
-	booted_mem=$(awk -F '=' '$1=="mem" && $2 ~ /^[0-9]+M$/ {print $2+0; exit}' RS=" " /proc/cmdline)
-	[ -n "$booted_mem" ] && [ "$booted_mem" -gt "$dt_mem" ] || return 0
+	booted_mem=
+	for arg in $(cat /proc/cmdline); do
+		case "$arg" in
+		mem=*M)
+			booted_mem=${arg#mem=}
+			booted_mem=${booted_mem%M}
+			break
+			;;
+		esac
+	done
+	case "$booted_mem" in
+	"" | *[!0-9]*) return 0 ;;
+	esac
+	[ "$booted_mem" -gt "$dt_mem" ] || return 0
 
 	logger -s -p daemon.err -t novatek "Kernel booted with mem=${booted_mem}M, past the ${dt_mem}M U-Boot laid out from osmem; HDAL would overwrite kernel memory, not loading it"
 	bootargs=$(fw_printenv -n bootargs 2>/dev/null)
