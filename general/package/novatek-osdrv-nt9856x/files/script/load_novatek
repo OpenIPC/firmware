@@ -152,6 +152,35 @@ insert_ko() {
     #insmod hdal/kdrv_videoout/fbdev/nvt_fb.ko
 }
 
+# The vendor U-Boot lays memory out from osmem: the DT memory node it hands
+# over ends there and the HDAL pool starts there. The kernel's RAM comes from
+# mem= alone, and the bootcmd these boards were given re-runs the saved
+# bootargs, so an osmem changed later never reaches mem=. Booted with mem=
+# past the node, the kernel owns the start of the HDAL pool and
+# nvtmpp_heap_init in kflow_common panics the camera into a reboot loop.
+# The opposite drift leaves the DT above the kernel's RAM and hangs it before
+# the console, which nothing here can catch. #2107.
+check_mem() {
+	reg=/proc/device-tree/memory/reg
+	[ -r $reg ] || return 0
+	dt_mem=$(( 0x$(hexdump -ve '1/1 "%02x"' $reg | cut -c9-16) >> 20 ))
+	booted_mem=$(awk -F '=' '$1=="mem" && $2 ~ /^[0-9]+M$/ {print $2+0; exit}' RS=" " /proc/cmdline)
+	[ -n "$booted_mem" ] && [ "$booted_mem" -gt "$dt_mem" ] || return 0
+
+	logger -s -p daemon.err -t novatek "Kernel booted with mem=${booted_mem}M, past the ${dt_mem}M U-Boot laid out from osmem; HDAL would overwrite kernel memory, not loading it"
+	bootargs=$(fw_printenv -n bootargs 2>/dev/null)
+	case " $bootargs" in
+	*" mem=${booted_mem}M"*)
+		bootargs=$(echo " $bootargs" | sed "s/ mem=${booted_mem}M/ mem=${dt_mem}M/; s/^ //")
+		fw_setenv bootargs "$bootargs" &&
+			logger -s -p daemon.err -t novatek "bootargs set to mem=${dt_mem}M; reboot to load HDAL"
+		;;
+	esac
+	exit 1
+}
+
+check_mem
+
 cd /lib/modules/4.19.91/novatek
 insert_ko
 
