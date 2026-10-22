@@ -215,12 +215,24 @@ set_default_osmem() {
 	*) return 0 ;;
 	esac
 
+	# Exactly one mem=, and the one that goes with the old split: a second
+	# one, or any other value, is a bootargs somebody wrote by hand, and
+	# moving part of it would leave it disagreeing with itself.
 	bootargs=$(fw_printenv -n bootargs 2>/dev/null)
-	case " $bootargs " in
-	*' mem=${osmem'*)
+	mem=
+	for arg in $bootargs; do
+		case "$arg" in
+		mem=*)
+			[ -z "$mem" ] || return 0
+			mem=$arg
+			;;
+		esac
+	done
+	case "$mem" in
+	'mem=${osmem}' | 'mem=${osmem:-32M}')
 		bootargs=
 		;;
-	*" mem=32M "*)
+	mem=32M)
 		bootargs=$(echo " $bootargs" | sed "s/ mem=32M/ mem=48M/; s/^ //")
 		;;
 	*)
