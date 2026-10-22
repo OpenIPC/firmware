@@ -2,10 +2,14 @@ config BR2_PACKAGE_CPU_MODELS
 	bool "cpu-models"
 	default n
 	help
-	  The person detector majestic's object detection runs on the CPU of
-	  cameras without an NPU (HiSilicon/Goke parts with the IVE motion
-	  backend): an int8 network majestic's own engine loads from
-	  /usr/share/majestic/person.pdnet, with the thresholds of its three
-	  presets beside it in person.json. 84 KB. MIT.
+	  The int8 networks majestic's own engine runs on the CPU, in
+	  /usr/share/majestic:
+	  - person.qnet, the person detector its object detection runs on
+	    cameras without an NPU (HiSilicon/Goke parts with the IVE motion
+	    backend), with the thresholds of its three presets beside it in
+	    person.json;
+	  - drum.qnet, which reads the drums of a water, gas or electricity
+	    meter for its meter reading.
+	  134 KB together. MIT.
 
 	  https://github.com/OpenIPC/cpu-models
