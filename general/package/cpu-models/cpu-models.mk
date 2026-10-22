@@ -7,12 +7,13 @@
 # Built and published by that repository's release workflow, never by hand:
 # each asset traces to the commit and run that built it, and the release
 # checked the engine against the model's reference arithmetic first.
-CPU_MODELS_VERSION = v1
+CPU_MODELS_VERSION = v2
 CPU_MODELS_SITE = https://github.com/OpenIPC/cpu-models/releases/download/$(CPU_MODELS_VERSION)
-CPU_MODELS_SOURCE = person.pdnet
+CPU_MODELS_SOURCE = person.qnet
 # The thresholds behind majestic's object-detection presets for this model,
-# read beside it.
-CPU_MODELS_EXTRA_DOWNLOADS = person.json
+# read beside it; and the drum model majestic's meter reading classifies
+# each drum of a utility meter with.
+CPU_MODELS_EXTRA_DOWNLOADS = person.json drum.qnet
 CPU_MODELS_LICENSE = MIT
 
 define CPU_MODELS_EXTRACT_CMDS
@@ -20,9 +21,11 @@ define CPU_MODELS_EXTRACT_CMDS
 endef
 
 define CPU_MODELS_INSTALL_TARGET_CMDS
+	# v1's blob, which the engine no longer reads, out of a reused target
+	rm -f $(TARGET_DIR)/usr/share/majestic/person.pdnet
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/share/majestic
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/share/majestic \
-		$(@D)/person.pdnet $(@D)/person.json
+		$(@D)/person.qnet $(@D)/person.json $(@D)/drum.qnet
 endef
 
 $(eval $(generic-package))
