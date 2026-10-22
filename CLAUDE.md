@@ -188,6 +188,7 @@ nor a camera. There is no test framework; these are scripts, run them from the r
 
 ```sh
 bash .github/scripts/test_load_hisilicon.sh                   # os_mem_size derivation
+bash .github/scripts/test_load_novatek.sh                     # the osmem / mem= writes (needs busybox)
 bash .github/scripts/test_sysupgrade.sh                       # sysupgrade rootfs verification
 bash .github/scripts/test_check_mac.sh                        # the MAC the camera gives itself
 bash .github/scripts/test_excludes_report.sh                  # excludes lists report stale entries

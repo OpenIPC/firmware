@@ -152,6 +152,15 @@ insert_ko() {
     #insmod hdal/kdrv_videoout/fbdev/nvt_fb.ko
 }
 
+proc_cmdline=${LOAD_NOVATEK_CMDLINE:-/proc/cmdline}
+device_tree=${LOAD_NOVATEK_DT:-/proc/device-tree}
+
+# The size cell of a one-address, one-size DT reg property, in MB.
+dt_mb() {
+	[ -r "$1" ] || return 1
+	echo $(( 0x$(hexdump -ve '1/1 "%02x"' "$1" | cut -c9-16) >> 20 ))
+}
+
 # The vendor U-Boot lays memory out from osmem: the DT memory node it hands
 # over ends there and the HDAL pool starts there. The kernel's RAM comes from
 # mem= alone, and the bootcmd these boards were given re-runs the saved
@@ -161,11 +170,9 @@ insert_ko() {
 # The opposite drift leaves the DT above the kernel's RAM and hangs it before
 # the console, which nothing here can catch. #2107.
 check_mem() {
-	reg=/proc/device-tree/memory/reg
-	[ -r $reg ] || return 0
-	dt_mem=$(( 0x$(hexdump -ve '1/1 "%02x"' $reg | cut -c9-16) >> 20 ))
+	dt_mem=$(dt_mb "$device_tree/memory/reg") || return 0
 	booted_mem=
-	for arg in $(cat /proc/cmdline); do
+	for arg in $(cat "$proc_cmdline"); do
 		case "$arg" in
 		mem=*M)
 			booted_mem=${arg#mem=}
@@ -191,7 +198,61 @@ check_mem() {
 	exit 1
 }
 
+# 128 MB boards were set up with osmem=32M, which leaves Linux 25 MB -- one
+# live viewer before majestic's low-memory floor sheds it -- and HDAL a 96 MB
+# pool it does not fill. At 48M Linux has 16 MB more (six viewers measured on
+# an NT98566 + SC501AI) and HDAL still keeps 25 MB free, 14.5 MB with a JPEG
+# path running beside the stream. Moved once, for the next boot: osmem and
+# mem= in one environment write, so they cannot disagree, with osmem_default
+# marking it done, so a split an owner picks afterwards is left as it is.
+# #2107.
+set_default_osmem() {
+	dram=$(dt_mb "$device_tree/nvt_memory_cfg/dram/reg") || return 0
+	[ "$dram" -eq 128 ] || return 0
+	[ -z "$(fw_printenv -n osmem_default 2>/dev/null)" ] || return 0
+	case "$(fw_printenv -n osmem 2>/dev/null)" in
+	"" | 32M) ;;
+	*) return 0 ;;
+	esac
+
+	# Exactly one mem=, and the one that goes with the old split: a second
+	# one, or any other value, is a bootargs somebody wrote by hand, and
+	# moving part of it would leave it disagreeing with itself.
+	bootargs=$(fw_printenv -n bootargs 2>/dev/null)
+	mem=
+	for arg in $bootargs; do
+		case "$arg" in
+		mem=*)
+			[ -z "$mem" ] || return 0
+			mem=$arg
+			;;
+		esac
+	done
+	case "$mem" in
+	'mem=${osmem}' | 'mem=${osmem:-32M}')
+		bootargs=
+		;;
+	mem=32M)
+		bootargs=$(echo " $bootargs" | sed "s/ mem=32M/ mem=48M/; s/^ //")
+		;;
+	*)
+		return 0
+		;;
+	esac
+
+	batch=$(mktemp) || return 0
+	{
+		echo "osmem 48M"
+		[ -n "$bootargs" ] && echo "bootargs $bootargs"
+		echo "osmem_default 48M"
+	} >"$batch"
+	fw_setenv --script "$batch" &&
+		logger -s -p daemon.info -t novatek "Linux memory set to 48M of 128M; applies at the next boot"
+	rm -f "$batch"
+}
+
 check_mem
+set_default_osmem
 
 cd /lib/modules/4.19.91/novatek
 insert_ko
