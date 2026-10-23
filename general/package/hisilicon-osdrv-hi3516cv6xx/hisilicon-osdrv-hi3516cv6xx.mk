@@ -53,11 +53,13 @@ HISILICON_OSDRV_HI3516CV6XX_MPP_LIBS = \
 # Sensor .so blobs shipped from vendor flash where the openhisilicon
 # V5 SDK has no source mirror. Extracted from the original CV608 DEMO
 # board flash (Hi3516CV610_MPP_V1.0.1.0 B040, Sep 2024). Source-built
-# sensors (gc4023, os04d10, sc4336p, sc450ai, sc500ai, sc431hai) come
-# from hisilicon-opensdk and are not duplicated here.
+# sensors (gc4023, os04d10, sc4336p, sc450ai, sc500ai, sc431hai, sp2308)
+# come from hisilicon-opensdk and are not duplicated here. The demo board's
+# libsns_os02m10.so is gone: built for B040, it overran the B051 ISP's stack
+# in pfn_cmos_get_standby_cfg and majestic aborted on every start. Its sensor
+# (chip ID 0x5302) is the SP2308 source driver's.
 HISILICON_OSDRV_HI3516CV6XX_SENSOR_BLOBS = \
-	libsns_imx307.so \
-	libsns_os02m10.so
+	libsns_imx307.so
 
 # hi3516cv6xx_lite ships the same 5120 KB squashfs slot on an 8 MB NOR part
 # that master is already 0.68 KB short of (CI run 39116182919), so the IMX335
@@ -69,7 +71,7 @@ HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES =
 else
 define HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/*.ini
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx335_*.ini
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/modes
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/modes $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/modes/*.ini
 endef
@@ -99,11 +101,12 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# actually reaches (1520p 30, flex 1920x1080 30, full10 40), not "high fps".
 	$(HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES)
 
-	# ipctool's i2c probe reports the OmniVision OS02M10 chip ID
-	# (0x5302) as "SP2308" (rebadged SuperPix marker — same silicon).
-	# Symlink so devices whose u-boot env still carries that legacy
-	# name resolve to the correct driver without a manual fix.
-	ln -sf libsns_os02m10.so $(TARGET_DIR)/usr/lib/sensors/libsns_sp2308.so
+	# SP2308, on both variants with its driver: ipcinfo names chip ID
+	# 0x5302 sp2308, which is the name majestic looks this profile up by.
+	# 1080p30 RAW10 on MIPI lanes 0 and 2, BGGR (checked under red, green
+	# and blue light).
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/sp2308_i2c_1080p.ini
 
 endef
 
