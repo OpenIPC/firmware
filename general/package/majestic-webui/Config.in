@@ -26,14 +26,14 @@ config BR2_PACKAGE_MAJESTIC_WEBUI_PTZ
 
 config BR2_PACKAGE_MAJESTIC_WEBUI_COUNTING
 	bool "Counting page"
-	default y if BR2_PACKAGE_XMNPU_MODELS || BR2_PACKAGE_CPU_MODELS
+	default y if BR2_PACKAGE_XMNPU_MODELS || BR2_PACKAGE_CPU_MODELS_PERSON
 	help
 	  The Counting page: people crossing lines in and out, who is in
 	  each zone and for how long, by the hour and by the day. Counting
 	  runs on majestic's object detection, so the option is on wherever
 	  the image carries a detection model (xmnpu-models for the NPU,
-	  cpu-models for the CPU); without one there is nothing to count
-	  with.
+	  cpu-models' person detector for the CPU); without one there is
+	  nothing to count with. cpu-models' drum reader alone is not one.
 
 config BR2_PACKAGE_MAJESTIC_WEBUI_FPV
 	bool "FPV (wfb-ng) settings page"
