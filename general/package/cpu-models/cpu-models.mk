@@ -20,12 +20,19 @@ define CPU_MODELS_EXTRACT_CMDS
 	cp $(addprefix $(CPU_MODELS_DL_DIR)/,$(CPU_MODELS_SOURCE) $(CPU_MODELS_EXTRA_DOWNLOADS)) $(@D)/
 endef
 
+# All three are fetched and hash-checked whichever are chosen: one release,
+# one hash file.
+CPU_MODELS_FILES = \
+	$(if $(BR2_PACKAGE_CPU_MODELS_PERSON),person.qnet person.json) \
+	$(if $(BR2_PACKAGE_CPU_MODELS_DRUM),drum.qnet)
+
 define CPU_MODELS_INSTALL_TARGET_CMDS
-	# v1's blob, which the engine no longer reads, out of a reused target
-	rm -f $(TARGET_DIR)/usr/share/majestic/person.pdnet
+	# v1's blob, which the engine no longer reads, and any model no longer
+	# chosen, out of a reused target
+	rm -f $(addprefix $(TARGET_DIR)/usr/share/majestic/,person.pdnet person.qnet person.json drum.qnet)
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/share/majestic
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/share/majestic \
-		$(@D)/person.qnet $(@D)/person.json $(@D)/drum.qnet
+	$(if $(strip $(CPU_MODELS_FILES)),$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/share/majestic \
+		$(addprefix $(@D)/,$(CPU_MODELS_FILES)))
 endef
 
 $(eval $(generic-package))
