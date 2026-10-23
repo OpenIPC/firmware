@@ -381,9 +381,12 @@ FIXED_SLOTS_FIT = $(shell k=$$(( $$(stat -c %s $(TARGET)/images/uImage 2>/dev/nu
 	[ $$k -gt 0 ] && [ $$k -le 1983 ] && [ $$r -gt 0 ] && [ $$r -le $(1) ] && echo y)
 
 define FIXED_SLOTS_SKIP
-	echo "::warning::$(BR2_OPENIPC_SOC_MODEL) $(BR2_OPENIPC_VARIANT): uImage" \
-		"$$(( $$(stat -c %s $(TARGET)/images/uImage) / 1024 ))KB/1983KB, rootfs.squashfs" \
-		"$$(( $$(stat -c %s $(TARGET)/images/rootfs.squashfs) / 1024 ))KB/$(1)KB outgrow the fixed slots;" \
+	k=$$(( $$(stat -c %s $(TARGET)/images/uImage) / 1024 )); \
+	r=$$(( $$(stat -c %s $(TARGET)/images/rootfs.squashfs) / 1024 )); \
+	over=; \
+	[ $$k -le 1983 ] || over="uImage $${k}KB/1983KB"; \
+	[ $$r -le $(1) ] || over="$${over:+$$over, }rootfs.squashfs $${r}KB/$(1)KB"; \
+	echo "::warning::$(BR2_OPENIPC_SOC_MODEL) $(BR2_OPENIPC_VARIANT): $$over outgrew the fixed slot;" \
 		"shipping the split package only"
 endef
 
