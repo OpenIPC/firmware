@@ -96,8 +96,10 @@ make_symlink() {
 		SNS_TYPE=$(ipcinfo --short-sensor)
 		logger -s -p daemon.info -t xiongmai "You sensor is $SNS_TYPE and symlink to libsns.so not found"
 
+		# Sensors driven by libsns_X50_XM530 (see the openxiongmai README) that
+		# ipcinfo names unambiguously; everything else is in X123.
 		case $SNS_TYPE in
-			imx335|sc335e)
+			imx335|sc335e|sc5235|sc5332)
 				logger -s -p daemon.info -t xiongmai "Create new symlink to libsns_X50_XM530.so"
 				ln -sf /usr/lib/sensors/libsns_X50_XM530.so /usr/lib/libsns.so
 				;;
