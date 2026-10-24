@@ -1,0 +1,8 @@
+config BR2_PACKAGE_AXERA_OSDRV_AX620U
+	bool "axera-osdrv-ax620u"
+	help
+	  Axera AX620U (Cortex-A7 x4, AArch32) closed kernel modules,
+	  shipped in this package at kernel 4.19.125's vermagic. Unlike
+	  AX620E, AX620U has no existing open-source driver starting point
+	  for anything else (clock, pinctrl, platform code); see this
+	  package's README.
