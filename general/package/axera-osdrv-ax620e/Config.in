@@ -1,0 +1,10 @@
+config BR2_PACKAGE_AXERA_OSDRV_AX620E
+	bool "axera-osdrv-ax620e"
+	help
+	  Axera AX620E (AX630C/AX620E, Cortex-A53) kernel modules. VIN/CSI2
+	  capture, the VC8000E encoder and Hantro decoder, and EIP-130
+	  crypto build from source as part of the axera-ax620e kernel
+	  branch; the ISP 3A (ax_proton.ko), NPU (ax_npu.ko) and the rest of
+	  the vendor codec stack are closed binaries shipped in this
+	  package at kernel 5.15.73's vermagic. See this package's README
+	  for provenance.
