@@ -388,6 +388,14 @@ case " $* " in
                       rm -rf "$target"; mkdir -p "$target" ;;
         esac
         exit 0 ;;
+    # On the split layout the handed-off RAM phase mounts the jffs2 overlay
+    # read-only to copy the settings out, since its own mount has gone
+    # with the old root. It finds the marker the camera had.
+    *" -t jffs2 "*)
+        [ "1" = "$STUB_JFFS2_RO_FAIL" ] && exit 255
+        echo "mount jffs2 ro $target" >> "$FLASH_LOG"
+        mkdir -p "$target/etc"; echo settings > "$target/etc/marker"
+        exit 0 ;;
 esac
 case "${STUB_MOUNT:-ok}" in
     ok)
@@ -3380,6 +3388,59 @@ if [ "$RC" -eq 0 ] && [ "$(blob_len 2 "$OVL" 0x50000)" = 000000000000 ]; then
     ok "split layout -n: an empty settings blob, so the first boot starts clean"
 else
     bad "split layout -n, rc=$RC len='$(blob_len 2 "$OVL" 0x50000)' out='$OUT'"
+fi
+
+# Handed off: the RAM phase runs as PID 1, release_old_root has let go of the
+# old root and the overlay's mount with it, so /proc/mounts no longer shows
+# rootfs_data. The settings are still on it, and must still be carried: an
+# empty blob here is the camera starting from defaults after every NOR upgrade
+# since the hand-off (#2648).
+split_handed_off() {
+    split_env split
+    printf 'tmpfs %s/tmp tmpfs rw 0 0\n' "$SB" > "$SB/proc/mounts"
+    RUN_ENV="$RUN_ENV _ramfs_phase=1 _handoff=1 split_overlay_mounted=1 image_combined=1 update_kernel=1 update_rootfs=1 model=gk7205v200 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
+    tar -xzf "$SB/tmp/fw.tgz" -C "$SB/tmp"
+}
+split_handed_off
+run
+u=$(logged_at "umount -l /mnt"); m=$(logged_at "mount jffs2 ro")
+if [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] &&
+    blob_files 2 "$OVL" 0x50000 | grep -q 'etc/marker' &&
+    [ -n "$u" ] && [ -n "$m" ] && [ "$u" -lt "$m" ] && rebooted; then
+    ok "split layout, handed off: the overlay is mounted read-only and the settings carried"
+else
+    bad "split layout handed off must carry the settings, len='$(blob_len 2 "$OVL" 0x50000)' log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# The overlay cannot be read: refused before the write, not upgraded to defaults.
+split_handed_off
+STUB_JFFS2_RO_FAIL=1 run
+if printf '%s' "$OUT" | grep -q "Could not read the settings" &&
+    [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && ! printf '%s' "$OUT" | grep -q "Firmware updated"; then
+    ok "split layout, handed off: an overlay that will not mount stops the run, nothing written"
+else
+    bad "split layout handed off, unreadable overlay must refuse, rc=$RC out='$OUT'"
+fi
+
+# -n handed off: nothing to carry, nothing mounted.
+split_handed_off
+RUN_ENV="$RUN_ENV clear_overlay=1"
+run
+if [ "$(blob_len 2 "$OVL" 0x50000)" = 000000000000 ] && ! grep -q "mount jffs2" "$SB/tmp/flash.log"; then
+    ok "split layout, handed off, -n: an empty blob, the overlay left unmounted"
+else
+    bad "split layout handed off -n, len='$(blob_len 2 "$OVL" 0x50000)' out='$OUT'"
+fi
+
+# The first phase records that there are settings, for the RAM phase to look for.
+split_env split
+STUB_PIVOT_RC=0
+run -z --archive="$SB/tmp/fw.tgz"
+if grep -q "^kill -QUIT 1" "$SB/tmp/flash.log" &&
+    grep -q "split_overlay_mounted=.1" "$SB/ram/sysupgrade.env" 2>/dev/null; then
+    ok "split layout: the hand-off carries that the overlay was mounted"
+else
+    bad "split layout hand-off must record the mounted overlay, log='$(cat "$SB/tmp/flash.log")' env='$(grep overlay "$SB/ram/sysupgrade.env" 2>/dev/null)' out='$OUT'"
 fi
 
 # From fixed slots: the image runs on from the kernel slot into the rootfs one,

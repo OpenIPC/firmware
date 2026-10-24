@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.76
+scr_version=1.0.77
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -341,6 +341,10 @@ check_combined_fits() {
 	[ $(($(nor_split_base) + $(stat -c %s "$x"))) -le "$ovl" ] ||
 		die "$x runs past the end of its squashfs ($(printf 0x%x "$ovl")): not a firmware.bin as the build packs it. Nothing was written."
 	blob=$(nor_split_blob_size)
+	# Whether there are settings to carry: the hand-off takes the overlay's
+	# mount away before the write (release_old_root), so the RAM phase cannot
+	# tell from /proc/mounts any more. See do_update_firmware_split.
+	[ -n "$(nor_split_overlay_mp)" ] && split_overlay_mounted=1
 	[ $((ovl + blob)) -le "$end" ] ||
 		die "$x and the settings do not fit the flash: the image ends at $(printf 0x%x "$ovl"), the settings need $((blob / 1024)) KB, the flash ends at $(printf 0x%x "$end"). Nothing was written; -n upgrades without the settings."
 }
@@ -914,11 +918,16 @@ nor_split_url() {
 	fi
 }
 
+# Where the jffs2 overlay on rootfs_data is mounted, if it is.
+nor_split_overlay_mp() {
+	awk -v d="$(get_device rootfs_data | sed 's|/dev/mtd|/dev/mtdblock|')" '$1 == d { print $2; exit }' /proc/mounts
+}
+
 # The settings blob this run will write, in bytes: the header, the gzipped tar
 # of the overlay, whole 64 KiB blocks; one block for -n.
 nor_split_blob_size() {
 	local mp n=0
-	mp=$(awk -v d="$(get_device rootfs_data | sed 's|/dev/mtd|/dev/mtdblock|')" '$1 == d { print $2; exit }' /proc/mounts)
+	mp=$(nor_split_overlay_mp)
 	if [ "1" != "$clear_overlay" ] && [ -n "$mp" ]; then
 		n=$(tar -C "$mp" -cf - . 2>&3 | gzip | wc -c)
 	fi
@@ -944,10 +953,29 @@ do_update_firmware_split() {
 	[ -n "$end" ] || die "The flash layout is neither the split one nor fixed slots this upgrade can turn into it. Nothing was written."
 	rm -f "$blob" "$tgz"
 	quiesce_overlay
-	mp=$(awk -v d="$(get_device rootfs_data | sed 's|/dev/mtd|/dev/mtdblock|')" '$1 == d { print $2; exit }' /proc/mounts)
+	mp=$(nor_split_overlay_mp)
+	# Handed off, the overlay is no longer mounted: release_old_root let go of
+	# everything behind /mnt, the overlay with it. Reading /proc/mounts alone
+	# then took the camera for one without settings and staged an empty blob,
+	# which the first boot honours by starting from defaults -- every NOR
+	# upgrade since the hand-off (#2648). Nothing holds rootfs_data any more,
+	# so mount it read-only here and copy the settings from that, as
+	# rewrite_ubifs does on UBI. Refusing costs a reboot with nothing written;
+	# going on would cost the settings.
+	if [ "1" != "$clear_overlay" ] && [ -z "$mp" ] && [ "1" = "$split_overlay_mounted" ]; then
+		mp=/tmp/overlay.old
+		mkdir -p "$mp" &&
+			mount -t jffs2 -o ro "$(get_device rootfs_data | sed 's|/dev/mtd|/dev/mtdblock|')" "$mp" 2>&3 ||
+			die "Could not read the settings to carry them over. Nothing was written; -n upgrades without them."
+		overlay_mounted_here=1
+	fi
 	if [ "1" != "$clear_overlay" ] && [ -n "$mp" ]; then
 		tar -C "$mp" -cf - . 2>&3 | gzip > "$tgz" ||
 			die "Could not copy the settings into RAM. Nothing was written; -n upgrades without them."
+		if [ "1" = "$overlay_mounted_here" ]; then
+			busybox umount "$mp" 2>&3
+			rmdir "$mp" 2>&3
+		fi
 	else
 		# Length 0: the first boot erases the overlay and restores nothing.
 		: > "$tgz"
@@ -2584,7 +2612,7 @@ enter_ramfs() {
 	export live_flash_dirty root_on_flash flash_touched services_stopped
 	# remote_update: verify_rootfs branches on it for an unmountable rootfs.
 	# lock_owned: die() needs it to know the lock is ours to remove.
-	export remote_update lock_owned
+	export remote_update lock_owned split_overlay_mounted
 	# wdog_userspace_owned: watchdog_keep must not claim a device nobody was
 	# petting, and the scan behind that answer needs a /proc this pivot is about
 	# to move and a majestic it is about to leave behind /mnt.
