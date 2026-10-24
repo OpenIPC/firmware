@@ -972,8 +972,11 @@ do_update_firmware_split() {
 	if [ "1" != "$clear_overlay" ] && [ -n "$mp" ]; then
 		tar -C "$mp" -cf - . 2>&3 | gzip > "$tgz" ||
 			die "Could not copy the settings into RAM. Nothing was written; -n upgrades without them."
+		# Read-only, but still a filesystem on the flash about to be
+		# rewritten: let go of it before the write, or do not write.
 		if [ "1" = "$overlay_mounted_here" ]; then
-			busybox umount "$mp" 2>&3
+			busybox umount "$mp" 2>&3 ||
+				die "Could not release the settings partition after copying it. Nothing was written."
 			rmdir "$mp" 2>&3
 		fi
 	else

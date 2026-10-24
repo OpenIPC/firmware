@@ -343,6 +343,7 @@ case "$applet" in
     kill|ubirmvol|ubirsvol|ubimkvol)
                             echo "$applet $*" >> "$FLASH_LOG" ;;
     umount)                 echo "$applet $*" >> "$FLASH_LOG"
+                            case "$*" in *overlay.old*) [ "1" = "$STUB_OVL_UMOUNT_FAIL" ] && exit 1 ;; esac
                             exit "${STUB_BB_UMOUNT_RC:-0}" ;;
     # The applet list enter_ramfs links into the RAM root, and the RAM-root
     # reservation counts. Silent unless a test asks for one.
@@ -391,10 +392,14 @@ case " $* " in
     # On the split layout the handed-off RAM phase mounts the jffs2 overlay
     # read-only to copy the settings out, since its own mount has gone
     # with the old root. It finds the marker the camera had.
+    # The files come from STUB_JFFS2_DIR/<device name>, so a mount of any
+    # other device finds nothing and fails, as a wrong partition would.
     *" -t jffs2 "*)
         [ "1" = "$STUB_JFFS2_RO_FAIL" ] && exit 255
-        echo "mount jffs2 ro $target" >> "$FLASH_LOG"
-        mkdir -p "$target/etc"; echo settings > "$target/etc/marker"
+        dev=${@: -2:1}; src=$STUB_JFFS2_DIR/${dev##*/}
+        [ -d "$src" ] || exit 255
+        echo "mount jffs2 ro $dev $target" >> "$FLASH_LOG"
+        mkdir -p "$target" && cp -a "$src/." "$target/"
         exit 0 ;;
 esac
 case "${STUB_MOUNT:-ok}" in
@@ -3398,14 +3403,19 @@ fi
 split_handed_off() {
     split_env split
     printf 'tmpfs %s/tmp tmpfs rw 0 0\n' "$SB" > "$SB/proc/mounts"
-    RUN_ENV="$RUN_ENV _ramfs_phase=1 _handoff=1 split_overlay_mounted=1 image_combined=1 update_kernel=1 update_rootfs=1 model=gk7205v200 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
+    # What is on rootfs_data (mtdblock5): the settings, unlike anything the
+    # stub could make up.
+    rm -rf "$SB/jffs2"; mkdir -p "$SB/jffs2/mtdblock5/etc"
+    echo "from-rootfs_data" > "$SB/jffs2/mtdblock5/etc/carried"
+    RUN_ENV="$RUN_ENV STUB_JFFS2_DIR=$SB/jffs2 _ramfs_phase=1 _handoff=1 split_overlay_mounted=1 image_combined=1 update_kernel=1 update_rootfs=1 model=gk7205v200 skip_soc=1 skip_ver=1 root_on_flash=1 ram_root_shipped=1"
     tar -xzf "$SB/tmp/fw.tgz" -C "$SB/tmp"
 }
 split_handed_off
 run
 u=$(logged_at "umount -l /mnt"); m=$(logged_at "mount jffs2 ro")
 if [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] &&
-    blob_files 2 "$OVL" 0x50000 | grep -q 'etc/marker' &&
+    blob_files 2 "$OVL" 0x50000 | grep -q 'etc/carried' &&
+    grep -q "mount jffs2 ro .*mtdblock5 " "$SB/tmp/flash.log" &&
     [ -n "$u" ] && [ -n "$m" ] && [ "$u" -lt "$m" ] && rebooted; then
     ok "split layout, handed off: the overlay is mounted read-only and the settings carried"
 else
@@ -3420,6 +3430,16 @@ if printf '%s' "$OUT" | grep -q "Could not read the settings" &&
     ok "split layout, handed off: an overlay that will not mount stops the run, nothing written"
 else
     bad "split layout handed off, unreadable overlay must refuse, rc=$RC out='$OUT'"
+fi
+
+# The copy is made but the partition will not let go: refused before the write.
+split_handed_off
+STUB_OVL_UMOUNT_FAIL=1 run
+if printf '%s' "$OUT" | grep -q "Could not release the settings partition" &&
+    [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && ! printf '%s' "$OUT" | grep -q "Firmware updated"; then
+    ok "split layout, handed off: a settings mount that will not unmount stops the run, nothing written"
+else
+    bad "split layout handed off, stuck settings mount must refuse, rc=$RC out='$OUT'"
 fi
 
 # -n handed off: nothing to carry, nothing mounted.
