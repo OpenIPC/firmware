@@ -1,7 +1,8 @@
 # AX620U
 
-Status: scaffold. `ax620u.lite.config` does not exist yet -- it
-depends on the `axera-ax620u` kernel branch, not started.
+Status: `ax620u.lite.config` is the real working config from the
+`axera-ax620u` kernel branch (openipc-linux-ax620u, branch
+`axera-ax620u`) -- builds clean, produces a real `zImage` + devicetree.
 
 Target kernel version: 4.19.125, ARMv7 (Cortex-A7 x4). Read directly
 off a real deployed AX620U camera firmware's kernel modules'
