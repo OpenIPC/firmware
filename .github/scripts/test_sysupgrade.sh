@@ -31,7 +31,7 @@ bad() { echo "FAIL $*"; fail=$((fail + 1)); }
 
 [ -f "$SRC" ] || { echo "FAIL cannot find $SRC — run me from the repo root"; exit 1; }
 
-for t in xxd od timeout dash; do
+for t in xxd od timeout dash busybox; do
     command -v "$t" >/dev/null 2>&1 || { echo "FAIL required tool '$t' is missing"; exit 1; }
 done
 
@@ -165,6 +165,13 @@ set_cmdline "$CMDLINE_FLASH"
 
 # --- stubs -----------------------------------------------------------------
 stub() { printf '#!/bin/bash\n%s\n' "$2" > "$SB/bin/$1"; chmod +x "$SB/bin/$1"; }
+
+# The camera's timeout, not the host's. They differ exactly where it matters:
+# sysupgrade ignores TERM past its #2025 trap, and GNU timeout gives its child
+# TERM back at default while busybox's does not, so the host's timeout let the
+# mount-hang case pass against a bound that never fired on a camera.
+# By absolute path: `busybox` on the run's PATH is the stub below.
+stub timeout "exec $(command -v busybox) timeout \"\$@\""
 
 stub ipcinfo    'case "$1" in -v) echo "${STUB_VENDOR:-sigmastar}";; -F) echo "${STUB_FLASH:-nor}";; esac'
 # majestic is running when a test says so, and only then: the host's own

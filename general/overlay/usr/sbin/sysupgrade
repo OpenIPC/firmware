@@ -453,16 +453,23 @@ do_update_kernel() {
 # and the flash write, so an unbounded mount that wedges is indistinguishable from
 # a dead tool: the upgrade stops with no error, taking any GUI driving it down too.
 #
-# Best-effort, not a guarantee: timeout sends TERM and then waits to reap, so a
-# mount stuck in uninterruptible sleep still outlives it. It bounds the realistic
-# failures — a slow loop/probe, or a decompressor the kernel lacks — which is what
-# strands upgrades in practice.
+# KILL, not timeout's default TERM: this runs after `trap '' HUP INT TERM PIPE`
+# (#2025), and SIG_IGN survives exec, so mount ignores a TERM. busybox timeout
+# execs the program in its own place and only signals it, so with TERM the bound
+# never fired on a camera, and the run waited on the mount for as long as it took.
+# GNU timeout hid that on CI hosts: it catches TERM itself, so its child execs
+# with TERM at default. Ubuntu 26.04's uutils timeout does not, which is how it
+# surfaced.
+#
+# Best-effort, not a guarantee: a mount stuck in uninterruptible sleep outlives
+# even KILL. It bounds the realistic failures — a slow loop/probe, or a
+# decompressor the kernel lacks — which is what strands upgrades in practice.
 #
 # -t squashfs skips kernel fs autoprobing of what may be a garbage file; the error
 # text is returned rather than discarded, so the caller can print it.
 mount_rootfs() {
 	if command -v timeout >/dev/null 2>&1; then
-		timeout "$mount_wait" mount -t squashfs -o ro "$1" "$2" 2>&1
+		timeout -s KILL "$mount_wait" mount -t squashfs -o ro "$1" "$2" 2>&1
 	else
 		mount -t squashfs -o ro "$1" "$2" 2>&1
 	fi
