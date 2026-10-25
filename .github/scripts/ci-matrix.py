@@ -148,6 +148,10 @@ UNBUILT_BOARDS = {
     "hi3516ev300_dev": "variant 'dev', not a standard matrix variant",
     "hi3516ev300_glibc": "variant 'glibc', not a standard matrix variant",
     "t31glibc_lite": "glibc toolchain variant of t31_lite",
+    # The waybeam image is a real, buildable variant, but it is a streamer
+    # flavor (Majestic replaced by waybeam) rather than one of the standard
+    # lite/ultimate/neo matrix variants, so it is not built here.
+    "hi3516cv6xx_waybeam": "variant 'waybeam', not a standard matrix variant",
 
     # Real, and built locally. The other Anyka boards build every driver from
     # source; this one's ISP, encoder, Ethernet and SD drivers are the
@@ -290,18 +294,19 @@ UNBUILT_FAMILIES = {
 # builder's apfpv devices set it directly for their own S99msposd. Still a
 # package that left the matrix, not one that left the tree.
 #
-# waybeam is unbuildable by construction here rather than merely unselected: it
-# depends on !BR2_PACKAGE_MAJESTIC, and every sigmastar defconfig in ALL_BOARDS
-# sets BR2_PACKAGE_MAJESTIC=y, because both drive the same sensor and encoder.
-# The same exclusion holds downstream, so it is selected nowhere at all: every
-# OpenIPC/builder defconfig that selects wifibroadcast-ng also sets
-# BR2_PACKAGE_MAJESTIC=y, and no defconfig in either tree sets
-# BR2_PACKAGE_WAYBEAM=y. The symbol appears only where it is defined, in
-# general/package/waybeam/Config.in, and in this comment. The line this replaces
-# claimed builder's FPV variants selected it, which sent a contributor debugging
-# an FPV OSD fault (#2395) after a waybeam log file that no shipped image
-# writes. A defconfig with Majestic off, mainline or downstream, would take it
-# off this list.
+# waybeam stays unbuilt by the matrix rather than merely unselected: it depends
+# on !BR2_PACKAGE_MAJESTIC, and every sigmastar defconfig in ALL_BOARDS sets
+# BR2_PACKAGE_MAJESTIC=y, because both drive the same sensor and encoder. The
+# exclusion holds downstream too -- every OpenIPC/builder defconfig that selects
+# wifibroadcast-ng also sets BR2_PACKAGE_MAJESTIC=y -- so no ALL_BOARDS board
+# selects it. The one defconfig here that does is hi3516cv6xx_waybeam, which is
+# in UNBUILT_BOARDS below as a non-standard variant; that entry, not this one,
+# is the reason the image is still not built by CI. The line this replaces
+# claimed builder's FPV variants selected waybeam, which sent a contributor
+# debugging an FPV OSD fault (#2395) after a log file that no shipped image
+# writes. A node in ALL_BOARDS with Majestic off would take the package off this
+# list; a board in UNBUILT_BOARDS that selects it does not, because the matrix
+# never builds that board.
 #
 # usb-dual-role is here for the ordinary reason: it needs a device tree that
 # wires dwc3 as dual-role and a kernel built with CONFIG_USB_DWC3_DUAL_ROLE,
