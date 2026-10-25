@@ -3253,7 +3253,7 @@ release_field() {
 # -- on a mount that hangs, that is mount_wait seconds each.
 read_candidate_build() {
 	local x n loop err ofs= soc= verdict= refusal= y=/tmp/rootfs.peek
-	to_build=$build_id to_version= to_note=
+	to_build=$build_id to_version= to_note= kernel_only=
 	if [ "1" = "$image_combined" ]; then
 		# firmware.bin: the uImage, then the squashfs at the next 64 KiB boundary.
 		x=/tmp/firmware.bin.$model
@@ -3261,7 +3261,9 @@ read_candidate_build() {
 	elif [ "1" = "$update_rootfs" ]; then
 		x=$(rootfs_image)
 	else
-		to_note="kernel only; the rootfs stays"
+		# The rootfs carries the BUILD_ID, and it is not being written: the
+		# camera stays on the build it runs, with another kernel under it.
+		kernel_only=1
 		return 0
 	fi
 	[ -f "$x" ] || return 0
@@ -3306,15 +3308,20 @@ print_transition() {
 	local from=$(get_build_id) to rb
 	from_build=${from:-unknown}
 	to=${to_build:-unknown}
-	if [ -n "$to_version" ]; then
+	if [ "1" = "$kernel_only" ]; then
+		to="$from_build, with the kernel from ${to_build:-$(kernel_image)} (the rootfs stays)"
+	elif [ -n "$to_version" ]; then
 		to="$to ($to_version)"
 	elif [ -n "$to_note" ] || [ -z "$to_build" ]; then
 		to="$to (${to_note:-the image carries no build ID})"
 	fi
 	# Whether --build can still reach the build being left. Asked of the
-	# manifest this run fetched, or fetched now -- soft, a manifest that does
-	# not come is no reason to stop an upgrade the operator asked for.
-	if [ "1" != "$manifest_fetched" ] && [ -z "$archive" ]; then
+	# manifest this run fetched, or fetched now on a run that downloaded its
+	# image and so is online -- soft, a manifest that does not come is no
+	# reason to stop an upgrade the operator asked for. A run from local files
+	# may be offline, with its services already stopped: it does not wait on
+	# the network for this, and gets the unverified wording instead.
+	if [ "1" != "$manifest_fetched" ] && [ "1" = "$remote_update" ] && [ -z "$archive" ]; then
 		curl --connect-timeout 10 -s -f -m 20 -L $(tls_opts "$MANIFEST_URL") "$MANIFEST_URL" \
 			-o "$MANIFEST_CACHE" 2>&3 && manifest_fetched=1
 	fi
@@ -3341,7 +3348,7 @@ print_transition() {
 		fi
 		;;
 	esac
-	[ "1" = "$clear_overlay" ] ||
+	[ "1" = "$clear_overlay" ] || [ "$to_build" = "$from_build" ] ||
 		echo_c 36 " Recorded on the camera: 'sysupgrade --history' lists every upgrade."
 	case "$to_build" in nightly-*)
 		echo_c 33 " Daily builds are not release-tested: features may regress." ;;
@@ -3354,18 +3361,27 @@ print_transition() {
 # writable /etc left to write to (the pivot, the hand-off), and kept to the
 # last 50 lines so a camera upgraded nightly for years does not grow its
 # overlay for it. A run that wipes the overlay records nothing: the wipe would
-# take the line with it.
+# take the line with it. Nor does one that stays on the build it runs: the
+# flash phase skips a same-version image, and a forced reflash of the same
+# build is not a transition. A kernel-only run is recorded as kernel:<source>,
+# because the rootfs, and with it the build the camera reports, stays.
 #
 # Not to syslog: free_resources stops syslogd before the download (#2415), so
 # by the time the target is known there is no daemon to hear it. The remote
 # line free_resources sends already names the build being left.
 record_transition() {
 	[ "1" = "$clear_overlay" ] && return 0
-	local door=cli
+	local door=cli to=${to_build:-unknown}
 	[ "1" = "$web_update" ] && door=web
+	if [ "1" = "$kernel_only" ]; then
+		to=${kernel_file##*/}
+		to="kernel:${to_build:-${to:-unknown}}"
+	elif [ "$to_build" = "$from_build" ]; then
+		return 0
+	fi
 	{
 		tail -n 49 "$HISTORY_FILE" 2>/dev/null
-		echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $from_build ${to_build:-unknown} $door"
+		echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $from_build $to $door"
 	} > "$HISTORY_FILE.new" 2>&3 && mv "$HISTORY_FILE.new" "$HISTORY_FILE" 2>&3 && sync ||
 		{ rm -f "$HISTORY_FILE.new"; echo_c 33 "Could not record this upgrade in $HISTORY_FILE."; }
 	return 0

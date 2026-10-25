@@ -3689,6 +3689,14 @@ unset STUB_SOC STUB_SPLIT_PUBLISHED
 # back BEFORE the first write, and the history has to keep the line.
 HIST="$SB/etc/sysupgrade.history"
 banner_case() { reset_env; rm -f "$SB/tmp/manifest.flat"; STUB_IMG_BUILD_ID=nightly-20260711-bbbbbbb; }
+# The same two images, downloaded by `-k -r` from the default URL: a run that
+# is online, so it may ask the manifest about the build being left.
+banner_dl() {
+    make_archive "$K" "$R"
+    mkdir -p "$SB/keep" && mv "$SB/tmp/fw.tgz" "$SB/keep/dl.tgz"
+    rm -f "$SB"/tmp/*.ssc338q
+    STUB_DL_FILE="$SB/keep/dl.tgz"
+}
 
 banner_case
 run -z --kernel="$K" --rootfs="$R"
@@ -3735,27 +3743,65 @@ fi
 
 # The rollback line is only as good as the manifest: a build pruned from it
 # cannot be reached by --build, and saying otherwise is worse than silence.
-banner_case
+banner_case; banner_dl
 printf 'nightly-20260711-bbbbbbb ssc338q_lite nor x\nnightly-20260601-aaaaaaa ssc338q_lite nor x\n' > "$SB/manifest.flat"
 RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
-run -z --kernel="$K" --rootfs="$R"
+run -z -k -r
 if printf '%s' "$OUT" | grep -qF "return to this one with" &&
     printf '%s' "$OUT" | grep -qF "sysupgrade --build=nightly-20260601-aaaaaaa"; then
     ok "rollback line: the build being left is in the manifest"
 else
     bad "rollback line, listed build: out='$OUT'"
 fi
-banner_case
+banner_case; banner_dl
 printf 'nightly-20260711-bbbbbbb ssc338q_lite nor x\n' > "$SB/manifest.flat"
 RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
-run -z --kernel="$K" --rootfs="$R"
+run -z -k -r
 if printf '%s' "$OUT" | grep -qF "nightly-20260601-aaaaaaa is no longer in the manifest" &&
     ! printf '%s' "$OUT" | grep -qF "sysupgrade --build=nightly-20260601-aaaaaaa" && flashed /dev/mtd3; then
     ok "rollback line: a pruned build is not offered, and the upgrade goes on"
 else
     bad "rollback line, pruned build: rc=$RC out='$OUT'"
 fi
+# A run from local files may be offline, with its services already stopped:
+# it does not wait on the network for the rollback line, and says the
+# command holds only while the build is published.
+banner_case
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+run -z --kernel="$K" --rootfs="$R"
+if [ ! -s "$SB/tmp/manifest.flat" ] && printf '%s' "$OUT" | grep -qF "is still published" &&
+    flashed /dev/mtd3; then
+    ok "rollback line: local files do not fetch the manifest"
+else
+    bad "rollback line, local files: manifest='$(cat "$SB/tmp/manifest.flat" 2>/dev/null)' out='$OUT'"
+fi
 rm -f "$SB/manifest.flat" "$SB/tmp/manifest.flat"
+
+# The history records transitions. Staying on the running build is not one:
+# the flash phase skips a same-version image, and a forced reflash of the
+# same build changes nothing a user would roll back from.
+banner_case
+STUB_IMG_BUILD_ID=nightly-20260601-aaaaaaa
+STUB_IMG_VERSION=2026.06.01
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && ! flashed /dev/mtd3 && [ ! -e "$HIST" ] &&
+    ! printf '%s' "$OUT" | grep -qF "sysupgrade --history"; then
+    ok "same build: nothing recorded"
+else
+    bad "same build: rc=$RC history='$(cat "$HIST" 2>/dev/null)' out='$OUT'"
+fi
+
+# A kernel-only run leaves the rootfs, and so the build the camera reports,
+# where it was: it must not claim the camera moved to another build.
+banner_case
+run -z --kernel="$K"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && ! flashed /dev/mtd3 &&
+    printf '%s' "$OUT" | grep -qF "TO: nightly-20260601-aaaaaaa, with the kernel from" &&
+    tail -1 "$HIST" | grep -q " nightly-20260601-aaaaaaa kernel:uImage.ssc338q cli$"; then
+    ok "kernel only: the build stays, the kernel is named"
+else
+    bad "kernel only: rc=$RC history='$(cat "$HIST" 2>/dev/null)' out='$OUT'"
+fi
 
 # builder lists a device profile under the chip it was built for: a
 # gk7205v210 profile is gk7205v210_<...> in its manifest, while $model is
