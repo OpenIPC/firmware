@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.77
+scr_version=1.0.78
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -60,6 +60,9 @@ INITTAB=${INITTAB:-/etc/inittab}
 # Where MTD publishes its partitions, and the block devices the split NOR
 # layout is written through. Overridable for the same reason.
 MTD_SYS=${MTD_SYS:-/sys/class/mtd}
+# The NOR layout this run found before its first write (nor_split_devs), never
+# one handed in from outside: a stale value would decide where the image goes.
+nor_split_layout=
 MTDBLOCK=${MTDBLOCK:-/dev/mtdblock}
 MTDCHR=${MTDCHR:-/dev/mtd}
 # Where a handed-off flash phase writes its log, and the port that serves it.
@@ -420,7 +423,7 @@ do_update_kernel() {
 			local fsoc=$(fit_soc "$x")
 			[ -n "$fsoc" ] && check_soc "$fsoc"
 		else
-			local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
+			local ksoc=$(nor_split_soc "$x")
 			if [ "$vendor" != "ingenic" ] && [ "$vendor" != "rockchip" ]; then
 				check_soc "$ksoc"
 			fi
@@ -793,9 +796,38 @@ nor_split_blocks() {
 	echo $(((64 + size + 65535) / 65536))
 }
 
-# The SoC a uImage was built for: its name field, "Linux-<version>-<soc>".
+# The SoC a uImage was built for: the last word of its name field,
+# "Linux-<version>-<soc>", or "Linux-3.4.43-Goke-gk7102" as the gk710x kernel
+# names itself -- whose third word, "Goke", no camera is.
 nor_split_soc() {
-	od -j 32 -N 32 -S 1 -A n "$1" 2>&3 | cut -d- -f3 | tr -d ' '
+	od -j 32 -N 32 -S 1 -A n "$1" 2>&3 | tr -d ' ' | sed 's/.*-//'
+}
+
+# "mtdN offset size name" for every partition, in device order. Kernels from
+# 4.1 on give each partition's offset in sysfs. The older ones -- 3.18 on the
+# Hi3516CV300 and Hi3519V101 families and on Hi3536CV100, 3.0 and 3.4 on the
+# oldest SoCs -- give only names and sizes, and then the offsets follow from
+# the order every OpenIPC NOR layout has: each partition starts where the one
+# before it ends, except "firmware". That one starts where the kernel does --
+# the fixed slots' alias over kernel and rootfs, listed after them -- or, on
+# the split layout, where the next partition would, holding kernel, rootfs and
+# rootfs_data after it; either way it moves nothing on.
+mtd_geometry() {
+	local n d off size name next=0 kern=
+	for n in $(ls "$MTD_SYS" 2>&3 | sed -n 's/^mtd\([0-9][0-9]*\)$/\1/p' | sort -n); do
+		d=$MTD_SYS/mtd$n
+		size=$(cat "$d/size" 2>&3) && name=$(cat "$d/name" 2>&3) || continue
+		if [ -r "$d/offset" ]; then
+			off=$(cat "$d/offset")
+		elif [ "$name" = firmware ]; then
+			off=${kern:-$next}
+		else
+			off=$next
+		fi
+		[ "$name" = kernel ] && kern=$off
+		[ "$name" = firmware ] || next=$((off + size))
+		echo "mtd$n $off $size $name"
+	done
 }
 
 # "mtdN offset size" for the partitions that together cover the firmware area
@@ -804,23 +836,42 @@ nor_split_soc() {
 # rootfs_data back to back (fixed slots, on the way to the split layout). The
 # area starts where the board puts it; nothing here assumes where. From sysfs, which the
 # ramfs pivot carries along; nothing printed means neither shape is there.
+#
+# Offsets worked out from the order (mtd_geometry) are only taken when the
+# partitions hold what they are named for: a uImage at the start of "kernel"
+# and a squashfs at the start of "rootfs".
 nor_split_devs() {
-	local d n o z end=0 chip=0
-	for d in "$MTD_SYS"/mtd*; do
-		case "$d" in *ro) continue ;; esac
-		[ -r "$d/offset" ] || continue
-		o=$(cat "$d/offset") z=$(cat "$d/size")
+	local geo dev o z name chip=0 derived=
+	# Once the write has started, the partitions no longer hold what they did
+	# (the old rootfs slot is in the middle of the new image): the upgrade
+	# takes the layout once, before it, and every write and read-back goes
+	# by that (do_update_firmware_split).
+	if [ -n "$nor_split_layout" ]; then
+		echo "$nor_split_layout"
+		return 0
+	fi
+	geo=$(mtd_geometry)
+	[ -n "$geo" ] || return 1
+	firmware_dev= kernel_dev= rootfs_dev= rootfs_data_dev=
+	while read -r dev o z name; do
 		[ $((o + z)) -gt "$chip" ] && chip=$((o + z))
-	done
+		# one offset not from sysfs is enough to want the images checked
+		[ -r "$MTD_SYS/$dev/offset" ] || derived=1
+		case "$name" in
+			firmware) [ -n "$firmware_dev" ] || firmware_dev=$dev firmware_off=$o firmware_size=$z ;;
+			kernel) [ -n "$kernel_dev" ] || kernel_dev=$dev kernel_off=$o kernel_size=$z ;;
+			rootfs) [ -n "$rootfs_dev" ] || rootfs_dev=$dev rootfs_off=$o rootfs_size=$z ;;
+			rootfs_data) [ -n "$rootfs_data_dev" ] || rootfs_data_dev=$dev rootfs_data_off=$o rootfs_data_size=$z ;;
+		esac
+	done <<EOF
+$geo
+EOF
 	[ "$chip" -gt 0 ] || return 1
-	for n in firmware kernel rootfs rootfs_data; do
-		for d in "$MTD_SYS"/mtd*; do
-			case "$d" in *ro) continue ;; esac
-			[ "$(cat "$d/name" 2>/dev/null)" = "$n" ] || continue
-			eval "${n}_dev=${d##*/} ${n}_off=$(cat "$d/offset") ${n}_size=$(cat "$d/size")"
-			break
-		done
-	done
+	if [ -n "$derived" ]; then
+		[ -n "$kernel_dev" ] && [ -n "$rootfs_dev" ] &&
+			[ "$(xxd -p -l 4 "$MTDCHR${kernel_dev#mtd}" 2>&3)" = "27051956" ] &&
+			[ "$(xxd -p -l 4 "$MTDCHR${rootfs_dev#mtd}" 2>&3)" = "68737173" ] || return 1
+	fi
 	if [ -n "$firmware_dev" ] && [ "$firmware_off" -gt 0 ] &&
 		[ $((firmware_off + firmware_size)) -eq "$chip" ]; then
 		echo "$firmware_dev $firmware_off $firmware_size"
@@ -953,6 +1004,9 @@ nor_split_image() {
 
 do_update_firmware_split() {
 	local x=$1 ovl end base blob=/tmp/overlay.blob tgz=/tmp/overlay.tgz mp
+	nor_split_layout=$(nor_split_devs)
+	[ -n "$nor_split_layout" ] ||
+		die "The flash layout is neither the split one nor fixed slots this upgrade can turn into it. Nothing was written."
 	base=$(nor_split_base)
 	echo "Split NOR layout: firmware.bin at $(printf 0x%x "$base"), the kernel divides it at boot"
 	[ "$(nor_split_soc "$x")" = "$model" ] ||
