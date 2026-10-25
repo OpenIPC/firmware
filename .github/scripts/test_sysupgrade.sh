@@ -3411,6 +3411,30 @@ else
 fi
 
 # -n: a blob of length 0, which /init takes as "erase, restore nothing".
+# A profile camera on the split layout: firmware.bin's device profile is in
+# its squashfs, which nothing on the split path read (#2689 review). Another
+# profile's image is refused before anything is written; its own is taken.
+split_env split
+set_platform gk7205v200_lite_acme-cam1
+STUB_IMG_PLATFORM=gk7205v200_lite_other-cam2
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -qF "Wrong platform!" &&
+    ! printf '%s' "$OUT" | grep -qF "Protected: flashing continues" &&
+    [ "$(flash_at 2 0x50000 0x50000 8)" != "$FW_HEAD" ]; then
+    ok "split layout: another device profile's firmware.bin is refused before the pivot"
+else
+    bad "split layout, other profile: rc=$RC out='$OUT'"
+fi
+split_env split
+set_platform gk7205v200_lite_acme-cam1
+STUB_IMG_PLATFORM=gk7205v200_lite_acme-cam1
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ]; then
+    ok "split layout: the camera's own profile's firmware.bin is written"
+else
+    bad "split layout, own profile: rc=$RC out='$OUT'"
+fi
+
 split_env split
 run -z -n --archive="$SB/tmp/fw.tgz"
 if [ "$RC" -eq 0 ] && [ "$(blob_len 2 "$OVL" 0x50000)" = 000000000000 ]; then
@@ -3958,6 +3982,57 @@ if [ ! -e "$HIST" ] && ! printf '%s' "$OUT" | grep -qF "sysupgrade --history"; t
 else
     bad "-n: history='$(cat "$HIST" 2>/dev/null)' out='$OUT'"
 fi
+reset_env
+
+# --- a builder device profile on an aliased SoC (#2688) ----------------------
+# builder builds a gk7205v210 profile for gk7205v210 and names and stamps its
+# images so, while $model is aliased to gk7205v200: every upgrade of such a
+# camera was refused with "No kernel image for this camera (gk7205v200)".
+alias_case() {
+    reset_env
+    STUB_VENDOR=goke STUB_SOC=gk7205v210
+    set_platform gk7205v210_lite_acme-cam1
+    STUB_IMG_PLATFORM=gk7205v210_lite_acme-cam1
+    rm -f "$SB"/tmp/*.gk7205v2?0
+    make_uimage "$SB/tmp/uImage.$1" "$1"
+    make_rootfs "$SB/tmp/rootfs.squashfs.$1"
+    make_archive "$SB/tmp/uImage.$1" "$SB/tmp/rootfs.squashfs.$1"
+    mkdir -p "$SB/keep" && mv "$SB/tmp/fw.tgz" "$SB/keep/dl.tgz"
+    rm -f "$SB"/tmp/*.gk7205v2?0
+    STUB_DL_FILE="$SB/keep/dl.tgz"
+}
+
+alias_case gk7205v210
+STUB_IMG_SOC=gk7205v210
+run -z -k -r
+if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && flashed /dev/mtd3 &&
+    printf '%s' "$OUT" | grep -qF "Images named for gk7205v210" &&
+    printf '%s' "$OUT" | grep -qF "SoC OK (gk7205v210, aliased to gk7205v200)"; then
+    ok "aliased builder profile: images named for its own SoC are flashed"
+else
+    bad "aliased builder profile: expected both flashed, rc=$RC out='$OUT'"
+fi
+
+# Accepting the camera's own SoC is not accepting any SoC.
+alias_case gk7205v210
+STUB_IMG_SOC=gk7205v300
+run -z -k -r
+if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -qF "Wrong SoC!"; then
+    ok "aliased builder profile: a foreign image in its archive is still refused"
+else
+    bad "aliased builder profile, foreign image: rc=$RC out='$OUT'"
+fi
+
+# An archive named for the canonical model is taken as it always was.
+alias_case gk7205v200
+STUB_IMG_SOC=gk7205v200
+run -z -k -r
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 && ! printf '%s' "$OUT" | grep -qF "Images named for"; then
+    ok "aliased SoC, images named for the canonical model: unchanged"
+else
+    bad "aliased SoC, canonical names: rc=$RC out='$OUT'"
+fi
+rm -f "$SB"/tmp/*.gk7205v2?0
 reset_env
 
 echo "=== Part 2: invariants in $SRC ==="

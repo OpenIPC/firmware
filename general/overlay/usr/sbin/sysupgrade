@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.78
+scr_version=1.0.79
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -172,6 +172,10 @@ check_soc() {
 	# dies that report a different id (hi3516cv610/608) via fw_printenv/ipcinfo.
 	[ "1" = "$skip_soc" ] && echo "Skip SoC validation" && return 0
 	[ "$1" = "$model" ] && echo "SoC OK" && return 0
+	# The SoC this camera's own build was made for, before resolve_model_alias
+	# renamed it: a builder device profile on an aliased SoC is built, named and
+	# stamped for that one (see image_soc).
+	[ -n "$1" ] && [ "$1" = "$platform_soc" ] && echo "SoC OK ($1, aliased to $model)" && return 0
 	die "Wrong SoC! (image '$1' != build '$model')"
 }
 
@@ -187,13 +191,13 @@ compare_versions() {
 # of the defaults would drift.
 rootfs_image() {
 	[ -n "$rootfs_file" ] && { echo "$rootfs_file"; return 0; }
-	[ "$ubi_layout" = "ubifs" ] && echo "/tmp/rootfs.ubifs.$model" || echo "/tmp/rootfs.squashfs.$model"
+	[ "$ubi_layout" = "ubifs" ] && echo "/tmp/rootfs.ubifs.$image_soc" || echo "/tmp/rootfs.squashfs.$image_soc"
 }
 
 kernel_image() {
 	[ -n "$kernel_file" ] && { echo "$kernel_file"; return 0; }
-	[ "$ubi_layout" = "ubifs" ] && { echo "/tmp/fitImage.$model"; return 0; }
-	[ "$vendor" = "rockchip" ] && echo "/tmp/zboot.img.$model" || echo "/tmp/uImage.$model"
+	[ "$ubi_layout" = "ubifs" ] && { echo "/tmp/fitImage.$image_soc"; return 0; }
+	[ "$vendor" = "rockchip" ] && echo "/tmp/zboot.img.$image_soc" || echo "/tmp/uImage.$image_soc"
 }
 
 # Where the rootfs is written: the `rootfs` UBI volume on a UBI layout, the
@@ -343,7 +347,7 @@ check_combined_fits() {
 	nor_split_image "$x" ||
 		die "$x is not a split-layout firmware.bin for this camera (a uImage, then a squashfs), or the flash is laid out neither as the split layout nor as fixed slots. Nothing was written."
 	ovl=$(nor_split_overlay_at "$x") end=$(nor_split_end)
-	[ "$(nor_split_soc "$x")" = "$model" ] ||
+	nor_split_soc_ok "$x" ||
 		die "$x is built for $(nor_split_soc "$x"), this camera is a $model. Nothing was written."
 	[ $(($(nor_split_base) + $(stat -c %s "$x"))) -le "$ovl" ] ||
 		die "$x runs past the end of its squashfs ($(printf 0x%x "$ovl")): not a firmware.bin as the build packs it. Nothing was written."
@@ -373,7 +377,7 @@ check_combined_fits() {
 # camera is intact, is the more useful answer than "nothing to update".
 preflight_image_sizes() {
 	if [ "1" = "$image_combined" ]; then
-		check_combined_fits "/tmp/firmware.bin.$model"
+		check_combined_fits "/tmp/firmware.bin.$image_soc"
 		free_staged_archive
 		return 0
 	fi
@@ -493,7 +497,7 @@ mount_rootfs() {
 soc_guarded_by_kernel() {
 	local k=
 	if [ "kernel_follows" = "$1" ]; then
-		k="/tmp/uImage.$model"
+		k="/tmp/uImage.$image_soc"
 	elif [ "1" = "$update_kernel" ]; then
 		k=$(kernel_image)
 	else
@@ -1005,6 +1009,12 @@ nor_split_blob_size() {
 
 # The image is one for the split layout, for a camera whose flash is laid out
 # as either layout.
+# check_soc's question, asked of a firmware.bin's uImage.
+nor_split_soc_ok() {
+	local s=$(nor_split_soc "$1")
+	[ "$s" = "$model" ] || { [ -n "$s" ] && [ "$s" = "$platform_soc" ]; }
+}
+
 nor_split_image() {
 	[ -n "$(nor_split_devs)" ] && nor_split_overlay_at "$1" >/dev/null
 }
@@ -1016,7 +1026,7 @@ do_update_firmware_split() {
 		die "The flash layout is neither the split one nor fixed slots this upgrade can turn into it. Nothing was written."
 	base=$(nor_split_base)
 	echo "Split NOR layout: firmware.bin at $(printf 0x%x "$base"), the kernel divides it at boot"
-	[ "$(nor_split_soc "$x")" = "$model" ] ||
+	nor_split_soc_ok "$x" ||
 		die "$x is built for $(nor_split_soc "$x"), this camera is a $model. Nothing was written."
 	ovl=$(nor_split_overlay_at "$x") || die "$x is not a uImage followed by a squashfs. Nothing was written."
 	[ $((base + $(stat -c %s "$x"))) -le "$ovl" ] ||
@@ -1074,7 +1084,7 @@ do_update_firmware_split() {
 }
 
 do_update_firmware() {
-	local x=/tmp/firmware.bin.$model
+	local x=/tmp/firmware.bin.$image_soc
 	echo_c 33 "\nFirmware (split NOR image)"
 	echo "Update firmware from $x"
 	[ ! -f "$x" ] && die "File $x not found"
@@ -1265,7 +1275,7 @@ resolve_model_alias() {
 # Not "everything the archive brought": a plain `-k` downloads both halves and
 # writes one, and whether the other arrived intact is not this run's business.
 images_this_run() {
-	[ -f "/tmp/firmware.bin.$model" ] && { echo "/tmp/firmware.bin.$model"; return 0; }
+	[ -f "/tmp/firmware.bin.$image_soc" ] && { echo "/tmp/firmware.bin.$image_soc"; return 0; }
 	[ "1" = "$update_kernel" ] && kernel_image
 	[ "1" = "$update_rootfs" ] && rootfs_image
 	return 0
@@ -1886,13 +1896,38 @@ download_firmware() {
 		curl --connect-timeout 30 $dl_meter --speed-limit 1024 --speed-time 60 -m 1800 \
 			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xvf - -C /tmp $(tar_excludes) >"$unpacked_list" && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	fi
+	pick_image_soc
 	if [ "1" != "$skip_md5" ]; then
 		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 		check_md5_covered
 	fi
 	# The split NOR image (a uImage and the rootfs in one firmware.bin):
 	# flashed as a unit by do_update_firmware.
-	[ -f "/tmp/firmware.bin.$model" ] && image_combined=1
+	[ -f "/tmp/firmware.bin.$image_soc" ] && image_combined=1
+}
+
+# The SoC the images this run unpacked are named for (#2688).
+#
+# An image is named for $model, the canonical SoC resolve_model_alias makes of
+# a retired or shared one -- except a builder device profile on an aliased SoC.
+# builder builds it for the chip it was made for and names and stamps it so:
+# a gk7205v210 profile's archive holds uImage.gk7205v210 and a rootfs whose
+# hostname says gk7205v210, while $model is gk7205v200. Every upgrade of such
+# a camera was refused with "No kernel image for this camera (gk7205v200)".
+#
+# So when nothing this run unpacked is named for $model, and something is
+# named for the SoC the camera's own build was made for, the images are that
+# one's.
+# check_soc accepts the same SoC: it is the one the running image was built
+# for, so it says no more about a foreign image than $model does.
+pick_image_soc() {
+	image_soc=$model
+	[ -n "$platform_soc" ] && [ "$platform_soc" != "$model" ] || return 0
+	# What this run unpacked, as tar listed it -- not whatever /tmp holds.
+	grep -q "\.$model\$" "$unpacked_list" 2>&3 && return 0
+	grep -q "\.$platform_soc\$" "$unpacked_list" 2>&3 || return 0
+	image_soc=$platform_soc
+	echo "Images named for $platform_soc, the SoC this camera's build was made for (aliased to $model)"
 }
 
 # Who is petting the hardware watchdog, if anyone.
@@ -2701,6 +2736,9 @@ enter_ramfs() {
 	# /etc/os-release to read it from (#2484).
 	# device_pinned: the image was fetched under this device's own name.
 	export system_platform device_pinned
+	# platform_soc/image_soc: the pre-alias SoC check_soc also accepts, and the
+	# one the unpacked images are named for -- found from /tmp before the pivot.
+	export platform_soc image_soc
 	# The UBI layout and its volumes, resolved on the whole system: the flash
 	# phase may have no /sys to resolve them from.
 	export ubi_layout ubi_rootfs_dev ubi_data_dev UBI_SYS INITTAB overlay_kb
@@ -3056,7 +3094,9 @@ get_system_info() {
 	soc=$(fw_printenv -n soc 2>/dev/null)
 	[ -z "$model" ] && model="$soc"
 	[ -z "$model" ] && die "Cannot determine SoC: no BUILD_PLATFORM and no U-Boot 'soc'"
+	platform_soc=$model
 	resolve_model_alias
+	image_soc=$model
 	detect_ubi_layout
 	# A ubiblock camera running an image from before the hand-off has no
 	# ::restart: entry, and only the upgrade being run would ship one. Its
@@ -3310,7 +3350,7 @@ read_candidate_build() {
 	to_build=$build_id to_version= to_note= kernel_only=
 	if [ "1" = "$image_combined" ]; then
 		# firmware.bin: the uImage, then the squashfs at the next 64 KiB boundary.
-		x=/tmp/firmware.bin.$model
+		x=/tmp/firmware.bin.$image_soc
 		n=$(nor_split_blocks "$x") && ofs="-o $((n * 65536))"
 	elif [ "1" = "$update_rootfs" ]; then
 		x=$(rootfs_image)
@@ -3330,10 +3370,12 @@ read_candidate_build() {
 		to_build=$(release_field "$y" BUILD_ID)
 		to_version=$(release_field "$y" GITHUB_VERSION)
 		# firmware.bin's SoC is its uImage's, which check_combined_fits read.
-		if [ "1" != "$image_combined" ]; then
-			soc=$(head -1 "$y/etc/hostname" 2>&3 | cut -d- -f2)
-			verdict=$(check_platform "$y") || refusal=$verdict
-		fi
+		# Its device profile is only in the squashfs, and nothing else on the
+		# split path looked at it, so it is judged here like any rootfs's
+		# (#2689 review): a profile camera must not take another profile's
+		# firmware.bin.
+		[ "1" != "$image_combined" ] && soc=$(head -1 "$y/etc/hostname" 2>&3 | cut -d- -f2)
+		verdict=$(check_platform "$y") || refusal=$verdict
 		umount "$y"
 	else
 		# As in verify_rootfs: a KILLed mount may still be attached.
@@ -3802,6 +3844,10 @@ if [ "1" = "$_ramfs_phase" ]; then
 	# Handed off: this is PID 1 now, and nothing else is left running from the
 	# old root, so it can finally be let go -- see need_handoff.
 	[ "1" = "$_handoff" ] && release_old_root
+	# Stage 1 exports the SoC the images are named for; one that did not (or
+	# a caller that sets up this phase by hand) names them for $model, as
+	# every image did before #2688.
+	image_soc=${image_soc:-$model}
 	[ -n "$ramfs_kernel_file" ] && kernel_file=$ramfs_kernel_file
 	[ -n "$ramfs_rootfs_file" ] && rootfs_file=$ramfs_rootfs_file
 	flash_and_reboot
