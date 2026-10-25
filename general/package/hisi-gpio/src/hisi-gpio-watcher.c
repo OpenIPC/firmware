@@ -108,7 +108,7 @@ void * memmap(unsigned long phy_addr, unsigned long size)
   addr = mmap((void *)0, size_in_page, PROT_READ, MAP_SHARED, fd, phy_addr_in_page);
   if(addr == MAP_FAILED)
   {
-    printf("memmap():mmap @ 0x%x error!\n", phy_addr_in_page);
+    printf("memmap():mmap @ 0x%lx error!\n", phy_addr_in_page);
     return NULL;
   }
   /* add this mmap to MMAP Node */
@@ -192,7 +192,11 @@ int gpio_get_value(unsigned int gpio, unsigned long *value)
         return fd;  
     }  
    
-    read(fd, &ch, 1);  
+    if (read(fd, &ch, 1) != 1) {
+        perror("gpio/get-value");
+        close(fd);
+        return -1;
+    }
   
     if (ch != '0') {  
         *value = 1;  
@@ -220,7 +224,9 @@ int gpio_get_dir(unsigned int gpio, unsigned long *value)
         perror("gpio/direction");  
         return fd;  
     }  
-	i = read(fd, ch, 5); 
+	i = read(fd, ch, sizeof(ch) - 1);
+	if (i < 0)
+		i = 0;
 	ch[i] = 0;
 	
 	
@@ -322,10 +328,8 @@ int main(int argc, char *argv[])
 			exit(EXIT_FAILURE);}
 			
 		sfs = 1;
-		stat = malloc(strlen(argv[2]));
-		strcpy(stat, argv[2]);							//Status_on|off|both
-		cmd = malloc(strlen(argv[3]));
-		strcpy(cmd, argv[3]);							//Programm_run
+		stat = argv[2];									//Status_on|off|both
+		cmd = argv[3];									//Programm_run
 		gpio_get_value(gpio, &OldValue);				//Save current value
 	}
 	else
@@ -338,10 +342,8 @@ int main(int argc, char *argv[])
 		GPIO_Offset=parse_int(argv[2]); 				//GPIO_Offset
 		GPIO_Group=atoi(argv[3]);						//GPIO_Group
 		GPIO_Bit = atoi(argv[4]);						//GPIO_Bit
-		stat = malloc(strlen(argv[5]));
-		strcpy(stat, argv[5]);							//Status_on|off|both
-		cmd = malloc(strlen(argv[6]));
-		strcpy(cmd, argv[6]);							//Programm_run
+		stat = argv[5];									//Status_on|off|both
+		cmd = argv[6];									//Programm_run
 	}
 														//Status
 	if(!strcmp("on",stat)){status = 1;}					//on = 1 
