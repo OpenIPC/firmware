@@ -425,6 +425,8 @@ case "${STUB_MOUNT:-ok}" in
     ok)
         mkdir -p "$target/etc"
         echo "GITHUB_VERSION=${STUB_IMG_VERSION:-2026.07.11}" > "$target/etc/os-release"
+        [ -n "${STUB_IMG_BUILD_ID:-}" ] &&
+            echo "BUILD_ID=$STUB_IMG_BUILD_ID" >> "$target/etc/os-release"
         [ -n "${STUB_IMG_PLATFORM:-}" ] &&
             echo "BUILD_PLATFORM=$STUB_IMG_PLATFORM" >> "$target/etc/os-release"
         echo "openipc-${STUB_IMG_SOC:-ssc338q}" > "$target/etc/hostname"
@@ -572,6 +574,8 @@ run() {
         STUB_IMG_SOC="${STUB_IMG_SOC:-ssc338q}" \
         STUB_IMG_VERSION="${STUB_IMG_VERSION:-2026.07.11}" \
         STUB_IMG_PLATFORM="${STUB_IMG_PLATFORM:-}" \
+        STUB_IMG_BUILD_ID="${STUB_IMG_BUILD_ID:-}" \
+        HISTORY_FILE="$SB/etc/sysupgrade.history" \
         STUB_UPGRADE="${STUB_UPGRADE:-}" \
         STUB_DL_FILE="${STUB_DL_FILE:-}" \
         STUB_FLASHCP_FAIL="${STUB_FLASHCP_FAIL:-0}" \
@@ -614,7 +618,8 @@ at() { printf '%s\n' "$OUT" | grep -n -- "$1" | head -1 | cut -d: -f1; }
 
 reset_env() {
     unset STUB_MOUNT STUB_VENDOR STUB_SOC STUB_IMG_SOC STUB_IMG_VERSION MOUNT_WAIT
-    unset STUB_UPGRADE STUB_IMG_PLATFORM STUB_DL_FILE
+    unset STUB_UPGRADE STUB_IMG_PLATFORM STUB_IMG_BUILD_ID STUB_DL_FILE
+    rm -f "$SB/etc/sysupgrade.history"
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB FLASH_RAM_FLOOR_KB
@@ -3757,6 +3762,204 @@ done
 rm -f "$SB/manifest.flat"
 unset STUB_SOC STUB_SPLIT_PUBLISHED
 
+# --- the from -> to block and the history (#2676) ---------------------------
+# Users upgrade nightly by nightly and, once a build misbehaves, cannot say
+# which one they came from. The block has to name both builds and the way
+# back BEFORE the first write, and the history has to keep the line.
+HIST="$SB/etc/sysupgrade.history"
+banner_case() { reset_env; rm -f "$SB/tmp/manifest.flat"; STUB_IMG_BUILD_ID=nightly-20260711-bbbbbbb; }
+# The same two images, downloaded by `-k -r` from the default URL: a run that
+# is online, so it may ask the manifest about the build being left.
+banner_dl() {
+    make_archive "$K" "$R"
+    mkdir -p "$SB/keep" && mv "$SB/tmp/fw.tgz" "$SB/keep/dl.tgz"
+    rm -f "$SB"/tmp/*.ssc338q
+    STUB_DL_FILE="$SB/keep/dl.tgz"
+}
+
+banner_case
+run -z --kernel="$K" --rootfs="$R"
+b=$(at "UPDATING: nightly-20260601-aaaaaaa (2026.06.01)"); k=$(at "Update kernel from")
+if [ "$RC" -eq 0 ] && [ -n "$b" ] && [ -n "$k" ] && [ "$b" -lt "$k" ] &&
+    printf '%s' "$OUT" | grep -qF "TO: nightly-20260711-bbbbbbb (2026.07.11)" &&
+    printf '%s' "$OUT" | grep -qF "sysupgrade --build=nightly-20260601-aaaaaaa" &&
+    printf '%s' "$OUT" | grep -qF "Daily builds are not release-tested"; then
+    ok "from -> to block names both builds and the way back, before the first write"
+else
+    bad "from -> to block: expected before the kernel write (block@${b:-none} kernel@${k:-none}), rc=$RC out='$OUT'"
+fi
+if [ "$(wc -l < "$HIST" 2>/dev/null)" = 1 ] &&
+    grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z nightly-20260601-aaaaaaa nightly-20260711-bbbbbbb cli$' "$HIST"; then
+    ok "the upgrade is recorded in the history: time, from, to, door"
+else
+    bad "history: expected one 'time from to cli' line, got '$(cat "$HIST" 2>/dev/null)'"
+fi
+run -z --history
+if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -qF "nightly-20260601-aaaaaaa nightly-20260711-bbbbbbb cli" &&
+    nothing_wrote; then
+    ok "--history prints the record and writes nothing"
+else
+    bad "--history: rc=$RC out='$OUT'"
+fi
+rm -f "$HIST"
+run -z --history
+if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -qF "No upgrades recorded"; then
+    ok "--history on a camera with no record says so"
+else
+    bad "--history, no record: rc=$RC out='$OUT'"
+fi
+
+# The history stays bounded on a camera upgraded nightly for years.
+banner_case
+for i in $(seq 1 60); do echo "2026-01-01T00:00:00Z old-$i old-$((i + 1)) cli"; done > "$HIST"
+run -z --kernel="$K" --rootfs="$R"
+if [ "$(wc -l < "$HIST")" = 50 ] && grep -q "^.* old-12 " "$HIST" && ! grep -q " old-11 " "$HIST" &&
+    tail -1 "$HIST" | grep -q " nightly-20260711-bbbbbbb cli$"; then
+    ok "history keeps the last 50 upgrades"
+else
+    bad "history cap: $(wc -l < "$HIST") lines, head '$(head -1 "$HIST")', tail '$(tail -1 "$HIST")'"
+fi
+
+# The rollback line is only as good as the manifest: a build pruned from it
+# cannot be reached by --build, and saying otherwise is worse than silence.
+banner_case; banner_dl
+printf 'nightly-20260711-bbbbbbb ssc338q_lite nor x\nnightly-20260601-aaaaaaa ssc338q_lite nor x\n' > "$SB/manifest.flat"
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+run -z -k -r
+if printf '%s' "$OUT" | grep -qF "return to this one with" &&
+    printf '%s' "$OUT" | grep -qF "sysupgrade --build=nightly-20260601-aaaaaaa"; then
+    ok "rollback line: the build being left is in the manifest"
+else
+    bad "rollback line, listed build: out='$OUT'"
+fi
+banner_case; banner_dl
+printf 'nightly-20260711-bbbbbbb ssc338q_lite nor x\n' > "$SB/manifest.flat"
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+run -z -k -r
+if printf '%s' "$OUT" | grep -qF "nightly-20260601-aaaaaaa is no longer in the manifest" &&
+    ! printf '%s' "$OUT" | grep -qF "sysupgrade --build=nightly-20260601-aaaaaaa" && flashed /dev/mtd3; then
+    ok "rollback line: a pruned build is not offered, and the upgrade goes on"
+else
+    bad "rollback line, pruned build: rc=$RC out='$OUT'"
+fi
+# A run from local files may be offline, with its services already stopped:
+# it does not wait on the network for the rollback line, and says the
+# command holds only while the build is published.
+banner_case
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+run -z --kernel="$K" --rootfs="$R"
+if [ ! -s "$SB/tmp/manifest.flat" ] && printf '%s' "$OUT" | grep -qF "is still published" &&
+    flashed /dev/mtd3; then
+    ok "rollback line: local files do not fetch the manifest"
+else
+    bad "rollback line, local files: manifest='$(cat "$SB/tmp/manifest.flat" 2>/dev/null)' out='$OUT'"
+fi
+rm -f "$SB/manifest.flat" "$SB/tmp/manifest.flat"
+
+# The history records transitions. Staying on the running build is not one:
+# the flash phase skips a same-version image, and a forced reflash of the
+# same build changes nothing a user would roll back from.
+banner_case
+STUB_IMG_BUILD_ID=nightly-20260601-aaaaaaa
+STUB_IMG_VERSION=2026.06.01
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && ! flashed /dev/mtd3 && [ ! -e "$HIST" ] &&
+    ! printf '%s' "$OUT" | grep -qF "sysupgrade --history"; then
+    ok "same build: nothing recorded"
+else
+    bad "same build: rc=$RC history='$(cat "$HIST" 2>/dev/null)' out='$OUT'"
+fi
+
+# A kernel-only run leaves the rootfs, and so the build the camera reports,
+# where it was: it must not claim the camera moved to another build.
+banner_case
+run -z --kernel="$K"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && ! flashed /dev/mtd3 &&
+    printf '%s' "$OUT" | grep -qF "TO: nightly-20260601-aaaaaaa, with the kernel from" &&
+    tail -1 "$HIST" | grep -q " nightly-20260601-aaaaaaa kernel:uImage.ssc338q cli$"; then
+    ok "kernel only: the build stays, the kernel is named"
+else
+    bad "kernel only: rc=$RC history='$(cat "$HIST" 2>/dev/null)' out='$OUT'"
+fi
+
+# builder lists a device profile under the chip it was built for: a
+# gk7205v210 profile is gk7205v210_<...> in its manifest, while $model is
+# aliased to gk7205v200. Looked up under the alias alone, every build it has
+# read as pruned, and --list-builds came back empty.
+reset_env; rm -f "$SB/tmp/manifest.flat"
+set_platform gk7205v210_lite_acme-cam1
+printf 'nightly-20260711-bbbbbbb gk7205v210_lite_acme-cam1 nor x\nnightly-20260601-aaaaaaa gk7205v210_lite_acme-cam1 nor x\n' > "$SB/manifest.flat"
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+run -z --list-builds
+if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -qF "* nightly-20260601-aaaaaaa" &&
+    printf '%s' "$OUT" | grep -qF "nightly-20260711-bbbbbbb"; then
+    ok "aliased builder profile: its builds are found under its own platform"
+else
+    bad "aliased builder profile, --list-builds: rc=$RC out='$OUT'"
+fi
+rm -f "$SB/manifest.flat" "$SB/tmp/manifest.flat"
+
+# A build that was never published has no --build to offer.
+banner_case
+sed -i 's/^BUILD_ID=.*/BUILD_ID=local-20260601-aaaaaaa/' "$SB/etc/os-release"
+run -z --kernel="$K" --rootfs="$R"
+if printf '%s' "$OUT" | grep -qF "never published" && ! printf '%s' "$OUT" | grep -qF -- "--build=local-"; then
+    ok "rollback line: a local build is not offered to --build"
+else
+    bad "rollback line, local build: out='$OUT'"
+fi
+
+# An image this kernel cannot mount still flashes; the block says what it
+# could not read rather than guessing, and the history keeps "unknown".
+banner_case
+STUB_MOUNT=fail
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -eq 0 ] && flashed /dev/mtd3 &&
+    printf '%s' "$OUT" | grep -qF "TO: unknown (not readable: this kernel cannot mount the image)" &&
+    tail -1 "$HIST" | grep -q " nightly-20260601-aaaaaaa unknown cli$"; then
+    ok "unmountable image: target reported unknown, flash proceeds"
+else
+    bad "unmountable image: rc=$RC out='$OUT' history='$(cat "$HIST" 2>/dev/null)'"
+fi
+
+# A foreign image is refused at the mount that reads it, before the pivot --
+# where verify_rootfs would have had to reboot to refuse it -- and before the
+# history records an upgrade that will not happen (a lab gk7205v210 builder
+# profile did both).
+banner_case
+STUB_IMG_SOC=gk7205v300
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && nothing_wrote && [ ! -e "$HIST" ] &&
+    printf '%s' "$OUT" | grep -qF "Wrong SoC!" &&
+    ! printf '%s' "$OUT" | grep -qF "UPDATING:" &&
+    ! printf '%s' "$OUT" | grep -qF "Protected: flashing continues"; then
+    ok "wrong SoC: refused before the pivot, nothing recorded"
+else
+    bad "wrong SoC before the pivot: rc=$RC history='$(cat "$HIST" 2>/dev/null)' out='$OUT'"
+fi
+banner_case
+set_platform ssc338q_lite_acme-cam1
+STUB_IMG_PLATFORM=ssc338q_lite
+run -z --kernel="$K" --rootfs="$R"
+if [ "$RC" -ne 0 ] && nothing_wrote && [ ! -e "$HIST" ] &&
+    printf '%s' "$OUT" | grep -qF "Wrong platform!" &&
+    ! printf '%s' "$OUT" | grep -qF "Protected: flashing continues"; then
+    ok "dropped device profile: refused before the pivot, nothing recorded"
+else
+    bad "dropped device profile before the pivot: rc=$RC history='$(cat "$HIST" 2>/dev/null)' out='$OUT'"
+fi
+
+# -n wipes the overlay the history lives on: nothing to record, and no
+# promise that it was.
+banner_case
+run -z -n --kernel="$K" --rootfs="$R"
+if [ ! -e "$HIST" ] && ! printf '%s' "$OUT" | grep -qF "sysupgrade --history"; then
+    ok "-n records nothing, and does not claim to"
+else
+    bad "-n: history='$(cat "$HIST" 2>/dev/null)' out='$OUT'"
+fi
+reset_env
+
 echo "=== Part 2: invariants in $SRC ==="
 
 # An option named in a user-facing message must exist in the parser.
@@ -3764,7 +3967,7 @@ echo "=== Part 2: invariants in $SRC ==="
 # and --exclude is tar's, not ours.
 for opt in $(grep -oE '\-\-[a-z_]+' "$SRC" | sort -u); do
     case "$opt" in
-        --force_*|--wipe_overlay|--no_reboot|--no_update|--no_ramfs|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--insecure|--connect*|--speed*|--proto*|--max*|--exclude) continue ;;
+        --force_*|--wipe_overlay|--no_reboot|--no_update|--no_ramfs|--help|--web|--url|--archive|--kernel|--rootfs|--channel|--build|--list*|--history|--insecure|--connect*|--speed*|--proto*|--max*|--exclude) continue ;;
     esac
     bad "message references '$opt', which the option parser does not accept"
 done

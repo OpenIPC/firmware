@@ -75,6 +75,10 @@ FOLLOW_PORT=${FOLLOW_PORT:-80}
 mount_wait=${mount_wait:-45}
 # Seconds the operator gets to Ctrl-C out of a run that will force a reboot.
 abort_wait=${abort_wait:-5}
+# Every upgrade this camera has been through, one line each, on the overlay so
+# that it outlives the flash and goes with `-n` like the rest of the settings.
+# Read back by --history; see record_transition.
+HISTORY_FILE=${HISTORY_FILE:-/etc/sysupgrade.history}
 # Route to firmware or builder manifest. A stock OpenIPC/firmware build
 # stamps BUILD_PLATFORM=${soc}_${variant} with variant in {lite,ultimate,
 # neo}. Anything else — a per-device override (${soc}_${variant}_${device},
@@ -686,8 +690,11 @@ verify_rootfs() {
 	local verdict=
 	rootfs_version=
 
-	if mkdir -p "$y" && loop=$(losetup -f) && err=$(losetup "$loop" "$x" 2>&1) \
-		&& err=$(mount_rootfs "$loop" "$y"); then
+	# read_candidate_build already tried this mount before the pivot; one that
+	# failed there fails here too, and is not worth waiting out twice.
+	[ "1" = "$rootfs_unmountable" ] && err=$rootfs_mount_err
+	if [ "1" != "$rootfs_unmountable" ] && mkdir -p "$y" && loop=$(losetup -f) &&
+		err=$(losetup "$loop" "$x" 2>&1) && err=$(mount_rootfs "$loop" "$y"); then
 		rootfs_version=$(get_system_version "$y")
 		check_soc "$(head -1 $y/etc/hostname | cut -d- -f2)"
 		if ! verdict=$(check_platform "$y"); then
@@ -1212,6 +1219,7 @@ fetch_manifest() {
 	probe_url "$MANIFEST_URL"
 	curl --connect-timeout 30 -s -m 60 -L $(tls_opts "$MANIFEST_URL") "$MANIFEST_URL" -o "$MANIFEST_CACHE" \
 		|| die "Cannot fetch manifest $MANIFEST_URL"
+	manifest_fetched=1
 }
 
 # resolve_channel <nightly|latest>  -> echoes a build_id
@@ -1844,11 +1852,7 @@ download_firmware() {
 			resolve_model_alias
 			[ -n "$channel" ] && build_id=$(resolve_channel "$channel")
 			[ -z "$build_id" ] && die "Unknown channel/build"
-			# Rewrite only the leading SoC token of BUILD_PLATFORM to the
-			# canonical $model (preserving any rich _variant_device suffix used
-			# by builder); fall back to ${model}_${osr} for pre-1.0.51 images.
-			platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
-			if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
+			platform=$(manifest_platform)
 			url=$(resolve_url "$build_id" "$platform" "$(pkg_flash)")
 			[ -z "$url" ] && die "No artifact for $platform in $build_id"
 			# The manifest lists the plain package, which older cameras
@@ -2690,6 +2694,9 @@ enter_ramfs() {
 	# $RAM_ROOT names a directory in the NEW root, not the one being judged.
 	export ram_root_shipped
 	export kernel_version system_version rootfs_version mount_wait abort_wait
+	# rootfs_unmountable/rootfs_mount_err: read_candidate_build's mount of the
+	# same image failed; verify_rootfs takes its word rather than retrying.
+	export rootfs_unmountable rootfs_mount_err
 	# system_platform: check_platform runs in the ramfs, which has no
 	# /etc/os-release to read it from (#2484).
 	# device_pinned: the image was fetched under this device's own name.
@@ -3244,6 +3251,205 @@ get_build_id() {
 	grep '^BUILD_ID=' /etc/os-release 2>/dev/null | head -1 | cut -d= -f2
 }
 
+# The platform key this camera's builds are listed under in the manifest: the
+# leading SoC token of BUILD_PLATFORM rewritten to the canonical $model, any
+# rich _variant_device suffix builder uses kept; ${model}_<variant> for
+# pre-1.0.51 images, which carry no BUILD_PLATFORM.
+#
+# Except where the manifest lists nothing under that key and does list the
+# camera's own BUILD_PLATFORM: builder publishes a device profile under the
+# chip it was built for, so a gk7205v210 profile is gk7205v210_<...> there
+# while $model has been aliased to gk7205v200. Checked on a lab gk7205v210
+# profile against builder's manifest.
+manifest_platform() {
+	local p=$(get_system_platform) k
+	[ -n "$p" ] || { echo "${model}_$(get_system_build)"; return 0; }
+	k="${model}_${p#*_}"
+	if [ "$k" != "$p" ] && [ -s "$MANIFEST_CACHE" ] &&
+		! awk -v k="$k" '$2==k { f = 1; exit } END { exit !f }' "$MANIFEST_CACHE" &&
+		awk -v k="$p" '$2==k { f = 1; exit } END { exit !f }' "$MANIFEST_CACHE"; then
+		k=$p
+	fi
+	echo "$k"
+}
+
+# Every build the fetched manifest lists for this camera, newest first.
+manifest_builds() {
+	awk -v p="$(manifest_platform)" -v f="$(pkg_flash)" \
+		'$2==p && ($3==f || (f=="nor" && $3=="nor_split")) && !seen[$1]++ { print $1 }' "$MANIFEST_CACHE"
+}
+
+# One field of the os-release under root $1, quotes dropped.
+release_field() {
+	grep "^$2=" "$1/etc/os-release" 2>/dev/null | head -1 | cut -d= -f2- | sed 's/"//g'
+}
+
+# The build this run is about to write, read out of the candidate image while
+# nothing is written yet, for the banner and the history (#2676).
+#
+# verify_rootfs reads the same os-release, but it runs in the flash phase --
+# inside the ramfs, past the last moment an operator can still note anything
+# down or press Ctrl-C. So the read is made here, before the pivot.
+#
+# The mount also gets the image's SoC stamp and device profile, so they are
+# judged here, as verify_rootfs judges them: there a refusal is a reboot with
+# nothing written, here it leaves the camera as it was -- and comes before the
+# history records an upgrade that is never going to happen. Seen on a lab
+# gk7205v210 builder profile, whose image says gk7205v210 to a model aliased
+# to gk7205v200: the camera rebooted, and its history named the build it had
+# refused.
+#
+# Fails open, like every other look inside the image before the write: an
+# image this kernel cannot mount is not refused for it. A UBIFS rootfs cannot
+# be read without UBI under it at all; then the build the manifest resolved,
+# if any, is the best that can be said. A squashfs that did not mount is
+# remembered, so verify_rootfs does not wait out the same mount a second time
+# -- on a mount that hangs, that is mount_wait seconds each.
+read_candidate_build() {
+	local x n loop err ofs= soc= verdict= refusal= y=/tmp/rootfs.peek
+	to_build=$build_id to_version= to_note= kernel_only=
+	if [ "1" = "$image_combined" ]; then
+		# firmware.bin: the uImage, then the squashfs at the next 64 KiB boundary.
+		x=/tmp/firmware.bin.$model
+		n=$(nor_split_blocks "$x") && ofs="-o $((n * 65536))"
+	elif [ "1" = "$update_rootfs" ]; then
+		x=$(rootfs_image)
+	else
+		# The rootfs carries the BUILD_ID, and it is not being written: the
+		# camera stays on the build it runs, with another kernel under it.
+		kernel_only=1
+		return 0
+	fi
+	[ -f "$x" ] || return 0
+	if is_ubifs "$x"; then
+		to_note="UBIFS image: not readable before it is written"
+		return 0
+	fi
+	if mkdir -p "$y" && loop=$(losetup -f) && err=$(losetup $ofs "$loop" "$x" 2>&1) &&
+		err=$(mount_rootfs "$loop" "$y"); then
+		to_build=$(release_field "$y" BUILD_ID)
+		to_version=$(release_field "$y" GITHUB_VERSION)
+		# firmware.bin's SoC is its uImage's, which check_combined_fits read.
+		if [ "1" != "$image_combined" ]; then
+			soc=$(head -1 "$y/etc/hostname" 2>&3 | cut -d- -f2)
+			verdict=$(check_platform "$y") || refusal=$verdict
+		fi
+		umount "$y"
+	else
+		# As in verify_rootfs: a KILLed mount may still be attached.
+		umount "$y" 2>/dev/null
+		[ "1" = "$image_combined" ] || { rootfs_unmountable=1; rootfs_mount_err=$err; }
+		to_note="not readable: this kernel cannot mount the image"
+	fi
+	[ -n "$loop" ] && losetup -d "$loop" 2>/dev/null
+	rmdir "$y" 2>/dev/null
+	[ -n "$refusal" ] && die "$refusal"
+	[ -n "$soc" ] && check_soc "$soc"
+	[ -n "$to_build" ] || to_build=$build_id
+	return 0
+}
+
+# The from -> to block, printed once every image is on the camera and checked,
+# and before the first write: the last point at which the build being left is
+# still on screen and the run can still be abandoned for free (#2676). Users
+# upgrade nightly by nightly and, once a build misbehaves, often cannot say
+# which one they came from -- --build can take them back, but only to a build
+# they can name.
+#
+# Warn, never ask: the WebUI and scripts run this non-interactively, and with
+# --web the block simply reaches /ws/upgrade with the rest of the log.
+print_transition() {
+	local from=$(get_build_id) to rb
+	from_build=${from:-unknown}
+	to=${to_build:-unknown}
+	if [ "1" = "$kernel_only" ]; then
+		to="$from_build, with the kernel from ${to_build:-$(kernel_image)} (the rootfs stays)"
+	elif [ -n "$to_version" ]; then
+		to="$to ($to_version)"
+	elif [ -n "$to_note" ] || [ -z "$to_build" ]; then
+		to="$to (${to_note:-the image carries no build ID})"
+	fi
+	# Whether --build can still reach the build being left. Asked of the
+	# manifest this run fetched, or fetched now on a run that downloaded its
+	# image and so is online -- soft, a manifest that does not come is no
+	# reason to stop an upgrade the operator asked for. A run from local files
+	# may be offline, with its services already stopped: it does not wait on
+	# the network for this, and gets the unverified wording instead.
+	if [ "1" != "$manifest_fetched" ] && [ "1" = "$remote_update" ] && [ -z "$archive" ]; then
+		curl --connect-timeout 10 -s -f -m 20 -L $(tls_opts "$MANIFEST_URL") "$MANIFEST_URL" \
+			-o "$MANIFEST_CACHE" 2>&3 && manifest_fetched=1
+	fi
+	echo_c 36 "\n=================================================================="
+	echo_c 36 " UPDATING: $from_build${system_version:+ ($system_version)}"
+	echo_c 36 "       TO: $to"
+	case "$from_build" in
+	unknown | local-*)
+		echo_c 36 " The running build was never published, so --build cannot return to it."
+		;;
+	*)
+		rb="sysupgrade --build=$from_build"
+		if [ "1" = "$manifest_fetched" ] && [ -s "$MANIFEST_CACHE" ] &&
+			! manifest_builds | grep -qxF "$from_build"; then
+			echo_c 36 " $from_build is no longer in the manifest; 'sysupgrade --list-builds'"
+			echo_c 36 " shows the builds --build can still return to."
+		elif [ "1" = "$manifest_fetched" ] && [ -s "$MANIFEST_CACHE" ]; then
+			echo_c 36 " If the new build misbehaves, return to this one with:"
+			echo_c 36 "   $rb"
+		else
+			echo_c 36 " If the new build misbehaves, and $from_build is still published"
+			echo_c 36 " ('sysupgrade --list-builds'), return to it with:"
+			echo_c 36 "   $rb"
+		fi
+		;;
+	esac
+	[ "1" = "$clear_overlay" ] || [ "$to_build" = "$from_build" ] ||
+		echo_c 36 " Recorded on the camera: 'sysupgrade --history' lists every upgrade."
+	case "$to_build" in nightly-*)
+		echo_c 33 " Daily builds are not release-tested: features may regress." ;;
+	esac
+	echo_c 36 "=================================================================="
+}
+
+# One line per upgrade in $HISTORY_FILE: UTC time, from, to, and which door
+# started it. Written before the first write, because after it there may be no
+# writable /etc left to write to (the pivot, the hand-off), and kept to the
+# last 50 lines so a camera upgraded nightly for years does not grow its
+# overlay for it. A run that wipes the overlay records nothing: the wipe would
+# take the line with it. Nor does one that stays on the build it runs: the
+# flash phase skips a same-version image, and a forced reflash of the same
+# build is not a transition. A kernel-only run is recorded as kernel:<source>,
+# because the rootfs, and with it the build the camera reports, stays.
+#
+# Not to syslog: free_resources stops syslogd before the download (#2415), so
+# by the time the target is known there is no daemon to hear it. The remote
+# line free_resources sends already names the build being left.
+record_transition() {
+	[ "1" = "$clear_overlay" ] && return 0
+	local door=cli to=${to_build:-unknown}
+	[ "1" = "$web_update" ] && door=web
+	if [ "1" = "$kernel_only" ]; then
+		to=${kernel_file##*/}
+		to="kernel:${to_build:-${to:-unknown}}"
+	elif [ "$to_build" = "$from_build" ]; then
+		return 0
+	fi
+	{
+		tail -n 49 "$HISTORY_FILE" 2>/dev/null
+		echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $from_build $to $door"
+	} > "$HISTORY_FILE.new" 2>&3 && mv "$HISTORY_FILE.new" "$HISTORY_FILE" 2>&3 && sync ||
+		{ rm -f "$HISTORY_FILE.new"; echo_c 33 "Could not record this upgrade in $HISTORY_FILE."; }
+	return 0
+}
+
+print_history() {
+	if [ ! -s "$HISTORY_FILE" ]; then
+		echo_c 33 "\nNo upgrades recorded on this camera since its last factory reset."
+		return 0
+	fi
+	echo_c 33 "\nUpgrades started on this camera, oldest first (UTC, from, to, started from):"
+	cat "$HISTORY_FILE"
+}
+
 # Is this camera forwarding its log off-box? Only then is it worth spending a
 # second letting a datagram out before syslogd stops -- see free_resources.
 # Matches the knob S01syslogd reads (#2415).
@@ -3279,6 +3485,8 @@ Where:
                         e.g. nightly-20260520-b9d5883.
       --list-builds[=N] List the last N (default 20) builds available for
                         this platform; mark the running build with '*'.
+      --history         List the upgrades this camera has been through since
+                        its last factory reset (from, to, when).
   -f, --force_all       Do not validate anything.
   -n, --wipe_overlay    Wipe overlay partition.
   -x, --no_reboot       Do not reboot after updating. Ignored when the update
@@ -3491,6 +3699,11 @@ for i in "$@"; do
 			shift
 			;;
 
+		--history)
+			history_only=1
+			shift
+			;;
+
 		--archive=*)
 			update_kernel=1
 			update_rootfs=1
@@ -3596,16 +3809,17 @@ fi
 
 print_sysinfo
 
+if [ "1" = "$history_only" ]; then
+	print_history
+	exit 0
+fi
+
 if [ "1" = "$list_only" ]; then
 	fetch_manifest
 	resolve_model_alias
-	osr=$(get_system_build)
-	platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
-	if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
+	platform=$(manifest_platform)
 	here=$(get_build_id)
-	builds=$(awk -v p="$platform" -v f="$(pkg_flash)" \
-		'$2==p && ($3==f || (f=="nor" && $3=="nor_split")) && !seen[$1]++ { print $1 }' "$MANIFEST_CACHE" \
-		| head -n "${list_n:-20}")
+	builds=$(manifest_builds | head -n "${list_n:-20}")
 	if [ -z "$builds" ]; then
 		echo_c 33 "\nNo builds available for $platform yet."
 		echo "Manifest: $MANIFEST_URL"
@@ -3672,6 +3886,17 @@ free_resources
 # Now that every image is on the camera, and while the camera is still whole.
 preflight_image_sizes
 
+read_candidate_build
+print_transition
+
+# Seconds to Ctrl-C out, before the trap below takes the signals away: always
+# for the -x notice, and for an operator at a console so the block above can be
+# read (#2676). Never for --web or a script, which have no one to wait for.
+# Through die(), which puts the services back: an interrupt left to its default
+# would leave the camera without syslog, cron and ntpd until a reboot.
+pause_before_flash=
+[ -t 0 ] && [ "1" != "$web_update" ] && pause_before_flash=1
+
 # -x cannot be honoured for a write that lands on the flash this camera runs
 # from (see reboot_system). Say so before the first write rather than after it:
 # the trap below takes Ctrl-C away, deliberately, for the rest of the run, so
@@ -3683,9 +3908,15 @@ if [ "1" = "$skip_reboot" ] && rewrites_live_flash; then
 	echo_c 31 "\nNOTICE: -x was requested, but this run rewrites the flash this camera"
 	echo_c 31 "is running from. -x cannot be honoured for that: the running filesystem"
 	echo_c 31 "does not survive it. The camera will be rebooted once flashing is done."
+	pause_before_flash=1
+fi
+if [ "1" = "$pause_before_flash" ]; then
+	trap 'die "Interrupted before the first write; nothing was written."' INT TERM HUP
 	echo_c 37 "Press Ctrl-C now to abort. Continuing in $abort_wait seconds..."
 	sleep "$abort_wait"
 fi
+# After the pause: a run abandoned there was never an upgrade.
+record_transition
 
 # Clear the bootloader's boot counter so the freshly written image starts with a
 # clean slate: if it never reaches a healthy userspace, U-Boot boots FAILSAFE
