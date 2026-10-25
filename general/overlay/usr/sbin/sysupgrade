@@ -3370,10 +3370,12 @@ read_candidate_build() {
 		to_build=$(release_field "$y" BUILD_ID)
 		to_version=$(release_field "$y" GITHUB_VERSION)
 		# firmware.bin's SoC is its uImage's, which check_combined_fits read.
-		if [ "1" != "$image_combined" ]; then
-			soc=$(head -1 "$y/etc/hostname" 2>&3 | cut -d- -f2)
-			verdict=$(check_platform "$y") || refusal=$verdict
-		fi
+		# Its device profile is only in the squashfs, and nothing else on the
+		# split path looked at it, so it is judged here like any rootfs's
+		# (#2689 review): a profile camera must not take another profile's
+		# firmware.bin.
+		[ "1" != "$image_combined" ] && soc=$(head -1 "$y/etc/hostname" 2>&3 | cut -d- -f2)
+		verdict=$(check_platform "$y") || refusal=$verdict
 		umount "$y"
 	else
 		# As in verify_rootfs: a KILLed mount may still be attached.

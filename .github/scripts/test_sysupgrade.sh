@@ -3411,6 +3411,30 @@ else
 fi
 
 # -n: a blob of length 0, which /init takes as "erase, restore nothing".
+# A profile camera on the split layout: firmware.bin's device profile is in
+# its squashfs, which nothing on the split path read (#2689 review). Another
+# profile's image is refused before anything is written; its own is taken.
+split_env split
+set_platform gk7205v200_lite_acme-cam1
+STUB_IMG_PLATFORM=gk7205v200_lite_other-cam2
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -qF "Wrong platform!" &&
+    ! printf '%s' "$OUT" | grep -qF "Protected: flashing continues" &&
+    [ "$(flash_at 2 0x50000 0x50000 8)" != "$FW_HEAD" ]; then
+    ok "split layout: another device profile's firmware.bin is refused before the pivot"
+else
+    bad "split layout, other profile: rc=$RC out='$OUT'"
+fi
+split_env split
+set_platform gk7205v200_lite_acme-cam1
+STUB_IMG_PLATFORM=gk7205v200_lite_acme-cam1
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ]; then
+    ok "split layout: the camera's own profile's firmware.bin is written"
+else
+    bad "split layout, own profile: rc=$RC out='$OUT'"
+fi
+
 split_env split
 run -z -n --archive="$SB/tmp/fw.tgz"
 if [ "$RC" -eq 0 ] && [ "$(blob_len 2 "$OVL" 0x50000)" = 000000000000 ]; then
