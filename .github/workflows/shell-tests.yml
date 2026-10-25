@@ -46,6 +46,11 @@ jobs:
       # in the job below, against the busybox ash the device actually uses. This
       # step was `sh -n` then `dash -n`, which on ubuntu-latest is the same
       # check twice (/bin/sh is dash) and neither is the target shell.
+      # busybox for the suite's timeout: the camera's applet, not the host's.
+      - name: Install busybox
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq busybox-static
       - run: bash .github/scripts/test_sysupgrade.sh
 
       # The copy in git is not the copy that ships: the build strips whole-line
