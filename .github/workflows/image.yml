@@ -63,33 +63,61 @@ jobs:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -eu
+          # The release API has flaky days on workflow_run jobs (see
+          # enrich_manifest.py's retry), and one failed call here would leave
+          # the image tag a night behind again.
+          gh_retry() {
+            local n=0 delay=10
+            until "$@"; do
+              n=$((n + 1))
+              if [ "$n" -ge 4 ]; then
+                echo "::error::gh failed after 4 attempts: $*" >&2
+                return 1
+              fi
+              echo "::warning::gh attempt ${n} failed, retrying in ${delay}s" >&2
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+
+          dated='^nightly-[0-9]{8}-[0-9a-f]{7}$'
           SHA=
           if [ -n "$INPUT_BUILD_ID" ]; then
+            # Only a dated release is one build. `nightly` and `latest` keep
+            # the previous image of every board that failed to build, so
+            # assembling from them mixes generations under one name.
+            if ! printf '%s\n' "$INPUT_BUILD_ID" | grep -Eq "$dated"; then
+              echo "::error::build_id must be a dated release (nightly-YYYYMMDD-<short>), not '$INPUT_BUILD_ID'"
+              exit 1
+            fi
             BUILD_ID="$INPUT_BUILD_ID"
           else
             if [ -n "$HEAD_SHA" ]; then
               re="^nightly-[0-9]{8}-${HEAD_SHA:0:7}\$"
               SHA="$HEAD_SHA"
             else
-              re='^nightly-[0-9]{8}-[0-9a-f]{7}$'
+              re="$dated"
             fi
-            BUILD_ID=$(gh release list --limit 200 --json tagName,createdAt \
+            BUILD_ID=$(gh_retry gh release list --limit 200 --json tagName,createdAt \
               --jq "[.[] | select(.tagName | test(\"$re\"))] | sort_by(.createdAt) | last | .tagName // empty")
           fi
           if [ -z "$BUILD_ID" ]; then
             echo "::error::no dated release found for ${SHA:-the newest build}; refusing to assemble another build's images"
             exit 1
           fi
-          gh release view "$BUILD_ID" --json body,assets > /tmp/release.json
+          gh_retry gh release view "$BUILD_ID" --json body,assets > /tmp/release.json
           GOT=$(jq -r '.body // "" | split("\n") | map(select(startswith("sha="))) | first // "" | ltrimstr("sha=")' /tmp/release.json)
+          if [ -z "$GOT" ]; then
+            echo "::error::$BUILD_ID records no sha=; not a release build.yml published"
+            exit 1
+          fi
           if [ -n "$SHA" ] && [ "$GOT" != "$SHA" ]; then
-            echo "::error::$BUILD_ID was built from ${GOT:-an unrecorded commit}, not $SHA"
+            echo "::error::$BUILD_ID was built from $GOT, not $SHA"
             exit 1
           fi
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
           echo "sha=$GOT" >> "$GITHUB_OUTPUT"
-          echo "assembled_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-          echo "Assembling images for $BUILD_ID (sha=${GOT:-unknown})"
+          echo "Assembling images for $BUILD_ID (sha=$GOT)"
 
       - name: Prepare
         env:
@@ -303,18 +331,39 @@ jobs:
       #
       # The asset names are stable links, so the release body is what says
       # which build is inside; it was empty when #2679 found a day-old one.
-      # Hence also the resolve gate: with no build resolved there is nothing
-      # to upload, and the body would be rewritten to name none.
+      # It lists what this run assembled, by name: the action replaces files
+      # and never removes them, so an image that was skipped or refused
+      # tonight keeps an earlier build's file under this tag, and one
+      # build_id for the whole release would claim that file too. Gated on
+      # the resolve step: with no build resolved nothing is uploaded, and the
+      # body would be rewritten to name none.
+      - name: Describe the release
+        if: ${{ !cancelled() && steps.resolve.outcome == 'success' }}
+        env:
+          BUILD_ID: ${{ steps.resolve.outputs.build_id }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          {
+            echo "build_id=$BUILD_ID"
+            echo "sha=$SHA"
+            echo "assembled_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+            echo "Full NOR images: the kernel and rootfs of $BUILD_ID, U-Boot from the \`latest\` release."
+            echo "Assembled by this run:"
+            echo
+            for f in target/*.bin; do
+              if [ -e "$f" ]; then echo "- ${f#target/}"; fi
+            done
+            echo
+            echo "An asset not listed was not rebuilt by this run and holds an earlier build."
+          } > release-body.md
+          cat release-body.md
+
       - name: Upload
         if: ${{ !cancelled() && steps.resolve.outcome == 'success' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: image
           make_latest: false
-          body: |
-            build_id=${{ steps.resolve.outputs.build_id }}
-            sha=${{ steps.resolve.outputs.sha }}
-            assembled_at=${{ steps.resolve.outputs.assembled_at }}
-
-            Full NOR images: the kernel and rootfs of ${{ steps.resolve.outputs.build_id }}, U-Boot from the `latest` release.
+          body_path: release-body.md
           files: target/*.bin
