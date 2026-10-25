@@ -167,7 +167,7 @@ unsigned long parse_int (char *str) {
 	char *endptr; 
 
 	result = strtoll(str, &endptr, 0);
-	if (str == '\0' || *endptr != '\0') {
+	if (*str == '\0' || *endptr != '\0') {
 		fprintf(stderr, "\"%s\" is not a valid number\n", str);
 		exit(EXIT_FAILURE);
 	}
@@ -180,7 +180,7 @@ unsigned long parse_int (char *str) {
  ****************************************************************/ 
 int gpio_get_value(unsigned int gpio, unsigned long *value)  
 {  
-    int fd, len;  
+    int fd, len, n;  
     char buf[MAX_BUF];  
     char ch;  
   
@@ -192,8 +192,12 @@ int gpio_get_value(unsigned int gpio, unsigned long *value)
         return fd;  
     }  
    
-    if (read(fd, &ch, 1) != 1) {
-        perror("gpio/get-value");
+    n = read(fd, &ch, 1);
+    if (n != 1) {
+        if (n < 0)
+            perror("gpio/get-value");
+        else
+            fprintf(stderr, "gpio/get-value: %s: empty read\n", buf);
         close(fd);
         return -1;
     }
@@ -225,8 +229,11 @@ int gpio_get_dir(unsigned int gpio, unsigned long *value)
         return fd;  
     }  
 	i = read(fd, ch, sizeof(ch) - 1);
-	if (i < 0)
-		i = 0;
+	if (i < 0) {
+		perror("gpio/direction");
+		close(fd);
+		return -1;
+	}
 	ch[i] = 0;
 	
 	
@@ -246,7 +253,7 @@ void check_run(unsigned char *runsh, int chkbit, int chkstat, int chkdirect)
 		{	
 			if(debug)
 				{
-					if (chkdirect==1) {printf("Direction: Output\n");} else {printf("Direction: Input\n");}
+					printf("Direction: %s\n", chkdirect==1 ? "Output" : chkdirect==0 ? "Input" : "Unknown");
 						printf("Check Level:%d Current Level:%d\n",chkstat,chkbit);
 				printf("Run Script: %s\n", runsh);}
 			system (runsh);
@@ -256,7 +263,7 @@ void check_run(unsigned char *runsh, int chkbit, int chkstat, int chkdirect)
 		{	
 			if(debug)
 				{
-					if (chkdirect==1) {printf("Direction: Output\n");} else {printf("Direction: Input\n");}
+					printf("Direction: %s\n", chkdirect==1 ? "Output" : chkdirect==0 ? "Input" : "Unknown");
 					printf("Check Level:%d Current Level:%d\n",chkstat,chkbit);
 					printf("Run Script: %s\n", runsh);}
 			system (runsh);
@@ -304,6 +311,7 @@ int main(int argc, char *argv[])
 	unsigned long value = 0;
 	unsigned long OldValue= 0;
 	int GPIO_Group, GPIO_Bit, old_bit, new_bit, status;
+	int primed = 0;
 	
 	if(set_handler()==-1)
 	  {
@@ -330,7 +338,7 @@ int main(int argc, char *argv[])
 		sfs = 1;
 		stat = argv[2];									//Status_on|off|both
 		cmd = argv[3];									//Programm_run
-		gpio_get_value(gpio, &OldValue);				//Save current value
+		primed = gpio_get_value(gpio, &OldValue) == 0;	//Save current value
 	}
 	else
 	{	
@@ -359,8 +367,13 @@ int main(int argc, char *argv[])
 			adress=GPIO_Base+(GPIO_Group*GPIO_Offset)+0x3fc;
 			value = GetValueRegister(adress);
 		}
-		else {
-			gpio_get_value(gpio, &value);
+		else if (gpio_get_value(gpio, &value) < 0) {
+			usleep(250000);								//No level to compare, try again
+			continue;
+		}
+		else if (!primed) {
+			OldValue = value;							//First good read is the baseline, not an edge
+			primed = 1;
 		}
 			
       if(OldValue!=value)
@@ -379,7 +392,8 @@ int main(int argc, char *argv[])
             }
 			}
 			else {
-				gpio_get_dir(gpio, &direct);
+				if (gpio_get_dir(gpio, &direct) < 0)
+					direct = -1;
 				check_run(cmd,value,status,direct);
 			  }
 			
