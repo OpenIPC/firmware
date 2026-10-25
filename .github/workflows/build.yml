@@ -267,6 +267,12 @@ jobs:
       needs.preflight.outputs.should_build == 'true' &&
       needs.select.outputs.needs-build == 'true'
     runs-on: ubuntu-latest
+    # A cold ultimate build takes about 15 minutes, and the full download-flake
+    # budget below adds 38.5 minutes of backoff to that. Without a cap, a
+    # build that stops making progress holds its runner for GitHub's six-hour
+    # default: t31_ultimate went silent mid-configure on 2026-10-25
+    # (run 40175177369) and was still holding one an hour later.
+    timeout-minutes: 120
     env:
       BUILD_ID:  ${{ needs.preflight.outputs.build_id }}
       BUILD_SHA: ${{ needs.preflight.outputs.head_sha }}
@@ -447,6 +453,16 @@ jobs:
             fi
 
             cause=$(classify_failure "${buildlog}")
+            # The phase is the class (classify_failure above): only fetching
+            # and unpacking fail on a flake. A package that broke while it
+            # was patched, configured, built or installed is code, and will
+            # break the same way on every attempt. ssc333/ssc335_ultimate
+            # spent 55 minutes each on 2026-10-25 (run 40175177369) retrying
+            # one make error six times. Ending the loop here keeps the
+            # summariser's "build failed after N attempts" line.
+            case "$cause" in
+              */patched|*/configured|*/built|*/*_installed|*/installed) sleep_for="" ;;
+            esac
             if [ -z "$sleep_for" ]; then
               echo "::error::${{matrix.platform}}: build failed after ${attempt} attempts — ${cause}"
               exit 1
