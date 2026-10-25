@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       build_id:
-        description: 'Build ID to assemble (e.g. nightly-20260520-887328c). Default: channels.nightly from manifest.'
+        description: 'Build ID to assemble (e.g. nightly-20260520-887328c). Default: the newest dated release.'
         required: false
 
 permissions:
@@ -40,49 +40,101 @@ jobs:
       SIGMASTAR: ssc30kd ssc30kq ssc325 ssc333 ssc335 ssc335de ssc337 ssc337de ssc338q ssc377 ssc377d ssc377de ssc377qe ssc378de ssc378qe
       INGENIC: t10 t10l t20 t20l t20x t21n t23n t30a t30a1 t30l t30n t30x t31a t31al t31l t31lc t31n t31x
       ALLWINNER: v851s
-      MANIFEST_URL: https://openipc.github.io/firmware/manifest.json
+      # U-Boot is not part of a nightly: uboot.yml publishes it to `latest` on
+      # its own schedule, so every image carries the current bootloader.
       UBOOT_URL: https://github.com/openipc/firmware/releases/download/latest
 
     steps:
-      - name: Resolve build_id from manifest
+      # The build is resolved from the dated release the triggering run
+      # published, never from manifest.json. manifest.yml fires on the same
+      # build completion with nothing ordering the two, and its output reaches
+      # openipc.github.io only after a Pages deploy and the CDN's cache, so
+      # reading channels.nightly here took the previous night's kernel and
+      # rootfs under the current U-Boot (#2679). build.yml creates the dated
+      # release, body `sha=<HEAD>`, before its run completes, so the head SHA
+      # always finds it. The tag carries a short SHA, and a WebUI-only rebuild
+      # reuses it under a new date, so take the newest and check the full SHA.
+      - name: Resolve the build to assemble
         id: resolve
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           INPUT_BUILD_ID: ${{ inputs.build_id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -eu
-          curl -fsSL "$MANIFEST_URL" -o /tmp/manifest.json
+          # The release API has flaky days on workflow_run jobs (see
+          # enrich_manifest.py's retry), and one failed call here would leave
+          # the image tag a night behind again.
+          gh_retry() {
+            local n=0 delay=10
+            until "$@"; do
+              n=$((n + 1))
+              if [ "$n" -ge 4 ]; then
+                echo "::error::gh failed after 4 attempts: $*" >&2
+                return 1
+              fi
+              echo "::warning::gh attempt ${n} failed, retrying in ${delay}s" >&2
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+
+          dated='^nightly-[0-9]{8}-[0-9a-f]{7}$'
+          SHA=
           if [ -n "$INPUT_BUILD_ID" ]; then
+            # Only a dated release is one build. `nightly` and `latest` keep
+            # the previous image of every board that failed to build, so
+            # assembling from them mixes generations under one name.
+            if ! printf '%s\n' "$INPUT_BUILD_ID" | grep -Eq "$dated"; then
+              echo "::error::build_id must be a dated release (nightly-YYYYMMDD-<short>), not '$INPUT_BUILD_ID'"
+              exit 1
+            fi
             BUILD_ID="$INPUT_BUILD_ID"
           else
-            BUILD_ID=$(jq -r '.channels.nightly // ""' /tmp/manifest.json)
+            if [ -n "$HEAD_SHA" ]; then
+              re="^nightly-[0-9]{8}-${HEAD_SHA:0:7}\$"
+              SHA="$HEAD_SHA"
+            else
+              re="$dated"
+            fi
+            BUILD_ID=$(gh_retry gh release list --limit 200 --json tagName,createdAt \
+              --jq "[.[] | select(.tagName | test(\"$re\"))] | sort_by(.createdAt) | last | .tagName // empty")
           fi
-          if [ -z "$BUILD_ID" ] || [ "$BUILD_ID" = "null" ]; then
-            echo "::error::No build_id resolved (manifest channels.nightly empty? input not given?)"
+          if [ -z "$BUILD_ID" ]; then
+            echo "::error::no dated release found for ${SHA:-the newest build}; refusing to assemble another build's images"
             exit 1
           fi
-          # Sanity check: does the manifest actually know this build?
-          if ! jq -e --arg b "$BUILD_ID" '.builds[] | select(.id==$b)' /tmp/manifest.json >/dev/null; then
-            echo "::error::build_id $BUILD_ID is not present in manifest at $MANIFEST_URL"
+          gh_retry gh release view "$BUILD_ID" --json body,assets > /tmp/release.json
+          GOT=$(jq -r '.body // "" | split("\n") | map(select(startswith("sha="))) | first // "" | ltrimstr("sha=")' /tmp/release.json)
+          if [ -z "$GOT" ]; then
+            echo "::error::$BUILD_ID records no sha=; not a release build.yml published"
+            exit 1
+          fi
+          if [ -n "$SHA" ] && [ "$GOT" != "$SHA" ]; then
+            echo "::error::$BUILD_ID was built from $GOT, not $SHA"
             exit 1
           fi
           echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
-          echo "Assembling images for $BUILD_ID"
+          echo "sha=$GOT" >> "$GITHUB_OUTPUT"
+          echo "Assembling images for $BUILD_ID (sha=$GOT)"
 
       - name: Prepare
         env:
           BUILD_ID: ${{ steps.resolve.outputs.build_id }}
         run: |
-            MANIFEST=/tmp/manifest.json
-
             # firmware_url <firmware_soc> <variant> [<flash>]
-            #   -> echoes the <flash> (default nor) URL for
-            #      ${firmware_soc}_${variant} in $BUILD_ID, or nothing if the
-            #      manifest has no such entry. The split NOR package is listed
-            #      under nor_split.
+            #   -> echoes the <flash> (default nor) package URL for
+            #      ${firmware_soc}_${variant} on the $BUILD_ID release, or
+            #      nothing if that build did not publish one. nor_split is the
+            #      split NOR package, openipc.<soc>-nor-<variant>-split.tgz.
             firmware_url() {
-                jq -r --arg b "$BUILD_ID" --arg p "${1}_${2}" --arg f "${3:-nor}" \
-                    '.builds[] | select(.id==$b) | .platforms[$p][$f].url // empty' \
-                    "$MANIFEST"
+                local name
+                case "${3:-nor}" in
+                  nor_split) name="openipc.$1-nor-$2-split.tgz" ;;
+                  *) name="openipc.$1-${3:-nor}-$2.tgz" ;;
+                esac
+                jq -r --arg n "$name" '.assets[] | select(.name==$n) | .url' /tmp/release.json
             }
 
             # create <uboot_board> <firmware_soc> <variant>
@@ -276,10 +328,42 @@ jobs:
       # so a cancelled run leaves a bootloader on an otherwise blank part.
       # Uploading that publishes an unflashable image indistinguishable from a
       # finished one. The ${{ }} is load-bearing: a bare `!` starts a YAML tag.
+      #
+      # The asset names are stable links, so the release body is what says
+      # which build is inside; it was empty when #2679 found a day-old one.
+      # It lists what this run assembled, by name: the action replaces files
+      # and never removes them, so an image that was skipped or refused
+      # tonight keeps an earlier build's file under this tag, and one
+      # build_id for the whole release would claim that file too. Gated on
+      # the resolve step: with no build resolved nothing is uploaded, and the
+      # body would be rewritten to name none.
+      - name: Describe the release
+        if: ${{ !cancelled() && steps.resolve.outcome == 'success' }}
+        env:
+          BUILD_ID: ${{ steps.resolve.outputs.build_id }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          {
+            echo "build_id=$BUILD_ID"
+            echo "sha=$SHA"
+            echo "assembled_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+            echo "Full NOR images: the kernel and rootfs of $BUILD_ID, U-Boot from the \`latest\` release."
+            echo "Assembled by this run:"
+            echo
+            for f in target/*.bin; do
+              if [ -e "$f" ]; then echo "- ${f#target/}"; fi
+            done
+            echo
+            echo "An asset not listed was not rebuilt by this run and holds an earlier build."
+          } > release-body.md
+          cat release-body.md
+
       - name: Upload
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.resolve.outcome == 'success' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: image
           make_latest: false
+          body_path: release-body.md
           files: target/*.bin
