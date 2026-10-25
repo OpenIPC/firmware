@@ -702,6 +702,10 @@ verify_rootfs() {
 		# a property of the kernel being replaced, and irrelevant the moment the new
 		# one boots. flashcp writes the partition raw and never needs the mount, so
 		# aborting here rejects an image that would have flashed fine.
+		# A KILL from mount_rootfs can land after the kernel finished the mount
+		# but before mount exited, so a failed mount may still be attached; it
+		# has to go before any path below detaches the loop under it.
+		umount "$y" 2>/dev/null
 		echo_c 33 "\nCannot mount $x to verify it."
 		[ -n "$err" ] && echo_c 33 "  $err"
 		echo_c 33 "The running kernel may lack its squashfs decompressor; the image itself may be fine."
