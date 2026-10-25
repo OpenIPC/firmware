@@ -3842,6 +3842,10 @@ if [ "1" = "$_ramfs_phase" ]; then
 	# Handed off: this is PID 1 now, and nothing else is left running from the
 	# old root, so it can finally be let go -- see need_handoff.
 	[ "1" = "$_handoff" ] && release_old_root
+	# Stage 1 exports the SoC the images are named for; one that did not (or
+	# a caller that sets up this phase by hand) names them for $model, as
+	# every image did before #2688.
+	image_soc=${image_soc:-$model}
 	[ -n "$ramfs_kernel_file" ] && kernel_file=$ramfs_kernel_file
 	[ -n "$ramfs_rootfs_file" ] && rootfs_file=$ramfs_rootfs_file
 	flash_and_reboot
