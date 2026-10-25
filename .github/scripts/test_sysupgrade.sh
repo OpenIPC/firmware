@@ -3531,6 +3531,27 @@ else
     bad "split layout without sysfs offsets, rc=$RC out='$OUT'"
 fi
 
+# Some offsets in sysfs and some not: still checked as worked out.
+split_env fixed
+rm -f "$SB"/sys/class/mtd/mtd3/offset
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote; then
+    ok "one offset missing from sysfs: the images are checked too, and an empty kernel refuses"
+else
+    bad "a partly worked-out layout must be checked, rc=$RC out='$OUT'"
+fi
+
+# A layout handed in through the environment is not taken.
+split_env split
+RUN_ENV="$RUN_ENV nor_split_layout=mtd0"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] &&
+    [ "$(xxd -p -l 4 "$SB/dev/mtdblock0")" = 00000000 ]; then
+    ok "a nor_split_layout from the environment is ignored: firmware.bin where the flash says"
+else
+    bad "an inherited nor_split_layout must not steer the write, rc=$RC out='$OUT'"
+fi
+
 # Offsets from the order are not taken when the partitions do not hold what
 # their names say: nothing is written.
 split_env fixed
@@ -3562,6 +3583,18 @@ if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "settings do not fit" &&
     ok "split layout: an image that fills the flash is refused, nothing written"
 else
     bad "split layout: an oversized image must be refused, rc=$RC out='$OUT'"
+fi
+
+# The gk710x kernel names its uImage "Linux-3.4.43-Goke-gk7102": the SoC is the
+# last word of the name, not the third.
+split_env split
+printf 'Linux-3.4.43-Goke-gk7205v200\0' | dd of="$SB/tmp/firmware.bin.gk7205v200" bs=1 seek=32 conv=notrunc 2>/dev/null
+make_archive "$SB/tmp/firmware.bin.gk7205v200"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 4)" = 27051956 ] && rebooted; then
+    ok "split layout: a uImage named Linux-<version>-<vendor>-<soc> is taken for its SoC"
+else
+    bad "a vendor word in the uImage name must not hide the SoC, rc=$RC out='$OUT'"
 fi
 
 # Another SoC's image: refused before anything is written.

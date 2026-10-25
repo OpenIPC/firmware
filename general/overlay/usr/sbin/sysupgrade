@@ -60,6 +60,9 @@ INITTAB=${INITTAB:-/etc/inittab}
 # Where MTD publishes its partitions, and the block devices the split NOR
 # layout is written through. Overridable for the same reason.
 MTD_SYS=${MTD_SYS:-/sys/class/mtd}
+# The NOR layout this run found before its first write (nor_split_devs), never
+# one handed in from outside: a stale value would decide where the image goes.
+nor_split_layout=
 MTDBLOCK=${MTDBLOCK:-/dev/mtdblock}
 MTDCHR=${MTDCHR:-/dev/mtd}
 # Where a handed-off flash phase writes its log, and the port that serves it.
@@ -420,7 +423,7 @@ do_update_kernel() {
 			local fsoc=$(fit_soc "$x")
 			[ -n "$fsoc" ] && check_soc "$fsoc"
 		else
-			local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
+			local ksoc=$(nor_split_soc "$x")
 			if [ "$vendor" != "ingenic" ] && [ "$vendor" != "rockchip" ]; then
 				check_soc "$ksoc"
 			fi
@@ -793,9 +796,11 @@ nor_split_blocks() {
 	echo $(((64 + size + 65535) / 65536))
 }
 
-# The SoC a uImage was built for: its name field, "Linux-<version>-<soc>".
+# The SoC a uImage was built for: the last word of its name field,
+# "Linux-<version>-<soc>", or "Linux-3.4.43-Goke-gk7102" as the gk710x kernel
+# names itself -- whose third word, "Goke", no camera is.
 nor_split_soc() {
-	od -j 32 -N 32 -S 1 -A n "$1" 2>&3 | cut -d- -f3 | tr -d ' '
+	od -j 32 -N 32 -S 1 -A n "$1" 2>&3 | tr -d ' ' | sed 's/.*-//'
 }
 
 # "mtdN offset size name" for every partition, in device order. Kernels from
@@ -847,10 +852,11 @@ nor_split_devs() {
 	fi
 	geo=$(mtd_geometry)
 	[ -n "$geo" ] || return 1
-	ls "$MTD_SYS"/mtd*/offset >/dev/null 2>&1 || derived=1
 	firmware_dev= kernel_dev= rootfs_dev= rootfs_data_dev=
 	while read -r dev o z name; do
 		[ $((o + z)) -gt "$chip" ] && chip=$((o + z))
+		# one offset not from sysfs is enough to want the images checked
+		[ -r "$MTD_SYS/$dev/offset" ] || derived=1
 		case "$name" in
 			firmware) [ -n "$firmware_dev" ] || firmware_dev=$dev firmware_off=$o firmware_size=$z ;;
 			kernel) [ -n "$kernel_dev" ] || kernel_dev=$dev kernel_off=$o kernel_size=$z ;;
