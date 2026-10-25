@@ -3496,6 +3496,52 @@ else
     bad "fixed -> split, rc=$RC out='$OUT'"
 fi
 
+# A 3.x kernel gives no partition offsets in sysfs (they came in 4.1): the
+# 3.18 of the Hi3516CV300 and Hi3519V101 families and Hi3536CV100, the 3.0
+# and 3.4 of the oldest SoCs. The offsets then follow from the partition
+# order, and are taken once the kernel and rootfs partitions hold a uImage and
+# a squashfs, as on a running camera.
+no_sysfs_offsets() {
+    rm -f "$SB"/sys/class/mtd/mtd*/offset
+    [ -n "${1:-}" ] && printf '\x27\x05\x19\x56' | dd of="$SB/dev/mtdblock$1" conv=notrunc 2>/dev/null
+    [ -n "${2:-}" ] && printf 'hsqs' | dd of="$SB/dev/mtdblock$2" conv=notrunc 2>/dev/null
+    return 0
+}
+split_env fixed
+no_sysfs_offsets 2 3
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] &&
+    [ "$(flash_at 2 $((0x50000 + 30 * 65536)) 0x50000 4)" = 68737173 ] &&
+    [ "$(dd if="$SB/dev/mtdblock3" bs=1 skip=$((OVL - 0x250000)) count=12 2>/dev/null)" = OPENIPC-OVL1 ] &&
+    blob_files 3 "$OVL" 0x250000 | grep -q 'etc/marker' &&
+    [ "$(xxd -p -l 4 "$SB/dev/mtdblock4")" = 00000000 ] && nothing_wrote; then
+    ok "fixed slots -> split without sysfs offsets (3.x): the offsets from the order, the settings carried"
+else
+    bad "fixed -> split without sysfs offsets, rc=$RC out='$OUT'"
+fi
+
+split_env split
+no_sysfs_offsets 3 4
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] &&
+    [ "$(dd if="$SB/dev/mtdblock2" bs=1 skip=$((OVL - 0x50000)) count=12 2>/dev/null)" = OPENIPC-OVL1 ] &&
+    blob_files 2 "$OVL" 0x50000 | grep -q 'etc/marker' && rebooted; then
+    ok "split layout without sysfs offsets (3.x): firmware.bin at 0x50000, the settings staged"
+else
+    bad "split layout without sysfs offsets, rc=$RC out='$OUT'"
+fi
+
+# Offsets from the order are not taken when the partitions do not hold what
+# their names say: nothing is written.
+split_env fixed
+no_sysfs_offsets
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote; then
+    ok "without sysfs offsets, a kernel partition with no uImage refuses the upgrade, nothing written"
+else
+    bad "derived offsets over unrecognised partitions must refuse, rc=$RC out='$OUT'"
+fi
+
 # The same under an older bootloader, which spells out the fixed slots: any
 # U-Boot that loads the kernel from 0x50000 boots the split layout, since the
 # kernel finds its own partitions, so nothing about the bootloader is asked.
