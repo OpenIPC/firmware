@@ -9,4 +9,15 @@ config BR2_PACKAGE_GLIBC_COMPAT
 	  ld-linux.so.3 -> musl libc.
 
 	  Used by Hi3520DV200 (vendor MPP for V200 only ships glibc-linked
-	  .so, while glibc cannot run on the SoC's 3.0.8 kernel).
+	  .so, while glibc cannot run on the SoC's 3.0.8 kernel) and by the
+	  SigmaStar infinity3 (MSC313E) SDK libs.
+
+	  The executable that loads the vendor libs links
+	  -lglibc-compat-static (their mmap passes a 32-bit off_t) and
+	  -lglibc-compat ahead of libc: musl has its own __xstat family,
+	  and the first library in load order wins.
+
+	  A call neither can bridge for both ABIs at once (lseek's 32-bit
+	  off_t) is redirected per vendor library at install time with
+	  rename-import.py, to a glibc-compat wrapper of the same name
+	  length.
