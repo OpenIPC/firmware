@@ -11,7 +11,6 @@ chip=$(cat /sys/devices/soc0/machine | awk '{print $2}')
 mkdir -p /data/audio
 mkdir -p /data/cfg
 mkdir -p /data/misc
-mkdir -p /data/property
 
 mount --bind /etc/sensors/iqfile/audio /data/audio
 mount --bind /etc/sensors/iqfile /data/cfg
@@ -34,30 +33,12 @@ echo 0 >/proc/sys/vm/overcommit_memory
 echo 50 >/proc/sys/vm/overcommit_ratio
 
 ### MSC313E
-setprop mi.vi.src 2
-setprop mi.sys.shrink_mem 1
-setprop mi.vi.img.sub 0
-setprop mi.venc.bufcnt 2
-setprop mi.venc.sub.bufcnt 2
-
-setprop mi.vi.bufcnt 3
-setprop mi.vi.sub.bufcnt 3
-setprop mi.vi.sub.width 640
-setprop mi.vi.sub.height 480
-
-# SW OSD
-#setprop mi.osd.stretch 1
-setprop mi.osd.gop.use 0
-setprop mstar.omx.gop.disable 1
+# The middleware settings the vendor set with setprop are in /etc/sigmastar.conf
 
 echo D >/sys/class/mstar/mhvsp1/fbmg
 echo 9 >/sys/class/mstar/mhvsp1/fbmg
 #echo 0 > /sys/class/mstar/mscldma1/db
 #echo D40 > /sys/class/mstar/mhvsp1/dbgmg
-
-setprop mi.venc.bufratio 50
-setprop mi.venc.img.bufratio 40
-setprop mi.video.height.force.aligned32 1
 
 dmem -req 0x00016800 VSPL-I0P3B2
 dmem -req 0x00016800 VSPL-I0P3B1

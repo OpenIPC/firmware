@@ -1,5 +1,7 @@
 config BR2_PACKAGE_SIGMASTAR_OSDRV_MSC313E
 	bool "sigmastar-osdrv-msc313e"
+	depends on BR2_TOOLCHAIN_USES_MUSL
+	select BR2_PACKAGE_GLIBC_COMPAT
 	help
 	  sigmastar-osdrv-msc313e - SigmaStar kernel modules and libs
 

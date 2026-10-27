@@ -9,6 +9,19 @@ SIGMASTAR_OSDRV_MSC313E_SITE =
 SIGMASTAR_OSDRV_MSC313E_LICENSE = MIT
 SIGMASTAR_OSDRV_MSC313E_LICENSE_FILES = LICENSE
 
+# The vendor libs are glibc builds; on the musl rootfs glibc-compat supplies
+# the loader names and the glibc-only symbols they import.
+SIGMASTAR_OSDRV_MSC313E_DEPENDENCIES = glibc-compat
+
+# libmi and libOMX_BELA dlopen("libat.so") for property_get/property_set and
+# libCam* link it, so a library of that name has to exist. The vendor one is
+# Android's property client and needs the vendor's Android init (minit) to
+# serve it; this one reads /etc/sigmastar.conf instead.
+define SIGMASTAR_OSDRV_MSC313E_BUILD_CMDS
+	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC -shared -Wl,-soname,libat.so \
+		$(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/src/libat.c -o $(@D)/libat.so -lpthread -s
+endef
+
 define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iqfile
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/iqfile/*.xml
@@ -28,6 +41,8 @@ define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/lib/*.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(@D)/libat.so
+	$(INSTALL) -m 644 -D $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sigmastar.conf $(TARGET_DIR)/etc/sigmastar.conf
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*JXF22*.so
