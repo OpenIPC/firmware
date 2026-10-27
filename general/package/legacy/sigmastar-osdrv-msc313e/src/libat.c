@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 
 #ifndef CONFIG_FILE
 #define CONFIG_FILE "/etc/sigmastar.conf"
@@ -131,9 +132,11 @@ int property_set(const char *key, const char *value)
 }
 
 /*
- * liblog. The vendor one writes to the Android logger ring, which nothing
- * reads, and the ISP logs errors there on every frame, so stay quiet unless
- * AT_LOG_LEVEL asks for stderr (2 verbose, 3 debug .. 6 error, 7 fatal).
+ * liblog. The vendor one writes to the Android logger ring; here the ring is
+ * syslogd's (logread). Errors and fatals by default: the ISP logs some errors
+ * per frame while it settles, and the ring takes them without touching the
+ * console or flash. AT_LOG_LEVEL moves the threshold (2 verbose, 3 debug,
+ * 4 info, 5 warn, 6 error, 7 fatal, 8 nothing).
  */
 static int log_level(void)
 {
@@ -142,23 +145,23 @@ static int log_level(void)
 
 	if (!level) {
 		env = getenv("AT_LOG_LEVEL");
-		level = env ? atoi(env) : 8;
+		level = env ? atoi(env) : 6;
 	}
 	return level;
 }
 
 int __android_log_write(int prio, const char *tag, const char *msg)
 {
-	static const char prio_char[] = "??VDIWEFS";
-	size_t len;
+	static const int to_syslog[] = {
+		LOG_DEBUG, LOG_DEBUG, LOG_DEBUG, LOG_DEBUG,	/* ?, ?, V, D */
+		LOG_INFO, LOG_WARNING, LOG_ERR, LOG_CRIT,	/* I, W, E, F */
+	};
 
 	if (prio < log_level())
 		return 0;
-	len = strlen(msg);
-	return fprintf(stderr, "%c/%s: %s%s",
-		       prio >= 0 && prio < 9 ? prio_char[prio] : '?',
-		       tag ? tag : "", msg,
-		       len && msg[len - 1] == '\n' ? "" : "\n");
+	syslog(prio >= 0 && prio < 8 ? to_syslog[prio] : LOG_ERR, "%s: %s",
+	       tag ? tag : "", msg);
+	return 1;
 }
 
 int __android_log_vprint(int prio, const char *tag, const char *fmt, va_list ap)
