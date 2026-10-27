@@ -44,6 +44,10 @@ define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/lib/*.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(@D)/libat.so
+	# libOMX_AVQE_A moves the playback DMA pointer with a 32-bit-off_t lseek,
+	# which musl's 64-bit one would misread; send it to glibc-compat's wrapper.
+	python3 $(GLIBC_COMPAT_PKGDIR)/rename-import.py \
+		$(TARGET_DIR)/usr/lib/libOMX_AVQE_A.so lseek lse32
 	$(INSTALL) -m 644 -D $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sigmastar.conf $(TARGET_DIR)/etc/sigmastar.conf
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors

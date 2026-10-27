@@ -16,3 +16,8 @@ config BR2_PACKAGE_GLIBC_COMPAT
 	  -lglibc-compat-static (their mmap passes a 32-bit off_t) and
 	  -lglibc-compat ahead of libc: musl has its own __xstat family,
 	  and the first library in load order wins.
+
+	  A call neither can bridge for both ABIs at once (lseek's 32-bit
+	  off_t) is redirected per vendor library at install time with
+	  rename-import.py, to a glibc-compat wrapper of the same name
+	  length.

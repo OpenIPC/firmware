@@ -19,6 +19,7 @@
  */
 
 #define _GNU_SOURCE
+#include <errno.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -191,4 +192,22 @@ char **backtrace_symbols(void *const *buffer, int size)
 {
 	(void)buffer;
 	return calloc(size > 0 ? size : 1, sizeof(char *));
+}
+
+/*
+ * lseek with glibc's 32-bit off_t. No vendor library calls this by name:
+ * rename-import.py points a blob's own lseek import here (infinity3's
+ * libOMX_AVQE_A, which moves the playback DMA pointer with it), because an
+ * lseek interposed for every caller could not tell a glibc call (offset in
+ * r1, whence in r2) from a musl one (offset in r2:r3, whence on the stack).
+ */
+long lse32(int fd, long offset, int whence)
+{
+	off_t r = lseek(fd, offset, whence);
+
+	if (r != (long)r) {
+		errno = EOVERFLOW;
+		return -1;
+	}
+	return r;
 }
