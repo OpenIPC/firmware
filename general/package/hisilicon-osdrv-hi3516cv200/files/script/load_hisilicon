@@ -369,9 +369,14 @@ remove_ko() {
 #
 # That lookup has since changed: majestic takes the bare sensor name (the
 # #2675 log reads "No matches for 'JXH65'") and considers every file in
-# /etc/sensors that starts with it, trying them in turn. So a second ini for a
-# sensor that already has one must not start with its name, or every camera
-# with that sensor tries it: dvp_jxh65_960p.ini, not jxh65_dvp_960p.ini (#2700).
+# /etc/sensors that starts with it, in name order. It keeps the first whose VI
+# delivers frames and whose picture follows the shutter; one that only
+# delivers frames is kept by a majestic without that check, and kept anyway
+# when none passes it. The check cannot flag a picture that is live but
+# scrambled, which is what a board-specific profile gives on the boards the
+# default fits. So a second ini for a sensor must sort after the proven one,
+# and is then reached only where that one's picture is frozen:
+# jxh65_i2c_dvp_960p.ini comes after jxh65_i2c_960p.ini for that reason (#2706).
 load_usage() {
         echo "Usage:  ./load_hisilicon [-option] [sensor_name]"
         echo "options:"
