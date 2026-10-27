@@ -8,13 +8,22 @@
  * libuclibc-compat.so + libc.so.0 symlink; we mirror that for glibc.
  *
  * Symbols re-implemented here are the glibc-only ones used by the V200
- * MPP set: __xstat (struct stat ABI bridge) and __isoc99_sscanf.
+ * MPP set: __xstat (struct stat ABI bridge) and __isoc99_sscanf, and by the
+ * SigmaStar infinity3 (MSC313E) SDK libs: glibc's internal string names,
+ * pthread_cleanup_push's cancel registration, mallinfo and backtrace.
+ *
+ * musl exports its own __xstat/__fxstat/__lxstat, filling its legacy
+ * 104-byte struct; the vendor's buffer is glibc's 88-byte one. Lookup goes
+ * in load order and musl appends libc when it is first NEEDED, so these only
+ * win when the executable links -lglibc-compat ahead of libc.
  */
 
 #define _GNU_SOURCE
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -116,4 +125,70 @@ int __isoc99_sscanf(const char *str, const char *fmt, ...)
 	int r = vsscanf(str, fmt, ap);
 	va_end(ap);
 	return r;
+}
+
+/* glibc's internal names for the public string functions */
+char *__strdup(const char *s)
+{
+	return strdup(s);
+}
+
+char *__strndup(const char *s, size_t n)
+{
+	return strndup(s, n);
+}
+
+char *__strsep_g(char **stringp, const char *delim)
+{
+	return strsep(stringp, delim);
+}
+
+/*
+ * pthread_cleanup_push/pop as compiled against glibc. glibc longjmps into the
+ * registered buffer when the thread is cancelled; musl knows nothing of it,
+ * so a cancelled vendor thread exits without running its cleanup handlers.
+ * The infinity3 libs cancel threads only when tearing a pipeline down
+ * (pthread_cancel in libISP and libCamUtil); a normal pop runs the handler
+ * inline and never reaches these.
+ */
+void __pthread_register_cancel(void *buf)
+{
+	(void)buf;
+}
+
+void __pthread_unregister_cancel(void *buf)
+{
+	(void)buf;
+}
+
+void __pthread_unwind_next(void *buf)
+{
+	(void)buf;
+	pthread_exit(PTHREAD_CANCELED);
+}
+
+/* infinity3 libmi's memory and crash reports: report nothing, never crash */
+struct glibc_mallinfo {
+	int arena, ordblks, smblks, hblks, hblkhd;
+	int usmblks, fsmblks, uordblks, fordblks, keepcost;
+};
+
+struct glibc_mallinfo mallinfo(void)
+{
+	struct glibc_mallinfo mi = { 0 };
+
+	return mi;
+}
+
+int backtrace(void **buffer, int size)
+{
+	(void)buffer;
+	(void)size;
+	return 0;
+}
+
+char **backtrace_symbols(void *const *buffer, int size)
+{
+	(void)buffer;
+	return calloc(size > 0 ? size : 1, sizeof(char *));
 }
