@@ -345,8 +345,8 @@ remove_ko() {
 # missing one of the three gives no video, so advertising it here is worse
 # than silence. Deliberately absent for that reason:
 #
-#   gc2023, gc2023_mipi  the only gc2023 ini is the MIPI one, so majestic
-#                        answers plain gc2023 with "No matches for
+#   gc2023, gc2023_mipi  the only gc2023 ini is the MIPI one, so the majestic
+#                        of #2243 answered plain gc2023 with "No matches for
 #                        'gc2023_i2c'"; and on MIPI the only library shipped
 #                        is the DVP one, which programs the sensor for
 #                        parallel output and times VENC out (#2243, measured
@@ -361,11 +361,22 @@ remove_ko() {
 #   ov9750               its ini asks for libsns_ov9750_orig.so, which nothing
 #                        ships.
 #
-# ov2710_dc and ov2710_mipi are listed apart because their .ini names break
-# the <sensor>_<bus>_<res> convention majestic globs for, so they work only
-# once something points majestic at the file. The library behind them is real:
-# one libsns_ov2710.so that reads its own basename to pick MIPI or DVP (#2035,
+# ov2710_dc and ov2710_mipi are listed apart because the majestic of #2423
+# did not find their .ini on its own; pointing isp.sensorConfig at the file
+# works whatever majestic does. The library behind them is real: one
+# libsns_ov2710.so that reads its own basename to pick MIPI or DVP (#2035,
 # #2038).
+#
+# That lookup has since changed: majestic takes the bare sensor name (the
+# #2675 log reads "No matches for 'JXH65'") and considers every file in
+# /etc/sensors that starts with it, in name order. It keeps the first whose VI
+# delivers frames and whose picture follows the shutter; one that only
+# delivers frames is kept by a majestic without that check, and kept anyway
+# when none passes it. The check cannot flag a picture that is live but
+# scrambled, which is what a board-specific profile gives on the boards the
+# default fits. So a second ini for a sensor must sort after the proven one,
+# and is then reached only where that one's picture is frozen:
+# jxh65_i2c_dvp_960p.ini comes after jxh65_i2c_960p.ini for that reason (#2706).
 load_usage() {
         echo "Usage:  ./load_hisilicon [-option] [sensor_name]"
         echo "options:"
@@ -378,8 +389,8 @@ load_usage() {
         echo "Available sensors: ar0130 ar0237 gc1034 imx222 imx291 imx323 jxf22"
         echo "                   jxf23 jxh62 jxh65 ov2735 ov9712 ov9732 sc1135"
         echo "                   sc1145 sc1235 sc2035 sc2135 sc2235"
-        echo "    ov2710_dc and ov2710_mipi work too, but majestic cannot find"
-        echo "    their config on its own -- name it with"
+        echo "    ov2710_dc and ov2710_mipi work too; if majestic does not find"
+        echo "    their config on its own, name it with"
         echo "    cli -s .isp.sensorConfig /etc/sensors/<sensor>_1080p.ini"
         echo -e "for example: ./load_hisilicon -i -sensor jxf23 -osmem 32M -board demo -yuv0 0\n"
 }
