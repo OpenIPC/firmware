@@ -12,6 +12,11 @@ HISILICON_OSDRV_HI3516CV200_LICENSE_FILES = LICENSE
 define HISILICON_OSDRV_HI3516CV200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV200_PKGDIR)/files/sensor/config/*.ini
+	# The name #2700 shipped this profile under, and told cameras to set
+	# isp.sensorConfig to. That setting lives in /etc/majestic.yaml and
+	# survives sysupgrade, so the old path has to keep resolving. Starting
+	# with "dvp", it matches no sensor and is never tried unasked.
+	ln -sf jxh65_i2c_dvp_960p.ini $(TARGET_DIR)/etc/sensors/dvp_jxh65_960p.ini
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV200_PKGDIR)/files/sensor/iq/*.ini
