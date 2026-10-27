@@ -55,6 +55,16 @@ insert_vi() {
 		insmod xm530_vi.ko buffer=$VI_BUFF
 }
 
+# MMZ, likewise: the open driver when installed, the vendor's otherwise
+insert_mmz() {
+	modprobe open_mmz mmz_start="$MEM_START" mmz_size="$MEM_LEN" 2>/dev/null ||
+		insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN"
+}
+
+remove_mmz() {
+	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
+}
+
 remove_vi() {
 	rmmod -w open_vi 2>/dev/null || rmmod -w xm530_vi
 }
@@ -78,7 +88,7 @@ remove_sns() {
 insert_ko() {
 	# driver load
 	insert_sns > /dev/null
-	insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN"
+	insert_mmz
 	insert_vi
 	insmod xm530_isp.ko
 	insmod xm530_rgn.ko
@@ -99,7 +109,7 @@ remove_ko() {
 	rmmod -w xm530_rgn
 	rmmod -w xm530_isp
 	remove_vi
-	rmmod -w mmz
+	remove_mmz
 	remove_sns
 }
 

@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_VERSION))
-XIONGMAI_OPENSDK_VERSION = 0372c03bf10db8adac50962ca56f2e71923538c4
+XIONGMAI_OPENSDK_VERSION = 118c66def6776c86d841499164a51ed3c6b2fd7a
 
-XIONGMAI_OPENSDK_LICENSE = GPL-3.0 (libraries), GPL-2.0 (open_vi kernel module)
+XIONGMAI_OPENSDK_LICENSE = GPL-3.0 (libraries), GPL-2.0 (open_vi, open_mmz kernel modules)
 XIONGMAI_OPENSDK_LICENSE_FILES = LICENSE
 
 # Install after osdrv, the same order hisilicon-opensdk keeps with its osdrv.
@@ -15,11 +15,12 @@ ifeq ($(BR2_PACKAGE_XIONGMAI_OSDRV_XM530),y)
 XIONGMAI_OPENSDK_DEPENDENCIES += xiongmai-osdrv-xm530
 endif
 
-# The open VI driver (drivers/xm_vi): the vendor's xm530_vi.ko without its
-# freeze at VI init or its vmalloc leak. The kernel-module infrastructure
-# installs it as /lib/modules/<kver>/extra/open_vi.ko, which load_xiongmai
-# prefers over the vendor module.
-XIONGMAI_OPENSDK_MODULE_SUBDIRS = drivers/xm_vi
+# The open drivers, which load_xiongmai prefers over the vendor modules:
+# drivers/xm_vi (open_vi.ko), the vendor's xm530_vi.ko without its freeze at
+# VI init or its vmalloc leak, and drivers/xm_mmz (open_mmz.ko), its mmz.ko.
+# The kernel-module infrastructure installs them under /lib/modules/<kver>/
+# extra/; xiongmai-osdrv-xm530 then leaves out the vendor mmz.ko.
+XIONGMAI_OPENSDK_MODULE_SUBDIRS = drivers/xm_vi drivers/xm_mmz
 
 define XIONGMAI_OPENSDK_BUILD_CMDS
 	$(MAKE) $(TARGET_CONFIGURE_OPTS) CHIPARCH=$(OPENIPC_SOC_FAMILY) -C $(@D)/libraries all
