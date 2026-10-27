@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = c3076b23dd3fd48d10772dbbb58399615db2320a
+HISILICON_OPENSDK_VERSION = b0d848ed4722796bfb3c76c3317aa63bb0f14ae3
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -272,6 +272,7 @@ HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
 	smart_sc450ai/libsns_sc450ai \
 	smart_sc500ai/libsns_sc500ai \
 	sony_imx335/libsns_imx335 \
+	sony_imx662/libsns_imx662 \
 	superpix_sp2308/libsns_sp2308
 HISILICON_OPENSDK_SENSORS_hi3519dv500 = \
 	gst_412c/libsns_gst412c \
@@ -313,10 +314,11 @@ HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 # already fills 5119.32 KB of it (CI run 39116182919: "0KB left"). The IMX335
 # module is ~20 KB compressed and does not fit; 5 MP also needs osmem=64M, which
 # rules out most lite-class cv610 boards. hi3516cv6xx_ultimate is 16 MB and had
-# ~1.1 MB spare, so it keeps the sensor. Filtered here, at selection time, so an
-# image and its sysupgrade payload stay in step; a finalize-hook rm -f would not.
+# ~1.1 MB spare, so it keeps the sensor. IMX662 is held to ultimate for the same
+# room. Filtered here, at selection time, so an image and its sysupgrade payload
+# stay in step; a finalize-hook rm -f would not.
 ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3516cv6xx/lite)
-HISILICON_OPENSDK_SENSORS := $(filter-out sony_imx335/libsns_imx335,$(HISILICON_OPENSDK_SENSORS))
+HISILICON_OPENSDK_SENSORS := $(filter-out sony_imx335/libsns_imx335 sony_imx662/libsns_imx662,$(HISILICON_OPENSDK_SENSORS))
 endif
 
 # fpv variant on V4 (hi3516ev200 + gk7205v200): restrict to the high-fps

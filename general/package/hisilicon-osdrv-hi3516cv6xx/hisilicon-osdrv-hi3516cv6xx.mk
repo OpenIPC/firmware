@@ -53,7 +53,8 @@ HISILICON_OSDRV_HI3516CV6XX_MPP_LIBS = \
 # Sensor .so blobs shipped from vendor flash where the openhisilicon
 # V5 SDK has no source mirror. Extracted from the original CV608 DEMO
 # board flash (Hi3516CV610_MPP_V1.0.1.0 B040, Sep 2024). Source-built
-# sensors (gc4023, os04d10, sc4336p, sc450ai, sc500ai, sc431hai, sp2308)
+# sensors (gc4023, os04d10, sc4336p, sc450ai, sc500ai, sc431hai, sp2308,
+# imx335, imx662)
 # come from hisilicon-opensdk and are not duplicated here. The demo board's
 # libsns_os02m10.so is gone: built for B040, it overran the B051 ISP's stack
 # in pfn_cmos_get_standby_cfg and majestic aborted on every start. Its sensor
@@ -63,17 +64,19 @@ HISILICON_OSDRV_HI3516CV6XX_SENSOR_BLOBS = \
 
 # hi3516cv6xx_lite ships the same 5120 KB squashfs slot on an 8 MB NOR part
 # that master is already 0.68 KB short of (CI run 39116182919), so the IMX335
-# profiles stay with hi3516cv6xx_ultimate (16 MB). The driver itself is dropped
-# from the sensor list in hisilicon-opensdk.mk; here only the profiles go away,
-# which is why the gate is repeated: a profile without its driver is dead weight.
+# and IMX662 profiles stay with hi3516cv6xx_ultimate (16 MB). The drivers are
+# dropped from the sensor list in hisilicon-opensdk.mk; here only the profiles
+# go away, which is why the gate is repeated: a profile without its driver is
+# dead weight.
 ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3516cv6xx/lite)
-HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES =
+HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES =
 else
-define HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES
+define HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx335_*.ini
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/modes
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/modes $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/modes/*.ini
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx662_i2c_1080p.ini
 endef
 endif
 
@@ -99,7 +102,10 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# and are named without the imx335_i2c_ prefix so they cannot be picked
 	# up by auto-selection. Their rates are the ones the T6 crop timing
 	# actually reaches (1520p 30, flex 1920x1080 30, full10 40), not "high fps".
-	$(HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES)
+	# IMX662 has one, 1080p30 RAW12 on four lanes, RGGB, as the driver's
+	# author runs it on a CV610. ipcinfo does not detect the IMX662, so a
+	# camera needs `fw_setenv sensor imx662`; majestic then finds it by name.
+	$(HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES)
 
 	# SP2308, on both variants with its driver: ipcinfo names chip ID
 	# 0x5302 sp2308, which is the name majestic looks this profile up by.
