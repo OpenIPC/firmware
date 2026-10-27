@@ -23,13 +23,15 @@ define SIGMASTAR_OSDRV_MSC313E_BUILD_CMDS
 endef
 
 define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iqfile
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iqfile/audio
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/iqfile/sensor_db.cfg
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/iqfile/*.xml
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/iqfile/f22*.mz
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/iqfile/imx307*.mz
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/iqfile/imx323*.mz
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/iqfile/sc2235*.mz
 #	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/iqfile/*.mz
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iqfile/audio $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/iqfile/audio/*
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.18.30/sigmastar
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.18.30/sigmastar $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/kmod/*.ko
