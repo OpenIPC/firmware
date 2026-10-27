@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_VERSION))
-XIONGMAI_OPENSDK_VERSION = 0097f2b93b1927eff9a7a5842b96445abcd8eab4
+XIONGMAI_OPENSDK_VERSION = 0372c03bf10db8adac50962ca56f2e71923538c4
 
-XIONGMAI_OPENSDK_LICENSE = GPL-3.0 (libraries), GPL-2.0 (xm_vi kernel module)
+XIONGMAI_OPENSDK_LICENSE = GPL-3.0 (libraries), GPL-2.0 (open_vi kernel module)
 XIONGMAI_OPENSDK_LICENSE_FILES = LICENSE
 
 # Install after osdrv, the same order hisilicon-opensdk keeps with its osdrv.
@@ -17,7 +17,7 @@ endif
 
 # The open VI driver (drivers/xm_vi): the vendor's xm530_vi.ko without its
 # freeze at VI init or its vmalloc leak. The kernel-module infrastructure
-# installs it as /lib/modules/<kver>/extra/xm_vi.ko, which load_xiongmai
+# installs it as /lib/modules/<kver>/extra/open_vi.ko, which load_xiongmai
 # prefers over the vendor module.
 XIONGMAI_OPENSDK_MODULE_SUBDIRS = drivers/xm_vi
 

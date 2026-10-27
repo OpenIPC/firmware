@@ -49,19 +49,14 @@ remove_audio() {
 
 # VI: the open driver when xiongmai-opensdk installed it (OpenIPC/openxiongmai
 # drivers/xm_vi, the same /dev/vi without the vendor module's freeze at VI init
-# and its vmalloc leak), the vendor's otherwise.
-OPEN_VI=/lib/modules/3.10.103+/extra/xm_vi.ko
-
+# and its vmalloc leak), the vendor's otherwise. mmz is loaded by then.
 insert_vi() {
-	if [ -f "$OPEN_VI" ]; then
-		insmod "$OPEN_VI" buffer=$VI_BUFF
-	else
+	modprobe open_vi buffer=$VI_BUFF 2>/dev/null ||
 		insmod xm530_vi.ko buffer=$VI_BUFF
-	fi
 }
 
 remove_vi() {
-	rmmod -w xm_vi 2>/dev/null || rmmod -w xm530_vi
+	rmmod -w open_vi 2>/dev/null || rmmod -w xm530_vi
 }
 
 insert_sns() {
