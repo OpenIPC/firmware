@@ -1,0 +1,57 @@
+{
+  "system": {
+    "webPort": 80,
+    "verbose": false
+  },
+  "video0": {
+    "rcMode": "cbr",
+    "fps": 30,
+    "size": "1920x1080",
+    "bitrate": 6000,
+    "gopSize": 1.0,
+    "sliceCount": 1,
+    "resilience": "off",
+    "intraRefreshQp": 0,
+    "framing": "off"
+  },
+  "sensor": {
+    "index": -1,
+    "mode": -1
+  },
+  "outgoing": {
+    "enabled": true,
+    "server": "udp://192.168.1.10:5600",
+    "streamMode": "rtp",
+    "maxPayloadSize": 1400,
+    "connectedUdp": true,
+    "allowUnixEncoderStall": false,
+    "audioPort": 5601
+  },
+  "audio": {
+    "enabled": false,
+    "sampleRate": 48000,
+    "channels": 1,
+    "codec": "opus",
+    "volume": 80,
+    "mute": false
+  },
+  "record": {
+    "enabled": false,
+    "dir": "/mnt/mmcblk0p1",
+    "format": "ts",
+    "mode": "mirror",
+    "maxSeconds": 300,
+    "maxMB": 500
+  },
+  "snapshot": {
+    "enabled": true,
+    "quality": 80,
+    "channel": 7
+  },
+  "discovery": {
+    "enabled": true,
+    "serviceType": "_waybeam-venc._tcp",
+    "name": "",
+    "bareAlias": true
+  }
+}
