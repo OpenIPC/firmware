@@ -27,6 +27,8 @@ SIGMASTAR_OSDRV_MSC313E_OMX_COMPONENTS = $(addprefix \
 define SIGMASTAR_OSDRV_MSC313E_BUILD_CMDS
 	$(TARGET_CC) $(TARGET_CFLAGS) -fPIC -shared -Wl,-soname,libat.so \
 		$(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/src/libat.c -o $(@D)/libat.so -lpthread -s
+	$(TARGET_CC) $(TARGET_CFLAGS) $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/src/dmem.c \
+		-o $(@D)/dmem -s
 endef
 
 define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
@@ -47,6 +49,7 @@ define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/script/load*
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/script/ircut_demo
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/bin/*
+	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(@D)/dmem
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/ $(filter-out $(SIGMASTAR_OSDRV_MSC313E_OMX_COMPONENTS), \
