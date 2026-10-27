@@ -55,10 +55,16 @@ insert_vi() {
 		insmod xm530_vi.ko buffer=$VI_BUFF
 }
 
-# MMZ, likewise: the open driver when installed, the vendor's otherwise
+# MMZ, likewise: the open driver when installed, the vendor's otherwise. An
+# image with open_mmz keeps the vendor module outside the depmod tree, so the
+# two do not both provide the same symbols. Without either, nothing that
+# needs one can load.
 insert_mmz() {
+	vendor_mmz=mmz.ko
+	[ -f "$vendor_mmz" ] || vendor_mmz=/usr/lib/xiongmai/mmz.ko
 	modprobe open_mmz mmz_start="$MEM_START" mmz_size="$MEM_LEN" 2>/dev/null ||
-		insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN"
+		insmod "$vendor_mmz" mmz_start="$MEM_START" mmz_size="$MEM_LEN" ||
+		report_error
 }
 
 remove_mmz() {
