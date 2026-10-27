@@ -21,6 +21,7 @@
 #define _GNU_SOURCE
 #include <errno.h>
 #include <pthread.h>
+#include <setjmp.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -145,24 +146,57 @@ char *__strsep_g(char **stringp, const char *delim)
 }
 
 /*
- * pthread_cleanup_push/pop as compiled against glibc. glibc longjmps into the
- * registered buffer when the thread is cancelled; musl knows nothing of it,
- * so a cancelled vendor thread exits without running its cleanup handlers.
- * The infinity3 libs cancel threads only when tearing a pipeline down
- * (pthread_cancel in libISP and libCamUtil); a normal pop runs the handler
- * inline and never reaches these.
+ * pthread_cleanup_push/pop as compiled against glibc (libCam*, libISP, which
+ * pthread_cancel their threads when a pipeline is torn down). The macro
+ * __sigsetjmp()s into the buffer and registers it; when the thread is
+ * cancelled or calls pthread_exit, glibc longjmps back there, the vendor code
+ * runs its handler and calls __pthread_unwind_next to carry on to the next.
+ *
+ * musl runs its own cleanup chain on the way out, so each registered buffer
+ * gets an entry on it whose handler does that longjmp. The entry lives in the
+ * buffer's pad, which glibc keeps for its own bookkeeping and the vendor code
+ * never touches. __sigsetjmp is musl's (glibc's is not exported), so the
+ * saved context is musl's and its longjmp resumes it. musl takes an entry off
+ * the chain before calling it and pthread_exit starts again from the chain,
+ * so __pthread_unwind_next re-entering pthread_exit runs the remaining
+ * handlers, glibc's and musl's alike. A thread that left by pthread_exit(v)
+ * inside a cleanup region is joined as PTHREAD_CANCELED rather than v.
  */
-void __pthread_register_cancel(void *buf)
+struct glibc_unwind_buf {
+	unsigned long long jb[32];	/* glibc __jmp_buf: int[64] */
+	int mask_was_saved;
+	union {
+		void *pad[4];
+		struct __ptcb cb;
+	} priv;
+};
+
+/*
+ * GCC sizes the jmp_buf by musl's type, signal mask included (392 bytes);
+ * musl's longjmp reads only the saved registers at its start, all of them
+ * inside glibc's 256-byte __jmp_buf.
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+static void unwind_to_vendor(void *arg)
 {
-	(void)buf;
+	struct glibc_unwind_buf *buf = arg;
+
+	longjmp(*(jmp_buf *)buf->jb, 1);
+}
+#pragma GCC diagnostic pop
+
+void __pthread_register_cancel(struct glibc_unwind_buf *buf)
+{
+	_pthread_cleanup_push(&buf->priv.cb, unwind_to_vendor, buf);
 }
 
-void __pthread_unregister_cancel(void *buf)
+void __pthread_unregister_cancel(struct glibc_unwind_buf *buf)
 {
-	(void)buf;
+	_pthread_cleanup_pop(&buf->priv.cb, 0);
 }
 
-void __pthread_unwind_next(void *buf)
+void __pthread_unwind_next(struct glibc_unwind_buf *buf)
 {
 	(void)buf;
 	pthread_exit(PTHREAD_CANCELED);
