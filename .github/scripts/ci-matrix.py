@@ -102,6 +102,8 @@ ALL_BOARDS = [
     "fh8852v100_lite", "fh8856v100_lite",
     "fh8852v200_lite", "fh8852v210_lite", "fh8856v200_lite", "fh8856v210_lite",
     "fh8858v200_lite", "fh8858v210_lite",
+    # FH8626V100 and FH865x share the fullhan-fh8852v200 kernel and toolchain
+    "fh8626v100_lite", "fh8652_lite", "fh8656_lite", "fh8658_lite",
     # Grainmedia
     "gm8135_lite", "gm8136_lite",
     # Novatek
