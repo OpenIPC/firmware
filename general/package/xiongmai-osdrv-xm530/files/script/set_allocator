@@ -71,10 +71,15 @@ fi
 # load_xiongmai and older scripts read as the first argument
 kept=$(fw_printenv -n bootargs | tr ' ' '\n' |
 	grep -vE '^(mem|cma|mmz_allocator)=' | grep . | tr '\n' ' ')
-if ! fw_setenv bootargs "$args ${kept% }"; then
-	echo "Could not write bootargs; nothing changes at the next boot"
+# Both in one write of the environment, so they cannot disagree: the next
+# run takes its default from osmem
+script=$(mktemp)
+printf 'bootargs %s\nosmem %sM\n' "$args ${kept% }" "$os" >"$script"
+if ! fw_setenv -s "$script"; then
+	rm -f "$script"
+	echo "Could not write the environment; nothing changes at the next boot"
 	exit 1
 fi
-fw_setenv osmem "${os}M"
+rm -f "$script"
 echo "$args ${kept% }"
 echo "Applies at the next boot"

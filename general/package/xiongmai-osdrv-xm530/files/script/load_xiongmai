@@ -62,8 +62,8 @@ insert_vi() {
 #
 # set_allocator cma boots with the media share as a CMA area (cma=) and leaves
 # only the top 1 MB out of Linux, for xm530_rgn: open_mmz then takes every
-# other block from CMA. Only open_mmz can, so a failure there is said, and the
-# fallback below gets that 1 MB.
+# other block from CMA. Only open_mmz can, and the fixed zone is 1 MB then, so
+# a failure there stops the media modules rather than start them on it.
 insert_mmz() {
 	vendor_mmz=mmz.ko
 	[ -f "$vendor_mmz" ] || vendor_mmz=/usr/lib/xiongmai/mmz.ko
@@ -72,6 +72,7 @@ insert_mmz() {
 			mmz_size="$MEM_LEN" && return
 		logger -s -p daemon.err -t xiongmai \
 			"open_mmz allocator=cma failed; set_allocator xm restores the fixed zone"
+		report_error
 	fi
 	modprobe open_mmz mmz_start="$MEM_START" mmz_size="$MEM_LEN" 2>/dev/null ||
 		insmod "$vendor_mmz" mmz_start="$MEM_START" mmz_size="$MEM_LEN" ||
