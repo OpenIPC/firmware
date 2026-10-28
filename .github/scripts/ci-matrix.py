@@ -99,7 +99,9 @@ ALL_BOARDS = [
     "ak3910_lite", "ak3918_lite", "ak3918ev200_lite", "ak3918ev300_lite",
     "ak3916ev300_lite", "ak3918ev330_lite", "ak3918ev331_lite",
     # Fullhan
-    "fh8852v100_lite", "fh8852v200_lite",
+    "fh8852v100_lite", "fh8856v100_lite",
+    "fh8852v200_lite", "fh8852v210_lite", "fh8856v200_lite", "fh8856v210_lite",
+    "fh8858v200_lite", "fh8858v210_lite",
     # Grainmedia
     "gm8135_lite", "gm8136_lite",
     # Novatek
@@ -165,25 +167,18 @@ UNBUILT_BOARDS = {
     "s2l22m_lite": "no variant set; Ambarella S2L has no board directory",
     "s2l33m_lite": "no variant set; Ambarella S2L has no board directory",
 
-    # These are real boards, and this is a COST decision rather than a technical
-    # one, so it is the entry most worth arguing with. Every one of them sets
-    # BR2_TOOLCHAIN_BUILDROOT_MUSL instead of BR2_TOOLCHAIN_EXTERNAL: it
-    # compiles a GCC and a musl from source before it starts on the firmware,
-    # tens of minutes each, against ~6 for a board that downloads its toolchain.
-    # Adding all seven would cost more runner time than a large part of the rest
-    # of the matrix, on every PR that touches a shared path.
+    # A real board, and this is a COST decision rather than a technical one, so
+    # it is the entry most worth arguing with. It sets BR2_TOOLCHAIN_BUILDROOT_MUSL
+    # instead of BR2_TOOLCHAIN_EXTERNAL: it compiles a GCC and a musl from source
+    # before it starts on the firmware, tens of minutes, against ~6 for a board
+    # that downloads its toolchain. The six Fullhan siblings that used to sit
+    # here left by switching to their family's published toolchain, which is
+    # the cheaper way out of this list.
     #
     # It is the same trade the SMOKE_BOARDS comment above makes deliberately,
     # and it is one edit to reverse: move a name from here into ALL_BOARDS and
-    # it builds. Note what this does NOT say --- none of these has ever been
-    # built by CI, so "not built" is a statement about cost, not evidence that
-    # they work.
-    "fh8852v210_lite": "internal toolchain: builds gcc+musl from source",
-    "fh8856v100_lite": "internal toolchain: builds gcc+musl from source",
-    "fh8856v200_lite": "internal toolchain: builds gcc+musl from source",
-    "fh8856v210_lite": "internal toolchain: builds gcc+musl from source",
-    "fh8858v200_lite": "internal toolchain: builds gcc+musl from source",
-    "fh8858v210_lite": "internal toolchain: builds gcc+musl from source",
+    # it builds. Note what this does NOT say --- it has never been built by CI,
+    # so "not built" is a statement about cost, not evidence that it works.
     "hi3518ev201_lite": "internal toolchain: builds gcc+musl from source",
 }
 
@@ -970,7 +965,7 @@ def self_test():
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
          24, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 91, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 97, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -1063,7 +1058,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         91, "markdown inside a package is that package"),
+         97, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],
