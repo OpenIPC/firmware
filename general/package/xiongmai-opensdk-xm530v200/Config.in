@@ -1,0 +1,10 @@
+config BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200
+	bool "xiongmai-opensdk-xm530v200"
+	help
+	  The open media pipeline of the XM530V200 (libxmv200) on the
+	  vendor kernel modules: sensors, ISP bring-up, VPSS, H.265
+	  encoding and AE/AWB, without the vendor userspace. Installs
+	  xmv200-test (brings a board's pipeline up and encodes its
+	  streams to files), and libxmv200 for applications to link.
+
+	  https://github.com/OpenIPC/openxiongmai
