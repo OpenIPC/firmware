@@ -10,25 +10,52 @@ set_gpio()
     echo $2 > /sys/class/gpio/GPIO$1/value
 }
 
-cd /lib/modules/3.0.8/fullhan
-
-insmod vmm.ko mmz=anonymous,0,0xA1D00000,33M anony=1
-#insmod vmm.ko mmz=anonymous,0,0xA2000000,64M anony=1
+modprobe vmm mmz=anonymous,0,0xA1D00000,33M anony=1
+#modprobe vmm mmz=anonymous,0,0xA2000000,64M anony=1
 
 #reset sensor
 set_gpio 13 0
 
-insmod rtvbus.ko ra=0xa3e00000 rs=65536 fn=rtthread_arc_FH8852.bin fa=0xa3f00000
-#insmod rtvbus.ko ra=0xa7e00000 rs=65536 fn=rtthread_arc_FH8856.bin fa=0xa7f00000
+# rtvbus loads whether or not the ARC starts. It clears the word at +0x7c of
+# both ring halves (ra, ra + rs/2) and the ARC sets it; vbus_mesg_doinit()
+# refuses until then, media_process fails, and that failure path leaves a
+# dangling misc device that oopses the kernel when majestic opens it. So wait
+# for the ARC before loading the media modules.
+arc_ready()
+{
+	# a hex value with a nonzero digit; a failed read prints nothing
+	case "$(devmem $1 32 2>/dev/null)" in
+		0x*[1-9a-fA-F]*) return 0 ;;
+	esac
+	return 1
+}
+
+arc=0
+if modprobe rtvbus ra=0xa3e00000 rs=65536 fn=rtthread_arc_FH8852.bin fa=0xa3f00000; then
+	for i in 1 2 3 4 5 6 7 8 9 10; do
+		if arc_ready 0xa3e0007c || arc_ready 0xa3e0807c; then
+			arc=1
+			break
+		fi
+		usleep 200000
+	done
+fi
+#modprobe rtvbus ra=0xa7e00000 rs=65536 fn=rtthread_arc_FH8856.bin fa=0xa7f00000
 
 #reset sensor
 set_gpio 13 1
 
-insmod media_process.ko
-insmod isp.ko
-insmod vpu.ko vpu_mode=buf_0_3,buf_1_4
-insmod enc.ko
-insmod hevc.ko
-insmod jpeg.ko
-insmod bgm.ko
-insmod vbus_ac.ko
+if [ "$arc" = 0 ]; then
+	echo "load_fullhan: the ARC did not start, media modules not loaded"
+	exit 1
+fi
+
+modprobe media_process
+modprobe isp
+modprobe vpu vpu_mode=buf_0_3,buf_1_4
+modprobe enc
+# FH8833 (FH8632) has no HEVC encoder
+grep -q FH8833 /proc/cpuinfo || modprobe hevc
+modprobe jpeg
+modprobe bgm
+modprobe vbus_ac
