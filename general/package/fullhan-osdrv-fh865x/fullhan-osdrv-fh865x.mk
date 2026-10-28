@@ -19,9 +19,9 @@ FULLHAN_OSDRV_FH865X_DEPENDENCIES = linux
 FULLHAN_OSDRV_FH865X_V200 = $(BR2_EXTERNAL_GENERAL_PATH)/package/fullhan-osdrv-fh8852v200/files
 
 FULLHAN_OSDRV_FH865X_MODULES = xbus_rpc vmm media_process media_process_no_sc \
-	vpu isp bgm enc jpeg
+	vpu isp enc jpeg
 
-# isp, vpu, enc, jpeg and bgm take their symbols from media_process, which
+# isp, vpu, enc and jpeg take their symbols from media_process, which
 # takes its from xbus_rpc
 define FULLHAN_OSDRV_FH865X_BUILD_CMDS
 	cp -r $(FULLHAN_OSDRV_FH865X_PKGDIR)/files/make_drivers $(@D)/
@@ -29,7 +29,7 @@ define FULLHAN_OSDRV_FH865X_BUILD_CMDS
 		$(LINUX_MAKE_ENV) $(MAKE) -C $(LINUX_DIR) $(LINUX_MAKE_FLAGS) \
 			M=$(@D)/make_drivers/$(m) \
 			KBUILD_EXTRA_SYMBOLS="$(@D)/make_drivers/xbus_rpc/Module.symvers \
-				$(if $(filter vpu isp bgm enc jpeg,$(m)),$(@D)/make_drivers/media_process/Module.symvers)" \
+				$(if $(filter vpu isp enc jpeg,$(m)),$(@D)/make_drivers/media_process/Module.symvers)" \
 			modules$(sep))
 endef
 
