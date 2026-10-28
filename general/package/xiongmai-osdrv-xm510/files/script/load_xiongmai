@@ -72,10 +72,10 @@ remove_sns()
 	rmmod -w ssp_sony &> /dev/null
 }
 
-# MMZ and the encoder: the open drivers when xiongmai-opensdk-xm510 installed
-# them (OpenIPC/openxiongmai drivers/xm_mmz and drivers/hx280enc), the vendor
-# modules otherwise, which depmod indexes here under xiongmai/. Neither open
-# module needs a vendor module's symbols.
+# MMZ, VI and the encoder: the open drivers when xiongmai-opensdk-xm510
+# installed them (OpenIPC/openxiongmai drivers/xm_mmz, drivers/xm510_vi and
+# drivers/hx280enc), the vendor modules otherwise, which depmod indexes here
+# under xiongmai/. None of the open modules needs a vendor module's symbols.
 insert_mmz()
 {
 	modprobe open_mmz mmz_start=$MEM_START mmz_size=$MEM_LEN 2>/dev/null ||
@@ -86,6 +86,20 @@ insert_mmz()
 remove_mmz()
 {
 	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
+}
+
+# The vendor xm510_vi.ko depends on mmz: modprobe would load the vendor
+# mmz.ko under a running open_mmz, which refuses it (duplicate mmz_alloc) and
+# fails the load. insmod takes the symbols from whichever MMZ is loaded.
+insert_vi()
+{
+	modprobe open_vi buffer=$VI_BUFF 2>/dev/null ||
+		insmod xm510_vi.ko buffer=$VI_BUFF
+}
+
+remove_vi()
+{
+	rmmod -w open_vi 2>/dev/null || rmmod -w xm510_vi
 }
 
 insert_h264()
@@ -110,7 +124,7 @@ insert_ko()
 	cd /lib/modules/3.0.101/xiongmai/
 	insert_sns > /dev/null
 	insert_mmz
-	insmod xm510_vi.ko buffer=$VI_BUFF
+	insert_vi
 	insmod xm510_isp.ko
 	insmod xm510_rgn.ko
 	insert_h264
@@ -129,7 +143,7 @@ remove_ko()
 	remove_h264
 	rmmod -w xm510_rgn
 	rmmod -w xm510_isp
-	rmmod -w xm510_vi
+	remove_vi
 	remove_mmz
 
 	remove_sns

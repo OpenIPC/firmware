@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM510_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM510_VERSION))
-XIONGMAI_OPENSDK_XM510_VERSION = 0e82ee26e74c813a7ec98496a4138d05f8c5e36f
+XIONGMAI_OPENSDK_XM510_VERSION = 9498822e40875fbfc981df96cbce488c8a48b297
 
-XIONGMAI_OPENSDK_XM510_LICENSE = MIT (libwrapper), GPL-2.0 (open_mmz, open_h264 kernel modules)
+XIONGMAI_OPENSDK_XM510_LICENSE = MIT (libwrapper), GPL-2.0 (open_mmz, open_h264, open_vi kernel modules)
 XIONGMAI_OPENSDK_XM510_LICENSE_FILES = LICENSE
 
 # Install after osdrv, as xiongmai-opensdk does with xiongmai-osdrv-xm530.
@@ -17,10 +17,12 @@ endif
 
 # The open drivers, which load_xiongmai prefers over the vendor modules:
 # drivers/xm_mmz (open_mmz.ko), the XM510 mmz.ko's allocator and /proc
-# layout, and drivers/hx280enc (open_h264.ko), the encoder driver in place of
-# xm510_h264.ko. The kernel-module infrastructure installs them under
-# /lib/modules/<kver>/extra/. Neither needs a vendor module's symbols.
-XIONGMAI_OPENSDK_XM510_MODULE_SUBDIRS = drivers/xm_mmz drivers/hx280enc
+# layout; drivers/hx280enc (open_h264.ko), the encoder driver in place of
+# xm510_h264.ko; and drivers/xm510_vi (open_vi.ko), the VI driver in place of
+# xm510_vi.ko, which releases the frames of a consumer that exits. The
+# kernel-module infrastructure installs them under /lib/modules/<kver>/
+# extra/. None has a module dependency: open_vi looks the MMZ symbols up.
+XIONGMAI_OPENSDK_XM510_MODULE_SUBDIRS = drivers/xm_mmz drivers/hx280enc drivers/xm510_vi
 
 # libwrapper (uclibc symbols for the vendor binaries on musl) is this
 # package's own source, not openxiongmai's.
