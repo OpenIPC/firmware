@@ -88,13 +88,18 @@ remove_mmz()
 	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
 }
 
-# The vendor xm510_vi.ko depends on mmz: modprobe would load the vendor
-# mmz.ko under a running open_mmz, which refuses it (duplicate mmz_alloc) and
-# fails the load. insmod takes the symbols from whichever MMZ is loaded.
+# The vendor xm510_vi.ko depends on mmz. With the vendor mmz.ko loaded,
+# modprobe resolves that; on open_mmz it would load the vendor mmz.ko beside
+# it, which open_mmz refuses ("exports duplicate symbol mmz_alloc"), failing
+# the load, so there it is insmod, which takes the symbols open_mmz exports.
 insert_vi()
 {
-	modprobe open_vi buffer=$VI_BUFF 2>/dev/null ||
+	modprobe open_vi buffer=$VI_BUFF 2>/dev/null && return
+	if grep -q "^mmz " /proc/modules; then
+		modprobe xm510_vi buffer=$VI_BUFF
+	else
 		insmod xm510_vi.ko buffer=$VI_BUFF
+	fi
 }
 
 remove_vi()
