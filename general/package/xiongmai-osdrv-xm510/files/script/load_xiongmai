@@ -72,6 +72,31 @@ remove_sns()
 	rmmod -w ssp_sony &> /dev/null
 }
 
+# MMZ and the encoder: the open drivers when xiongmai-opensdk-xm510 installed
+# them (OpenIPC/openxiongmai drivers/xm_mmz and drivers/hx280enc), the vendor
+# modules otherwise. Neither open module needs a vendor module's symbols.
+insert_mmz()
+{
+	modprobe open_mmz mmz_start=$MEM_START mmz_size=$MEM_LEN 2>/dev/null ||
+		insmod mmz.ko mmz_start=$MEM_START mmz_size=$MEM_LEN ||
+		report_error
+}
+
+remove_mmz()
+{
+	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
+}
+
+insert_h264()
+{
+	modprobe open_h264 2>/dev/null || insmod xm510_h264.ko
+}
+
+remove_h264()
+{
+	rmmod -w open_h264 2>/dev/null || rmmod -w xm510_h264
+}
+
 insert_ko()
 {
 # low power control
@@ -83,11 +108,11 @@ insert_ko()
 # driver load
 	cd /lib/modules/3.0.101/xiongmai/
 	insert_sns > /dev/null
-	insmod mmz.ko mmz_start=$MEM_START mmz_size=$MEM_LEN
+	insert_mmz
 	insmod xm510_vi.ko buffer=$VI_BUFF
 	insmod xm510_isp.ko
 	insmod xm510_rgn.ko
-	insmod xm510_h264.ko
+	insert_h264
 	insmod xm_rtc.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko: see
 	# OpenIPC/firmware#2611.
@@ -100,10 +125,11 @@ remove_ko()
 {
 	#remove_audio
 	rmmod -w xm_rtc
-	rmmod -w xm510_h264
+	remove_h264
 	rmmod -w xm510_rgn
 	rmmod -w xm510_isp
 	rmmod -w xm510_vi
+	remove_mmz
 
 	remove_sns
 }
