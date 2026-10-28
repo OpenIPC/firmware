@@ -99,7 +99,7 @@ ALL_BOARDS = [
     "ak3910_lite", "ak3918_lite", "ak3918ev200_lite", "ak3918ev300_lite",
     "ak3916ev300_lite", "ak3918ev330_lite", "ak3918ev331_lite",
     # Fullhan
-    "fh8852v100_lite", "fh8856v100_lite",
+    "fh8833v100_lite", "fh8852v100_lite", "fh8856v100_lite",
     "fh8852v200_lite", "fh8852v210_lite", "fh8856v200_lite", "fh8856v210_lite",
     "fh8858v200_lite", "fh8858v210_lite",
     # FH8626V100 and FH865x share the fullhan-fh8852v200 kernel and toolchain
@@ -268,7 +268,6 @@ SMOKE_BOARDS = [
 UNBUILT_FAMILIES = {
     ("br-ext-chip-allwinner", "v83x"),
     ("br-ext-chip-ambarella", "s3l"),
-    ("br-ext-chip-fullhan", "fh8833v100"),
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
@@ -967,7 +966,7 @@ def self_test():
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
          24, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 100, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 101, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -1060,7 +1059,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         100, "markdown inside a package is that package"),
+         101, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],
