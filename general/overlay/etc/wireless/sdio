@@ -83,4 +83,20 @@ if [ "$1" = "rtl8189ftv-t31-wyze-v3" ]; then
 	exit 0
 fi
 
+# XM533 X3-WQ-B: SSV6020 ("SSV6158M") on SDIO0. xm_v200_sdio_wifi registers
+# the slot, sets its clock and powers the chip up (power pad 166, clock phase
+# 0x170, as its vendor loadpublic passes them); wlan0 appears once the card
+# has enumerated and the driver has loaded its firmware.
+if [ "$1" = "ssv6020-xm533-x3-wq-b" ]; then
+	modprobe xm_v200_sdio_wifi value=166 phase=0x170
+	modprobe ssv6x5x stacfgpath=/etc/ssv6x5x-wifi.cfg || exit 1
+	i=0
+	while [ ! -e /sys/class/net/wlan0 ] && [ $i -lt 10 ]; do
+		sleep 1
+		i=$((i + 1))
+	done
+	[ -e /sys/class/net/wlan0 ]
+	exit $?
+fi
+
 exit 1

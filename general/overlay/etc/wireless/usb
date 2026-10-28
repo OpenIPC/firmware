@@ -41,9 +41,15 @@ if [ "$1" = "rtl8812au-generic" ]; then
 	exit 0
 fi
 
-# Generic ATBM603x
+# Generic ATBM603x: atbm-wifi's module, or atbm603x-comb-openipc's
 if [ "$1" = "atbm603x-generic-usb" ]; then
-	modprobe atbm603x_wifi_usb
+	modprobe atbm603x_wifi_usb 2>/dev/null || modprobe atbm603x_comb_wifi_usb
+	exit 0
+fi
+
+# Generic ATBM606x (Wi-Fi 6: ATBM6062, 6162, 6132-C)
+if [ "$1" = "atbm606x-generic-usb" ]; then
+	modprobe atbm606x_wifi_usb
 	exit 0
 fi
 
@@ -330,6 +336,61 @@ if [ "$1" = "rtl8188fu-t31-aoni-e97vj62" ]; then
 	set_gpio 53 1
 	modprobe 8188fu
   exit 0
+fi
+
+# Xiongmai V200 series. The USB host is the vendor's dwc2 and xm_usb0, which
+# load_xiongmai only loads after S40network, so the profile loads them. The
+# dongle's power pad is cycled as the vendor's wifi_pdn.ko does: output high
+# (off) for 2 s, then low (on) for 2 s; pad register 0x10020000 + 4 * pad.
+# $1: power pad, 0 for none. $2: driver module.
+xm_v200_wifi() {
+	modprobe dwc2
+	modprobe xm_usb0
+	if [ "$1" -gt 0 ]; then
+		pad=$(printf 0x%x $((0x10020000 + $1 * 4)))
+		devmem "$pad" 32 0xc00
+		sleep 2
+		devmem "$pad" 32 0x400
+		sleep 2
+	fi
+	modprobe "$2" || return 1
+	# wlan0 appears once the dongle has enumerated and taken its firmware
+	i=0
+	while [ ! -e /sys/class/net/wlan0 ] && [ $i -lt 10 ]; do
+		sleep 1
+		i=$((i + 1))
+	done
+	[ -e /sys/class/net/wlan0 ]
+}
+
+# XM530V200 X6C-WEQ: ATBM6012B-X
+if [ "$1" = "atbm603x-xm530v200-x6c-weq" ]; then
+	xm_v200_wifi 87 atbm603x_comb_wifi_usb
+	exit $?
+fi
+
+# XM530V200 X2-WQ2: XM713G
+if [ "$1" = "atbm603x-xm530v200-x2-wq2" ]; then
+	xm_v200_wifi 82 atbm603x_comb_wifi_usb
+	exit $?
+fi
+
+# XM535D1 X6E-WEQ: ATBM6012B-X
+if [ "$1" = "atbm603x-xm535d1-x6e-weq" ]; then
+	xm_v200_wifi 11 atbm603x_comb_wifi_usb
+	exit $?
+fi
+
+# XM535D2 X9-WE2Q: ATBM6132CU, no power pad (the vendor passes 255)
+if [ "$1" = "atbm606x-xm535d2-x9-we2q" ]; then
+	xm_v200_wifi 0 atbm606x_wifi_usb
+	exit $?
+fi
+
+# XM535W1 X2W-WNG: ATBM6012B-X
+if [ "$1" = "atbm603x-xm535w1-x2w-wng" ]; then
+	xm_v200_wifi 163 atbm603x_comb_wifi_usb
+	exit $?
 fi
 
 exit 1
