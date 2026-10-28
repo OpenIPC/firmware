@@ -6,7 +6,7 @@ MODULE=/lib/modules/3.10.103+/xiongmai
 MEM_START=0x800
 MEM_SAMALL_LIN=0x1
 
-MEM_OS=$(cat /proc/cmdline | awk '{print $1}' | sed -e 's/mem=//' -e 's/M//')
+MEM_OS=$(tr ' ' '\n' </proc/cmdline | sed -n 's/^mem=\([0-9]*\)M$/\1/p' | head -1)
 MEM_LEN=$(echo "$MEM_ALL $MEM_OS"|awk '{printf("0x%03x00000",$1-$2)}')
 MEM_START=$(echo "$MEM_START $MEM_SAMALL_LIN $MEM_OS"|awk '{printf("0x%03x00000",$1+$2*$3)}')
 echo MEM_START="$MEM_START" MEM_LEN="$MEM_LEN"
@@ -59,9 +59,20 @@ insert_vi() {
 # image with open_mmz keeps the vendor module outside the depmod tree, so the
 # two do not both provide the same symbols. Without either, nothing that
 # needs one can load.
+#
+# set_allocator cma boots with the media share as a CMA area (cma=) and leaves
+# only the top 1 MB out of Linux, for xm530_rgn: open_mmz then takes every
+# other block from CMA. Only open_mmz can, so a failure there is said, and the
+# fallback below gets that 1 MB.
 insert_mmz() {
 	vendor_mmz=mmz.ko
 	[ -f "$vendor_mmz" ] || vendor_mmz=/usr/lib/xiongmai/mmz.ko
+	if grep -q "mmz_allocator=cma" /proc/cmdline; then
+		modprobe open_mmz allocator=cma mmz_start="$MEM_START" \
+			mmz_size="$MEM_LEN" && return
+		logger -s -p daemon.err -t xiongmai \
+			"open_mmz allocator=cma failed; set_allocator xm restores the fixed zone"
+	fi
 	modprobe open_mmz mmz_start="$MEM_START" mmz_size="$MEM_LEN" 2>/dev/null ||
 		insmod "$vendor_mmz" mmz_start="$MEM_START" mmz_size="$MEM_LEN" ||
 		report_error
