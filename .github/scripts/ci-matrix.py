@@ -110,6 +110,8 @@ ALL_BOARDS = [
     # xm550 is firmware-identical to xm530 --- built once and served via
     # xm530's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "xm510_lite", "xm530_lite",
+    # The V200 series: the xm530 family's kernel, built per chip.
+    "xm530v200_lite", "xm533_lite", "xm535d1_lite", "xm535d2_lite", "xm535w1_lite",
     # Ultimate
     "ssc333_ultimate", "ssc335_ultimate", "ssc335de_ultimate", "ssc337_ultimate",
     "ssc337de_ultimate", "ssc30kd_ultimate", "ssc30kq_ultimate", "ssc338q_ultimate",
@@ -156,16 +158,6 @@ UNBUILT_BOARDS = {
     # general/package/anyka-osdrv-ak3918av130/anyka-osdrv-ak3918av130.mk). It
     # joins ALL_BOARDS once those modules have run on an AV130 camera.
     "ak3918av130_lite": "prebuilt SDK modules not yet run on an AV130 camera",
-
-    # Xiongmai's V200 series (OpenIPC/qemu-bench#154): the XM530's kernel
-    # with the vendor modules from camera dumps. They boot and load those
-    # modules in qemu-bench, but have not run on a camera, and have no
-    # majestic yet.
-    "xm530v200_lite": "vendor modules not yet run on an XM530V200 camera",
-    "xm533_lite": "vendor modules not yet run on an XM533 camera",
-    "xm535d1_lite": "vendor modules not yet run on an XM535D1 camera",
-    "xm535d2_lite": "vendor modules not yet run on an XM535D2 camera",
-    "xm535w1_lite": "vendor modules not yet run on an XM535W1 camera",
 
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
@@ -346,9 +338,7 @@ NOT_BUILT = {
     "uqmi-openipc", "usb-dual-role", "vdec-openipc", "venc-openipc",
     "w1-ds18b20", "waybeam", "wpa_supplicant-openipc",
     "webface",
-    "webrtc-audio-processing-openipc", "wifibroadcast-ng", "wq9001",
-    "xiongmai-osdrv-xm530v200",
-    "yaml-cli-multi",
+    "webrtc-audio-processing-openipc", "wifibroadcast-ng", "wq9001", "yaml-cli-multi",
 }
 
 # Directories under general/package/ that hold no Buildroot package: all-patches
