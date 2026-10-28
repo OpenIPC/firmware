@@ -1,7 +1,7 @@
 # Architecture
 # FH865x is a Cortex-A7; the userland stays ARMv6 so the whole Fullhan 4.9
-# family shares one toolchain, and the kernel is built for ARMv7 by its own
-# config.
+# family shares one toolchain, majestic and SDK libraries, and the kernel
+# is built for ARMv7 by its own config.
 BR2_arm=y
 BR2_arm1176jzf_s=y
 BR2_ARM_EABI=y
@@ -47,18 +47,24 @@ BR2_OPENIPC_VARIANT="lite"
 BR2_OPENIPC_FLASH_SIZE="8"
 
 # Packages
-# No vendor media stack: the FH8626V100 and FH865x media drivers exist only in
-# factory images, not in a vendor SDK release, so this image has no streamer.
 BR2_PACKAGE_DROPBEAR_OPENIPC=y
+BR2_PACKAGE_FULLHAN_OSDRV_FH865X=y
 BR2_PACKAGE_IPCTOOL=y
 BR2_PACKAGE_LIBCURL_OPENIPC=y
 BR2_PACKAGE_LIBCURL_OPENIPC_CURL=y
 # BR2_PACKAGE_LIBCURL_OPENIPC_PROXY_SUPPORT is not set
 # BR2_PACKAGE_LIBCURL_OPENIPC_COOKIES_SUPPORT is not set
 # BR2_PACKAGE_LIBCURL_OPENIPC_EXTRA_PROTOCOLS_FEATURES is not set
+BR2_PACKAGE_LIBEVENT_OPENIPC=y
+BR2_PACKAGE_LIBOGG_OPENIPC=y
 BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC=y
 BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_MEDIATEK_MT7601U=y
+BR2_PACKAGE_MAJESTIC_FONTS=y
+BR2_PACKAGE_MAJESTIC_WEBUI=y
+BR2_PACKAGE_MAJESTIC=y
 BR2_PACKAGE_MBEDTLS_OPENIPC=y
 BR2_PACKAGE_MOTORS=y
+BR2_PACKAGE_OPUS_OPENIPC=y
+BR2_PACKAGE_OPUS_OPENIPC_FIXED_POINT=y
 BR2_PACKAGE_VTUND_OPENIPC=y
 BR2_PACKAGE_YAML_CLI=y

@@ -1,0 +1,14 @@
+# bgm.ko from the FP13 (FH885XV200_IPC_V1.1.0.FP13_20211202) SDK objects
+obj-m := bgm.o
+bgm-y := \
+	bgm_rtt.o \
+	bgm_linux.o \
+	bgm_hw_handle.o \
+	bgm_hw_handle_v3.o \
+	bgm_chn.o \
+	bgm_adapt.o \
+	bgm_os_common.o \
+	bgm_usr.o \
+	bgm_sw.o \
+	bgm_confid.o \
+	bgm_low_power.o

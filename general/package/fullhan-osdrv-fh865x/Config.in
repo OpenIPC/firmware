@@ -1,0 +1,10 @@
+config BR2_PACKAGE_FULLHAN_OSDRV_FH865X
+	bool "fullhan-osdrv-fh865x"
+	depends on BR2_LINUX_KERNEL
+	help
+	  fullhan-osdrv-fh865x - Fullhan FH8652/FH8656/FH8658 media
+	  drivers, linked against this kernel from the FH885XV200_IPC_V1.1.0
+	  SDK objects (FP13), with the fullhan-osdrv-fh8852v200 libraries,
+	  sensors and ARC firmware from the same SDK.
+
+	  https://openipc.org
