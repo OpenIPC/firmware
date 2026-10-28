@@ -157,6 +157,14 @@ UNBUILT_BOARDS = {
     # joins ALL_BOARDS once those modules have run on an AV130 camera.
     "ak3918av130_lite": "prebuilt SDK modules not yet run on an AV130 camera",
 
+    # Xiongmai's V200 series (OpenIPC/qemu-bench#154): the XM530's kernel
+    # with the vendor modules from camera dumps. They boot and load those
+    # modules in qemu-bench, but have not run on a camera, and have no
+    # majestic yet.
+    "xm530v200_lite": "vendor modules not yet run on an XM530V200 camera",
+    "xm533_lite": "vendor modules not yet run on an XM533 camera",
+    "xm535_lite": "vendor modules not yet run on an XM535 camera",
+
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
     "hi3519dv500_toolchain": "toolchain config, produces no firmware image",
@@ -336,7 +344,9 @@ NOT_BUILT = {
     "uqmi-openipc", "usb-dual-role", "vdec-openipc", "venc-openipc",
     "w1-ds18b20", "waybeam", "wpa_supplicant-openipc",
     "webface",
-    "webrtc-audio-processing-openipc", "wifibroadcast-ng", "wq9001", "yaml-cli-multi",
+    "webrtc-audio-processing-openipc", "wifibroadcast-ng", "wq9001",
+    "xiongmai-osdrv-xm530v200",
+    "yaml-cli-multi",
 }
 
 # Directories under general/package/ that hold no Buildroot package: all-patches
