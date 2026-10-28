@@ -1,0 +1,58 @@
+################################################################################
+#
+# atbm606x-openipc
+#
+################################################################################
+
+# OpenIPC/atbm_60xx's atbm606x/ directory: AltoBeam's Wi-Fi 6 driver as
+# Ingenic's SDK ships it (DRIVER_VER 4327).
+ATBM606X_OPENIPC_SITE = $(call github,openipc,atbm_60xx,$(ATBM606X_OPENIPC_VERSION))
+ATBM606X_OPENIPC_VERSION = 5379d2a495cc572e927e4ba2fb3f25519b17ab1e
+
+ATBM606X_OPENIPC_LICENSE = GPL-2.0
+
+# The tree has no .config: its settings are passed instead, as for
+# atbm60xx. ATBM_BUILD_IN_KERNEL=n is what makes its top Makefile build
+# the bundled cfg80211 (wireless/) beside the driver (hal_apollo/).
+ATBM606X_OPENIPC_MODULE_SUBDIRS = atbm606x
+ATBM606X_OPENIPC_MODULE_MAKE_OPTS = \
+	ATBM_BUILD_IN_KERNEL=n \
+	WIFI_PROJ_DIR=$(@D)/atbm606x \
+	CONFIG_ATBM_MENUCONFIG_WIFI6=y \
+	CONFIG_ATBM_WIRELESS_WIFI6=y \
+	CONFIG_ATBM_USB_BUS_WIFI6=y \
+	CONFIG_ATBM_USE_FIRMWARE_H_WIFI6=y \
+	CONFIG_COMPAT_COMBO_HFW=y \
+	CONFIG_COMPAT_6062X=y \
+	CONFIG_COMPAT_6162X=y \
+	CONFIG_COMPAT_6062_CX=y \
+	CONFIG_COMPAT_6132_C=y \
+	CONFIG_ATBM_SUPPORT_BAN_5G_24G_WIFI6=y \
+	CONFIG_ATBM_FUNC_NOTXCONFIRM_WIFI6=y \
+	CONFIG_ATBM_FUNC_MONITOR_WIFI6=y \
+	CONFIG_ATBM_USB_INTR_WIFI6=y \
+	CONFIG_ATBM_FUNC_DEV_CTRL_API_WIFI6=y \
+	CONFIG_ATBM_FUNC_MODULE_FS_WIFI6=y \
+	CONFIG_ATBM_FUNC_PRIVE_IE_WIFI6=y \
+	CONFIG_ATBM_FUNC_SAE_AUTHEN_WIFI6=y \
+	CONFIG_ATBM_FUNC_DRIVER_SETUP_AMPDU_WIFI6=y \
+	CONFIG_ATBM_DEFAULT_COUNTRY_CODE_WIFI6=00 \
+	CONFIG_ATBM_APOLLO_SUPPORT_SGI_WIFI6=y \
+	CONFIG_ATBM_WIFIIF1_NAME_WIFI6=wlan%d \
+	CONFIG_NEED_P2P0_INTERFACE_WIFI6=y \
+	CONFIG_ATBM_WIFIIF2_NAME_WIFI6=p2p%d \
+	CONFIG_ATBM_MODULE_PM_STAYAWK_WIFI6=pm_stayawake \
+	CONFIG_ATBM_MODULE_DRIVER_NAME_WIFI6=atbm_wlan \
+	CONFIG_ATBM_PLATFORM_DEVICE_NAME_WIFI6=atbm_dev_wifi \
+	CONFIG_ATBM_MODULE_NAME_WIFI6=atbm606x_wifi_usb \
+	CONFIG_CPTCFG_CFG80211=y \
+	CONFIG_CPTCFG_CFG80211_WEXT=y \
+	CONFIG_CPTCFG_CFG80211_CRDA_SUPPORT=y \
+	CONFIG_CPTCFG_CFG80211_COUNTRY_CODE=y
+
+# Its mac80211 code reaches the WEP/TKIP software crypto unconditionally
+# on kernels up to 5.4; this option is what gives it the fields it uses.
+ATBM606X_OPENIPC_MODULE_MAKE_OPTS += CONFIG_ATBM_FUNC_SW_ENC_WIFI6=y
+
+$(eval $(kernel-module))
+$(eval $(generic-package))

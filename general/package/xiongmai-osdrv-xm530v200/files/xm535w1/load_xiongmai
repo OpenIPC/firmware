@@ -71,8 +71,9 @@ insert_ko() {
 	insmod adc.ko
 	# No SD card: the X2W-WNG has no slot, and its firmware ships no SD
 	# module to take the pads from.
-	insmod dwc2.ko
-	insmod xm_usb0.ko
+	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
+	modprobe dwc2
+	modprobe xm_usb0
 }
 
 remove_ko() {

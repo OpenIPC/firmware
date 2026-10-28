@@ -1,0 +1,7 @@
+config BR2_PACKAGE_ATBM603X_COMB_OPENIPC
+	bool "atbm603x-comb-openipc"
+	depends on BR2_LINUX_KERNEL
+	help
+	  AltoBeam USB Wi-Fi driver for the ATBM6012B-X/Y and 6032-X
+	  (AsmLite) and the ATBM603x (Ares-B), firmware built in;
+	  binds 007a:888b and 007a:8888. Needs the kernel's cfg80211.

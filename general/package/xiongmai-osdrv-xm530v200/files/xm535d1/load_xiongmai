@@ -66,8 +66,9 @@ insert_ko() {
 	# The kernel's xm_v200_sd, not the vendor's sdio0_sd/sdio1_sd: those hand
 	# the arasan driver their own kernel's platform data layout.
 	modprobe xm_v200_sd detect=1 pdn="$SDIO_PDN"
-	insmod dwc2.ko
-	insmod xm_usb0.ko
+	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
+	modprobe dwc2
+	modprobe xm_usb0
 }
 
 remove_ko() {
