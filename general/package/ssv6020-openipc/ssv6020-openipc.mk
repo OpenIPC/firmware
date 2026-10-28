@@ -8,7 +8,7 @@
 # SSV6020 HAL, as Allwinner's BSP ships it for the SSV6158, built as an
 # external module on 3.10 kernels.
 SSV6020_OPENIPC_SITE = $(call github,openipc,ssv6x5x,$(SSV6020_OPENIPC_VERSION))
-SSV6020_OPENIPC_VERSION = d624c55332901a1e0fde2a3944cf102cd87a1cfe
+SSV6020_OPENIPC_VERSION = 1d5db4649d12cdfddc7c8ecccd039e528afca89f
 
 SSV6020_OPENIPC_LICENSE = GPL-2.0
 
