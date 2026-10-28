@@ -2049,13 +2049,19 @@ majestic_api() {
 VM=/proc/sys/vm
 hold_vm_for_flash() {
 	vm_saved=
-	local k v
+	local k v kv
 	for k in watermark_boost_factor dirty_ratio dirty_background_ratio dirty_bytes dirty_background_bytes; do
 		[ -w "$VM/$k" ] && v=$(cat "$VM/$k" 2>&3) && vm_saved="$vm_saved $k=$v"
 	done
-	[ -w "$VM/watermark_boost_factor" ] && echo 0 > "$VM/watermark_boost_factor" 2>&3
-	[ -w "$VM/dirty_bytes" ] && echo 262144 > "$VM/dirty_bytes" 2>&3
-	[ -w "$VM/dirty_background_bytes" ] && echo 65536 > "$VM/dirty_background_bytes" 2>&3
+	# Not a reason to refuse the upgrade: most cameras have the memory to
+	# spare, and these are values the kernel always takes from root. But a
+	# camera that does run short should be able to say why, so say it.
+	for kv in watermark_boost_factor=0 dirty_bytes=262144 dirty_background_bytes=65536; do
+		k=${kv%%=*} v=${kv#*=}
+		[ -w "$VM/$k" ] || continue
+		echo "$v" > "$VM/$k" 2>&3 ||
+			echo_c 33 "Warning: could not set vm.$k=$v; the flash runs without that memory guard."
+	done
 	return 0
 }
 
@@ -2075,6 +2081,10 @@ release_vm_for_flash() {
 
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
+	# From here until the flash takes the signals away, an interrupt is a
+	# refusal with nothing written: die() then restarts what this stops and
+	# gives back the VM settings held below.
+	trap 'die "Interrupted before the first write; nothing was written."' INT TERM HUP
 	# First, before anything is downloaded or unpacked: see hold_vm_for_flash.
 	hold_vm_for_flash
 	# --web: majestic freed its own video pipeline and is streaming this log

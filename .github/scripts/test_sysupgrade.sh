@@ -4665,6 +4665,12 @@ if [ -n "$frh" ] && [ -n "$frm" ] && [ "$frh" -lt "$frm" ]; then
 else
     bad "free_resources must call hold_vm_for_flash first (hold=$frh first-majestic=$frm)"
 fi
+frt=$(printf '%s\n' "$fr" | grep -n "trap 'die" | head -1 | cut -d: -f1)
+if [ -n "$frt" ] && [ -n "$frh" ] && [ "$frt" -lt "$frh" ]; then
+    ok "an interrupt after the VM hold is a refusal that gives the settings back"
+else
+    bad "free_resources must trap INT/TERM/HUP to die before hold_vm_for_flash (trap=$frt hold=$frh)"
+fi
 for k in watermark_boost_factor dirty_bytes dirty_background_bytes; do
     awk '/^hold_vm_for_flash\(\)/,/^}/' "$SRC" | grep -q "$k" \
         && ok "hold_vm_for_flash sets $k" \
