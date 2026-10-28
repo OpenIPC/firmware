@@ -13,13 +13,14 @@ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y
 BR2_TOOLCHAIN_EXTERNAL_CXX=y
 
 # Kernel
-# The XM535 (D1, D2, W1) runs the XM530's kernel, built uniprocessor as its
-# vendor kernel and modules are, under its own machine name.
+# XM535W1 runs the XM530's kernel, built uniprocessor as its vendor
+# kernel and modules are, under its own machine name. Xiongmai treats the
+# XM535D1, D2 and W1 as separate chips, each with its own firmware.
 BR2_LINUX_KERNEL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/openipc/linux/archive/$(OPENIPC_KERNEL).tar.gz"
 BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
-BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/xm535.generic.config"
+BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/xm535w1.generic.config"
 BR2_LINUX_KERNEL_UIMAGE=y
 BR2_LINUX_KERNEL_XZ=y
 
@@ -38,7 +39,7 @@ BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
 
 # OpenIPC
 BR2_OPENIPC_SOC_VENDOR="xiongmai"
-BR2_OPENIPC_SOC_MODEL="xm535"
+BR2_OPENIPC_SOC_MODEL="xm535w1"
 BR2_OPENIPC_SOC_FAMILY="xm530"
 BR2_OPENIPC_VARIANT="lite"
 BR2_OPENIPC_FLASH_SIZE="8"

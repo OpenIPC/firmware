@@ -163,7 +163,9 @@ UNBUILT_BOARDS = {
     # majestic yet.
     "xm530v200_lite": "vendor modules not yet run on an XM530V200 camera",
     "xm533_lite": "vendor modules not yet run on an XM533 camera",
-    "xm535_lite": "vendor modules not yet run on an XM535 camera",
+    "xm535d1_lite": "vendor modules not yet run on an XM535D1 camera",
+    "xm535d2_lite": "vendor modules not yet run on an XM535D2 camera",
+    "xm535w1_lite": "vendor modules not yet run on an XM535W1 camera",
 
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
