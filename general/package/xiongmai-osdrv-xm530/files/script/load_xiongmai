@@ -86,7 +86,7 @@ remove_mmz() {
 # The ISP device: OpenIPC/openxiongmai drivers/xm530_isp (open_isp.ko), when
 # xiongmai-opensdk installed it, the vendor's xm530_isp.ko otherwise.
 insert_isp() {
-	modprobe open_isp 2>/dev/null || insmod xm530_isp.ko
+	modprobe open_isp 2>/dev/null || modprobe xm530_isp
 }
 
 remove_isp() {
