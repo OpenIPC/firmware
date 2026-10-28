@@ -88,14 +88,15 @@ define WAYBEAM_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 0755 -D $(@D)/out/cv610/waybeam \
 		$(TARGET_DIR)/usr/bin/waybeam
 	# The backend dlopens /usr/lib/sensors/libsns_<type>.so by the configured
-	# sensor name. Both plugins it knows ship here; the imx335 one replaces
-	# the stock build hisilicon-opensdk installs, because the tree's carries
-	# the T6 timing and the five fixed modes.
+	# sensor name. Only the imx662 plugin ships here, because only that part
+	# is still built out of the waybeam tree (it carries the mode table and
+	# ISP seeds waybeam was developed against). IMX335 comes from
+	# hisilicon-opensdk, which builds it from OpenIPC/openhisilicon
+	# (libraries/sensor/hi3516cv6xx/sony_imx335) -- one copy, one pin, and the
+	# daemon's side of the contract is the mode table in src/cv610_modes.c.
 	$(INSTALL) -m 0755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -m 0644 -D $(@D)/sensors/cv610/imx662/libsns_imx662.so \
 		$(TARGET_DIR)/usr/lib/sensors/libsns_imx662.so
-	$(INSTALL) -m 0644 -D $(@D)/sensors/cv610/imx335/libsns_imx335.so \
-		$(TARGET_DIR)/usr/lib/sensors/libsns_imx335.so
 	$(INSTALL) -m 0644 -D $(WAYBEAM_PKGDIR)/$(WAYBEAM_CONFIG) \
 		$(TARGET_DIR)/etc/waybeam.json
 endef
