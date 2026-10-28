@@ -110,6 +110,8 @@ ALL_BOARDS = [
     # xm550 is firmware-identical to xm530 --- built once and served via
     # xm530's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "xm510_lite", "xm530_lite",
+    # The V200 series: the xm530 family's kernel, built per chip.
+    "xm530v200_lite", "xm533_lite", "xm535d1_lite", "xm535d2_lite", "xm535w1_lite",
     # Ultimate
     "ssc333_ultimate", "ssc335_ultimate", "ssc335de_ultimate", "ssc337_ultimate",
     "ssc337de_ultimate", "ssc30kd_ultimate", "ssc30kq_ultimate", "ssc338q_ultimate",
