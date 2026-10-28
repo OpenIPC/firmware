@@ -74,11 +74,12 @@ remove_sns()
 
 # MMZ and the encoder: the open drivers when xiongmai-opensdk-xm510 installed
 # them (OpenIPC/openxiongmai drivers/xm_mmz and drivers/hx280enc), the vendor
-# modules otherwise. Neither open module needs a vendor module's symbols.
+# modules otherwise, which depmod indexes here under xiongmai/. Neither open
+# module needs a vendor module's symbols.
 insert_mmz()
 {
 	modprobe open_mmz mmz_start=$MEM_START mmz_size=$MEM_LEN 2>/dev/null ||
-		insmod mmz.ko mmz_start=$MEM_START mmz_size=$MEM_LEN ||
+		modprobe mmz mmz_start=$MEM_START mmz_size=$MEM_LEN ||
 		report_error
 }
 
@@ -89,7 +90,7 @@ remove_mmz()
 
 insert_h264()
 {
-	modprobe open_h264 2>/dev/null || insmod xm510_h264.ko
+	modprobe open_h264 2>/dev/null || modprobe xm510_h264
 }
 
 remove_h264()
