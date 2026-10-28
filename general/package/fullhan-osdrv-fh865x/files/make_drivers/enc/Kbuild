@@ -1,0 +1,15 @@
+# enc.ko from the FP13 (FH885XV200_IPC_V1.1.0.FP13_20211202) SDK objects
+obj-m := enc.o
+enc-y := \
+	hhe_manage.o \
+	hhe_os_common.o \
+	hhe_param.o \
+	hhe_linux.o \
+	hhe_rtt.o \
+	hhe_low_power.o \
+	hhe_header.o \
+	hhe_fw.o \
+	hhe_fw_default.o \
+	pae_header.o \
+	hhe_smart.o \
+	hhe_lambda.o
