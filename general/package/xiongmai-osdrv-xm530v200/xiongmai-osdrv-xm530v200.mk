@@ -26,9 +26,15 @@ XIONGMAI_OSDRV_XM530V200_FILES = $(XIONGMAI_OSDRV_XM530V200_PKGDIR)/files/$(OPEN
 # tree depmod reads, to where load_xiongmai finds them only when the open
 # ones do not load.
 ifeq ($(BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200),y)
+XIONGMAI_OSDRV_XM530V200_REPLACED = mmz sys vb rgn
+ifeq ($(OPENIPC_SOC_MODEL),xm533)
+XIONGMAI_OSDRV_XM530V200_REPLACED += vi
+endif
+ifneq ($(filter xm535d1 xm535d2,$(OPENIPC_SOC_MODEL)),)
+XIONGMAI_OSDRV_XM530V200_REPLACED += vpss
+endif
 define XIONGMAI_OSDRV_XM530V200_DROP_REPLACED
-	for m in mmz sys vb rgn vi; do \
-		[ -f $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai/$$m.ko ] || continue; \
+	for m in $(XIONGMAI_OSDRV_XM530V200_REPLACED); do \
 		$(INSTALL) -D -m 644 $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai/$$m.ko \
 			$(TARGET_DIR)/usr/lib/xiongmai/$$m.ko && \
 		rm -f $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai/$$m.ko || exit 1; \
