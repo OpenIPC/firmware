@@ -72,10 +72,10 @@ remove_sns()
 	rmmod -w ssp_sony &> /dev/null
 }
 
-# MMZ, VI, the ISP and the encoder: the open drivers when
+# MMZ, VI, the ISP, regions and the encoder: the open drivers when
 # xiongmai-opensdk-xm510 installed them (OpenIPC/openxiongmai drivers/xm_mmz,
-# drivers/xm510_vi, drivers/xm510_isp and drivers/hx280enc), the vendor
-# modules otherwise, which depmod indexes here
+# drivers/xm510_vi, drivers/xm510_isp, drivers/xm510_rgn and drivers/hx280enc),
+# the vendor modules otherwise, which depmod indexes here
 # under xiongmai/. None of the open modules needs a vendor module's symbols.
 insert_mmz()
 {
@@ -118,6 +118,23 @@ remove_isp()
 	rmmod -w open_isp 2>/dev/null || rmmod -w xm510_isp
 }
 
+# The vendor xm510_rgn.ko depends on mmz, as xm510_vi.ko does: insmod on
+# open_mmz, modprobe on the vendor mmz.ko.
+insert_rgn()
+{
+	modprobe open_rgn 2>/dev/null && return
+	if grep -q "^mmz " /proc/modules; then
+		modprobe xm510_rgn
+	else
+		insmod xm510_rgn.ko
+	fi
+}
+
+remove_rgn()
+{
+	rmmod -w open_rgn 2>/dev/null || rmmod -w xm510_rgn
+}
+
 insert_h264()
 {
 	modprobe open_h264 2>/dev/null || modprobe xm510_h264
@@ -142,7 +159,7 @@ insert_ko()
 	insert_mmz
 	insert_vi
 	insert_isp
-	insmod xm510_rgn.ko
+	insert_rgn
 	insert_h264
 	insmod xm_rtc.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko: see
@@ -157,7 +174,7 @@ remove_ko()
 	#remove_audio
 	rmmod -w xm_rtc
 	remove_h264
-	rmmod -w xm510_rgn
+	remove_rgn
 	remove_isp
 	remove_vi
 	remove_mmz

@@ -93,6 +93,17 @@ remove_isp() {
 	rmmod -w open_isp 2>/dev/null || rmmod -w xm530_isp
 }
 
+# Regions (OSD): OpenIPC/openxiongmai drivers/xm530_rgn (open_rgn.ko), when
+# xiongmai-opensdk installed it, the vendor's xm530_rgn.ko otherwise. The open
+# one keeps its bitmaps in its own memory, not in an MMZ block.
+insert_rgn() {
+	modprobe open_rgn 2>/dev/null || modprobe xm530_rgn
+}
+
+remove_rgn() {
+	rmmod -w open_rgn 2>/dev/null || rmmod -w xm530_rgn
+}
+
 remove_vi() {
 	rmmod -w open_vi 2>/dev/null || rmmod -w xm530_vi
 }
@@ -119,7 +130,7 @@ insert_ko() {
 	insert_mmz
 	insert_vi
 	insert_isp
-	insmod xm530_rgn.ko
+	insert_rgn
 	insmod xm530_h264.ko
 	insmod xm_rtc.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko: see
@@ -134,7 +145,7 @@ remove_ko() {
 	remove_audio
 	rmmod -w xm_rtc
 	rmmod -w xm530_h264
-	rmmod -w xm530_rgn
+	remove_rgn
 	remove_isp
 	remove_vi
 	remove_mmz
