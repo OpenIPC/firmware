@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.79
+scr_version=1.0.80
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -1074,7 +1074,12 @@ do_update_firmware_split() {
 		die "The new firmware and the settings do not fit the flash ($(( (ovl + $(stat -c %s "$blob") - base) / 1024 )) KB of $(( (end - base) / 1024 )) KB). Nothing was written; -n upgrades without the settings."
 	mark_live_flash_dirty
 	echo "Writing $x at $(printf 0x%x "$base")"
-	nor_write_at "$x" "$base" || die "Writing $x failed: the flash does not read back as the image."
+	# Once more before giving up: the image is still in RAM, and a failure here
+	# ends in a reboot onto whatever part of it reached the flash.
+	nor_write_at "$x" "$base" || {
+		echo_c 33 "The flash does not read back as the image; writing it again."
+		nor_write_at "$x" "$base"
+	} || die "Writing $x failed: the flash does not read back as the image."
 	nor_write_at "$blob" "$ovl" ||
 		die "Writing the settings at $(printf 0x%x "$ovl") failed; the camera starts from defaults."
 	rm -f "$blob"
@@ -2019,8 +2024,69 @@ majestic_api() {
 		"http://127.0.0.1:$port/api/v1/upgrade/$1" 2>/dev/null)" ]
 }
 
+# Two kernel defaults that leave a 32 MB camera nothing to flash from, both
+# measured on a hi3516cv608 (26 MB for Linux, ~10 MB of it the kernel's own
+# slab and vmalloc) with the 9 MB image in /tmp, where check_flash_ram had
+# seen 3 MB available. Each time, the dd writing the image was OOM-killed in
+# the mtdblock page cache within its first blocks -- "Killed", then "the
+# flash does not read back as the image", then a reboot onto a half-written
+# kernel that never started; the SPI-NOR driver's writeback hit the same wall
+# on its per-operation ioremap.
+#
+# - Watermark boosting (watermark_boost_factor, 15000 by default since 5.0)
+#   raises all three zone watermarks by a whole pageblock, 4 MB with 4 KiB
+#   pages, whenever an allocation falls back to another migratetype: the min
+#   watermark stood at 4736 KB instead of 640 KB. The vendor's own firmware
+#   for that board sets the factor to 0 at boot.
+# - With boosting off, dirty pages took the rest: dd fills the page cache far
+#   faster than NOR erases and programs, and dirty_ratio lets 20% of what is
+#   available go dirty before the writer is throttled -- 3.6 MB of it at the
+#   kill. A fixed 256 KB keeps dd at the flash's pace instead.
+#
+# Held from here until the camera reboots; restore_resources gives the values
+# back to a camera that stays up. Each knob is skipped where the kernel has
+# none (watermark_boost_factor is 5.0+).
+VM=/proc/sys/vm
+hold_vm_for_flash() {
+	vm_saved=
+	local k v kv
+	for k in watermark_boost_factor dirty_ratio dirty_background_ratio dirty_bytes dirty_background_bytes; do
+		[ -w "$VM/$k" ] && v=$(cat "$VM/$k" 2>&3) && vm_saved="$vm_saved $k=$v"
+	done
+	# Not a reason to refuse the upgrade: most cameras have the memory to
+	# spare, and these are values the kernel always takes from root. But a
+	# camera that does run short should be able to say why, so say it.
+	for kv in watermark_boost_factor=0 dirty_bytes=262144 dirty_background_bytes=65536; do
+		k=${kv%%=*} v=${kv#*=}
+		[ -w "$VM/$k" ] || continue
+		echo "$v" > "$VM/$k" 2>&3 ||
+			echo_c 33 "Warning: could not set vm.$k=$v; the flash runs without that memory guard."
+	done
+	return 0
+}
+
+# The bytes and ratio knobs each zero the other when written, so only the one
+# that was in force (the non-zero one) is written back.
+release_vm_for_flash() {
+	[ -n "$vm_saved" ] || return 0
+	local kv k v
+	for kv in $vm_saved; do
+		k=${kv%%=*} v=${kv#*=}
+		case "$k" in dirty_bytes | dirty_background_bytes) [ "$v" = 0 ] && continue ;; esac
+		case "$k" in dirty_ratio | dirty_background_ratio) [ "$v" = 0 ] && continue ;; esac
+		echo "$v" > "$VM/$k" 2>&3
+	done
+	vm_saved=
+}
+
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
+	# From here until the flash takes the signals away, an interrupt is a
+	# refusal with nothing written: die() then restarts what this stops and
+	# gives back the VM settings held below.
+	trap 'die "Interrupted before the first write; nothing was written."' INT TERM HUP
+	# First, before anything is downloaded or unpacked: see hold_vm_for_flash.
+	hold_vm_for_flash
 	# --web: majestic freed its own video pipeline and is streaming this log
 	# over /ws/upgrade; keep it alive until just before the flash (see below).
 	#
@@ -2150,6 +2216,7 @@ free_resources() {
 #
 # Started low-number-first, the reverse of the order they were stopped in.
 restore_resources() {
+	release_vm_for_flash
 	# Best effort: a /tmp still holding more than the old cap keeps the new one.
 	[ -n "$tmp_cap_kb" ] && mount -o remount,size=${tmp_cap_kb}k /tmp 2>&3
 	[ "1" = "$services_stopped" ] || return 0

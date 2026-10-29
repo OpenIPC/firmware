@@ -43,6 +43,20 @@ SB=$(mktemp -d)
 trap 'rm -rf "$SB"' EXIT
 mkdir -p "$SB/tmp" "$SB/proc" "$SB/etc/init.d" "$SB/bin"
 
+# The VM knobs hold_vm_for_flash changes, at the kernel's defaults.
+VM_DEFAULTS="watermark_boost_factor=15000 dirty_ratio=20 dirty_background_ratio=10 dirty_bytes=0 dirty_background_bytes=0"
+seed_vm() {
+    local kv
+    mkdir -p "$SB/proc/sys/vm"
+    for kv in $VM_DEFAULTS; do echo "${kv#*=}" > "$SB/proc/sys/vm/${kv%%=*}"; done
+}
+vm_now() {
+    local kv out=
+    for kv in $VM_DEFAULTS; do out="$out ${kv%%=*}=$(cat "$SB/proc/sys/vm/${kv%%=*}")"; done
+    echo "${out# }"
+}
+seed_vm
+
 # Rewrite the absolute device paths sysupgrade hardcodes to point into $SB.
 # /dev/* is deliberately NOT rewritten: flashcp is stubbed and records its argv,
 # so the target only needs to be a recognisable string.
@@ -66,6 +80,7 @@ sed -e 's|"$1/etc/os-release"|"${1:-@SB@}@OSRELEASE@"|g' \
     -e "s|/proc/meminfo|@SB@/proc/meminfo|g" \
     -e "s|/proc/sys/vm/min_free_kbytes|@SB@/proc/min_free_kbytes|g" \
     -e "s|/proc/sys/vm/drop_caches|@SB@/tmp/drop_caches|g" \
+    -e "s|/proc/sys/vm\\b|@SB@/proc/sys/vm|g" \
     -e "s|/etc/init.d/|@SB@/etc/init.d/|g" \
     -e "s|/var/run/vigil-supervise.pid|@SB@/tmp/vigil-supervise.pid|g" \
     -e "s|/bin/busybox|@SB@/bin/busybox|g" \
@@ -2480,6 +2495,7 @@ printf '%s' "$OUT" | grep -q '^1 Erasing' \
 # with nothing written is indistinguishable from a successful upgrade to
 # anything watching the camera come back.
 reset_env
+seed_vm
 set_mtd <<'EOF'
 dev:    size   erasesize  name
 mtd0: 00040000 00010000 "boot"
@@ -2505,6 +2521,15 @@ fi
 grep -q "S95majestic restart" "$SB/tmp/flash.log" \
     && ok "...and hands the camera back with its services running" \
     || bad "the refusal left the camera degraded, log='$(cat "$SB/tmp/flash.log")'"
+# ...and with the kernel's memory settings as it found them: hold_vm_for_flash
+# turned watermark boosting off and capped dirty memory for the flash. Only the
+# knobs in force are written back; the kernel zeroes dirty_bytes itself when
+# dirty_ratio is written, which these plain files cannot do, so the bytes pair
+# is left out of the comparison.
+vm_in_force() { vm_now | tr ' ' '\n' | grep -v '_bytes=' | tr '\n' ' '; }
+[ "$(vm_in_force)" = "watermark_boost_factor=15000 dirty_ratio=20 dirty_background_ratio=10 " ] \
+    && ok "...and puts back the VM settings it held for the flash" \
+    || bad "a refused upgrade left the VM settings changed: $(vm_now)"
 
 # The kernel is checked on the same terms.
 reset_env
@@ -4628,6 +4653,32 @@ grep -q '^WDOG=${WDOG:-/dev/watchdog}' "$SRC" && grep -q '^WDOG_PROC=${WDOG_PROC
 awk '/^preflight_image_sizes\(\)/,/^}/' "$SRC" | grep -q 'check_rootfs_complete' \
     && ok "the incomplete-image check runs before the pivot" \
     || bad "preflight_image_sizes must call check_rootfs_complete"
+
+# A 32 MB camera OOM-killed the image write twice: once in a 4 MB watermark
+# boost, once in 3.6 MB of dirty mtdblock pages. Both are held off from
+# free_resources on, before the image is unpacked.
+fr=$(awk '/^free_resources\(\)/,/^}/' "$SRC")
+frh=$(printf '%s\n' "$fr" | grep -n 'hold_vm_for_flash' | head -1 | cut -d: -f1)
+frm=$(printf '%s\n' "$fr" | grep -n 'majestic' | head -1 | cut -d: -f1)
+if [ -n "$frh" ] && [ -n "$frm" ] && [ "$frh" -lt "$frm" ]; then
+    ok "free_resources holds the VM settings first, before anything is freed or fetched"
+else
+    bad "free_resources must call hold_vm_for_flash first (hold=$frh first-majestic=$frm)"
+fi
+frt=$(printf '%s\n' "$fr" | grep -n "trap 'die" | head -1 | cut -d: -f1)
+if [ -n "$frt" ] && [ -n "$frh" ] && [ "$frt" -lt "$frh" ]; then
+    ok "an interrupt after the VM hold is a refusal that gives the settings back"
+else
+    bad "free_resources must trap INT/TERM/HUP to die before hold_vm_for_flash (trap=$frt hold=$frh)"
+fi
+for k in watermark_boost_factor dirty_bytes dirty_background_bytes; do
+    awk '/^hold_vm_for_flash\(\)/,/^}/' "$SRC" | grep -q "$k" \
+        && ok "hold_vm_for_flash sets $k" \
+        || bad "hold_vm_for_flash must set $k"
+done
+awk '/^restore_resources\(\)/,/^}/' "$SRC" | grep -q 'release_vm_for_flash' \
+    && ok "a camera that stays up gets its VM settings back" \
+    || bad "restore_resources must call release_vm_for_flash"
 
 echo
 if [ "$fail" -eq 0 ]; then
