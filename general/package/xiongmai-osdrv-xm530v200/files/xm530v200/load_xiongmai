@@ -52,7 +52,7 @@ insert_ko() {
 	modprobe open_i2c 2>/dev/null || insmod i2c.ko
 	insert_mmz
 	insmod vb.ko
-	insmod sys.ko
+	modprobe open_sys 2>/dev/null || insmod /usr/lib/xiongmai/sys.ko 2>/dev/null || insmod sys.ko
 	insmod log.ko
 	insmod ddr.ko
 	insmod vo.ko
@@ -94,7 +94,7 @@ remove_ko() {
 	rmmod -w vo
 	rmmod -w ddr
 	rmmod -w log
-	rmmod -w sys
+	rmmod -w open_sys 2>/dev/null || rmmod -w sys
 	rmmod -w vb
 	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
 	rmmod -w open_i2c 2>/dev/null || rmmod -w i2c

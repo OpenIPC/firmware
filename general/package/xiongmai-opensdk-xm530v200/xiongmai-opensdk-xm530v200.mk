@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = 178f83a2e2f48cf79564bc0b708c6c969396b132
+XIONGMAI_OPENSDK_XM530V200_VERSION = ea42fce609304468361f36ea1253a4d28752ad00
 
-XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c kernel modules)
+XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys kernel modules)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
 XIONGMAI_OPENSDK_XM530V200_INSTALL_STAGING = YES
 
@@ -32,12 +32,12 @@ endef
 # The open drivers, which load_xiongmai prefers over the vendor modules:
 # drivers/xm_mmz (open_mmz.ko) with the V200 series' allocator,
 # drivers/xm_hevc (open_hevc.ko) for this chip's engine (v3 on the
-# XM530V200 and XM533, v1 on the XM535s) and drivers/xm_v200_i2c
-# (open_i2c.ko) for its I2C. The kernel-module infrastructure
+# XM530V200 and XM533, v1 on the XM535s), drivers/xm_v200_i2c
+# (open_i2c.ko) for its I2C and drivers/xm_v200_sys (open_sys.ko). The kernel-module infrastructure
 # installs them under /lib/modules/<kver>/extra/; xiongmai-osdrv-xm530v200
-# then leaves out the vendor mmz.ko.
+# then leaves out the vendor mmz.ko and sys.ko.
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz drivers/xm_hevc \
-	drivers/xm_v200_i2c
+	drivers/xm_v200_i2c drivers/xm_v200_sys
 ifneq ($(filter xm530v200 xm533,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT = v3
 else
