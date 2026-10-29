@@ -1,0 +1,9 @@
+config BR2_PACKAGE_EXFAT_NOFUSE_OPENIPC
+	bool "exfat-nofuse-openipc"
+	depends on BR2_LINUX_KERNEL
+	help
+	  exFAT kernel module for kernels older than exfat-openipc supports
+	  (3.x, e.g. the SigmaStar infinity3 3.18 kernel). Built as
+	  exfat.ko; not loaded at boot.
+
+	  https://github.com/dorimanx/exfat-nofuse
