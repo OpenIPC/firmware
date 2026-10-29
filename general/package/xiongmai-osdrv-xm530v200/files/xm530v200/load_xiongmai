@@ -60,7 +60,8 @@ insert_ko() {
 	insmod vpss.ko
 	insmod rgn.ko
 	insmod venc.ko
-	insmod hevc.ko
+	# the open driver where the image has it
+	modprobe open_hevc 2>/dev/null || insmod hevc.ko
 	insmod jpeg.ko
 	insmod nn.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko:
@@ -85,7 +86,7 @@ remove_ko() {
 	rmmod -w acodec
 	rmmod -w nn
 	rmmod -w jpeg
-	rmmod -w hevc
+	rmmod -w open_hevc 2>/dev/null || rmmod -w hevc
 	rmmod -w venc
 	rmmod -w rgn
 	rmmod -w vpss
