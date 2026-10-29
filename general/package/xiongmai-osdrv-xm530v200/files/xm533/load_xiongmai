@@ -62,7 +62,8 @@ insert_ko() {
 	insmod rgn.ko
 	insmod venc.ko
 	insmod h264.ko
-	insmod hevc.ko
+	# the open driver where the image has it
+	modprobe open_hevc 2>/dev/null || insmod hevc.ko
 	insmod venc_mem.ko
 	insmod nn.ko
 	insmod ive.ko
@@ -87,7 +88,7 @@ remove_ko() {
 	rmmod -w ive
 	rmmod -w nn
 	rmmod -w venc_mem
-	rmmod -w hevc
+	rmmod -w open_hevc 2>/dev/null || rmmod -w hevc
 	rmmod -w h264
 	rmmod -w venc
 	rmmod -w rgn
