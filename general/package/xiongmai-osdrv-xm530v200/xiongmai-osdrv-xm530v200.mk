@@ -20,14 +20,14 @@ XIONGMAI_OSDRV_XM530V200_LICENSE = PROPRIETARY
 # what those kernels add (clk_get_pts, kthread_set_prio).
 XIONGMAI_OSDRV_XM530V200_FILES = $(XIONGMAI_OSDRV_XM530V200_PKGDIR)/files/$(OPENIPC_SOC_MODEL)
 
-# xiongmai-opensdk-xm530v200 builds open_mmz.ko and open_sys.ko in place of
-# mmz.ko and sys.ko. They export the same symbols, and depmod would make the
+# xiongmai-opensdk-xm530v200 builds open_mmz.ko, open_sys.ko and open_vb.ko
+# in place of mmz.ko, sys.ko and vb.ko. They export the same symbols, and depmod would make the
 # modules that need them depend on the vendor ones. So those move out of the
 # tree depmod reads, to where load_xiongmai finds them only when the open
 # ones do not load.
 ifeq ($(BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200),y)
 define XIONGMAI_OSDRV_XM530V200_DROP_REPLACED
-	for m in mmz sys; do \
+	for m in mmz sys vb; do \
 		$(INSTALL) -D -m 644 $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai/$$m.ko \
 			$(TARGET_DIR)/usr/lib/xiongmai/$$m.ko && \
 		rm -f $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai/$$m.ko || exit 1; \
