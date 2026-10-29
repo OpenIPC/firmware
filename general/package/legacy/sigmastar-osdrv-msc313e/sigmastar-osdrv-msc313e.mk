@@ -15,10 +15,12 @@ SIGMASTAR_OSDRV_MSC313E_DEPENDENCIES = glibc-compat
 
 # The OMX core (libOMX_BELA) dlopens its components as /lib/<name>, or from
 # $OMX_LIB_PATH when that is set; it never searches the library path. Keep
-# them in /lib so nothing has to set it.
+# them in /lib so nothing has to set it. libOMX_IJPE loads its hardware
+# encoder, libOMX_IJPE_ENC_HW, the same way: without it in /lib the JPEG
+# encoder fails to construct (and crashes in its own error path).
 SIGMASTAR_OSDRV_MSC313E_OMX_COMPONENTS = $(addprefix \
 	$(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/lib/libOMX_,$(addsuffix .so, \
-	ACODEC ALSA ASPL AVQE_A IJPE VMFE VSPL VSRC VVHE))
+	ACODEC ALSA ASPL AVQE_A IJPE IJPE_ENC_HW VMFE VSPL VSRC VVHE))
 
 # libmi and libOMX_BELA dlopen("libat.so") for property_get/property_set and
 # libCam* link it, so a library of that name has to exist. The vendor one is
