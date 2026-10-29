@@ -62,6 +62,12 @@ define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
 	# which musl's 64-bit one would misread; send it to glibc-compat's wrapper.
 	python3 $(GLIBC_COMPAT_PKGDIR)/rename-import.py \
 		$(TARGET_DIR)/lib/libOMX_AVQE_A.so lseek lse32
+	# Their mmap takes a 32-bit off_t too: send it to glibc-compat's mm32.
+	for lib in $(addprefix $(TARGET_DIR)/usr/lib/,libCamAlgo.so libCamUtil.so \
+		libmi_isp.so libmi.so libMTE_LINUX.so libOMX_BELA.so libtinyalsa.so) \
+		$(addprefix $(TARGET_DIR)/lib/,libOMX_AVQE_A.so libOMX_IJPE.so); do \
+		python3 $(GLIBC_COMPAT_PKGDIR)/rename-import.py $$lib mmap mm32 || exit 1; \
+	done
 	$(INSTALL) -m 644 -D $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sigmastar.conf $(TARGET_DIR)/etc/sigmastar.conf
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
