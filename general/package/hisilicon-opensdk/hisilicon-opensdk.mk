@@ -836,7 +836,6 @@ define HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
 		rm -f $(TARGET_DIR)/lib/modules/*/extra/open_$${mod}.ko; \
 	done
 	rm -f $(TARGET_DIR)/lib/modules/*/extra/open_ive_neo.ko
-	rm -f $(TARGET_DIR)/lib/modules/*/extra/open_adc.ko
 	$(LINUX_RUN_DEPMOD)
 endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200
@@ -854,24 +853,23 @@ endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V500
 endif
 
-# Modules built for V4 ev200 by openhisilicon's Kbuild but never insmod'd
+# A module built for V4 ev200 by openhisilicon's Kbuild but never insmod'd
 # on V4 — load_hisilicon doesn't reference them, majestic / userspace MPI
-# doesn't call in, no init script loads them. Shipped as dead weight in
+# doesn't call in, no init script loads it. Shipped as dead weight in
 # /lib/modules/<kver>/extra/ on every ev200 lite rootfs. Skip the install
-# so the bytes don't compete with majestic for the 5 MB NOR partition cap
+# so its bytes don't compete with majestic for the 5 MB NOR partition cap
 # on boards like hi3518ev300_lite.
 #
 #   - open_ive_neo.ko (~12 KB)  — cv500-targeted experimental, also
 #                                  compiles for V4; the .c grew from
 #                                  66 KB → 130 KB source in recent
 #                                  cv500 dispatch work.
-#   - open_adc.ko (~6 KB)       — generic ADC driver, only relevant for
-#                                  boards exposing GPIO/temp via sysfs;
-#                                  not referenced anywhere on
-#                                  ev300_lite / gk7205v200_lite nightly.
 #
-# Both still compile in CI (Kbuild unchanged) and cv500 keeps whatever
-# subset its own kbuild includes. gk7205v200 handles the same cleanup
+# It still compiles in CI (Kbuild unchanged) and cv500 keeps whatever
+# subset its own kbuild includes. open_adc.ko used to be skipped here too;
+# it is /dev/lsadc, the photocell input majestic's nightMode.adcReadout
+# reads on this family (OpenIPC/majestic#359), so load_hisilicon and
+# load_goke now load it and it ships. gk7205v200 handles the same cleanup
 # inline in HISILICON_OPENSDK_FINALIZE_MODULES_GK7205V200 above — putting
 # it in a separate post-hook would re-run the rsync from per-package and
 # undo the goke/ rename cleanup, re-introducing 1.9 MB of heavy modules
@@ -880,7 +878,6 @@ ifeq ($(OPENIPC_SOC_FAMILY),hi3516ev200)
 define HISILICON_OPENSDK_SKIP_UNUSED_EV200
 	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
 	rm -f $(TARGET_DIR)/lib/modules/*/extra/open_ive_neo.ko
-	rm -f $(TARGET_DIR)/lib/modules/*/extra/open_adc.ko
 	$(LINUX_RUN_DEPMOD)
 endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_SKIP_UNUSED_EV200
