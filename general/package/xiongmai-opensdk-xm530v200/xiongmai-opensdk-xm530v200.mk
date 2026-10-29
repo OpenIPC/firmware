@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = aa1bb9d02ecd112188355ce1e146c6cc9231ec89
+XIONGMAI_OPENSDK_XM530V200_VERSION = 0defd716f865a61cdee7b7ee82d4c095f9eda3d8
 
-XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn kernel modules)
+XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi kernel modules)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
 XIONGMAI_OPENSDK_XM530V200_INSTALL_STAGING = YES
 
@@ -35,12 +35,17 @@ endef
 # XM530V200 and XM533, v1 on the XM535s), drivers/xm_v200_i2c
 # (open_i2c.ko) for its I2C, drivers/xm_v200_sys (open_sys.ko) and
 # drivers/xm_v200_vb (open_vb.ko) and drivers/xm_v200_venc (open_venc.ko)
-# with its buffer layout, drivers/xm_v200_rgn (open_rgn.ko) for its OSD. The kernel-module infrastructure
-# installs them under /lib/modules/<kver>/extra/; xiongmai-osdrv-xm530v200
-# then leaves out the vendor mmz.ko, sys.ko, vb.ko and rgn.ko.
+# with its buffer layout, drivers/xm_v200_rgn (open_rgn.ko) for its OSD,
+# and on the XM533 drivers/xm533_vi (open_vi.ko). The kernel-module
+# infrastructure installs them under /lib/modules/<kver>/extra/;
+# xiongmai-osdrv-xm530v200 then leaves out the vendor mmz.ko, sys.ko,
+# vb.ko, rgn.ko and vi.ko.
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz drivers/xm_hevc \
 	drivers/xm_v200_i2c drivers/xm_v200_sys drivers/xm_v200_vb \
 	drivers/xm_v200_venc drivers/xm_v200_rgn
+ifeq ($(OPENIPC_SOC_MODEL),xm533)
+XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm533_vi
+endif
 ifneq ($(filter xm530v200 xm533,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT = v3
 else
