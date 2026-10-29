@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = b0d848ed4722796bfb3c76c3317aa63bb0f14ae3
+HISILICON_OPENSDK_VERSION = 6e6729a1a6d33a0b697ed6b0ba022b4372f4256e
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -265,7 +265,9 @@ HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 	soi_jxh42/libsns_jxh42 \
 	sony_imx222/libsns_imx222
 HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
+	cvsens_cv2003/libsns_cv2003 \
 	galaxycore_gc4023/libsns_gc4023 \
+	galaxycore_gc4653/libsns_gc4653 \
 	omnivision_os04d10/libsns_os04d10 \
 	smart_sc431hai/libsns_sc431hai \
 	smart_sc4336p/libsns_sc4336p \
@@ -273,7 +275,8 @@ HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
 	smart_sc500ai/libsns_sc500ai \
 	sony_imx335/libsns_imx335 \
 	sony_imx662/libsns_imx662 \
-	superpix_sp2308/libsns_sp2308
+	superpix_sp2308/libsns_sp2308 \
+	visemi_vs4388/libsns_vs4388
 HISILICON_OPENSDK_SENSORS_hi3519dv500 = \
 	gst_412c/libsns_gst412c \
 	omnivision_os04a10/libsns_os04a10 \
