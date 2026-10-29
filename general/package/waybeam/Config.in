@@ -12,11 +12,15 @@ config BR2_PACKAGE_WAYBEAM
 
 	  On Hi3516CV610 the backend compiles against the public
 	  OpenHisilicon V5 headers, links the vendor MPP userspace
-	  libraries and drives the sensors as userspace plugins
-	  (libsns_imx662.so / libsns_imx335.so) it builds from its own
-	  tree. The vendor MPP kernel modules stay the ones S70vendor
-	  loads at boot; the backend re-inits the graph around them and
-	  never reloads them.
+	  libraries and drives the sensors as userspace plugins it
+	  dlopens by name from /usr/lib/sensors. This package builds
+	  the IMX662 plugin from the waybeam tree, where it carries the
+	  mode table and ISP seeds the backend was developed against;
+	  the IMX335 plugin is built from OpenIPC/openhisilicon by
+	  hisilicon-opensdk, so that copy has one source and one pin.
+	  The vendor MPP kernel modules stay the ones S70vendor loads
+	  at boot; the backend re-inits the graph around them and never
+	  reloads them.
 
 	  Infinity6C (SSC378QE) is not offered here even though the
 	  encoder has a backend for it: waybeam's I6C backend targets
@@ -38,7 +42,7 @@ config BR2_PACKAGE_WAYBEAM
 	    - SigmaStar Infinity6E: /usr/bin/json_cli and unlocked
 	      imx335/imx415 sensor modules, compiled here against this
 	      board's kernel
-	    - Hi3516CV610: libsns_imx662.so and libsns_imx335.so
-	      plugins, compiled here
+	    - Hi3516CV610: libsns_imx662.so, compiled here;
+	      libsns_imx335.so comes from hisilicon-opensdk
 
 	  https://github.com/OpenIPC/waybeam
