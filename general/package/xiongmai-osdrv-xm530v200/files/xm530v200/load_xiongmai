@@ -53,8 +53,8 @@ insert_ko() {
 	insert_mmz
 	modprobe open_vb 2>/dev/null || insmod /usr/lib/xiongmai/vb.ko 2>/dev/null || insmod vb.ko
 	modprobe open_sys 2>/dev/null || insmod /usr/lib/xiongmai/sys.ko 2>/dev/null || insmod sys.ko
-	insmod log.ko
-	insmod ddr.ko
+	modprobe open_log 2>/dev/null || insmod log.ko
+	modprobe open_ddr 2>/dev/null || insmod ddr.ko
 	insmod vo.ko
 	insmod isp.ko
 	modprobe open_vpss 2>/dev/null || insmod /usr/lib/xiongmai/vpss.ko 2>/dev/null || insmod vpss.ko
@@ -66,9 +66,9 @@ insert_ko() {
 	insmod nn.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko:
 	# see OpenIPC/firmware#2611.
-	insmod acodec.ko
-	insmod i2s.ko
-	insmod adc.ko
+	modprobe open_acodec 2>/dev/null || insmod acodec.ko
+	modprobe open_i2s 2>/dev/null || insmod i2s.ko
+	modprobe open_adc 2>/dev/null || insmod adc.ko
 	# The kernel's xm_v200_sd, not the vendor's sdio0_sd/sdio1_sd: those hand
 	# the arasan driver their own kernel's platform data layout.
 	modprobe xm_v200_sd detect=1 pdn="$SDIO_PDN"
@@ -81,9 +81,9 @@ remove_ko() {
 	modprobe -r xm_v200_sd
 	rmmod -w xm_usb0
 	rmmod -w dwc2
-	rmmod -w adc
-	rmmod -w i2s
-	rmmod -w acodec
+	rmmod -w open_adc 2>/dev/null || rmmod -w adc
+	rmmod -w open_i2s 2>/dev/null || rmmod -w i2s
+	rmmod -w open_acodec 2>/dev/null || rmmod -w acodec
 	rmmod -w nn
 	rmmod -w jpeg
 	rmmod -w open_hevc 2>/dev/null || rmmod -w hevc
@@ -92,8 +92,8 @@ remove_ko() {
 	rmmod -w open_vpss 2>/dev/null || rmmod -w vpss
 	rmmod -w isp
 	rmmod -w vo
-	rmmod -w ddr
-	rmmod -w log
+	rmmod -w open_ddr 2>/dev/null || rmmod -w ddr
+	rmmod -w open_log 2>/dev/null || rmmod -w log
 	rmmod -w open_sys 2>/dev/null || rmmod -w sys
 	rmmod -w open_vb 2>/dev/null || rmmod -w vb
 	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
