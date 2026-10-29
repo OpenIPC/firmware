@@ -57,7 +57,7 @@ insert_ko() {
 	insmod ddr.ko
 	insmod vo.ko
 	insmod isp.ko
-	insmod vpss.ko
+	modprobe open_vpss 2>/dev/null || insmod /usr/lib/xiongmai/vpss.ko 2>/dev/null || insmod vpss.ko
 	modprobe open_rgn 2>/dev/null || insmod /usr/lib/xiongmai/rgn.ko 2>/dev/null || insmod rgn.ko
 	modprobe open_venc 2>/dev/null || insmod venc.ko
 	# the open driver where the image has it
@@ -89,7 +89,7 @@ remove_ko() {
 	rmmod -w open_hevc 2>/dev/null || rmmod -w hevc
 	rmmod -w open_venc 2>/dev/null || rmmod -w venc
 	rmmod -w open_rgn 2>/dev/null || rmmod -w rgn
-	rmmod -w vpss
+	rmmod -w open_vpss 2>/dev/null || rmmod -w vpss
 	rmmod -w isp
 	rmmod -w vo
 	rmmod -w ddr
