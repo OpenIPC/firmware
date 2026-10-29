@@ -62,8 +62,8 @@ insert_ko() {
 	modprobe open_venc 2>/dev/null || insmod venc.ko
 	# the open driver where the image has it
 	modprobe open_hevc 2>/dev/null || insmod hevc.ko
-	insmod jpeg.ko
-	insmod nn.ko
+	modprobe open_jpeg 2>/dev/null || insmod jpeg.ko
+	modprobe open_nn 2>/dev/null || insmod nn.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko:
 	# see OpenIPC/firmware#2611.
 	modprobe open_acodec 2>/dev/null || insmod acodec.ko
@@ -84,8 +84,8 @@ remove_ko() {
 	rmmod -w open_adc 2>/dev/null || rmmod -w adc
 	rmmod -w open_i2s 2>/dev/null || rmmod -w i2s
 	rmmod -w open_acodec 2>/dev/null || rmmod -w acodec
-	rmmod -w nn
-	rmmod -w jpeg
+	rmmod -w open_nn 2>/dev/null || rmmod -w nn
+	rmmod -w open_jpeg 2>/dev/null || rmmod -w jpeg
 	rmmod -w open_hevc 2>/dev/null || rmmod -w hevc
 	rmmod -w open_venc 2>/dev/null || rmmod -w venc
 	rmmod -w open_rgn 2>/dev/null || rmmod -w rgn
