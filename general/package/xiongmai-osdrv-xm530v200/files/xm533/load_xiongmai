@@ -60,7 +60,7 @@ insert_ko() {
 	insmod isp.ko
 	insmod vi.ko
 	insmod rgn.ko
-	insmod venc.ko
+	modprobe open_venc 2>/dev/null || insmod venc.ko
 	insmod h264.ko
 	# the open driver where the image has it
 	modprobe open_hevc 2>/dev/null || insmod hevc.ko
@@ -90,7 +90,7 @@ remove_ko() {
 	rmmod -w venc_mem
 	rmmod -w open_hevc 2>/dev/null || rmmod -w hevc
 	rmmod -w h264
-	rmmod -w venc
+	rmmod -w open_venc 2>/dev/null || rmmod -w venc
 	rmmod -w rgn
 	rmmod -w vi
 	rmmod -w isp
