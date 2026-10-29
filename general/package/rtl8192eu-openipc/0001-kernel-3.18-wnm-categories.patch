@@ -1,0 +1,25 @@
+Define the WNM action categories on kernels older than 3.19
+
+Kernel 3.18's linux/ieee80211.h (the SigmaStar infinity3 kernel) has no
+WLAN_CATEGORY_WNM / WLAN_CATEGORY_WNM_UNPROTECTED, which the driver uses.
+
+--- a/include/ieee80211.h
++++ b/include/ieee80211.h
+@@ -14,6 +14,17 @@
+  *****************************************************************************/
+ #ifndef __IEEE80211_H
+ #define __IEEE80211_H
++/* kernel 3.18 ieee80211.h lacks the WNM action categories */
++#include <linux/version.h>
++#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
++#ifndef WLAN_CATEGORY_WNM
++#define WLAN_CATEGORY_WNM 10
++#endif
++#ifndef WLAN_CATEGORY_WNM_UNPROTECTED
++#define WLAN_CATEGORY_WNM_UNPROTECTED 11
++#endif
++#endif
++
+ 
+ #define ETH_TYPE_LEN		2
+ #define PAYLOAD_TYPE_LEN	1
