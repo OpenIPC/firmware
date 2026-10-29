@@ -4,7 +4,11 @@
 #
 ################################################################################
 
-MAJESTIC_FONTS_VERSION = 0.12
+# files/UbuntuMono-Regular.ttf ("OpenIPC Mono") is a subset of Ubuntu Mono
+# 0.80: ASCII, Cyrillic, the degree sign and the numero sign. make-subset.py
+# remakes it byte for byte from the upstream font; anything majestic draws
+# outside it renders as an empty box.
+MAJESTIC_FONTS_VERSION = 0.13
 MAJESTIC_FONTS_SITE_METHOD = local
 MAJESTIC_FONTS_SITE = $(MAJESTIC_FONTS_PKGDIR)/files
 
