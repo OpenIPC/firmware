@@ -56,7 +56,7 @@ insert_mmz() {
 
 insert_ko() {
 	set_pll
-	insmod i2c.ko
+	modprobe open_i2c 2>/dev/null || insmod i2c.ko
 	insert_mmz
 	insmod vb.ko
 	insmod sys.ko
@@ -102,7 +102,7 @@ remove_ko() {
 	rmmod -w sys
 	rmmod -w vb
 	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
-	rmmod -w i2c
+	rmmod -w open_i2c 2>/dev/null || rmmod -w i2c
 }
 
 load_usage() {
