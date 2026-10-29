@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = 8c97ff9a9f4bd8410c5b70a8dcc870e8a746fb56
+XIONGMAI_OPENSDK_XM530V200_VERSION = 178f83a2e2f48cf79564bc0b708c6c969396b132
 
-XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc kernel modules)
+XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c kernel modules)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
 XIONGMAI_OPENSDK_XM530V200_INSTALL_STAGING = YES
 
@@ -30,19 +30,27 @@ define XIONGMAI_OPENSDK_XM530V200_INSTALL_TARGET_CMDS
 endef
 
 # The open drivers, which load_xiongmai prefers over the vendor modules:
-# drivers/xm_mmz (open_mmz.ko) with the V200 series' allocator, and
+# drivers/xm_mmz (open_mmz.ko) with the V200 series' allocator,
 # drivers/xm_hevc (open_hevc.ko) for this chip's engine (v3 on the
-# XM530V200 and XM533, v1 on the XM535s). The kernel-module infrastructure
+# XM530V200 and XM533, v1 on the XM535s) and drivers/xm_v200_i2c
+# (open_i2c.ko) for its I2C. The kernel-module infrastructure
 # installs them under /lib/modules/<kver>/extra/; xiongmai-osdrv-xm530v200
 # then leaves out the vendor mmz.ko.
-XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz drivers/xm_hevc
+XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz drivers/xm_hevc \
+	drivers/xm_v200_i2c
 ifneq ($(filter xm530v200 xm533,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT = v3
 else
 XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT = v1
 endif
+ifneq ($(filter xm535%,$(OPENIPC_SOC_MODEL)),)
+XIONGMAI_OPENSDK_XM530V200_I2C_CHIP = xm535
+else
+XIONGMAI_OPENSDK_XM530V200_I2C_CHIP = $(OPENIPC_SOC_MODEL)
+endif
 XIONGMAI_OPENSDK_XM530V200_MODULE_MAKE_OPTS = MMZ_ALLOCATOR=list \
-	HEVC_LAYOUT=$(XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT)
+	HEVC_LAYOUT=$(XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT) \
+	I2C_CHIP=$(XIONGMAI_OPENSDK_XM530V200_I2C_CHIP)
 
 $(eval $(kernel-module))
 $(eval $(generic-package))
