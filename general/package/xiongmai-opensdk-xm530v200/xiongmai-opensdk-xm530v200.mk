@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = 70ae4071f52f53c82821b03d402d567ef72b29a1
+XIONGMAI_OPENSDK_XM530V200_VERSION = 92f9f710bca956208b986aaec4959c75e17a3c84
 
-XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT
+XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz kernel module)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
 XIONGMAI_OPENSDK_XM530V200_INSTALL_STAGING = YES
 
@@ -29,4 +29,12 @@ define XIONGMAI_OPENSDK_XM530V200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -D $(@D)/tools/xmv200-test/xmv200-test $(TARGET_DIR)/usr/bin/xmv200-test
 endef
 
+# drivers/xm_mmz (open_mmz.ko) with the V200 series' allocator, which
+# load_xiongmai prefers over the vendor mmz.ko. The kernel-module
+# infrastructure installs it under /lib/modules/<kver>/extra/;
+# xiongmai-osdrv-xm530v200 then leaves out the vendor mmz.ko.
+XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz
+XIONGMAI_OPENSDK_XM530V200_MODULE_MAKE_OPTS = MMZ_ALLOCATOR=list
+
+$(eval $(kernel-module))
 $(eval $(generic-package))
