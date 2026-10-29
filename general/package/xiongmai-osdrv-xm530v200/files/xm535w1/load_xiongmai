@@ -49,10 +49,21 @@ set_pll() {
 	sleep 0.1
 }
 
+# MMZ: the open driver (open_mmz, the V200 series' allocator) where the
+# image has it, the vendor's otherwise; an image with open_mmz keeps the
+# vendor module outside the depmod tree.
+insert_mmz() {
+	vendor_mmz=mmz.ko
+	[ -f "$vendor_mmz" ] || vendor_mmz=/usr/lib/xiongmai/mmz.ko
+	modprobe open_mmz mmz_start="$MEM_START" mmz_size="$MEM_LEN" 2>/dev/null ||
+		insmod "$vendor_mmz" mmz_start="$MEM_START" mmz_size="$MEM_LEN" ||
+		report_error
+}
+
 insert_ko() {
 	set_pll
 	insmod i2c.ko
-	insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN" || report_error
+	insert_mmz
 	insmod vb.ko
 	insmod sys.ko
 	insmod log.ko
@@ -93,7 +104,7 @@ remove_ko() {
 	rmmod -w log
 	rmmod -w sys
 	rmmod -w vb
-	rmmod -w mmz
+	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
 	rmmod -w i2c
 }
 
