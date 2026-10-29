@@ -54,7 +54,7 @@ HISILICON_OSDRV_HI3516CV6XX_MPP_LIBS = \
 # V5 SDK has no source mirror. Extracted from the original CV608 DEMO
 # board flash (Hi3516CV610_MPP_V1.0.1.0 B040, Sep 2024). Source-built
 # sensors (gc4023, os04d10, sc4336p, sc450ai, sc500ai, sc431hai, sp2308,
-# imx335, imx662)
+# imx335, imx662, cv2003, gc4653, vs4388)
 # come from hisilicon-opensdk and are not duplicated here. The demo board's
 # libsns_os02m10.so is gone: built for B040, it overran the B051 ISP's stack
 # in pfn_cmos_get_standby_cfg and majestic aborted on every start. Its sensor
@@ -113,6 +113,19 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# and blue light).
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/sp2308_i2c_1080p.ini
+
+	# CV2003, GC4653 and VS4388, on both variants with their drivers: the
+	# sensors of one vendor's CV610/CV608 cameras, which are 8 MB lite-class
+	# boards (OpenIPC/majestic#355, #356, #357). Every one of them wires the
+	# sensor to the second MIPI port in 2+2 mode on lanes 1 and 3, with its
+	# clock on the second clock lane, into VI device 1 -- devno 1 and
+	# lane_divide_mode 1 in the profile. RGGB, RAW10, linear: CV2003
+	# 1080p30, GC4653 and VS4388 2560x1440p30. ipcinfo names them cv2003,
+	# gc4653 and vs4388, the names majestic looks these profiles up by.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/cv2003_i2c_1080p.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/gc4653_i2c_4M.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/vs4388_i2c_4M.ini
 
 endef
 
