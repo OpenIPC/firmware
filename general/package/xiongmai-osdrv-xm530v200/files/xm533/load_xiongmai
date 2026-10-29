@@ -66,7 +66,7 @@ insert_ko() {
 	modprobe open_hevc 2>/dev/null || insmod hevc.ko
 	modprobe open_venc_mem 2>/dev/null || insmod venc_mem.ko
 	modprobe open_nn 2>/dev/null || insmod nn.ko
-	insmod ive.ko
+	modprobe open_ive 2>/dev/null || insmod ive.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko:
 	# see OpenIPC/firmware#2611.
 	modprobe open_acodec 2>/dev/null || insmod acodec.ko
@@ -85,7 +85,7 @@ remove_ko() {
 	rmmod -w open_adc 2>/dev/null || rmmod -w adc
 	rmmod -w open_i2s 2>/dev/null || rmmod -w i2s
 	rmmod -w open_acodec 2>/dev/null || rmmod -w acodec
-	rmmod -w ive
+	rmmod -w open_ive 2>/dev/null || rmmod -w ive
 	rmmod -w open_nn 2>/dev/null || rmmod -w nn
 	rmmod -w open_venc_mem 2>/dev/null || rmmod -w venc_mem
 	rmmod -w open_hevc 2>/dev/null || rmmod -w hevc
