@@ -27,7 +27,7 @@ XIONGMAI_OSDRV_XM530V200_FILES = $(XIONGMAI_OSDRV_XM530V200_PKGDIR)/files/$(OPEN
 # ones do not load.
 ifeq ($(BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200),y)
 define XIONGMAI_OSDRV_XM530V200_DROP_REPLACED
-	for m in mmz sys vb; do \
+	for m in mmz sys vb rgn; do \
 		$(INSTALL) -D -m 644 $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai/$$m.ko \
 			$(TARGET_DIR)/usr/lib/xiongmai/$$m.ko && \
 		rm -f $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai/$$m.ko || exit 1; \
