@@ -83,6 +83,16 @@ remove_mmz() {
 	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
 }
 
+# The ISP device: OpenIPC/openxiongmai drivers/xm530_isp (open_isp.ko), when
+# xiongmai-opensdk installed it, the vendor's xm530_isp.ko otherwise.
+insert_isp() {
+	modprobe open_isp 2>/dev/null || modprobe xm530_isp
+}
+
+remove_isp() {
+	rmmod -w open_isp 2>/dev/null || rmmod -w xm530_isp
+}
+
 remove_vi() {
 	rmmod -w open_vi 2>/dev/null || rmmod -w xm530_vi
 }
@@ -108,7 +118,7 @@ insert_ko() {
 	insert_sns > /dev/null
 	insert_mmz
 	insert_vi
-	insmod xm530_isp.ko
+	insert_isp
 	insmod xm530_rgn.ko
 	insmod xm530_h264.ko
 	insmod xm_rtc.ko
@@ -125,7 +135,7 @@ remove_ko() {
 	rmmod -w xm_rtc
 	rmmod -w xm530_h264
 	rmmod -w xm530_rgn
-	rmmod -w xm530_isp
+	remove_isp
 	remove_vi
 	remove_mmz
 	remove_sns

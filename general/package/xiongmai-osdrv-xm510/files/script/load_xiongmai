@@ -72,9 +72,10 @@ remove_sns()
 	rmmod -w ssp_sony &> /dev/null
 }
 
-# MMZ, VI and the encoder: the open drivers when xiongmai-opensdk-xm510
-# installed them (OpenIPC/openxiongmai drivers/xm_mmz, drivers/xm510_vi and
-# drivers/hx280enc), the vendor modules otherwise, which depmod indexes here
+# MMZ, VI, the ISP and the encoder: the open drivers when
+# xiongmai-opensdk-xm510 installed them (OpenIPC/openxiongmai drivers/xm_mmz,
+# drivers/xm510_vi, drivers/xm510_isp and drivers/hx280enc), the vendor
+# modules otherwise, which depmod indexes here
 # under xiongmai/. None of the open modules needs a vendor module's symbols.
 insert_mmz()
 {
@@ -107,6 +108,16 @@ remove_vi()
 	rmmod -w open_vi 2>/dev/null || rmmod -w xm510_vi
 }
 
+insert_isp()
+{
+	modprobe open_isp 2>/dev/null || modprobe xm510_isp
+}
+
+remove_isp()
+{
+	rmmod -w open_isp 2>/dev/null || rmmod -w xm510_isp
+}
+
 insert_h264()
 {
 	modprobe open_h264 2>/dev/null || modprobe xm510_h264
@@ -130,7 +141,7 @@ insert_ko()
 	insert_sns > /dev/null
 	insert_mmz
 	insert_vi
-	insmod xm510_isp.ko
+	insert_isp
 	insmod xm510_rgn.ko
 	insert_h264
 	insmod xm_rtc.ko
@@ -147,7 +158,7 @@ remove_ko()
 	rmmod -w xm_rtc
 	remove_h264
 	rmmod -w xm510_rgn
-	rmmod -w xm510_isp
+	remove_isp
 	remove_vi
 	remove_mmz
 
