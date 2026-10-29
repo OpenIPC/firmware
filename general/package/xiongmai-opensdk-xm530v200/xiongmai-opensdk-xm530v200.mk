@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = ec7cf3c022b795025f4d0911254245b5677a61d6
+XIONGMAI_OPENSDK_XM530V200_VERSION = 37d26c15d8198ff12fdebceec049457484cf5a25
 
-XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io kernel modules)
+XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io, open_h264, open_jpeg, open_venc_mem, open_nn kernel modules)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
 XIONGMAI_OPENSDK_XM530V200_INSTALL_STAGING = YES
 
@@ -38,16 +38,25 @@ endef
 # with its buffer layout, drivers/xm_v200_rgn (open_rgn.ko) for its OSD,
 # on the XM533 drivers/xm533_vi (open_vi.ko), on the XM535D1/D2
 # drivers/xm535_vpss (open_vpss.ko), on the XM535W1 drivers/xm535w1_vi
-# (open_vi.ko), on the XM530V200 drivers/xm530v200_vpss (open_vpss.ko). The kernel-module
+# (open_vi.ko), on the XM530V200 drivers/xm530v200_vpss (open_vpss.ko).
+# The small modules (open_acodec, open_i2s, open_adc, open_ddr, open_log,
+# open_nn, the XM533's open_mipi_io and open_venc_mem, the XM533's and
+# XM535s' open_h264, the XM530V200's open_jpeg) replace vendor modules
+# nothing links against, which stay as the fallback. The kernel-module
 # infrastructure installs them under /lib/modules/<kver>/extra/;
 # xiongmai-osdrv-xm530v200 then leaves out the vendor mmz.ko, sys.ko,
 # vb.ko, rgn.ko and those vi.ko and vpss.ko.
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz drivers/xm_hevc \
 	drivers/xm_v200_i2c drivers/xm_v200_sys drivers/xm_v200_vb \
 	drivers/xm_v200_venc drivers/xm_v200_rgn drivers/xm_v200_acodec \
-	drivers/xm_v200_i2s drivers/xm_v200_adc drivers/xm_v200_ddr drivers/xm_v200_log
+	drivers/xm_v200_i2s drivers/xm_v200_adc drivers/xm_v200_ddr drivers/xm_v200_log \
+	drivers/xm_v200_nn
 ifeq ($(OPENIPC_SOC_MODEL),xm533)
-XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm533_vi drivers/xm533_mipi_io
+XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm533_vi drivers/xm533_mipi_io \
+	drivers/xm533_venc_mem
+endif
+ifneq ($(filter xm533 xm535%,$(OPENIPC_SOC_MODEL)),)
+XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm_v200_h264
 endif
 ifneq ($(filter xm535d1 xm535d2,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm535_vpss
@@ -56,7 +65,7 @@ ifeq ($(OPENIPC_SOC_MODEL),xm535w1)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm535w1_vi
 endif
 ifeq ($(OPENIPC_SOC_MODEL),xm530v200)
-XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm530v200_vpss
+XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm530v200_vpss drivers/xm530v200_jpeg
 endif
 ifneq ($(filter xm530v200 xm533,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT = v3
@@ -79,13 +88,13 @@ XIONGMAI_OPENSDK_XM530V200_RGN_CHIP = xm535
 endif
 # the small modules' chip variants
 ifeq ($(OPENIPC_SOC_MODEL),xm530v200)
-XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=v200 I2S_CHIP=v200 ADC_CHIP=v200 DDR_CHIP=v200
+XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=v200 I2S_CHIP=v200 ADC_CHIP=v200 DDR_CHIP=v200 NN_CHIP=v200
 else ifeq ($(OPENIPC_SOC_MODEL),xm533)
-XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=xm533 I2S_CHIP=v200 ADC_CHIP=v200
+XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=xm533 I2S_CHIP=v200 ADC_CHIP=v200 NN_CHIP=xm533
 else ifeq ($(OPENIPC_SOC_MODEL),xm535w1)
-XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=xm535w1 I2S_CHIP=xm535w1 ADC_CHIP=xm535
+XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=xm535w1 I2S_CHIP=xm535w1 ADC_CHIP=xm535 NN_CHIP=xm535
 else
-XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=xm535 I2S_CHIP=xm535 ADC_CHIP=xm535
+XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=xm535 I2S_CHIP=xm535 ADC_CHIP=xm535 NN_CHIP=xm535
 endif
 XIONGMAI_OPENSDK_XM530V200_MODULE_MAKE_OPTS = MMZ_ALLOCATOR=list \
 	HEVC_LAYOUT=$(XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT) \
