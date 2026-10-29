@@ -55,7 +55,7 @@ insert_ko() {
 	modprobe open_sys 2>/dev/null || insmod /usr/lib/xiongmai/sys.ko 2>/dev/null || insmod sys.ko
 	modprobe open_log 2>/dev/null || insmod log.ko
 	modprobe open_ddr 2>/dev/null || insmod ddr.ko
-	insmod vo.ko
+	modprobe open_vo 2>/dev/null || insmod /usr/lib/xiongmai/vo.ko 2>/dev/null || insmod vo.ko
 	insmod isp.ko
 	modprobe open_vpss 2>/dev/null || insmod /usr/lib/xiongmai/vpss.ko 2>/dev/null || insmod vpss.ko
 	modprobe open_rgn 2>/dev/null || insmod /usr/lib/xiongmai/rgn.ko 2>/dev/null || insmod rgn.ko
@@ -91,7 +91,7 @@ remove_ko() {
 	rmmod -w open_rgn 2>/dev/null || rmmod -w rgn
 	rmmod -w open_vpss 2>/dev/null || rmmod -w vpss
 	rmmod -w isp
-	rmmod -w vo
+	rmmod -w open_vo 2>/dev/null || rmmod -w vo
 	rmmod -w open_ddr 2>/dev/null || rmmod -w ddr
 	rmmod -w open_log 2>/dev/null || rmmod -w log
 	rmmod -w open_sys 2>/dev/null || rmmod -w sys
