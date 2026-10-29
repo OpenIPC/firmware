@@ -45,10 +45,12 @@ WAYBEAM_CONFIG = files/waybeam.cv610.json
 WAYBEAM_MAKE_OPTS = SOC_BUILD=cv610 \
 	CV610_CC="$(TARGET_CC)" \
 	CV610_SDK_INC="$(HISILICON_OPENSDK_DIR)" \
-	CV610_SDK_LIB="$(TARGET_DIR)/usr/lib"
+	CV610_SDK_LIB="$(if $(BR2_PER_PACKAGE_DIRECTORIES),$(PER_PACKAGE_DIR)/hisilicon-osdrv-hi3516cv6xx/target/usr/lib,$(TARGET_DIR)/usr/lib)"
 # Built after the stock sensor and MPP-library packages: the tree's plugins
 # replace the stock libsns_imx335.so, and the vendor .so set the backend links
-# against is already in $(TARGET_DIR)/usr/lib.
+# against is installed by hisilicon-osdrv-hi3516cv6xx. With per-package
+# directories that install lands somewhere this package cannot see until the
+# final target pass, so read it from the dependency's own target tree.
 WAYBEAM_DEPENDENCIES += hisilicon-opensdk hisilicon-osdrv-hi3516cv6xx
 else
 WAYBEAM_SOC = star6e

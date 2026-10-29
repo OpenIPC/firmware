@@ -1,8 +1,16 @@
 config BR2_PACKAGE_WAYBEAM
 	bool "waybeam"
 	depends on BR2_TOOLCHAIN_HAS_THREADS
-	depends on BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY6E || \
-		(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV6XX && BR2_PACKAGE_HISILICON_OPENSDK)
+	# Each arm names the family whose backend the makefile would pick for it,
+	# because the driver packages themselves carry no family guard: the
+	# star6e backend is built for every family that is not hi3516cv6xx, so
+	# without this a tree with the SigmaStar driver enabled on another SoC
+	# could select waybeam and get an encoder for the wrong hardware.
+	depends on (BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY6E && \
+		BR2_OPENIPC_SOC_FAMILY = "infinity6e") || \
+		(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV6XX && \
+		 BR2_PACKAGE_HISILICON_OPENSDK && \
+		 BR2_OPENIPC_SOC_FAMILY = "hi3516cv6xx")
 	depends on !BR2_PACKAGE_MAJESTIC
 	help
 	  Standalone H.265 video encoder and streamer with one backend
