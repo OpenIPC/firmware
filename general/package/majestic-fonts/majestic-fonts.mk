@@ -4,11 +4,12 @@
 #
 ################################################################################
 
-# UbuntuMono-Regular.ttf is a subset of Ubuntu Mono 0.80 (google/fonts,
-# ufl/ubuntumono): ASCII, Cyrillic, the degree sign and the numero sign,
-# hinting kept. Made with fontTools:
-#   pyftsubset UbuntuMono-Regular.ttf --name-IDs='*' --notdef-outline \
-#     --no-layout-closure --drop-tables+=VDMX \
+# files/UbuntuMono-Regular.ttf is a subset of Ubuntu Mono 0.80: ASCII,
+# Cyrillic, the degree sign and the numero sign, hinting kept. It is remade
+# byte for byte from the upstream font with fontTools 4.61:
+#   curl -LO https://github.com/google/fonts/raw/main/ufl/ubuntumono/UbuntuMono-Regular.ttf
+#   pyftsubset UbuntuMono-Regular.ttf --output-file=files/UbuntuMono-Regular.ttf \
+#     --name-IDs='*' --notdef-outline --no-layout-closure --drop-tables+=VDMX \
 #     --unicodes=U+0000,U+0008,U+0009,U+000D,U+001D,U+0020-007E,U+00A8,U+00B0,\
 #     U+0138,U+0182,U+0410-0451,U+2116
 # Anything majestic draws that is not in it renders as an empty box.
