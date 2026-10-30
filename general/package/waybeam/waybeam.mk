@@ -42,15 +42,23 @@ WAYBEAM_CONFIG = files/waybeam.cv610.json
 # the opensdk package unpacks; CV610_SDK_LIB is where
 # hisilicon-osdrv-hi3516cv6xx installs the vendor MPP .so files. CC_BIN is a
 # star6e-only knob.
+#
+# $(TARGET_DIR)/usr/lib is the right path under per-package directories too:
+# before this package configures, Buildroot rsyncs every dependency's target
+# tree into this package's $(TARGET_DIR) (prepare-per-package-directory in
+# package/pkg-utils.mk), so hisilicon-osdrv-hi3516cv6xx's libss_mpi*.so are
+# already there. Reading them out of that package's own per-package tree
+# instead would bypass that mechanism.
 WAYBEAM_MAKE_OPTS = SOC_BUILD=cv610 \
 	CV610_CC="$(TARGET_CC)" \
 	CV610_SDK_INC="$(HISILICON_OPENSDK_DIR)" \
-	CV610_SDK_LIB="$(if $(BR2_PER_PACKAGE_DIRECTORIES),$(PER_PACKAGE_DIR)/hisilicon-osdrv-hi3516cv6xx/target/usr/lib,$(TARGET_DIR)/usr/lib)"
-# Built after the stock sensor and MPP-library packages: the tree's plugins
-# replace the stock libsns_imx335.so, and the vendor .so set the backend links
-# against is installed by hisilicon-osdrv-hi3516cv6xx. With per-package
-# directories that install lands somewhere this package cannot see until the
-# final target pass, so read it from the dependency's own target tree.
+	CV610_SDK_LIB="$(TARGET_DIR)/usr/lib"
+# Built after the stock sensor and MPP-library packages: this tree's IMX662
+# plugin takes the /usr/lib/sensors/libsns_imx662.so path that
+# hisilicon-opensdk would fill from OpenIPC/openhisilicon, so that copy is
+# filtered out at selection time when waybeam is on (hisilicon-opensdk.mk,
+# next to the lite filter). The vendor .so set the backend links against is
+# installed by hisilicon-osdrv-hi3516cv6xx.
 WAYBEAM_DEPENDENCIES += hisilicon-opensdk hisilicon-osdrv-hi3516cv6xx
 else
 WAYBEAM_SOC = star6e
@@ -90,12 +98,14 @@ define WAYBEAM_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 0755 -D $(@D)/out/cv610/waybeam \
 		$(TARGET_DIR)/usr/bin/waybeam
 	# The backend dlopens /usr/lib/sensors/libsns_<type>.so by the configured
-	# sensor name. Only the imx662 plugin ships here, because only that part
-	# is still built out of the waybeam tree (it carries the mode table and
-	# ISP seeds waybeam was developed against). IMX335 comes from
-	# hisilicon-opensdk, which builds it from OpenIPC/openhisilicon
-	# (libraries/sensor/hi3516cv6xx/sony_imx335) -- one copy, one pin, and the
-	# daemon's side of the contract is the mode table in src/cv610_modes.c.
+	# sensor name. IMX662 ships from this tree, because this is the copy the
+	# backend's mode table and ISP seeds were developed against;
+	# hisilicon-opensdk is told to skip its own build of the same sensor, so
+	# exactly one package owns the path instead of the winner being whatever
+	# target-finalize's sorted rsync lays down last. IMX335 has no copy here
+	# at all: hisilicon-opensdk builds it from OpenIPC/openhisilicon
+	# (libraries/sensor/hi3516cv6xx/sony_imx335), and the daemon's side of
+	# that contract is the mode table in src/cv610_modes.c.
 	$(INSTALL) -m 0755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -m 0644 -D $(@D)/sensors/cv610/imx662/libsns_imx662.so \
 		$(TARGET_DIR)/usr/lib/sensors/libsns_imx662.so

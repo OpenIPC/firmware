@@ -324,6 +324,20 @@ ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3516cv6xx/lite)
 HISILICON_OPENSDK_SENSORS := $(filter-out sony_imx335/libsns_imx335 sony_imx662/libsns_imx662,$(HISILICON_OPENSDK_SENSORS))
 endif
 
+# waybeam on hi3516cv6xx ships its own IMX662 plugin, built from the waybeam
+# tree against the mode table and ISP seeds that backend was developed
+# against, and it installs to the same /usr/lib/sensors/libsns_imx662.so path
+# this package uses. Filter the openhisilicon copy out at selection time --
+# the same pattern the lite branch above uses -- so exactly one package owns
+# the file, instead of the winner being whichever one target-finalize's
+# sorted per-package rsync happens to lay down last. IMX335 is unaffected:
+# waybeam has no copy of it, so it keeps coming from here.
+ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv6xx)
+ifeq ($(BR2_PACKAGE_WAYBEAM),y)
+HISILICON_OPENSDK_SENSORS := $(filter-out sony_imx662/libsns_imx662,$(HISILICON_OPENSDK_SENSORS))
+endif
+endif
+
 # fpv variant on V4 (hi3516ev200 + gk7205v200): restrict to the high-fps
 # Sony sensors only. FPV cameras are permanently paired with one sensor;
 # the other 26 entries in HISILICON_OPENSDK_SENSORS_$(family) are dead
