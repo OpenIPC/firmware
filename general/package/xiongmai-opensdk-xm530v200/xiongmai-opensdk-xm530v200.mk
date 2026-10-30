@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = 9e1926631b948522fee252444f089f7bff7403d4
+XIONGMAI_OPENSDK_XM530V200_VERSION = 389fd41775b12d7d6e4fe7142e5b4f48d57ba922
 
-XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io, open_h264, open_jpeg, open_venc_mem, open_nn, open_ive, open_vo kernel modules)
+XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io, open_h264, open_jpeg, open_venc_mem, open_nn, open_ive, open_vo, open_isp kernel modules)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
 XIONGMAI_OPENSDK_XM530V200_INSTALL_STAGING = YES
 
@@ -44,10 +44,11 @@ endef
 # XM533's and XM535s' open_h264 (drivers/hx280enc, H264_CHIP=v200), the
 # XM530V200's open_jpeg) replace vendor modules nothing links against,
 # which stay as the fallback. On the XM530V200 drivers/xm530v200_vo
-# (open_vo.ko) replaces vo.ko, which the VPSS links against. The
-# kernel-module infrastructure installs them under /lib/modules/<kver>/extra/;
+# (open_vo.ko) replaces vo.ko, which the VPSS links against; on the XM533
+# drivers/xm533_isp (open_isp.ko) replaces isp.ko, which vi.ko links
+# against. The kernel-module infrastructure installs them under /lib/modules/<kver>/extra/;
 # xiongmai-osdrv-xm530v200 then leaves out the vendor mmz.ko, sys.ko,
-# vb.ko, rgn.ko and those vi.ko, vpss.ko and vo.ko.
+# vb.ko, rgn.ko and those vi.ko, vpss.ko, vo.ko and isp.ko.
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz drivers/xm_hevc \
 	drivers/xm_v200_i2c drivers/xm_v200_sys drivers/xm_v200_vb \
 	drivers/xm_v200_venc drivers/xm_v200_rgn drivers/xm_v200_acodec \
@@ -55,7 +56,7 @@ XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz drivers/xm_hevc \
 	drivers/xm_v200_nn
 ifeq ($(OPENIPC_SOC_MODEL),xm533)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm533_vi drivers/xm533_mipi_io \
-	drivers/xm533_venc_mem drivers/xm533_ive
+	drivers/xm533_venc_mem drivers/xm533_ive drivers/xm533_isp
 endif
 ifneq ($(filter xm533 xm535%,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/hx280enc
