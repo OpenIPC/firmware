@@ -89,9 +89,4 @@ BR2_PACKAGE_MAJESTIC_WEBUI=y
 BR2_PACKAGE_OPUS_OPENIPC=y
 BR2_PACKAGE_OPUS_OPENIPC_FIXED_POINT=y
 BR2_PACKAGE_OPUS_OPENIPC_HISI_SHIM=y
-# protobuf-c is dynamically loaded by the cv6xx-flavored majestic binary
-# (libprotobuf-c.so.1 appears in DT_NEEDED but no other config selects
-# it — the vendor majestic build was linked against a private protobuf-c
-# version).
-BR2_PACKAGE_PROTOBUF_C=y
 BR2_PACKAGE_YAML_CLI=y
