@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +31,18 @@ int LIM_ACTIVE = 0;
  * (firmware#2675, a hi3518ev200 zoom/focus lens). Every coil write goes
  * through coil_set() and every coil export starts at coil_off(). */
 int COIL_ACTIVE = 1;
+
+/* Set by SIGINT/SIGTERM/SIGHUP, and nothing else is done in the handler. A
+ * move killed mid-step would otherwise skip the writes that switch its coils
+ * off and leave the last energised ones driving: a stepper heating while it
+ * stands still, and on active-low boards a pin left at 0 is a coil on. The
+ * step loops stop on it and end the move the normal way, coils off. */
+static volatile sig_atomic_t STOP = 0;
+
+static void on_stop(int sig) {
+	(void)sig;
+	STOP = 1;
+}
 
 static int coil_off(void) {
 	return !COIL_ACTIVE;
@@ -301,21 +314,27 @@ void limits_config(int check_motor_pins) {
 }
 
 /* Strict like ptz_limits: a typo must not flip every coil on, so anything
- * but a lone 0 or 1 keeps the default and says so. */
+ * but a lone 0 or 1 -- the whole value, at most one trailing newline --
+ * keeps the default and says so. */
 void coil_config(void) {
 	FILE *fp = popen("fw_printenv -n ptz_coil_active 2>/dev/null", "r");
 	if (fp == NULL) {
 		return;
 	}
-	char line[16];
-	if (fgets(line, sizeof(line), fp) != NULL) {
-		if (strcmp(line, "0\n") == 0 || strcmp(line, "0") == 0) {
-			COIL_ACTIVE = 0;
-		} else if (strcmp(line, "1\n") != 0 && strcmp(line, "1") != 0) {
-			printf("ptz_coil_active: expected 0 or 1 - coils stay active-high\n");
-		}
-	}
+	char value[8];
+	size_t n = fread(value, 1, sizeof(value), fp);
 	pclose(fp);
+	if (n == 0) {
+		return;		/* unset */
+	}
+	if (n == 2 && value[1] == '\n') {
+		n = 1;
+	}
+	if (n == 1 && value[0] == '0') {
+		COIL_ACTIVE = 0;
+	} else if (n != 1 || value[0] != '1') {
+		printf("ptz_coil_active: expected 0 or 1 - coils stay active-high\n");
+	}
 }
 
 void gpio_config() {
@@ -399,6 +418,9 @@ void delay_us(long us) {
 	 * time, which a preemption in the middle of the spin can reach */
 	long long target = (long long)us * 1000;
 	for (;;) {
+		if (STOP) {
+			return;
+		}
 		if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
 			usleep(us);
 			return;
@@ -430,7 +452,7 @@ void axis_backoff(const int pins[4], const int fds[4], int level, int steps, int
 	}
 	int done = 0, released_at = -1, micro = 0, blocked = 0;
 
-	while (done < BACKOFF_MAX_STEPS) {
+	while (done < BACKOFF_MAX_STEPS && !STOP) {
 		if (released_at < 0 && !limit_hit(lim)) {
 			released_at = done;
 		}
@@ -485,7 +507,7 @@ void axis_run(const int pins[4], const int fds[4], int level, int steps, int del
 	const int (*seq)[4] = (steps < 0) ? REVERSE_STEP_SEQUENCE : STEP_SEQUENCE;
 
 	int micro = 0, phase = -1;
-	while (remaining > 0) {
+	while (remaining > 0 && !STOP) {
 		if (limit_hit(lim)) {
 			printf("%s: end stop reached, %d steps not done\n", level ? "tilt" : "pan", remaining);
 			axis_backoff(pins, fds, level, steps, delay, lim, phase);
@@ -543,6 +565,14 @@ int main(int argc, char *argv[]) {
 		CLOCK_RES_NS = res.tv_sec ? 1000000000L : res.tv_nsec;
 	}
 
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = on_stop;	/* no SA_RESTART: a sleep ends early on it */
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
+	sigaction(SIGHUP, &sa, NULL);
+
 	gpio_config();
 	coil_config();
 	limits_config(1);
@@ -565,8 +595,14 @@ int main(int argc, char *argv[]) {
 	}
 
 	axis_run(PAN_PINS, PAN_FDS, 0, pan_steps, delay);
-	axis_run(TILT_PINS, TILT_FDS, 1, tilt_steps, delay);
+	if (!STOP) {
+		axis_run(TILT_PINS, TILT_FDS, 1, tilt_steps, delay);
+	}
 	gpio_clean(0);
 
+	if (STOP) {
+		printf("interrupted: move stopped, coils off\n");
+		return 1;
+	}
 	return 0;
 }
