@@ -26,6 +26,14 @@ else
 VI_BUFF=2
 fi
 
+# A 1280x960 main stream (majestic's video0.size, a sensor's 960P mode) does
+# not fit 14 MB of MMZ with three VI buffers: the encoder then cannot be
+# created. Two leave room for it. The VI module is loaded once, at boot, so a
+# changed video0.size takes effect after a reboot.
+if [ "$VI_BUFF" = 3 ] && [ "$(cli -g .video0.size 2>/dev/null)" = 1280x960 ]; then
+VI_BUFF=2
+fi
+
 SNS_A=AR0130
 
 if [ $# -ge 2 ]; then
