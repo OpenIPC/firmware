@@ -1,12 +1,35 @@
 config BR2_PACKAGE_WAYBEAM
 	bool "waybeam"
 	depends on BR2_TOOLCHAIN_HAS_THREADS
-	depends on BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY6E
+	# Each arm names the family whose backend the makefile would pick for it,
+	# because the driver packages themselves carry no family guard: the
+	# star6e backend is built for every family that is not hi3516cv6xx, so
+	# without this a tree with the SigmaStar driver enabled on another SoC
+	# could select waybeam and get an encoder for the wrong hardware.
+	depends on (BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY6E && \
+		BR2_OPENIPC_SOC_FAMILY = "infinity6e") || \
+		(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV6XX && \
+		 BR2_PACKAGE_HISILICON_OPENSDK && \
+		 BR2_OPENIPC_SOC_FAMILY = "hi3516cv6xx")
 	depends on !BR2_PACKAGE_MAJESTIC
 	help
-	  Standalone H.265 video encoder and streamer for SigmaStar
-	  Infinity6E (SSC338Q/SSC30KQ). Provides a dual encoder
-	  backend, sensor unlock and an HTTP configuration API.
+	  Standalone H.265 video encoder and streamer with one backend
+	  per SoC: SigmaStar Infinity6E (SSC338Q/SSC30KQ) and Hisilicon
+	  Hi3516CV610 (V5). Drives the sensor and encoder directly and
+	  exposes an HTTP configuration API.
+
+	  On Hi3516CV610 the backend compiles against the public
+	  OpenHisilicon V5 headers, links the vendor MPP userspace
+	  libraries and drives the sensors as userspace plugins it
+	  dlopens by name from /usr/lib/sensors. This package builds
+	  the IMX662 plugin from the waybeam tree, where it carries the
+	  mode table and ISP seeds the backend was developed against,
+	  and hisilicon-opensdk skips its own build of that sensor so
+	  only one copy ships. The IMX335 plugin is built from
+	  OpenIPC/openhisilicon by hisilicon-opensdk -- one source and
+	  one pin. The vendor MPP kernel modules stay the ones S70vendor
+	  loads at boot; the backend re-inits the graph around them and
+	  never reloads them.
 
 	  Infinity6C (SSC378QE) is not offered here even though the
 	  encoder has a backend for it: waybeam's I6C backend targets
@@ -17,15 +40,20 @@ config BR2_PACKAGE_WAYBEAM
 
 	  It is an alternative to the Majestic streamer and cannot be
 	  built alongside it: both drive the same sensor and encoder
-	  hardware, and both rely on the SigmaStar OSDRV MI libraries,
+	  hardware, so only one of the two can own the graph. On
+	  SigmaStar they additionally share the OSDRV MI libraries,
 	  which OSDRV installs only when Majestic is not selected.
 
 	  Installs:
 	    - /usr/bin/waybeam
-	    - /usr/bin/json_cli
 	    - /etc/waybeam.json
 	    - /etc/init.d/S95waybeam
-	    - unlocked imx335/imx415 sensor modules, compiled here
-	      against this board's kernel
+	    - SigmaStar Infinity6E: /usr/bin/json_cli and unlocked
+	      imx335/imx415 sensor modules, compiled here against this
+	      board's kernel
+	    - Hi3516CV610: libsns_imx662.so, compiled here (the
+	      hisilicon-opensdk build of the same sensor is filtered
+	      out, so this is the only copy); libsns_imx335.so comes
+	      from hisilicon-opensdk
 
 	  https://github.com/OpenIPC/waybeam
