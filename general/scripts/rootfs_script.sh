@@ -11,6 +11,11 @@ echo BUILD_ID=${BUILD_ID:-local-$(date -u +%Y%m%d)-${GIT_HASH-build}} >> ${FILE}
 echo BUILD_SHA=${BUILD_SHA:-${GIT_HASH-build}} >> ${FILE}
 PLATFORM=${BUILD_PLATFORM:-${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}}
 echo BUILD_PLATFORM=${PLATFORM} >> ${FILE}
+# The chips this image also serves (BR2_OPENIPC_SOC_ALIASES), for the scripts
+# that have to tell the die they run on from the image they were built as.
+if [ -n "${OPENIPC_SOC_ALIASES}" ]; then
+	echo SOC_ALIASES="\"${OPENIPC_SOC_ALIASES}\"" >> ${FILE}
+fi
 date +TIME_STAMP=%s >> ${FILE}
 
 # The image ships no majestic.yaml: majestic runs on its own defaults until a
