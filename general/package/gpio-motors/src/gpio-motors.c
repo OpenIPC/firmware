@@ -22,6 +22,19 @@ int LIM_PINS[4] = {-1, -1, -1, -1};
 int LIM_FDS[4] = {-1, -1, -1, -1};
 int LIM_ACTIVE = 0;
 
+/* The level that energises a coil, from fw env `ptz_coil_active`: 1 (the
+ * default, ULN2803-style drivers) or 0 for boards that switch a coil on by
+ * pulling its pin low. On such a board every coil written 0 is on, so a pin
+ * exported as a plain output, a move that ends on all zeros, and a release
+ * that writes 0 all leave both motors energised until they overheat
+ * (firmware#2675, a hi3518ev200 zoom/focus lens). Every coil write goes
+ * through coil_set() and every coil export starts at coil_off(). */
+int COIL_ACTIVE = 1;
+
+static int coil_off(void) {
+	return !COIL_ACTIVE;
+}
+
 /* CLOCK_MONOTONIC resolution, read once in main(): 1ns on kernels with
  * high-resolution timers, one jiffy (10ms at HZ=100) without them */
 long CLOCK_RES_NS = 0;
@@ -36,12 +49,14 @@ int REVERSE_STEP_SEQUENCE[8][4] = {
 	{0, 1, 1, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}, {1, 0, 0, 0}
 };
 
-void gpio_release(int pin) {
+/* unexporting leaves the pin driving its last value, so that value is the
+ * one that switches the load off */
+void gpio_release(int pin, int off) {
 	char path[64];
 	snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/value", pin);
 	FILE *file = fopen(path, "w");
 	if (file) {
-		fprintf(file, "%d", 0);
+		fprintf(file, "%d", off);
 		fclose(file);
 	}
 
@@ -62,15 +77,15 @@ void gpio_clean(int error) {
 		if (TILT_FDS[i] != -1) {
 			close(TILT_FDS[i]);
 		}
-		gpio_release(PAN_PINS[i]);
-		gpio_release(TILT_PINS[i]);
+		gpio_release(PAN_PINS[i], coil_off());
+		gpio_release(TILT_PINS[i], coil_off());
 	}
 
 	if (SELECT_FD != -1) {
 		close(SELECT_FD);
 	}
 	if (SELECT_PIN != -1) {
-		gpio_release(SELECT_PIN);
+		gpio_release(SELECT_PIN, 0);
 	}
 
 	for (int i = 0; i < 4; i++) {
@@ -86,7 +101,9 @@ void gpio_clean(int error) {
 	}
 }
 
-void gpio_export(int pin) {
+/* `level` is the value the pin starts at: writing "low" or "high" as the
+ * direction sets it in the same step, where "out" would first drive it low */
+void gpio_export(int pin, int level) {
 	char path[64];
 	FILE *file;
 
@@ -102,7 +119,7 @@ void gpio_export(int pin) {
 	snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/direction", pin);
 	file = fopen(path, "w");
 	if (file) {
-		fprintf(file, "out");
+		fprintf(file, level ? "high" : "low");
 		fclose(file);
 	} else {
 		printf("Unable to set direction of GPIO %d: [%d] %s\n", pin, errno, strerror(errno));
@@ -129,6 +146,11 @@ void gpio_set(int fd, int pin, int value) {
 		printf("Unable to set value of GPIO %d: [%d] %s\n", pin, errno, strerror(errno));
 		gpio_clean(1);
 	}
+}
+
+/* `on` is a STEP_SEQUENCE entry: 1 energises the coil */
+void coil_set(int fd, int pin, int on) {
+	gpio_set(fd, pin, on ? COIL_ACTIVE : coil_off());
 }
 
 /* 1 when the pin's sysfs direction reads "in", 0 otherwise (also when the
@@ -278,6 +300,24 @@ void limits_config(int check_motor_pins) {
 	}
 }
 
+/* Strict like ptz_limits: a typo must not flip every coil on, so anything
+ * but a lone 0 or 1 keeps the default and says so. */
+void coil_config(void) {
+	FILE *fp = popen("fw_printenv -n ptz_coil_active 2>/dev/null", "r");
+	if (fp == NULL) {
+		return;
+	}
+	char line[16];
+	if (fgets(line, sizeof(line), fp) != NULL) {
+		if (strcmp(line, "0\n") == 0 || strcmp(line, "0") == 0) {
+			COIL_ACTIVE = 0;
+		} else if (strcmp(line, "1\n") != 0 && strcmp(line, "1") != 0) {
+			printf("ptz_coil_active: expected 0 or 1 - coils stay active-high\n");
+		}
+	}
+	pclose(fp);
+}
+
 void gpio_config() {
 	/* ptz_gpio is the documented name (majestic-webui#227); gpio_motors is
 	 * every camera configured before the rename, so it stays as the
@@ -403,7 +443,7 @@ void axis_backoff(const int pins[4], const int fds[4], int level, int steps, int
 		}
 		phase = (phase + dir + 8) % 8;
 		for (int i = 0; i < 4; i++) {
-			gpio_set(fds[i], pins[i], STEP_SEQUENCE[phase][i]);
+			coil_set(fds[i], pins[i], STEP_SEQUENCE[phase][i]);
 		}
 		delay_us(delay);
 		if (++micro >= 8) {
@@ -412,7 +452,7 @@ void axis_backoff(const int pins[4], const int fds[4], int level, int steps, int
 		}
 	}
 	for (int i = 0; i < 4; i++) {
-		gpio_set(fds[i], pins[i], 0);
+		coil_set(fds[i], pins[i], 0);
 	}
 	if (blocked) {
 		printf("%s: back-off stopped by the opposite end switch after %d steps - check the switches\n", axis, done);
@@ -452,7 +492,7 @@ void axis_run(const int pins[4], const int fds[4], int level, int steps, int del
 			break;
 		}
 		for (int i = 0; i < 4; i++) {
-			gpio_set(fds[i], pins[i], seq[micro][i]);
+			coil_set(fds[i], pins[i], seq[micro][i]);
 		}
 		/* REVERSE_STEP_SEQUENCE[m] is STEP_SEQUENCE[7 - m] */
 		phase = (steps < 0) ? 7 - micro : micro;
@@ -465,7 +505,7 @@ void axis_run(const int pins[4], const int fds[4], int level, int steps, int del
 	}
 
 	for (int i = 0; i < 4; i++) {
-		gpio_set(fds[i], pins[i], 0);
+		coil_set(fds[i], pins[i], 0);
 	}
 }
 
@@ -504,14 +544,15 @@ int main(int argc, char *argv[]) {
 	}
 
 	gpio_config();
+	coil_config();
 	limits_config(1);
 	for (int i = 0; i < 4; i++) {
-		gpio_export(PAN_PINS[i]);
-		gpio_export(TILT_PINS[i]);
+		gpio_export(PAN_PINS[i], coil_off());
+		gpio_export(TILT_PINS[i], coil_off());
 	}
 
 	if (SELECT_PIN != -1) {
-		gpio_export(SELECT_PIN);
+		gpio_export(SELECT_PIN, 0);
 	}
 
 	for (int i = 0; i < 4; i++) {
