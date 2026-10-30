@@ -5,7 +5,7 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = b53b1aba55508fa32661b959c66e6092dc23151b
+XIONGMAI_OPENSDK_XM530V200_VERSION = 3b0c75eea4522e4351a3ffc296db4acabf35c98a
 
 XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io, open_h264, open_jpeg, open_venc_mem, open_nn, open_ive, open_vo, open_isp kernel modules)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
@@ -42,7 +42,7 @@ endef
 # The small modules (open_acodec, open_i2s, open_adc, open_ddr, open_log,
 # open_nn, the XM533's open_mipi_io, open_venc_mem and open_ive, the
 # XM533's and XM535s' open_h264 (drivers/hx280enc, H264_CHIP=v200), the
-# XM530V200's open_jpeg, the XM535D1/D2's open_isp) replace vendor
+# XM530V200's open_jpeg, the XM535s' open_isp) replace vendor
 # modules nothing links against,
 # which stay as the fallback. On the XM530V200 drivers/xm530v200_vo
 # (open_vo.ko) replaces vo.ko, which the VPSS links against; on the XM533
@@ -67,7 +67,7 @@ ifneq ($(filter xm535d1 xm535d2,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm535_vpss drivers/xm535_isp
 endif
 ifeq ($(OPENIPC_SOC_MODEL),xm535w1)
-XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm535w1_vi
+XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm535w1_vi drivers/xm535w1_isp
 endif
 ifeq ($(OPENIPC_SOC_MODEL),xm530v200)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm530v200_vpss drivers/xm530v200_jpeg \

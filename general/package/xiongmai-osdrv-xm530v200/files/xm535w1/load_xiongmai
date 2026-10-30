@@ -69,7 +69,7 @@ insert_ko() {
 	modprobe open_log 2>/dev/null || insmod log.ko
 	modprobe open_ddr 2>/dev/null || insmod ddr.ko
 	modprobe open_vi line=0 2>/dev/null || insmod /usr/lib/xiongmai/vi.ko line=0 2>/dev/null || insmod vi.ko line=0
-	insmod isp.ko
+	modprobe open_isp 2>/dev/null || insmod isp.ko
 	modprobe open_rgn 2>/dev/null || insmod /usr/lib/xiongmai/rgn.ko 2>/dev/null || insmod rgn.ko
 	modprobe open_venc 2>/dev/null || insmod venc.ko
 	modprobe open_h264 2>/dev/null || insmod h264.ko
@@ -99,7 +99,7 @@ remove_ko() {
 	rmmod -w open_h264 2>/dev/null || rmmod -w h264
 	rmmod -w open_venc 2>/dev/null || rmmod -w venc
 	rmmod -w open_rgn 2>/dev/null || rmmod -w rgn
-	rmmod -w isp
+	rmmod -w open_isp 2>/dev/null || rmmod -w isp
 	rmmod -w open_vi 2>/dev/null || rmmod -w vi
 	rmmod -w open_ddr 2>/dev/null || rmmod -w ddr
 	rmmod -w open_log 2>/dev/null || rmmod -w log
