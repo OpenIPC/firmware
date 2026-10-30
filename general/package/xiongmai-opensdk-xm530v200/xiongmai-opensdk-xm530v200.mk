@@ -5,7 +5,7 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = 389fd41775b12d7d6e4fe7142e5b4f48d57ba922
+XIONGMAI_OPENSDK_XM530V200_VERSION = d9dc48dde8897b2c0b12bec18d75b8d1518c60c9
 
 XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io, open_h264, open_jpeg, open_venc_mem, open_nn, open_ive, open_vo, open_isp kernel modules)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
@@ -46,6 +46,7 @@ endef
 # which stay as the fallback. On the XM530V200 drivers/xm530v200_vo
 # (open_vo.ko) replaces vo.ko, which the VPSS links against; on the XM533
 # drivers/xm533_isp (open_isp.ko) replaces isp.ko, which vi.ko links
+# against, and on the XM530V200 drivers/xm530v200_isp, which vpss.ko links
 # against. The kernel-module infrastructure installs them under /lib/modules/<kver>/extra/;
 # xiongmai-osdrv-xm530v200 then leaves out the vendor mmz.ko, sys.ko,
 # vb.ko, rgn.ko and those vi.ko, vpss.ko, vo.ko and isp.ko.
@@ -69,7 +70,7 @@ XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm535w1_vi
 endif
 ifeq ($(OPENIPC_SOC_MODEL),xm530v200)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm530v200_vpss drivers/xm530v200_jpeg \
-	drivers/xm530v200_vo
+	drivers/xm530v200_vo drivers/xm530v200_isp
 endif
 ifneq ($(filter xm530v200 xm533,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT = v3
