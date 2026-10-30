@@ -338,14 +338,15 @@ if [ "$1" = "rtl8188fu-t31-aoni-e97vj62" ]; then
   exit 0
 fi
 
-# Xiongmai V200 series. The USB host is the vendor's dwc2 and xm_usb0, which
-# load_xiongmai only loads after S40network, so the profile loads them. The
+# Xiongmai V200 series. The USB host is dwc2 and xm_usb0 (open_dwc2 and
+# open_xm_usb0 where built, the vendor's otherwise), which load_xiongmai
+# only loads after S40network, so the profile loads them. The
 # dongle's power pad is cycled as the vendor's wifi_pdn.ko does: output high
 # (off) for 2 s, then low (on) for 2 s; pad register 0x10020000 + 4 * pad.
 # $1: power pad, 0 for none. $2: driver module.
 xm_v200_wifi() {
-	modprobe dwc2
-	modprobe xm_usb0
+	modprobe open_dwc2 2>/dev/null || modprobe dwc2
+	modprobe open_xm_usb0 2>/dev/null || modprobe xm_usb0
 	if [ "$1" -gt 0 ]; then
 		pad=$(printf 0x%x $((0x10020000 + $1 * 4)))
 		devmem "$pad" 32 0xc00

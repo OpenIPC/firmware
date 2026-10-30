@@ -79,14 +79,14 @@ insert_ko() {
 	# the arasan driver their own kernel's platform data layout.
 	modprobe xm_v200_sd detect=1 pdn="$SDIO_PDN"
 	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
-	modprobe dwc2
-	modprobe xm_usb0
+	modprobe open_dwc2 2>/dev/null || modprobe dwc2
+	modprobe open_xm_usb0 2>/dev/null || modprobe xm_usb0
 }
 
 remove_ko() {
 	modprobe -r xm_v200_sd
-	rmmod -w xm_usb0
-	rmmod -w dwc2
+	rmmod -w open_xm_usb0 2>/dev/null || rmmod -w xm_usb0
+	rmmod -w open_dwc2 2>/dev/null || rmmod -w dwc2
 	rmmod -w open_adc 2>/dev/null || rmmod -w adc
 	rmmod -w open_i2s 2>/dev/null || rmmod -w i2s
 	rmmod -w open_acodec 2>/dev/null || rmmod -w acodec
