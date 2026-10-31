@@ -108,11 +108,16 @@ MANIFEST_CACHE=/tmp/manifest.flat
 # run's images. Empty until this run has unpacked something.
 unpacked_list=
 # Where the image is unpacked: /tmp, or the idle media zone (stage_in_mmz).
-# The second phase is a fresh shell (PID 1 in the RAM root) that knows only what
-# was exported, so the first passes the zone on, and only a hand-off reads it.
+# The second phase is a fresh shell -- PID 1 after a hand-off, or the re-exec in
+# the RAM root without one -- that knows only what was exported, so the first
+# passes the zone on. Taken only where that path really is the stage's jffs2
+# mount, so a stray variable in the environment cannot point a run elsewhere.
 stage_dir=/tmp
-[ "1" = "$_handoff" ] && [ -n "$handoff_stage_dir" ] && stage_dir=$handoff_stage_dir
+[ -n "$handoff_stage_dir" ] &&
+	grep -q " $handoff_stage_dir jffs2 " /proc/mounts 2>/dev/null &&
+	stage_dir=$handoff_stage_dir
 mmz_stage_mounted=
+mmz_phram_ours=
 unset _osr _plat _manifest_repo
 # Every online fetch verifies the server's certificate against the bundle the
 # image ships at /etc/ssl/certs/ca-certificates.crt (libcurl's built-in default
@@ -1367,6 +1372,14 @@ check_unpack_room() {
 	# RAM that tmpfs is made of. They are different numbers -- see
 	# check_unpack_ram -- and either can be the one that binds.
 	check_unpack_ram "$((need / 1024))" "$a"
+	# Staged in the media zone, the unpack does not touch /tmp: what has to fit
+	# is the stage, and only the archive stays behind in the tmpfs.
+	if [ "$stage_dir" != /tmp ]; then
+		free=$(df -k "$stage_dir" 2>&3 | awk 'END { print $(NF - 2) }')
+		[ -n "$free" ] && [ "$free" -gt 0 ] 2>&3 || return 0
+		[ "$((need / 1024))" -lt "$free" ] && return 0
+		die "No room to unpack $a in the media zone: needs $((need / 1024)) KB, $free KB free. Nothing was written."
+	fi
 	# Anchored on the Use% column rather than a field number, so a long device
 	# name that wraps the row does not shift the answer.
 	free=$(df -k /tmp 2>&3 | awk 'END { print $(NF - 2) }')
@@ -1557,7 +1570,8 @@ MMZ_STAGE_SKIP_KB=${MMZ_STAGE_SKIP_KB:-4096}
 # Whether stage_in_mmz could run at all here: a carve-out zone and phram.
 mmz_stage_possible() {
 	[ "ot" = "$(cat /sys/module/hisi_mem/parameters/allocator 2>&3)" ] || return 1
-	grep -q '^phram ' /proc/modules 2>&3 && return 0
+	# A phram someone already loaded is theirs, mapping who knows what.
+	grep -q '^phram ' /proc/modules 2>&3 && return 1
 	find "/lib/modules/$(uname -r)" -name phram.ko 2>&3 | grep -q .
 }
 
@@ -1570,19 +1584,21 @@ stage_in_mmz() {
 	[ -n "$base" ] && [ -n "$size_kb" ] || return 1
 	size_kb=$((size_kb * 1024))
 	start=$((base + MMZ_STAGE_SKIP_KB * 1024))
+	# Every block the modules hold, by where it ENDS (the second address of
+	# "phys(start, end)"), so one that starts below the mapping and runs into it
+	# is refused too. A zone whose occupancy cannot be read is not mapped at all.
+	grep -q "total size=" /proc/umap/media-mem 2>&3 || return 1
 	top=$(awk -F'[(), ]+' '/MMB: phys/ { for (i = 1; i < NF; i++) if ($i == "phys") print $(i + 2) }' /proc/umap/media-mem 2>&3 |
 		while read -r e; do echo $((e)); done | sort -n | tail -1)
 	[ -n "$top" ] && [ "$top" -ge "$start" ] && return 1
 	len_kb=$((size_kb - MMZ_STAGE_SKIP_KB))
 	[ "$len_kb" -ge $((need + 1024)) ] || return 1
-	# A phram left loaded with no device would take no new parameters: modprobe
-	# of a loaded module is a no-op. One that maps something else is not ours.
-	if grep -q '^phram ' /proc/modules 2>&3; then
-		grep -q '"sysupgrade"' /proc/mtd 2>&3 && return 1
-		rmmod phram 2>&3 || return 1
-	fi
+	# Ours only if this run loads it: modprobe of a loaded module ignores the
+	# parameters, and one already loaded may map something else.
+	grep -q '^phram ' /proc/modules 2>&3 && return 1
 	# In bytes: the 5.10 parser takes no "Ki".
 	modprobe phram phram=sysupgrade,$(printf 0x%x "$start"),$((len_kb * 1024)) 2>&3 || return 1
+	mmz_phram_ours=1
 	n=$(awk -F: '/"sysupgrade"/ { sub("mtd", "", $1); print $1 }' /proc/mtd)
 	if [ -z "$n" ] || ! flash_eraseall -q "/dev/mtd$n" 2>&3 ||
 		! mkdir -p /tmp/stage || ! mount -t jffs2 "/dev/mtdblock$n" /tmp/stage 2>&3; then
@@ -1601,7 +1617,10 @@ release_mmz_stage() {
 		mmz_stage_mounted=
 	fi
 	rmdir /tmp/stage 2>&3
-	grep -q '^phram ' /proc/modules 2>&3 && rmmod phram 2>&3
+	if [ "1" = "$mmz_phram_ours" ]; then
+		rmmod phram 2>&3
+		mmz_phram_ours=
+	fi
 	stage_dir=/tmp
 	return 0
 }
