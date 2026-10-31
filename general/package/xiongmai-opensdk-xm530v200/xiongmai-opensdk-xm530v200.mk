@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = 56650745851b9e9286ad30b4e4bc982bed78475a
+XIONGMAI_OPENSDK_XM530V200_VERSION = d7a6450bdad2dd3b0c53dfcb5da65cf3b3e6428e
 
-XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io, open_h264, open_jpeg, open_venc_mem, open_nn, open_ive, open_vo, open_isp, open_xm_usb0 kernel modules), GPL-2.0+ or BSD-3-Clause (open_dwc2 kernel module)
+XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io, open_h264, open_jpeg, open_venc_mem, open_nn, open_ive, open_vo, open_isp, open_xm_usb0, open_rtc, open_vdec, open_var, open_dma kernel modules), GPL-2.0+ or BSD-3-Clause (open_dwc2 kernel module)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
 XIONGMAI_OPENSDK_XM530V200_INSTALL_STAGING = YES
 
@@ -50,7 +50,10 @@ endef
 # against, and on the XM530V200 drivers/xm530v200_isp, which vpss.ko links
 # against. On the XM530V200 and XM535s drivers/dwc2 (open_dwc2.ko) and
 # drivers/xm_v200_usb0 (open_xm_usb0.ko) are the USB host, in place of
-# dwc2.ko and xm_usb0.ko. The kernel-module infrastructure installs them under /lib/modules/<kver>/extra/;
+# dwc2.ko and xm_usb0.ko. On the XM530V200 drivers/xm_v200_rtc (open_rtc),
+# xm_v200_vdec (open_vdec), xm_v200_var (open_var) and xm_v200_dma
+# (open_dma) stand in for rtc.ko, vdec.ko, var.ko and xm_dma.ko, which the
+# image does not carry. The kernel-module infrastructure installs them under /lib/modules/<kver>/extra/;
 # xiongmai-osdrv-xm530v200 then leaves out the vendor mmz.ko, sys.ko,
 # vb.ko, rgn.ko and those vi.ko, vpss.ko, vo.ko and isp.ko.
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz drivers/xm_hevc \
@@ -73,7 +76,8 @@ XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm535w1_vi drivers/xm535w1_
 endif
 ifeq ($(OPENIPC_SOC_MODEL),xm530v200)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm530v200_vpss drivers/xm530v200_jpeg \
-	drivers/xm530v200_vo drivers/xm530v200_isp
+	drivers/xm530v200_vo drivers/xm530v200_isp drivers/xm_v200_rtc \
+	drivers/xm_v200_vdec drivers/xm_v200_var drivers/xm_v200_dma
 endif
 ifneq ($(filter xm530v200 xm535%,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/dwc2 drivers/xm_v200_usb0

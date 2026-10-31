@@ -69,6 +69,12 @@ insert_ko() {
 	modprobe open_acodec 2>/dev/null || insmod acodec.ko
 	modprobe open_i2s 2>/dev/null || insmod i2s.ko
 	modprobe open_adc 2>/dev/null || insmod adc.ko
+	# The clock (sets the system time from it), the decoder bridge, the
+	# rotator and the DMA: open modules only, the vendor's are not shipped.
+	modprobe open_rtc
+	modprobe open_vdec
+	modprobe open_var
+	modprobe open_dma
 	# The kernel's xm_v200_sd, not the vendor's sdio0_sd/sdio1_sd: those hand
 	# the arasan driver their own kernel's platform data layout.
 	modprobe xm_v200_sd detect=1 pdn="$SDIO_PDN"
@@ -81,6 +87,10 @@ remove_ko() {
 	modprobe -r xm_v200_sd
 	rmmod -w open_xm_usb0 2>/dev/null || rmmod -w xm_usb0
 	rmmod -w open_dwc2 2>/dev/null || rmmod -w dwc2
+	rmmod -w open_dma
+	rmmod -w open_var
+	rmmod -w open_vdec
+	rmmod -w open_rtc
 	rmmod -w open_adc 2>/dev/null || rmmod -w adc
 	rmmod -w open_i2s 2>/dev/null || rmmod -w i2s
 	rmmod -w open_acodec 2>/dev/null || rmmod -w acodec
