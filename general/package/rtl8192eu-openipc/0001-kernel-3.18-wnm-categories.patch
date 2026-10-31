@@ -2,6 +2,9 @@ Define the WNM action categories on kernels older than 3.19
 
 Kernel 3.18's linux/ieee80211.h (the SigmaStar infinity3 kernel) has no
 WLAN_CATEGORY_WNM / WLAN_CATEGORY_WNM_UNPROTECTED, which the driver uses.
+The upstream driver (mange/rtl8192eu-linux-driver) only targets newer
+kernels; the defines are guarded, so this can stay across version bumps
+and be dropped once the driver defines them itself or 3.18 is retired.
 
 --- a/include/ieee80211.h
 +++ b/include/ieee80211.h

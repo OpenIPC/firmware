@@ -318,10 +318,16 @@ UNBUILT_FAMILIES = {
 # vermagic and a struct-layout probe, not by a boot (see its .mk). It leaves
 # this list when that board joins ALL_BOARDS, which waits for those modules
 # to have run on an AV130 camera.
+#
+# exfat-nofuse-openipc is the exFAT module for the 3.x kernels that
+# exfat-openipc does not build on. Its only user is OpenIPC/builder's
+# msc316dc_lite_imou-looc2 (infinity3, kernel 3.18); the mainline infinity3
+# boards have no card slot driver selected, so it would be flash spent on
+# nothing there.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x",
     "anyka-osdrv-ak3918av130", "atbm-wifi",
-    "aura-httpd", "baresip-openipc", "comgt", "f2fs-tools-openipc", "faceter-agent",
+    "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
     "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
