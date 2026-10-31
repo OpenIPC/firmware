@@ -74,6 +74,7 @@ define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*JXF22*.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*imx307*.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*imx323*.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*ov2735*.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*sc2235*.so
 #	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*.so
 
