@@ -237,6 +237,14 @@ expect refused "$(sa "$env" '' $params -- hybrid 36M 28M)" \
 	"hybrid 36M 28M: refused, no carve-out left"
 expect refused "$(sa "$env" '' $params -- hybrid 36M 0M)" \
 	"hybrid 36M 0M: refused, that is ot"
+expect refused "$(sa "$env" '' $params -- hybrid 36M 1M)" \
+	"hybrid 36M 1M: refused, below the 4M minimum before any rounding"
+expect "mem=64M console=ttyAMA0,115200 mmz_allocator=hybrid mmz=cma,0,0x42400000,20M:anonymous,0,0x43800000,8M" \
+	"$(sa "$env" '' $params -- hybrid 36M 020M)" \
+	"hybrid 36M 020M: 20M, not the octal 16M"
+expect "mem=64M console=ttyAMA0,115200 mmz_allocator=hybrid mmz=cma,0,0x42400000,8M:anonymous,0,0x42c00000,20M" \
+	"$(sa "$env" '' $params -- hybrid 036M)" \
+	"hybrid 036M: an OS share of 36M, not the octal 30M"
 
 echo
 if [ "$fail" -eq 0 ]; then

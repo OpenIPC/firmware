@@ -61,6 +61,9 @@ if [ -d $p ] && [ -n "$(cat $p/allocator 2>/dev/null)" ]; then
     case "$n" in
     ''|*[!0-9]*) n=0 ;;
     esac
+    # decimal, whatever leading zeros it came with: $(( 036 )) is octal 30
+    n=${n#"${n%%[!0]*}"}
+    n=${n:-0}
     if [ "$n" -lt 32 ] || [ $((n + 8)) -gt "$(cat $p/dram)" ]; then
       echo "osmem must be a size in MiB from 32M to $(( $(cat $p/dram) - 8 ))M, not '${os}'"
       exit 1
@@ -91,7 +94,10 @@ if [ -d $p ] && [ -n "$(cat $p/allocator 2>/dev/null)" ]; then
       case "$c" in
       ''|*[!0-9]*) c=0 ;;
       esac
-      c=$(( (c + 3) / 4 * 4 ))
+      c=${c#"${c%%[!0]*}"}
+      c=${c:-0}
+      # the minimum is what was asked for, before the round up to whole 4M
+      [ "$c" -ge 4 ] && c=$(( (c + 3) / 4 * 4 )) || c=0
       if [ "$c" -lt 4 ] || [ $((osm + c + 4)) -gt "$dram" ]; then
         echo "the CMA share must be a size in MiB from 4M to $(( dram - osm - 4 ))M, not '${3}'"
         exit 1
