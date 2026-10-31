@@ -98,6 +98,14 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/gc4653_i2c_4M.ini \
 		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/vs4388_i2c_4M.ini
 
+	# GC4023, on both variants with its driver: 2560x1440p30 RAW10, RGGB,
+	# linear, wired like the GC4653 above. The values are the SDK's own for
+	# this sensor (its VI-device-1 MIPI attributes and ISP public
+	# attributes), not measured on a board. ipcinfo names chip ID 0x4023
+	# gc4023.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/gc4023_i2c_4M.ini
+
 endef
 
 $(eval $(generic-package))
