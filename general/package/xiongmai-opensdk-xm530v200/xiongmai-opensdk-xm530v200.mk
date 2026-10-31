@@ -5,7 +5,7 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = fea86026c7a2f25f7acf66b83514f1c3ff274018
+XIONGMAI_OPENSDK_XM530V200_VERSION = 3a585a707e989d2d259561b06a6ff39dcf8dd962
 
 XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io, open_h264, open_jpeg, open_venc_mem, open_nn, open_ive, open_vo, open_isp, open_xm_usb0, open_rtc, open_vdec, open_var, open_dma, open_motor kernel modules), GPL-2.0+ or BSD-3-Clause (open_dwc2 kernel module)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
@@ -71,7 +71,12 @@ ifneq ($(filter xm533 xm535%,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/hx280enc
 endif
 ifneq ($(filter xm535d1 xm535d2,$(OPENIPC_SOC_MODEL)),)
-XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm535_vpss drivers/xm535_isp
+# open_vi beside open_vpss: a single-ISP (online) product's picture is
+# scaled by VI, as the vendor's vi.ko does; each built without the other's
+# stubs
+XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm535_vpss drivers/xm535_isp \
+	drivers/xm535w1_vi
+XIONGMAI_OPENSDK_XM530V200_VPSS_VI = WITH_VI=1 WITH_VPSS=1
 endif
 ifeq ($(OPENIPC_SOC_MODEL),xm535w1)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/xm535w1_vi drivers/xm535w1_isp
@@ -118,6 +123,7 @@ XIONGMAI_OPENSDK_XM530V200_MOTOR_CHIP = xm535d2
 endif
 XIONGMAI_OPENSDK_XM530V200_MODULE_MAKE_OPTS = MMZ_ALLOCATOR=list \
 	MOTOR_CHIP=$(XIONGMAI_OPENSDK_XM530V200_MOTOR_CHIP) \
+	$(XIONGMAI_OPENSDK_XM530V200_VPSS_VI) \
 	HEVC_LAYOUT=$(XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT) \
 	I2C_CHIP=$(XIONGMAI_OPENSDK_XM530V200_I2C_CHIP) \
 	VB_LAYOUT=$(XIONGMAI_OPENSDK_XM530V200_VB_LAYOUT) \
