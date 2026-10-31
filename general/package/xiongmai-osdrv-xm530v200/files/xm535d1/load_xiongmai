@@ -54,6 +54,16 @@ insert_mmz() {
 		report_error
 }
 
+# The pan/tilt motors (open_motor), as the vendor firmware loads kmotor.ko:
+# the reference board's pins without the self-test; motor_params in the U-Boot
+# environment replaces them, "off" leaves the module out.
+insert_motor() {
+	params=$(fw_printenv -n motor_params 2>/dev/null)
+	[ "$params" = off ] && return 0
+	[ -n "$params" ] || params="gpio_pin=80,81,82,83,87,86,85,84,-1,-1,-1,-1 auto_test=0"
+	modprobe open_motor $params
+}
+
 insert_ko() {
 	set_pll
 	modprobe open_i2c 2>/dev/null || insmod i2c.ko
@@ -81,9 +91,11 @@ insert_ko() {
 	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
 	modprobe open_dwc2 2>/dev/null || modprobe dwc2
 	modprobe open_xm_usb0 2>/dev/null || modprobe xm_usb0
+	insert_motor
 }
 
 remove_ko() {
+	rmmod -w open_motor 2>/dev/null
 	modprobe -r xm_v200_sd
 	rmmod -w open_xm_usb0 2>/dev/null || rmmod -w xm_usb0
 	rmmod -w open_dwc2 2>/dev/null || rmmod -w dwc2

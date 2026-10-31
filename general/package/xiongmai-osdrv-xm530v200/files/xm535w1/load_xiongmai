@@ -60,6 +60,14 @@ insert_mmz() {
 		report_error
 }
 
+# The pan/tilt motors (open_motor): this chip's boards have none, as its
+# vendor firmware, unless motor_params in the U-Boot environment gives them.
+insert_motor() {
+	params=$(fw_printenv -n motor_params 2>/dev/null)
+	[ -n "$params" ] && [ "$params" != off ] || return 0
+	modprobe open_motor $params
+}
+
 insert_ko() {
 	set_pll
 	modprobe open_i2c 2>/dev/null || insmod i2c.ko
@@ -86,9 +94,11 @@ insert_ko() {
 	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
 	modprobe open_dwc2 2>/dev/null || modprobe dwc2
 	modprobe open_xm_usb0 2>/dev/null || modprobe xm_usb0
+	insert_motor
 }
 
 remove_ko() {
+	rmmod -w open_motor 2>/dev/null
 	rmmod -w open_xm_usb0 2>/dev/null || rmmod -w xm_usb0
 	rmmod -w open_dwc2 2>/dev/null || rmmod -w dwc2
 	rmmod -w open_adc 2>/dev/null || rmmod -w adc

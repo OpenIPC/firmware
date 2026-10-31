@@ -49,6 +49,16 @@ insert_mmz() {
 		report_error
 }
 
+# The pan/tilt motors (open_motor), as the vendor firmware loads kmotor.ko:
+# the reference board's pins without the self-test; motor_params in the U-Boot
+# environment replaces them, "off" leaves the module out.
+insert_motor() {
+	params=$(fw_printenv -n motor_params 2>/dev/null)
+	[ "$params" = off ] && return 0
+	[ -n "$params" ] || params="gpio_pin=8,9,1007,1006,33,36,89,1009,-1,-1,-1,-1 auto_test=0"
+	modprobe open_motor $params
+}
+
 insert_ko() {
 	set_pll
 	modprobe open_i2c 2>/dev/null || insmod i2c.ko
@@ -77,9 +87,11 @@ insert_ko() {
 	# The kernel's xm_v200_sd, not the vendor's sdio0_sd/sdio1_sd: those hand
 	# the arasan driver their own kernel's platform data layout.
 	modprobe xm_v200_sd detect=1 pdn="$SDIO_PDN"
+	insert_motor
 }
 
 remove_ko() {
+	rmmod -w open_motor 2>/dev/null
 	modprobe -r xm_v200_sd
 	rmmod -w open_mipi_io 2>/dev/null || rmmod -w mipi_io
 	rmmod -w open_adc 2>/dev/null || rmmod -w adc
