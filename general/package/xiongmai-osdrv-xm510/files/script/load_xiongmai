@@ -214,7 +214,11 @@ record_sensor() {
 # before majestic starts, and only once.
 use_xmispd() {
 	[ "$(fw_printenv -n xmispd 2>/dev/null)" = 1 ] || return 0
-	[ -x /usr/bin/xmispd ] || return 0
+	if [ ! -x /usr/bin/xmispd ]; then
+		logger -s -p daemon.warn -t xiongmai \
+			"xmispd is on but not in this image; keeping the vendor isp"
+		return 0
+	fi
 	local sensor
 	sensor=$(ipcinfo --short-sensor 2>/dev/null)
 	case "$sensor" in
@@ -227,8 +231,12 @@ use_xmispd() {
 		;;
 	esac
 	grep -q ' /usr/bin/isp ' /proc/mounts && return 0
-	mount --bind /usr/bin/xmispd /usr/bin/isp &&
+	if mount --bind /usr/bin/xmispd /usr/bin/isp; then
 		logger -s -p daemon.info -t xiongmai "Using xmispd as the ISP daemon"
+	else
+		logger -s -p daemon.warn -t xiongmai \
+			"xmispd could not take /usr/bin/isp; keeping the vendor isp"
+	fi
 }
 
 load_usage()
