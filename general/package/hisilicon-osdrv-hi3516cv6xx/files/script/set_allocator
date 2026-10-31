@@ -52,7 +52,7 @@ calc_mmz() {
 p=${SET_ALLOCATOR_MEM:-/sys/module/hisi_mem/parameters}
 if [ -d $p ] && [ -n "$(cat $p/allocator 2>/dev/null)" ]; then
   case "$1" in
-  ot|cma|auto)
+  ot|cma|hybrid|auto)
     get_env
     # The share asked for, else the one this boot runs with, in whole MiB:
     # a bare number would reach mem= as bytes, and the camera would not boot.
@@ -77,6 +77,29 @@ if [ -d $p ] && [ -n "$(cat $p/allocator 2>/dev/null)" ]; then
       osm=$(( (n + 3) / 4 * 4 ))
       zone=$(printf 'anonymous,0,0x%x,%dM' $(( 0x40000000 + osm * 1048576 )) $(( dram - osm )))
       newbootargs="mem=${dram}M ${kept}mmz_allocator=cma mmz=${zone}"
+    elif [ "$1" = hybrid ]; then
+      # A carve-out for what the media pipeline holds all the time, and a CMA
+      # zone above the OS share that Linux uses until a peak borrows it: the
+      # streamer then never has to take its whole pipeline back from Linux,
+      # which under plain cma can stall a camera that is short of memory.
+      # The CMA share defaults to 8M, which on a 64M hi3516cv608 at 36M
+      # leaves 20M fixed for a 1080p pipeline measured at 15-18M.
+      dram=$(cat $p/dram)
+      osm=$(( (n + 3) / 4 * 4 ))
+      c=${3:-8M}
+      c=${c%M}
+      case "$c" in
+      ''|*[!0-9]*) c=0 ;;
+      esac
+      c=$(( (c + 3) / 4 * 4 ))
+      if [ "$c" -lt 4 ] || [ $((osm + c + 4)) -gt "$dram" ]; then
+        echo "the CMA share must be a size in MiB from 4M to $(( dram - osm - 4 ))M, not '${3}'"
+        exit 1
+      fi
+      zone=$(printf 'cma,0,0x%x,%dM:anonymous,0,0x%x,%dM' \
+        $(( 0x40000000 + osm * 1048576 )) $c \
+        $(( 0x40000000 + (osm + c) * 1048576 )) $(( dram - osm - c )))
+      newbootargs="mem=${dram}M ${kept}mmz_allocator=hybrid mmz=${zone}"
     else
       # mem= is the OS share for a kernel without the probe, osmem= for this one.
       newbootargs="mem=${os} ${kept}mmz_allocator=ot osmem=${os}"
@@ -94,7 +117,7 @@ if [ -d $p ] && [ -n "$(cat $p/allocator 2>/dev/null)" ]; then
     exit 0
     ;;
   *)
-    echo "Usage: set_allocator ot|cma [osmem] | auto | mmz"
+    echo "Usage: set_allocator ot|cma [osmem] | hybrid [osmem] [cma share] | auto | mmz"
     echo "Now: DRAM $(cat $p/dram)M, OS $(cat $p/osmem)M, $(cat $p/allocator), mmz=$(cat $p/mmz)"
     exit 1
     ;;
