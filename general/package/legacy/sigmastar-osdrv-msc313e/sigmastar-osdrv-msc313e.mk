@@ -15,10 +15,12 @@ SIGMASTAR_OSDRV_MSC313E_DEPENDENCIES = glibc-compat
 
 # The OMX core (libOMX_BELA) dlopens its components as /lib/<name>, or from
 # $OMX_LIB_PATH when that is set; it never searches the library path. Keep
-# them in /lib so nothing has to set it.
+# them in /lib so nothing has to set it. libOMX_IJPE loads its hardware
+# encoder, libOMX_IJPE_ENC_HW, the same way: without it in /lib the JPEG
+# encoder fails to construct (and crashes in its own error path).
 SIGMASTAR_OSDRV_MSC313E_OMX_COMPONENTS = $(addprefix \
 	$(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/lib/libOMX_,$(addsuffix .so, \
-	ACODEC ALSA ASPL AVQE_A IJPE VMFE VSPL VSRC VVHE))
+	ACODEC ALSA ASPL AVQE_A IJPE IJPE_ENC_HW VMFE VSPL VSRC VVHE))
 
 # libmi and libOMX_BELA dlopen("libat.so") for property_get/property_set and
 # libCam* link it, so a library of that name has to exist. The vendor one is
@@ -60,12 +62,19 @@ define SIGMASTAR_OSDRV_MSC313E_INSTALL_TARGET_CMDS
 	# which musl's 64-bit one would misread; send it to glibc-compat's wrapper.
 	python3 $(GLIBC_COMPAT_PKGDIR)/rename-import.py \
 		$(TARGET_DIR)/lib/libOMX_AVQE_A.so lseek lse32
+	# Their mmap takes a 32-bit off_t too: send it to glibc-compat's mm32.
+	for lib in $(addprefix $(TARGET_DIR)/usr/lib/,libCamAlgo.so libCamUtil.so \
+		libmi_isp.so libmi.so libMTE_LINUX.so libOMX_BELA.so libtinyalsa.so) \
+		$(addprefix $(TARGET_DIR)/lib/,libOMX_AVQE_A.so libOMX_IJPE.so); do \
+		python3 $(GLIBC_COMPAT_PKGDIR)/rename-import.py $$lib mmap mm32 || exit 1; \
+	done
 	$(INSTALL) -m 644 -D $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sigmastar.conf $(TARGET_DIR)/etc/sigmastar.conf
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*JXF22*.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*imx307*.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*imx323*.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*ov2735*.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*sc2235*.so
 #	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(SIGMASTAR_OSDRV_MSC313E_PKGDIR)/files/sensor/*.so
 
