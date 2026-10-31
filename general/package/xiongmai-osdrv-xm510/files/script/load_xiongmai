@@ -207,6 +207,38 @@ record_sensor() {
 		logger -s -p daemon.info -t xiongmai "Writing $sensor to U-Boot ENV"
 }
 
+# xmispd, the open ISP daemon (OpenIPC/openxiongmai tools/xmispd), in place of
+# the vendor isp after "fw_setenv xmispd 1" and a reboot, for the sensors it
+# has; "fw_setenv xmispd" and a reboot go back. majestic starts "isp" from
+# PATH and stops it by that name, and a bind mount keeps the name. Done here,
+# before majestic starts, and only once.
+use_xmispd() {
+	[ "$(fw_printenv -n xmispd 2>/dev/null)" = 1 ] || return 0
+	if [ ! -x /usr/bin/xmispd ]; then
+		logger -s -p daemon.warn -t xiongmai \
+			"xmispd is on but not in this image; keeping the vendor isp"
+		return 0
+	fi
+	local sensor
+	sensor=$(ipcinfo --short-sensor 2>/dev/null)
+	case "$sensor" in
+	jxh42 | jxh62 | jxh65 | ar0130 | sc1135 | sc1235 | sc2145h* | sc2235 | \
+		ov9732 | ov9750* | mis1002) ;;
+	*)
+		logger -s -p daemon.warn -t xiongmai \
+			"xmispd has no ${sensor:-detected} sensor; keeping the vendor isp"
+		return 0
+		;;
+	esac
+	grep -q ' /usr/bin/isp ' /proc/mounts && return 0
+	if mount --bind /usr/bin/xmispd /usr/bin/isp; then
+		logger -s -p daemon.info -t xiongmai "Using xmispd as the ISP daemon"
+	else
+		logger -s -p daemon.warn -t xiongmai \
+			"xmispd could not take /usr/bin/isp; keeping the vendor isp"
+	fi
+}
+
 load_usage()
 {
 	echo "Usage:  ./loadxm510 [-option] [sensor_name]"
@@ -225,6 +257,7 @@ then
 cd /lib/modules/3.0.101/xiongmai
 insert_ko
 record_sensor
+use_xmispd
 fi
 
 if [ "$1" = "-r" ]

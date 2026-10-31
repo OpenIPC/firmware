@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM510_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM510_VERSION))
-XIONGMAI_OPENSDK_XM510_VERSION = ce1068c5f2a3a48bc3d0905563909b99090df11c
+XIONGMAI_OPENSDK_XM510_VERSION = 0bddaea9715f334c2e2304b50e88253855df6dc1
 
-XIONGMAI_OPENSDK_XM510_LICENSE = MIT (libwrapper), GPL-2.0 (open_mmz, open_h264, open_vi, open_isp, open_rgn kernel modules)
+XIONGMAI_OPENSDK_XM510_LICENSE = MIT (libwrapper, xmispd), GPL-2.0 (open_mmz, open_h264, open_vi, open_isp, open_rgn kernel modules)
 XIONGMAI_OPENSDK_XM510_LICENSE_FILES = LICENSE
 
 # Install after osdrv, as xiongmai-opensdk does with xiongmai-osdrv-xm530.
@@ -29,15 +29,20 @@ endif
 XIONGMAI_OPENSDK_XM510_MODULE_SUBDIRS = drivers/xm_mmz drivers/hx280enc drivers/xm510_vi drivers/xm510_isp drivers/xm510_rgn
 
 # libwrapper (uclibc symbols for the vendor binaries on musl) is this
-# package's own source, not openxiongmai's.
+# package's own source, not openxiongmai's. xmispd (tools/xmispd, on
+# libraries/libxmisp) is the open ISP daemon, a drop-in for the vendor
+# /usr/bin/isp; load_xiongmai puts it in that place when U-Boot's xmispd is 1.
 define XIONGMAI_OPENSDK_XM510_BUILD_CMDS
 	$(TARGET_CC) -fPIC -shared -s $(XIONGMAI_OPENSDK_XM510_PKGDIR)/src/lib/wrapper.c \
 		-o $(@D)/libwrapper.so
+	$(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(@D)/tools/xmispd
 endef
 
 define XIONGMAI_OPENSDK_XM510_INSTALL_TARGET_CMDS
 	install -m 0755 -D $(@D)/libwrapper.so $(TARGET_DIR)/lib/libwrapper.so
 	ln -sfv libwrapper.so $(TARGET_DIR)/lib/libwrapper.so.0
+	$(INSTALL) -m 0755 -D $(@D)/tools/xmispd/xmispd $(TARGET_DIR)/usr/bin/xmispd
+	$(TARGET_STRIP) $(TARGET_DIR)/usr/bin/xmispd
 endef
 
 $(eval $(kernel-module))
