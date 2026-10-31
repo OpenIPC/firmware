@@ -5,7 +5,7 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM510_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM510_VERSION))
-XIONGMAI_OPENSDK_XM510_VERSION = 0bddaea9715f334c2e2304b50e88253855df6dc1
+XIONGMAI_OPENSDK_XM510_VERSION = b7e99a355f55366ba6a1cd6b54d473ac4a0eaafa
 
 XIONGMAI_OPENSDK_XM510_LICENSE = MIT (libwrapper, xmispd), GPL-2.0 (open_mmz, open_h264, open_vi, open_isp, open_rgn kernel modules)
 XIONGMAI_OPENSDK_XM510_LICENSE_FILES = LICENSE
