@@ -1996,7 +1996,14 @@ download_firmware() {
 		fi
 		# A builder device writes its plain package's URL into `upgrade` on
 		# first boot; its -split one, where published, is beside it.
-		[ -z "$url" ] && url=$(nor_split_url "$(fw_printenv -n upgrade || default_upgrade_url)")
+		# default_upgrade_url has looked for it already.
+		if [ -z "$url" ]; then
+			if url=$(fw_printenv -n upgrade); then
+				url=$(nor_split_url "$url")
+			else
+				url=$(default_upgrade_url)
+			fi
+		fi
 		# Named for this device, so verify_rootfs can trust it when it cannot mount it.
 		case "${url##*/}" in
 			"$system_platform-$(pkg_flash).tgz"|"$system_platform-$(pkg_flash)-split.tgz") device_pinned=1 ;;
