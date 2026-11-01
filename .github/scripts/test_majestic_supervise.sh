@@ -51,7 +51,7 @@ case "\$(cat "$SB/mode")" in
     term) kill -TERM \$\$ ;;
     exit) exit 0 ;;
     exit1) exit 1 ;;
-    pipe) kill -PIPE \$\$ ;;
+    usr2) kill -USR2 \$\$ ;;
     run) exec sleep 1000 ;;
 esac
 EOF
@@ -113,7 +113,7 @@ for m in term exit; do
 done
 
 # 3b. ...and an end that is not restarted says so, unless it was a stop.
-for m in exit:'exited with status 0' exit1:'exited with status 1' pipe:'ended by signal 13'; do
+for m in exit:'exited with status 0' exit1:'exited with status 1' usr2:'ended by signal 12'; do
     reset "${m%%:*}"
     supervise
     grep -q "${m#*:}; not starting it again" "$SB/log" 2>/dev/null \
