@@ -18,8 +18,11 @@ start() {
 	# that were measured with zram carry; elsewhere (an rv1126 kernel builds
 	# zram in, its busybox has no swapon) this leaves the camera as it was.
 	command -v mkswap > /dev/null && command -v swapon > /dev/null || return 0
-	modprobe zram num_devices=1 2>/dev/null || return 0
-	[ -d $dev ] || return 0
+	# From here the image is one that means to have it: say why when it does not.
+	if ! modprobe zram num_devices=1 || [ ! -d $dev ]; then
+		echo "zram swap: the zram module did not load, no swap"
+		return 1
+	fi
 	grep -q '^/dev/zram0 ' /proc/swaps && return 0
 
 	# Half of what Linux has, uncompressed. lzo-rle is built into the kernel;
@@ -34,7 +37,10 @@ start() {
 }
 
 stop() {
-	grep -q '^/dev/zram0 ' /proc/swaps && swapoff /dev/zram0
+	command -v swapoff > /dev/null || return 0
+	if grep -q '^/dev/zram0 ' /proc/swaps; then
+		swapoff /dev/zram0
+	fi
 }
 
 case "$1" in
