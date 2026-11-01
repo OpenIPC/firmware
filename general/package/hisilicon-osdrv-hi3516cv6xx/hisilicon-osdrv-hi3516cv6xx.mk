@@ -88,7 +88,8 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# SC4336P, on both variants with its driver: 2560x1440p30 RAW10, BGGR,
 	# linear, wired like the SP2308 above. The values are the SDK's own for
 	# this sensor (its MIPI and ISP public attributes, and the driver's
-	# linear VMAX), not measured on a board. ipcinfo names it sc4336p.
+	# linear VMAX), and a CV610 runs on them (OpenIPC/majestic#361).
+	# ipcinfo names it sc4336p.
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/sc4336p_i2c_4M.ini
 
 	# CV2003, GC4653 and VS4388, on both variants with their drivers: the
