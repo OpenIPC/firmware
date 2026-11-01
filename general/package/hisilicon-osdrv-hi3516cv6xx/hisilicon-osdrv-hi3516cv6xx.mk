@@ -85,6 +85,13 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/sp2308_i2c_1080p.ini
 
+	# SC4336P, on both variants with its driver: 2560x1440p30 RAW10, BGGR,
+	# linear, wired like the SP2308 above. The values are the SDK's own for
+	# this sensor (its MIPI and ISP public attributes, and the driver's
+	# linear VMAX), and a CV610 runs on them (OpenIPC/majestic#361).
+	# ipcinfo names it sc4336p.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/sc4336p_i2c_4M.ini
+
 	# CV2003, GC4653 and VS4388, on both variants with their drivers: the
 	# sensors of one vendor's CV610/CV608 cameras, which are 8 MB lite-class
 	# boards (OpenIPC/majestic#355, #356, #357). Every one of them wires the
