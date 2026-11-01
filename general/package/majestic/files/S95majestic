@@ -144,6 +144,24 @@ crashed() {
 	return 1
 }
 
+# An end that is not restarted is said in the log, unless it is someone
+# stopping majestic. Nothing else would say it: majestic's output goes to
+# /dev/null, and what it says before its log is open is lost with it -- a
+# majestic that exited 1 on "another instance is running" left a camera
+# without video and not a line anywhere about why.
+ended() {
+	case "$1" in
+		130 | 143) ;;
+		*)
+			if [ "$1" -gt 128 ]; then
+				logger -t "$DAEMON" "ended by signal $(($1 - 128)); not starting it again" 2>/dev/null
+			else
+				logger -t "$DAEMON" "exited with status $1; not starting it again" 2>/dev/null
+			fi
+			;;
+	esac
+}
+
 supervise() {
 	trap '' HUP
 	# A stop while it waits ends the wait, not just the run after it.
@@ -159,7 +177,10 @@ supervise() {
 		[ -f "$UPGRADE_LOCK" ] && break
 		start-stop-daemon -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- $DAEMON_ARGS
 		rc=$?
-		[ "$rc" -gt 128 ] && crashed $((rc - 128)) || break
+		if ! { [ "$rc" -gt 128 ] && crashed $((rc - 128)); }; then
+			ended "$rc"
+			break
+		fi
 		sig=$((rc - 128))
 		[ -f "$UPGRADE_LOCK" ] && break
 		now=$(cut -d. -f1 /proc/uptime)

@@ -50,6 +50,8 @@ case "\$(cat "$SB/mode")" in
     abrt) kill -ABRT \$\$ ;;
     term) kill -TERM \$\$ ;;
     exit) exit 0 ;;
+    exit1) exit 1 ;;
+    usr2) kill -USR2 \$\$ ;;
     run) exec sleep 1000 ;;
 esac
 EOF
@@ -110,6 +112,17 @@ for m in term exit; do
         || bad "$m: $(starts) starts"
 done
 
+# 3b. ...and an end that is not restarted says so, unless it was a stop.
+for m in exit:'exited with status 0' exit1:'exited with status 1' usr2:'ended by signal 12'; do
+    reset "${m%%:*}"
+    supervise
+    grep -q "${m#*:}; not starting it again" "$SB/log" 2>/dev/null \
+        && ok "a majestic that ends with '${m%%:*}' leaves '${m#*:}' in the log" || bad "${m%%:*}: log: $(cat "$SB/log" 2>/dev/null)"
+done
+reset term
+supervise
+[ ! -s "$SB/log" ] && ok "an end by SIGTERM, someone stopping it, logs nothing" || bad "term logged: $(cat "$SB/log")"
+
 # 4. An upgrade has the camera: a crash then is left to it.
 reset segv
 touch "$SB/sysupgrade.lock"
@@ -140,6 +153,7 @@ else
     bad "after stop: supervisor $(pgrep -f "$SB/S95majestic supervise"), starts $(starts)"
 fi
 [ ! -f "$SB/run/majestic-supervise.pid" ] && ok "stop removes the supervisor's pid" || bad "pid file left after stop"
+[ ! -s "$SB/log" ] && ok "and a stop leaves nothing in the log" || bad "stop logged: $(cat "$SB/log")"
 
 # 6. A stop while it waits to start majestic again ends the wait.
 reset segv
