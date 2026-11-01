@@ -42,6 +42,8 @@ BR2_LINUX_KERNEL_UIMAGE_LOADADDR="0x40018000"
 
 # Filesystem
 BR2_PACKAGE_BUSYBOX_CONFIG="$(BR2_EXTERNAL)/package/busybox/busybox.config"
+# mkswap, swapon and swapoff for the zram swap S36zram sets up
+BR2_PACKAGE_BUSYBOX_CONFIG_FRAGMENT_FILES="$(BR2_EXTERNAL)/package/busybox/busybox-swap.fragment"
 BR2_PACKAGE_UBOOT_TOOLS=y
 # BR2_PACKAGE_IFUPDOWN_SCRIPTS is not set
 # Wireless stack omitted — openipc/linux hi3516cv6xx kernel has
