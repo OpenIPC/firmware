@@ -291,7 +291,14 @@ if [ "$head" = "1" ]; then
 fi
 [ "$out" = "-" ] && [ -n "${STUB_DL_FILE:-}" ] && cat "$STUB_DL_FILE"
 # fetch_manifest: the channel/build index, when a test supplies one.
-case "$out" in *manifest.flat) [ -n "${STUB_MANIFEST:-}" ] && cp "$STUB_MANIFEST" "$out" ;; esac
+# Each fetch is noted, as the file itself does not outlive the run.
+case "$out" in */manifest.*.flat)
+    echo "$out" >> "${FLASH_LOG%/*}/manifest-fetches"
+    [ -n "${STUB_MANIFEST:-}" ] && cp "$STUB_MANIFEST" "$out"
+    # What `timeout 15` does to a listing that is still fetching.
+    [ -n "${STUB_TERM_DURING_FETCH:-}" ] && kill -TERM "$PPID"
+    ;;
+esac
 exit "${STUB_CURL_RC:-0}"'
 # check_sdcard re-reads `mount` after every umount, so a static pair of stubs
 # would spin forever: the unmount has to actually change what mount reports.
@@ -351,6 +358,11 @@ stub busybox '
 applet=$1; shift
 case "$applet" in
     flashcp|flash_eraseall) echo "$applet $*" >> "$FLASH_LOG"
+                            # A manifest still in /tmp when a write starts is
+                            # RAM the flash phase did not have; noted apart, so
+                            # the flash log stays what was written.
+                            ls "${FLASH_LOG%/*}"/manifest.*.flat >/dev/null 2>&1 &&
+                                echo "$applet $*" >> "${FLASH_LOG%/*}/manifest-at-flash"
                             # Real flashcp writes progress to stdout, and under
                             # -s that is what set_progress pipes through awk for
                             # the WebUI. Without some, "does the progress still
@@ -3816,7 +3828,9 @@ unset STUB_SOC STUB_SPLIT_PUBLISHED
 # which one they came from. The block has to name both builds and the way
 # back BEFORE the first write, and the history has to keep the line.
 HIST="$SB/etc/sysupgrade.history"
-banner_case() { reset_env; rm -f "$SB/tmp/manifest.flat"; STUB_IMG_BUILD_ID=nightly-20260711-bbbbbbb; }
+manifest_left() { ls "$SB"/tmp/manifest.*.flat 2>/dev/null; }
+manifest_reset() { rm -f "$SB"/tmp/manifest.*.flat "$SB/tmp/manifest-fetches"; }
+banner_case() { reset_env; manifest_reset; STUB_IMG_BUILD_ID=nightly-20260711-bbbbbbb; }
 # The same two images, downloaded by `-k -r` from the default URL: a run that
 # is online, so it may ask the manifest about the build being left.
 banner_dl() {
@@ -3874,12 +3888,20 @@ fi
 banner_case; banner_dl
 printf 'nightly-20260711-bbbbbbb ssc338q_lite nor x\nnightly-20260601-aaaaaaa ssc338q_lite nor x\n' > "$SB/manifest.flat"
 RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+rm -f "$SB/tmp/manifest-at-flash"
 run -z -k -r
 if printf '%s' "$OUT" | grep -qF "return to this one with" &&
     printf '%s' "$OUT" | grep -qF "sysupgrade --build=nightly-20260601-aaaaaaa"; then
     ok "rollback line: the build being left is in the manifest"
 else
     bad "rollback line, listed build: out='$OUT'"
+fi
+# /tmp is RAM, and the flash phase still needs it: the manifest goes once the
+# block above is printed, so no write finds it there.
+if [ ! -e "$SB/tmp/manifest-at-flash" ] && flashed /dev/mtd3; then
+    ok "the manifest is not kept in /tmp for the flash phase"
+else
+    bad "manifest in /tmp while flashing: $(cat "$SB/tmp/manifest-at-flash" 2>&1)"
 fi
 banner_case; banner_dl
 printf 'nightly-20260711-bbbbbbb ssc338q_lite nor x\n' > "$SB/manifest.flat"
@@ -3897,13 +3919,14 @@ fi
 banner_case
 RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
 run -z --kernel="$K" --rootfs="$R"
-if [ ! -s "$SB/tmp/manifest.flat" ] && printf '%s' "$OUT" | grep -qF "is still published" &&
+if [ ! -e "$SB/tmp/manifest-fetches" ] && printf '%s' "$OUT" | grep -qF "is still published" &&
     flashed /dev/mtd3; then
     ok "rollback line: local files do not fetch the manifest"
 else
-    bad "rollback line, local files: manifest='$(cat "$SB/tmp/manifest.flat" 2>/dev/null)' out='$OUT'"
+    bad "rollback line, local files: fetched '$(cat "$SB/tmp/manifest-fetches" 2>/dev/null)' out='$OUT'"
 fi
-rm -f "$SB/manifest.flat" "$SB/tmp/manifest.flat"
+rm -f "$SB/manifest.flat"
+manifest_reset
 
 # The history records transitions. Staying on the running build is not one:
 # the flash phase skips a same-version image, and a forced reflash of the
@@ -3935,7 +3958,7 @@ fi
 # gk7205v210 profile is gk7205v210_<...> in its manifest, while $model is
 # aliased to gk7205v200. Looked up under the alias alone, every build it has
 # read as pruned, and --list-builds came back empty.
-reset_env; rm -f "$SB/tmp/manifest.flat"
+reset_env; manifest_reset
 set_platform gk7205v210_lite_acme-cam1
 printf 'nightly-20260711-bbbbbbb gk7205v210_lite_acme-cam1 nor x\nnightly-20260601-aaaaaaa gk7205v210_lite_acme-cam1 nor x\n' > "$SB/manifest.flat"
 RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
@@ -3946,7 +3969,39 @@ if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -qF "* nightly-20260601-aaaaaaa"
 else
     bad "aliased builder profile, --list-builds: rc=$RC out='$OUT'"
 fi
-rm -f "$SB/manifest.flat" "$SB/tmp/manifest.flat"
+# The manifest is 1.7 MB of RAM, and the WebUI lists on page loads.
+if [ -s "$SB/tmp/manifest-fetches" ] && [ -z "$(manifest_left)" ]; then
+    ok "a listing leaves no manifest behind"
+else
+    bad "manifest after a listing: fetched '$(cat "$SB/tmp/manifest-fetches" 2>&1)' left '$(manifest_left)'"
+fi
+# Each run has its own, so an upgrade's cleanup cannot pull one from under a
+# listing that overlaps it.
+run -z --list-builds
+if [ "$(sort -u "$SB/tmp/manifest-fetches" | wc -l)" = 2 ]; then
+    ok "every run fetches into its own manifest"
+else
+    bad "manifest paths of two runs: $(cat "$SB/tmp/manifest-fetches")"
+fi
+manifest_reset
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat STUB_TERM_DURING_FETCH=1"
+run -z --list-builds
+if [ "$RC" -ne 0 ] && [ -s "$SB/tmp/manifest-fetches" ] && [ -z "$(manifest_left)" ]; then
+    ok "a listing timed out mid-fetch leaves no manifest behind"
+else
+    bad "listing ended by TERM: rc=$RC left '$(manifest_left)' out='$OUT'"
+fi
+manifest_reset
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+run -z --build=nightly-20200101-0000000
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -qF "No artifact for" &&
+    [ -s "$SB/tmp/manifest-fetches" ] && [ -z "$(manifest_left)" ]; then
+    ok "a refused upgrade leaves no manifest behind"
+else
+    bad "refused upgrade: rc=$RC left '$(manifest_left)' out='$OUT'"
+fi
+rm -f "$SB/manifest.flat"
+manifest_reset
 
 # A build that was never published has no --build to offer.
 banner_case

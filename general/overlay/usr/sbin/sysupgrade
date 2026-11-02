@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.81
+scr_version=1.0.82
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -99,7 +99,11 @@ case "$_plat" in
 		;;
 esac
 MANIFEST_URL=${MANIFEST_URL:-https://openipc.github.io/${_manifest_repo}/manifest.flat}
-MANIFEST_CACHE=/tmp/manifest.flat
+# One per run, and gone with it: the WebUI's update notice runs --list-builds on
+# page loads, with no lock, so it can overlap an upgrade, and 1.7 MB left in /tmp
+# after a listing is RAM the next flash does not have.
+MANIFEST_CACHE=/tmp/manifest.$$.flat
+trap 'rm -f "$MANIFEST_CACHE"' EXIT
 # What this run unpacked into /tmp, one name per line as tar -v lists it, so a
 # refusal can take back exactly that and nothing else (discard_unpacked). Made
 # by mktemp when the unpack starts, never a fixed name: a fixed one could be a
@@ -3629,6 +3633,10 @@ print_transition() {
 		echo_c 33 " Daily builds are not release-tested: features may regress." ;;
 	esac
 	echo_c 36 "=================================================================="
+	# Nothing reads the manifest after this, and /tmp is RAM: kept, its 1.7 MB
+	# was what check_flash_ram found missing on a 32 MB hi3516ev200 (1016 KB
+	# left of the 2048 it wants; 2328 KB without it).
+	rm -f "$MANIFEST_CACHE"
 }
 
 # One line per upgrade in $HISTORY_FILE: UTC time, from, to, and which door
@@ -4043,6 +4051,8 @@ if [ "1" = "$history_only" ]; then
 fi
 
 if [ "1" = "$list_only" ]; then
+	# `timeout 15` ends a slow listing with TERM, which would skip the EXIT trap.
+	trap 'exit 1' INT TERM HUP
 	fetch_manifest
 	resolve_model_alias
 	platform=$(manifest_platform)
