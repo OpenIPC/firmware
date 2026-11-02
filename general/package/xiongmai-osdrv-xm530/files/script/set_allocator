@@ -1,0 +1,85 @@
+#!/bin/sh
+# set_allocator xm|cma [osmem]: where the media buffers come from, at the next
+# boot.
+#
+#  xm   the vendor layout: mem=<osmem> keeps the rest of DDR out of Linux, and
+#       the MMZ module hands it out as one fixed zone.
+#  cma  Linux gets all of DDR but the top 1 MB. The kernel reserves the media
+#       share as a CMA area (cma=), which open_mmz allocates from and Linux
+#       uses for its own pages meanwhile. The 1 MB stays a zone for
+#       xm530_rgn, which ioremap()s its block.
+#
+# osmem is in MB (default: the osmem variable, or what this boot has), the
+# same number as in the xm layout: with cma the media share is DDR - osmem.
+
+ram=64
+[ "$(ipcinfo --chip-name 2>/dev/null)" = xm550 ] && ram=128
+zone=1
+
+usage() {
+	echo "Usage: $0 xm|cma [osmem]"
+	echo "Now: $(tr ' ' '\n' </proc/cmdline | grep -E '^(mem|cma|mmz_allocator)=' | tr '\n' ' ')"
+	exit 1
+}
+
+booted_mem() {
+	tr ' ' '\n' </proc/cmdline | sed -n 's/^mem=\([0-9]*\)M$/\1/p' | head -1
+}
+
+has_module() {
+	find /lib/modules/$(uname -r) -name "$1.ko" | grep -q .
+}
+
+case "$1" in
+xm | cma) ;;
+*) usage ;;
+esac
+
+os=$(echo "${2:-$(fw_printenv -n osmem 2>/dev/null)}" | tr -d 'M')
+if [ -z "$os" ]; then
+	# A cma boot's mem= is not the OS share; its zone is
+	booted=$(booted_mem)
+	cma=$(tr ' ' '\n' </proc/cmdline | sed -n 's/^cma=\([0-9]*\)M$/\1/p')
+	os=$((booted - ${cma:-0}))
+fi
+case "$os" in
+'' | *[!0-9]*) echo "osmem '$os' is not a number of MB"; exit 1 ;;
+esac
+if [ "$os" -lt 16 ] || [ "$os" -ge $((ram - zone)) ]; then
+	echo "osmem ${os}M does not fit ${ram} MB of DDR"
+	exit 1
+fi
+
+if [ "$1" = cma ]; then
+	# Without these the camera would boot with a 1 MB zone and no video
+	if ! grep -q CMA /proc/pagetypeinfo 2>/dev/null; then
+		echo "This kernel has no CMA; nothing changed"
+		exit 1
+	fi
+	for m in open_mmz open_vi; do
+		if ! has_module $m; then
+			echo "cma needs $m.ko, which this image does not have; nothing changed"
+			exit 1
+		fi
+	done
+	args="mem=$((ram - zone))M cma=$((ram - zone - os))M mmz_allocator=cma"
+else
+	args="mem=${os}M"
+fi
+
+# Everything else on the command line stays, in its order, after mem=, which
+# load_xiongmai and older scripts read as the first argument
+kept=$(fw_printenv -n bootargs | tr ' ' '\n' |
+	grep -vE '^(mem|cma|mmz_allocator)=' | grep . | tr '\n' ' ')
+# Both in one write of the environment, so they cannot disagree: the next
+# run takes its default from osmem
+script=$(mktemp)
+printf 'bootargs %s\nosmem %sM\n' "$args ${kept% }" "$os" >"$script"
+if ! fw_setenv -s "$script"; then
+	rm -f "$script"
+	echo "Could not write the environment; nothing changes at the next boot"
+	exit 1
+fi
+rm -f "$script"
+echo "$args ${kept% }"
+echo "Applies at the next boot"

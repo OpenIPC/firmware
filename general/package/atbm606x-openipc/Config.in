@@ -1,0 +1,8 @@
+config BR2_PACKAGE_ATBM606X_OPENIPC
+	bool "atbm606x-openipc"
+	depends on BR2_LINUX_KERNEL
+	help
+	  AltoBeam Wi-Fi 6 USB driver for the ATBM6062, ATBM6062-C,
+	  ATBM6162 and ATBM6132-C (Cronus, Oceanus, Cronus Lite), firmware
+	  built in. It brings its own cfg80211 and mac80211, so the kernel's
+	  CONFIG_CFG80211 and CONFIG_MAC80211 must be off.

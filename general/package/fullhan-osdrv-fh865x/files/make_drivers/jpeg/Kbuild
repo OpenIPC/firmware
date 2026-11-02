@@ -1,0 +1,10 @@
+# jpeg.ko from the FP13 (FH885XV200_IPC_V1.1.0.FP13_20211202) SDK objects
+obj-m := jpeg.o
+jpeg-y := \
+	jpeg_reg_process.o \
+	jpeg_manage.o \
+	jpeg_os_common.o \
+	jpeg_rtt.o \
+	jpeg_linux.o \
+	mjpeg_rc.o \
+	jpeg_low_power.o

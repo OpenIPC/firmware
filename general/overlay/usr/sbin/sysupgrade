@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.79
+scr_version=1.0.83
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -99,7 +99,11 @@ case "$_plat" in
 		;;
 esac
 MANIFEST_URL=${MANIFEST_URL:-https://openipc.github.io/${_manifest_repo}/manifest.flat}
-MANIFEST_CACHE=/tmp/manifest.flat
+# One per run, and gone with it: the WebUI's update notice runs --list-builds on
+# page loads, with no lock, so it can overlap an upgrade, and 1.7 MB left in /tmp
+# after a listing is RAM the next flash does not have.
+MANIFEST_CACHE=/tmp/manifest.$$.flat
+trap 'rm -f "$MANIFEST_CACHE"' EXIT
 # What this run unpacked into /tmp, one name per line as tar -v lists it, so a
 # refusal can take back exactly that and nothing else (discard_unpacked). Made
 # by mktemp when the unpack starts, never a fixed name: a fixed one could be a
@@ -107,6 +111,17 @@ MANIFEST_CACHE=/tmp/manifest.flat
 # before the lock, even -- would find the first run's list and delete that
 # run's images. Empty until this run has unpacked something.
 unpacked_list=
+# Where the image is unpacked: /tmp, or the idle media zone (stage_in_mmz).
+# The second phase is a fresh shell -- PID 1 after a hand-off, or the re-exec in
+# the RAM root without one -- that knows only what was exported, so the first
+# passes the zone on. Taken only where that path really is the stage's jffs2
+# mount, so a stray variable in the environment cannot point a run elsewhere.
+stage_dir=/tmp
+[ -n "$handoff_stage_dir" ] &&
+	grep -q " $handoff_stage_dir jffs2 " /proc/mounts 2>/dev/null &&
+	stage_dir=$handoff_stage_dir
+mmz_stage_mounted=
+mmz_phram_ours=
 unset _osr _plat _manifest_repo
 # Every online fetch verifies the server's certificate against the bundle the
 # image ships at /etc/ssl/certs/ca-certificates.crt (libcurl's built-in default
@@ -147,6 +162,9 @@ die() {
 		# is cleared only on the flash path below (and clearing it is harmless
 		# even if no flash follows), so there is nothing to undo here.
 		discard_unpacked
+		# Before majestic is back: its media buffers come from the zone the
+		# stage maps, and the zone's allocator does not know the stage is there.
+		release_mmz_stage
 		restore_resources
 		# Only ever remove a lock this process owns. die() is reachable before
 		# create_lock has run (get_system_info, called from print_sysinfo, can
@@ -191,13 +209,13 @@ compare_versions() {
 # of the defaults would drift.
 rootfs_image() {
 	[ -n "$rootfs_file" ] && { echo "$rootfs_file"; return 0; }
-	[ "$ubi_layout" = "ubifs" ] && echo "/tmp/rootfs.ubifs.$image_soc" || echo "/tmp/rootfs.squashfs.$image_soc"
+	[ "$ubi_layout" = "ubifs" ] && echo "$stage_dir/rootfs.ubifs.$image_soc" || echo "$stage_dir/rootfs.squashfs.$image_soc"
 }
 
 kernel_image() {
 	[ -n "$kernel_file" ] && { echo "$kernel_file"; return 0; }
 	[ "$ubi_layout" = "ubifs" ] && { echo "/tmp/fitImage.$image_soc"; return 0; }
-	[ "$vendor" = "rockchip" ] && echo "/tmp/zboot.img.$image_soc" || echo "/tmp/uImage.$image_soc"
+	[ "$vendor" = "rockchip" ] && echo "$stage_dir/zboot.img.$image_soc" || echo "$stage_dir/uImage.$image_soc"
 }
 
 # Where the rootfs is written: the `rootfs` UBI volume on a UBI layout, the
@@ -377,7 +395,7 @@ check_combined_fits() {
 # camera is intact, is the more useful answer than "nothing to update".
 preflight_image_sizes() {
 	if [ "1" = "$image_combined" ]; then
-		check_combined_fits "/tmp/firmware.bin.$image_soc"
+		check_combined_fits "$stage_dir/firmware.bin.$image_soc"
 		free_staged_archive
 		return 0
 	fi
@@ -497,7 +515,7 @@ mount_rootfs() {
 soc_guarded_by_kernel() {
 	local k=
 	if [ "kernel_follows" = "$1" ]; then
-		k="/tmp/uImage.$image_soc"
+		k="$stage_dir/uImage.$image_soc"
 	elif [ "1" = "$update_kernel" ]; then
 		k=$(kernel_image)
 	else
@@ -828,6 +846,10 @@ mtd_geometry() {
 	for n in $(ls "$MTD_SYS" 2>&3 | sed -n 's/^mtd\([0-9][0-9]*\)$/\1/p' | sort -n); do
 		d=$MTD_SYS/mtd$n
 		size=$(cat "$d/size" 2>&3) && name=$(cat "$d/name" 2>&3) || continue
+		# Not the flash: the media zone mapped by stage_in_mmz is an MTD too,
+		# with no offset, and laid out after rootfs_data it made the chip 24 MB
+		# longer and every image "not a split-layout firmware.bin".
+		[ "$(cat "$d/type" 2>&3)" = ram ] && continue
 		if [ -r "$d/offset" ]; then
 			off=$(cat "$d/offset")
 		elif [ "$name" = firmware ]; then
@@ -977,13 +999,15 @@ url_exists() {
 
 # The -split package's URL for a plain firmware package's, when the release
 # carries one for this camera, else the URL as it is:
-# openipc.<soc>-nor-<variant>.tgz becomes ...-<variant>-split.tgz. A board
+# openipc.<soc>-nor-<variant>.tgz becomes ...-<variant>-split.tgz, and a
+# builder device's <soc>_<variant>_<device>-nor.tgz ...-nor-split.tgz. A board
 # built for the split layout publishes it, whatever its SoC; any bootloader
 # boots it, as the kernel sits where the fixed slots put it and finds its own
 # partitions.
 nor_split_url() {
 	local split
-	split=$(echo "$1" | sed 's|\(/openipc\.[^/]*-nor-[a-z0-9]*\)\.tgz$|\1-split.tgz|')
+	split=$(echo "$1" | sed -e 's|\(/openipc\.[^/]*-nor-[a-z0-9]*\)\.tgz$|\1-split.tgz|' \
+		-e 's|\(/[a-z0-9]*_[a-z0-9]*_[^/]*-nor\)\.tgz$|\1-split.tgz|')
 	if [ "$(pkg_flash)" = nor ] && [ "$split" != "$1" ] && url_exists "$split"; then
 		echo "$split"
 	else
@@ -1074,7 +1098,12 @@ do_update_firmware_split() {
 		die "The new firmware and the settings do not fit the flash ($(( (ovl + $(stat -c %s "$blob") - base) / 1024 )) KB of $(( (end - base) / 1024 )) KB). Nothing was written; -n upgrades without the settings."
 	mark_live_flash_dirty
 	echo "Writing $x at $(printf 0x%x "$base")"
-	nor_write_at "$x" "$base" || die "Writing $x failed: the flash does not read back as the image."
+	# Once more before giving up: the image is still in RAM, and a failure here
+	# ends in a reboot onto whatever part of it reached the flash.
+	nor_write_at "$x" "$base" || {
+		echo_c 33 "The flash does not read back as the image; writing it again."
+		nor_write_at "$x" "$base"
+	} || die "Writing $x failed: the flash does not read back as the image."
 	nor_write_at "$blob" "$ovl" ||
 		die "Writing the settings at $(printf 0x%x "$ovl") failed; the camera starts from defaults."
 	rm -f "$blob"
@@ -1084,7 +1113,7 @@ do_update_firmware_split() {
 }
 
 do_update_firmware() {
-	local x=/tmp/firmware.bin.$image_soc
+	local x=$stage_dir/firmware.bin.$image_soc
 	echo_c 33 "\nFirmware (split NOR image)"
 	echo "Update firmware from $x"
 	[ ! -f "$x" ] && die "File $x not found"
@@ -1275,7 +1304,7 @@ resolve_model_alias() {
 # Not "everything the archive brought": a plain `-k` downloads both halves and
 # writes one, and whether the other arrived intact is not this run's business.
 images_this_run() {
-	[ -f "/tmp/firmware.bin.$image_soc" ] && { echo "/tmp/firmware.bin.$image_soc"; return 0; }
+	[ -f "$stage_dir/firmware.bin.$image_soc" ] && { echo "$stage_dir/firmware.bin.$image_soc"; return 0; }
 	[ "1" = "$update_kernel" ] && kernel_image
 	[ "1" = "$update_rootfs" ] && rootfs_image
 	return 0
@@ -1288,7 +1317,7 @@ images_this_run() {
 # Refusing those would block a perfectly good archive from installing at all --
 # a worse failure than the one this guard exists to catch.
 md5_names() {
-	awk '{ n = $2; sub(/^[*]/, "", n); while (sub(/^[.]\//, "", n)) ; print n }' /tmp/*.md5sum 2>&3
+	awk '{ n = $2; sub(/^[*]/, "", n); while (sub(/^[.]\//, "", n)) ; print n }' "$stage_dir"/*.md5sum 2>&3
 }
 
 # An image no manifest mentions has not been checksummed, and must not pass for
@@ -1349,6 +1378,14 @@ check_unpack_room() {
 	# RAM that tmpfs is made of. They are different numbers -- see
 	# check_unpack_ram -- and either can be the one that binds.
 	check_unpack_ram "$((need / 1024))" "$a"
+	# Staged in the media zone, the unpack does not touch /tmp: what has to fit
+	# is the stage, and only the archive stays behind in the tmpfs.
+	if [ "$stage_dir" != /tmp ]; then
+		free=$(df -k "$stage_dir" 2>&3 | awk 'END { print $(NF - 2) }')
+		[ -n "$free" ] && [ "$free" -gt 0 ] 2>&3 || return 0
+		[ "$((need / 1024))" -lt "$free" ] && return 0
+		die "No room to unpack $a in the media zone: needs $((need / 1024)) KB, $free KB free. Nothing was written."
+	fi
 	# Anchored on the Use% column rather than a field number, so a long device
 	# name that wraps the row does not shift the answer.
 	free=$(df -k /tmp 2>&3 | awk 'END { print $(NF - 2) }')
@@ -1521,6 +1558,79 @@ stop_majestic_for_memory() {
 	return 0
 }
 
+# Unpack into the media zone instead of RAM, where RAM is what is short.
+#
+# A 64 MB HiSilicon part with hisi_mem's carve-out ("ot") gives the OS 32-36 MB
+# and the media zone the rest, out of the kernel's sight. Once majestic has
+# stopped, that zone is idle -- the kernel modules keep a few hundred KB at its
+# start -- and is far larger than an image. phram maps its free part as an MTD,
+# jffs2 on that is a filesystem that costs the OS nothing, and every step after
+# the unpack -- checksums, the rootfs peek, the write -- reads files from it as
+# it would from /tmp. It sits under /tmp, so the pivot to the RAM root carries
+# it along.
+#
+# The start of the zone is left alone (MMZ_STAGE_SKIP_KB), and nothing is mapped
+# unless every block the modules hold ends below it: the zone's own allocator
+# does not know about the mapping.
+MMZ_STAGE_SKIP_KB=${MMZ_STAGE_SKIP_KB:-4096}
+# Whether stage_in_mmz could run at all here: a carve-out zone and phram.
+mmz_stage_possible() {
+	[ "ot" = "$(cat /sys/module/hisi_mem/parameters/allocator 2>&3)" ] || return 1
+	# A phram someone already loaded is theirs, mapping who knows what.
+	grep -q '^phram ' /proc/modules 2>&3 && return 1
+	find "/lib/modules/$(uname -r)" -name phram.ko 2>&3 | grep -q .
+}
+
+stage_in_mmz() {
+	local need=$1 p=/sys/module/hisi_mem/parameters base size_kb top start len_kb n
+	[ -z "$(pidof majestic 2>&3)" ] || return 1
+	[ "ot" = "$(cat $p/allocator 2>&3)" ] || return 1
+	base=$(cut -d, -f3 $p/mmz 2>&3)
+	size_kb=$(cut -d, -f4 $p/mmz 2>&3 | tr -d M)
+	[ -n "$base" ] && [ -n "$size_kb" ] || return 1
+	size_kb=$((size_kb * 1024))
+	start=$((base + MMZ_STAGE_SKIP_KB * 1024))
+	# Every block the modules hold, by where it ENDS (the second address of
+	# "phys(start, end)"), so one that starts below the mapping and runs into it
+	# is refused too. A zone whose occupancy cannot be read is not mapped at all.
+	grep -q "total size=" /proc/umap/media-mem 2>&3 || return 1
+	top=$(awk -F'[(), ]+' '/MMB: phys/ { for (i = 1; i < NF; i++) if ($i == "phys") print $(i + 2) }' /proc/umap/media-mem 2>&3 |
+		while read -r e; do echo $((e)); done | sort -n | tail -1)
+	[ -n "$top" ] && [ "$top" -ge "$start" ] && return 1
+	len_kb=$((size_kb - MMZ_STAGE_SKIP_KB))
+	[ "$len_kb" -ge $((need + 1024)) ] || return 1
+	# Ours only if this run loads it: modprobe of a loaded module ignores the
+	# parameters, and one already loaded may map something else.
+	grep -q '^phram ' /proc/modules 2>&3 && return 1
+	# In bytes: the 5.10 parser takes no "Ki".
+	modprobe phram phram=sysupgrade,$(printf 0x%x "$start"),$((len_kb * 1024)) 2>&3 || return 1
+	mmz_phram_ours=1
+	n=$(awk -F: '/"sysupgrade"/ { sub("mtd", "", $1); print $1 }' /proc/mtd)
+	if [ -z "$n" ] || ! flash_eraseall -q "/dev/mtd$n" 2>&3 ||
+		! mkdir -p /tmp/stage || ! mount -t jffs2 "/dev/mtdblock$n" /tmp/stage 2>&3; then
+		release_mmz_stage
+		return 1
+	fi
+	mmz_stage_mounted=1
+	stage_dir=/tmp/stage
+	export handoff_stage_dir=$stage_dir
+	echo_c 33 "Unpacking into the idle media zone ($((len_kb / 1024)) MB at $(printf 0x%x "$start")) instead of RAM."
+}
+
+release_mmz_stage() {
+	if [ "1" = "$mmz_stage_mounted" ]; then
+		umount /tmp/stage 2>&3
+		mmz_stage_mounted=
+	fi
+	rmdir /tmp/stage 2>&3
+	if [ "1" = "$mmz_phram_ours" ]; then
+		rmmod phram 2>&3
+		mmz_phram_ours=
+	fi
+	stage_dir=/tmp
+	return 0
+}
+
 # Will the unpack fit in the RAM this camera has left? $1 KB, $2 what to call
 # the source in the message.
 #
@@ -1578,6 +1688,16 @@ On this kernel that tmpfs is ramfs, which cannot use the $ram_cma_kb KB free in 
 CMA (MMZ) area, so that is not counted."
 	need_handoff && stage=$(ramfs_stage_kb)
 	want=$((need + UNPACK_RESERVE_KB + stage))
+	# Where the media zone is a carve-out, it is the first choice and not a
+	# fallback. Passing this check is not the end of what the run needs: the
+	# rootfs peek mounts the new image, and its squashfs caches come out of the
+	# same RAM -- 4 MB more for a 1 MiB-block image, where a 64 MB hi3516cv608
+	# that had passed here ran out and thrashed until power was cut. In the
+	# zone, the image costs the OS nothing.
+	if mmz_stage_possible; then
+		[ -z "$(pidof majestic 2>&3)" ] || stop_majestic_for_memory "$need"
+		stage_in_mmz "$need" && return 0
+	fi
 	[ "$want" -lt "$avail" ] && return 0
 	if stop_majestic_for_memory "$((want - avail))"; then
 		# A second reading that will not parse is no opinion, as the first is.
@@ -1585,6 +1705,9 @@ CMA (MMZ) area, so that is not counted."
 		avail=$ram_kb
 		[ "$want" -lt "$avail" ] && return 0
 	fi
+	# The image itself can go to the media zone; the tools unpacking it and the
+	# RAM root still need the OS's own memory.
+	[ $((UNPACK_RESERVE_KB + stage)) -lt "$avail" ] 2>&3 && stage_in_mmz "$need" && return 0
 	local out="Not enough memory to unpack $src: it needs $want KB -- $need KB of image
 plus $UNPACK_RESERVE_KB KB for the tools unpacking it"
 	[ "$stage" -gt 0 ] && out="$out and $stage KB for the RAM root
@@ -1836,7 +1959,7 @@ discard_unpacked() {
 	while read -r f; do
 		f=${f#./}
 		case "$f" in "" | . | .. | */*) continue ;; esac
-		rm -f "/tmp/$f"
+		rm -f "$stage_dir/$f"
 	done < "$unpacked_list"
 	rm -f "$unpacked_list"
 	unpacked_list=
@@ -1855,7 +1978,7 @@ download_firmware() {
 	if [ -n "$archive" ]; then
 		[ ! -f "$archive" ] && die "File $archive not found"
 		check_unpack_room "$archive"
-		gzip -d "$archive" -c | tar xvf - -C /tmp $(tar_excludes) >"$unpacked_list" && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
+		gzip -d "$archive" -c | tar xvf - -C "$stage_dir" $(tar_excludes) >"$unpacked_list" && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
 	else
 		if [ -n "$channel" ] || [ -n "$build_id" ]; then
 			fetch_manifest
@@ -1871,9 +1994,20 @@ download_firmware() {
 			echo "Resolved $build_id for $platform"
 			device_pinned=1
 		fi
-		[ -z "$url" ] && url=$(fw_printenv -n upgrade || default_upgrade_url)
+		# A builder device writes its plain package's URL into `upgrade` on
+		# first boot; its -split one, where published, is beside it.
+		# default_upgrade_url has looked for it already.
+		if [ -z "$url" ]; then
+			if url=$(fw_printenv -n upgrade); then
+				url=$(nor_split_url "$url")
+			else
+				url=$(default_upgrade_url)
+			fi
+		fi
 		# Named for this device, so verify_rootfs can trust it when it cannot mount it.
-		[ "${url##*/}" = "$system_platform-$(pkg_flash).tgz" ] && device_pinned=1
+		case "${url##*/}" in
+			"$system_platform-$(pkg_flash).tgz"|"$system_platform-$(pkg_flash)-split.tgz") device_pinned=1 ;;
+		esac
 		echo "Download from $url"
 		probe_url "$url"
 		# The streamed route stages no second copy, so it never had a room
@@ -1894,16 +2028,16 @@ download_firmware() {
 		# link completes. -m stays as a far outer backstop against a trickle that
 		# never trips the stall check.
 		curl --connect-timeout 30 $dl_meter --speed-limit 1024 --speed-time 60 -m 1800 \
-			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xvf - -C /tmp $(tar_excludes) >"$unpacked_list" && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xvf - -C "$stage_dir" $(tar_excludes) >"$unpacked_list" && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	fi
 	pick_image_soc
 	if [ "1" != "$skip_md5" ]; then
-		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
+		(cd "$stage_dir" && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 		check_md5_covered
 	fi
 	# The split NOR image (a uImage and the rootfs in one firmware.bin):
 	# flashed as a unit by do_update_firmware.
-	[ -f "/tmp/firmware.bin.$image_soc" ] && image_combined=1
+	[ -f "$stage_dir/firmware.bin.$image_soc" ] && image_combined=1
 }
 
 # The SoC the images this run unpacked are named for (#2688).
@@ -2019,8 +2153,69 @@ majestic_api() {
 		"http://127.0.0.1:$port/api/v1/upgrade/$1" 2>/dev/null)" ]
 }
 
+# Two kernel defaults that leave a 32 MB camera nothing to flash from, both
+# measured on a hi3516cv608 (26 MB for Linux, ~10 MB of it the kernel's own
+# slab and vmalloc) with the 9 MB image in /tmp, where check_flash_ram had
+# seen 3 MB available. Each time, the dd writing the image was OOM-killed in
+# the mtdblock page cache within its first blocks -- "Killed", then "the
+# flash does not read back as the image", then a reboot onto a half-written
+# kernel that never started; the SPI-NOR driver's writeback hit the same wall
+# on its per-operation ioremap.
+#
+# - Watermark boosting (watermark_boost_factor, 15000 by default since 5.0)
+#   raises all three zone watermarks by a whole pageblock, 4 MB with 4 KiB
+#   pages, whenever an allocation falls back to another migratetype: the min
+#   watermark stood at 4736 KB instead of 640 KB. The vendor's own firmware
+#   for that board sets the factor to 0 at boot.
+# - With boosting off, dirty pages took the rest: dd fills the page cache far
+#   faster than NOR erases and programs, and dirty_ratio lets 20% of what is
+#   available go dirty before the writer is throttled -- 3.6 MB of it at the
+#   kill. A fixed 256 KB keeps dd at the flash's pace instead.
+#
+# Held from here until the camera reboots; restore_resources gives the values
+# back to a camera that stays up. Each knob is skipped where the kernel has
+# none (watermark_boost_factor is 5.0+).
+VM=/proc/sys/vm
+hold_vm_for_flash() {
+	vm_saved=
+	local k v kv
+	for k in watermark_boost_factor dirty_ratio dirty_background_ratio dirty_bytes dirty_background_bytes; do
+		[ -w "$VM/$k" ] && v=$(cat "$VM/$k" 2>&3) && vm_saved="$vm_saved $k=$v"
+	done
+	# Not a reason to refuse the upgrade: most cameras have the memory to
+	# spare, and these are values the kernel always takes from root. But a
+	# camera that does run short should be able to say why, so say it.
+	for kv in watermark_boost_factor=0 dirty_bytes=262144 dirty_background_bytes=65536; do
+		k=${kv%%=*} v=${kv#*=}
+		[ -w "$VM/$k" ] || continue
+		echo "$v" > "$VM/$k" 2>&3 ||
+			echo_c 33 "Warning: could not set vm.$k=$v; the flash runs without that memory guard."
+	done
+	return 0
+}
+
+# The bytes and ratio knobs each zero the other when written, so only the one
+# that was in force (the non-zero one) is written back.
+release_vm_for_flash() {
+	[ -n "$vm_saved" ] || return 0
+	local kv k v
+	for kv in $vm_saved; do
+		k=${kv%%=*} v=${kv#*=}
+		case "$k" in dirty_bytes | dirty_background_bytes) [ "$v" = 0 ] && continue ;; esac
+		case "$k" in dirty_ratio | dirty_background_ratio) [ "$v" = 0 ] && continue ;; esac
+		echo "$v" > "$VM/$k" 2>&3
+	done
+	vm_saved=
+}
+
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
+	# From here until the flash takes the signals away, an interrupt is a
+	# refusal with nothing written: die() then restarts what this stops and
+	# gives back the VM settings held below.
+	trap 'die "Interrupted before the first write; nothing was written."' INT TERM HUP
+	# First, before anything is downloaded or unpacked: see hold_vm_for_flash.
+	hold_vm_for_flash
 	# --web: majestic freed its own video pipeline and is streaming this log
 	# over /ws/upgrade; keep it alive until just before the flash (see below).
 	#
@@ -2150,6 +2345,7 @@ free_resources() {
 #
 # Started low-number-first, the reverse of the order they were stopped in.
 restore_resources() {
+	release_vm_for_flash
 	# Best effort: a /tmp still holding more than the old cap keeps the new one.
 	[ -n "$tmp_cap_kb" ] && mount -o remount,size=${tmp_cap_kb}k /tmp 2>&3
 	[ "1" = "$services_stopped" ] || return 0
@@ -3239,7 +3435,7 @@ default_upgrade_url() {
 	plat=$(get_system_platform)
 	case "$plat" in
 		*_*_*)
-			echo "https://github.com/OpenIPC/builder/releases/download/latest/$plat-$(pkg_flash).tgz"
+			nor_split_url "https://github.com/OpenIPC/builder/releases/download/latest/$plat-$(pkg_flash).tgz"
 			return ;;
 	esac
 	osr=$(get_system_build)
@@ -3350,7 +3546,7 @@ read_candidate_build() {
 	to_build=$build_id to_version= to_note= kernel_only=
 	if [ "1" = "$image_combined" ]; then
 		# firmware.bin: the uImage, then the squashfs at the next 64 KiB boundary.
-		x=/tmp/firmware.bin.$image_soc
+		x=$stage_dir/firmware.bin.$image_soc
 		n=$(nor_split_blocks "$x") && ofs="-o $((n * 65536))"
 	elif [ "1" = "$update_rootfs" ]; then
 		x=$(rootfs_image)
@@ -3450,6 +3646,10 @@ print_transition() {
 		echo_c 33 " Daily builds are not release-tested: features may regress." ;;
 	esac
 	echo_c 36 "=================================================================="
+	# Nothing reads the manifest after this, and /tmp is RAM: kept, its 1.7 MB
+	# was what check_flash_ram found missing on a 32 MB hi3516ev200 (1016 KB
+	# left of the 2048 it wants; 2328 KB without it).
+	rm -f "$MANIFEST_CACHE"
 }
 
 # One line per upgrade in $HISTORY_FILE: UTC time, from, to, and which door
@@ -3601,6 +3801,9 @@ reboot_system() {
 		# The images first, as die() does: they are of no further use, and
 		# while they sit in /tmp a cap raised for them cannot be put back.
 		discard_unpacked
+		# Before majestic is back: its media buffers come from the zone the
+		# stage maps, and the zone's allocator does not know the stage is there.
+		release_mmz_stage
 		restore_resources
 		rm $LOCK_FILE
 		restore_majestic
@@ -3861,6 +4064,8 @@ if [ "1" = "$history_only" ]; then
 fi
 
 if [ "1" = "$list_only" ]; then
+	# `timeout 15` ends a slow listing with TERM, which would skip the EXIT trap.
+	trap 'exit 1' INT TERM HUP
 	fetch_manifest
 	resolve_model_alias
 	platform=$(manifest_platform)

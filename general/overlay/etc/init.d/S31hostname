@@ -5,6 +5,11 @@
 # is the only source that is reliable across every vendor (ipcinfo misreports
 # the SoC and cannot see the sensor on Sigmastar). Set once, then frozen by the
 # /etc/hostname.auto marker: editing /etc/hostname afterwards is never clobbered.
+#
+# One exception: the env soc names the image, and an image that serves several
+# dies (xm530_lite on an XM550, hi3516cv6xx on a CV610) would name every one of
+# them after itself. Such an image lists the other dies as SOC_ALIASES in
+# os-release, and ipcinfo is believed only when it names one of those.
 
 MARK=/etc/hostname.auto
 
@@ -14,10 +19,24 @@ sync_hosts() {
 	printf '127.0.1.1\t%s\n' "$1" >> /etc/hosts
 }
 
+# The die ipcinfo reports when the image declares it as one of its aliases,
+# else $1 unchanged.
+die_alias() {
+	local aliases chip a
+	aliases=$(sed -n 's/^SOC_ALIASES=//p' /etc/os-release 2>/dev/null | tr -d '"')
+	[ -n "$aliases" ] || { echo "$1"; return; }
+	chip=$(ipcinfo -c 2>/dev/null | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9]//g')
+	for a in $aliases; do
+		[ "$a" = "$chip" ] && { echo "$chip"; return; }
+	done
+	echo "$1"
+}
+
 start() {
 	[ -f "$MARK" ] && return 0
 
 	soc=$(fw_printenv -n soc 2>/dev/null | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9]//g')
+	soc=$(die_alias "$soc")
 	sensor=$(fw_printenv -n sensor 2>/dev/null | tr 'A-Z' 'a-z' | sed -e 's/_.*$//' -e 's/[^a-z0-9]//g')
 
 	# No SoC: keep the build default (openipc-<soc>), try again next boot.

@@ -99,7 +99,11 @@ ALL_BOARDS = [
     "ak3910_lite", "ak3918_lite", "ak3918ev200_lite", "ak3918ev300_lite",
     "ak3916ev300_lite", "ak3918ev330_lite", "ak3918ev331_lite",
     # Fullhan
-    "fh8852v100_lite", "fh8852v200_lite",
+    "fh8833v100_lite", "fh8852v100_lite", "fh8856v100_lite",
+    "fh8852v200_lite", "fh8852v210_lite", "fh8856v200_lite", "fh8856v210_lite",
+    "fh8858v200_lite", "fh8858v210_lite",
+    # FH8626V100 and FH865x share the fullhan-fh8852v200 kernel and toolchain
+    "fh8626v100_lite", "fh8652_lite", "fh8656_lite", "fh8658_lite",
     # Grainmedia
     "gm8135_lite", "gm8136_lite",
     # Novatek
@@ -110,6 +114,8 @@ ALL_BOARDS = [
     # xm550 is firmware-identical to xm530 --- built once and served via
     # xm530's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "xm510_lite", "xm530_lite",
+    # The V200 series: the xm530 family's kernel, built per chip.
+    "xm530v200_lite", "xm533_lite", "xm535d1_lite", "xm535d2_lite", "xm535w1_lite",
     # Ultimate
     "ssc333_ultimate", "ssc335_ultimate", "ssc335de_ultimate", "ssc337_ultimate",
     "ssc337de_ultimate", "ssc30kd_ultimate", "ssc30kq_ultimate", "ssc338q_ultimate",
@@ -163,25 +169,18 @@ UNBUILT_BOARDS = {
     "s2l22m_lite": "no variant set; Ambarella S2L has no board directory",
     "s2l33m_lite": "no variant set; Ambarella S2L has no board directory",
 
-    # These are real boards, and this is a COST decision rather than a technical
-    # one, so it is the entry most worth arguing with. Every one of them sets
-    # BR2_TOOLCHAIN_BUILDROOT_MUSL instead of BR2_TOOLCHAIN_EXTERNAL: it
-    # compiles a GCC and a musl from source before it starts on the firmware,
-    # tens of minutes each, against ~6 for a board that downloads its toolchain.
-    # Adding all seven would cost more runner time than a large part of the rest
-    # of the matrix, on every PR that touches a shared path.
+    # A real board, and this is a COST decision rather than a technical one, so
+    # it is the entry most worth arguing with. It sets BR2_TOOLCHAIN_BUILDROOT_MUSL
+    # instead of BR2_TOOLCHAIN_EXTERNAL: it compiles a GCC and a musl from source
+    # before it starts on the firmware, tens of minutes, against ~6 for a board
+    # that downloads its toolchain. The six Fullhan siblings that used to sit
+    # here left by switching to their family's published toolchain, which is
+    # the cheaper way out of this list.
     #
     # It is the same trade the SMOKE_BOARDS comment above makes deliberately,
     # and it is one edit to reverse: move a name from here into ALL_BOARDS and
-    # it builds. Note what this does NOT say --- none of these has ever been
-    # built by CI, so "not built" is a statement about cost, not evidence that
-    # they work.
-    "fh8852v210_lite": "internal toolchain: builds gcc+musl from source",
-    "fh8856v100_lite": "internal toolchain: builds gcc+musl from source",
-    "fh8856v200_lite": "internal toolchain: builds gcc+musl from source",
-    "fh8856v210_lite": "internal toolchain: builds gcc+musl from source",
-    "fh8858v200_lite": "internal toolchain: builds gcc+musl from source",
-    "fh8858v210_lite": "internal toolchain: builds gcc+musl from source",
+    # it builds. Note what this does NOT say --- it has never been built by CI,
+    # so "not built" is a statement about cost, not evidence that it works.
     "hi3518ev201_lite": "internal toolchain: builds gcc+musl from source",
 }
 
@@ -269,7 +268,6 @@ SMOKE_BOARDS = [
 UNBUILT_FAMILIES = {
     ("br-ext-chip-allwinner", "v83x"),
     ("br-ext-chip-ambarella", "s3l"),
-    ("br-ext-chip-fullhan", "fh8833v100"),
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
@@ -320,10 +318,16 @@ UNBUILT_FAMILIES = {
 # vermagic and a struct-layout probe, not by a boot (see its .mk). It leaves
 # this list when that board joins ALL_BOARDS, which waits for those modules
 # to have run on an AV130 camera.
+#
+# exfat-nofuse-openipc is the exFAT module for the 3.x kernels that
+# exfat-openipc does not build on. Its only user is OpenIPC/builder's
+# msc316dc_lite_imou-looc2 (infinity3, kernel 3.18); the mainline infinity3
+# boards have no card slot driver selected, so it would be flash spent on
+# nothing there.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x",
     "anyka-osdrv-ak3918av130", "atbm-wifi",
-    "aura-httpd", "baresip-openipc", "comgt", "f2fs-tools-openipc", "faceter-agent",
+    "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
     "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
@@ -968,7 +972,7 @@ def self_test():
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
          24, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 90, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 101, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -1061,7 +1065,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         90, "markdown inside a package is that package"),
+         101, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],

@@ -26,6 +26,14 @@ else
 VI_BUFF=2
 fi
 
+# A 1280x960 main stream (majestic's video0.size, a sensor's 960P mode) does
+# not fit 14 MB of MMZ with three VI buffers: the encoder then cannot be
+# created. Two leave room for it. The VI module is loaded once, at boot, so a
+# changed video0.size takes effect after a reboot.
+if [ "$VI_BUFF" = 3 ] && [ "$(cli -g .video0.size 2>/dev/null)" = 1280x960 ]; then
+VI_BUFF=2
+fi
+
 SNS_A=AR0130
 
 if [ $# -ge 2 ]; then
@@ -72,6 +80,79 @@ remove_sns()
 	rmmod -w ssp_sony &> /dev/null
 }
 
+# MMZ, VI, the ISP, regions and the encoder: the open drivers when
+# xiongmai-opensdk-xm510 installed them (OpenIPC/openxiongmai drivers/xm_mmz,
+# drivers/xm510_vi, drivers/xm510_isp, drivers/xm510_rgn and drivers/hx280enc),
+# the vendor modules otherwise, which depmod indexes here
+# under xiongmai/. None of the open modules needs a vendor module's symbols.
+insert_mmz()
+{
+	modprobe open_mmz mmz_start=$MEM_START mmz_size=$MEM_LEN 2>/dev/null ||
+		modprobe mmz mmz_start=$MEM_START mmz_size=$MEM_LEN ||
+		report_error
+}
+
+remove_mmz()
+{
+	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
+}
+
+# The vendor xm510_vi.ko depends on mmz. With the vendor mmz.ko loaded,
+# modprobe resolves that; on open_mmz it would load the vendor mmz.ko beside
+# it, which open_mmz refuses ("exports duplicate symbol mmz_alloc"), failing
+# the load, so there it is insmod, which takes the symbols open_mmz exports.
+insert_vi()
+{
+	modprobe open_vi buffer=$VI_BUFF 2>/dev/null && return
+	if grep -q "^mmz " /proc/modules; then
+		modprobe xm510_vi buffer=$VI_BUFF
+	else
+		insmod xm510_vi.ko buffer=$VI_BUFF
+	fi
+}
+
+remove_vi()
+{
+	rmmod -w open_vi 2>/dev/null || rmmod -w xm510_vi
+}
+
+insert_isp()
+{
+	modprobe open_isp 2>/dev/null || modprobe xm510_isp
+}
+
+remove_isp()
+{
+	rmmod -w open_isp 2>/dev/null || rmmod -w xm510_isp
+}
+
+# The vendor xm510_rgn.ko depends on mmz, as xm510_vi.ko does: insmod on
+# open_mmz, modprobe on the vendor mmz.ko.
+insert_rgn()
+{
+	modprobe open_rgn 2>/dev/null && return
+	if grep -q "^mmz " /proc/modules; then
+		modprobe xm510_rgn
+	else
+		insmod xm510_rgn.ko
+	fi
+}
+
+remove_rgn()
+{
+	rmmod -w open_rgn 2>/dev/null || rmmod -w xm510_rgn
+}
+
+insert_h264()
+{
+	modprobe open_h264 2>/dev/null || modprobe xm510_h264
+}
+
+remove_h264()
+{
+	rmmod -w open_h264 2>/dev/null || rmmod -w xm510_h264
+}
+
 insert_ko()
 {
 # low power control
@@ -83,11 +164,11 @@ insert_ko()
 # driver load
 	cd /lib/modules/3.0.101/xiongmai/
 	insert_sns > /dev/null
-	insmod mmz.ko mmz_start=$MEM_START mmz_size=$MEM_LEN
-	insmod xm510_vi.ko buffer=$VI_BUFF
-	insmod xm510_isp.ko
-	insmod xm510_rgn.ko
-	insmod xm510_h264.ko
+	insert_mmz
+	insert_vi
+	insert_isp
+	insert_rgn
+	insert_h264
 	insmod xm_rtc.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko: see
 	# OpenIPC/firmware#2611.
@@ -100,10 +181,11 @@ remove_ko()
 {
 	#remove_audio
 	rmmod -w xm_rtc
-	rmmod -w xm510_h264
-	rmmod -w xm510_rgn
-	rmmod -w xm510_isp
-	rmmod -w xm510_vi
+	remove_h264
+	remove_rgn
+	remove_isp
+	remove_vi
+	remove_mmz
 
 	remove_sns
 }
@@ -125,6 +207,38 @@ record_sensor() {
 		logger -s -p daemon.info -t xiongmai "Writing $sensor to U-Boot ENV"
 }
 
+# xmispd, the open ISP daemon (OpenIPC/openxiongmai tools/xmispd), in place of
+# the vendor isp after "fw_setenv xmispd 1" and a reboot, for the sensors it
+# has; "fw_setenv xmispd" and a reboot go back. majestic starts "isp" from
+# PATH and stops it by that name, and a bind mount keeps the name. Done here,
+# before majestic starts, and only once.
+use_xmispd() {
+	[ "$(fw_printenv -n xmispd 2>/dev/null)" = 1 ] || return 0
+	if [ ! -x /usr/bin/xmispd ]; then
+		logger -s -p daemon.warn -t xiongmai \
+			"xmispd is on but not in this image; keeping the vendor isp"
+		return 0
+	fi
+	local sensor
+	sensor=$(ipcinfo --short-sensor 2>/dev/null)
+	case "$sensor" in
+	jxh42 | jxh62 | jxh65 | ar0130 | sc1135 | sc1235 | sc2145h* | sc2235 | \
+		ov9732 | ov9750* | mis1002) ;;
+	*)
+		logger -s -p daemon.warn -t xiongmai \
+			"xmispd has no ${sensor:-detected} sensor; keeping the vendor isp"
+		return 0
+		;;
+	esac
+	grep -q ' /usr/bin/isp ' /proc/mounts && return 0
+	if mount --bind /usr/bin/xmispd /usr/bin/isp; then
+		logger -s -p daemon.info -t xiongmai "Using xmispd as the ISP daemon"
+	else
+		logger -s -p daemon.warn -t xiongmai \
+			"xmispd could not take /usr/bin/isp; keeping the vendor isp"
+	fi
+}
+
 load_usage()
 {
 	echo "Usage:  ./loadxm510 [-option] [sensor_name]"
@@ -143,6 +257,7 @@ then
 cd /lib/modules/3.0.101/xiongmai
 insert_ko
 record_sensor
+use_xmispd
 fi
 
 if [ "$1" = "-r" ]

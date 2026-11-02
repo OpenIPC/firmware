@@ -1,0 +1,44 @@
+#!/bin/sh
+
+set_gpio()
+{
+    if [ ! -d "/sys/class/gpio/GPIO$1" ]; then
+        echo $1 > /sys/class/gpio/export
+        echo out > /sys/class/gpio/GPIO$1/direction
+    fi
+
+    echo $2 > /sys/class/gpio/GPIO$1/value
+}
+
+# The FH885xV200 layout: U-Boot gives FH865x mem=32M as well.
+# mmz:name,0,start,size,type
+modprobe vmm mmz=anonymous,0,0xA2000000,32M anony=1
+
+# GPIO13 is the SoC's CIS_RSTN, as in the SDK's load_modules scripts and
+# the FH8652 camera's; the sensor stays in reset while the ARC boots and the
+# media core takes its clocks, and is released before the ISP probes it.
+set_gpio 13 0
+
+# The SDK has no FH865x build of the ARC firmware; the FH885xV200 one is
+# the same code a few months newer than the FH8652 camera firmware. The ARC
+# runs audio and the encoders' softcore, not video, so when xbus_rpc cannot
+# start it, use the media core built without the softcore and keep video.
+if modprobe xbus_rpc fn=/lib/firmware/rtthread_arc_FH885xV200.bin fa=0xbff80000; then
+	set_gpio 13 1
+	modprobe media_process
+	modprobe isp
+	modprobe vpu
+	modprobe enc
+	modprobe jpeg
+else
+	set_gpio 13 1
+	# depmod ties isp, vpu, enc and jpeg to media_process (and through it
+	# to xbus_rpc), which media_process_no_sc stands in for here; modprobe
+	# would pull those back in and fail, so these go in by path.
+	cd /lib/modules/4.9.129/fullhan
+	insmod media_process_no_sc.ko
+	insmod isp.ko
+	insmod vpu.ko
+	insmod enc.ko
+	insmod jpeg.ko
+fi

@@ -1,0 +1,31 @@
+diff --git a/os_dep/linux/ioctl_cfg80211.c b/os_dep/linux/ioctl_cfg80211.c
+index 86c45b9..4c303d4 100644
+--- a/os_dep/linux/ioctl_cfg80211.c
++++ b/os_dep/linux/ioctl_cfg80211.c
+@@ -8918,6 +8918,7 @@ static void rtw_cfg80211_init_vht_capab(_adapter *padapter
+ }
+ #endif /* defined(CONFIG_80211AC_VHT) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0)) */
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
+ static void rtw_cfg80211_create_vht_cap(struct ieee80211_sta_vht_cap *vht_cap)
+ {
+ 	u16 mcs_map;
+@@ -8934,6 +8935,7 @@ static void rtw_cfg80211_create_vht_cap(struct ieee80211_sta_vht_cap *vht_cap)
+ 	vht_cap->vht_mcs.rx_mcs_map = cpu_to_le16(mcs_map);
+ 	vht_cap->vht_mcs.tx_mcs_map = cpu_to_le16(mcs_map);
+ }
++#endif
+ 
+ void rtw_cfg80211_init_wdev_data(_adapter *padapter)
+ {
+@@ -8961,8 +8963,10 @@ void rtw_cfg80211_init_wiphy(_adapter *padapter)
+ 		if (band) {
+ 			#if defined(CONFIG_80211N_HT)
+ 			rtw_cfg80211_init_ht_capab(padapter, &band->ht_cap, BAND_ON_2_4G, rf_type);
++			#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
+ 			rtw_cfg80211_create_vht_cap(&band->vht_cap);
+ 			#endif
++			#endif
+ 		}
+ 	}
+ #ifdef CONFIG_IEEE80211_BAND_5GHZ

@@ -1,0 +1,11 @@
+# xbus_rpc.ko from the V1.1.0 (FH885XV200_IPC_V1.1.0_20210716) SDK objects
+obj-m := xbus_rpc.o
+xbus_rpc-y := \
+	loader.o \
+	xbus_core.o \
+	xbus_rshell.o \
+	xbus_perf.o \
+	vbus_compatible.o \
+	xbus_audio.o \
+	xbus_proc.o \
+	xbus_pmu.o

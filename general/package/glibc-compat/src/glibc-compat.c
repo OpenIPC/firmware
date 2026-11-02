@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -244,4 +245,17 @@ long lse32(int fd, long offset, int whence)
 		return -1;
 	}
 	return r;
+}
+
+/*
+ * mmap for the same libraries, renamed the same way (mmap -> mm32): their
+ * offset is a 32-bit off_t in the sixth argument slot, which musl's mmap reads
+ * as the low half of a 64-bit one from the next slot. The static mmap in
+ * glibc-compat-static.c guesses between the two slots and maps the wrong
+ * physical address when both look page-aligned (seen on infinity3: the
+ * encoder's output buffers mapped at address 0, the boot ROM).
+ */
+void *mm32(void *addr, size_t len, int prot, int flags, int fd, long offset)
+{
+	return mmap(addr, len, prot, flags, fd, (off_t)(unsigned long)offset);
 }

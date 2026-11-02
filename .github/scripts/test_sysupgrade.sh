@@ -43,6 +43,20 @@ SB=$(mktemp -d)
 trap 'rm -rf "$SB"' EXIT
 mkdir -p "$SB/tmp" "$SB/proc" "$SB/etc/init.d" "$SB/bin"
 
+# The VM knobs hold_vm_for_flash changes, at the kernel's defaults.
+VM_DEFAULTS="watermark_boost_factor=15000 dirty_ratio=20 dirty_background_ratio=10 dirty_bytes=0 dirty_background_bytes=0"
+seed_vm() {
+    local kv
+    mkdir -p "$SB/proc/sys/vm"
+    for kv in $VM_DEFAULTS; do echo "${kv#*=}" > "$SB/proc/sys/vm/${kv%%=*}"; done
+}
+vm_now() {
+    local kv out=
+    for kv in $VM_DEFAULTS; do out="$out ${kv%%=*}=$(cat "$SB/proc/sys/vm/${kv%%=*}")"; done
+    echo "${out# }"
+}
+seed_vm
+
 # Rewrite the absolute device paths sysupgrade hardcodes to point into $SB.
 # /dev/* is deliberately NOT rewritten: flashcp is stubbed and records its argv,
 # so the target only needs to be a recognisable string.
@@ -66,6 +80,7 @@ sed -e 's|"$1/etc/os-release"|"${1:-@SB@}@OSRELEASE@"|g' \
     -e "s|/proc/meminfo|@SB@/proc/meminfo|g" \
     -e "s|/proc/sys/vm/min_free_kbytes|@SB@/proc/min_free_kbytes|g" \
     -e "s|/proc/sys/vm/drop_caches|@SB@/tmp/drop_caches|g" \
+    -e "s|/proc/sys/vm\\b|@SB@/proc/sys/vm|g" \
     -e "s|/etc/init.d/|@SB@/etc/init.d/|g" \
     -e "s|/var/run/vigil-supervise.pid|@SB@/tmp/vigil-supervise.pid|g" \
     -e "s|/bin/busybox|@SB@/bin/busybox|g" \
@@ -259,8 +274,10 @@ fi
 if [ "$head" = "1" ] && [ "$w" = "1" ]; then
     # url_exists: the status alone. A -split package exists only where the
     # release publishes one (STUB_SPLIT_PUBLISHED); everything else does.
+    # Each -split probe is noted, so a test can count them.
     case "$url" in
-    *-split.tgz) [ -n "${STUB_SPLIT_PUBLISHED:-}" ] && printf 200 || printf 404 ;;
+    *-split.tgz) echo "$url" >> "${FLASH_LOG%/*}/split-probes"
+                 [ -n "${STUB_SPLIT_PUBLISHED:-}" ] && printf 200 || printf 404 ;;
     *) printf 200 ;;
     esac
     exit 0
@@ -276,7 +293,14 @@ if [ "$head" = "1" ]; then
 fi
 [ "$out" = "-" ] && [ -n "${STUB_DL_FILE:-}" ] && cat "$STUB_DL_FILE"
 # fetch_manifest: the channel/build index, when a test supplies one.
-case "$out" in *manifest.flat) [ -n "${STUB_MANIFEST:-}" ] && cp "$STUB_MANIFEST" "$out" ;; esac
+# Each fetch is noted, as the file itself does not outlive the run.
+case "$out" in */manifest.*.flat)
+    echo "$out" >> "${FLASH_LOG%/*}/manifest-fetches"
+    [ -n "${STUB_MANIFEST:-}" ] && cp "$STUB_MANIFEST" "$out"
+    # What `timeout 15` does to a listing that is still fetching.
+    [ -n "${STUB_TERM_DURING_FETCH:-}" ] && kill -TERM "$PPID"
+    ;;
+esac
 exit "${STUB_CURL_RC:-0}"'
 # check_sdcard re-reads `mount` after every umount, so a static pair of stubs
 # would spin forever: the unmount has to actually change what mount reports.
@@ -336,6 +360,11 @@ stub busybox '
 applet=$1; shift
 case "$applet" in
     flashcp|flash_eraseall) echo "$applet $*" >> "$FLASH_LOG"
+                            # A manifest still in /tmp when a write starts is
+                            # RAM the flash phase did not have; noted apart, so
+                            # the flash log stays what was written.
+                            ls "${FLASH_LOG%/*}"/manifest.*.flat >/dev/null 2>&1 &&
+                                echo "$applet $*" >> "${FLASH_LOG%/*}/manifest-at-flash"
                             # Real flashcp writes progress to stdout, and under
                             # -s that is what set_progress pipes through awk for
                             # the WebUI. Without some, "does the progress still
@@ -2480,6 +2509,7 @@ printf '%s' "$OUT" | grep -q '^1 Erasing' \
 # with nothing written is indistinguishable from a successful upgrade to
 # anything watching the camera come back.
 reset_env
+seed_vm
 set_mtd <<'EOF'
 dev:    size   erasesize  name
 mtd0: 00040000 00010000 "boot"
@@ -2505,6 +2535,15 @@ fi
 grep -q "S95majestic restart" "$SB/tmp/flash.log" \
     && ok "...and hands the camera back with its services running" \
     || bad "the refusal left the camera degraded, log='$(cat "$SB/tmp/flash.log")'"
+# ...and with the kernel's memory settings as it found them: hold_vm_for_flash
+# turned watermark boosting off and capped dirty memory for the flash. Only the
+# knobs in force are written back; the kernel zeroes dirty_bytes itself when
+# dirty_ratio is written, which these plain files cannot do, so the bytes pair
+# is left out of the comparison.
+vm_in_force() { vm_now | tr ' ' '\n' | grep -v '_bytes=' | tr '\n' ' '; }
+[ "$(vm_in_force)" = "watermark_boost_factor=15000 dirty_ratio=20 dirty_background_ratio=10 " ] \
+    && ok "...and puts back the VM settings it held for the flash" \
+    || bad "a refused upgrade left the VM settings changed: $(vm_now)"
 
 # The kernel is checked on the same terms.
 reset_env
@@ -3761,6 +3800,27 @@ default_url_is "$B/openipc.hi3516ev300-nor-dev-split.tgz" \
 unset STUB_SPLIT_PUBLISHED
 default_url_is "$B/openipc.hi3516ev300-nor-dev.tgz" \
     eval 'set_platform hi3516ev300_dev dev; STUB_SOC=hi3516ev300'
+# A builder device profile publishes <platform>-nor-split.tgz beside its plain
+# package, and writes the plain one's URL into `upgrade` on first boot: either
+# way the camera asks for the -split one when it is there.
+default_url_is "$B/hi3516ev200_lite_imou-cue2-c22en-nor-split.tgz" \
+    eval 'set_platform hi3516ev200_lite_imou-cue2-c22en; STUB_SOC=hi3516ev200; STUB_SPLIT_PUBLISHED=1'
+default_url_is "$B/hi3516ev200_lite_imou-cue2-c22en-nor-split.tgz" \
+    eval 'set_platform hi3516ev200_lite_imou-cue2-c22en; STUB_SOC=hi3516ev200; STUB_SPLIT_PUBLISHED=1; STUB_UPGRADE=$B/hi3516ev200_lite_imou-cue2-c22en-nor.tgz'
+unset STUB_SPLIT_PUBLISHED
+default_url_is "$B/hi3516ev200_lite_imou-cue2-c22en-nor.tgz" \
+    eval 'set_platform hi3516ev200_lite_imou-cue2-c22en; STUB_SOC=hi3516ev200; STUB_UPGRADE=$B/hi3516ev200_lite_imou-cue2-c22en-nor.tgz'
+unset STUB_SPLIT_PUBLISHED
+# With nothing in `upgrade`, the default URL is looked up once: a probe that
+# stalls costs its minute once, not twice.
+rm -f "$SB/tmp/split-probes"
+default_url_is "$B/hi3516ev200_lite_imou-cue2-c22en-nor.tgz" \
+    eval 'set_platform hi3516ev200_lite_imou-cue2-c22en; STUB_SOC=hi3516ev200'
+if [ "$(wc -l < "$SB/tmp/split-probes")" = 1 ]; then
+    ok "the default URL's -split package is probed once"
+else
+    bad "-split probes for the default URL: $(cat "$SB/tmp/split-probes" 2>&1)"
+fi
 
 default_url_is "$F/openipc.ssc338q-nor-lite.tgz" true
 # --channel resolves the plain package from the manifest; the family fetches
@@ -3791,7 +3851,9 @@ unset STUB_SOC STUB_SPLIT_PUBLISHED
 # which one they came from. The block has to name both builds and the way
 # back BEFORE the first write, and the history has to keep the line.
 HIST="$SB/etc/sysupgrade.history"
-banner_case() { reset_env; rm -f "$SB/tmp/manifest.flat"; STUB_IMG_BUILD_ID=nightly-20260711-bbbbbbb; }
+manifest_left() { ls "$SB"/tmp/manifest.*.flat 2>/dev/null; }
+manifest_reset() { rm -f "$SB"/tmp/manifest.*.flat "$SB/tmp/manifest-fetches"; }
+banner_case() { reset_env; manifest_reset; STUB_IMG_BUILD_ID=nightly-20260711-bbbbbbb; }
 # The same two images, downloaded by `-k -r` from the default URL: a run that
 # is online, so it may ask the manifest about the build being left.
 banner_dl() {
@@ -3849,12 +3911,20 @@ fi
 banner_case; banner_dl
 printf 'nightly-20260711-bbbbbbb ssc338q_lite nor x\nnightly-20260601-aaaaaaa ssc338q_lite nor x\n' > "$SB/manifest.flat"
 RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+rm -f "$SB/tmp/manifest-at-flash"
 run -z -k -r
 if printf '%s' "$OUT" | grep -qF "return to this one with" &&
     printf '%s' "$OUT" | grep -qF "sysupgrade --build=nightly-20260601-aaaaaaa"; then
     ok "rollback line: the build being left is in the manifest"
 else
     bad "rollback line, listed build: out='$OUT'"
+fi
+# /tmp is RAM, and the flash phase still needs it: the manifest goes once the
+# block above is printed, so no write finds it there.
+if [ ! -e "$SB/tmp/manifest-at-flash" ] && flashed /dev/mtd3; then
+    ok "the manifest is not kept in /tmp for the flash phase"
+else
+    bad "manifest in /tmp while flashing: $(cat "$SB/tmp/manifest-at-flash" 2>&1)"
 fi
 banner_case; banner_dl
 printf 'nightly-20260711-bbbbbbb ssc338q_lite nor x\n' > "$SB/manifest.flat"
@@ -3872,13 +3942,14 @@ fi
 banner_case
 RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
 run -z --kernel="$K" --rootfs="$R"
-if [ ! -s "$SB/tmp/manifest.flat" ] && printf '%s' "$OUT" | grep -qF "is still published" &&
+if [ ! -e "$SB/tmp/manifest-fetches" ] && printf '%s' "$OUT" | grep -qF "is still published" &&
     flashed /dev/mtd3; then
     ok "rollback line: local files do not fetch the manifest"
 else
-    bad "rollback line, local files: manifest='$(cat "$SB/tmp/manifest.flat" 2>/dev/null)' out='$OUT'"
+    bad "rollback line, local files: fetched '$(cat "$SB/tmp/manifest-fetches" 2>/dev/null)' out='$OUT'"
 fi
-rm -f "$SB/manifest.flat" "$SB/tmp/manifest.flat"
+rm -f "$SB/manifest.flat"
+manifest_reset
 
 # The history records transitions. Staying on the running build is not one:
 # the flash phase skips a same-version image, and a forced reflash of the
@@ -3910,7 +3981,7 @@ fi
 # gk7205v210 profile is gk7205v210_<...> in its manifest, while $model is
 # aliased to gk7205v200. Looked up under the alias alone, every build it has
 # read as pruned, and --list-builds came back empty.
-reset_env; rm -f "$SB/tmp/manifest.flat"
+reset_env; manifest_reset
 set_platform gk7205v210_lite_acme-cam1
 printf 'nightly-20260711-bbbbbbb gk7205v210_lite_acme-cam1 nor x\nnightly-20260601-aaaaaaa gk7205v210_lite_acme-cam1 nor x\n' > "$SB/manifest.flat"
 RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
@@ -3921,7 +3992,39 @@ if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -qF "* nightly-20260601-aaaaaaa"
 else
     bad "aliased builder profile, --list-builds: rc=$RC out='$OUT'"
 fi
-rm -f "$SB/manifest.flat" "$SB/tmp/manifest.flat"
+# The manifest is 1.7 MB of RAM, and the WebUI lists on page loads.
+if [ -s "$SB/tmp/manifest-fetches" ] && [ -z "$(manifest_left)" ]; then
+    ok "a listing leaves no manifest behind"
+else
+    bad "manifest after a listing: fetched '$(cat "$SB/tmp/manifest-fetches" 2>&1)' left '$(manifest_left)'"
+fi
+# Each run has its own, so an upgrade's cleanup cannot pull one from under a
+# listing that overlaps it.
+run -z --list-builds
+if [ "$(sort -u "$SB/tmp/manifest-fetches" | wc -l)" = 2 ]; then
+    ok "every run fetches into its own manifest"
+else
+    bad "manifest paths of two runs: $(cat "$SB/tmp/manifest-fetches")"
+fi
+manifest_reset
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat STUB_TERM_DURING_FETCH=1"
+run -z --list-builds
+if [ "$RC" -ne 0 ] && [ -s "$SB/tmp/manifest-fetches" ] && [ -z "$(manifest_left)" ]; then
+    ok "a listing timed out mid-fetch leaves no manifest behind"
+else
+    bad "listing ended by TERM: rc=$RC left '$(manifest_left)' out='$OUT'"
+fi
+manifest_reset
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+run -z --build=nightly-20200101-0000000
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -qF "No artifact for" &&
+    [ -s "$SB/tmp/manifest-fetches" ] && [ -z "$(manifest_left)" ]; then
+    ok "a refused upgrade leaves no manifest behind"
+else
+    bad "refused upgrade: rc=$RC left '$(manifest_left)' out='$OUT'"
+fi
+rm -f "$SB/manifest.flat"
+manifest_reset
 
 # A build that was never published has no --build to offer.
 banner_case
@@ -4628,6 +4731,32 @@ grep -q '^WDOG=${WDOG:-/dev/watchdog}' "$SRC" && grep -q '^WDOG_PROC=${WDOG_PROC
 awk '/^preflight_image_sizes\(\)/,/^}/' "$SRC" | grep -q 'check_rootfs_complete' \
     && ok "the incomplete-image check runs before the pivot" \
     || bad "preflight_image_sizes must call check_rootfs_complete"
+
+# A 32 MB camera OOM-killed the image write twice: once in a 4 MB watermark
+# boost, once in 3.6 MB of dirty mtdblock pages. Both are held off from
+# free_resources on, before the image is unpacked.
+fr=$(awk '/^free_resources\(\)/,/^}/' "$SRC")
+frh=$(printf '%s\n' "$fr" | grep -n 'hold_vm_for_flash' | head -1 | cut -d: -f1)
+frm=$(printf '%s\n' "$fr" | grep -n 'majestic' | head -1 | cut -d: -f1)
+if [ -n "$frh" ] && [ -n "$frm" ] && [ "$frh" -lt "$frm" ]; then
+    ok "free_resources holds the VM settings first, before anything is freed or fetched"
+else
+    bad "free_resources must call hold_vm_for_flash first (hold=$frh first-majestic=$frm)"
+fi
+frt=$(printf '%s\n' "$fr" | grep -n "trap 'die" | head -1 | cut -d: -f1)
+if [ -n "$frt" ] && [ -n "$frh" ] && [ "$frt" -lt "$frh" ]; then
+    ok "an interrupt after the VM hold is a refusal that gives the settings back"
+else
+    bad "free_resources must trap INT/TERM/HUP to die before hold_vm_for_flash (trap=$frt hold=$frh)"
+fi
+for k in watermark_boost_factor dirty_bytes dirty_background_bytes; do
+    awk '/^hold_vm_for_flash\(\)/,/^}/' "$SRC" | grep -q "$k" \
+        && ok "hold_vm_for_flash sets $k" \
+        || bad "hold_vm_for_flash must set $k"
+done
+awk '/^restore_resources\(\)/,/^}/' "$SRC" | grep -q 'release_vm_for_flash' \
+    && ok "a camera that stays up gets its VM settings back" \
+    || bad "restore_resources must call release_vm_for_flash"
 
 echo
 if [ "$fail" -eq 0 ]; then
