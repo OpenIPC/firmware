@@ -5,7 +5,7 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_VERSION))
-XIONGMAI_OPENSDK_VERSION = ce1068c5f2a3a48bc3d0905563909b99090df11c
+XIONGMAI_OPENSDK_VERSION = 410f39ab662344cec96c93da472e5b8967ece5f4
 
 XIONGMAI_OPENSDK_LICENSE = GPL-3.0 (libraries), GPL-2.0 (open_vi, open_mmz, open_isp, open_rgn kernel modules)
 XIONGMAI_OPENSDK_LICENSE_FILES = LICENSE
@@ -29,7 +29,10 @@ define XIONGMAI_OPENSDK_BUILD_CMDS
 endef
 
 # load_xiongmai links /usr/lib/libsns.so to one of the sensor libraries,
-# picked by the sensor ipcinfo reports.
+# picked by the sensor ipcinfo reports. The open ISP library (libisp_XM530,
+# so far for the IMX335 only) goes beside the vendor's, which
+# xiongmai-osdrv-xm530 installs; majestic takes it in the vendor's place
+# when its system.openIsp is on.
 define XIONGMAI_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors \
@@ -37,6 +40,8 @@ define XIONGMAI_OPENSDK_INSTALL_TARGET_CMDS
 		$(@D)/libraries/libsns_X123_XM530/libsns_X123_XM530.so
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib \
 		$(@D)/libraries/libispapp_XM530/libispapp_XM530.so
+	$(INSTALL) -D -m 644 $(@D)/libraries/libisp_XM530/libisp_XM530.so \
+		$(TARGET_DIR)/usr/lib/openxiongmai/libisp_XM530.so
 endef
 
 $(eval $(kernel-module))
