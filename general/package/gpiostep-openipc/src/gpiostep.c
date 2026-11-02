@@ -16,6 +16,19 @@
  *
  *   insmod gpiostep.ko pan_gpios=3,4,72,73 tilt_gpios=69,59,58,57
  *
+ * Some heads drive the two coils through a 74HC595 shift register instead of
+ * eight SoC pins (Heimlink HM202, SSC325: vendor driver "MStar-SC325 74HC595
+ * ptz device driver"). Naming the register's three pins switches to that:
+ *
+ *   insmod gpiostep.ko sr_gpios=53,47,52 pan_bits=0,1,2,3 tilt_bits=4,5,6,7
+ *
+ * sr_gpios is serial clock, serial data and latch; pan_bits/tilt_bits say on
+ * which outputs Q0-Q7 coils a,b,c,d sit (these defaults). Both axes then share
+ * one shadow byte, and every coil change shifts all eight bits out, MSB first,
+ * and latches them. The register's outputs come up undefined at power-on,
+ * which can leave a coil energised, so loading clears it. pan_gpios and
+ * tilt_gpios are not used in this mode.
+ *
  * Step semantics (one "step" == one full 8-phase cycle) and the half-step
  * sequence are identical to general/package/gpio-motors/src/gpio-motors.c.
  *
@@ -46,6 +59,7 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/sched.h>
+#include <linux/spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/kernel.h>
 #include <linux/ktime.h>
@@ -64,6 +78,19 @@ module_param_array(pan_gpios, int, &n_pan, 0444);
 MODULE_PARM_DESC(pan_gpios, "4 GPIO numbers for the pan coil");
 module_param_array(tilt_gpios, int, &n_tilt, 0444);
 MODULE_PARM_DESC(tilt_gpios, "4 GPIO numbers for the tilt coil");
+
+/* 74HC595 mode: unset (n_sr == 0) unless the pins are named. n_pan_bits and
+ * n_tilt_bits stay 0 unless the outputs are named too; the defaults then hold. */
+static int sr_gpios[3];
+static int pan_bits[4] = { 0, 1, 2, 3 };
+static int tilt_bits[4] = { 4, 5, 6, 7 };
+static int n_sr, n_pan_bits, n_tilt_bits;
+module_param_array(sr_gpios, int, &n_sr, 0444);
+MODULE_PARM_DESC(sr_gpios, "74HC595 serial clock, data and latch GPIOs (coils on a shift register)");
+module_param_array(pan_bits, int, &n_pan_bits, 0444);
+MODULE_PARM_DESC(pan_bits, "74HC595 outputs (0-7) of the pan coil's a,b,c,d");
+module_param_array(tilt_bits, int, &n_tilt_bits, 0444);
+MODULE_PARM_DESC(tilt_bits, "74HC595 outputs (0-7) of the tilt coil's a,b,c,d");
 
 static int ramp_start_us = 2000;
 module_param(ramp_start_us, int, 0644);
@@ -93,6 +120,7 @@ static const int rev_step_seq[8][4] = {
 struct axis {
 	struct mutex lock;
 	const int *pins;
+	const int *bits;	/* its register outputs, in 74HC595 mode */
 	bool energised;		/* field on since the last move */
 	int dir;		/* direction of the last move */
 	u64 speed2;		/* (micro-steps/s)^2 reached at its end */
@@ -102,18 +130,70 @@ struct axis {
 };
 
 static struct axis pan_axis = {
-	.lock = __MUTEX_INITIALIZER(pan_axis.lock), .pins = pan_gpios
+	.lock = __MUTEX_INITIALIZER(pan_axis.lock), .pins = pan_gpios,
+	.bits = pan_bits
 };
 static struct axis tilt_axis = {
-	.lock = __MUTEX_INITIALIZER(tilt_axis.lock), .pins = tilt_gpios
+	.lock = __MUTEX_INITIALIZER(tilt_axis.lock), .pins = tilt_gpios,
+	.bits = tilt_bits
 };
+
+static const int coils_off[4] = { 0, 0, 0, 0 };
+
+/* What the 74HC595 holds. Both axes write it, each under its own lock, so a
+ * move on one must not undo the other's coils and two writers must not
+ * interleave their bits: the byte and the shifting are under sr_lock. */
+static u8 sr_state;
+static DEFINE_SPINLOCK(sr_lock);
+
+/* Clock a byte in, Q7 first, and latch it onto the outputs. The 595 wants
+ * ~100 ns pulses at 3.3 V; the ndelay()s keep that however fast the GPIO
+ * writes are. Called with sr_lock held. */
+static void sr_write(u8 v)
+{
+	int i;
+
+	for (i = 7; i >= 0; i--) {
+		gpio_set_value(sr_gpios[1], (v >> i) & 1);
+		ndelay(100);
+		gpio_set_value(sr_gpios[0], 1);
+		ndelay(100);
+		gpio_set_value(sr_gpios[0], 0);
+	}
+	ndelay(100);
+	gpio_set_value(sr_gpios[2], 1);
+	ndelay(100);
+	gpio_set_value(sr_gpios[2], 0);
+}
+
+/* 74HC595 mode: this axis's four outputs to coils[], the other axis's kept. */
+static void sr_coils(struct axis *ax, const int coils[4])
+{
+	unsigned long flags;
+	u8 mask = 0, val = 0;
+	int i;
+
+	for (i = 0; i < 4; i++) {
+		mask |= BIT(ax->bits[i]);
+		if (coils[i])
+			val |= BIT(ax->bits[i]);
+	}
+	spin_lock_irqsave(&sr_lock, flags);
+	sr_state = (sr_state & ~mask) | val;
+	sr_write(sr_state);
+	spin_unlock_irqrestore(&sr_lock, flags);
+}
 
 static void coil_off(struct axis *ax)
 {
 	int i;
 
-	for (i = 0; i < 4; i++)
-		gpio_set_value(ax->pins[i], 0);
+	if (n_sr) {
+		sr_coils(ax, coils_off);
+	} else {
+		for (i = 0; i < 4; i++)
+			gpio_set_value(ax->pins[i], 0);
+	}
 	ax->energised = false;
 	ax->dir = 0;
 }
@@ -235,8 +315,12 @@ static void axis_run(struct axis *ax, int steps, int delay_us)
 	us = delay_us;
 	micro = 0;
 	while (remaining > 0) {
-		for (i = 0; i < 4; i++)
-			gpio_set_value(ax->pins[i], seq[micro][i]);
+		if (n_sr) {
+			sr_coils(ax, seq[micro]);
+		} else {
+			for (i = 0; i < 4; i++)
+				gpio_set_value(ax->pins[i], seq[micro][i]);
+		}
 
 		if (ramp) {
 			us = (int)div_u64(1000000, isqrt64(speed2));
@@ -321,39 +405,142 @@ static void free_coil(const int pins[4])
 		gpio_free(pins[i]);
 }
 
-static int __init gpiostep_init(void)
+/* Eight different outputs, each 0-7: two coils on one output would have each
+ * axis rewrite the other's. */
+static bool bits_valid(void)
 {
+	u8 used = 0;
+	int i, b;
+
+	for (i = 0; i < 8; i++) {
+		b = i < 4 ? pan_bits[i] : tilt_bits[i - 4];
+		if (b < 0 || b > 7 || (used & BIT(b)))
+			return false;
+		used |= BIT(b);
+	}
+	return true;
+}
+
+/* The register's sck, si and rck, low. Every shift runs under sr_lock with
+ * interrupts off, so a pin on a controller whose writes can sleep (an I2C or
+ * SPI expander) is refused rather than written from atomic context. */
+static int request_sr(void)
+{
+	int i, ret;
+
+	for (i = 0; i < 3; i++) {
+		ret = gpio_request(sr_gpios[i], "gpiostep-74hc595");
+		if (ret) {
+			pr_err("gpiostep: 74HC595 gpio %d request failed (%d)\n",
+			       sr_gpios[i], ret);
+			goto fail;
+		}
+		if (gpio_cansleep(sr_gpios[i])) {
+			pr_err("gpiostep: 74HC595 gpio %d is on a controller that can sleep\n",
+			       sr_gpios[i]);
+			ret = -EINVAL;
+			i++;
+			goto fail;
+		}
+		ret = gpio_direction_output(sr_gpios[i], 0);
+		if (ret) {
+			pr_err("gpiostep: 74HC595 gpio %d cannot drive an output (%d)\n",
+			       sr_gpios[i], ret);
+			i++;
+			goto fail;
+		}
+	}
+	return 0;
+
+fail:
+	while (--i >= 0)
+		gpio_free(sr_gpios[i]);
+	return ret;
+}
+
+static void free_sr(void)
+{
+	int i;
+
+	for (i = 0; i < 3; i++)
+		gpio_free(sr_gpios[i]);
+}
+
+static int request_outputs(void)
+{
+	unsigned long flags;
 	int ret;
 
+	if (n_sr) {
+		if (n_sr != 3 || (n_pan_bits && n_pan_bits != 4) ||
+		    (n_tilt_bits && n_tilt_bits != 4) || !bits_valid()) {
+			pr_err("gpiostep: need 3 sr_gpios, and 4 pan_bits and 4 tilt_bits naming 8 different outputs 0-7\n");
+			return -EINVAL;
+		}
+		ret = request_sr();
+		if (ret)
+			return ret;
+		/* undefined since power-on: start with every coil off */
+		spin_lock_irqsave(&sr_lock, flags);
+		sr_state = 0;
+		sr_write(sr_state);
+		spin_unlock_irqrestore(&sr_lock, flags);
+		return 0;
+	}
+
+	if (n_pan_bits || n_tilt_bits)
+		pr_warn("gpiostep: pan_bits and tilt_bits only apply with sr_gpios; ignored\n");
 	if (n_pan != 4 || n_tilt != 4) {
 		pr_err("gpiostep: need exactly 4 pan_gpios and 4 tilt_gpios\n");
 		return -EINVAL;
 	}
-
 	ret = request_coil(pan_gpios, "gpiostep-pan");
 	if (ret)
 		return ret;
-
 	ret = request_coil(tilt_gpios, "gpiostep-tilt");
-	if (ret) {
+	if (ret)
 		free_coil(pan_gpios);
-		return ret;
+	return ret;
+}
+
+static void free_outputs(void)
+{
+	if (n_sr) {
+		free_sr();
+		return;
 	}
+	free_coil(pan_gpios);
+	free_coil(tilt_gpios);
+}
+
+static int __init gpiostep_init(void)
+{
+	int ret;
+
+	ret = request_outputs();
+	if (ret)
+		return ret;
 
 	INIT_DELAYED_WORK(&pan_axis.release, release_work);
 	INIT_DELAYED_WORK(&tilt_axis.release, release_work);
 
 	ret = misc_register(&gpiostep_misc);
 	if (ret) {
-		free_coil(pan_gpios);
-		free_coil(tilt_gpios);
+		free_outputs();
 		return ret;
 	}
 
-	pr_info("gpiostep: ready, pan=%d,%d,%d,%d tilt=%d,%d,%d,%d via /dev/%s\n",
-		pan_gpios[0], pan_gpios[1], pan_gpios[2], pan_gpios[3],
-		tilt_gpios[0], tilt_gpios[1], tilt_gpios[2], tilt_gpios[3],
-		GPIOSTEP_DEV_NAME);
+	if (n_sr)
+		pr_info("gpiostep: ready, 74HC595 sck=%d si=%d rck=%d pan=Q%d,%d,%d,%d tilt=Q%d,%d,%d,%d via /dev/%s\n",
+			sr_gpios[0], sr_gpios[1], sr_gpios[2],
+			pan_bits[0], pan_bits[1], pan_bits[2], pan_bits[3],
+			tilt_bits[0], tilt_bits[1], tilt_bits[2], tilt_bits[3],
+			GPIOSTEP_DEV_NAME);
+	else
+		pr_info("gpiostep: ready, pan=%d,%d,%d,%d tilt=%d,%d,%d,%d via /dev/%s\n",
+			pan_gpios[0], pan_gpios[1], pan_gpios[2], pan_gpios[3],
+			tilt_gpios[0], tilt_gpios[1], tilt_gpios[2], tilt_gpios[3],
+			GPIOSTEP_DEV_NAME);
 	return 0;
 }
 
@@ -364,8 +551,7 @@ static void __exit gpiostep_exit(void)
 	cancel_delayed_work_sync(&tilt_axis.release);
 	coil_off(&pan_axis);
 	coil_off(&tilt_axis);
-	free_coil(pan_gpios);
-	free_coil(tilt_gpios);
+	free_outputs();
 }
 
 module_init(gpiostep_init);
