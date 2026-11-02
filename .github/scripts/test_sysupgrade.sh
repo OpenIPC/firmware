@@ -274,8 +274,10 @@ fi
 if [ "$head" = "1" ] && [ "$w" = "1" ]; then
     # url_exists: the status alone. A -split package exists only where the
     # release publishes one (STUB_SPLIT_PUBLISHED); everything else does.
+    # Each -split probe is noted, so a test can count them.
     case "$url" in
-    *-split.tgz) [ -n "${STUB_SPLIT_PUBLISHED:-}" ] && printf 200 || printf 404 ;;
+    *-split.tgz) echo "$url" >> "${FLASH_LOG%/*}/split-probes"
+                 [ -n "${STUB_SPLIT_PUBLISHED:-}" ] && printf 200 || printf 404 ;;
     *) printf 200 ;;
     esac
     exit 0
@@ -3798,6 +3800,27 @@ default_url_is "$B/openipc.hi3516ev300-nor-dev-split.tgz" \
 unset STUB_SPLIT_PUBLISHED
 default_url_is "$B/openipc.hi3516ev300-nor-dev.tgz" \
     eval 'set_platform hi3516ev300_dev dev; STUB_SOC=hi3516ev300'
+# A builder device profile publishes <platform>-nor-split.tgz beside its plain
+# package, and writes the plain one's URL into `upgrade` on first boot: either
+# way the camera asks for the -split one when it is there.
+default_url_is "$B/hi3516ev200_lite_imou-cue2-c22en-nor-split.tgz" \
+    eval 'set_platform hi3516ev200_lite_imou-cue2-c22en; STUB_SOC=hi3516ev200; STUB_SPLIT_PUBLISHED=1'
+default_url_is "$B/hi3516ev200_lite_imou-cue2-c22en-nor-split.tgz" \
+    eval 'set_platform hi3516ev200_lite_imou-cue2-c22en; STUB_SOC=hi3516ev200; STUB_SPLIT_PUBLISHED=1; STUB_UPGRADE=$B/hi3516ev200_lite_imou-cue2-c22en-nor.tgz'
+unset STUB_SPLIT_PUBLISHED
+default_url_is "$B/hi3516ev200_lite_imou-cue2-c22en-nor.tgz" \
+    eval 'set_platform hi3516ev200_lite_imou-cue2-c22en; STUB_SOC=hi3516ev200; STUB_UPGRADE=$B/hi3516ev200_lite_imou-cue2-c22en-nor.tgz'
+unset STUB_SPLIT_PUBLISHED
+# With nothing in `upgrade`, the default URL is looked up once: a probe that
+# stalls costs its minute once, not twice.
+rm -f "$SB/tmp/split-probes"
+default_url_is "$B/hi3516ev200_lite_imou-cue2-c22en-nor.tgz" \
+    eval 'set_platform hi3516ev200_lite_imou-cue2-c22en; STUB_SOC=hi3516ev200'
+if [ "$(wc -l < "$SB/tmp/split-probes")" = 1 ]; then
+    ok "the default URL's -split package is probed once"
+else
+    bad "-split probes for the default URL: $(cat "$SB/tmp/split-probes" 2>&1)"
+fi
 
 default_url_is "$F/openipc.ssc338q-nor-lite.tgz" true
 # --channel resolves the plain package from the manifest; the family fetches

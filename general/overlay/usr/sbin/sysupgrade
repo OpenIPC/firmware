@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.82
+scr_version=1.0.83
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -999,13 +999,15 @@ url_exists() {
 
 # The -split package's URL for a plain firmware package's, when the release
 # carries one for this camera, else the URL as it is:
-# openipc.<soc>-nor-<variant>.tgz becomes ...-<variant>-split.tgz. A board
+# openipc.<soc>-nor-<variant>.tgz becomes ...-<variant>-split.tgz, and a
+# builder device's <soc>_<variant>_<device>-nor.tgz ...-nor-split.tgz. A board
 # built for the split layout publishes it, whatever its SoC; any bootloader
 # boots it, as the kernel sits where the fixed slots put it and finds its own
 # partitions.
 nor_split_url() {
 	local split
-	split=$(echo "$1" | sed 's|\(/openipc\.[^/]*-nor-[a-z0-9]*\)\.tgz$|\1-split.tgz|')
+	split=$(echo "$1" | sed -e 's|\(/openipc\.[^/]*-nor-[a-z0-9]*\)\.tgz$|\1-split.tgz|' \
+		-e 's|\(/[a-z0-9]*_[a-z0-9]*_[^/]*-nor\)\.tgz$|\1-split.tgz|')
 	if [ "$(pkg_flash)" = nor ] && [ "$split" != "$1" ] && url_exists "$split"; then
 		echo "$split"
 	else
@@ -1992,9 +1994,20 @@ download_firmware() {
 			echo "Resolved $build_id for $platform"
 			device_pinned=1
 		fi
-		[ -z "$url" ] && url=$(fw_printenv -n upgrade || default_upgrade_url)
+		# A builder device writes its plain package's URL into `upgrade` on
+		# first boot; its -split one, where published, is beside it.
+		# default_upgrade_url has looked for it already.
+		if [ -z "$url" ]; then
+			if url=$(fw_printenv -n upgrade); then
+				url=$(nor_split_url "$url")
+			else
+				url=$(default_upgrade_url)
+			fi
+		fi
 		# Named for this device, so verify_rootfs can trust it when it cannot mount it.
-		[ "${url##*/}" = "$system_platform-$(pkg_flash).tgz" ] && device_pinned=1
+		case "${url##*/}" in
+			"$system_platform-$(pkg_flash).tgz"|"$system_platform-$(pkg_flash)-split.tgz") device_pinned=1 ;;
+		esac
 		echo "Download from $url"
 		probe_url "$url"
 		# The streamed route stages no second copy, so it never had a room
@@ -3422,7 +3435,7 @@ default_upgrade_url() {
 	plat=$(get_system_platform)
 	case "$plat" in
 		*_*_*)
-			echo "https://github.com/OpenIPC/builder/releases/download/latest/$plat-$(pkg_flash).tgz"
+			nor_split_url "https://github.com/OpenIPC/builder/releases/download/latest/$plat-$(pkg_flash).tgz"
 			return ;;
 	esac
 	osr=$(get_system_build)
