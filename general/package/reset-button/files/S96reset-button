@@ -1,0 +1,64 @@
+#!/bin/sh
+#
+# Reboot (hold 5 s) or factory reset (hold 15 s) from the button named
+# button=N in /usr/share/openipc/gpio.conf. After S95majestic, whose
+# /play_audio sounds the beeps.
+
+DAEMON="reset-button"
+DAEMON_PATH="/usr/sbin/$DAEMON"
+GPIO_CONF="/usr/share/openipc/gpio.conf"
+
+# Find the daemon by executable, never through a pidfile: a second watcher
+# on the same pin would act on every release twice.
+running() {
+	start-stop-daemon -t -K -q -x "$DAEMON_PATH"
+}
+
+start() {
+	# No gpio.conf, or button=-1: this board has no button to watch.
+	grep -q '^button=[0-9]' "$GPIO_CONF" 2>/dev/null || return 0
+	echo -n "Starting $DAEMON: "
+	if running; then
+		echo "OK (already running)"
+		return 0
+	fi
+	# It opens the pin before it forks into the background, so a pin it
+	# cannot open fails here, on the console, not in a daemon nobody reads.
+	if "$DAEMON_PATH"; then
+		echo "OK"
+	else
+		echo "FAIL"
+		return 1
+	fi
+}
+
+stop() {
+	echo -n "Stopping $DAEMON: "
+	start-stop-daemon -K -q -x "$DAEMON_PATH"
+	i=0
+	while running && [ $i -lt 10 ]; do
+		i=$((i + 1))
+		sleep 1
+	done
+	if running; then
+		echo "FAIL"
+		return 1
+	fi
+	echo "OK"
+}
+
+case "$1" in
+	start|stop)
+		$1
+		;;
+
+	restart)
+		stop || exit 1
+		start
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart}"
+		exit 1
+		;;
+esac

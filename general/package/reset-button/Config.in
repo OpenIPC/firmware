@@ -1,0 +1,26 @@
+config BR2_PACKAGE_RESET_BUTTON
+	bool "reset-button"
+	# The beeps go through majestic's /play_audio with the curl BINARY,
+	# as quirc-openipc's do. The binary is a sub-option of libcurl-openipc,
+	# so both symbols are needed.
+	select BR2_PACKAGE_LIBCURL_OPENIPC
+	select BR2_PACKAGE_LIBCURL_OPENIPC_CURL
+	help
+	  Reboot or factory-reset the camera from its button. Hold it
+	  and let go: under 5 s nothing, 5 to 15 s reboot (one beep at
+	  5 s), 15 to 30 s factory reset with firstboot (two beeps at
+	  15 s), over 30 s nothing, as a button stuck down. firstboot
+	  wipes the overlay, so the camera comes back unclaimed with its
+	  settings gone; the U-Boot environment, WiFi credentials
+	  included, is kept.
+
+	  The pin is button=N in /usr/share/openipc/gpio.conf, the
+	  per-device pin map; pressed is low, or high with
+	  button_active=1. A board whose gpio.conf has no button, or
+	  button=-1, starts nothing, and a pin already exported as an
+	  output is refused. The pin is polled every 100 ms, as many SoC
+	  GPIOs cannot raise an edge interrupt. The beeps go through
+	  majestic's /play_audio; with no speaker or no majestic the
+	  button works the same, silently.
+
+	  https://openipc.org
