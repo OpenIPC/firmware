@@ -1,6 +1,6 @@
 #!/bin/sh
-# set_allocator xm|cma [osmem]: where the media buffers come from, at the next
-# boot.
+# set_allocator xm|cma|hybrid [osmem] [cma share]: where the media buffers
+# come from, at the next boot.
 #
 #  xm   the vendor layout: mem=<osmem> keeps the rest of DDR out of Linux, and
 #       the MMZ module hands it out as one fixed zone.
@@ -8,16 +8,23 @@
 #       share as a CMA area (cma=), which open_mmz allocates from and Linux
 #       uses for its own pages meanwhile. The 1 MB stays a zone for
 #       xm530_rgn, which ioremap()s its block.
+#  hybrid  the media share is split: a fixed zone, out of Linux as with xm,
+#       for what the pipeline holds all the time, and a CMA area of
+#       <cma share> MB (default 8, whole 4 MB) beside Linux, which open_mmz
+#       borrows from only when the zone is full. A start then has no memory
+#       to take back from Linux, which under cma, with Linux short of memory,
+#       took the board down.
 #
 # osmem is in MB (default: the osmem variable, or what this boot has), the
-# same number as in the xm layout: with cma the media share is DDR - osmem.
+# same number as in the xm layout: with cma the media share is DDR - osmem,
+# with hybrid the zone is DDR - osmem - cma share.
 
 ram=64
 [ "$(ipcinfo --chip-name 2>/dev/null)" = xm550 ] && ram=128
 zone=1
 
 usage() {
-	echo "Usage: $0 xm|cma [osmem]"
+	echo "Usage: $0 xm|cma|hybrid [osmem] [cma share]"
 	echo "Now: $(tr ' ' '\n' </proc/cmdline | grep -E '^(mem|cma|mmz_allocator)=' | tr '\n' ' ')"
 	exit 1
 }
@@ -31,7 +38,7 @@ has_module() {
 }
 
 case "$1" in
-xm | cma) ;;
+xm | cma | hybrid) ;;
 *) usage ;;
 esac
 
@@ -50,19 +57,46 @@ if [ "$os" -lt 16 ] || [ "$os" -ge $((ram - zone)) ]; then
 	exit 1
 fi
 
-if [ "$1" = cma ]; then
-	# Without these the camera would boot with a 1 MB zone and no video
+if [ "$1" = hybrid ]; then
+	share=$(echo "${3:-8}" | tr -d 'M')
+	case "$share" in
+	'' | *[!0-9]*) echo "cma share '$share' is not a number of MB"; exit 1 ;;
+	esac
+	# The kernel aligns a CMA area to 4 MB, and would take the rest from
+	# the OS share
+	rounded=$(((share + 3) / 4 * 4))
+	[ "$rounded" = "$share" ] ||
+		echo "cma share ${share}M rounded up to ${rounded}M"
+	share=$rounded
+	if [ "$share" -lt 4 ] || [ $((ram - os - share)) -lt 4 ]; then
+		echo "cma share ${share}M leaves no zone of 4 MB beside osmem ${os}M"
+		exit 1
+	fi
+fi
+
+if [ "$1" = cma ] || [ "$1" = hybrid ]; then
+	# Without these the camera would boot with no video
 	if ! grep -q CMA /proc/pagetypeinfo 2>/dev/null; then
 		echo "This kernel has no CMA; nothing changed"
 		exit 1
 	fi
 	for m in open_mmz open_vi; do
 		if ! has_module $m; then
-			echo "cma needs $m.ko, which this image does not have; nothing changed"
+			echo "$1 needs $m.ko, which this image does not have; nothing changed"
 			exit 1
 		fi
 	done
+fi
+if [ "$1" = hybrid ] &&
+	! grep -q -a "hybrid" "$(find /lib/modules/$(uname -r) -name open_mmz.ko | head -1)"; then
+	echo "This image's open_mmz.ko has no hybrid allocator; nothing changed"
+	exit 1
+fi
+
+if [ "$1" = cma ]; then
 	args="mem=$((ram - zone))M cma=$((ram - zone - os))M mmz_allocator=cma"
+elif [ "$1" = hybrid ]; then
+	args="mem=$((os + share))M cma=${share}M mmz_allocator=hybrid"
 else
 	args="mem=${os}M"
 fi
