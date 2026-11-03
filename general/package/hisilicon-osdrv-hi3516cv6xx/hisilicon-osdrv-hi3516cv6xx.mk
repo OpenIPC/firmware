@@ -92,6 +92,14 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# ipcinfo names it sc4336p.
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/sc4336p_i2c_4M.ini
 
+	# Its ISP tuning: the vendor SDK's own scene_auto profile for SC4336P,
+	# day and IR halves in one file, trimmed to the sections majestic reads
+	# on gen 5 (sharpen, NR, demosaic, the 3DNR ladder, LDCI, dehaze, DPC,
+	# AE weights, CA, saturation, gamma). majestic finds it as
+	# /etc/sensors/iq/<sensor>.ini; about 26 KB compressed.
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/sc4336p.ini
+
 	# CV2003, GC4653 and VS4388, on both variants with their drivers: the
 	# sensors of one vendor's CV610/CV608 cameras, which are 8 MB lite-class
 	# boards (OpenIPC/majestic#355, #356, #357). Every one of them wires the
