@@ -95,7 +95,7 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# Its ISP tuning: the vendor SDK's own scene_auto profile for SC4336P,
 	# day and IR halves in one file, trimmed to the sections majestic reads
 	# on gen 5 (sharpen, NR, demosaic, the 3DNR ladder, LDCI, dehaze, DPC,
-	# AE weights, CA, saturation, gamma). majestic finds it as
+	# AE pace and route, AE weights, CA, saturation, gamma). majestic finds it as
 	# /etc/sensors/iq/<sensor>.ini; about 26 KB compressed.
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/sc4336p.ini
