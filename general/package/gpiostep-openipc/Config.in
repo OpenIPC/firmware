@@ -17,6 +17,11 @@ config BR2_PACKAGE_GPIOSTEP_OPENIPC
 	  overridable via module params, e.g.
 	  insmod gpiostep.ko pan_gpios=3,4,72,73 tilt_gpios=69,59,58,57
 
+	  Heads that clock the coils into a 74HC595 shift register instead
+	  name its three pins, sck,si,rck, and the module drives the
+	  register (see Readme.md):
+	  insmod gpiostep.ko sr_gpios=53,47,52
+
 	  https://openipc.org
 
 comment "gpiostep-openipc needs a Linux kernel to be built"
