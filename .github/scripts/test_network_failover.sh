@@ -524,12 +524,13 @@ else
     bad "leasefail rewrote the rescue route, log='$(cat "$LOG")'"
 fi
 
-# A lease on the rescue address: only clearing it first drops the demoted route.
+# A lease on the rescue address: ifconfig to the same address changes nothing,
+# so the route itself has to come back to metric 0.
 : > "$LOG"
 ds bound eth0 ip=192.168.2.10 subnet=255.255.255.0
-ds renew eth0 ip=192.168.2.10 subnet=255.255.255.0
-if [ "$(grep -c '^ifconfig eth0 0.0.0.0$' "$LOG")" = 1 ]; then
-    ok "eth0 bound on the rescue address: cleared once, not on renew"
+if logged "ip route del 192.168.2.0/24 dev eth0 proto kernel metric 20" &&
+    logged "ip route add 192.168.2.0/24 dev eth0 proto kernel scope link src 192.168.2.10"; then
+    ok "eth0 bound on the rescue address: connected route back at metric 0"
 else
     bad "lease on the rescue address, log='$(cat "$LOG")'"
 fi
@@ -545,9 +546,44 @@ else
     bad "wlan0 leasefail route, log='$(cat "$LOG")'"
 fi
 
+# The same address across a lease and a failed one, both ways.
+: > "$LOG"
+printf '192.168.1.0/24 scope link  src 192.168.1.10  metric 30\n' > "$SB/routes.wlan0"
+ds bound wlan0 ip=192.168.1.10 subnet=255.255.255.0
+if logged "ip route del 192.168.1.0/24 dev wlan0 proto kernel metric 30" &&
+    logged "ip route add 192.168.1.0/24 dev wlan0 proto kernel scope link src 192.168.1.10 metric 10"; then
+    ok "wlan0 bound on its leasefail address: connected route at the lease's metric"
+else
+    bad "wlan0 bound on its leasefail address, log='$(cat "$LOG")'"
+fi
+: > "$LOG"
+printf '192.168.1.0/24 scope link  src 192.168.1.10  metric 10\n' > "$SB/routes.wlan0"
+ds nak wlan0
+if logged "ip route del 192.168.1.0/24 dev wlan0 proto kernel metric 10" &&
+    logged "ip route add 192.168.1.0/24 dev wlan0 proto kernel scope link src 192.168.1.10 metric 30"; then
+    ok "wlan0 lease refused on the same address: connected route at leasefail's metric"
+else
+    bad "wlan0 nak on the same address, log='$(cat "$LOG")'"
+fi
+
+# A stanza's metric line overrides the failed-lease metrics as well.
+: > "$LOG"
+link 0x1003 1
+printf '192.168.1.0/24 scope link  src 192.168.1.2\n' > "$SB/routes.eth0"
+printf '192.168.1.0/24 scope link  src 192.168.1.10\n' > "$SB/routes.wlan0"
+ds leasefail eth0 IF_METRIC=5
+ds leasefail wlan0 IF_METRIC=7
+if logged "ip route add 192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.2 metric 5" &&
+    logged "ip route add 192.168.1.0/24 dev wlan0 proto kernel scope link src 192.168.1.10 metric 7"; then
+    ok "IF_METRIC overrides the failed-lease metrics"
+else
+    bad "IF_METRIC on leasefail, log='$(cat "$LOG")'"
+fi
+
 reset
 printf '192.168.1.0/24 scope link  src 192.168.1.10\n' > "$SB/routes.eth0"
 ds leasefail eth0
+ds bound eth0 ip=192.168.1.10 subnet=255.255.255.0
 if grep -q "^ip route del" "$LOG"; then
     bad "leasefail outside dual mode rewrote a route, log='$(cat "$LOG")'"
 else
