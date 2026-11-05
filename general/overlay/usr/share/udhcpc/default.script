@@ -31,23 +31,51 @@ FALLBACK=/var/run/network.fallback
 # Outside dual mode every interface keeps metric 0 and the exact routes it
 # always had. A `metric N` line in the interface's stanza overrides this:
 # ifupdown exports stanza options to udhcpc's environment as IF_<NAME>.
+#
+# The two addresses a failed lease leaves in dual mode rank either side of that
+# lease. eth0's rescue address goes behind wlan0's routes: a port can show
+# carrier and pass nothing, and at metric 0 its connected route would take the
+# subnet from a WiFi network on the same one. wlan0's own leasefail address
+# goes behind the rescue address, so a radio with no network cannot take the
+# subnet from the cable when netaddr_fallback and ipaddr share one. A stanza's
+# metric line overrides these too.
+RESCUE_METRIC=20
+WLAN_LEASEFAIL_METRIC=30
 metric=0
 case "$interface" in wlan*) [ -s "$FALLBACK" ] && metric=10 ;; esac
 case "$IF_METRIC" in '' | *[!0-9]*) ;; *) metric=$IF_METRIC ;; esac
+
+failed_lease_metric() {
+	case "$IF_METRIC" in '' | *[!0-9]*) metric=$1 ;; esac
+}
 
 # The kernel adds an interface's connected route at metric 0 whatever the
 # default route's metric is, so a wlan0 on the same subnet as eth0 would still
 # take the on-link traffic. Re-add this address's prefix route at the
 # interface's metric. Quoted and line by line: an interface can carry more
-# than one route, and a renew finds the one already rewritten.
+# than one route, and a renew finds the one already rewritten. In dual mode a
+# route can also hold another metric than this event's: an address that
+# outlives the change, as ifconfig to the same address does nothing -- a lease
+# on the rescue address, or on wlan0's leasefail address.
 prefix_metric() {
-	[ "$metric" -gt 0 ] || return 0
+	[ "$metric" -gt 0 ] || [ -s "$FALLBACK" ] || return 0
 	ip -4 route show dev "$interface" | while read -r dst rest; do
 		case "$dst" in default | *[!0-9./]*) continue ;; esac
-		case " $rest " in *" via "* | *" metric "*) continue ;; esac
+		case " $rest " in *" via "*) continue ;; esac
 		case " $rest " in *" src $1 "*) ;; *) continue ;; esac
-		ip route del "$dst" dev "$interface" proto kernel 2>/dev/null || continue
-		ip route add "$dst" dev "$interface" proto kernel scope link src "$1" metric "$metric"
+		cur=0
+		case " $rest " in *" metric "*)
+			cur=${rest##*metric }
+			cur=${cur%% *}
+			;;
+		esac
+		[ "$cur" = "$metric" ] && continue
+		old=
+		new=
+		[ "$cur" = 0 ] || old="metric $cur"
+		[ "$metric" = 0 ] || new="metric $metric"
+		ip route del "$dst" dev "$interface" proto kernel $old 2>/dev/null || continue
+		ip route add "$dst" dev "$interface" proto kernel scope link src "$1" $new
 	done
 }
 
@@ -128,13 +156,17 @@ case "$1" in
 			carrier=0
 			read -r carrier 2>/dev/null < /sys/class/net/eth0/carrier
 			if [ "$carrier" = 1 ]; then
-				/sbin/ifconfig eth0 "$(cat "$FALLBACK")" up
+				addr=$(cat "$FALLBACK")
+				/sbin/ifconfig eth0 "$addr" up
+				failed_lease_metric "$RESCUE_METRIC"
+				prefix_metric "$addr"
 			else
 				/sbin/ifconfig eth0 0.0.0.0
 			fi
 		else
 			addr=$(fw_printenv -n ipaddr || echo -n 192.168.1.10)
 			/sbin/ifconfig $interface $addr netmask $(fw_printenv -n netmask || echo -n 255.255.255.0) up
+			case "$interface" in wlan*) [ -s "$FALLBACK" ] && failed_lease_metric "$WLAN_LEASEFAIL_METRIC" ;; esac
 			prefix_metric "$addr"
 		fi
 		;;
