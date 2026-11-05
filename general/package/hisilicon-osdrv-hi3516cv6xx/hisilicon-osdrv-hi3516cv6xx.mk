@@ -113,6 +113,11 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/gc4653_i2c_4M.ini \
 		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/vs4388_i2c_4M.ini
 
+	# MIS20S1, on both variants with its driver: 1920x1080p30 RAW12, RGGB,
+	# linear, from the vendor's own CV610 driver for it, wired like the
+	# boards above. ipcinfo names it mis20s1.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/mis20s1_i2c_1080p.ini
+
 endef
 
 $(eval $(generic-package))

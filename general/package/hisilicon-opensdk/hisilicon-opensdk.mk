@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 95a52746215bcfcf663ede022ea2cf07a4fbe21b
+HISILICON_OPENSDK_VERSION = 31af5c13d15b0c3f3e40c8fdc16dc3fa6ad1650e
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -268,6 +268,7 @@ HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
 	cvsens_cv2003/libsns_cv2003 \
 	galaxycore_gc4023/libsns_gc4023 \
 	galaxycore_gc4653/libsns_gc4653 \
+	imagedesign_mis20s1/libsns_mis20s1 \
 	omnivision_os04d10/libsns_os04d10 \
 	smart_sc431hai/libsns_sc431hai \
 	smart_sc4336p/libsns_sc4336p \
