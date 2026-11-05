@@ -31,6 +31,15 @@ FALLBACK=/var/run/network.fallback
 # Outside dual mode every interface keeps metric 0 and the exact routes it
 # always had. A `metric N` line in the interface's stanza overrides this:
 # ifupdown exports stanza options to udhcpc's environment as IF_<NAME>.
+#
+# The two addresses a failed lease leaves in dual mode rank either side of that
+# lease. eth0's rescue address goes behind wlan0's routes: a port can show
+# carrier and pass nothing, and at metric 0 its connected route would take the
+# subnet from a WiFi network on the same one. wlan0's own leasefail address
+# goes behind the rescue address, so a radio with no network cannot take the
+# subnet from the cable when netaddr_fallback and ipaddr share one.
+RESCUE_METRIC=20
+WLAN_LEASEFAIL_METRIC=30
 metric=0
 case "$interface" in wlan*) [ -s "$FALLBACK" ] && metric=10 ;; esac
 case "$IF_METRIC" in '' | *[!0-9]*) ;; *) metric=$IF_METRIC ;; esac
@@ -128,13 +137,17 @@ case "$1" in
 			carrier=0
 			read -r carrier 2>/dev/null < /sys/class/net/eth0/carrier
 			if [ "$carrier" = 1 ]; then
-				/sbin/ifconfig eth0 "$(cat "$FALLBACK")" up
+				addr=$(cat "$FALLBACK")
+				/sbin/ifconfig eth0 "$addr" up
+				metric=$RESCUE_METRIC
+				prefix_metric "$addr"
 			else
 				/sbin/ifconfig eth0 0.0.0.0
 			fi
 		else
 			addr=$(fw_printenv -n ipaddr || echo -n 192.168.1.10)
 			/sbin/ifconfig $interface $addr netmask $(fw_printenv -n netmask || echo -n 255.255.255.0) up
+			case "$interface" in wlan*) [ -s "$FALLBACK" ] && metric=$WLAN_LEASEFAIL_METRIC ;; esac
 			prefix_metric "$addr"
 		fi
 		;;
@@ -142,6 +155,12 @@ case "$1" in
 	renew|bound)
 		if [ -x /usr/sbin/avahi-autoipd ]; then
 			/usr/sbin/avahi-autoipd -c $interface && /usr/sbin/avahi-autoipd -k $interface
+		fi
+		# A lease on the rescue address itself: ifconfig would change nothing
+		# and leave its connected route behind wlan0's, with eth0 now primary.
+		if [ "$1" = bound ] && [ "$interface" = eth0 ] && [ -s "$FALLBACK" ] &&
+			[ "$ip" = "$(cat "$FALLBACK")" ]; then
+			/sbin/ifconfig eth0 0.0.0.0
 		fi
 		/sbin/ifconfig $interface $ip $BROADCAST $NETMASK
 		prefix_metric "$ip"

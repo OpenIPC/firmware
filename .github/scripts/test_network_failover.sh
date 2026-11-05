@@ -498,6 +498,62 @@ else
     bad "dual leasefail, log='$(cat "$LOG")'"
 fi
 
+# A port with carrier that passes nothing never gets a lease. The rescue address
+# stays, but its connected route must rank behind wlan0's, or it takes the
+# subnet from a WiFi network on the same one.
+reset
+echo 192.168.2.10 > "$SB/run/network.fallback"
+link 0x1003 1
+printf '192.168.2.0/24 scope link  src 192.168.2.10\n' > "$SB/routes.eth0"
+ds leasefail eth0
+if logged "ifconfig eth0 192.168.2.10 up" &&
+    logged "ip route del 192.168.2.0/24 dev eth0 proto kernel" &&
+    logged "ip route add 192.168.2.0/24 dev eth0 proto kernel scope link src 192.168.2.10 metric 20"; then
+    ok "dual eth0 rescue address: connected route behind wlan0's"
+else
+    bad "rescue route, log='$(cat "$LOG")'"
+fi
+
+# udhcpc runs leasefail again every cycle, and the route is already demoted.
+: > "$LOG"
+printf '192.168.2.0/24 scope link  src 192.168.2.10  metric 20\n' > "$SB/routes.eth0"
+ds leasefail eth0
+if ! grep -q "^ip route del" "$LOG"; then
+    ok "dual eth0 rescue address: a repeated leasefail leaves the route alone"
+else
+    bad "leasefail rewrote the rescue route, log='$(cat "$LOG")'"
+fi
+
+# A lease on the rescue address: only clearing it first drops the demoted route.
+: > "$LOG"
+ds bound eth0 ip=192.168.2.10 subnet=255.255.255.0
+ds renew eth0 ip=192.168.2.10 subnet=255.255.255.0
+if [ "$(grep -c '^ifconfig eth0 0.0.0.0$' "$LOG")" = 1 ]; then
+    ok "eth0 bound on the rescue address: cleared once, not on renew"
+else
+    bad "lease on the rescue address, log='$(cat "$LOG")'"
+fi
+
+# No network in range: wlan0's leasefail address ranks behind the rescue address.
+reset
+echo 192.168.1.2 > "$SB/run/network.fallback"
+printf '192.168.1.0/24 scope link  src 192.168.1.10\n' > "$SB/routes.wlan0"
+ds leasefail wlan0
+if logged "ip route add 192.168.1.0/24 dev wlan0 proto kernel scope link src 192.168.1.10 metric 30"; then
+    ok "dual wlan0 leasefail: connected route behind the rescue address"
+else
+    bad "wlan0 leasefail route, log='$(cat "$LOG")'"
+fi
+
+reset
+printf '192.168.1.0/24 scope link  src 192.168.1.10\n' > "$SB/routes.eth0"
+ds leasefail eth0
+if grep -q "^ip route del" "$LOG"; then
+    bad "leasefail outside dual mode rewrote a route, log='$(cat "$LOG")'"
+else
+    ok "leasefail outside dual mode: connected route untouched"
+fi
+
 reset
 ds leasefail eth0
 # The line itself is unchanged; dash's echo prints the -n it is given.
