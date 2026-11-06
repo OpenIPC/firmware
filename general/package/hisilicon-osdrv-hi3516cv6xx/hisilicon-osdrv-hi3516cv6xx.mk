@@ -53,6 +53,10 @@ define HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/modes
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/modes $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/modes/*.ini
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx662_i2c_1080p.ini
+	# The IMX662's 3DNR ladder, from the stock firmware of a K662C6S. About
+	# 3 KB compressed.
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx662.ini
 endef
 endif
 
