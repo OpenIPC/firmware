@@ -113,6 +113,10 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/vs4388.ini \
 		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/mis20s1.ini
 
+	# GC4023's: the vendor SDK's own scene_auto tuning for it, day and IR
+	# halves, trimmed the same way as sc4336p.ini. About 12 KB compressed.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/gc4023.ini
+
 	# CV2003, GC4653 and VS4388, on both variants with their drivers: the
 	# sensors of one vendor's CV610/CV608 cameras, which are 8 MB lite-class
 	# boards (OpenIPC/majestic#355, #356, #357). Every one of them wires the
