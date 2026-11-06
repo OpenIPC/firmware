@@ -1,0 +1,99 @@
+#!/bin/sh
+#
+# Ambarella S3L driver bring-up, in the vendor's order: iav and what it needs,
+# then the sensor, then the DSP microcode.
+#
+# iav registers plain character devices and no device class, so mdev never sees
+# them and the nodes have to be made here. The major comes from /proc/devices;
+# the minors are fixed.
+#
+# The microcode (orccode.bin, orcme.bin, default_binary.bin) and the load_ucode
+# tool are Ambarella's and are not part of this package. Without them the
+# drivers load and the DSP does not start, so no video. Drop them in place and
+# this script uses them.
+
+vendor=$(ipcinfo -v)
+ucode_dir=/lib/firmware
+
+log_vendor() {
+	logger -s -p daemon.info -t "${vendor:-ambarella}" "$1"
+}
+
+load() {
+	mod=$1
+	shift
+	grep -q "^${mod} " /proc/modules && return 0
+	# modprobe, not insmod: iav needs dsp, hw_timer, imgproc and vout, and
+	# modules.dep knows that.
+	modprobe "${mod}" "$@"
+}
+
+make_node() {
+	major=$(awk -v name="$1" '$2 == name { print $1; exit }' /proc/devices)
+	if [ -z "${major}" ]; then
+		log_vendor "No $1 in /proc/devices, /dev/$1 not created"
+		return 1
+	fi
+	[ -c "/dev/$1" ] || mknod -m 666 "/dev/$1" c "${major}" "$2"
+}
+
+sensor_module() {
+	case "$1" in
+		ov4689 | ov2718 | imx290 | imx274 | imx326)
+			echo "$1_mipi"
+			;;
+		ar0230 | ar0237 | imx172 | imx178 | imx226)
+			echo "$1"
+			;;
+	esac
+}
+
+load_sensor() {
+	sensor=$(fw_printenv -n sensor 2>/dev/null)
+	[ -n "${sensor}" ] || sensor=$(ipcinfo -s 2>/dev/null)
+	sensor=$(echo "${sensor}" | tr 'A-Z' 'a-z')
+
+	if [ -z "${sensor}" ]; then
+		log_vendor "No sensor in the environment and none detected"
+		return 1
+	fi
+
+	module=$(sensor_module "${sensor}")
+	if [ -z "${module}" ]; then
+		log_vendor "No driver in this package for sensor ${sensor}"
+		return 1
+	fi
+
+	load "${module}" || log_vendor "Failed to load ${module}"
+}
+
+load_microcode() {
+	if ! command -v load_ucode >/dev/null || [ ! -f "${ucode_dir}/orccode.bin" ]; then
+		log_vendor "No DSP microcode on this image, video will not start"
+		return 1
+	fi
+
+	load_ucode "${ucode_dir}" >/dev/null || log_vendor "load_ucode failed"
+}
+
+insert_ko() {
+	if ! load iav; then
+		log_vendor "Failed to load iav"
+		return 1
+	fi
+
+	make_node iav 0
+	make_node ucode 1
+	load_sensor
+	load_microcode
+}
+
+case "$1" in
+	-i | "")
+		insert_ko
+		;;
+	*)
+		echo "Usage: $0 [-i]"
+		exit 1
+		;;
+esac
