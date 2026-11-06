@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -50,57 +51,57 @@ struct ucode_version {
 #define UCODE_LOADED _IOW('u', 2, uint32_t)
 
 struct ucode_file {
-	int fd;
+	uint8_t *data;
 	size_t size;
 };
 
-static int open_file(const char *dir, const char *name, size_t room,
+static int read_file(const char *dir, const char *name, size_t room,
 		     struct ucode_file *f)
 {
 	char path[256];
 	struct stat st;
+	size_t done = 0;
+	int fd, ret = -1;
 
 	snprintf(path, sizeof(path), "%s/%s", dir, name);
-	if ((f->fd = open(path, O_RDONLY)) < 0 || fstat(f->fd, &st) < 0) {
+	if ((fd = open(path, O_RDONLY)) < 0 || fstat(fd, &st) < 0) {
 		fprintf(stderr, "load_ucode: %s: %s\n", path, strerror(errno));
-		return -1;
+		goto out;
 	}
-	if ((size_t)st.st_size > room) {
-		fprintf(stderr, "load_ucode: %s is %lld bytes, only %zu fit\n",
+	if (st.st_size <= 0 || (size_t)st.st_size > room) {
+		fprintf(stderr, "load_ucode: %s is %lld bytes, needs 1..%zu\n",
 			path, (long long)st.st_size, room);
-		return -1;
+		goto out;
 	}
 	f->size = st.st_size;
-	return 0;
-}
-
-static int copy_file(const struct ucode_file *f, const char *name,
-		     uint8_t *dst)
-{
-	size_t done = 0;
+	if (!(f->data = malloc(f->size))) {
+		fprintf(stderr, "load_ucode: %s: %s\n", path, strerror(errno));
+		goto out;
+	}
 
 	while (done < f->size) {
-		ssize_t n = read(f->fd, dst + done, f->size - done);
+		ssize_t n = read(fd, f->data + done, f->size - done);
 		if (n <= 0) {
-			fprintf(stderr, "load_ucode: reading %s: %s\n", name,
-				n ? strerror(errno) : "short file");
-			return -1;
+			fprintf(stderr, "load_ucode: reading %s: %s\n", path,
+				n ? strerror(errno) : "file shrank");
+			goto out;
 		}
 		done += n;
 	}
-	return 0;
+	ret = 0;
+out:
+	if (fd >= 0)
+		close(fd);
+	return ret;
 }
 
 int main(int argc, char **argv)
 {
 	struct ucode_info info;
 	struct ucode_version ver;
-	struct ucode_file files[UCODE_MAX_ITEMS];
+	struct ucode_file files[UCODE_MAX_ITEMS] = { 0 };
 	uint8_t *map;
 	int fd, ret = 1;
-
-	for (int i = 0; i < UCODE_MAX_ITEMS; i++)
-		files[i].fd = -1;
 
 	if (argc != 2) {
 		fprintf(stderr, "Usage: %s DIR\n", argv[0]);
@@ -126,8 +127,8 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	/* Every file is checked before any is written: a set that fails half
-	 * way would leave old and new microcode mixed in the window. */
+	/* Every file is read in full before the window is touched: a set that
+	 * failed half way would leave old and new microcode mixed in it. */
 	for (uint32_t i = 0; i < info.nr_item; i++) {
 		struct ucode_item *it = &info.item[i];
 		/* Each file may run up to the next one's offset, the last one
@@ -145,7 +146,7 @@ int main(int argc, char **argv)
 				it->filename, it->addr_offset, info.map_size);
 			goto out;
 		}
-		if (open_file(argv[1], it->filename, end - it->addr_offset,
+		if (read_file(argv[1], it->filename, end - it->addr_offset,
 			      &files[i]))
 			goto out;
 	}
@@ -161,8 +162,7 @@ int main(int argc, char **argv)
 	for (uint32_t i = 0; i < info.nr_item; i++) {
 		struct ucode_item *it = &info.item[i];
 
-		if (copy_file(&files[i], it->filename, map + it->addr_offset))
-			goto unmap;
+		memcpy(map + it->addr_offset, files[i].data, files[i].size);
 		printf("%s: %zu bytes at +0x%06x\n", it->filename,
 		       files[i].size, it->addr_offset);
 	}
@@ -182,8 +182,7 @@ unmap:
 	munmap(map, info.map_size);
 out:
 	for (int i = 0; i < UCODE_MAX_ITEMS; i++)
-		if (files[i].fd >= 0)
-			close(files[i].fd);
+		free(files[i].data);
 	close(fd);
 	return ret;
 }
