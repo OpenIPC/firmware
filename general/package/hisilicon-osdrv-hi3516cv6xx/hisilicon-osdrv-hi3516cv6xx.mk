@@ -105,6 +105,14 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# 10 KB compressed.
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/cv2003.ini
 
+	# GC4653, VS4388 and MIS20S1: the same vendor's own tuning for them, from
+	# the stock firmware of its CV610 cameras (OpenIPC/majestic#356, #357),
+	# trimmed the same way. About 10 KB compressed each.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/gc4653.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/vs4388.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/mis20s1.ini
+
 	# CV2003, GC4653 and VS4388, on both variants with their drivers: the
 	# sensors of one vendor's CV610/CV608 cameras, which are 8 MB lite-class
 	# boards (OpenIPC/majestic#355, #356, #357). Every one of them wires the
