@@ -7,11 +7,10 @@
 # them and the nodes have to be made here. The major comes from /proc/devices;
 # the minors are fixed.
 #
-# The microcode (orccode.bin, orcme.bin, default_binary.bin) and the load_ucode
-# tool are Ambarella's and are not part of this package, and the stock tool is
-# a glibc armhf binary that will not run on this musl image. Without them the
-# drivers load and the DSP does not start, so no video. Drop working ones in
-# place and this script uses them.
+# The microcode (orccode.bin, orcme.bin, default_binary.bin) is Ambarella's and
+# is not part of this package; load_ucode, which puts it in place, is built from
+# the package's src/. Without the microcode the drivers load and the DSP does
+# not start, so no video. Drop it in /lib/firmware and this script loads it.
 
 vendor=$(ipcinfo -v)
 ucode_dir=/lib/firmware
