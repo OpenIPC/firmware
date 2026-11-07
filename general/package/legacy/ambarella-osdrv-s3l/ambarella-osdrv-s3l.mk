@@ -6,9 +6,11 @@
 
 AMBARELLA_OSDRV_S3L_SITE_METHOD = local
 AMBARELLA_OSDRV_S3L_SITE = $(AMBARELLA_OSDRV_S3L_PKGDIR)/src
-AMBARELLA_OSDRV_S3L_LICENSE = MIT
+AMBARELLA_OSDRV_S3L_LICENSE = MIT (load_ucode), PROPRIETARY (modules, microcode)
 
-# load_ucode puts the DSP microcode in place; the microcode itself is not shipped.
+# load_ucode puts the DSP microcode in place. files/firmware is the generic set
+# from Ambarella's S3L SDK release 2.5.0_20181109 (2018/10/28, 284712.282649),
+# not from a camera's stock firmware, which the tree does not accept (#2767).
 define AMBARELLA_OSDRV_S3L_BUILD_CMDS
 	$(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(@D) load_ucode
 endef
@@ -19,6 +21,9 @@ define AMBARELLA_OSDRV_S3L_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.104/ambarella
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.104/ambarella $(AMBARELLA_OSDRV_S3L_PKGDIR)/files/kmod/*.ko
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/firmware
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/firmware $(AMBARELLA_OSDRV_S3L_PKGDIR)/files/firmware/*.bin
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(AMBARELLA_OSDRV_S3L_PKGDIR)/files/script/load*
