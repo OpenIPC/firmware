@@ -92,7 +92,7 @@ ALL_BOARDS = [
     # served via gk7206v100's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "gk7206v100_lite",
     # Ambarella
-    "s3l_lite",
+    "s3l_ultimate",
     # Allwinner
     "v851s_lite",
     # Anyka [AK3918EV300]
@@ -261,7 +261,7 @@ SMOKE_BOARDS = [
     "v851s_lite",             # Allwinner
     "ak3918ev330_lite",       # Anyka, the one 4.4 kernel's EV330 image
     "xm530_lite",             # Xiongmai
-    "s3l_lite",               # Ambarella, and squashfs NOR with UBI NAND
+    "s3l_ultimate",           # Ambarella, and squashfs NOR with UBI NAND
 ]
 
 # Board directories with no board in ALL_BOARDS. Their defconfigs exist but are
