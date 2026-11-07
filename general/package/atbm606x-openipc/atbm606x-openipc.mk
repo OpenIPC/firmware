@@ -7,7 +7,7 @@
 # OpenIPC/atbm_60xx's atbm606x/ directory: AltoBeam's Wi-Fi 6 driver as
 # Ingenic's SDK ships it (DRIVER_VER 4327).
 ATBM606X_OPENIPC_SITE = $(call github,openipc,atbm_60xx,$(ATBM606X_OPENIPC_VERSION))
-ATBM606X_OPENIPC_VERSION = 5379d2a495cc572e927e4ba2fb3f25519b17ab1e
+ATBM606X_OPENIPC_VERSION = 81897066d589a3e3e00db07c2bb0f3e58aae192e
 
 ATBM606X_OPENIPC_LICENSE = GPL-2.0
 
