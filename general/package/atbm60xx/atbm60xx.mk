@@ -9,7 +9,7 @@ ATBM60XX_SITE = $(call github,openipc,atbm_60xx,$(ATBM60XX_VERSION))
 # Its exported `NAME ?= $(shell ...)` defaults re-ran each other's $(shell)
 # without end once make 4.4 began expanding exported variables for it, and
 # t31_ultimate's build sat in this module until the job was killed.
-ATBM60XX_VERSION = 13977efab09c2e293fd471e99b66e5fa2791d783
+ATBM60XX_VERSION = 70d6dec035e6cbe701ec552b0e17d36b0d879c69
 
 define ATBM60XX_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/share/atbm60xx_conf
