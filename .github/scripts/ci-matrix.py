@@ -91,6 +91,8 @@ ALL_BOARDS = [
     # gk7206v10/v10b/v11/v11a/v11at are firmware-identical to gk7206v12a ---
     # served via gk7206v100's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "gk7206v100_lite",
+    # Ambarella
+    "s3l_ultimate",
     # Allwinner
     "v851s_lite",
     # Anyka [AK3918EV300]
@@ -259,6 +261,7 @@ SMOKE_BOARDS = [
     "v851s_lite",             # Allwinner
     "ak3918ev330_lite",       # Anyka, the one 4.4 kernel's EV330 image
     "xm530_lite",             # Xiongmai
+    "s3l_ultimate",           # Ambarella, and squashfs NOR with UBI NAND
 ]
 
 # Board directories with no board in ALL_BOARDS. Their defconfigs exist but are
@@ -267,7 +270,6 @@ SMOKE_BOARDS = [
 # matrix fails --self-test instead of quietly skipping CI.
 UNBUILT_FAMILIES = {
     ("br-ext-chip-allwinner", "v83x"),
-    ("br-ext-chip-ambarella", "s3l"),
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
@@ -981,7 +983,7 @@ def self_test():
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
          24, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 101, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 102, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -1074,7 +1076,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         101, "markdown inside a package is that package"),
+         102, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],
