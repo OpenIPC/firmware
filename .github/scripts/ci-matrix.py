@@ -91,6 +91,8 @@ ALL_BOARDS = [
     # gk7206v10/v10b/v11/v11a/v11at are firmware-identical to gk7206v12a ---
     # served via gk7206v100's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "gk7206v100_lite",
+    # Ambarella
+    "s3l_lite",
     # Allwinner
     "v851s_lite",
     # Anyka [AK3918EV300]
@@ -259,6 +261,7 @@ SMOKE_BOARDS = [
     "v851s_lite",             # Allwinner
     "ak3918ev330_lite",       # Anyka, the one 4.4 kernel's EV330 image
     "xm530_lite",             # Xiongmai
+    "s3l_lite",               # Ambarella, and squashfs NOR with UBI NAND
 ]
 
 # Board directories with no board in ALL_BOARDS. Their defconfigs exist but are
@@ -267,7 +270,6 @@ SMOKE_BOARDS = [
 # matrix fails --self-test instead of quietly skipping CI.
 UNBUILT_FAMILIES = {
     ("br-ext-chip-allwinner", "v83x"),
-    ("br-ext-chip-ambarella", "s3l"),
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
