@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# Axera AX620U module load, dependency order from the vendor modules'
+# own `depends=` (read with modinfo off a real firmware dump -- see
+# this package's README). AX620U's module set differs from AX620E's:
+# it has ax_avs/ax_ddr_retention/ax_dma_hal/ax_hwinfo/ax_ives/
+# ax_logctl/ax_mipi (not ax_mipi_rx)/ax_osal/ax_pcal6416a/ax_rtc/
+# ax_sdio_host and lacks ax_base/ax_tdp/ax_vpp.
+
+KO_DIR=/lib/modules/$(uname -r)/axera
+
+insert_ko() {
+	[ -d "$KO_DIR" ] || {
+		logger -s -p daemon.err -t axera "no $KO_DIR -- ax_proton/ax_npu not installed, see axera-osdrv-ax620u's README"
+		return 1
+	}
+
+	insmod "$KO_DIR/ax_osal.ko"
+	insmod "$KO_DIR/ax_sys.ko"
+	insmod "$KO_DIR/ax_pool.ko"
+	insmod "$KO_DIR/ax_cmm.ko"
+	insmod "$KO_DIR/ax_dma_hal.ko"
+	insmod "$KO_DIR/ax_hwinfo.ko"
+	insmod "$KO_DIR/ax_rtc.ko"
+	insmod "$KO_DIR/ax_ddr_retention.ko"
+	insmod "$KO_DIR/ax_pcal6416a.ko"
+	insmod "$KO_DIR/ax_sdio_host.ko"
+	insmod "$KO_DIR/ax_logctl.ko"
+
+	insmod "$KO_DIR/ax_mipi.ko"
+	insmod "$KO_DIR/ax_gdc.ko"
+	insmod "$KO_DIR/ax_ivps.ko"
+	insmod "$KO_DIR/ax_ives.ko"
+	insmod "$KO_DIR/ax_jenc.ko"
+	insmod "$KO_DIR/ax_venc.ko"
+	insmod "$KO_DIR/ax_vdec.ko"
+	insmod "$KO_DIR/ax_vo.ko"
+	insmod "$KO_DIR/ax_avs.ko"
+	insmod "$KO_DIR/ax_audio.ko"
+
+	insmod "$KO_DIR/ax_npu.ko"
+	insmod "$KO_DIR/ax_proton.ko"
+}
+
+insert_ko
