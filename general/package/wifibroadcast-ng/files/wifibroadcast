@@ -224,7 +224,7 @@ start() {
 	stop
 	start_broadcast
 	start_tunnel
-	start_telemetry
+	[ "$telemetry_enabled" = "false" ] || start_telemetry
 }
 
 stop() {
