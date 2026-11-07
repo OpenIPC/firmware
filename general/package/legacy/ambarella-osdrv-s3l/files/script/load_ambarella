@@ -135,7 +135,15 @@ load_microcode() {
 		return 1
 	fi
 
-	load_ucode "${ucode_dir}" >/dev/null || log_vendor "load_ucode failed"
+	# The version is the first thing to compare when the DSP misbehaves: cameras
+	# in the field run many different builds of this microcode (#2767).
+	if output=$(load_ucode "${ucode_dir}"); then
+		# load_ucode succeeds without this line when only the version ioctl fails.
+		version=$(echo "${output}" | grep '^ucode version')
+		log_vendor "${version:-Microcode loaded, version unknown}"
+	else
+		log_vendor "load_ucode failed"
+	fi
 }
 
 insert_ko() {
