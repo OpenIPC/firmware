@@ -3,9 +3,10 @@
 # AK3918EV200: the ISP, encoder and sensor drivers are built into the
 # kernel, so there is nothing to load. The kernel gets its memory split as
 # on the other OpenIPC SoCs: Linux has osmem (bootargs mem=${osmem}) and the
-# video drivers the rest of totalmem. An environment that gives Linux all
-# of totalmem leaves no video memory; it is brought down to the split the
-# vendor firmware uses, once, and the camera rebooted.
+# video drivers the rest of totalmem. An environment that leaves video less
+# than the vendor firmware's 24 MiB -- all of totalmem to Linux, as before
+# this split existed, or any osmem too close to it -- cannot capture; it
+# is brought down to the vendor split, once, and the camera rebooted.
 
 vendor=$(ipcinfo -v)
 video_mem=24
@@ -17,8 +18,8 @@ log_vendor() {
 check_mem() {
 	total=$(fw_printenv -n totalmem 2>/dev/null | tr -d 'M')
 	os=$(fw_printenv -n osmem 2>/dev/null | tr -d 'M')
-	[ -n "$total" ] || return
-	[ -z "$os" ] || [ "$os" -ge "$total" ] || return
+	[ -n "$total" ] && [ "$total" -gt "$video_mem" ] || return
+	[ -z "$os" ] || [ $((total - os)) -lt "$video_mem" ] || return
 
 	fw_setenv osmem "$((total - video_mem))M" || return
 	log_vendor "osmem $((total - video_mem))M of ${total}M, video ${video_mem}M; rebooting"
