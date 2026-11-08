@@ -4721,6 +4721,26 @@ else
     bad "reboot_system must release the watchdog before it reboots (rel=$relw reboot=$rbtw)"
 fi
 
+# A boot that never finished: init reads SIGQUIT only after rcS exits, so only
+# init's own rcS is ended, and a process merely named like it is left alone.
+RB="$SB/rbproc"; rm -rf "$RB"
+mkdir -p "$RB/700" "$RB/701" "$RB/702"
+printf '/bin/sh\0/etc/init.d/rcS\0' > "$RB/700/cmdline"; printf 'PPid:\t1\n' > "$RB/700/status"
+printf '/bin/sh\0/etc/init.d/rcS\0' > "$RB/701/cmdline"; printf 'PPid:\t700\n' > "$RB/701/status"
+printf '/bin/sh\0/root/led.sh\0' > "$RB/702/cmdline"; printf 'PPid:\t1\n' > "$RB/702/status"
+rb_out=$(WDOG_PROC="$RB" dash -c '
+    busybox() { shift; echo "KILLED $*"; }
+    echo_c() { :; }
+    '"$(sed -n '/^release_boot_scripts()/,/^}/p' "$SRC")"'
+    release_boot_scripts' 3>/dev/null)
+[ "$rb_out" = "KILLED -KILL 700" ] || [ "$rb_out" = "KILLED 700" ] \
+    && ok "a stuck boot: only init's own rcS is ended before the hand-off" \
+    || bad "release_boot_scripts ended the wrong processes: [$rb_out]"
+rm -rf "$RB"
+grep -q '^	release_boot_scripts$' "$SRC" \
+    && ok "hand_off_pid1 releases the boot scripts before signalling init" \
+    || bad "hand_off_pid1 must call release_boot_scripts"
+
 grep -q '^WDOG=${WDOG:-/dev/watchdog}' "$SRC" && grep -q '^WDOG_PROC=${WDOG_PROC:-/proc}' "$SRC" \
     && ok "both watchdog paths are overridable, so this suite never scans the real /proc" \
     || bad "WDOG and WDOG_PROC must be overridable"

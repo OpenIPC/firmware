@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.83
+scr_version=1.0.84
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -2672,6 +2672,27 @@ stage_handoff() {
 	[ -x "$RAM_ROOT/sbin/init" ]
 }
 
+# Let init get past a boot that never finished.
+#
+# busybox init looks at its signals only between inittab's stages, and the
+# ::sysinit: stage lasts until rcS exits. A foreground loop in /etc/rc.local
+# (S99 runs it from rcS) therefore holds SIGQUIT unread for as long as the
+# camera is up: the hand-off waits out handoff_wait, reboots with nothing
+# written, and every later attempt does the same. init is waiting on rcS's pid
+# alone, so ending rcS lets it reach the signal; what rcS left running is killed
+# by the hand-off along with everything else.
+release_boot_scripts() {
+	local p cmd
+	for p in "$WDOG_PROC"/[0-9]*; do
+		cmd=$(tr '\0' ' ' < "$p/cmdline" 2>&3) || continue
+		case "$cmd" in *'/etc/init.d/rcS'*) ;; *) continue ;; esac
+		[ "1" = "$(awk '/^PPid:/ { print $2; exit }' "$p/status" 2>&3)" ] || continue
+		echo_c 33 "The boot scripts have not finished (often a command in /etc/rc.local running in the foreground), and PID 1 cannot take over until they do: ending them."
+		busybox kill -KILL "${p##*/}" 2>&3
+	done
+	return 0
+}
+
 # Hand PID 1 to the ramfs, and never come back.
 #
 # pivot_root has already moved PID 1's root and cwd here along with ours. What
@@ -2700,6 +2721,7 @@ hand_off_pid1() {
 	fi
 	echo_c 33 "Progress also goes to the serial console. The camera reboots by itself when it is done."
 	sync
+	release_boot_scripts
 	busybox kill -QUIT 1
 	sleep "${handoff_wait:-30}"
 	echo_c 31 "PID 1 did not hand over; rebooting (nothing was flashed)"
