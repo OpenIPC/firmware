@@ -1,0 +1,11 @@
+config BR2_PACKAGE_ANYKA_OSDRV_AK3918EV200
+	bool "anyka-osdrv-ak3918ev200"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Anyka AK3918EV200 support files: the sensors' ISP tuning in
+	  /etc/sensor, which the kernel's ISP driver loads by sensor name,
+	  and the load_anyka script that keeps the bootloader's video
+	  memory split (osmem, rmem) in the form the kernel expects.
+	  The drivers themselves are built into the kernel.
+
+	  https://openipc.org
