@@ -9,8 +9,9 @@ ANYKA_OSDRV_AK3918EV200_SITE =
 ANYKA_OSDRV_AK3918EV200_LICENSE = PROPRIETARY
 
 # files/sensor/<sensor>.conf is the ISP tuning of one sensor, named as
-# ipctool names the sensor. The kernel's ISP driver
-# (drivers/misc/ak_isp_tuning.c) reads /etc/sensor/<name>.conf for the
+# ipctool names the sensor (`ipcinfo -s`), not always as the vendor did.
+# The kernel's ISP driver (drivers/misc/ak_isp_tuning.c) reads
+# /etc/sensor/<name>.conf for the
 # sensor it detected when capture first starts, so every file here is
 # reachable and only the detected sensor's is read.
 #
@@ -21,16 +22,16 @@ ANYKA_OSDRV_AK3918EV200_LICENSE = PROPRIETARY
 # style size) and gives each style style 0's sensor register list, the
 # only one the kernel writes; no tuning value is changed.
 #
-#   gc1024.conf  isp_gc1024.conf      v3.000      AK3918EV200 camera
+#   gc1004.conf  isp_gc1024.conf      v3.000      AK3918EV200 camera
 #   gc1034.conf  isp_gc1034_0.conf    v3.001      V380E2 camera
-#   h62.conf     isp_h62.conf         v3.004      AnyCloud39EV300 SDK
+#   jxh62.conf   isp_h62.conf         v3.004      AnyCloud39EV300 SDK
 #                (UVC_check_sensor; a webcam tuning, the only H62 one)
 #   sc1135.conf  isp_sc1135_0.conf    v3.015      V380E2 camera
 #   sc1145.conf  isp_sc1145.conf      v3.006      AK3918EV200 camera
 #   sc1235.conf  isp_sc1235.conf      v3.012      AK3918EV200 camera
-#   sc1245.conf  isp_sc1245.conf      v3.011      AK3918EV200 camera
 #   sc1345.conf  isp_sc1345_dvp.conf  v3.004      Gwell camera
-#   sc2232.conf  isp_sc2232.conf      v3.000      V380E2 camera
+#   sc2145h.conf isp_sc1245.conf      v3.011      AK3918EV200 camera
+#   sc2235p.conf isp_sc2232.conf      v3.000      V380E2 camera
 #
 # Where a camera carried several, the newest generic one was taken. The
 # EV300 and EV330 tunings ("4.x", "5.x") are laid out for other ISP
