@@ -287,7 +287,7 @@ start() {
 	if [ -n "$dev" ]; then
 		set_wireless
 	else
-		ifup eth0
+		ip link set eth0 up 2>/dev/null && ip link set eth0 down && ifup eth0
 	fi
 }
 
