@@ -4,6 +4,15 @@ BR_LINK = https://github.com/buildroot/buildroot/archive
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
 BR_CONF = $(TARGET)/openipc_defconfig
 TARGET ?= $(PWD)/output
+# TARGET is this Makefile's name for the output directory, and it stops here. A
+# variable given on the make command line is exported to every recipe and handed
+# to sub-makes through MAKEFLAGS, so `make TARGET=...` used to reach Buildroot and
+# every package's configure. host-libffi's AX_ENABLE_BUILDDIR takes $TARGET as a
+# build subdirectory, then re-runs ../../configure from it and fails (#2794).
+# Buildroot is told where to build by O=$(TARGET); the one sub-make of this file
+# that needs TARGET, repack-final's, passes it explicitly.
+MAKEOVERRIDES := $(filter-out TARGET=%,$(MAKEOVERRIDES))
+unexport TARGET
 export CMAKE_POLICY_VERSION_MINIMUM := 3.5
 
 # GCC 15 defaults to -std=gnu23, where an empty parameter list means "takes no
