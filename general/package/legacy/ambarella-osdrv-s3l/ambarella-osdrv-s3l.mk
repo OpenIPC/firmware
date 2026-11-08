@@ -6,7 +6,7 @@
 
 AMBARELLA_OSDRV_S3L_SITE_METHOD = local
 AMBARELLA_OSDRV_S3L_SITE = $(AMBARELLA_OSDRV_S3L_PKGDIR)/src
-AMBARELLA_OSDRV_S3L_LICENSE = MIT (load_ucode), PROPRIETARY (modules, microcode)
+AMBARELLA_OSDRV_S3L_LICENSE = MIT (load_ucode, ISP generator), PROPRIETARY (modules, microcode)
 
 # load_ucode puts the DSP microcode in place. files/firmware is the generic set
 # from Ambarella's S3L SDK release 2.5.0_20181109 (2018/10/28, 284712.282649),
@@ -21,8 +21,19 @@ AMBARELLA_OSDRV_S3L_LICENSE = MIT (load_ucode), PROPRIETARY (modules, microcode)
 AMBARELLA_OSDRV_S3L_DEPENDENCIES = linux
 AMBARELLA_OSDRV_S3L_IAV_OFFSETS = INODE_I_CDEV:272 FILE_PRIVATE_DATA:112
 
+# The ISP configuration Divinus loads into the DSP (/etc/sensors/<sensor>.bin) is generated
+# here from src/isp's presets, one per sensor; nothing comes from a camera's firmware. Only
+# Divinus reads it (Majestic does not), so it is built and installed only with Divinus.
+ifeq ($(BR2_PACKAGE_DIVINUS),y)
+AMBARELLA_OSDRV_S3L_ISP_SENSORS = ov4689
+AMBARELLA_OSDRV_S3L_DEPENDENCIES += host-python3
+endif
+
 define AMBARELLA_OSDRV_S3L_BUILD_CMDS
 	$(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(@D) load_ucode
+	for s in $(AMBARELLA_OSDRV_S3L_ISP_SENSORS); do \
+		$(HOST_DIR)/bin/python3 $(@D)/isp/s3l_isp_gen.py $(@D)/isp/$$s.bin --preset $(@D)/isp/$$s.yaml || exit 1; \
+	done
 	$(LINUX_MAKE_ENV) $(MAKE) -C $(LINUX_DIR) $(LINUX_MAKE_FLAGS) \
 		M=$(@D)/abi abi_probe.s
 	for want in $(AMBARELLA_OSDRV_S3L_IAV_OFFSETS); do \
@@ -37,8 +48,10 @@ define AMBARELLA_OSDRV_S3L_BUILD_CMDS
 endef
 
 define AMBARELLA_OSDRV_S3L_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
-	# $(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(AMBARELLA_OSDRV_S3L_PKGDIR)/files/sensor/config/*.cfg
+	$(if $(AMBARELLA_OSDRV_S3L_ISP_SENSORS),$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors)
+	for s in $(AMBARELLA_OSDRV_S3L_ISP_SENSORS); do \
+		$(INSTALL) -m 644 $(@D)/isp/$$s.bin $(TARGET_DIR)/etc/sensors/$$s.bin || exit 1; \
+	done
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.104/ambarella
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.104/ambarella $(AMBARELLA_OSDRV_S3L_PKGDIR)/files/kmod/*.ko
