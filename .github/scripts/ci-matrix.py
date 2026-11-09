@@ -104,7 +104,8 @@ ALL_BOARDS = [
     "fh8833v100_lite", "fh8852v100_lite", "fh8856v100_lite",
     "fh8852v200_lite", "fh8852v210_lite", "fh8856v200_lite", "fh8856v210_lite",
     "fh8858v200_lite", "fh8858v210_lite",
-    # FH8626V100 and FH865x share the fullhan-fh8852v200 kernel and toolchain
+    # FH8626V100 builds the fullhan-fh8626 4.19 kernel with the FH8852V200
+    # toolchain; FH865x share the fullhan-fh8852v200 kernel and toolchain
     "fh8626v100_lite", "fh8652_lite", "fh8656_lite", "fh8658_lite",
     # Grainmedia
     "gm8135_lite", "gm8136_lite",
@@ -338,7 +339,8 @@ NOT_BUILT = {
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x",
     "anyka-osdrv-ak3918av130", "atbm-wifi",
     "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
-    "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
+    "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc",
+    "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
     "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
     "matter",
