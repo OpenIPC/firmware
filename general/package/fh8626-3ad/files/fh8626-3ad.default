@@ -1,0 +1,10 @@
+# Build-time defaults for the read-only root filesystem.
+# Set a loop to off and restart the service before controlling its actuators
+# manually. For fully manual operation, stop S80fh8626-3ad instead.
+# AE owns sensor exposure and analogue gain; AWB owns ISP red/blue balance.
+AE_MODE=auto
+AWB_MODE=auto
+# Slow shutter: in low light AE may lengthen the frame down to this rate
+# (frames/s) before raising the analogue gain above 4x; "off" keeps the
+# nominal frame rate.
+SLOW_SHUTTER_MIN_FPS=12.5
