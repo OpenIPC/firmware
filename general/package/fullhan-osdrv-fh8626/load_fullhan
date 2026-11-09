@@ -1,0 +1,32 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 Difan Zhang
+#
+# FH8626V100: the media, audio and remaining SoC drivers are kernel modules
+# bound from the device tree, which also reserves their memory, so Linux is
+# given all of the DDR. An environment saved under the 4.9 SDK kernel holds
+# osmem 29M, which leaves those reservations outside Linux; it is raised,
+# once, and the camera rebooted.
+
+# The DDR is inside the FH8626V100 package, so every board has the same 64M
+total_mem=64M
+
+check_mem() {
+	[ "$(fw_printenv -n osmem 2>/dev/null)" != "$total_mem" ] || return
+	fw_setenv osmem "$total_mem" || return
+	logger -s -p daemon.info -t fullhan "osmem $total_mem; rebooting"
+	reboot
+}
+
+case "$1" in
+	-i)
+		check_mem
+		# mdev does not load modules for devices that exist at boot
+		find /sys/devices -name modalias -exec cat {} + | sort -u |
+			xargs modprobe -qa
+		;;
+	*)
+		echo "Usage: $0 -i"
+		exit 1
+		;;
+esac
