@@ -2083,10 +2083,13 @@ pick_image_soc() {
 watchdog_owner() {
 	local p f
 	[ -c "$WDOG" ] || return 1
+	# -ef compares the device nodes, and the watchdog core gives the same dog a
+	# second one, ${WDOG}0, which is what divinus opens.
 	for p in "$WDOG_PROC"/[0-9]*; do
 		for f in "$p"/fd/*; do
 			[ -e "$f" ] || continue
-			[ "$f" -ef "$WDOG" ] && { echo "${p##*/}"; return 0; }
+			{ [ "$f" -ef "$WDOG" ] || [ "$f" -ef "${WDOG}0" ]; } &&
+				{ echo "${p##*/}"; return 0; }
 		done
 	done
 	return 1
