@@ -60,6 +60,30 @@ define HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES
 endef
 endif
 
+# AIBNR models for the Hi3516CV610 NPU, read from /usr/share/aiisp by
+# majestic's isp.aibnr setting. The vendor's AIISP reference has one model file
+# per frame size; the high_iso one is the second model its sample switches to
+# above ISO bucket 1.
+#
+# Source: Hi3516CV610_SDK_V1.0.2.0, out/model/aiisp. 2560x1440 is the SDK's
+# prebuilt pair, unchanged. The SDK carries no 1080p pair, so 1920x1080 is the
+# SDK's own model_convert.py run unmodified (`-s 1920x1080`) with the CANN 6.10
+# ATC from SVP_NNN_PC_V5.0.2.3 of the same release.
+#
+# Sizes: the six profiles above that run at 1920x1080 (CV2003, IMX662, SP2308)
+# or 2560x1440 (GC4653, SC4336P, VS4388). IMX335 at 2592x1944 is left out:
+# measured on a hi3516cv613, the NPU takes 33 ms per 1080p frame, so 5 MP
+# would run near 10 fps. About 460 KB of squashfs. Ultimate only, the flavour
+# whose majestic has the setting.
+ifeq ($(OPENIPC_VARIANT),ultimate)
+define HISILICON_OSDRV_HI3516CV6XX_AIISP_MODELS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/share/aiisp
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/share/aiisp $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/aiisp/aibnr_model_*.bin
+endef
+else
+HISILICON_OSDRV_HI3516CV6XX_AIISP_MODELS =
+endif
+
 define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
@@ -81,6 +105,8 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# author runs it on a CV610. ipcinfo does not detect the IMX662, so a
 	# camera needs `fw_setenv sensor imx662`; majestic then finds it by name.
 	$(HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES)
+
+	$(HISILICON_OSDRV_HI3516CV6XX_AIISP_MODELS)
 
 	# SP2308, on both variants with its driver: ipcinfo names chip ID
 	# 0x5302 sp2308, which is the name majestic looks this profile up by.
