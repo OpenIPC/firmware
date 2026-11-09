@@ -30,6 +30,7 @@ Usage:
 import argparse
 import ast
 import collections
+import datetime
 import glob
 import json
 import os
@@ -264,12 +265,29 @@ SMOKE_BOARDS = [
     "s3l_ultimate",           # Ambarella, and squashfs NOR with UBI NAND
 ]
 
+# Boards the nightly builds once a week, on WEEKLY_DAY, rather than every night.
+# They are part of the tree like any other built board, so --self-test holds
+# them to the same contract, but they cost more than they are touched: the v83x
+# pair compile their own gcc and musl before the firmware, and change rarely.
+#
+# A pull request builds them only for a change nothing else covers: their own
+# defconfigs, their board directory, or a package no nightly board builds. A
+# change that widens to the full matrix, or reaches them through a package the
+# nightly boards share, leaves them to the next weekly run. A hand dispatch and
+# the ci:full label build them as well.
+#
+# The nightly uploads with --clobber into the rolling releases, so on the other
+# six days their last images stay where flashers and sysupgrade find them. A
+# nightly that skips because HEAD has not moved skips them too; they wait for the
+# next WEEKLY_DAY with a new commit.
+WEEKLY_BOARDS = ["v83x_lite", "v83x_ultimate"]
+WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
+
 # Board directories with no board in ALL_BOARDS. Their defconfigs exist but are
 # not built, so a change there narrows to nothing --- which is correct, and is
 # listed rather than inferred so that a family silently falling out of the
 # matrix fails --self-test instead of quietly skipping CI.
 UNBUILT_FAMILIES = {
-    ("br-ext-chip-allwinner", "v83x"),
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
@@ -335,7 +353,7 @@ UNBUILT_FAMILIES = {
 # Lenovo Snowman) do the same job, each from a copy of its own. A mainline
 # board with a button in a gpio.conf would take it off this list.
 NOT_BUILT = {
-    "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x",
+    "adaptive-link", "aic8800-openipc",
     "anyka-osdrv-ak3918av130",
     "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
@@ -560,13 +578,21 @@ class Tree:
         return packages
 
     def _resolve(self):
-        self.built = [b for b in ALL_BOARDS if b in self.boards]
+        self.nightly = [b for b in ALL_BOARDS if b in self.boards]
+        self.weekly = [b for b in WEEKLY_BOARDS if b in self.boards]
+        self.built = self.nightly + self.weekly
         self.smoke = [b for b in self.built if b in set(SMOKE_BOARDS)]
         for board in self.built:
             self.boards[board]["packages"] = self._closure(self.boards[board]["symbols"])
 
     def boards_for_package(self, package):
         return [b for b in self.built if package in self.boards[b]["packages"]]
+
+    def pull_request_boards_for_package(self, package):
+        """boards_for_package, less the weekly boards when a nightly board
+        builds the package too: then the change is not theirs alone."""
+        hits = self.boards_for_package(package)
+        return [b for b in hits if b in self.nightly] or hits
 
     def boards_for_family(self, vendor_dir, family):
         return [b for b in self.built
@@ -579,7 +605,7 @@ class Tree:
 # --------------------------------------------------------------------------
 
 def classify(tree, changed, labels=(), event="pull_request", draft=False,
-             base_boards=None, index_packages=None):
+             base_boards=None, index_packages=None, nightly=False, weekday=None):
     """Map a list of changed paths to {rows, needs_build, reason}.
 
     base_boards is ALL_BOARDS as the PR's base revision had it, or None when it
@@ -588,13 +614,25 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False,
     index_packages is the set of packages whose source lines are the whole of
     the PR's change to PACKAGE_INDEX, or None when the change is anything more
     (or its diff could not be read); only an edit to PACKAGE_INDEX consults it.
-    """
-    full = list(tree.built)
 
+    nightly is the dispatch's `nightly` input and weekday the UTC weekday of the
+    run; together they decide whether WEEKLY_BOARDS are in a nightly.
+    """
     if event != "pull_request":
-        return _decision(full, True, reason=f"{event} builds everything")
+        if not nightly:
+            return _decision(list(tree.built), True, reason=f"{event} builds everything")
+        if weekday == WEEKLY_DAY:
+            return _decision(list(tree.built), True,
+                             reason="nightly builds everything, weekly boards included")
+        return _decision(list(tree.nightly), True,
+                         reason="nightly builds everything but the weekly boards")
     if FULL_LABEL in labels:
-        return _decision(full, True, reason=f"{FULL_LABEL} label set")
+        return _decision(list(tree.built), True, reason=f"{FULL_LABEL} label set")
+
+    # On a pull request the full matrix is the nightly one: a change that
+    # widens leaves the weekly boards to their weekly run.
+    full = list(tree.nightly)
+
     if draft:
         return _decision([], False, reason="draft pull request")
     if not changed:
@@ -661,7 +699,7 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False,
                 return _decision(full, True,
                                  reason=f"{path} sources a package boards enable by default")
             for package in index_packages:
-                boards.update(tree.boards_for_package(package))
+                boards.update(tree.pull_request_boards_for_package(package))
             boards.update(tree.smoke)
             smoked = smoked or f"{path} source lines"
             continue
@@ -671,7 +709,7 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False,
             if package_dir.group(1) in tree.implicit:
                 return _decision(full, True,
                                  reason=f"{path} is a package boards enable by default")
-            hits = tree.boards_for_package(package_dir.group(1))
+            hits = tree.pull_request_boards_for_package(package_dir.group(1))
             if hits:
                 boards.update(hits)
                 continue
@@ -793,19 +831,25 @@ def changed_files_from_api():
 
 
 def all_boards_of(source):
-    """ALL_BOARDS as written in a copy of this file, or None.
+    """ALL_BOARDS and WEEKLY_BOARDS as written in a copy of this file, or None.
 
     Read with ast, never executed: on a pull request the copy comes from the
-    base branch, but the parser is the only part of it that has to run.
+    base branch, but the parser is the only part of it that has to run. A copy
+    from before WEEKLY_BOARDS existed gives ALL_BOARDS alone.
     """
+    found = {}
     try:
         for node in ast.parse(source).body:
-            if isinstance(node, ast.Assign) and any(
-                    isinstance(t, ast.Name) and t.id == "ALL_BOARDS" for t in node.targets):
-                return set(ast.literal_eval(node.value))
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and \
+                            target.id in ("ALL_BOARDS", "WEEKLY_BOARDS"):
+                        found[target.id] = set(ast.literal_eval(node.value))
     except (SyntaxError, ValueError):
-        pass
-    return None
+        return None
+    if "ALL_BOARDS" not in found:
+        return None
+    return found["ALL_BOARDS"] | found.get("WEEKLY_BOARDS", set())
 
 
 def base_all_boards():
@@ -954,7 +998,9 @@ def self_test():
         problems.append("SMOKE_BOARDS is not smaller than the full matrix")
     covered = set().union(*(tree.boards[b]["traits"] for b in tree.smoke)) \
         if tree.smoke else set()
-    for trait in sorted(set().union(*(tree.boards[b]["traits"] for b in tree.built))):
+    # The weekly boards are left out: a CI-plumbing change does not build them,
+    # so their traits are proven by the weekly run, not by the smoke set.
+    for trait in sorted(set().union(*(tree.boards[b]["traits"] for b in tree.nightly))):
         if trait not in covered:
             problems.append(
                 f"no board in SMOKE_BOARDS has {trait}; a CI-plumbing change "
@@ -963,7 +1009,7 @@ def self_test():
     # 5. The narrowing must be sound: what is not recognised as one SoC's own
     #    has to come back with the full matrix, and what is has to come back
     #    with exactly the boards that build it.
-    full = len(tree.built)
+    full = len(tree.nightly)
     smoke = len(tree.smoke)
     cases = [
         # Vendor packages narrow to the families that enable them.
@@ -991,6 +1037,16 @@ def self_test():
         (["general/package/hisilicon-osdrv-hi3516cv200/files/script/load_hisilicon",
           "br-ext-chip-hisilicon/configs/hi3516cv200_lite_defconfig"],
          3, "union of two narrowing paths"),
+        # The weekly boards build on a PR only for what is theirs alone.
+        (["br-ext-chip-allwinner/configs/v83x_lite_defconfig"], 1,
+         "a weekly board's defconfig"),
+        (["br-ext-chip-allwinner/board/v83x/v83x.generic.config"], 2,
+         "the weekly family's kernel config"),
+        (["general/package/allwinner-osdrv-v83x/allwinner-osdrv-v83x.mk"], 2,
+         "a package only the weekly boards build"),
+        (["br-ext-chip-allwinner/configs/v83x_lite_defconfig",
+          "general/package/hisilicon-osdrv-hi3520dv200/files/script/load_hisilicon"],
+         2, "a weekly defconfig beside a nightly board's package"),
         # Everything shared, global, or unknown widens.
         (["Makefile"], full, "build system"),
         (["general/openipc.fragment"], full, "fragment appended to every defconfig"),
@@ -1111,9 +1167,9 @@ def self_test():
     index = [PACKAGE_INDEX]
     line = 'source "$BR2_EXTERNAL_GENERAL_PATH/package/{}/Config.in"'
     package = next(p for p in sorted(tree.symbols_of)
-                   if p not in tree.implicit and tree.boards_for_package(p)
-                   and set(tree.boards_for_package(p)) - set(tree.smoke))
-    expected = set(tree.smoke) | set(tree.boards_for_package(package))
+                   if p not in tree.implicit and tree.pull_request_boards_for_package(p)
+                   and set(tree.pull_request_boards_for_package(p)) - set(tree.smoke))
+    expected = set(tree.smoke) | set(tree.pull_request_boards_for_package(package))
     got = set(classify(tree, index, index_packages={package})["rows"])
     if got != expected:
         problems.append(f"index source line for {package}: expected "
@@ -1138,8 +1194,11 @@ def self_test():
             problems.append(f"package_index_change on {what}: expected {want}")
 
     source = open(os.path.abspath(__file__)).read()
-    if all_boards_of(source) != set(ALL_BOARDS):
-        problems.append("all_boards_of() cannot read ALL_BOARDS back out of this file")
+    if all_boards_of(source) != set(ALL_BOARDS) | set(WEEKLY_BOARDS):
+        problems.append("all_boards_of() cannot read ALL_BOARDS and WEEKLY_BOARDS "
+                        "back out of this file")
+    if all_boards_of('ALL_BOARDS = ["a"]') != {"a"}:
+        problems.append("all_boards_of() must read a base from before WEEKLY_BOARDS")
     if all_boards_of("ALL_BOARDS = [") is not None:
         problems.append("all_boards_of() must give None, not raise, on a broken file")
 
@@ -1156,9 +1215,25 @@ def self_test():
     # 7. Non-PR events and the escape hatch always get everything.
     for kwargs, what in [({"event": "schedule"}, "schedule"),
                          ({"event": "workflow_dispatch"}, "dispatch"),
-                         ({"labels": [FULL_LABEL]}, FULL_LABEL)]:
-        if len(classify(tree, ["README.md"], **kwargs)["rows"]) != full:
+                         ({"labels": [FULL_LABEL]}, FULL_LABEL),
+                         ({"event": "workflow_dispatch", "nightly": True,
+                           "weekday": WEEKLY_DAY}, "the nightly on WEEKLY_DAY")]:
+        if set(classify(tree, ["README.md"], **kwargs)["rows"]) != set(tree.built):
             problems.append(f"{what} must build everything")
+    # 7b. Any other day's nightly builds every board but the weekly ones.
+    for day in range(7):
+        if day == WEEKLY_DAY:
+            continue
+        got = set(classify(tree, ["README.md"], event="workflow_dispatch",
+                           nightly=True, weekday=day)["rows"])
+        if got != set(tree.nightly):
+            problems.append(f"the nightly on weekday {day} must build all but the "
+                            f"weekly boards, got {len(got)} boards")
+    for board in WEEKLY_BOARDS:
+        if board not in tree.boards:
+            problems.append(f"{board} is in WEEKLY_BOARDS but has no defconfig")
+        if board in ALL_BOARDS:
+            problems.append(f"{board} is in both ALL_BOARDS and WEEKLY_BOARDS")
     if classify(tree, ["general/package/majestic/majestic.mk"], draft=True)["needs_build"]:
         problems.append("a draft pull request must not build")
 
@@ -1216,6 +1291,7 @@ def main():
     if args.stdin:
         changed = [line.strip() for line in sys.stdin if line.strip()]
         event, labels, draft = "pull_request", [], False
+        nightly, weekday = False, None
         base_boards, index_patch = None, None
         if args.base_file:
             with open(args.base_file) as handle:
@@ -1229,6 +1305,9 @@ def main():
         labels = [label["name"] for label in pull_request.get("labels", [])]
         draft = bool(pull_request.get("draft"))
         changed, base_boards, index_patch = None, None, None
+        # A dispatch's inputs reach the event payload as strings.
+        nightly = str((_event().get("inputs") or {}).get("nightly", "")).lower() == "true"
+        weekday = datetime.datetime.now(datetime.timezone.utc).weekday()
         if event == "pull_request":
             try:
                 changed, index_patch = changed_files_from_api()
@@ -1244,7 +1323,7 @@ def main():
                           file=sys.stderr)
 
     decision = classify(tree, changed or [], labels, event, draft, base_boards,
-                        package_index_change(index_patch))
+                        package_index_change(index_patch), nightly, weekday)
 
     print(f"ci-matrix: {len(decision['rows'])}/{len(tree.built)} boards "
           f"(needs_build={decision['needs_build']}) --- {decision['reason']}",
