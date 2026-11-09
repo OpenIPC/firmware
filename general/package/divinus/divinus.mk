@@ -17,6 +17,13 @@ else ifeq ($(BR2_PACKAGE_SIGMASTAR_OSDRV_MSC313E),y)
 	# default stack; musl's 128 KiB one overflows in the camera pipeline.
 	DIVINUS_DEPENDENCIES += glibc-compat
 	DIVINUS_OPTIONS = "-rdynamic -s -Os -DGLIBC_COMPAT -Wl,-z,stack-size=1048576 -Wl,--no-as-needed -lglibc-compat"
+else ifeq ($(BR2_PACKAGE_FULLHAN_OSDRV_FH8626),y)
+	DIVINUS_DEPENDENCIES += alsa-lib
+	DIVINUS_OPTIONS = "-rdynamic -s -Os -DDIVINUS_V4L2 -lasound"
+define DIVINUS_INSTALL_INIT_SYSV
+	$(INSTALL) -D -m 755 $(DIVINUS_PKGDIR)/files/S95divinus \
+		$(TARGET_DIR)/etc/init.d/S95divinus
+endef
 else
 	DIVINUS_OPTIONS = "-rdynamic -s -Os"
 endif
