@@ -5,7 +5,7 @@
 ################################################################################
 
 MAJESTIC_AF_SITE = $(call github,openipc,majestic-af,$(MAJESTIC_AF_VERSION))
-MAJESTIC_AF_VERSION = ae5b8c1fb72ba0f0d0f92417bd1a520116da80a2
+MAJESTIC_AF_VERSION = f448cfc216f796439e635df46c8f85ce655809c8
 
 MAJESTIC_AF_LICENSE = MIT
 MAJESTIC_AF_LICENSE_FILES = LICENSE
