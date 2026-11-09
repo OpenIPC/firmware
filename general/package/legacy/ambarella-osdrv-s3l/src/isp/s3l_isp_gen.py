@@ -12,6 +12,10 @@ Presets are `key: value` lines, applied in order, then --set on top. Keys (OPTIO
   dbp                    dynamic bad-pixel correction: off | MODE,THRESH (mode 1..4, threshold 0..255)
   sharpness              final sharpening: off | mild | medium | strong
   temporal_nr            motion-compensated temporal noise reduction: off | low | med | high
+  saturation             colour saturation, 0..3.9 (1.0 = as the sensor gives it); the default is 1.0
+  rgb2yuv                colour matrix and range of the YUV output: bt601 (studio range, the default) | bt709-full
+  tone_curve             output tone curve as IN:OUT,IN:OUT,... knots on the 8-bit code of each colour channel
+                         (IN rising, OUT not falling), joined by straight lines; off = identity
 Everything not set by a preset is neutral: identity colour with gamma 0.45, BT.601, no local exposure, contrast
 enhancement or HDR (a linear sensor).
 
@@ -366,8 +370,60 @@ def opt_dbp(cfg, v):
     cfg.tables['dbp_hot'] = bytearray(u16s([t] * 384))
 
 
+def opt_saturation(cfg, v):
+    """The chroma gain curve (LISO +0x120, 128 x u16, 1024 = 1.0), flat."""
+    x = float(v)
+    if not 0 <= x < 4:
+        raise SystemExit(f'saturation {x}: 0..3.9')
+    cfg.tables['chroma_gain_curve'] = bytearray(u16s([round(1024 * x)] * 128))
+
+
+def opt_rgb2yuv(cfg, v):
+    """RGB->YUV matrix, Q10 (LISO +0x130). The default, bt601, is the studio-range BT.601 matrix (black at 16, white at
+    235). The S3L encoder tags its streams full range with BT.709 colours (ffprobe: yuvj420p, pc, bt709), so players
+    show that signal with black lifted to 16 and white dimmed to 235. bt709-full is Y = 0.2126 R + 0.7152 G + 0.0722 B
+    over 0..255, which is what such a stream is displayed with."""
+    if v == 'bt601':
+        rgb2yuv_bt601(cfg)
+    elif v == 'bt709-full':
+        m = ((0.2126, 0.7152, 0.0722), (-0.1146, -0.3854, 0.5), (0.5, -0.4542, -0.0458))
+        struct.pack_into('<9h3h', cfg.liso, 0x130, *[round(c * 1024) for row in m for c in row], 0, 128, 128)
+    else:
+        raise SystemExit(f'rgb2yuv {v!r}: bt601 or bt709-full')
+
+
+def opt_tone_curve(cfg, v):
+    """The tone table (LISO +0x12c): 256 entries, one 10-bit value per colour channel, indexed by the 8-bit input."""
+    if v == 'off':
+        return
+    knots = []
+    for part in v.split(','):
+        a, sep, b = part.partition(':')
+        if not sep:
+            raise SystemExit(f'tone_curve {v!r}: IN:OUT,IN:OUT,...')
+        knots.append((float(a), float(b)))
+    if len(knots) < 2:
+        raise SystemExit(f'tone_curve {v!r}: at least two knots')
+    for (x0, y0), (x1, y1) in zip(knots, knots[1:]):
+        if not x0 < x1 or y1 < y0:
+            raise SystemExit(f'tone_curve {v!r}: IN must rise and OUT must not fall')
+    if not all(0 <= x <= 255 and 0 <= y <= 255 for x, y in knots):
+        raise SystemExit(f'tone_curve {v!r}: values 0..255')
+
+    def curve(x):
+        if x <= knots[0][0]:
+            return knots[0][1]
+        for (x0, y0), (x1, y1) in zip(knots, knots[1:]):
+            if x <= x1:
+                return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+        return knots[-1][1]
+    vals = [min(1023, max(0, round(1023 * curve(i) / 255))) for i in range(256)]
+    cfg.tables['tone_curve'] = bytearray(struct.pack('<256I', *(x | x << 10 | x << 20 for x in vals)))
+
+
 OPTIONS = {'black_level': opt_black_level, 'wb_gain': opt_wb_gain, 'dbp': opt_dbp,
-           'sharpness': opt_sharpness, 'temporal_nr': opt_temporal_nr}
+           'sharpness': opt_sharpness, 'temporal_nr': opt_temporal_nr, 'saturation': opt_saturation,
+           'rgb2yuv': opt_rgb2yuv, 'tone_curve': opt_tone_curve}
 GEOMETRY = {'width': (2688, 16, 4096), 'height': (1520, 8, 4096), 'bayer': (1, 0, 3)}
 
 
