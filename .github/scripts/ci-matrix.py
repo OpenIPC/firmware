@@ -336,7 +336,7 @@ UNBUILT_FAMILIES = {
 # board with a button in a gpio.conf would take it off this list.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc", "allwinner-osdrv-v83x",
-    "anyka-osdrv-ak3918av130", "atbm-wifi",
+    "anyka-osdrv-ak3918av130",
     "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
