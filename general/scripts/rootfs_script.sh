@@ -191,6 +191,9 @@ if [ -x "${TARGET_DIR}${CLAIM_SHELL}" ]; then
 		|| echo "${CLAIM_SHELL}" >> "${TARGET_DIR}/etc/shells"
 fi
 
+# GDB's pretty-printers for libstdc++, copied in beside it from the toolchain.
+rm -f "${TARGET_DIR}"/usr/lib/*-gdb.py
+
 # Mozilla's whole store is 121 roots and ~100KB of squashfs; most of it is
 # national and regional roots a camera's outbound HTTPS never meets. Lite keeps
 # the operators named in ca-bundle-lite.keep, ~60KB less (#2508). A bundle that
