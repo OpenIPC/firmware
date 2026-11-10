@@ -47,6 +47,15 @@ if [ "$1" = "atbm603x-generic-usb" ]; then
 	exit 0
 fi
 
+# Generic ATBM6012B: atbm-wifi's module built for the 6012B. A mask of 0
+# quiets the driver's own log, as on the SDIO arms: left at its default it
+# writes an error to the kernel log for every wireless-extensions ioctl it
+# does not implement, which is one line per poll of the link (#2815).
+if [ "$1" = "atbm6012b-generic-usb" ]; then
+	modprobe atbm6012b_wifi_usb atbm_printk_mask=0
+	exit 0
+fi
+
 # Generic ATBM606x (Wi-Fi 6: ATBM6062, 6162, 6132-C)
 if [ "$1" = "atbm606x-generic-usb" ]; then
 	modprobe atbm606x_wifi_usb
@@ -223,7 +232,7 @@ fi
 # SSC333 Tapo C110 v2.6
 if [ "$1" = "atbm6012b-ssc333-tapo-c110" ]; then
 	set_gpio 16 1
-	modprobe atbm6012b_wifi_usb
+	modprobe atbm6012b_wifi_usb atbm_printk_mask=0
 	exit 0
 fi
 
