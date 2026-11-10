@@ -188,6 +188,7 @@ jobs:
               case "$1" in
                 hi3516cv6xx) boot_kib=256 env_kib=64 read_kib=2048 ;;
                 hi3519dv500) boot_kib=512 env_kib=256 read_kib=6144 ;;
+                ssc325|ssc333|ssc335|ssc335de|ssc337|ssc337de) boot_kib=256 env_kib=64 read_kib=2048 ;;
                 *) echo "::error::create_split: no NOR boot area known for $1"; return 1 ;;
               esac
             }
@@ -281,8 +282,15 @@ jobs:
               echo -e "Created: $release (firmware.bin ${fw_kib} KiB at ${off} KiB, rootfs_data from $(( off + end_kib )) KiB)\n"
             }
 
+            # A SigmaStar lite build whose rootfs outgrew the fixed slot ships
+            # the split package alone; its full image is then the split one.
+            split_failed=
             for soc in $SIGMASTAR $ALLWINNER; do
-              create $soc $soc lite
+              if [ -z "$(firmware_url $soc lite)" ] && [ -n "$(firmware_url $soc lite nor_split)" ]; then
+                create_split u-boot-$soc-nor.bin $soc lite $soc 8192 || split_failed=1
+              else
+                create $soc $soc lite
+              fi
               create $soc $soc ultimate
             done
 
@@ -304,7 +312,6 @@ jobs:
             # reached, nothing would publish for anyone. Collect instead: every
             # target gets its turn, what did assemble ships (Upload runs on
             # failure too), and the step still goes red so the refusal is seen.
-            split_failed=
             for variant in lite ultimate; do
               case $variant in lite) nor=8192 ;; *) nor=16384 ;; esac
               create_split boot-hi3516cv610-10b-nor.bin hi3516cv6xx "$variant" hi3516cv610-ddr2-64m  "$nor" || split_failed=1
