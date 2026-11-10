@@ -208,6 +208,9 @@ ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
 ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
 	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.squashfs,8192,nor)
 else ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
+ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"sigmastar" "xiongmai"),)
+	@$(call CHECK_UBOOT_ROOTMTD)
+endif
 	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,5120,nor)
 else
 	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,8192,nor)
@@ -351,6 +354,19 @@ define CHECK_KERNEL_READ
 	echo "- uImage: [$$((size / 1024))KB/$$((limit / 1024))KB read by the bootloader]"; \
 	if test $$size -gt $$limit; then \
 		echo "-- size exceeded by: $$((size - limit)) bytes; bootloaders reading $$((limit / 1024))KB would cut it short"; exit 1; fi
+endef
+
+# OpenIPC's SigmaStar and XMedia U-Boot size the rootfs partition from the
+# squashfs at 0x250000 on every boot, not from the chip: 8192k once bytes_used
+# + 4K reaches 5120K (cmd_sf.c). On 8 MB that leaves no rootfs_data, so the cap
+# there is 4K under the slot. An image over the slot is CHECK_SIZE's to report.
+define CHECK_UBOOT_ROOTMTD
+	used=$$(od -An -tu8 -j40 -N8 $(TARGET)/images/rootfs.squashfs | tr -d ' '); \
+	test -n "$$used" || exit 1; \
+	limit=$$((5120 * 1024 - 4096)); \
+	if test $$used -ge $$limit && test $$used -le $$((5120 * 1024)); then \
+		echo "- rootfs.squashfs: [$$used/$$limit bytes used, U-Boot's 5120k rootfs limit]"; \
+		echo "-- size exceeded by: $$((used - limit + 1)) bytes; U-Boot would boot it with an 8192k rootfs and no overlay"; exit 1; fi
 endef
 
 define CHECK_SIZE
