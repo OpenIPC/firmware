@@ -10,14 +10,52 @@ set_gpio()
     echo $2 > /sys/class/gpio/GPIO$1/value
 }
 
+# The media pool (vmm.ko's mmz) starts where the kernel's memory, mem= in
+# the bootargs, ends. A fixed 0xA2000000,32M is right only for a 64 MB chip
+# booted with mem=32M: a 128 MB FH8856V200 kept 64 MB idle and could not run
+# a second stream, and an inherited vendor mem=36M put the kernel 4 MB into
+# the pool, where the ISP's buffers then failed to allocate (majestic#354).
+# The pool runs to the end of the DDR the PMU reports, but no further than
+# 64M: 0xA2000000,64M is the largest pool reported streaming on a 128 MB
+# chip, and the vendor's 0xA2400000,90M keeps the top 2 MB for its own ARC
+# loader. The fixed layout stays when either size cannot be read.
+pool_layout()
+{
+	# One mem=, in megabytes, at the start of the DDR (no @, @0, or the
+	# DDR's own address); more than one describes a layout this does not.
+	os_mb=$(awk 'BEGIN { RS = "[ \n]" }
+		/^mem=/ { n++; v = tolower($0) }
+		END {
+			if (n == 1 && v ~ /^mem=[0-9]+m(@(0|0x0+|0xa0000000))?$/) {
+				sub(/^mem=/, "", v); sub(/m.*$/, "", v); print v
+			}
+		}' "${LOAD_FULLHAN_CMDLINE:-/proc/cmdline}")
+	# fh_chipid prints the PMU's DDR size in Mbit (an FH8852V201 reads
+	# 512Mbit); anything but a size these chips are made with is a misread.
+	ddr_mbit=$(sed -n 's/^ddr_size[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)Mbit$/\1/p' \
+		"${LOAD_FULLHAN_CHIP:-/proc/driver/chip}" 2>/dev/null)
+	case "$ddr_mbit" in
+		512|1024|2048) ddr_mb=$((ddr_mbit / 8)) ;;
+		*) ddr_mb= ;;
+	esac
+
+	if [ -z "$os_mb" ] || [ -z "$ddr_mb" ] || [ "$os_mb" -lt 16 ] || [ $((ddr_mb - os_mb)) -lt 8 ]; then
+		logger -s -t load_fullhan "mem=${os_mb:-?}M on ${ddr_mb:-?} MB of DDR: media pool left at 0xA2000000,32M"
+		echo "0xA2000000,32M"
+		return
+	fi
+
+	pool_mb=$((ddr_mb - os_mb))
+	[ "$pool_mb" -gt 64 ] && pool_mb=64
+	[ "$pool_mb" -lt 32 ] && \
+		logger -s -t load_fullhan "mem=${os_mb}M leaves the media pool ${pool_mb}M; the ISP may not start"
+	printf '0x%X,%dM\n' $(((0xA00 + os_mb) << 20)) "$pool_mb"
+}
+
 cd /lib/modules/4.9.129/fullhan
 
 # mmz:name,0,start,size,type
-insmod vmm.ko mmz=anonymous,0,0xA2000000,32M anony=1
-#insmod vmm.ko mmz=anonymous,0,0xA1F00000,33M anony=1
-#insmod vmm.ko mmz=anonymous,0,0xA1B00000,37M anony=1 # 4MP
-#insmod vmm.ko mmz=anonymous,0,0xA4000000,64M anony=1 # 5MP
-#insmod vmm.ko mmz=anonymous,0,0xA2400000,90M anony=1 # 8MP
+insmod vmm.ko mmz=anonymous,0,$(pool_layout) anony=1
 
 #reset sensor
 set_gpio 13 0
