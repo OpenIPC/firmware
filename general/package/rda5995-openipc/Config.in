@@ -2,7 +2,27 @@ config BR2_PACKAGE_RDA5995_OPENIPC
 	bool "rda5995-openipc"
 	depends on BR2_LINUX_KERNEL
 	help
-	  Rdamicro RDA5995 USB wireless driver (rdawfmac, 1e04:8888), with
-	  its firmware compiled in.
+	  Rdamicro RDA5995 USB wireless driver (rdawfmac, 1e04:8888).
 
 	  https://github.com/openipc/rda-wlan
+
+if BR2_PACKAGE_RDA5995_OPENIPC
+
+choice
+	prompt "Driver"
+	default BR2_PACKAGE_RDA5995_OPENIPC_RDAWLAN
+
+config BR2_PACKAGE_RDA5995_OPENIPC_RDAWLAN
+	bool "rdawlan"
+	help
+	  The driver with its firmware compiled in.
+
+config BR2_PACKAGE_RDA5995_OPENIPC_RDAWLAN_RDA5995
+	bool "rdawlan-rda5995"
+	help
+	  The USB driver for Linux 4.19 that loads its firmware from
+	  /lib/firmware, where this package installs it.
+
+endchoice
+
+endif

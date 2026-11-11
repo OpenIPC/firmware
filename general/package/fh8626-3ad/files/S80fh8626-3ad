@@ -1,0 +1,116 @@
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-only
+# Copyright (C) 2026 Difan Zhang
+# Start independent AE/AWB control; capture clients own streaming.
+
+DAEMON="fh8626-3ad"
+PIDFILE="/var/run/$DAEMON.pid"
+BIN="/usr/sbin/$DAEMON"
+AE_MODE=auto
+AWB_MODE=auto
+SLOW_SHUTTER_MIN_FPS=12.5
+[ ! -r /etc/default/fh8626-3ad ] || . /etc/default/fh8626-3ad
+
+read_pid()
+{
+    pid=
+    [ -r "$PIDFILE" ] && read -r pid < "$PIDFILE"
+    case "$pid" in ''|*[!0-9]*) return 1 ;; esac
+    [ "$pid" -gt 1 ] || return 1
+}
+
+is_running()
+{
+    read_pid && kill -0 "$pid" 2>/dev/null &&
+        [ "$(readlink "/proc/$pid/exe" 2>/dev/null)" = "$BIN" ]
+}
+
+case "$1" in
+    start)
+        printf 'Starting %s: ' "$DAEMON"
+        if [ ! -x "$BIN" ]; then
+            echo "FAIL ($BIN not found)"
+            exit 1
+        fi
+        if is_running; then
+            echo "already running (pid $pid)"
+            exit 0
+        fi
+
+        # Wait for the actual ISP and sensor, not just an unrelated video node.
+        for i in 1 2 3 4 5 6 7 8 9 10; do
+            isp_ready=0
+            sensor_ready=0
+            [ "$AE_MODE" = off ] && sensor_ready=1
+            for name_file in /sys/class/video4linux/v4l-subdev*/name; do
+                [ -r "$name_file" ] || continue
+                read -r name < "$name_file"
+                case "$name" in
+                    fh8626-isp*) isp_ready=1 ;;
+                    gc1054\ *) sensor_ready=1 ;;
+                esac
+            done
+            [ "$isp_ready" -eq 1 ] && [ "$sensor_ready" -eq 1 ] && break
+            sleep 1
+        done
+
+        if [ "$isp_ready" -ne 1 ] || [ "$sensor_ready" -ne 1 ]; then
+            echo 'FAIL (ISP or sensor subdevice unavailable after 10 seconds)'
+            exit 1
+        fi
+
+        mkdir -p /var/run
+        # Line timing and illuminant calibration are not established on this
+        # board. Keep the measured statistics loop without guessed timing.
+        # -b returns only after device/control setup and PID publication.
+        "$BIN" -b -P "$PIDFILE" -A "$AE_MODE" -W "$AWB_MODE" -f off -m whitepoint -p normal \
+            -F "$SLOW_SHUTTER_MIN_FPS"
+        result=$?
+        if [ "$result" -eq 0 ]; then
+            echo OK
+        else
+            echo "FAIL (see /var/run/$DAEMON.log)"
+        fi
+        exit "$result"
+        ;;
+    stop)
+        printf 'Stopping %s: ' "$DAEMON"
+        if ! is_running; then
+            rm -f "$PIDFILE"
+            echo "not running"
+            exit 0
+        fi
+        stopped_pid=$pid
+        if ! start-stop-daemon -K -q -p "$PIDFILE" -x "$BIN"; then
+            echo FAIL
+            exit 1
+        fi
+        # Do not remove its PID or start a replacement while writes may run.
+        for i in 1 2 3 4 5; do
+            if ! kill -0 "$stopped_pid" 2>/dev/null ||
+               [ "$(readlink "/proc/$stopped_pid/exe" 2>/dev/null)" != "$BIN" ]; then
+                echo OK
+                exit 0
+            fi
+            sleep 1
+        done
+        echo "FAIL (pid $stopped_pid has not exited)"
+        exit 1
+        ;;
+    restart|reload)
+        "$0" stop && "$0" start
+        ;;
+    status)
+        if is_running; then
+            echo "$DAEMON is running (pid $pid)"
+            exit 0
+        else
+            echo "$DAEMON is not running"
+            exit 1
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
