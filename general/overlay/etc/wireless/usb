@@ -5,6 +5,27 @@ set_gpio() {
 	sleep 1
 }
 
+# Allwinner USB0 is OTG and can boot as a device. The manager settles on its
+# role a few seconds after probe and would undo an earlier switch, so wait.
+role=/sys/bus/platform/devices/usbc0/otg_role
+if [ -e $role ]; then
+	i=0
+	while [ "$(cat $role)" = null ] && [ $i -lt 10 ]; do
+		sleep 1
+		i=$((i + 1))
+	done
+	echo usb_host > $role
+fi
+
+# Allwinner boards power the radio through sunxi-wlan, on the wlan_regon pin
+# of their device tree. Power it once USB0 is a host, and give it time to
+# enumerate before the profile loads its driver.
+power=/sys/class/misc/sunxi-wlan/rf-ctrl/power_state
+if [ -e $power ] && [ "$(cat $power)" = 0 ]; then
+	echo 1 > $power
+	sleep 2
+fi
+
 # Generic MT7601U
 if [ "$1" = "mt7601u-generic" ]; then
 	modprobe mt7601u
