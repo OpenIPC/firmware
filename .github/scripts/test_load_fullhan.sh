@@ -77,16 +77,22 @@ pool "0xA2000000,32M" "64 MB: the layout it always had"
 quiet "... and says nothing"
 
 run "mem=32M $boot" "$(chip FH8856V200 1024)"
-pool "0xA2000000,96M" "128 MB: the pool takes the rest of the DDR"
+pool "0xA2000000,64M" "128 MB: 64M, the largest pool seen streaming there"
 quiet "... and says nothing"
 
 run "$boot mem=32M" "$(chip FH8856V200 1024)"
-pool "0xA2000000,96M" "mem= as the last argument"
+pool "0xA2000000,64M" "mem= as the last argument"
 
 echo "=== a vendor environment left behind, mem=36M ==="
 
 run "mem=36M $boot" "$(chip FH8856V200 1024)"
-pool "0xA2400000,92M" "128 MB: the pool starts above the kernel, not 4 MB inside it"
+pool "0xA2400000,64M" "128 MB: the pool starts above the kernel, not 4 MB inside it"
+
+run "mem=36M@0 $boot" "$(chip FH8856V200 1024)"
+pool "0xA2400000,64M" "mem=36M@0: the same"
+
+run "mem=36M@0xA0000000 $boot" "$(chip FH8856V200 1024)"
+pool "0xA2400000,64M" "mem=36M at the DDR's own address: the same"
 
 run "mem=36M $boot" "$(chip FH8852V200 512)"
 pool "0xA2400000,28M" "64 MB: the pool starts above the kernel"
@@ -112,7 +118,17 @@ run "mem=128M $boot" "$(chip FH8856V200 1024)"
 pool "0xA2000000,32M" "mem= covering the whole DDR"
 
 run "mem=32m $boot" "$(chip FH8856V200 1024)"
+pool "0xA2000000,64M" "mem= with a lower-case m, as the kernel takes it"
+
+run "mem=33554432 $boot" "$(chip FH8856V200 1024)"
 pool "0xA2000000,32M" "mem= not in megabytes"
+
+run "mem=36M@0x80000000 $boot" "$(chip FH8856V200 1024)"
+pool "0xA2000000,32M" "mem= somewhere other than the DDR's start"
+logged "media pool left at" "... and says so"
+
+run "mem=32M mem=16M@0xA4000000 $boot" "$(chip FH8856V200 1024)"
+pool "0xA2000000,32M" "two mem= (a second bank)"
 
 run "mymem=64M $boot" "$(chip FH8856V200 1024)"
 pool "0xA2000000,32M" "an argument that only ends in mem="
