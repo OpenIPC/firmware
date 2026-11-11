@@ -141,7 +141,13 @@ def color_chain(cfg):
     q = lambda k: round(k * 1023 / 15)
     cfg.tables['cc_3d'] = bytearray(struct.pack('<4096I', *(q(a) | q(b) << 10 | q(c) << 20
                                                             for a in range(16) for b in range(16) for c in range(16))))
-    vals = [min(4 * i, 1023) for i in range(256)]                # identity, 8-bit index to 10-bit output
+    tone_table(cfg)
+
+
+def tone_table(cfg, vals=None):
+    """Install the tone table: 256 10-bit values, one per 8-bit input code. No values means the identity."""
+    if vals is None:
+        vals = [min(4 * i, 1023) for i in range(256)]
     cfg.tables['tone_curve'] = bytearray(struct.pack('<256I', *(x | x << 10 | x << 20 for x in vals)))
 
 
@@ -395,6 +401,7 @@ def opt_rgb2yuv(cfg, v):
 def opt_tone_curve(cfg, v):
     """The tone table (LISO +0x12c): 256 entries, one 10-bit value per colour channel, indexed by the 8-bit input."""
     if v == 'off':
+        tone_table(cfg)                    # undo a curve an earlier preset or option set
         return
     knots = []
     for part in v.split(','):
@@ -417,8 +424,7 @@ def opt_tone_curve(cfg, v):
             if x <= x1:
                 return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
         return knots[-1][1]
-    vals = [min(1023, max(0, round(1023 * curve(i) / 255))) for i in range(256)]
-    cfg.tables['tone_curve'] = bytearray(struct.pack('<256I', *(x | x << 10 | x << 20 for x in vals)))
+    tone_table(cfg, [min(1023, max(0, round(1023 * curve(i) / 255))) for i in range(256)])
 
 
 OPTIONS = {'black_level': opt_black_level, 'wb_gain': opt_wb_gain, 'dbp': opt_dbp,
