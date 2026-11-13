@@ -266,6 +266,7 @@ HISILICON_OPENSDK_SENSORS_hi3516cv200 = \
 	sony_imx222/libsns_imx222
 HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
 	cvsens_cv2003/libsns_cv2003 \
+	galaxycore_gc2063/libsns_gc2063 \
 	galaxycore_gc4023/libsns_gc4023 \
 	galaxycore_gc4653/libsns_gc4653 \
 	imagedesign_mis20s1/libsns_mis20s1 \
@@ -274,8 +275,13 @@ HISILICON_OPENSDK_SENSORS_hi3516cv6xx = \
 	smart_sc4336p/libsns_sc4336p \
 	smart_sc450ai/libsns_sc450ai \
 	smart_sc500ai/libsns_sc500ai \
+	smart_sc850sl/libsns_sc850sl \
 	sony_imx335/libsns_imx335 \
+	sony_imx415/libsns_imx415 \
 	sony_imx662/libsns_imx662 \
+	sony_imx664/libsns_imx664 \
+	sony_imx675/libsns_imx675 \
+	sony_imx678/libsns_imx678 \
 	superpix_sp2308/libsns_sp2308 \
 	visemi_vs4388/libsns_vs4388
 HISILICON_OPENSDK_SENSORS_hi3519dv500 = \
@@ -320,10 +326,15 @@ HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 # module is ~20 KB compressed and does not fit; 5 MP also needs osmem=64M, which
 # rules out most lite-class cv610 boards. hi3516cv6xx_ultimate is 16 MB and had
 # ~1.1 MB spare, so it keeps the sensor. IMX662 is held to ultimate for the same
-# room. Filtered here, at selection time, so an image and its sysupgrade payload
-# stay in step; a finalize-hook rm -f would not.
+# room. GC2063, SC850SL, IMX415, IMX664, IMX675 and IMX678, recovered from a
+# SIP-K662C6S module's firmware, are held to ultimate too: lite has nothing
+# left for them. Filtered here, at selection time, so an image and its
+# sysupgrade payload stay in step; a finalize-hook rm -f would not.
 ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3516cv6xx/lite)
-HISILICON_OPENSDK_SENSORS := $(filter-out sony_imx335/libsns_imx335 sony_imx662/libsns_imx662,$(HISILICON_OPENSDK_SENSORS))
+HISILICON_OPENSDK_SENSORS := $(filter-out sony_imx335/libsns_imx335 sony_imx662/libsns_imx662 \
+	galaxycore_gc2063/libsns_gc2063 smart_sc850sl/libsns_sc850sl \
+	sony_imx415/libsns_imx415 sony_imx664/libsns_imx664 \
+	sony_imx675/libsns_imx675 sony_imx678/libsns_imx678,$(HISILICON_OPENSDK_SENSORS))
 endif
 
 # fpv variant on V4 (hi3516ev200 + gk7205v200): restrict to the high-fps
