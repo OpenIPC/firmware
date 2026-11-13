@@ -1,11 +1,14 @@
 #!/bin/sh
 # Post-image: append the DTB to zImage and wrap as uImage for hi3520dv200_neo.
+# The SoC-wide DT, not a board's: this one image serves every Hi3520DV200, and
+# the NBD6808T-PL's DT puts a framebuffer past the end of a 128 MB board's DDR
+# and its NOR on CS1 only (OpenIPC/linux#201).
 IMAGES_DIR="${BINARIES_DIR:-$1}"
 BUILD_DIR="${BUILD_DIR:-$(dirname $IMAGES_DIR)/build}"
 HOST_DIR="${HOST_DIR:-$(dirname $IMAGES_DIR)/host}"
 KDIR="$BUILD_DIR/linux-custom"
 ZIMAGE="$IMAGES_DIR/zImage"
-DTB="$KDIR/arch/arm/boot/dts/hisilicon/hi3520dv200-nbd6808t.dtb"
+DTB="$KDIR/arch/arm/boot/dts/hisilicon/hi3520dv200-generic.dtb"
 LOADADDR=0x80008000
 
 MKIMAGE=""
