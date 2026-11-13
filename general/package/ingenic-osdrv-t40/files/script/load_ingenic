@@ -22,9 +22,18 @@ check_return() {
 	fi
 }
 
+# sinfo probes the sensor where the board wires it: the same isp.sensor*
+# settings majestic hands libimp, for boards unlike the reference design
+# (#1884). Unset, sinfo keeps its defaults, which are the reference board's.
+SINFO_PARAM=""
+for P in i2c_adapter_nr:.isp.sensorI2cBus reset_gpio:.isp.sensorResetPin pwdn_gpio:.isp.sensorPowerDownPin; do
+	V=$(cli -g ${P#*:})
+	[ -n "${V}" ] && SINFO_PARAM="${SINFO_PARAM} ${P%%:*}=${V}"
+done
+
 lsmod | grep "sinfo" >/dev/null
 if [ $? -ne 0 ]; then
-	modprobe sinfo
+	modprobe sinfo ${SINFO_PARAM}
 	check_return "insmod sinfo"
 fi
 
