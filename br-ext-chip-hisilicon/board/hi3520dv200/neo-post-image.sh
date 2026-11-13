@@ -23,9 +23,15 @@ done
 
 # A missing input is a broken build, not a skip: the NOR packaging step would
 # otherwise pick up whatever uImage an earlier build left behind.
-for f in "$ZIMAGE" "$DTB"; do
-    [ -f "$f" ] || { echo "neo-post-image: ERROR: $f not found" >&2; exit 1; }
-done
+[ -f "$ZIMAGE" ] || { echo "neo-post-image: ERROR: $ZIMAGE not found" >&2; exit 1; }
+# The kernel comes from a rolling upstream-patches.tar.gz, and Buildroot keeps
+# the first one it downloaded. The generic DT arrived with OpenIPC/linux#203.
+[ -f "$DTB" ] || {
+    echo "neo-post-image: ERROR: $DTB not found" >&2
+    echo "neo-post-image: a cached upstream-patches.tar.gz older than OpenIPC/linux#203?" >&2
+    echo "neo-post-image: delete it from the download dir, then make br-linux-dirclean" >&2
+    exit 1
+}
 
 KREL=$(sed 's/-//g' "$KDIR/include/config/kernel.release")
 
