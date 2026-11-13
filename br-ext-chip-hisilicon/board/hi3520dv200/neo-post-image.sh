@@ -1,11 +1,14 @@
 #!/bin/sh
 # Post-image: append the DTB to zImage and wrap as uImage for hi3520dv200_neo.
+# The SoC-wide DT, not a board's: this one image serves every Hi3520DV200, and
+# the NBD6808T-PL's DT puts a framebuffer past the end of a 128 MB board's DDR
+# and its NOR on CS1 only (OpenIPC/linux#201).
 IMAGES_DIR="${BINARIES_DIR:-$1}"
 BUILD_DIR="${BUILD_DIR:-$(dirname $IMAGES_DIR)/build}"
 HOST_DIR="${HOST_DIR:-$(dirname $IMAGES_DIR)/host}"
 KDIR="$BUILD_DIR/linux-custom"
 ZIMAGE="$IMAGES_DIR/zImage"
-DTB="$KDIR/arch/arm/boot/dts/hisilicon/hi3520dv200-nbd6808t.dtb"
+DTB="$KDIR/arch/arm/boot/dts/hisilicon/hi3520dv200-generic.dtb"
 LOADADDR=0x80008000
 
 MKIMAGE=""
@@ -20,9 +23,15 @@ done
 
 # A missing input is a broken build, not a skip: the NOR packaging step would
 # otherwise pick up whatever uImage an earlier build left behind.
-for f in "$ZIMAGE" "$DTB"; do
-    [ -f "$f" ] || { echo "neo-post-image: ERROR: $f not found" >&2; exit 1; }
-done
+[ -f "$ZIMAGE" ] || { echo "neo-post-image: ERROR: $ZIMAGE not found" >&2; exit 1; }
+# The kernel comes from a rolling upstream-patches.tar.gz, and Buildroot keeps
+# the first one it downloaded. The generic DT arrived with OpenIPC/linux#203.
+[ -f "$DTB" ] || {
+    echo "neo-post-image: ERROR: $DTB not found" >&2
+    echo "neo-post-image: a cached upstream-patches.tar.gz older than OpenIPC/linux#203?" >&2
+    echo "neo-post-image: delete it from the download dir, then make br-linux-dirclean" >&2
+    exit 1
+}
 
 KREL=$(sed 's/-//g' "$KDIR/include/config/kernel.release")
 

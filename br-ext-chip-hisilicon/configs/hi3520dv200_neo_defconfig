@@ -20,7 +20,7 @@ BR2_TOOLCHAIN_EXTERNAL_CXX=y
 # Kernel — openipc/linux upstream-patches branch (same source as the other
 # neo boards). Hi3520DV200 support (DT, mach-hibvt, hil2v200 L2, SATA glue,
 # SFC v350, hisi-femac up port, SP805 restart) comes from openipc/linux
-# PR #82; the board DT is hi3520dv200-nbd6808t.
+# PR #82; neo appends hi3520dv200-generic (PR #203), the DT for any board.
 BR2_LINUX_KERNEL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
 BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/openipc/linux/archive/upstream-patches.tar.gz"
