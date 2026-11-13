@@ -67,10 +67,11 @@ if [ -z "$(find ${TARGET_DIR}/bin ${TARGET_DIR}/sbin ${TARGET_DIR}/usr/bin ${TAR
 	fi
 fi
 
-# The overlay's WireGuard client drives wg, which only wireguard-tools installs.
+# The overlay's WireGuard client drives wg, which only wireguard-tools (or
+# wireguard-tools-openipc, its fork for 3.0-header toolchains) installs.
 # Without it /usr/sbin/wireguard can never bring wg0 up, so it goes with its
 # init script and interface stanza: 0.7KB of squashfs on hi3516cv6xx lite.
-if ! grep -q '^BR2_PACKAGE_WIREGUARD_TOOLS=y' ${BR2_CONFIG}; then
+if ! grep -qE '^BR2_PACKAGE_WIREGUARD_TOOLS(_OPENIPC)?=y' ${BR2_CONFIG}; then
 	rm -f ${TARGET_DIR}/usr/sbin/wireguard ${TARGET_DIR}/etc/init.d/S98wireguard \
 		${TARGET_DIR}/etc/network/interfaces.d/wg0
 fi

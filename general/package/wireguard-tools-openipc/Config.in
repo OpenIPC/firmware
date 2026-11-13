@@ -1,0 +1,13 @@
+config BR2_PACKAGE_WIREGUARD_TOOLS_OPENIPC
+	bool "wireguard-tools-openipc"
+	help
+	  The wg tool for configuring WireGuard tunnels.
+
+	  Buildroot's wireguard-tools requires kernel headers >= 3.10, the
+	  oldest kernel the out-of-tree module supports. That rules out
+	  toolchains built for a 3.0 vendor kernel even when the board runs
+	  a modern kernel with WireGuard in-tree (the neo variants). wg only
+	  talks generic netlink to the running kernel and builds against 3.0
+	  headers with the NLM_F_DUMP_INTR fallback patch.
+
+	  https://git.zx2c4.com/wireguard-tools
