@@ -70,9 +70,11 @@ endef
 # sensor under majestic yet. ipcinfo names all but the IMX678, which needs
 # `fw_setenv sensor imx678`.
 #
-# With them, the vendor's day scene for those six and for SC450AI and SC500AI,
-# recovered from the same firmware: AE pace and route, Bayer NR, dynamic DPC
-# and saturation, each about 1 KB compressed.
+# With them, the vendor's day scene for those six, recovered from the same
+# firmware: AE pace and route, Bayer NR, dynamic DPC and saturation, each about
+# 1 KB compressed. The same firmware's SC450AI and SC500AI scenes are not
+# shipped: those sensors already run on cameras here with the driver's own
+# tuning, and the vendor's has not been tried on them.
 define HISILICON_OSDRV_HI3516CV6XX_K662C6S_PROFILES
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors \
@@ -89,9 +91,7 @@ define HISILICON_OSDRV_HI3516CV6XX_K662C6S_PROFILES
 		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx415.ini \
 		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx664.ini \
 		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx675.ini \
-		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx678.ini \
-		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/sc450ai.ini \
-		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/sc500ai.ini
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx678.ini
 endef
 endif
 
