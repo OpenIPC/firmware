@@ -327,9 +327,12 @@ if [ "$1" = "rtl8188fu-t31-aosu-c5l" ]; then
 fi
 
 # T31 CamHi
+# The T31 kernel has the vendor MT7601 STA driver built in
+# (CONFIG_MT7601_STA, "wlan0"), so powering the dongle is all this needs:
+# there is no mt7601u.ko to load, and mac80211, which this used to load,
+# is not the stack that driver uses (#2412).
 if [ "$1" = "mt7601u-t31-camhi" ]; then
 	set_gpio 61 0
-	modprobe mac80211
 	exit 0
 fi
 
