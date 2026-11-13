@@ -1,5 +1,6 @@
 config BR2_PACKAGE_WIREGUARD_TOOLS_OPENIPC
 	bool "wireguard-tools-openipc"
+	depends on !BR2_PACKAGE_WIREGUARD_TOOLS # both install /usr/bin/wg
 	help
 	  The wg tool for configuring WireGuard tunnels.
 
