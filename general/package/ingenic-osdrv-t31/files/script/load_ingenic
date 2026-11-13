@@ -125,6 +125,9 @@ case ${SENSOR} in
 "jxq03"|"jxq03p")
 	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
 	ISP_PARAM="isp_clk=150000000"
+	# 64 MB boards (rmem 25M, check_vb): without memopt the ISP leaves the
+	# 2304x1296 frame pool no room (#1755). Larger boards keep the default.
+	[ "$(fw_printenv -n totalmem)" = "64M" ] && ISP_PARAM="${ISP_PARAM} isp_memopt=1"
 	SENSOR_PARAM=""
 	;;
 "jxk04")
