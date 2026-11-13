@@ -122,7 +122,7 @@ case ${SENSOR} in
 	;;
 "jxq03"|"jxq03p")
 	AVPU_PARAM="clk_name=vpll avpu_clk=400000000"
-	ISP_PARAM="isp_clk=150000000"
+	ISP_PARAM="isp_clk=150000000 isp_memopt=1"
 	SENSOR_PARAM=""
 	;;
 "jxk04")
