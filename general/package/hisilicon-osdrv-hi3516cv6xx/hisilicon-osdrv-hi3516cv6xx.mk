@@ -46,6 +46,7 @@ HISILICON_OSDRV_HI3516CV6XX_SENSOR_BLOBS = \
 # dead weight.
 ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3516cv6xx/lite)
 HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES =
+HISILICON_OSDRV_HI3516CV6XX_K662C6S_PROFILES =
 else
 define HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
@@ -57,6 +58,40 @@ define HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES
 	# 3 KB compressed.
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx662.ini
+endef
+
+# The other sensors a SIP-K662C6S module's stock firmware carries, whose drivers
+# openhisilicon recovered from it: GC2063, SC850SL, IMX415, IMX664, IMX675 and
+# IMX678, held to ultimate with their drivers. Each profile is the driver's own
+# primary mode, linear: GC2063 1080p30 RAW10 and IMX664 2688x1520p30 RAW12 on
+# two lanes (lanes 0 and 2 of the first port, the SDK's single-sensor wiring);
+# SC850SL 3840x2160p30 RAW12 BGGR, IMX415 3840x2160p30 RAW10 GBRG, IMX675
+# 2592x1944p30 RAW10 and IMX678 3840x2160p30 RAW12 on four. None has run on its
+# sensor under majestic yet. ipcinfo names all but the IMX678, which needs
+# `fw_setenv sensor imx678`.
+#
+# With them, the vendor's day scene for those six and for SC450AI and SC500AI,
+# recovered from the same firmware: AE pace and route, Bayer NR, dynamic DPC
+# and saturation, each about 1 KB compressed.
+define HISILICON_OSDRV_HI3516CV6XX_K662C6S_PROFILES
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/gc2063_i2c_1080p.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/sc850sl_i2c_8M.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx415_i2c_8M.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx664_i2c_4M.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx675_i2c_5M.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx678_i2c_8M.ini
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/gc2063.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/sc850sl.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx415.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx664.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx675.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx678.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/sc450ai.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/sc500ai.ini
 endef
 endif
 
@@ -105,6 +140,8 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# author runs it on a CV610. ipcinfo does not detect the IMX662, so a
 	# camera needs `fw_setenv sensor imx662`; majestic then finds it by name.
 	$(HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES)
+
+	$(HISILICON_OSDRV_HI3516CV6XX_K662C6S_PROFILES)
 
 	$(HISILICON_OSDRV_HI3516CV6XX_AIISP_MODELS)
 
