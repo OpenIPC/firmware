@@ -1,0 +1,32 @@
+# OpenIPC
+#
+# TOOLCHAIN-ONLY config for Axera AX620E/AX630C (aarch64 Cortex-A53).
+#
+# Bootstraps the aarch64 musl toolchain published as
+# toolchain.axera-ax620e.tgz (consumed by ax620e_lite), DECOUPLED from
+# the firmware package set -- see hi3519dv500_toolchain_defconfig for
+# why this exists as its own config. Used only by
+# .github/workflows/toolchain.yml.
+#
+BR2_OPENIPC_SOC_VENDOR="axera"
+BR2_OPENIPC_SOC_MODEL="ax620e"
+BR2_OPENIPC_SOC_FAMILY="ax620e"
+
+# Architecture (aarch64 Cortex-A53)
+BR2_aarch64=y
+BR2_cortex_a53=y
+
+# Toolchain -- aarch64 musl, 5.15 kernel headers (the real deployed
+# AX620E firmware's own kernel version, confirmed from its modules'
+# vermagic -- see br-ext-chip-axera/board/ax620e/README.md). Same block
+# as ax620e_lite so the produced toolchain matches byte-for-byte what
+# the firmware expects.
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
+BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/openipc/firmware/releases/download/$(OPENIPC_TOOLCHAIN).tgz"
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="aarch64-openipc-linux-musl"
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_5_15=y
+BR2_KERNEL_HEADERS_5_15=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y
+BR2_GCC_VERSION_13_X=y
+BR2_TOOLCHAIN_EXTERNAL_CXX=y
