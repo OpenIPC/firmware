@@ -426,14 +426,27 @@ if [ "$1" = "atbm603x-xm535w1-x2w-wng" ]; then
 	exit $?
 fi
 
-# XM530 AltoBeam ATBM6032 (USB 007a:8888); PDN gpio from the wifipdn env
-# (set per board, e.g. by the builder profile's customizer)
+# XM530/XM550 AltoBeam ATBM6032 (USB 007a:8888). The power GPIO differs per
+# board, so it comes from the wifipdn variable, which the device's customizer
+# in OpenIPC/builder sets. A failure here sends S40network to the wired port
+# instead of an ifup of a wlan0 that does not exist.
 if [ "$1" = "atbm603x-xm530" ]; then
-	modprobe dwc_otg
-	pdn=$(fw_printenv -n wifipdn)
-	[ -n "$pdn" ] && modprobe wifi_pdn value="$pdn"
-	modprobe atbm603x_wifi_usb
-	exit 0
+	pdn=$(fw_printenv -n wifipdn 2>/dev/null)
+	if [ -z "$pdn" ]; then
+		echo "atbm603x-xm530: wifipdn is not set" >&2
+		exit 1
+	fi
+	modprobe dwc_otg || exit 1
+	modprobe wifi_pdn value="$pdn" || exit 1
+	modprobe atbm603x_wifi_usb || exit 1
+	# wlan0 appears once the dongle has enumerated and taken its firmware
+	i=0
+	while [ ! -e /sys/class/net/wlan0 ] && [ $i -lt 10 ]; do
+		sleep 1
+		i=$((i + 1))
+	done
+	[ -e /sys/class/net/wlan0 ]
+	exit $?
 fi
 
 exit 1
