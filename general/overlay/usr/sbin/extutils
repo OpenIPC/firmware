@@ -296,6 +296,11 @@ case "$CMD" in
 		# MAC, so two cameras sharing an address also claim one ONVIF identity.
 		mac_stored >/dev/null && exit 0
 
+		# ethaddr only names eth0. A camera without one (Wi-Fi only, its MAC
+		# in the adapter, like the Tenda CP3) has nothing to repair, and must
+		# not rewrite the u-boot environment at every boot it cannot read it.
+		[ -e "/sys/class/net/eth0" ] || exit 0
+
 		was=$(fw_printenv -n ethaddr 2>/dev/null)
 		mac=$(mac_from_flash) || mac=$(mac_generate)
 		if [ -z "$mac" ]; then
