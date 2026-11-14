@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# Axera AX620E/AX630C module load, dependency order from the vendor
+# modules' own `depends=` (read with modinfo off a real firmware dump --
+# see this package's README). The open modules (vin, vc8000e venc,
+# hantro vdec, eip-130 crypto) build from the axera-ax620e kernel branch
+# and are not listed here; only the closed ax_*.ko need an explicit order.
+
+KO_DIR=/lib/modules/$(uname -r)/axera
+
+insert_ko() {
+	[ -d "$KO_DIR" ] || {
+		logger -s -p daemon.err -t axera "no $KO_DIR -- ax_proton/ax_npu not installed, see axera-osdrv-ax620e's README"
+		return 1
+	}
+
+	# Foundation: memory pools and the sysfs/ioctl base every other module binds to.
+	insmod "$KO_DIR/ax_sys.ko"
+	insmod "$KO_DIR/ax_pool.ko"
+	insmod "$KO_DIR/ax_cmm.ko"
+	insmod "$KO_DIR/ax_base.ko"
+
+	# Capture / codec path.
+	insmod "$KO_DIR/ax_mipi_rx.ko"
+	insmod "$KO_DIR/ax_gdc.ko"
+	insmod "$KO_DIR/ax_vpp.ko"
+	insmod "$KO_DIR/ax_ivps.ko"
+	insmod "$KO_DIR/ax_tdp.ko"
+	insmod "$KO_DIR/ax_jenc.ko"
+	insmod "$KO_DIR/ax_venc.ko"
+	insmod "$KO_DIR/ax_vdec.ko"
+	insmod "$KO_DIR/ax_vo.ko"
+	insmod "$KO_DIR/ax_audio.ko"
+
+	# ISP 3A and NPU last -- ax_proton depends on everything above.
+	insmod "$KO_DIR/ax_npu.ko"
+	insmod "$KO_DIR/ax_proton.ko"
+}
+
+insert_ko
