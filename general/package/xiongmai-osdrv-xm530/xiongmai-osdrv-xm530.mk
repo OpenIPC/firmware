@@ -36,9 +36,13 @@ define XIONGMAI_OSDRV_XM530_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai $(XIONGMAI_OSDRV_XM530_PKGDIR)/files/kmod/usb/*.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai $(XIONGMAI_OSDRV_XM530_PKGDIR)/files/kmod/xm711/*.ko
 
-	# Dirty hack
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.103+/kernel/net/wireless
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.103+/kernel/net/wireless $(XIONGMAI_OSDRV_XM530_PKGDIR)/files/kmod/rewrite/cfg80211.ko
+	# The vendor's backported cfg80211 is the xm711 driver's, and is still
+	# module "cfg80211": under /lib/modules depmod splits the symbols both
+	# copies export between them, and the kernel's mac80211 (and every driver
+	# built on it) cannot load against the backport. So it stays out of the
+	# tree depmod reads, as mmz.ko does, and `wifi xm711` loads it by path.
+	$(INSTALL) -D -m 644 $(XIONGMAI_OSDRV_XM530_PKGDIR)/files/kmod/rewrite/cfg80211.ko \
+		$(TARGET_DIR)/usr/lib/xiongmai/cfg80211.ko
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(XIONGMAI_OSDRV_XM530_PKGDIR)/files/script/load*
