@@ -169,6 +169,11 @@ UNBUILT_BOARDS = {
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
     "hi3519dv500_toolchain": "toolchain config, produces no firmware image",
+    # Axera has no image yet. These two configs publish its toolchains so
+    # majestic can be ported first. The boards follow once a camera has run
+    # them (#2670).
+    "ax620e_toolchain": "toolchain config, produces no firmware image",
+    "ax620u_toolchain": "toolchain config, produces no firmware image",
     "s2l22m_lite": "no variant set; Ambarella S2L has no board directory",
     "s2l33m_lite": "no variant set; Ambarella S2L has no board directory",
 
