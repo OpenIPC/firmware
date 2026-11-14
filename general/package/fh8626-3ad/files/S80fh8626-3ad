@@ -47,7 +47,7 @@ case "$1" in
                 read -r name < "$name_file"
                 case "$name" in
                     fh8626-isp*) isp_ready=1 ;;
-                    gc1054\ *) sensor_ready=1 ;;
+                    gc1054\ *|gc2083\ *) sensor_ready=1 ;;
                 esac
             done
             [ "$isp_ready" -eq 1 ] && [ "$sensor_ready" -eq 1 ] && break

@@ -65,9 +65,12 @@ which a global exposure change first shows sets every motion block.
   client's write: the daemon restarts the history from the values read and
   waits until they show. Without control events it polls, as before (controls
   every 4 frames, timing every 16).
-- The supported sensor is `gc1054`, the only one the ISP tuning tables are
-  measured for. Its control contract is exposure in integration lines and
-  analogue gain in Q6 (64 = 1x); limits and steps are queried from the driver.
+- The supported sensors are `gc1054` and `gc2083`. Their control contract is
+  exposure in integration lines and analogue gain in Q6 (64 = 1x); limits and
+  steps are queried from the driver. The ISP tuning tables are measured on the
+  GC1054 module and are applied only to it; a GC2083 keeps the ISP driver's
+  black level, noise and colour defaults until it is measured. The 3,3,2 frame
+  delays were measured on GC1054 too; `-L` overrides them.
   Automatic discovery requires exactly one supported sensor; otherwise use `-s`.
 - **Timing.** The line time is `(width + HBLANK) / PIXEL_RATE`; frame lines are
   `height + VBLANK`. Without PIXEL_RATE/HBLANK, the frame interval divided by

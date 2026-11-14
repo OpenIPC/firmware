@@ -216,9 +216,32 @@ static int discover_subdev(char *path, size_t size, const char *driver)
 	return found == 1 ? 0 : -1;
 }
 
-static const char * const s_supported_sensors[] = {
-	"gc1054"
+/*
+ * Sensors whose drivers expose exposure in lines, Q6 analogue gain and
+ * VBLANK/PIXEL_RATE/HBLANK timing, which is all AE and AWB use. The ISP
+ * tuning in isp-tuning.c (black pedestal, colour matrices, noise and
+ * sharpening schedules) is calibrated on one sensor module and is applied
+ * only to that sensor; the others keep the ISP driver's defaults.
+ */
+struct sensor_info {
+	const char *driver;
+	bool tuned;
 };
+
+static const struct sensor_info s_supported_sensors[] = {
+	{ "gc1054", true },
+	{ "gc2083", false },
+};
+
+static const struct sensor_info *find_sensor(const char *driver)
+{
+	size_t i;
+
+	for (i = 0; i < sizeof(s_supported_sensors)/sizeof(s_supported_sensors[0]); i++)
+		if (!strcmp(driver, s_supported_sensors[i].driver))
+			return &s_supported_sensors[i];
+	return NULL;
+}
 
 static int sensor_is_supported(int fd, char *detected_name, size_t max_len)
 {
@@ -244,9 +267,9 @@ static int sensor_is_supported(int fd, char *detected_name, size_t max_len)
 	fclose(file);
 
 	for (i = 0; i < sizeof(s_supported_sensors)/sizeof(s_supported_sensors[0]); i++) {
-		if (name_matches(name, s_supported_sensors[i])) {
+		if (name_matches(name, s_supported_sensors[i].driver)) {
 			if (detected_name && max_len > 0)
-				snprintf(detected_name, max_len, "%s", s_supported_sensors[i]);
+				snprintf(detected_name, max_len, "%s", s_supported_sensors[i].driver);
 			return 0;
 		}
 	}
@@ -270,13 +293,13 @@ static int discover_sensor_subdev(char *path, size_t size, char *driver_out, siz
 			continue;
 		if (fgets(name, sizeof(name), file)) {
 			for (s = 0; s < sizeof(s_supported_sensors)/sizeof(s_supported_sensors[0]); s++) {
-				if (!name_matches(name, s_supported_sensors[s]))
+				if (!name_matches(name, s_supported_sensors[s].driver))
 					continue;
 				if (sscanf(paths.gl_pathv[i], "/sys/class/video4linux/%127[^/]/name", node) == 1) {
 					found++;
 					snprintf(path, size, "/dev/%.110s", node);
 					if (driver_out && driver_size)
-						snprintf(driver_out, driver_size, "%s", s_supported_sensors[s]);
+						snprintf(driver_out, driver_size, "%s", s_supported_sensors[s].driver);
 				}
 				break;
 			}
@@ -1196,6 +1219,7 @@ int main(int argc, char **argv)
 	bool ae_enabled = true, awb_enabled = true, awb_sync = true, awb_written = false;
 	bool pidfile_written = false;
 	bool flicker_set = false, tuning_enabled = false;
+	const struct sensor_info *sensor = NULL;
 	struct isp_tuning tuning;
 	int fd, lockfd = -1, sensor_fd = -1, option, result = EXIT_FAILURE;
 
@@ -1418,6 +1442,7 @@ int main(int argc, char **argv)
 					close(sensor_fd);
 					sensor_fd = -1;
 				} else {
+					sensor = find_sensor(sensor_name);
 					/* Before the first timing read, so no change is missed. */
 					ae_loop.sensor_events = ae_enabled &&
 								subscribe_sensor_events(sensor_fd);
@@ -1459,7 +1484,11 @@ int main(int argc, char **argv)
 		if (flicker_set && write_power_line(fd, ae_cfg.flicker_mode) < 0)
 			LOG_WARN("Power line frequency control: %s", strerror(errno));
 		read_power_line(fd, &ae.config);
-		tuning_enabled = isp_tuning_init(&tuning, fd) == 0;
+		/* Without an identified sensor, as before: the tuned module */
+		if (sensor && !sensor->tuned)
+			LOG_INFO("No ISP tuning for %s; keeping the ISP defaults", sensor->driver);
+		else
+			tuning_enabled = isp_tuning_init(&tuning, fd) == 0;
 	}
 	if (!observe && ae_enabled) {
 		struct v4l2_event_subscription sub = { .type = V4L2_EVENT_CTRL };
