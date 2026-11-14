@@ -45,6 +45,7 @@ ANYKA_OSDRV_AK3918AV100_LICENSE = PROPRIETARY
 # camera (vendor U-Boot 2019.10.0-V4.0.25, kernel 4.4.282 of 2024-04-10),
 # /usr/modules and /mvs/modules, unmodified (isp_drv_lib V0.2.30):
 #   aaa8a9ae27e7427d9d6f7a4570bedf93ad9eef52699b1edd75ebdf16782335b1  ak_hcd.ko
+#   5928207d9fdbb44a8d3788608c2fbaf3daaeda2d86710c61084091e4ff177797  ak_eth.ko
 #   8f19dbbcc8e82254308dae822e9ea5e5b85988535e0dad96c99c30f5e8c9dd53  ak_i2c.ko
 #   9bad58fa412cf42b612caca95b8f223fcff397b3a5b743cab8f992172b1ec87b  ak_ion.ko
 #   07f871f2bfe74c9a8ce71dd999788b7570987edb0dae7097df7f654251d7c181  ak_isp.ko
