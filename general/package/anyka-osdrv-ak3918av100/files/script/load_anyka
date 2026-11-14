@@ -1,0 +1,92 @@
+#!/bin/sh
+#
+# AK3918AV100 family (AV100, EV300L) driver bring-up with the vendor's
+# prebuilt modules. The order follows the AnyCloud39AV100 SDK's
+# rootfs/scripts/sensor/*.sh and an EV300L camera's stock vg_boot.sh: I2C,
+# audio and ION, then the ISP, the sensor, the encoder and its bridge. SD and
+# Ethernet are loaded earlier, from /etc/modules.
+
+vendor=$(ipcinfo -v)
+moddir=/lib/modules/$(uname -r)/anyka
+
+log_vendor() {
+	logger -s -p daemon.info -t "${vendor:-anyka}" "$1"
+}
+
+load() {
+	mod=$1
+	shift
+	grep -q "^${mod} " /proc/modules && return 0
+	modprobe "${mod}" "$@"
+}
+
+# The sensor drivers the image carries
+sensors() {
+	for f in "${moddir}"/sensor_*.ko; do
+		[ -e "$f" ] || continue
+		f=${f##*/sensor_}
+		echo "${f%.ko}"
+	done
+}
+
+isp_args() {
+	# The EV300L's stock firmware drops four frames on a flip or a frame
+	# rate change; the AV100 SDK loads the ISP with its defaults.
+	grep -q 'ak3918ev300l' /proc/device-tree/compatible 2>/dev/null &&
+		echo "flip_drop_frames=4 chgfps_drop_frames=4"
+}
+
+insert_ko() {
+	load ak_i2c
+	load ak_pcm
+	load ak_ion
+
+	load ak_isp $(isp_args)
+	SENSOR=$(fw_printenv -n sensor 2>/dev/null)
+	if [ -n "${SENSOR}" ]; then
+		log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
+	else
+		SENSOR=$(ipcinfo --short-sensor 2>/dev/null)
+		[ -n "${SENSOR}" ] && log_vendor "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+	fi
+	SENSOR=$(echo "${SENSOR}" | tr 'A-Z' 'a-z')
+	# Each sensor module reads its chip ID with check_id=1 and stays unbound
+	# on a mismatch, which is how the stock firmware loads all of them when it
+	# does not know the sensor.
+	if [ -n "${SENSOR}" ] && [ -e "${moddir}/sensor_${SENSOR}.ko" ]; then
+		load "sensor_${SENSOR}" check_id=1
+	else
+		log_vendor "No driver named for sensor '${SENSOR}', trying each"
+		for s in $(sensors); do
+			load "sensor_${s}" check_id=1
+		done
+	fi
+
+	load ak_venc_adapter
+	load ak_venc_bridge
+}
+
+remove_ko() {
+	for mod in ak_venc_bridge ak_venc_adapter; do
+		grep -q "^${mod} " /proc/modules && rmmod "${mod}"
+	done
+	for s in $(sensors); do
+		grep -q "^sensor_${s} " /proc/modules && rmmod "sensor_${s}"
+	done
+	grep -q "^ak_isp " /proc/modules && rmmod ak_isp
+}
+
+case "$1" in
+	-i)
+		insert_ko
+		;;
+
+	-r)
+		remove_ko
+		;;
+
+	*)
+		echo "Usage: $0 {-i|-r}"
+		exit 1
+		;;
+esac
