@@ -166,6 +166,14 @@ UNBUILT_BOARDS = {
     # joins ALL_BOARDS once those modules have run on an AV130 camera.
     "ak3918av130_lite": "prebuilt SDK modules not yet run on an AV130 camera",
 
+    # The AK3918AV100 family: the AnyCloud39AV100 SDK's own 4.4.282 kernel
+    # (OpenIPC/linux anyka-ak3918av100, not yet published) and the vendor's
+    # prebuilt modules (anyka-osdrv-ak3918av100), which have not run on a
+    # camera under OpenIPC. They join ALL_BOARDS once both have.
+    "ak3918av100_lite": "kernel branch not yet in OpenIPC/linux; prebuilt modules not run on a camera",
+    "ak3918av100x_lite": "kernel branch not yet in OpenIPC/linux; prebuilt modules not run on a camera",
+    "ak3918ev300l_lite": "kernel branch not yet in OpenIPC/linux; prebuilt modules not run on a camera",
+
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
     "hi3519dv500_toolchain": "toolchain config, produces no firmware image",
@@ -293,6 +301,8 @@ WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 # listed rather than inferred so that a family silently falling out of the
 # matrix fails --self-test instead of quietly skipping CI.
 UNBUILT_FAMILIES = {
+    # Every board of it is in UNBUILT_BOARDS (kernel branch not yet published).
+    ("br-ext-chip-anyka", "ak3918av100"),
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
@@ -344,6 +354,10 @@ UNBUILT_FAMILIES = {
 # this list when that board joins ALL_BOARDS, which waits for those modules
 # to have run on an AV130 camera.
 #
+# anyka-osdrv-ak3918av100 is selected only by the AK3918AV100 family's
+# boards, all in UNBUILT_BOARDS for the reason given there. It leaves this
+# list with them.
+#
 # exfat-nofuse-openipc is the exFAT module for the 3.x kernels that
 # exfat-openipc does not build on. Its only user is OpenIPC/builder's
 # msc316dc_lite_imou-looc2 (infinity3, kernel 3.18); the mainline infinity3
@@ -359,7 +373,7 @@ UNBUILT_FAMILIES = {
 # board with a button in a gpio.conf would take it off this list.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc",
-    "anyka-osdrv-ak3918av130",
+    "anyka-osdrv-ak3918av100", "anyka-osdrv-ak3918av130",
     "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
