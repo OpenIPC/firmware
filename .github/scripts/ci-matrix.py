@@ -316,15 +316,20 @@ UNBUILT_FAMILIES = {
 # waybeam is unbuildable by construction here rather than merely unselected: it
 # depends on !BR2_PACKAGE_MAJESTIC, and every sigmastar defconfig in ALL_BOARDS
 # sets BR2_PACKAGE_MAJESTIC=y, because both drive the same sensor and encoder.
-# The same exclusion holds downstream, so it is selected nowhere at all: every
-# OpenIPC/builder defconfig that selects wifibroadcast-ng also sets
-# BR2_PACKAGE_MAJESTIC=y, and no defconfig in either tree sets
-# BR2_PACKAGE_WAYBEAM=y. The symbol appears only where it is defined, in
-# general/package/waybeam/Config.in, and in this comment. The line this replaces
-# claimed builder's FPV variants selected it, which sent a contributor debugging
-# an FPV OSD fault (#2395) after a waybeam log file that no shipped image
-# writes. A defconfig with Majestic off, mainline or downstream, would take it
-# off this list.
+# The same exclusion holds downstream, so it is selected nowhere in either tree:
+# every OpenIPC/builder defconfig that selects wifibroadcast-ng also sets
+# BR2_PACKAGE_MAJESTIC=y, and the one that sets BR2_PACKAGE_WAYBEAM=y, builder's
+# hi3516cv6xx_waybeam_generic-fpv, is a device in that tree rather than a
+# defconfig here, and turns Majestic off itself. The symbol appears only where it
+# is defined, in general/package/waybeam/Config.in, and in this comment. The line
+# this replaces claimed builder's FPV variants selected it, which sent a
+# contributor debugging an FPV OSD fault (#2395) after a waybeam log file that no
+# shipped image writes. A defconfig with Majestic off, mainline or downstream,
+# would take it off this list.
+#
+# The cv610 arm added to that package does not change any of this: on
+# hi3516cv6xx the same !BR2_PACKAGE_MAJESTIC gate applies, and the only
+# downstream selector is the builder device named above.
 #
 # usb-dual-role is here for the ordinary reason: it needs a device tree that
 # wires dwc3 as dual-role and a kernel built with CONFIG_USB_DWC3_DUAL_ROLE,
