@@ -225,13 +225,24 @@ static int discover_subdev(char *path, size_t size, const char *driver)
  */
 struct sensor_info {
 	const char *driver;
-	bool tuned;
+	struct isp_profile tuning;
 };
 
+/*
+ * The GC2083 pedestal was measured from dark statistics on a Tenda CP3
+ * V2.2 (minimum integration, ISP digital gain 1x): 63-64 on every Bayer
+ * site at 1x to 8x analogue gain, the sensor holding its own black level.
+ * Subtracting it tripled the luma spread of a room scene. The GC1054 tone
+ * curve left the same scene a stop darker, so the GC2083 keeps the ISP's
+ * default curve; its other blocks still wait for measurements.
+ */
 static const struct sensor_info s_supported_sensors[] = {
-	{ "gc1054", true },
-	{ "gc2083", false },
+	{ "gc1054", { TUNE_BLACK | TUNE_GAMMA | TUNE_REST, 0 } },
+	{ "gc2083", { TUNE_BLACK, 64 } },
 };
+
+/* An unidentified sensor keeps the full tuning, as before */
+static const struct isp_profile s_default_tuning = { TUNE_BLACK | TUNE_GAMMA | TUNE_REST, 0 };
 
 static const struct sensor_info *find_sensor(const char *driver)
 {
@@ -1484,11 +1495,12 @@ int main(int argc, char **argv)
 		if (flicker_set && write_power_line(fd, ae_cfg.flicker_mode) < 0)
 			LOG_WARN("Power line frequency control: %s", strerror(errno));
 		read_power_line(fd, &ae.config);
-		/* Without an identified sensor, as before: the tuned module */
-		if (sensor && !sensor->tuned)
+		const struct isp_profile *prof = sensor ? &sensor->tuning : &s_default_tuning;
+
+		if (!prof->blocks)
 			LOG_INFO("No ISP tuning for %s; keeping the ISP defaults", sensor->driver);
 		else
-			tuning_enabled = isp_tuning_init(&tuning, fd) == 0;
+			tuning_enabled = isp_tuning_init(&tuning, fd, prof) == 0;
 	}
 	if (!observe && ae_enabled) {
 		struct v4l2_event_subscription sub = { .type = V4L2_EVENT_CTRL };
