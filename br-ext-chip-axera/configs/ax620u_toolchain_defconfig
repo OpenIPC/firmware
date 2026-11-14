@@ -1,0 +1,29 @@
+# OpenIPC
+#
+# TOOLCHAIN-ONLY config for Axera AX620U (Cortex-A7 x4, AArch32).
+#
+# Bootstraps the arm musleabihf toolchain published as
+# toolchain.axera-ax620u.tgz (consumed by ax620u_lite), DECOUPLED from
+# the firmware package set.
+#
+BR2_OPENIPC_SOC_VENDOR="axera"
+BR2_OPENIPC_SOC_MODEL="ax620u"
+BR2_OPENIPC_SOC_FAMILY="ax620u"
+
+# Architecture (Cortex-A7, AArch32)
+BR2_arm=y
+BR2_cortex_a7=y
+BR2_ARM_FPU_NEON_VFPV4=y
+BR2_ARM_INSTRUCTIONS_THUMB2=y
+
+# Toolchain -- arm musleabihf, 4.19 kernel headers (the real deployed
+# AX620U firmware's own kernel version, confirmed from its modules'
+# vermagic -- see br-ext-chip-axera/board/ax620u/README.md).
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
+BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/openipc/firmware/releases/download/$(OPENIPC_TOOLCHAIN).tgz"
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="arm-openipc-linux-musleabihf"
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_4_19=y
+BR2_KERNEL_HEADERS_4_19=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y
+BR2_TOOLCHAIN_EXTERNAL_CXX=y

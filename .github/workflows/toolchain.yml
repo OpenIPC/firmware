@@ -31,6 +31,10 @@ jobs:
         run: |
           set -eu
           ALL=$(sed -e 's/#.*//' <<'LIST'
+          # Axera: toolchain-only configs, no firmware image yet (#2670).
+          ax620e_toolchain
+          ax620u_toolchain
+
           # Sigmastar
           # infinity3: msc313e/msc316dc/msc316dm share this one.
           msc313e_lite
