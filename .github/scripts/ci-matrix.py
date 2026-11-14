@@ -229,7 +229,7 @@ NO_BUILD_SCRIPTS = {
     "test_load_hisilicon.sh", "test_load_goke.sh", "test_load_novatek.sh", "test_load_fullhan.sh", "test_load_fullhan_v100.sh", "test_load_hisilicon_layout.sh", "test_push_build.py", "test_shell_parse.sh",
     "test_strip_shell_comments.sh", "test_sysupgrade.sh", "test_crashlog.sh", "test_failsafe_log.sh", "test_majestic_supervise.sh",
     "test_vigil_supervise.sh",
-    "test_init_overlay.sh",
+    "test_init_overlay.sh", "test_wlan_settings.sh",
     # build-one.yml's request parser and its test: dispatch and shell-tests
     # only, never part of a board build.
     "build_request.sh", "test_build_request.sh",

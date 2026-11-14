@@ -1,5 +1,5 @@
 #!/bin/sh
-dev=$(fw_printenv -n wlandev)
+dev=$(wlan_settings dev)
 mac=$(fw_printenv -n wlanmac)
 net=$(fw_printenv -n netaddr_fallback)
 
@@ -37,7 +37,7 @@ set_wireless() {
 		# DHCP of its own meanwhile, as qrscan's restore does not either: with
 		# no server on either side, both would take udhcpc's leasefail
 		# address, and the camera would answer on one subnet from two ports.
-		if [ -z "$(fw_printenv -n wlanssid 2>/dev/null)" ]; then
+		if ! wlan_settings configured; then
 			[ -e /sys/class/net/eth0 ] && ifup eth0
 			return 0
 		fi
