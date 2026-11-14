@@ -3,8 +3,9 @@
 # AK3918AV100 family (AV100, EV300L) driver bring-up with the vendor's
 # prebuilt modules. The order follows the AnyCloud39AV100 SDK's
 # rootfs/scripts/sensor/*.sh and an EV300L camera's stock vg_boot.sh: I2C,
-# audio and ION, then the ISP, the sensor, the encoder and its bridge. SD and
-# Ethernet are loaded earlier, from /etc/modules.
+# audio and ION, then the ISP, the sensor, the encoder and its bridge. SD,
+# Ethernet and the USB host are loaded earlier, from /etc/modules; a module
+# set's own arguments are in /etc/modprobe.d/anyka.conf.
 
 vendor=$(ipcinfo -v)
 moddir=/lib/modules/$(uname -r)/anyka
@@ -29,19 +30,12 @@ sensors() {
 	done
 }
 
-isp_args() {
-	# The EV300L's stock firmware drops four frames on a flip or a frame
-	# rate change; the AV100 SDK loads the ISP with its defaults.
-	grep -q 'ak3918ev300l' /proc/device-tree/compatible 2>/dev/null &&
-		echo "flip_drop_frames=4 chgfps_drop_frames=4"
-}
-
 insert_ko() {
 	load ak_i2c
 	load ak_pcm
 	load ak_ion
 
-	load ak_isp $(isp_args)
+	load ak_isp
 	SENSOR=$(fw_printenv -n sensor 2>/dev/null)
 	if [ -n "${SENSOR}" ]; then
 		log_vendor "Get data from environment and set SENSOR as ${SENSOR}"

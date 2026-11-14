@@ -90,6 +90,12 @@ define ANYKA_OSDRV_AK3918AV100_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/$$kver/anyka \
 		$(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/kmod/$(ANYKA_OSDRV_AK3918AV100_KMOD)/*.ko
 
+	if [ -d $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/modprobe/$(ANYKA_OSDRV_AK3918AV100_KMOD) ]; then \
+		$(INSTALL) -D -m 644 \
+			$(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/modprobe/$(ANYKA_OSDRV_AK3918AV100_KMOD)/anyka.conf \
+			$(TARGET_DIR)/etc/modprobe.d/anyka.conf; \
+	fi
+
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/script/load_anyka
 endef
