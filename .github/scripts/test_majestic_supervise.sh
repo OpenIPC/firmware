@@ -26,13 +26,15 @@ bad() { echo "FAIL $*"; fail=$((fail + 1)); }
 [ -f "$SRC" ] || { echo "FAIL cannot find $SRC — run me from the repo root"; exit 1; }
 
 SB=$(mktemp -d)
-trap 'pkill -f "$SB/" 2>/dev/null; rm -rf "$SB"' EXIT
+# The "stuck" majestic ignores SIGTERM, so it needs a SIGKILL to go.
+trap 'pkill -f "$SB/" 2>/dev/null; pkill -KILL -f "^sleep 1000" 2>/dev/null; rm -rf "$SB"' EXIT
 mkdir -p "$SB/bin" "$SB/run" "$SB/crash"
 
 sed -e "s|DAEMON_PATH=\"/usr/bin/\$DAEMON\"|DAEMON_PATH=\"$SB/bin/majestic\"|" \
     -e "s|/var/run/|$SB/run/|g" \
     -e "s|CRASH=/etc/crash|CRASH=$SB/crash|" \
     -e "s|UPGRADE_LOCK=/tmp/sysupgrade.lock|UPGRADE_LOCK=$SB/sysupgrade.lock|" \
+    -e "s|RUN_MARKER=/tmp/majestic-running|RUN_MARKER=$SB/majestic-running|" \
     -e "s|BACKOFF=\"5 30 120\"|BACKOFF=\"\${TEST_BACKOFF:-0 0 0}\"|" \
     "$SRC" > "$SB/S95majestic"
 for p in 'DAEMON_PATH="/usr/bin/$DAEMON"' /var/run/ CRASH=/etc/crash UPGRADE_LOCK=/tmp/sysupgrade.lock 'BACKOFF="5 30 120"'; do
@@ -53,6 +55,7 @@ case "\$(cat "$SB/mode")" in
     exit1) exit 1 ;;
     usr2) kill -USR2 \$\$ ;;
     run) exec sleep 1000 ;;
+    stuck) trap "" TERM; exec sleep 1000 ;;
 esac
 EOF
 cat > "$SB/bin/start-stop-daemon" <<'EOF'
@@ -243,6 +246,42 @@ if [ "$sups" = 1 ] && [ "$daemons" = 1 ] && [ -n "$named" ] && kill -0 "$named" 
 else
     bad "stop during launch then start: supervisors $sups, daemons $daemons, pid file '$named'"
 fi
+sh "$SB/S95majestic" stop > /dev/null
+sleep 0.5
+
+# 13. A majestic that ignores SIGTERM -- stopped, or wedged in its own code --
+#     is killed, and nothing starts it again: also when the pid file no longer
+#     names the supervisor, which would otherwise read the SIGKILL as a crash.
+for lose in no yes; do
+    reset stuck
+    sh "$SB/S95majestic" start > /dev/null
+    for _ in $(seq 50); do [ "$(starts)" -ge 1 ] && break; sleep 0.1; done
+    sleep 0.3
+    [ $lose = yes ] && rm -f "$SB/run/majestic-supervise.pid"
+    out=$(sh "$SB/S95majestic" stop)
+    sleep 3
+    if [ "$out" = "Stopping majestic: OK" ] && ! pgrep -f "^sleep 1000" > /dev/null \
+        && ! pgrep -f "$SB/S95majestic supervise" > /dev/null && [ "$(starts)" = 1 ] \
+        && grep -q 'sending SIGKILL' "$SB/log" 2>/dev/null; then
+        ok "a majestic that ignores SIGTERM is killed and not started again (pid file lost: $lose)"
+    else
+        bad "stuck, pid file lost $lose: '$out', starts $(starts), supervisors $(pgrep -f "$SB/S95majestic supervise" | tr '\n' ' ')"
+    fi
+done
+
+# 14. ...and a restart of it ends with one supervisor and one majestic.
+reset stuck
+sh "$SB/S95majestic" start > /dev/null
+for _ in $(seq 50); do [ "$(starts)" -ge 1 ] && break; sleep 0.1; done
+sleep 0.3
+echo run > "$SB/mode"             # the majestic restart starts behaves
+sh "$SB/S95majestic" restart > /dev/null
+sleep 2
+sups=$(pgrep -f "$SB/S95majestic supervise" | wc -l)
+daemons=$(pgrep -f "^sleep 1000" | wc -l)
+[ "$sups" = 1 ] && [ "$daemons" = 1 ] && [ "$(starts)" = 2 ] \
+    && ok "a restart of a majestic that ignores SIGTERM leaves one supervisor and one majestic" \
+    || bad "restart of a stuck majestic: supervisors $sups, daemons $daemons, starts $(starts)"
 sh "$SB/S95majestic" stop > /dev/null
 sleep 0.5
 

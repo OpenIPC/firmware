@@ -1518,11 +1518,13 @@ stop_majestic_for_memory() {
 	[ "1" = "$majestic_stopped" ] && return 1
 	pid=$(pidof majestic 2>/dev/null) || return 1
 	# "releases": free_resources' early stop, before upgrade mode. majestic's
-	# own stop gives its watchdog back with the magic close, so stopping the
-	# owner there leaves nothing armed; and its ownership is already recorded,
-	# so where a driver ignores the magic close the RAM-phase keeper takes the
-	# device over from the pivot -- the unpack before it is seconds against
-	# majestic's 300 s. Later stops come after upgrade mode let go of the
+	# own stop usually gives its watchdog back with the magic close, so
+	# stopping the owner there leaves nothing armed -- but not when majestic
+	# ignored SIGTERM and S95majestic had to SIGKILL it, which closes the
+	# device without the magic close. Either way its ownership is already
+	# recorded, so where the dog stays armed (that, or a driver that ignores
+	# the magic close) the RAM-phase keeper takes the device over from the
+	# pivot -- the unpack before it is seconds against majestic's 300 s. Later stops come after upgrade mode let go of the
 	# watchdog, and keep the guard.
 	if [ -n "$wdog_owner_pid" ] && [ "releases" != "$2" ]; then
 		case " $pid " in *" $wdog_owner_pid "*) return 1 ;; esac
