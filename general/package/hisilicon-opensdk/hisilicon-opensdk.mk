@@ -321,6 +321,15 @@ HISILICON_OPENSDK_SENSORS_gk7206v100 = \
 	sony_imx307/libsns_imx307
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
+# GK7201V200 (XM72010200) boards carry the SP2308 (chip ID 0x5302, sold as
+# OS02M10), whose V4 driver builds from sensor/hi3516ev200 like the rest of
+# the family's (OpenIPC/builder#248). Added for this die only: gk7205v500_lite
+# keeps its fixed 5120 KB rootfs slot with 8 KB left, while gk7201v200_lite
+# already ships the split package with room to spare (~13 KB compressed).
+ifeq ($(OPENIPC_SOC_MODEL),gk7201v200)
+HISILICON_OPENSDK_SENSORS += superpix_sp2308/libsns_sp2308
+endif
+
 # hi3516cv6xx_lite is an 8 MB NOR part with a 5120 KB squashfs slot, and master
 # already fills 5119.32 KB of it (CI run 39116182919: "0KB left"). The IMX335
 # module is ~20 KB compressed and does not fit; 5 MP also needs osmem=64M, which
