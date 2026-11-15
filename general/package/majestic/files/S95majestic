@@ -233,6 +233,22 @@ stop() {
 		i=$((i + 1))
 		sleep 1
 	done
+	# A majestic still here after ten SIGTERMs is not going to act on them:
+	# it is stopped (SIGSTOP, a debugger, the tty) or wedged in its own code.
+	# Left alone, stop answers FAIL and restart gives up, so the one command
+	# meant to recover a hung streamer leaves it in place -- serving nothing --
+	# until a reboot. SIGKILL reaches a stopped process as well. One asleep in
+	# a driver (state D) ignores even that, and still ends in FAIL below. The
+	# supervisor, already asked to end, exits as soon as the daemon is gone.
+	if running; then
+		logger -t "$DAEMON" "did not end after SIGTERM; sending SIGKILL" 2>/dev/null
+		start-stop-daemon -K -q -s KILL -x "$DAEMON_PATH"
+		i=0
+		while { running || { [ -n "$sup" ] && kill -0 "$sup" 2>/dev/null; }; } && [ $i -lt 5 ]; do
+			i=$((i + 1))
+			sleep 1
+		done
+	fi
 	# A supervisor still alive at the cutoff could yet launch a daemon:
 	# not stopped, and its pid file stays for the next stop to find it.
 	if running || { [ -n "$sup" ] && kill -0 "$sup" 2>/dev/null; }; then
