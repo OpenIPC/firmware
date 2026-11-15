@@ -24,9 +24,27 @@ date +TIME_STAMP=%s >> ${FILE}
 # whose recipe changed, so it is removed here on every build.
 rm -f ${TARGET_DIR}/etc/majestic.yaml
 
-CONF="USES_GLIBC=y|OSDRV_T30=y|OSDRV_V85X=y|LIBV4L=y|MAVLINK_ROUTER=y|RUBYFPV=y|ONYXFPV=y|WIFIBROADCAST=y|WIFIBROADCAST_NG=y|AUDIO_PROCESSING_OPENIPC=y"
+CONF="OSDRV_T30=y|OSDRV_V85X=y|LIBV4L=y|MAVLINK_ROUTER=y|RUBYFPV=y|ONYXFPV=y|WIFIBROADCAST=y|WIFIBROADCAST_NG=y|AUDIO_PROCESSING_OPENIPC=y"
 if ! grep -qP ${CONF} ${BR2_CONFIG}; then
-	rm -f ${TARGET_DIR}/usr/lib/libstdc++*
+	if grep -q "USES_GLIBC=y" "${BR2_CONFIG}"; then
+		# A glibc board used to keep libstdc++ unconditionally, because its
+		# vendor blobs may link it. Keep it only when something on the image
+		# names it -- as DT_NEEDED or as a dlopen() string, both raw bytes
+		# here. That over-matches, which is the safe way round. On
+		# ssc338q_ultimate nothing does (zerotier-one links its C++ runtime
+		# statically), and its 1.4 MB, 427 KB of xz, was what pushed the
+		# rootfs over 8192 KB. As in prune-libnl.sh, the pass must be able to
+		# see inside a binary (every dynamic ELF names libc.so) before an
+		# empty result is trusted.
+		libc_seen=$(find "${TARGET_DIR}" -type f ! -name 'libstdc++*' -print0 | xargs -0 -r grep -laF -e 'libc.so' 2>/dev/null | head -n 1)
+		stdcpp_used=$(find "${TARGET_DIR}" -type f ! -name 'libstdc++*' -print0 | xargs -0 -r grep -laF -e 'libstdc++.so' 2>/dev/null | head -n 1)
+		if [ -n "${libc_seen}" ] && [ -z "${stdcpp_used}" ]; then
+			echo "rootfs_script: nothing on this glibc image names libstdc++.so, dropping it"
+			rm -f "${TARGET_DIR}"/usr/lib/libstdc++*
+		fi
+	else
+		rm -f ${TARGET_DIR}/usr/lib/libstdc++*
+	fi
 fi
 
 if grep -q "USES_MUSL=y" ${BR2_CONFIG}; then
