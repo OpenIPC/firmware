@@ -108,6 +108,10 @@ ifeq ($(OPENIPC_SOC_MODEL),gk7201v200)
 define GOKE_OSDRV_GK7205V500_INSTALL_V200_LIBS
 	cd $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/v200 && sha256sum -c --quiet SHA256SUMS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/v200/*.so
+	# Sensor profiles only GK7201V200 boards carry (SP2308, see
+	# hisilicon-opensdk), kept out of the family-wide *.ini glob above so the
+	# other dies' rootfs do not pay for them.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/config/gk7201v200/*.ini
 endef
 endif
 
