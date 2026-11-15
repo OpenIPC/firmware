@@ -36,11 +36,11 @@ if ! grep -qP ${CONF} ${BR2_CONFIG}; then
 		# rootfs over 8192 KB. As in prune-libnl.sh, the pass must be able to
 		# see inside a binary (every dynamic ELF names libc.so) before an
 		# empty result is trusted.
-		libc_seen=$(find ${TARGET_DIR} -type f ! -name 'libstdc++*' -print0 | xargs -0 -r grep -laF -e 'libc.so' 2>/dev/null | head -n 1)
-		stdcpp_used=$(find ${TARGET_DIR} -type f ! -name 'libstdc++*' -print0 | xargs -0 -r grep -laF -e 'libstdc++.so' 2>/dev/null | head -n 1)
+		libc_seen=$(find "${TARGET_DIR}" -type f ! -name 'libstdc++*' -print0 | xargs -0 -r grep -laF -e 'libc.so' 2>/dev/null | head -n 1)
+		stdcpp_used=$(find "${TARGET_DIR}" -type f ! -name 'libstdc++*' -print0 | xargs -0 -r grep -laF -e 'libstdc++.so' 2>/dev/null | head -n 1)
 		if [ -n "${libc_seen}" ] && [ -z "${stdcpp_used}" ]; then
 			echo "rootfs_script: nothing on this glibc image names libstdc++.so, dropping it"
-			rm -f ${TARGET_DIR}/usr/lib/libstdc++*
+			rm -f "${TARGET_DIR}"/usr/lib/libstdc++*
 		fi
 	else
 		rm -f ${TARGET_DIR}/usr/lib/libstdc++*
