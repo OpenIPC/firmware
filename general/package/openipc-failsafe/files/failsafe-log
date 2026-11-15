@@ -1,0 +1,30 @@
+#!/bin/sh
+# Keep the log of the boot that fell into failsafe, for the crash report.
+#
+# Run by failsafe-rescue, after S29pstore has mounted pstore. Two records can
+# hold it, both in the ramoops region of reserved RAM, which a warm reset --
+# the watchdog's, or a reboot -- leaves alone:
+#
+#  - console-ramoops-0: the kernel's own messages. Everything from
+#    "Booting Linux" until S02sysctl lowers kernel.printk, errors after that.
+#    The only record of a boot that ended before userspace logging started --
+#    and boot loops kept arriving with no log at all while pmsg was the only
+#    one: the boots that loop are mostly the ones that never got that far.
+#  - pmsg-ramoops-0: the system log S03pmsglog copied there, majestic's and
+#    every service's, klogd's kernel lines included, for a boot that got as
+#    far as S03pmsglog.
+#
+# They go into /etc/crash/failsafe.log in that order, which is the order they
+# were written in, and crashlog-send sends the file beside the failsafe note as
+# the crash's syslog. An earlier fall's log goes first, so a note is never
+# beside another boot's log when this one left none. Overlay only, no flash.
+PSTORE=/sys/fs/pstore
+LOG=/etc/crash/failsafe.log
+
+rm -f "$LOG" "$LOG.new" 2>/dev/null
+[ -s "$PSTORE/console-ramoops-0" ] || [ -s "$PSTORE/pmsg-ramoops-0" ] || exit 0
+mkdir -p "${LOG%/*}" 2>/dev/null || exit 0
+cat "$PSTORE/console-ramoops-0" "$PSTORE/pmsg-ramoops-0" > "$LOG.new" 2>/dev/null
+[ -s "$LOG.new" ] && mv -f "$LOG.new" "$LOG" 2>/dev/null
+rm -f "$LOG.new" 2>/dev/null
+exit 0
