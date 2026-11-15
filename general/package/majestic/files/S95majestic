@@ -20,6 +20,7 @@ DAEMON_ARGS="-s"
 SUPERVISOR=/var/run/majestic-supervise.pid
 CRASH=/etc/crash
 UPGRADE_LOCK=/tmp/sysupgrade.lock
+RUN_MARKER=/tmp/majestic-running
 BACKOFF="5 30 120"
 WINDOW=600
 LIMIT=5
@@ -127,11 +128,16 @@ unlock() {
 # crash and starts majestic again behind the stop.
 supervisors() {
 	for d in /proc/[0-9]*; do
-		set -- $(tr '\0' ' ' < "$d/cmdline" 2>/dev/null)
-		[ $# -ge 2 ] || continue
-		eval "script=\${$(($# - 1))} last=\${$#}"
-		[ "$last" = supervise ] && [ "${script##*/}" = "${0##*/}" ] && echo "${d#/proc/}"
+		is_supervisor "${d#/proc/}" && echo "${d#/proc/}"
 	done
+}
+
+# Whether a pid runs this script as `supervise`: its last two arguments.
+is_supervisor() {
+	set -- $(tr '\0' ' ' < "/proc/$1/cmdline" 2>/dev/null)
+	[ $# -ge 2 ] || return 1
+	eval "script=\${$(($# - 1))} last=\${$#}"
+	[ "$last" = supervise ] && [ "${script##*/}" = "${0##*/}" ]
 }
 
 any_alive() {
@@ -145,12 +151,7 @@ any_alive() {
 # have been reused by anything since.
 supervising() {
 	pid=$(cat "$SUPERVISOR" 2>/dev/null)
-	[ -n "$pid" ] || return 1
-	# This script, run as `supervise`: its last two arguments.
-	set -- $(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
-	[ $# -ge 2 ] || return 1
-	eval "script=\${$(($# - 1))} last=\${$#}"
-	[ "$last" = supervise ] && [ "${script##*/}" = "${0##*/}" ]
+	[ -n "$pid" ] && is_supervisor "$pid"
 }
 
 # The signals a fault ends majestic with: SIGILL, SIGABRT, SIGBUS (7, and 10
@@ -265,13 +266,18 @@ stop() {
 	if running; then
 		sups=$(supervisors)
 		[ -n "$sups" ] && kill $sups 2>/dev/null
-		logger -t "$DAEMON" "did not end after SIGTERM; sending SIGKILL" 2>/dev/null
+		logger -t "$DAEMON" "did not end after SIGTERM; sending SIGKILL -- the hardware watchdog stays armed until majestic runs again" 2>/dev/null
 		start-stop-daemon -K -q -s KILL -x "$DAEMON_PATH"
 		i=0
 		while { running || any_alive $sup $sups; } && [ $i -lt 5 ]; do
 			i=$((i + 1))
 			sleep 1
 		done
+		# majestic leaves $RUN_MARKER while it runs and removes it on a clean
+		# exit, so the next one finding it reports the last as killed by
+		# SIGKILL and points at dmesg for an out-of-memory kill. This kill is
+		# not one, and the line above already says so.
+		running || rm -f "$RUN_MARKER"
 	fi
 	# A supervisor still alive at the cutoff could yet launch a daemon:
 	# not stopped, and its pid file stays for the next stop to find it.
