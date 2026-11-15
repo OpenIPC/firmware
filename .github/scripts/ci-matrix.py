@@ -223,7 +223,7 @@ NO_BUILD_SCRIPTS = {
     "lint-workflow-shell.py", "push_build.py", "soc_aliases.py",
     "test_automount.sh", "test_check_mac.sh", "test_excludes_report.sh",
     "test_load_hisilicon.sh", "test_load_goke.sh", "test_load_novatek.sh", "test_load_fullhan.sh", "test_load_hisilicon_layout.sh", "test_push_build.py", "test_shell_parse.sh",
-    "test_strip_shell_comments.sh", "test_sysupgrade.sh", "test_crashlog.sh", "test_majestic_supervise.sh",
+    "test_strip_shell_comments.sh", "test_sysupgrade.sh", "test_crashlog.sh", "test_failsafe_log.sh", "test_majestic_supervise.sh",
     "test_vigil_supervise.sh",
     "test_init_overlay.sh",
     # build-one.yml's request parser and its test: dispatch and shell-tests
@@ -1121,6 +1121,7 @@ def self_test():
         ([".github/scripts/test_sysupgrade.sh"], 0, "shell-tests fixture"),
         ([".github/scripts/test_check_mac.sh"], 0, "shell-tests: MAC derivation"),
         ([".github/scripts/test_crashlog.sh"], 0, "shell-tests: crash log capture"),
+        ([".github/scripts/test_failsafe_log.sh"], 0, "shell-tests: failed-boot log"),
         ([".github/scripts/test_majestic_supervise.sh"], 0, "shell-tests: majestic supervisor"),
         ([".github/scripts/test_strip_shell_comments.sh"], 0, "shell-tests: stripper"),
         ([".github/scripts/test_automount.sh"], 0, "shell-tests: automount"),

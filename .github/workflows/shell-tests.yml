@@ -85,6 +85,15 @@ jobs:
             general/package/openipc-failsafe/files/S98crashlog > /tmp/S98crashlog.stripped
           SRC=/tmp/S98crashlog.stripped bash .github/scripts/test_crashlog.sh
 
+      # failsafe-log keeps the log of a boot that fell into failsafe: the
+      # only thing a boot loop's report can say beyond its name.
+      - run: bash .github/scripts/test_failsafe_log.sh
+      - name: Re-run failsafe-log against the stripped form that actually ships
+        run: |
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/package/openipc-failsafe/files/failsafe-log > /tmp/failsafe-log.stripped
+          SRC=/tmp/failsafe-log.stripped bash .github/scripts/test_failsafe_log.sh
+
   majestic-supervise:
     name: majestic restarted after a crash, never in a loop
     if: >-
