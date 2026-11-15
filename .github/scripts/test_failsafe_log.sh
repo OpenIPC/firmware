@@ -56,15 +56,31 @@ grep -q 'the pipeline did not start' "$LOG" 2>/dev/null \
     && ok "the system log is kept when it is all there is" \
     || bad "the pmsg record was not kept"
 
-# --- both: in the order they were written ------------------------------------
+# --- both: each under its own header, console first ----------------------------
 reset
 printf '[    1.000000] kernel first\n' > "$SB/pstore/console-ramoops-0"
 printf 'Oct 15 09:00:01 cam user.info syslog: userspace after\n' > "$SB/pstore/pmsg-ramoops-0"
 run
-[ "$(head -n 1 "$LOG" 2>/dev/null)" = "[    1.000000] kernel first" ] &&
-    [ "$(tail -n 1 "$LOG")" = "Oct 15 09:00:01 cam user.info syslog: userspace after" ] \
-    && ok "kernel console first, then the system log" \
-    || bad "the two records are not in the order they were written: $(cat "$LOG" 2>/dev/null)"
+want=$(printf '==> console-ramoops-0 <==\n[    1.000000] kernel first\n==> pmsg-ramoops-0 <==\nOct 15 09:00:01 cam user.info syslog: userspace after')
+[ "$(cat "$LOG" 2>/dev/null)" = "$want" ] \
+    && ok "two records, two headed sections, the system log last" \
+    || bad "not the two headed sections: $(cat "$LOG" 2>/dev/null)"
+
+# --- a record that cannot be read is left out, not kept in part --------------
+if [ "$(id -u)" -ne 0 ]; then
+    reset
+    printf '[    1.000000] kernel\n' > "$SB/pstore/console-ramoops-0"
+    printf 'Oct 15 09:00:01 cam user.info syslog: readable\n' > "$SB/pstore/pmsg-ramoops-0"
+    chmod 000 "$SB/pstore/console-ramoops-0"
+    run
+    chmod 644 "$SB/pstore/console-ramoops-0"
+    ! grep -q 'console-ramoops-0' "$LOG" 2>/dev/null && grep -q 'readable' "$LOG" 2>/dev/null \
+        && ok "an unreadable record is left out and the other kept" \
+        || bad "an unreadable record changed the log: $(cat "$LOG" 2>/dev/null)"
+    [ ! -e "$SB/crash/failsafe.log.part" ] && ok "and no part file is left" || bad "failsafe.log.part left behind"
+else
+    echo "skip the unreadable-record case: root reads a mode-000 file"
+fi
 
 # --- an earlier fall's log never sits beside this one's note -----------------
 reset
