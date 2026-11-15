@@ -59,10 +59,16 @@ define HISILICON_OSDRV_HI3516EV200_IMX335_LAYOUT
 endef
 endif
 
-# camhi-motor.ko is a prebuilt for the vendor 4.9.37 kernel. A neo board runs
-# Linux 7.0, which cannot load it, so it would only be dead weight there, on
-# a rootfs that sits at its 5120 KB cap.
-ifneq ($(OPENIPC_VARIANT),neo)
+# camhi-motor.ko is a prebuilt for the vendor 4.9.37 kernel. The neo variant
+# is defined by its kernel -- every neo build runs Linux 7.0, which cannot load
+# a 4.9.37 module -- so on neo it is only dead weight, on a rootfs at its
+# 5120 KB cap. A rebuild over an earlier neo target would keep the copy it
+# installed then, so neo removes the directory outright.
+ifeq ($(OPENIPC_VARIANT),neo)
+define HISILICON_OSDRV_HI3516EV200_INSTALL_CAMHI_MOTOR
+	rm -rf $(TARGET_DIR)/lib/modules/4.9.37
+endef
+else
 define HISILICON_OSDRV_HI3516EV200_INSTALL_CAMHI_MOTOR
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/hisilicon $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/kmod/camhi-motor.ko
