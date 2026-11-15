@@ -337,6 +337,20 @@ HISILICON_OPENSDK_SENSORS := $(filter-out sony_imx335/libsns_imx335 sony_imx662/
 	sony_imx675/libsns_imx675 sony_imx678/libsns_imx678,$(HISILICON_OPENSDK_SENSORS))
 endif
 
+# waybeam on hi3516cv6xx ships its own IMX662 plugin, built from the waybeam
+# tree, and its backend dlopens it from /usr/lib/cv610 rather than from
+# /usr/lib/sensors: that plugin drives the sensor clock from the mode the
+# backend picked, while this one assumes a fixed 37.125 MHz and refuses
+# anything above 90 fps. The copy here would be dead weight on a waybeam image
+# (majestic cannot be selected alongside it), so filter it out at selection
+# time, the same way the lite branch above does. IMX335 is untouched: waybeam
+# has no copy of it, and its backend dlopens this one.
+ifeq ($(OPENIPC_SOC_FAMILY),hi3516cv6xx)
+ifeq ($(BR2_PACKAGE_WAYBEAM),y)
+HISILICON_OPENSDK_SENSORS := $(filter-out sony_imx662/libsns_imx662,$(HISILICON_OPENSDK_SENSORS))
+endif
+endif
+
 # fpv variant on V4 (hi3516ev200 + gk7205v200): restrict to the high-fps
 # Sony sensors only. FPV cameras are permanently paired with one sensor;
 # the other 26 entries in HISILICON_OPENSDK_SENSORS_$(family) are dead

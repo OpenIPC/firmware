@@ -320,17 +320,18 @@ UNBUILT_FAMILIES = {
 # package that left the matrix, not one that left the tree.
 #
 # waybeam is unbuildable by construction here rather than merely unselected: it
-# depends on !BR2_PACKAGE_MAJESTIC, and every sigmastar defconfig in ALL_BOARDS
-# sets BR2_PACKAGE_MAJESTIC=y, because both drive the same sensor and encoder.
-# The same exclusion holds downstream, so it is selected nowhere at all: every
-# OpenIPC/builder defconfig that selects wifibroadcast-ng also sets
-# BR2_PACKAGE_MAJESTIC=y, and no defconfig in either tree sets
-# BR2_PACKAGE_WAYBEAM=y. The symbol appears only where it is defined, in
-# general/package/waybeam/Config.in, and in this comment. The line this replaces
-# claimed builder's FPV variants selected it, which sent a contributor debugging
-# an FPV OSD fault (#2395) after a waybeam log file that no shipped image
-# writes. A defconfig with Majestic off, mainline or downstream, would take it
-# off this list.
+# depends on !BR2_PACKAGE_MAJESTIC, and every defconfig in ALL_BOARDS on a
+# family it supports (sigmastar Infinity6E, hi3516cv6xx) sets
+# BR2_PACKAGE_MAJESTIC=y, because both drive the same sensor and encoder. No
+# defconfig in this tree sets BR2_PACKAGE_WAYBEAM=y. Downstream it is selected:
+# OpenIPC/builder's ssc338q_waybeam_generic (builder#185) is wfb-ng with waybeam
+# in place of Majestic, and a hi3516cv6xx waybeam device is to follow the cv610
+# arm (#2860). Those builds are builder's CI, not this matrix. An earlier version
+# of this note claimed builder's FPV variants selected it while no image did,
+# which sent a contributor debugging an FPV OSD fault (#2395) after a waybeam
+# log file that no shipped image wrote -- so check builder before trusting
+# either claim. A mainline defconfig with Majestic off would take it off this
+# list.
 #
 # usb-dual-role is here for the ordinary reason: it needs a device tree that
 # wires dwc3 as dual-role and a kernel built with CONFIG_USB_DWC3_DUAL_ROLE,
