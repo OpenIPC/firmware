@@ -26,7 +26,7 @@ rm -f ${TARGET_DIR}/etc/majestic.yaml
 
 CONF="OSDRV_T30=y|OSDRV_V85X=y|LIBV4L=y|MAVLINK_ROUTER=y|RUBYFPV=y|ONYXFPV=y|WIFIBROADCAST=y|WIFIBROADCAST_NG=y|AUDIO_PROCESSING_OPENIPC=y"
 if ! grep -qP ${CONF} ${BR2_CONFIG}; then
-	if grep -q "USES_GLIBC=y" ${BR2_CONFIG}; then
+	if grep -q "USES_GLIBC=y" "${BR2_CONFIG}"; then
 		# A glibc board used to keep libstdc++ unconditionally, because its
 		# vendor blobs may link it. Keep it only when something on the image
 		# names it -- as DT_NEEDED or as a dlopen() string, both raw bytes
