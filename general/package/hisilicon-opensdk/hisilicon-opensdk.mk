@@ -901,6 +901,10 @@ endif
 #                                  66 KB → 130 KB source in recent
 #                                  cv500 dispatch work.
 #
+# Kbuild drops it in extra/ on 4.9 and in updates/ on the neo boards' 7.0
+# kernel, so both are cleared; neo shipped it for a while because only
+# extra/ was.
+#
 # It still compiles in CI (Kbuild unchanged) and cv500 keeps whatever
 # subset its own kbuild includes. open_adc.ko used to be skipped here too;
 # it is /dev/lsadc, the photocell input majestic's nightMode.adcReadout
@@ -913,7 +917,8 @@ endif
 ifeq ($(OPENIPC_SOC_FAMILY),hi3516ev200)
 define HISILICON_OPENSDK_SKIP_UNUSED_EV200
 	$(if $(BR2_PER_PACKAGE_DIRECTORIES),rsync -a $(PER_PACKAGE_DIR)/hisilicon-opensdk/target/lib/modules/ $(TARGET_DIR)/lib/modules/)
-	rm -f $(TARGET_DIR)/lib/modules/*/extra/open_ive_neo.ko
+	rm -f $(TARGET_DIR)/lib/modules/*/extra/open_ive_neo.ko \
+		$(TARGET_DIR)/lib/modules/*/updates/open_ive_neo.ko
 	$(LINUX_RUN_DEPMOD)
 endef
 HISILICON_OPENSDK_TARGET_FINALIZE_HOOKS += HISILICON_OPENSDK_SKIP_UNUSED_EV200

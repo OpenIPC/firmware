@@ -59,6 +59,16 @@ define HISILICON_OSDRV_HI3516EV200_IMX335_LAYOUT
 endef
 endif
 
+# camhi-motor.ko is a prebuilt for the vendor 4.9.37 kernel. A neo board runs
+# Linux 7.0, which cannot load it, so it would only be dead weight there, on
+# a rootfs that sits at its 5120 KB cap.
+ifneq ($(OPENIPC_VARIANT),neo)
+define HISILICON_OSDRV_HI3516EV200_INSTALL_CAMHI_MOTOR
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/hisilicon $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/kmod/camhi-motor.ko
+endef
+endif
+
 define HISILICON_OSDRV_HI3516EV200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/sensor/config/*.ini
@@ -89,8 +99,7 @@ define HISILICON_OSDRV_HI3516EV200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/sensor/iq/ov2735.ini
 	ln -sf imx307.ini $(TARGET_DIR)/etc/sensors/iq/default.ini
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.37/hisilicon $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/kmod/camhi-motor.ko
+	$(HISILICON_OSDRV_HI3516EV200_INSTALL_CAMHI_MOTOR)
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(HISILICON_OSDRV_HI3516EV200_PKGDIR)/files/script/load*
