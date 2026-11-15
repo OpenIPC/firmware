@@ -121,6 +121,26 @@ unlock() {
 	rm -rf "$SUPERVISOR.lock"
 }
 
+# Every process running this script as `supervise`, by command line rather
+# than by $SUPERVISOR: the stop that SIGKILLs majestic must also reach a
+# supervisor the pidfile no longer names, or that one reads the SIGKILL as a
+# crash and starts majestic again behind the stop.
+supervisors() {
+	for d in /proc/[0-9]*; do
+		set -- $(tr '\0' ' ' < "$d/cmdline" 2>/dev/null)
+		[ $# -ge 2 ] || continue
+		eval "script=\${$(($# - 1))} last=\${$#}"
+		[ "$last" = supervise ] && [ "${script##*/}" = "${0##*/}" ] && echo "${d#/proc/}"
+	done
+}
+
+any_alive() {
+	for p in "$@"; do
+		kill -0 "$p" 2>/dev/null && return 0
+	done
+	return 1
+}
+
 # The supervisor's pid, if it is the supervisor still: a pid in a file can
 # have been reused by anything since.
 supervising() {
@@ -239,19 +259,23 @@ stop() {
 	# meant to recover a hung streamer leaves it in place -- serving nothing --
 	# until a reboot. SIGKILL reaches a stopped process as well. One asleep in
 	# a driver (state D) ignores even that, and still ends in FAIL below. The
-	# supervisor, already asked to end, exits as soon as the daemon is gone.
+	# supervisor, asked to end, exits as soon as the daemon is gone -- every
+	# supervisor, including one the pidfile lost track of (see supervisors).
+	sups=
 	if running; then
+		sups=$(supervisors)
+		[ -n "$sups" ] && kill $sups 2>/dev/null
 		logger -t "$DAEMON" "did not end after SIGTERM; sending SIGKILL" 2>/dev/null
 		start-stop-daemon -K -q -s KILL -x "$DAEMON_PATH"
 		i=0
-		while { running || { [ -n "$sup" ] && kill -0 "$sup" 2>/dev/null; }; } && [ $i -lt 5 ]; do
+		while { running || any_alive $sup $sups; } && [ $i -lt 5 ]; do
 			i=$((i + 1))
 			sleep 1
 		done
 	fi
 	# A supervisor still alive at the cutoff could yet launch a daemon:
 	# not stopped, and its pid file stays for the next stop to find it.
-	if running || { [ -n "$sup" ] && kill -0 "$sup" 2>/dev/null; }; then
+	if running || { [ -n "$sup" ] && kill -0 "$sup" 2>/dev/null; } || any_alive $sups; then
 		unlock
 		echo "FAIL"
 		return 1
