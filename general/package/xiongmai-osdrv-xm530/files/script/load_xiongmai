@@ -194,6 +194,22 @@ record_sensor() {
 		logger -s -p daemon.info -t xiongmai "Writing $sensor to U-Boot ENV"
 }
 
+# The XM530 install commands give Linux mem=35M of the XM530's 64 MB, and an
+# XM550 installed with them unchanged keeps that 35M of its 128 MB: Linux
+# runs in 32 MB beside a 93 MB media zone the pipeline uses about 25 MB of,
+# and majestic cannot offer 1440p (#2853). 64/64 is what that board ran
+# 2560x1440 H.265 with. Only the untouched 35M of the plain xm layout moves:
+# any other split, and every cma or hybrid boot, is the owner's. It applies
+# at the next boot; this one keeps the zone it already handed out.
+fix_xm550_split() {
+	[ "$chipid" = xm550 ] && [ "$MEM_OS" = 35 ] || return 0
+	grep -q -E '(^| )(cma|mmz_allocator)=' /proc/cmdline && return 0
+	command -v set_allocator >/dev/null 2>&1 || return 0
+	set_allocator xm 64 >/dev/null &&
+		logger -s -p daemon.info -t xiongmai \
+			"XM550 booted with the XM530's mem=35M; mem=64M from the next boot"
+}
+
 load_usage() {
 	echo "Usage: $0 [-option]"
 	echo "options:"
@@ -209,6 +225,7 @@ if [ "$1" = "-i" ]; then
 	insert_ko
 	make_symlink
 	record_sensor
+	fix_xm550_split
 fi
 
 if [ "$1" = "-r" ]; then
