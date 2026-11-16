@@ -32,6 +32,14 @@ jobs:
       - run: bash .github/scripts/test_load_goke.sh
       - run: bash .github/scripts/test_load_novatek.sh
       - run: bash .github/scripts/test_load_fullhan.sh
+      - run: bash .github/scripts/test_load_fullhan_v100.sh
+      # The build strips whole-line comments from shipped scripts; run the
+      # suite against that form too, since it is the one cameras execute.
+      - name: Re-run the V100 load_fullhan suite against the stripped form that ships
+        run: |
+          awk -f general/scripts/strip-shell-comments.awk \
+            general/package/fullhan-osdrv-fh8852v100/files/script/load_fullhan > /tmp/load_fullhan_v100.stripped
+          SCRIPT_UNDER_TEST=/tmp/load_fullhan_v100.stripped bash .github/scripts/test_load_fullhan_v100.sh
       - run: bash .github/scripts/test_load_hisilicon_layout.sh
 
   sysupgrade-verify:
