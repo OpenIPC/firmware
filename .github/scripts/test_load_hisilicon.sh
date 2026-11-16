@@ -115,18 +115,24 @@ fi
 
 eval "$(fn sensor_known)"
 eval "$(fn detect_sensor)"
-devmem() { clock=$3; }
+devmem() { clock=$3; writes=$((writes + 1)); }
 sleep()  { :; }
 logger() { :; }
+# Prints what detect_sensor returned and how many clock writes it made, so a
+# first-probe hit that still touched the clock fails the test.
 probe() {   # $1: what answers at 37.125 MHz, $2: the clock the sensor needs, $3: its name
-    at37="$1"; want="$2"; name="$3"; clock=0x6
+    at37="$1"; want="$2"; name="$3"; clock=0x6; writes=0
     ipcinfo() { if [ "$clock" = "$want" ]; then echo "$name"; else echo "$at37"; fi; }
-    detect_sensor
+    # Not $(detect_sensor): a subshell would keep the write count to itself.
+    detect_sensor > "$probe_out"
+    echo "$(cat "$probe_out") writes=$writes"
 }
-T jxh22  "$(probe tpffff 0x1 jxh22)"  "JXH22 silent at 37.125 MHz -> found at 24 MHz (#1352)"
-T sc1135 "$(probe ''     0x5 sc1135)" "nothing at 37.125 MHz -> found at 27 MHz"
-T imx122 "$(probe imx122 0x6 imx122)" "IMX122 answers the first probe -> kept, no retry"
-T tpffff "$(probe tpffff 0x9 jxh22)"  "no clock helps -> the first answer, as before"
+probe_out=$(mktemp)
+trap 'rm -f "$probe_out"' EXIT
+T "jxh22 writes=1"  "$(probe tpffff 0x1 jxh22)"  "JXH22 silent at 37.125 MHz -> found at 24 MHz, one clock write (#1352)"
+T "sc1135 writes=2" "$(probe ''     0x5 sc1135)" "nothing at 37.125 MHz -> found at 27 MHz, two clock writes"
+T "imx122 writes=0" "$(probe imx122 0x6 imx122)" "IMX122 answers the first probe -> kept, no clock write"
+T "tpffff writes=2" "$(probe tpffff 0x9 jxh22)"  "no clock helps -> the first answer, as before"
 
 echo
 if [ "$fail" -eq 0 ]; then
