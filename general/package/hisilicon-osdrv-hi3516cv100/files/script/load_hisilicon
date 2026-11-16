@@ -47,6 +47,42 @@ insert_detect() {
 	SENSOR=imx122 insert_sns
 }
 
+# The names insert_sns has a case arm for. Keep the two lists the same:
+# .github/scripts/test_load_hisilicon.sh fails when they drift apart.
+sensor_known() {
+	case $1 in
+	ar0130 | 9m034 | po3100k | bf3116 | bg0703 | icx692 | mn34031 | mn34041 | \
+	imx104 | imx123 | imx138_spi | imx222 | imx225 | imx322 | imx323 | imx122 | \
+	imx138_i2c | ov9712 | ov9732 | soih22 | ov2710 | jxh22 | jxh42 | ar0140 | \
+	ar0141 | mt9p006 | hm1375 | ar0330 | imx236 | sc1035 | sc1135 | sc2135)
+		return 0 ;;
+	esac
+	return 1
+}
+
+# insert_detect probes with the IMX122 clock, 37.125 MHz. A sensor that wants
+# 24 MHz (the JXH22 of #1352) may not answer at that clock: every read comes
+# back 0xFF, and ipctool names a TechPoint "TPffff" that is not there. That
+# name is not "unknown", so it was saved to the env and the camera stayed on
+# "Invalid sensor type" for good. Probe again at 24 and then 27 MHz, the other
+# two clocks insert_sns uses, before settling for what the first probe said.
+detect_sensor() {
+	found=$(ipcinfo --short-sensor)
+	sensor_known "$found" && { echo "$found"; return; }
+	for clk in 0x1 0x5; do
+		devmem 0x20030030 32 $clk
+		sleep 1
+		retry=$(ipcinfo --short-sensor)
+		if sensor_known "$retry"; then
+			logger -s -p daemon.info -t hisilicon \
+				"Sensor answered only at clock $clk: $retry (first probe said '$found')"
+			echo "$retry"
+			return
+		fi
+	done
+	echo "$found"
+}
+
 remove_detect() {
 	rmmod -w open_ssp_sony &>/dev/null
 	rmmod -w open_ssp_pana &>/dev/null
@@ -459,7 +495,7 @@ else
 		logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
 	else
 		insert_detect
-		SENSOR_DETECT=$(ipcinfo --short-sensor)
+		SENSOR_DETECT=$(detect_sensor)
 		export SENSOR=${SENSOR_DETECT:=unknown}
 		remove_detect
 		logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"
