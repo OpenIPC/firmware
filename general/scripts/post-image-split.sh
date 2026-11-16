@@ -16,6 +16,16 @@ set -e
 BINARIES_DIR=$1
 ERASEBLOCK_SIZE=$((64 * 1024))
 
+# The image is only bootable by a kernel that divides it: mtdsplit
+# (MTD_SPLIT_FIRMWARE) or OpenIPC's split layout (MTD_SPLIT_LAYOUT). Kconfig
+# drops a symbol its tree does not know, so a kernel that predates either
+# builds without a word and cannot find its rootfs -- refuse the image instead.
+if ! grep -qsE '^CONFIG_MTD_SPLIT_(FIRMWARE|LAYOUT)=y$' "${BUILD_DIR}"/linux-*/.config; then
+	echo "post-image-split: the kernel (${BUILD_DIR}/linux-*/.config) has neither" \
+		"CONFIG_MTD_SPLIT_FIRMWARE nor CONFIG_MTD_SPLIT_LAYOUT: it cannot boot a split firmware.bin" >&2
+	exit 1
+fi
+
 if [ -f "${BINARIES_DIR}/Image" ]; then
 	# Buildroot drops the load address from its .config unless it builds a
 	# uImage itself; the board's composed defconfig, beside images/, has it.
