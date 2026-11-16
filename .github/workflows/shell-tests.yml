@@ -32,6 +32,7 @@ jobs:
       - run: bash .github/scripts/test_load_goke.sh
       - run: bash .github/scripts/test_load_novatek.sh
       - run: bash .github/scripts/test_load_fullhan.sh
+      - run: bash .github/scripts/test_load_fullhan_v100.sh
       - run: bash .github/scripts/test_load_hisilicon_layout.sh
 
   sysupgrade-verify:
