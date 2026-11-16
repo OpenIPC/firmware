@@ -1,8 +1,9 @@
 #!/bin/sh
 # load_fullhan (FH885x V100, FH8632): where it puts the media pool and the ARC.
 #
-# The ARC's image runs at the top of the DDR, so rtvbus's ring and firmware
-# take its last 2 MB, and vmm.ko's mmz runs from the end of mem= up to them.
+# The ARC's image runs at the top of a 128 MB DDR, so there rtvbus's ring and
+# firmware take its last 2 MB, and vmm.ko's mmz runs from the end of mem= up
+# to them. A 64 MB chip keeps the fixed layout it always had.
 # The same script runs on 64 MB FH8852 and FH8632 chips and 128 MB FH8856
 # ones, booted with OpenIPC's mem=29M or a vendor environment's mem=36M, so
 # each of those is a case below -- and the 64 MB, mem=29M case must stay
@@ -106,7 +107,11 @@ run "mem=36M@0xA0000000 $boot" "$(chip FH8856 1024 d)"
 layout "0xA2400000,90M" 0xa7e00000 "mem=36M at the DDR's own address: the same"
 
 run "mem=36M $boot" "$(chip FH8852 512 c)"
-layout "0xA2400000,26M" 0xa3e00000 "64 MB: the pool starts above the kernel"
+layout "0xA1D00000,33M" 0xa3e00000 "64 MB: the layout it always had, whatever mem= says"
+quiet "... and says nothing"
+
+run "mem=96M $boot" "$(chip FH8856 1024 d)"
+layout "0xA6000000,30M" 0xa7e00000 "128 MB, a large mem=: the pool still ends below the ARC"
 logged "the ISP may not start" "... and says the pool is small"
 
 echo "=== nothing to go on: the fixed 64 MB layout ==="
@@ -122,8 +127,9 @@ logged "fixed 64 MB layout kept" "... and says so"
 run "mem=29M $boot" "$(chip FH8856 2048 d)"
 layout "0xA1D00000,33M" 0xa3e00000 "a DDR size no V100 chip has"
 
-run "mem=60M $boot" "$(chip FH8852 512 c)"
+run "mem=120M $boot" "$(chip FH8856 1024 d)"
 layout "0xA1D00000,33M" 0xa3e00000 "mem= leaving no room for a pool"
+logged "fixed 64 MB layout kept" "... and says so"
 
 run "mem=33554432 $boot" "$(chip FH8856 1024 d)"
 layout "0xA1D00000,33M" 0xa3e00000 "mem= not in megabytes"

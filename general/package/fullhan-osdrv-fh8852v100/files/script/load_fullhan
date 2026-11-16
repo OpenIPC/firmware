@@ -17,11 +17,14 @@ set_gpio()
 # ARC where it never looks, and the stock mem=36M also put the kernel 4 MB
 # into the pool (#1610). So the ARC takes the top 2 MB of the DDR the PMU
 # reports -- ring, then firmware, as the vendor's 0xa7e00000/0xa7f00000 on
-# 128 MB -- and the pool runs from the end of mem= up to it: 0xA1D00000,33M
-# for 64 MB with mem=29M, as before, and the vendor's 0xA2400000,90M for
-# 128 MB with mem=36M. The fixed layout stays when either size cannot be read.
+# 128 MB -- and the pool runs from the end of mem= up to it: the vendor's
+# 0xA2400000,90M with mem=36M. A 64 MB chip (FH8852, FH8632) keeps the fixed
+# layout it has always run, whatever mem= says, and so does any chip whose
+# sizes cannot be read.
 mem_layout()
 {
+	pool=0xA1D00000,33M
+	arc=0xA3E00000
 	# One mem=, in megabytes, at the start of the DDR (no @, @0, or the
 	# DDR's own address); more than one describes a layout this does not.
 	os_mb=$(awk 'BEGIN { RS = "[ \n]" }
@@ -36,14 +39,13 @@ mem_layout()
 	ddr_mbit=$(sed -n 's/^ddr_size[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)Mbit$/\1/p' \
 		"${LOAD_FULLHAN_CHIP:-/proc/driver/chip}" 2>/dev/null)
 	case "$ddr_mbit" in
-		512|1024) ddr_mb=$((ddr_mbit / 8)) ;;
+		512) return ;;
+		1024) ddr_mb=128 ;;
 		*) ddr_mb= ;;
 	esac
 
 	if [ -z "$os_mb" ] || [ -z "$ddr_mb" ] || [ "$os_mb" -lt 16 ] || [ $((ddr_mb - 2 - os_mb)) -lt 8 ]; then
 		logger -s -t load_fullhan "mem=${os_mb:-?}M on ${ddr_mb:-?} MB of DDR: fixed 64 MB layout kept"
-		pool=0xA1D00000,33M
-		arc=0xA3E00000
 		return
 	fi
 
