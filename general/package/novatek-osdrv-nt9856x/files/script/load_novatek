@@ -262,7 +262,7 @@ set_default_osmem() {
 # and everything goes back as it was found: the driver powers the sensor up
 # again by itself when majestic opens it.
 probe_powered_sensor() {
-	local clk=0xf0020070 en pins pin cfg name dir found
+	local clk=0xf0020070 en pins pin cfg name dir val own found
 	for cfg in /etc/sensors/sen_*.cfg; do
 		name=$(basename "$cfg" .cfg)
 		[ -f "nvt_$name.ko" ] || continue
@@ -274,16 +274,27 @@ probe_powered_sensor() {
 	en=$(devmem $clk 32)
 	devmem $clk 32 $((en | 0x4))
 	for pin in $pins; do
-		[ -d /sys/class/gpio/gpio$pin ] || echo $pin >/sys/class/gpio/export || continue
+		# A pin someone else exported is put back exactly as found and left
+		# exported; only an export this probe made is released.
+		own=
+		if [ ! -d /sys/class/gpio/gpio$pin ]; then
+			echo $pin >/sys/class/gpio/export || continue
+			own=1
+		fi
 		dir=$(cat /sys/class/gpio/gpio$pin/direction)
+		val=$(cat /sys/class/gpio/gpio$pin/value)
 		echo low >/sys/class/gpio/gpio$pin/direction
 		usleep 1000
 		echo 1 >/sys/class/gpio/gpio$pin/value
 		usleep 2000
 		found=$(ipcinfo --short-sensor)
 		echo 0 >/sys/class/gpio/gpio$pin/value
-		[ "$dir" = in ] && echo in >/sys/class/gpio/gpio$pin/direction
-		echo $pin >/sys/class/gpio/unexport
+		if [ "$dir" = in ]; then
+			echo in >/sys/class/gpio/gpio$pin/direction
+		else
+			echo $val >/sys/class/gpio/gpio$pin/value
+		fi
+		[ -n "$own" ] && echo $pin >/sys/class/gpio/unexport
 		if [ -n "$found" ]; then
 			logger -s -p daemon.info -t novatek "$found answered with its reset (GPIO $pin) released and its clock on"
 			break
