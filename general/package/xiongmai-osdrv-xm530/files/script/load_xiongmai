@@ -205,9 +205,14 @@ fix_xm550_split() {
 	[ "$chipid" = xm550 ] && [ "$MEM_OS" = 35 ] || return 0
 	grep -q -E '(^| )(cma|mmz_allocator)=' /proc/cmdline && return 0
 	command -v set_allocator >/dev/null 2>&1 || return 0
-	set_allocator xm 64 >/dev/null &&
+	local out
+	if out=$(set_allocator xm 64 2>&1); then
 		logger -s -p daemon.info -t xiongmai \
 			"XM550 booted with the XM530's mem=35M; mem=64M from the next boot"
+	else
+		logger -s -p daemon.warn -t xiongmai \
+			"XM550 left at mem=35M: $(echo "$out" | tail -1)"
+	fi
 }
 
 load_usage() {

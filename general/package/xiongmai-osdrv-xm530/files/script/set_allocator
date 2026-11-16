@@ -102,8 +102,19 @@ else
 fi
 
 # Everything else on the command line stays, in its order, after mem=, which
-# load_xiongmai and older scripts read as the first argument
-kept=$(fw_printenv -n bootargs | tr ' ' '\n' |
+# load_xiongmai and older scripts read as the first argument. A read that
+# failed or came back without root= would leave bootargs as just mem=..., and
+# the camera without a root filesystem at the next boot: load_xiongmai runs
+# this unattended on XM550s (#2870), so nothing is written then.
+bootargs=$(fw_printenv -n bootargs 2>/dev/null)
+case " $bootargs " in
+*" root="*) ;;
+*)
+	echo "Could not read bootargs with a root=; nothing changed"
+	exit 1
+	;;
+esac
+kept=$(echo "$bootargs" | tr ' ' '\n' |
 	grep -vE '^(mem|cma|mmz_allocator)=' | grep . | tr '\n' ' ')
 # Both in one write of the environment, so they cannot disagree: the next
 # run takes its default from osmem
