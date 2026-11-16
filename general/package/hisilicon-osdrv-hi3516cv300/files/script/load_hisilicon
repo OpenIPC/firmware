@@ -332,7 +332,12 @@ insert_sns()
 			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
             ;;
 
-	sc2310_i2c|sc2235p_i2c|sc2235p_i2c_dc)
+	# ipcinfo names a plain SC2235 (chip ID 0x2235) sc2235_i2c. Without an arm
+	# for it this script stopped at "Invalid sensor type" before loading any
+	# module, and majestic then failed with "Cannot get chip id" (#1418). The
+	# driver is hisilicon-opensdk's libsns_sc2235, a DVP sensor from the same
+	# vendor as the SC2235P, so it takes the same bus, pinmux and clock.
+	sc2310_i2c|sc2235p_i2c|sc2235p_i2c_dc|sc2235_i2c|sc2235_i2c_dc)
 			# This was added by ZigFisher
 			bus_type="i2c";
 			pinmux_mode="i2c_dc";
