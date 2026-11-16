@@ -28,7 +28,7 @@ KREL=$(sed 's/-//g' "$KDIR/include/config/kernel.release")
 cat "$ZIMAGE" "$DTB" > "${IMAGES_DIR}/zImage-dtb"
 $MKIMAGE -A arm -O linux -T kernel -C none \
     -a $LOADADDR -e $LOADADDR \
-    -n "Linux-${KREL}-hi3519v101" \
+    -n "Linux-${KREL}-hi3516av200" \
     -d "${IMAGES_DIR}/zImage-dtb" "${IMAGES_DIR}/uImage"
 rm -f "${IMAGES_DIR}/zImage-dtb"
 if [ -f "${IMAGES_DIR}/uImage" ]; then

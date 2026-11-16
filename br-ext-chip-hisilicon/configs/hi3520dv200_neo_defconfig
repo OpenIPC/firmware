@@ -71,4 +71,5 @@ BR2_PACKAGE_XMDP=y
 BR2_PACKAGE_YAML_CLI=y
 
 # Post-image: wrap zImage + DTB into uImage so the 2010-era U-Boot's bootm works.
-BR2_ROOTFS_POST_IMAGE_SCRIPT="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/neo-post-image.sh"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/neo-post-image.sh $(BR2_EXTERNAL_GENERAL_PATH)/scripts/post-image-split.sh"
+BR2_OPENIPC_NOR_FIXED_PACKAGE=y

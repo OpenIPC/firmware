@@ -75,4 +75,5 @@ BR2_PACKAGE_VTUND_OPENIPC=y
 BR2_PACKAGE_YAML_CLI=y
 
 # Post-image: wrap zImage + DTB into uImage so U-Boot bootm works.
-BR2_ROOTFS_POST_IMAGE_SCRIPT="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/neo-post-image.sh"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/neo-post-image.sh $(BR2_EXTERNAL_GENERAL_PATH)/scripts/post-image-split.sh"
+BR2_OPENIPC_NOR_FIXED_PACKAGE=y
