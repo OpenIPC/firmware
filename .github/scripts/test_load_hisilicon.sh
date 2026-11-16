@@ -132,7 +132,7 @@ trap 'rm -f "$probe_out"' EXIT
 T "jxh22 writes=1"  "$(probe tpffff 0x1 jxh22)"  "JXH22 silent at 37.125 MHz -> found at 24 MHz, one clock write (#1352)"
 T "sc1135 writes=2" "$(probe ''     0x5 sc1135)" "nothing at 37.125 MHz -> found at 27 MHz, two clock writes"
 T "imx122 writes=0" "$(probe imx122 0x6 imx122)" "IMX122 answers the first probe -> kept, no clock write"
-T "tpffff writes=2" "$(probe tpffff 0x9 jxh22)"  "no clock helps -> the first answer, as before"
+T " writes=2"       "$(probe tpffff 0x9 jxh22)"  "no clock helps -> nothing, so the phantom tpffff is never saved"
 
 echo
 if [ "$fail" -eq 0 ]; then

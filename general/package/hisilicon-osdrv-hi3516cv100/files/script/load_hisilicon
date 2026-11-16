@@ -65,7 +65,9 @@ sensor_known() {
 # back 0xFF, and ipctool names a TechPoint "TPffff" that is not there. That
 # name is not "unknown", so it was saved to the env and the camera stayed on
 # "Invalid sensor type" for good. Probe again at 24 and then 27 MHz, the other
-# two clocks insert_sns uses, before settling for what the first probe said.
+# two clocks insert_sns uses. If none of them gives a name insert_sns can load,
+# answer nothing: the caller treats that as unknown and does not save it, so the
+# next boot detects again instead of latching a name no arm accepts.
 detect_sensor() {
 	found=$(ipcinfo --short-sensor)
 	sensor_known "$found" && { echo "$found"; return; }
@@ -80,7 +82,8 @@ detect_sensor() {
 			return
 		fi
 	done
-	echo "$found"
+	logger -s -p daemon.warn -t hisilicon \
+		"No loadable sensor at any clock (first probe said '$found')"
 }
 
 remove_detect() {
