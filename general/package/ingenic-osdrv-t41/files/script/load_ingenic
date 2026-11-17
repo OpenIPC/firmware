@@ -1,0 +1,117 @@
+#!/bin/sh
+
+KMOD_PATH=/lib/modules/$(uname -r)/ingenic
+SOC=$(ipcinfo -f || fw_printenv -n soc)
+vendor=$(ipcinfo -v)
+
+if [ ! -f /usr/sbin/sensor_cli ]; then
+	ln -s /usr/sbin/extutils /usr/sbin/sensor_cli
+fi
+
+echo 1 >/proc/sys/vm/overcommit_memory
+
+log_vendor() {
+	logger -s -p daemon.info -t ${vendor} "$1"
+}
+
+check_return() {
+	if [ $? -ne 0 ]; then
+		echo err: $1
+		echo exit
+		exit
+	fi
+}
+
+# sinfo probes the sensor where the board wires it: the same isp.sensor*
+# settings majestic hands libimp, for boards unlike the reference design
+# (#1884). Unset, sinfo keeps its defaults, which are the reference board's.
+SINFO_PARAM=""
+for P in i2c_adapter_nr:.isp.sensorI2cBus reset_gpio:.isp.sensorResetPin pwdn_gpio:.isp.sensorPowerDownPin; do
+	V=$(cli -g ${P#*:})
+	[ -n "${V}" ] && SINFO_PARAM="${SINFO_PARAM} ${P%%:*}=${V}"
+done
+
+lsmod | grep "sinfo" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe sinfo ${SINFO_PARAM}
+	check_return "insmod sinfo"
+fi
+
+if fw_printenv -n sensor >/dev/null; then
+	export SENSOR=$(fw_printenv -n sensor)
+	log_vendor "Get data from environment and set SENSOR as ${SENSOR}"
+else
+	echo 1 >/proc/jz/sinfo/info
+	check_return "start sinfo"
+	SENSOR_INFO=$(cat /proc/jz/sinfo/info)
+	check_return "get sensor type"
+	SENSOR=${SENSOR_INFO#*:}
+	# sinfo prints "sensor: <name>"
+	SENSOR=${SENSOR# }
+	if [ "sensor not found" = "$SENSOR" ]; then
+		unset SENSOR
+		fw_setenv sensor
+	else
+		log_vendor "Get data from sinfo and set SENSOR as ${SENSOR}"
+		fw_setenv sensor $SENSOR && log_vendor "Write detected ${SENSOR} to U-Boot ENV"
+	fi
+fi
+
+# isp_clk is the T41 SDK's start_param value for every sensor it tunes.
+# start_param also sets direct_mode=1 (and ivdc_mem_line for imx327 and
+# sc8238); that couples the ISP to IMP's direct mode in the application, so
+# it stays off until the streamer here is known to ask for direct mode.
+# The SDK loads avpu with no parameters.
+case ${SENSOR} in
+*)
+	AVPU_PARAM=""
+	ISP_PARAM="isp_clk=300000000"
+	SENSOR_PARAM=""
+	;;
+esac
+
+echo --------------------
+echo "AVPU_PARAM: ${AVPU_PARAM}"
+echo "ISP_PARAM: ${ISP_PARAM}"
+echo "SENSOR: ${SENSOR}"
+echo "SENSOR_PARAM: ${SENSOR_PARAM}"
+echo --------------------
+
+lsmod | grep "avpu" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe avpu ${AVPU_PARAM}
+	check_return "insmod avpu"
+fi
+
+lsmod | grep "tx_isp" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe tx-isp-${SOC} ${ISP_PARAM}
+	check_return "insmod isp drv"
+fi
+
+lsmod | grep ${SENSOR} >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe sensor_${SENSOR}_${SOC} ${SENSOR_PARAM}
+	check_return "insmod sensor drv"
+fi
+
+lsmod | grep "audio" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe audio spk_gpio=-1
+	check_return "insmod audio"
+fi
+
+lsmod | grep "gpio" >/dev/null
+if [ $? -ne 0 ]; then
+	modprobe gpio
+	check_return "insmod gpio"
+fi
+
+if [ ! -z "$(lsmod | grep "gpio")" ]; then
+	GPIOS=".nightMode.irCutPin1 .nightMode.irCutPin2 .nightMode.irSensorPin .nightMode.backlightPin .audio.speakerPin"
+	for GPIO in $(echo ${GPIOS})
+	do
+		G=$(cli -g ${GPIO})
+		[ ! -z "${G}" ] && echo ${G} > /proc/gpio_claim/gpio
+	done
+fi
