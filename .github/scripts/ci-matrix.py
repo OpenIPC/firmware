@@ -180,6 +180,12 @@ UNBUILT_BOARDS = {
     # them (#2670).
     "ax620e_toolchain": "toolchain config, produces no firmware image",
     "ax620u_toolchain": "toolchain config, produces no firmware image",
+    # Ingenic T41 builds locally (kernel, openingenic modules, image). CI
+    # cannot yet: toolchain.ingenic-t41 is not published (toolchain.yml lists
+    # t41_lite, so one dispatch fixes that) and there is no majestic.t41.*
+    # on S3. Move both into ALL_BOARDS once majestic.t41.* exists.
+    "t41_lite": "no majestic.t41 build or published toolchain.ingenic-t41 yet",
+    "t41_ultimate": "no majestic.t41 build or published toolchain.ingenic-t41 yet",
     "s2l22m_lite": "no variant set; Ambarella S2L has no board directory",
     "s2l33m_lite": "no variant set; Ambarella S2L has no board directory",
 
@@ -301,6 +307,8 @@ WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 UNBUILT_FAMILIES = {
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
+    # T41: see t41_lite in UNBUILT_BOARDS.
+    ("br-ext-chip-ingenic", "t41"),
 }
 
 # Packages no board in ALL_BOARDS builds: enabled only by the 29 defconfigs the
@@ -369,7 +377,7 @@ NOT_BUILT = {
     "anyka-osdrv-ak3918av130",
     "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
-    "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
+    "go2rtc", "herald", "hisi-gpio", "i2c-telemetry", "ingenic-osdrv-t41",
     "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
     "matter",
     "mavfwd", "mdnsd-openipc", "mini", "mqtt-bot", "msposd", "n3n-openipc", "nabto",
