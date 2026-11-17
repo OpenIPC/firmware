@@ -25,8 +25,10 @@ define FULLHAN_OSDRV_FH8852V100_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(FULLHAN_OSDRV_FH8852V100_PKGDIR)/files/sensor/*.so
 
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors/params
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors/params $(FULLHAN_OSDRV_FH8852V100_PKGDIR)/files/sensor/params/*
+	# majestic reads tuning from /etc/sensors, as the V200 package installs
+	# it; under /usr/lib/sensors/params no V100 sensor found its .hex.
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(FULLHAN_OSDRV_FH8852V100_PKGDIR)/files/sensor/params/*
 endef
 
 $(eval $(generic-package))
