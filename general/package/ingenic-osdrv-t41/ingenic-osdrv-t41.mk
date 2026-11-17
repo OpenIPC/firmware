@@ -14,26 +14,16 @@ INGENIC_OSDRV_T41_LICENSE_FILES = LICENSE
 # for byte from their SDK. files/sensor/params: that SDK's
 # resource/sensor_settings_t41, every sensor it tunes (sc301IoT renamed to
 # sc301iot, the name its driver and yaml use).
-#
-# A generic image (no OPENIPC_SNS_MODEL) carries every yaml, and the
-# tuning of the sensors sinfo detects, as t40 and t31 carry a subset of
-# theirs. gc3003a and sc501ai are only ever set by hand (fw_setenv sensor:
-# their IDs are gc3003's and sc500ai's), so their 86 KB of compressed
-# tuning stay out of it -- with them t41_lite's rootfs is 40 KB over its
-# partition. A build for either sensor installs its own.
 ifeq ($(OPENIPC_SNS_MODEL),)
 INGENIC_OSDRV_T41_SENSORS = $(notdir $(basename $(wildcard $(INGENIC_OSDRV_T41_PKGDIR)/files/sensor/*.yaml)))
-INGENIC_OSDRV_T41_PARAMS = $(filter-out gc3003a sc501ai,$(INGENIC_OSDRV_T41_SENSORS))
 else
 INGENIC_OSDRV_T41_SENSORS = $(OPENIPC_SNS_MODEL)
-INGENIC_OSDRV_T41_PARAMS = $(OPENIPC_SNS_MODEL)
 endif
 
 define INGENIC_OSDRV_T41_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensor
 	$(foreach s,$(INGENIC_OSDRV_T41_SENSORS),
-		$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T41_PKGDIR)/files/sensor/$(s).yaml)
-	$(foreach s,$(INGENIC_OSDRV_T41_PARAMS),
+		$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T41_PKGDIR)/files/sensor/$(s).yaml
 		$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(INGENIC_OSDRV_T41_PKGDIR)/files/sensor/params/$(s)-t41.bin)
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
