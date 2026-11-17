@@ -90,7 +90,7 @@ ALL_BOARDS = [
     # via gk7205v500's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "gk7201v200_lite", "gk7205v500_lite",
     # Goke [GK7206V100]
-    # gk7206v10/v10b/v11/v11a/v11at are firmware-identical to gk7206v12a ---
+    # gk7206v10/v10b/v11/v11at/v12a are firmware-identical to gk7206v11a ---
     # served via gk7206v100's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "gk7206v100_lite",
     # Ambarella
