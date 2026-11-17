@@ -180,6 +180,9 @@ UNBUILT_BOARDS = {
     # them (#2670).
     "ax620e_toolchain": "toolchain config, produces no firmware image",
     "ax620u_toolchain": "toolchain config, produces no firmware image",
+    # T41 publishes its toolchain ahead of its boards (#2877), whose build
+    # needs toolchain.ingenic-t41 to exist.
+    "t41_toolchain": "toolchain config, produces no firmware image",
     "s2l22m_lite": "no variant set; Ambarella S2L has no board directory",
     "s2l33m_lite": "no variant set; Ambarella S2L has no board directory",
 

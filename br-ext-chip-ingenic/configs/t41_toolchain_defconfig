@@ -1,0 +1,35 @@
+# OpenIPC
+#
+# TOOLCHAIN-ONLY config for Ingenic T41 (XBurst2).
+#
+# Bootstraps the mipsel musl toolchain published as
+# toolchain.ingenic-t41.tgz (consumed by t41_lite and t41_ultimate),
+# DECOUPLED from the firmware package set -- see
+# hi3519dv500_toolchain_defconfig for why this exists as its own config.
+# Used only by .github/workflows/toolchain.yml.
+#
+BR2_OPENIPC_SOC_VENDOR="ingenic"
+BR2_OPENIPC_SOC_MODEL="t41"
+BR2_OPENIPC_SOC_FAMILY="t41"
+
+# Architecture -- same block as t40_lite
+BR2_mipsel=y
+BR2_mips_xburst=y
+# BR2_MIPS_SOFT_FLOAT is not set
+BR2_MIPS_FP32_MODE_64=y
+
+# Toolchain -- mipsel musl with C++, same block as t40_lite.
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
+BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/openipc/firmware/releases/download/$(OPENIPC_TOOLCHAIN).tgz"
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="mipsel-openipc-linux-musl"
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_4_4=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y
+BR2_TOOLCHAIN_EXTERNAL_CXX=y
+
+# This config builds no kernel, and Buildroot 2024.02 has no 4.4 header
+# series of its own. Take the headers from the ingenic-t41 kernel tarball,
+# which is where a firmware config's headers come from (headers as kernel).
+BR2_KERNEL_HEADERS_CUSTOM_TARBALL=y
+BR2_KERNEL_HEADERS_CUSTOM_TARBALL_LOCATION="https://github.com/openipc/linux/archive/$(OPENIPC_KERNEL).tar.gz"
