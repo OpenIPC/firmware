@@ -57,6 +57,8 @@ ALL_BOARDS = [
     "ssc30kd_lite", "ssc30kq_lite", "ssc338q_lite",
     # Ingenic
     "t10_lite", "t20_lite", "t21_lite", "t30_lite", "t23_lite", "t31_lite", "t40_lite",
+    # T41 builds without majestic until majestic.t41 exists (see its defconfig).
+    "t41_lite",
     # Hisilicon [HI3516AV100]
     "hi3516av100_lite", "hi3516av100_neo", "hi3516dv100_lite",
     # Hisilicon [HI3516CV100]
@@ -128,7 +130,7 @@ ALL_BOARDS = [
     # Ultimate
     "ssc333_ultimate", "ssc335_ultimate", "ssc335de_ultimate", "ssc337_ultimate",
     "ssc337de_ultimate", "ssc30kd_ultimate", "ssc30kq_ultimate", "ssc338q_ultimate",
-    "t20_ultimate", "t21_ultimate", "t31_ultimate", "t40_ultimate",
+    "t20_ultimate", "t21_ultimate", "t31_ultimate", "t40_ultimate", "t41_ultimate",
     "hi3516av100_ultimate", "hi3516dv100_ultimate", "hi3518ev200_ultimate",
     "hi3516cv300_ultimate", "hi3516ev200_ultimate", "hi3516ev300_ultimate",
     "hi3518ev300_ultimate", "hi3516av200_ultimate",
@@ -180,12 +182,6 @@ UNBUILT_BOARDS = {
     # them (#2670).
     "ax620e_toolchain": "toolchain config, produces no firmware image",
     "ax620u_toolchain": "toolchain config, produces no firmware image",
-    # Ingenic T41 builds locally (kernel, openingenic modules, image). CI
-    # cannot yet: toolchain.ingenic-t41 is not published (toolchain.yml lists
-    # t41_lite, so one dispatch fixes that) and there is no majestic.t41.*
-    # on S3. Move both into ALL_BOARDS once majestic.t41.* exists.
-    "t41_lite": "no majestic.t41 build or published toolchain.ingenic-t41 yet",
-    "t41_ultimate": "no majestic.t41 build or published toolchain.ingenic-t41 yet",
     "s2l22m_lite": "no variant set; Ambarella S2L has no board directory",
     "s2l33m_lite": "no variant set; Ambarella S2L has no board directory",
 
@@ -307,8 +303,6 @@ WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 UNBUILT_FAMILIES = {
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
-    # T41: see t41_lite in UNBUILT_BOARDS.
-    ("br-ext-chip-ingenic", "t41"),
 }
 
 # Packages no board in ALL_BOARDS builds: enabled only by the 29 defconfigs the
@@ -377,7 +371,7 @@ NOT_BUILT = {
     "anyka-osdrv-ak3918av130",
     "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
-    "go2rtc", "herald", "hisi-gpio", "i2c-telemetry", "ingenic-osdrv-t41",
+    "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
     "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
     "matter",
     "mavfwd", "mdnsd-openipc", "mini", "mqtt-bot", "msposd", "n3n-openipc", "nabto",
