@@ -5,7 +5,7 @@
 ################################################################################
 
 FULLHAN_OPENSDK_SITE = $(call github,openipc,openfullhan,$(FULLHAN_OPENSDK_VERSION))
-FULLHAN_OPENSDK_VERSION = 1564015b194dce612f9fd7c2aa22229e906a227d
+FULLHAN_OPENSDK_VERSION = 8fd1f30ebe3292e2a023848cb829eead64dce1db
 
 FULLHAN_OPENSDK_LICENSE = GPL-3.0
 FULLHAN_OPENSDK_LICENSE_FILES = LICENSE
