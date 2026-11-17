@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 6ce8b7fa051750d22e9f1ed22ddaf62fbc0927ed
+HISILICON_OPENSDK_VERSION = 443c5d5b1bcd5998f01c92871129e2125948685a
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -320,6 +320,17 @@ HISILICON_OPENSDK_SENSORS_gk7206v100 = \
 	smartsens_sc500ai/libsns_sc500ai \
 	sony_imx307/libsns_imx307
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
+
+# SC2315E on hi3516ev200 builds from openhisilicon's smart_sc2315e, the source
+# of the libsns_sc2315e.so hisilicon-osdrv-hi3516ev200 used to carry as a
+# binary. That binary wrote two words past its sensor state on every
+# frame-rate set and could crash the streamer when the pipeline restarted
+# (openhisilicon#306). Added here, per family, rather than to the list above:
+# gk7205v200 takes that list whole and installs from its own sensor tree,
+# which has no sc2315e.
+ifeq ($(OPENIPC_SOC_FAMILY),hi3516ev200)
+HISILICON_OPENSDK_SENSORS += smart_sc2315e/libsns_sc2315e
+endif
 
 # GK7201V200 (XM72010200) boards carry the SP2308 (chip ID 0x5302, sold as
 # OS02M10), whose V4 driver builds from sensor/hi3516ev200 like the rest of
