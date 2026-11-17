@@ -20,6 +20,14 @@ define HISILICON_OSDRV_HI3516CV200_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV200_PKGDIR)/files/sensor/iq/*.ini
+	# The streamer opens this one name, not a file named after the fitted
+	# sensor, and nothing in its configuration selects another: every cv200
+	# board gets ar0130.ini whatever it carries. Of that file only [3dnr]
+	# reaches the ISP; [ccm], [sharpen], [gamma], [DRC] and the rest are
+	# PQTools data the text loader reports as unread. ar0130_quiet.ini is
+	# the same file with [3dnr] retuned for boards whose noise matters more
+	# than their detail:
+	#   ln -sf ar0130_quiet.ini /etc/sensors/iq/default.ini
 	ln -sf ar0130.ini $(TARGET_DIR)/etc/sensors/iq/default.ini
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.37/hisilicon
