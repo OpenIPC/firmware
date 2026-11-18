@@ -1,0 +1,138 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 580f26f..07fc9b1 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -51,7 +51,7 @@ include_directories(./src/)
+ # directly rather than through the table. Affects libipchw only; the ipctool
+ # executable is a diagnostic tool and always carries every vendor.
+ set(IPCHW_OPTIONAL_VENDORS
+-    allwinner ambarella anyka bcm fh gm ingenic novatek rockchip sstar tegra xilinx xm)
++    allwinner ambarella anyka axera bcm fh gm ingenic novatek rockchip sstar tegra xilinx xm)
+ set(IPCHW_VENDORS "all" CACHE STRING
+     "Vendor HALs to compile into libipchw: 'all', 'none', or a ;-separated \
+ subset of: ${IPCHW_OPTIONAL_VENDORS}")
+diff --git a/src/chipid.c b/src/chipid.c
+index 8d10b1c..0e91dd6 100644
+--- a/src/chipid.c
++++ b/src/chipid.c
+@@ -80,6 +80,9 @@ static const manufacturers_t manufacturers[] = {
+ #ifdef IPCHW_VENDOR_ANYKA
+     {NULL /* Generic */, anyka_detect_cpu, VENDOR_ANYKA, anyka_setup_hal},
+ #endif
++#ifdef IPCHW_VENDOR_AXERA
++    {NULL /* Generic */, axera_detect_cpu, VENDOR_AXERA, axera_setup_hal},
++#endif
+ #ifdef IPCHW_VENDOR_ROCKCHIP
+     {NULL /* Generic */, rockchip_detect_cpu, VENDOR_ROCKCHIP,
+      rockchip_setup_hal},
+@@ -98,6 +101,10 @@ static const manufacturers_t manufacturers[] = {
+ #ifdef IPCHW_VENDOR_NOVATEK
+     {NULL, novatek_detect_cpu, VENDOR_NOVATEK, novatek_setup_hal},
+ #endif
++#ifdef IPCHW_VENDOR_AXERA
++    /* AX620E/AX630C run an arm64 kernel */
++    {NULL /* Generic */, axera_detect_cpu, VENDOR_AXERA, axera_setup_hal},
++#endif
+ #ifdef IPCHW_VENDOR_TEGRA
+     {NULL, tegra_detect_cpu, "Nvidia", tegra_setup_hal},
+ #endif
+diff --git a/src/chipid.h b/src/chipid.h
+index e1007e4..bc68c68 100644
+--- a/src/chipid.h
++++ b/src/chipid.h
+@@ -6,6 +6,7 @@
+ #define VENDOR_ALLWINNER "Allwinner"
+ #define VENDOR_AMBARELLA "Ambarella"
+ #define VENDOR_ANYKA "Anyka"
++#define VENDOR_AXERA "Axera"
+ #define VENDOR_BCM "Broadcom"
+ #define VENDOR_FH "Fullhan"
+ #define VENDOR_GM "GrainMedia"
+diff --git a/src/hal/axera.c b/src/hal/axera.c
+new file mode 100644
+index 0000000..cdbe17f
+--- /dev/null
++++ b/src/hal/axera.c
+@@ -0,0 +1,55 @@
++#include "hal/axera.h"
++
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++
++#include "chipid.h"
++#include "hal/common.h"
++#include "tools.h"
++
++static unsigned char sony_addrs[] = {0x34, 0};
++static unsigned char ssens_addrs[] = {0x60, 0};
++static unsigned char omni_addrs[] = {0x6c, 0};
++
++static sensor_addr_t axera_possible_i2c_addrs[] = {
++    {SENSOR_SONY, sony_addrs},
++    {SENSOR_SMARTSENS, ssens_addrs},
++    {SENSOR_OMNIVISION, omni_addrs},
++    {0, NULL}};
++
++/*
++ * Axera has no readable chip-ID register documented anywhere public; the
++ * kernel's root compatible names the die. AX620U's own devicetree (real
++ * deployed firmware) says "axera,ax620x", AX620E/AX630C/AX620Q's say
++ * "axera,ax620e", so map the AX620U spelling to the family OpenIPC builds.
++ */
++bool axera_detect_cpu(char *chip_name) {
++    char buf[64];
++
++    if (!line_from_file("/proc/device-tree/compatible", "axera,(ax[0-9a-z]+)",
++                        buf, sizeof(buf)))
++        return false;
++    if (!strcmp(buf, "ax620x"))
++        strcpy(buf, "ax620u");
++    strcpy(chip_name, buf);
++    return true;
++}
++
++/*
++ * The sensor bus as the boards' own devicetrees and sensor libraries use it:
++ * AX620U's on i2c8 (OS04A10 at 0x36 on the JFtech A8 board), AX620E's on
++ * i2c6 (SC450AI at 0x30 on the Xiongmai IVG-A6, i2c@4856000).
++ */
++static int axera_open_i2c_fd() {
++    char adapter_name[FILENAME_MAX];
++
++    i2c_adapter_nr = strcmp(chip_name, "ax620u") ? 6 : 8;
++    snprintf(adapter_name, sizeof(adapter_name), "/dev/i2c-%d", i2c_adapter_nr);
++    return universal_open_sensor_fd(adapter_name);
++}
++
++void axera_setup_hal() {
++    possible_i2c_addrs = axera_possible_i2c_addrs;
++    open_i2c_sensor_fd = axera_open_i2c_fd;
++}
+diff --git a/src/hal/axera.h b/src/hal/axera.h
+new file mode 100644
+index 0000000..e9926a8
+--- /dev/null
++++ b/src/hal/axera.h
+@@ -0,0 +1,9 @@
++#ifndef HAL_AXERA_H
++#define HAL_AXERA_H
++
++#include <stdbool.h>
++
++bool axera_detect_cpu(char *chip_name);
++void axera_setup_hal();
++
++#endif /* HAL_AXERA_H */
+diff --git a/src/hal/common.h b/src/hal/common.h
+index 329052f..a6391d8 100644
+--- a/src/hal/common.h
++++ b/src/hal/common.h
+@@ -10,6 +10,7 @@
+ #include "hal/allwinner.h"
+ #include "hal/ambarella.h"
+ #include "hal/anyka.h"
++#include "hal/axera.h"
+ #include "hal/bcm.h"
+ #include "hal/fh.h"
+ #include "hal/gm.h"
