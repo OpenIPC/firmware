@@ -1,40 +1,66 @@
 #!/bin/sh
 #
-# Axera AX620E/AX630C module load, dependency order from the vendor
-# modules' own `depends=` (read with modinfo off a real firmware dump --
-# see this package's README). The open modules (vin, vc8000e venc,
-# hantro vdec, eip-130 crypto) build from the axera-ax620e kernel branch
-# and are not listed here; only the closed ax_*.ko need an explicit order.
+# Axera AX620E module load. Order and parameters follow the stock Xiongmai
+# IVG-A6 firmware (/usr/lib/modules/Load_AX620E + /usr/etc/loadpublic), which
+# matches each module's own depends= (busybox insmod resolves none of them).
+#
+# ax_cmm owns the DRAM above the kernel's mem= (osmem): cmmpool is
+# <name>,0,<phys start>,<size>, start = 0x40000000 + osmem.
 
 KO_DIR=/lib/modules/$(uname -r)/axera
 
+mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d M)
+mem_total=${mem_total:-256}
+os_mem=$(sed -n 's/.*mem=\([0-9]*\)M.*/\1/p' /proc/cmdline)
+
 insert_ko() {
 	[ -d "$KO_DIR" ] || {
-		logger -s -p daemon.err -t axera "no $KO_DIR -- ax_proton/ax_npu not installed, see axera-osdrv-ax620e's README"
+		logger -s -p daemon.err -t axera "no $KO_DIR, see axera-osdrv-ax620e's README"
 		return 1
 	}
+	[ -n "$os_mem" ] || {
+		logger -s -p daemon.err -t axera "no mem= on the kernel command line, ax_cmm has no pool"
+		return 1
+	}
+	cmm_start=$(printf '0x%x' $((0x40000000 + os_mem * 1024 * 1024)))
+	cmm_size=$((mem_total - os_mem))M
 
-	# Foundation: memory pools and the sysfs/ioctl base every other module binds to.
-	insmod "$KO_DIR/ax_sys.ko"
-	insmod "$KO_DIR/ax_pool.ko"
-	insmod "$KO_DIR/ax_cmm.ko"
-	insmod "$KO_DIR/ax_base.ko"
+	cd "$KO_DIR" || return 1
+	insmod XmCommon.ko
+	insmod XmDemux.ko
+	insmod XmGpio.ko
 
-	# Capture / codec path.
-	insmod "$KO_DIR/ax_mipi_rx.ko"
-	insmod "$KO_DIR/ax_gdc.ko"
-	insmod "$KO_DIR/ax_vpp.ko"
-	insmod "$KO_DIR/ax_ivps.ko"
-	insmod "$KO_DIR/ax_tdp.ko"
-	insmod "$KO_DIR/ax_jenc.ko"
-	insmod "$KO_DIR/ax_venc.ko"
-	insmod "$KO_DIR/ax_vdec.ko"
-	insmod "$KO_DIR/ax_vo.ko"
-	insmod "$KO_DIR/ax_audio.ko"
+	insmod ax_sys.ko
+	insmod ax_cmm.ko cmmpool=anonymous,0,$cmm_start,$cmm_size || return 1
+	insmod ax_pool.ko
+	insmod ax_base.ko
+	insmod ax_npu.ko
+	insmod ax_vo.ko
+	insmod ax_ivps.ko
+	insmod ax_vpp.ko
+	insmod ax_gdc.ko
+	insmod ax_tdp.ko
+	insmod ax_venc.ko
+	insmod ax_jenc.ko
+	insmod ax_mipi_rx.ko
+	insmod ax_proton.ko
+	insmod ax_audio.ko
+	insmod ax_vdec.ko
 
-	# ISP 3A and NPU last -- ax_proton depends on everything above.
-	insmod "$KO_DIR/ax_npu.ko"
-	insmod "$KO_DIR/ax_proton.ko"
+	insmod XmGpioI2c.ko
+	insmod XmIrCut.ko
 }
 
-insert_ko
+remove_ko() {
+	for m in XmIrCut XmGpioI2c ax_vdec ax_audio ax_proton ax_mipi_rx ax_jenc \
+		ax_venc ax_tdp ax_gdc ax_vpp ax_ivps ax_vo ax_npu ax_base ax_pool \
+		ax_cmm ax_sys XmGpio XmDemux XmCommon; do
+		rmmod $m 2>/dev/null
+	done
+}
+
+case "$1" in
+	-r) remove_ko ;;
+	-a) remove_ko; insert_ko ;;
+	*) insert_ko ;;
+esac
