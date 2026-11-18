@@ -183,6 +183,27 @@ remove_ko() {
 	unload open_osal
 }
 
+# The sensor is probed once, after the modules are in, and saved to the U-Boot
+# environment, as load_goke does on the GK7205 families. A streamer that stops
+# releases the sensor through the SDK, which switches its clock off, so a
+# later probe finds nothing on the bus: the saved name is what the next start
+# reads. A failed probe is not saved (#2428).
+detect_sensor() {
+	if [ "$SENSOR" = "unknown" ]; then
+		SENSOR=
+		fw_setenv sensor
+	fi
+	[ -n "$SENSOR" ] && return
+	fw_printenv -n sensor >/dev/null 2>&1 && return
+	SENSOR=$(ipcinfo --short-sensor)
+	if [ -n "$SENSOR" ]; then
+		fw_setenv sensor "$SENSOR" &&
+			logger -s -p daemon.info -t goke "Writing ${SENSOR} to U-Boot ENV"
+	else
+		logger -s -p daemon.warn -t goke "No sensor detected"
+	fi
+}
+
 load_usage() {
 	echo "Usage:  ./load_goke [-option]"
 	echo "options:"
@@ -245,4 +266,5 @@ fi
 
 if [ $b_arg_insmod -eq 1 ]; then
 	insert_ko
+	detect_sensor
 fi
