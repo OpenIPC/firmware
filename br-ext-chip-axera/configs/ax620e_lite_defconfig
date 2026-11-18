@@ -33,10 +33,10 @@ BR2_LINUX_KERNEL_IMAGE=y
 BR2_LINUX_KERNEL_UIMAGE_LOADADDR="0x40200000"
 BR2_LINUX_KERNEL_DTS_SUPPORT=y
 BR2_LINUX_KERNEL_INTREE_DTS_NAME="axera/ax620e-xm-ipc"
-# OpenIPC NOR layout (openipc u-boot-ax620e): boot 256K, env 64K, kernel 2M
+# OpenIPC NOR fixed slots (openipc u-boot-ax620e): boot 256K, env 64K, kernel 2M
 # @0x50000, rootfs 5M @0x250000. LZMA keeps the uImage in the 2M slot.
 BR2_OPENIPC_ARM64_UIMAGE_COMP="lzma"
-BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_GENERAL_PATH)/scripts/post-image-split.sh"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_GENERAL_PATH)/scripts/post-image-arm64-uimage.sh"
 
 # Filesystem
 BR2_PACKAGE_BUSYBOX_CONFIG="$(BR2_EXTERNAL)/package/busybox/busybox.config"
