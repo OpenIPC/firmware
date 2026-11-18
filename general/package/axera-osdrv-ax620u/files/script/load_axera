@@ -1,45 +1,63 @@
 #!/bin/sh
 #
-# Axera AX620U module load, dependency order from the vendor modules'
-# own `depends=` (read with modinfo off a real firmware dump -- see
-# this package's README). AX620U's module set differs from AX620E's:
-# it has ax_avs/ax_ddr_retention/ax_dma_hal/ax_hwinfo/ax_ives/
-# ax_logctl/ax_mipi (not ax_mipi_rx)/ax_osal/ax_pcal6416a/ax_rtc/
-# ax_sdio_host and lacks ax_base/ax_tdp/ax_vpp.
+# Axera AX620U module load. Order and parameters follow the stock
+# firmware's own loader (/usr/lib/modules/Load_AX620U and
+# /usr/etc/loadpublic on the JFtech IPC_AX620U_A8 dump): ax_cmm needs its
+# memory pool spelled out, everything above the kernel's mem= up to the
+# end of DRAM.
+#
+# usage: load_axera [-i|-r]
 
 KO_DIR=/lib/modules/$(uname -r)/axera
+mem_start=0x40000000
+
+os_mem=
+for arg in $(cat /proc/cmdline); do
+	case "$arg" in
+		mem=*M) os_mem=${arg#mem=}; os_mem=${os_mem%M} ;;
+	esac
+done
+os_mem=${os_mem:-$(fw_printenv -n osmem 2>/dev/null | tr -d 'M')}
+os_mem=${os_mem:-87}
+mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d 'M')
+mem_total=${mem_total:-256}
+
+mmz_start=$(printf "0x%x" $((mem_start + os_mem * 1024 * 1024)))
+mmz_size=$((mem_total - os_mem))M
+
+# ax_audio and ax_pcal6416a are left out: on the OpenIPC 4.19.125 kernel
+# both oops in probe (they read struct snd_soc_* / struct gpio_chip fields
+# at the vendor kernel's offsets), and the oops leaves a lock held that
+# stalls every CPU after it. Load them only on a kernel whose config
+# matches the vendor's.
+modules="ax_osal ax_sys ax_cmm ax_npu ax_sdio_host ax_pool ax_proton ax_mipi
+	ax_venc ax_jenc ax_vdec ax_vo ax_ivps ax_gdc ax_hwinfo ax_logctl
+	ax_dma_hal ax_ddr_retention ax_ives ax_rtc ax_avs
+	XmCommon XmDemux XmGpio XmGpioI2c"
 
 insert_ko() {
 	[ -d "$KO_DIR" ] || {
-		logger -s -p daemon.err -t axera "no $KO_DIR -- ax_proton/ax_npu not installed, see axera-osdrv-ax620u's README"
+		logger -s -p daemon.err -t axera "no $KO_DIR"
 		return 1
 	}
 
-	insmod "$KO_DIR/ax_osal.ko"
-	insmod "$KO_DIR/ax_sys.ko"
-	insmod "$KO_DIR/ax_pool.ko"
-	insmod "$KO_DIR/ax_cmm.ko"
-	insmod "$KO_DIR/ax_dma_hal.ko"
-	insmod "$KO_DIR/ax_hwinfo.ko"
-	insmod "$KO_DIR/ax_rtc.ko"
-	insmod "$KO_DIR/ax_ddr_retention.ko"
-	insmod "$KO_DIR/ax_pcal6416a.ko"
-	insmod "$KO_DIR/ax_sdio_host.ko"
-	insmod "$KO_DIR/ax_logctl.ko"
-
-	insmod "$KO_DIR/ax_mipi.ko"
-	insmod "$KO_DIR/ax_gdc.ko"
-	insmod "$KO_DIR/ax_ivps.ko"
-	insmod "$KO_DIR/ax_ives.ko"
-	insmod "$KO_DIR/ax_jenc.ko"
-	insmod "$KO_DIR/ax_venc.ko"
-	insmod "$KO_DIR/ax_vdec.ko"
-	insmod "$KO_DIR/ax_vo.ko"
-	insmod "$KO_DIR/ax_avs.ko"
-	insmod "$KO_DIR/ax_audio.ko"
-
-	insmod "$KO_DIR/ax_npu.ko"
-	insmod "$KO_DIR/ax_proton.ko"
+	for ko in $modules; do
+		case "$ko" in
+			ax_cmm) set -- "cmmpool=anonymous,0,$mmz_start,$mmz_size" ;;
+			*) set -- ;;
+		esac
+		insmod "$KO_DIR/$ko.ko" "$@" || \
+			logger -s -p daemon.err -t axera "insmod $ko failed"
+	done
 }
 
-insert_ko
+remove_ko() {
+	for ko in $(echo $modules | tr ' ' '\n' | sed '1!G;h;$!d'); do
+		rmmod "$ko" 2>/dev/null
+	done
+}
+
+case "$1" in
+	-r) remove_ko ;;
+	*) insert_ko ;;
+esac
