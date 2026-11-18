@@ -1,0 +1,111 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Axera AX620E Xiongmai IP camera (IVG-A6 class): SPI NOR boot flash,
+ * internal EPHY (RMII), SC450AI on MIPI. Nodes taken from the board's own
+ * vendor devicetree (FIT in /boot/uImage of the stock firmware).
+ *
+ * The vendor U-Boot passes mem= (osmem) and rewrites /memory; the CMM
+ * window above osmem belongs to ax_cmm.ko (cmmpool= in load_axera).
+ */
+
+/dts-v1/;
+
+#include "axera/ax620e.dtsi"
+
+/ {
+	model = "Axera AX620E IPC";
+	compatible = "axera,ax620e-ipc", "axera,ax620e";
+
+	aliases {
+		serial0 = &uart0;
+		ethernet0 = &eth0;
+		spi0 = &spi_nor;
+	};
+
+	/*
+	 * The NOR camera profile has no ATF/BL31 (SPL -> DDRINIT -> U-Boot):
+	 * nothing answers PSCI SMCs. Its own vendor DT releases CPU1 with a
+	 * spin-table at 0x23400dc, as its U-Boot/BL1 expect.
+	 */
+	/delete-node/ psci;
+
+	cpus {
+		cpu@0 {
+			enable-method = "spin-table";
+			cpu-release-addr = <0x0 0x023400dc>;
+		};
+		cpu@1 {
+			enable-method = "spin-table";
+			cpu-release-addr = <0x0 0x023400dc>;
+		};
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@40000000 {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0x0 0x10000000>;
+	};
+
+	soc {
+		spi_nor: spi@1a00000 {
+			compatible = "snps,dw-apb-ssi";
+			reg = <0x0 0x01a00000 0x0 0x10000>;
+			interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk_cpu AX620X_CLK_H_SSI_EB>,
+				 <&clk_cpu AX620X_HCLK_SPI_EB>;
+			clock-names = "ssi_clk", "pclk";
+			/*
+			 * CS is GPIO2_29, as in the vendor DT. openipc/linux
+			 * axera-ax620e has no "axera,ax-apb-gpio" driver yet, so until
+			 * it does this probe defers forever and there is no root fs.
+			 */
+			cs-gpios = <&gpio2 29 GPIO_ACTIVE_LOW>;
+			num-cs = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			flash@0 {
+				compatible = "jedec,spi-nor";
+				reg = <0>;
+				spi-max-frequency = <50000000>;
+			};
+		};
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&wdt0 {
+	status = "okay";
+};
+
+&eth0 {
+	status = "okay";
+	/* No "axera,axera_reset_match" driver in this kernel: drop the resets
+	 * (U-Boot leaves EMAC/EPHY out of reset) or the probe defers forever. */
+	/delete-property/ resets;
+	/delete-property/ reset-names;
+	phy-mode = "rmii";
+	phy-handle = <&ephy>;
+
+	mdio {
+		compatible = "snps,dwmac-mdio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ephy: ethernet-phy@1 {
+			compatible = "ethernet-phy-id0044.1400";
+			reg = <1>;
+		};
+	};
+};
+
+&crypto {
+	status = "okay";
+};
