@@ -317,6 +317,7 @@ HISILICON_OPENSDK_SENSORS_gk7206v100 = \
 	smartsens_sc4336/libsns_sc4336 \
 	smartsens_sc4336p/libsns_sc4336p \
 	smartsens_sc450ai/libsns_sc450ai \
+	smartsens_sc465sl/libsns_sc465sl \
 	smartsens_sc500ai/libsns_sc500ai \
 	sony_imx307/libsns_imx307
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
