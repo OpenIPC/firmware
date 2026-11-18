@@ -19,23 +19,22 @@ To build against a local kernel tree instead of the branch tarball:
 
     make BOARD=ax620e_lite LINUX_OVERRIDE_SRCDIR=/path/to/linux
 
-## Booting on a Xiongmai IVG-A6 (stock U-Boot 2020.04)
+## Flash layout and bootloader
 
-Flash layout: spl 64K @0, U-Boot @0x10000, env 64K @0x50000 (single
-copy, CRC32), then `firmware.bin` @0x60000. The stock env boots a
-squashfs `/boot/uImage` (`loadromfs ... squashfsload; axera_boot`);
-OpenIPC needs, at minimum:
+The standard OpenIPC NOR layout (lite): boot 256K, env 64K @0x40000,
+kernel 2M @0x50000 (`uImage`, LZMA multi-file with the DTB), rootfs 5M
+@0x250000, rootfs_data after it; the NOR is `spi_nor.0` (the devicetree
+label the vendor kernel and its `mtdparts=` use).
 
-    setenv xmuart 0          # without it the console is muted after "Starting kernel ..."
-    setenv osmem 120M        # kernel RAM; the rest (to totalmem) is ax_cmm's pool
-    setenv totalmem 256M
-    setenv bootargs 'mem=${osmem} console=ttyS0,115200n8 panic=20 rootfstype=squashfs root=/dev/mtdblock3 init=/init mtdparts=spi_nor.0:320k(boot),64k(env),<kernel>k(kernel),<rootfs>k(rootfs),-(rootfs_data)'
-    setenv bootcmd 'setenv setargs setenv bootargs ${bootargs};run setargs;sf probe 0;sf read 0x45000000 0x60000 <uImage size>;bootm 0x45000000'
-
-The NOR is `spi_nor.0` (devicetree label, the vendor kernel's name). The
-stock U-Boot's console asks for a password after an interrupted autoboot,
-so set these from the stock Linux (or write the env block). The kernel has
-no mtdsplit, hence explicit kernel/rootfs sizes.
+The boot partition holds the vendor SPL (64K @0, kept: the boot ROM loads
+and checks it, it brings up DDR and loads U-Boot's image from 0x10000) and
+the OpenIPC U-Boot built from the Axera SDK's U-Boot 2020.04
+(`openipc_ax620e_nor_defconfig`, ax_gzip payload behind the SDK image
+header, signed with the SDK's test key -- the key the stock image carries).
+It starts with OpenIPC's default environment (`bootcmd=run bootflash`,
+`osmem`, `extras`, `uk`/`ur`/`fwupd`), saves it on first start, and boots
+the kernel slot. With the stock Xiongmai U-Boot instead, the firmware has to
+sit at 0x60000 and the env needs `xmuart=0` and the OpenIPC bootcmd.
 
 At boot `S70vendor` runs `load_axera` (ipcinfo -v says `axera`): the 21
 vendor modules load in the stock loader's order, `ax_cmm` gets the DRAM
