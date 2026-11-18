@@ -55,6 +55,8 @@ ALL_BOARDS = [
     "ssc378de_lite", "ssc378qe_lite",
     # Sigmastar [I6E]
     "ssc30kd_lite", "ssc30kq_lite", "ssc338q_lite",
+    # Axera
+    "ax620e_lite", "ax620u_lite",
     # Ingenic
     "t10_lite", "t20_lite", "t21_lite", "t30_lite", "t23_lite", "t31_lite", "t40_lite",
     "t41_lite",
@@ -179,14 +181,6 @@ UNBUILT_BOARDS = {
     # Axera's toolchain configs publish toolchain.axera-ax620{e,u} (#2852).
     "ax620e_toolchain": "toolchain config, produces no firmware image",
     "ax620u_toolchain": "toolchain config, produces no firmware image",
-    # The Axera images (#2670) build against the kernels in OpenIPC/linux#259
-    # (axera-ax620e) and #260 (axera-ax620u). Until those merge, the branch
-    # tarballs CI downloads have neither the in-tree devicetrees these
-    # defconfigs name nor the configs' drivers, so the build cannot succeed.
-    # They have booted only in QEMU; like ak3918av100_lite they move into
-    # ALL_BOARDS once the kernels are on their branches.
-    "ax620e_lite": "kernel waits on OpenIPC/linux#259; booted in QEMU only",
-    "ax620u_lite": "kernel waits on OpenIPC/linux#260; booted in QEMU only",
     # T41 publishes its toolchain ahead of its boards (#2877), whose build
     # needs toolchain.ingenic-t41 to exist.
     "t41_toolchain": "toolchain config, produces no firmware image",
@@ -284,6 +278,7 @@ SMOKE_BOARDS = [
     "ak3918ev330_lite",       # Anyka, the one 4.4 kernel's EV330 image
     "xm530_lite",             # Xiongmai
     "s3l_ultimate",           # Ambarella, and squashfs NOR with UBI NAND
+    "ax620u_lite",            # Axera, and an all-in-UBI NAND image
 ]
 
 # Boards the nightly builds once a week, on WEEKLY_DAY, rather than every night.
@@ -309,9 +304,6 @@ WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 # listed rather than inferred so that a family silently falling out of the
 # matrix fails --self-test instead of quietly skipping CI.
 UNBUILT_FAMILIES = {
-    # ax620e_lite / ax620u_lite are in UNBUILT_BOARDS (kernels pending).
-    ("br-ext-chip-axera", "ax620e"),
-    ("br-ext-chip-axera", "ax620u"),
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
@@ -380,8 +372,6 @@ UNBUILT_FAMILIES = {
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc",
     "anyka-osdrv-ak3918av130",
-    # Selected only by ax620e_lite / ax620u_lite (UNBUILT_BOARDS).
-    "axera-osdrv-ax620e", "axera-osdrv-ax620u",
     "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
