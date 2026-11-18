@@ -834,15 +834,31 @@ jobs:
           # back (the split layout is the standard), so a plain package this
           # build superseded goes. Only for boards in this build: one that
           # did not build keeps both packages it had.
+          #
+          # Runs dispatched on different refs are in different concurrency
+          # groups and write the same two releases, so "not in my dist/" alone
+          # could delete a plain package another run has just uploaded. It goes
+          # only when it is older than the split package this run put on the
+          # release: one written after that belongs to a later build and stays.
+          # Not a job-level concurrency group: that keeps one pending publish
+          # and cancels the one before it, losing a whole build's upload.
           drop_superseded_fixed() { # <tag>
-            local tag="$1" have split plain
-            have=$(gh_retry gh release view "$tag" --json assets --jq '.assets[].name')
+            local tag="$1" have split plain t_split t_plain
+            have=$(gh_retry gh release view "$tag" --json assets \
+              --jq '.assets[] | "\(.name) \(.updatedAt)"')
             for split in "${IMAGES[@]}"; do
               case "${split##*/}" in *-nor-*-split.tgz) ;; *) continue ;; esac
               plain="${split##*/}"
               plain="${plain%-split.tgz}.tgz"
               [ -e "dist/${plain}" ] && continue
-              grep -qxF "$plain" <<<"$have" || continue
+              t_plain=$(awk -v n="$plain" '$1 == n { print $2 }' <<<"$have")
+              [ -n "$t_plain" ] || continue
+              t_split=$(awk -v n="${split##*/}" '$1 == n { print $2 }' <<<"$have")
+              # ISO 8601 UTC from the same API: string order is time order.
+              if [ -z "$t_split" ] || [[ ! "$t_plain" < "$t_split" ]]; then
+                echo "[${tag}] ${plain}: written at ${t_plain}, not before ${split##*/} (${t_split:-absent}); keeping"
+                continue
+              fi
               echo "[${tag}] ${plain}: superseded by ${split##*/}, deleting"
               gh_retry gh release delete-asset "$tag" "$plain" --yes
               sleep 1
