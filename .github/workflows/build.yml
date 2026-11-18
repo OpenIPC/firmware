@@ -825,6 +825,30 @@ jobs:
             done
           }
 
+          # A board whose rootfs outgrew its fixed slot ships only the -split
+          # package (Makefile, FIXED_SLOTS_SKIP), and --clobber never touches
+          # the plain package it no longer builds. That left
+          # openipc.hi3518cv100-nor-lite.tgz on nightly and latest as of
+          # 2026-11-15, without the sensor-clock fix #1352's reporter was
+          # told to install the day after. The fixed slots are not coming
+          # back (the split layout is the standard), so a plain package this
+          # build superseded goes. Only for boards in this build: one that
+          # did not build keeps both packages it had.
+          drop_superseded_fixed() { # <tag>
+            local tag="$1" have split plain
+            have=$(gh_retry gh release view "$tag" --json assets --jq '.assets[].name')
+            for split in "${IMAGES[@]}"; do
+              case "${split##*/}" in *-nor-*-split.tgz) ;; *) continue ;; esac
+              plain="${split##*/}"
+              plain="${plain%-split.tgz}.tgz"
+              [ -e "dist/${plain}" ] && continue
+              grep -qxF "$plain" <<<"$have" || continue
+              echo "[${tag}] ${plain}: superseded by ${split##*/}, deleting"
+              gh_retry gh release delete-asset "$tag" "$plain" --yes
+              sleep 1
+            done
+          }
+
           # `webui=` is what the next preflight diffs against to notice a WebUI-only
           # change; drop the line rather than record an empty value, so a failed
           # lookup reads as "unknown" and builds instead of matching a future empty.
@@ -855,11 +879,13 @@ jobs:
             gh_retry gh release edit nightly --notes "$NOTES"
             gh_retry gh api -X PATCH "repos/${GH_REPO}/git/refs/tags/nightly" -f sha="$HEAD_SHA" -F force=true
             upload_paced nightly "${IMAGES[@]}"
+            drop_superseded_fixed nightly
 
             # --- latest: legacy alias ---
             ensure_release latest
             gh_retry gh api -X PATCH "repos/${GH_REPO}/git/refs/tags/latest" -f sha="$HEAD_SHA" -F force=true
             upload_paced latest "${IMAGES[@]}"
+            drop_superseded_fixed latest
           fi
 
   # openipc.org learns about the build here, once: which images were published
