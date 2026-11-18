@@ -46,6 +46,21 @@ A "step" is one full 8-phase cycle, matching `gpio-motors`. The default pin map
 motion is rough, try the vendor coil order `[0,2,1,3]`:
 `pan_gpios=3,72,4,73 tilt_gpios=69,58,59,57`.
 
+### Anyka AK3918EV200, Gwell pan/tilt (SC1345)
+
+```
+insmod gpiostep.ko pan_gpios=15,14,13,23 tilt_gpios=19,20,10,11
+```
+
+Decoded from the stock `presetmotor.ko` (its `vSetpMotorGPIO_init`), and
+checked on the camera: the first four pins pan it and the last four tilt it, in
+this coil order, and a positive tilt points it up. The module switches the
+eight pads to GPIO itself: the EV200 pinctrl muxes a pad when
+`gpio_direction_output()` claims it, and leaves SHAREPIN_CON2 with the value
+the stock driver writes. Use a delay of 2 ms or more: at 1 ms a pan loses steps
+(24-32 px off after 100 steps out and back), at 2 ms three such moves land
+where they started.
+
 ### Coils on a 74HC595 shift register
 
 Some heads do not wire the eight coil lines to SoC pins. They clock the coil
