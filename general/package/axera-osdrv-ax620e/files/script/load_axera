@@ -2,16 +2,31 @@
 #
 # Axera AX620E module load. Order and parameters follow the stock Xiongmai
 # IVG-A6 firmware (/usr/lib/modules/Load_AX620E + /usr/etc/loadpublic), which
-# matches each module's own depends= (busybox insmod resolves none of them).
+# matches each module's own depends=. modprobe, not insmod: the package
+# installs them under /lib/modules/$(uname -r)/axera, where Buildroot's depmod
+# indexes them, so a dependency is resolved from modules.dep rather than from
+# this list. The list stays ordered anyway: ax_cmm has to be loaded first with
+# its pool, or modprobe would pull it in as a dependency without one.
 #
 # ax_cmm owns the DRAM above the kernel's mem= (osmem): cmmpool is
 # <name>,0,<phys start>,<size>, start = 0x40000000 + osmem.
 
 KO_DIR=/lib/modules/$(uname -r)/axera
+failed=0
 
 mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d M)
 mem_total=${mem_total:-256}
 os_mem=$(sed -n 's/.*mem=\([0-9]*\)M.*/\1/p' /proc/cmdline)
+
+load() {
+	mod=$1
+	shift
+	grep -q "^${mod} " /proc/modules && return 0
+	modprobe "$mod" "$@" && return 0
+	logger -s -p daemon.err -t axera "modprobe $mod failed"
+	failed=1
+	return 1
+}
 
 insert_ko() {
 	[ -d "$KO_DIR" ] || {
@@ -25,30 +40,30 @@ insert_ko() {
 	cmm_start=$(printf '0x%x' $((0x40000000 + os_mem * 1024 * 1024)))
 	cmm_size=$((mem_total - os_mem))M
 
-	cd "$KO_DIR" || return 1
-	insmod XmCommon.ko
-	insmod XmDemux.ko
-	insmod XmGpio.ko
+	load XmCommon
+	load XmDemux
+	load XmGpio
 
-	insmod ax_sys.ko
-	insmod ax_cmm.ko cmmpool=anonymous,0,$cmm_start,$cmm_size || return 1
-	insmod ax_pool.ko
-	insmod ax_base.ko
-	insmod ax_npu.ko
-	insmod ax_vo.ko
-	insmod ax_ivps.ko
-	insmod ax_vpp.ko
-	insmod ax_gdc.ko
-	insmod ax_tdp.ko
-	insmod ax_venc.ko
-	insmod ax_jenc.ko
-	insmod ax_mipi_rx.ko
-	insmod ax_proton.ko
-	insmod ax_audio.ko
-	insmod ax_vdec.ko
+	load ax_sys
+	load ax_cmm cmmpool=anonymous,0,$cmm_start,$cmm_size || return 1
+	load ax_pool
+	load ax_base
+	load ax_npu
+	load ax_vo
+	load ax_ivps
+	load ax_vpp
+	load ax_gdc
+	load ax_tdp
+	load ax_venc
+	load ax_jenc
+	load ax_mipi_rx
+	load ax_proton
+	load ax_audio
+	load ax_vdec
 
-	insmod XmGpioI2c.ko
-	insmod XmIrCut.ko
+	load XmGpioI2c
+	load XmIrCut
+	return $failed
 }
 
 remove_ko() {

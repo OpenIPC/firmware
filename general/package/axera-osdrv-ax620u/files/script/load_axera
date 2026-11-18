@@ -6,6 +6,12 @@
 # memory pool spelled out, everything above the kernel's mem= up to the
 # end of DRAM.
 #
+# modprobe, not insmod: the package installs the modules under
+# /lib/modules/$(uname -r)/axera, where Buildroot's depmod indexes them, so
+# each module's depends= (ax_osal for nearly all) comes from modules.dep. The
+# list stays in the stock order anyway: ax_cmm has to be loaded with its pool
+# before anything that depends on it, or modprobe would load it without one.
+#
 # usage: load_axera [-i|-r]
 
 KO_DIR=/lib/modules/$(uname -r)/axera
@@ -40,14 +46,19 @@ insert_ko() {
 		return 1
 	}
 
+	failed=0
 	for ko in $modules; do
 		case "$ko" in
 			ax_cmm) set -- "cmmpool=anonymous,0,$mmz_start,$mmz_size" ;;
 			*) set -- ;;
 		esac
-		insmod "$KO_DIR/$ko.ko" "$@" || \
-			logger -s -p daemon.err -t axera "insmod $ko failed"
+		grep -q "^$ko " /proc/modules && continue
+		modprobe "$ko" "$@" || {
+			logger -s -p daemon.err -t axera "modprobe $ko failed"
+			failed=1
+		}
 	done
+	return $failed
 }
 
 remove_ko() {

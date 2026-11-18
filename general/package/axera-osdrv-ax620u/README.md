@@ -27,3 +27,25 @@ same Xiongmai-style peripheral modules (`XmIrCut`, `XmGpio`,
 `XmGpioI2c`, `XmDemux`, `XmCommon`) as AX620E's firmware. Same
 provenance as [axera-osdrv-ax620e](../axera-osdrv-ax620e/README.md):
 no public source exists for the closed modules at any kernel version.
+
+## Provenance and kernel binding
+
+- Origin: `/usr/lib/modules/` of the stock firmware of a JFtech
+  IPC_AX620U_A8 camera, copied unmodified.
+- Kernel: every module carries `vermagic=4.19.125 SMP preempt mod_unload
+  ARMv7 p2v8` and loads only into a kernel built from OpenIPC/linux
+  `axera-ax620u` with `ax620u.lite.config` (release exactly `4.19.125`,
+  no modversions). A kernel update that changes that needs new binaries.
+- Licence: the modules declare `GPL`, `GPL v2` or `Dual BSD/GPL` in their
+  own `modinfo`; their source is not published.
+- Same model as the other vendors' binary driver packages here
+  (`hisilicon-osdrv-*`, `goke-osdrv-*`, `sigmastar-osdrv-*`,
+  `novatek-osdrv-nt9856x`, `xiongmai-osdrv-xm530v200`).
+
+## Loading
+
+Installed under `/lib/modules/4.19.125/axera` and indexed by Buildroot's
+`depmod`; `load_axera` (run by `S70vendor`) loads them with `modprobe` in
+the stock order, `ax_cmm` with its `cmmpool=` before anything that
+depends on it. A failed load is logged and makes `load_axera` exit
+non-zero.

@@ -24,5 +24,31 @@ against the vendor SDK's `osdrv` driver trees (a `Makefile` and zero
 audit in `sipeed/maix_ax620e_sdk` issue #2, which found the same gap in
 AXERA-TECH's newest public release.
 
-`load_axera` (in `files/script/`) insmods them in the correct
-dependency order, read from each module's own `depends=` via `modinfo`.
+## Provenance and kernel binding
+
+- Origin: the vendor modules of a deployed Xiongmai IVG-A6 (AX620E)
+  camera firmware, `/usr/lib/modules/`, copied unmodified. They are
+  Axera's binary-only media stack as Axera ships it to camera makers.
+- Kernel: every module carries `vermagic=5.15.73 SMP preempt mod_unload
+  aarch64`, and loads only into a kernel built from OpenIPC/linux
+  `axera-ax620e` with `ax620e.lite.config` (release exactly `5.15.73`, no
+  modversions, KPROBES on so `struct module` matches). A kernel update
+  that changes any of that needs a new set of binaries from Axera.
+- Licence: the modules declare `GPL`, `GPL v2` or `Dual BSD/GPL` in their
+  own `modinfo`; their source is not published.
+- Same model as the other vendors' binary driver packages in this tree,
+  e.g. `hisilicon-osdrv-hi3516ev200`, `goke-osdrv-gk7205v200`,
+  `sigmastar-osdrv-infinity6e`, `novatek-osdrv-nt9856x`,
+  `xiongmai-osdrv-xm530v200`: the SoC vendor's media modules, at the
+  kernel version they were built for, are what the camera's media
+  pipeline runs on; the kernel itself builds from source.
+
+## Loading
+
+The package installs the modules under `/lib/modules/5.15.73/axera`,
+where Buildroot's target-finalize `depmod` indexes them. `load_axera`
+(in `files/script/`, run by `S70vendor`) loads them with `modprobe` in
+the stock loader's order, which matches every module's `depends=`;
+`ax_cmm` goes first of the Axera modules with its `cmmpool=`, so nothing
+pulls it in without one. A failed load is logged and makes `load_axera`
+exit non-zero.
