@@ -1,0 +1,33 @@
+#!/bin/sh
+
+DAEMON="divinus"
+DAEMON_PATH="/usr/bin/$DAEMON"
+PIDFILE="/var/run/$DAEMON.pid"
+
+[ -r /etc/TZ ] && export TZ=$(cat /etc/TZ)
+
+case "$1" in
+	start)
+		echo -n "Starting $DAEMON: "
+		start-stop-daemon -S -q -b -m -p "$PIDFILE" -x "$DAEMON_PATH" &&
+			echo "OK" || echo "FAIL"
+		;;
+
+	stop)
+		echo -n "Stopping $DAEMON: "
+		start-stop-daemon -K -q -p "$PIDFILE" -x "$DAEMON_PATH" &&
+			rm -f "$PIDFILE"
+		echo "OK"
+		;;
+
+	restart)
+		"$0" stop
+		sleep 1
+		"$0" start
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop|restart}"
+		exit 1
+		;;
+esac

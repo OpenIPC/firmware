@@ -1,0 +1,48 @@
+#!/bin/sh
+# Keep the log of the boot that fell into failsafe, for the crash report.
+#
+# Run by failsafe-rescue, after S29pstore has mounted pstore. Two records can
+# hold it, both in the ramoops region of reserved RAM, which a warm reset --
+# the watchdog's, or a reboot -- leaves alone:
+#
+#  - console-ramoops-0: the kernel's own messages. Everything from
+#    "Booting Linux" until S02sysctl lowers kernel.printk, errors after that.
+#    The only record of a boot that ended before userspace logging started --
+#    and boot loops kept arriving with no log at all while pmsg was the only
+#    one: the boots that loop are mostly the ones that never got that far.
+#  - pmsg-ramoops-0: the system log S03pmsglog copied there, majestic's and
+#    every service's, klogd's kernel lines included, for a boot that got as
+#    far as S03pmsglog.
+#
+# Each goes into /etc/crash/failsafe.log under its own header, console first:
+# they overlap in time -- the console record goes on taking kernel errors after
+# S03pmsglog starts, and klogd copies those into the system log too -- so they
+# are two views of one boot, not one stream, and are kept apart rather than
+# merged into an order neither has. The system log comes last, so the file
+# ends where the boot's userspace did when it got that far. crashlog-send sends
+# the file beside the failsafe note as the crash's syslog.
+#
+# ramoops clears both records at every boot, so each holds only the boot that
+# fell: a boot that ended before S03pmsglog leaves the pmsg record empty, never
+# an older boot's. A record that cannot be read whole is left out rather than
+# kept in part. An earlier fall's log goes first, so a note is never beside
+# another boot's log when this one left none, and the file is replaced whole.
+# Overlay only, no flash.
+PSTORE=/sys/fs/pstore
+LOG=/etc/crash/failsafe.log
+
+rm -f "$LOG" "$LOG.new" "$LOG.part" 2>/dev/null
+[ -s "$PSTORE/console-ramoops-0" ] || [ -s "$PSTORE/pmsg-ramoops-0" ] || exit 0
+mkdir -p "${LOG%/*}" 2>/dev/null || exit 0
+for rec in console-ramoops-0 pmsg-ramoops-0; do
+	[ -s "$PSTORE/$rec" ] || continue
+	cat "$PSTORE/$rec" > "$LOG.part" 2>/dev/null || continue
+	{ echo "==> $rec <=="; cat "$LOG.part"; } >> "$LOG.new" 2>/dev/null || {
+		rm -f "$LOG.new" "$LOG.part"
+		exit 0
+	}
+done
+rm -f "$LOG.part" 2>/dev/null
+[ -s "$LOG.new" ] && mv -f "$LOG.new" "$LOG" 2>/dev/null
+rm -f "$LOG.new" 2>/dev/null
+exit 0

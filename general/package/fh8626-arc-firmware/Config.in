@@ -1,0 +1,10 @@
+config BR2_PACKAGE_FH8626_ARC_FIRMWARE
+	bool "fh8626-arc-firmware"
+	select BR2_PACKAGE_HOST_ARC_BINUTILS
+	help
+	  Firmware for the FH8626V100's ARC coprocessor, loaded by the
+	  kernel's fh8626-arc remoteproc driver from
+	  /lib/firmware/fh8626-arc.elf. It answers on one RPMsg echo
+	  endpoint, rpmsg-arc-echo, and does nothing else yet.
+
+	  Built from source in this package.

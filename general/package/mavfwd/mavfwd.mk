@@ -5,7 +5,7 @@
 ################################################################################
 
 MAVFWD_SITE = $(call github,openipc,mavfwd,$(MAVFWD_VERSION))
-MAVFWD_VERSION = HEAD
+MAVFWD_VERSION = 298486fc981a9d725928414b57ab1f81b1d0d47f
 
 MAVFWD_LICENSE = MIT
 MAVFWD_LICENSE_FILES = LICENSE

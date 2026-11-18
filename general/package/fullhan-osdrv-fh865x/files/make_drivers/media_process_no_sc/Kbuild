@@ -1,0 +1,19 @@
+# media_process_no_sc.ko from the FP13 (FH885XV200_IPC_V1.1.0.FP13_20211202) SDK objects
+obj-m := media_process_no_sc.o
+media_process_no_sc-y := \
+	media_data_manage.o \
+	media_stream_manage.o \
+	media_manage.o \
+	media_process_linux.o \
+	media_calc.o \
+	media_process_rtt.o \
+	rc_fh.o \
+	media_chip_info.o \
+	media_low_power.o \
+	media_share_ram.o \
+	softcore_master.o \
+	softcore.o \
+	softcore_veu.o \
+	fh_std.o \
+	fh_std_proc.o \
+	fh_std_autotest.o

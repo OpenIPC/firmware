@@ -5,6 +5,27 @@ set_gpio() {
 	sleep 1
 }
 
+# Allwinner USB0 is OTG and can boot as a device. The manager settles on its
+# role a few seconds after probe and would undo an earlier switch, so wait.
+role=/sys/bus/platform/devices/usbc0/otg_role
+if [ -e $role ]; then
+	i=0
+	while [ "$(cat $role)" = null ] && [ $i -lt 10 ]; do
+		sleep 1
+		i=$((i + 1))
+	done
+	echo usb_host > $role
+fi
+
+# Allwinner boards power the radio through sunxi-wlan, on the wlan_regon pin
+# of their device tree. Power it once USB0 is a host, and give it time to
+# enumerate before the profile loads its driver.
+power=/sys/class/misc/sunxi-wlan/rf-ctrl/power_state
+if [ -e $power ] && [ "$(cat $power)" = 0 ]; then
+	echo 1 > $power
+	sleep 2
+fi
+
 # Generic MT7601U
 if [ "$1" = "mt7601u-generic" ]; then
 	modprobe mt7601u
@@ -41,9 +62,24 @@ if [ "$1" = "rtl8812au-generic" ]; then
 	exit 0
 fi
 
-# Generic ATBM603x
+# Generic ATBM603x: atbm-wifi's module, or atbm603x-comb-openipc's
 if [ "$1" = "atbm603x-generic-usb" ]; then
-	modprobe atbm603x_wifi_usb
+	modprobe atbm603x_wifi_usb 2>/dev/null || modprobe atbm603x_comb_wifi_usb
+	exit 0
+fi
+
+# Generic ATBM6012B: atbm-wifi's module built for the 6012B. A mask of 0
+# quiets the driver's own log, as on the SDIO arms: left at its default it
+# writes an error to the kernel log for every wireless-extensions ioctl it
+# does not implement, which is one line per poll of the link (#2815).
+if [ "$1" = "atbm6012b-generic-usb" ]; then
+	modprobe atbm6012b_wifi_usb atbm_printk_mask=0
+	exit 0
+fi
+
+# Generic ATBM606x (Wi-Fi 6: ATBM6062, 6162, 6132-C)
+if [ "$1" = "atbm606x-generic-usb" ]; then
+	modprobe atbm606x_wifi_usb
 	exit 0
 fi
 
@@ -97,6 +133,14 @@ if [ "$1" = "atbm603x-gk7205v300-xm-g6s" ]; then
   devmem 0x100C0080 32 0x530
   set_gpio 7 0
 	modprobe atbm603x_wifi_usb
+	exit 0
+fi
+
+# AK3918EV300L gzhongshi HVT3610S3: an ATBM6012B on USB, powered from GPIO 70
+# (wifi_power in its stock firmware's dev_gpio.cfg)
+if [ "$1" = "atbm603x-ak3918ev300l-hvt3610s3" ]; then
+	set_gpio 70 1
+	modprobe atbm603x_wifi_usb 2>/dev/null || modprobe atbm603x_comb_wifi_usb
 	exit 0
 fi
 
@@ -217,7 +261,7 @@ fi
 # SSC333 Tapo C110 v2.6
 if [ "$1" = "atbm6012b-ssc333-tapo-c110" ]; then
 	set_gpio 16 1
-	modprobe atbm6012b_wifi_usb
+	modprobe atbm6012b_wifi_usb atbm_printk_mask=0
 	exit 0
 fi
 
@@ -291,9 +335,12 @@ if [ "$1" = "rtl8188fu-t31-aosu-c5l" ]; then
 fi
 
 # T31 CamHi
+# The T31 kernel has the vendor MT7601 STA driver built in
+# (CONFIG_MT7601_STA, "wlan0"), so powering the dongle is all this needs:
+# there is no mt7601u.ko to load, and mac80211, which this used to load,
+# is not the stack that driver uses (#2412).
 if [ "$1" = "mt7601u-t31-camhi" ]; then
 	set_gpio 61 0
-	modprobe mac80211
 	exit 0
 fi
 
@@ -330,6 +377,84 @@ if [ "$1" = "rtl8188fu-t31-aoni-e97vj62" ]; then
 	set_gpio 53 1
 	modprobe 8188fu
   exit 0
+fi
+
+# Xiongmai V200 series. The USB host is the vendor's dwc2 and xm_usb0, which
+# load_xiongmai only loads after S40network, so the profile loads them. The
+# dongle's power pad is cycled as the vendor's wifi_pdn.ko does: output high
+# (off) for 2 s, then low (on) for 2 s; pad register 0x10020000 + 4 * pad.
+# $1: power pad, 0 for none. $2: driver module.
+xm_v200_wifi() {
+	modprobe dwc2
+	modprobe xm_usb0
+	if [ "$1" -gt 0 ]; then
+		pad=$(printf 0x%x $((0x10020000 + $1 * 4)))
+		devmem "$pad" 32 0xc00
+		sleep 2
+		devmem "$pad" 32 0x400
+		sleep 2
+	fi
+	modprobe "$2" || return 1
+	# wlan0 appears once the dongle has enumerated and taken its firmware
+	i=0
+	while [ ! -e /sys/class/net/wlan0 ] && [ $i -lt 10 ]; do
+		sleep 1
+		i=$((i + 1))
+	done
+	[ -e /sys/class/net/wlan0 ]
+}
+
+# XM530V200 X6C-WEQ: ATBM6012B-X
+if [ "$1" = "atbm603x-xm530v200-x6c-weq" ]; then
+	xm_v200_wifi 87 atbm603x_comb_wifi_usb
+	exit $?
+fi
+
+# XM530V200 X2-WQ2: XM713G
+if [ "$1" = "atbm603x-xm530v200-x2-wq2" ]; then
+	xm_v200_wifi 82 atbm603x_comb_wifi_usb
+	exit $?
+fi
+
+# XM535D1 X6E-WEQ: ATBM6012B-X
+if [ "$1" = "atbm603x-xm535d1-x6e-weq" ]; then
+	xm_v200_wifi 11 atbm603x_comb_wifi_usb
+	exit $?
+fi
+
+# XM535D2 X9-WE2Q: ATBM6132CU, no power pad (the vendor passes 255)
+if [ "$1" = "atbm606x-xm535d2-x9-we2q" ]; then
+	xm_v200_wifi 0 atbm606x_wifi_usb
+	exit $?
+fi
+
+# XM535W1 X2W-WNG: ATBM6012B-X
+if [ "$1" = "atbm603x-xm535w1-x2w-wng" ]; then
+	xm_v200_wifi 163 atbm603x_comb_wifi_usb
+	exit $?
+fi
+
+# XM530/XM550 AltoBeam ATBM6032 (USB 007a:8888). The power GPIO differs per
+# board, so it comes from the wifipdn variable, which the device's customizer
+# in OpenIPC/builder sets. A failure here sends S40network to the wired port
+# instead of an ifup of a wlan0 that does not exist.
+if [ "$1" = "atbm603x-xm530" ]; then
+	pdn=$(fw_printenv -n wifipdn 2>/dev/null)
+	if [ -z "$pdn" ]; then
+		echo "atbm603x-xm530: wifipdn is not set" >&2
+		exit 1
+	fi
+	modprobe dwc_otg || exit 1
+	modprobe wifi_pdn value="$pdn" || exit 1
+	modprobe atbm603x_wifi_usb || exit 1
+	# wlan0 appears once the dongle has enumerated and taken its firmware
+	i=0
+	while [ ! -e /sys/class/net/wlan0 ] && [ $i -lt 10 ]; do
+		sleep 1
+		i=$((i + 1))
+	done
+	[ -e /sys/class/net/wlan0 ]
+	exit $?
 fi
 
 exit 1

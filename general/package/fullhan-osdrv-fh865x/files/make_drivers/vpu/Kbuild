@@ -1,0 +1,15 @@
+# vpu.ko from the FP13 (FH885XV200_IPC_V1.1.0.FP13_20211202) SDK objects
+obj-m := vpu.o
+vpu-y := \
+	vpu_linux.o \
+	vpu_rtt.o \
+	vpu_os_common.o \
+	vpu_low_power.o \
+	vpu_manage.o \
+	vpu_split.o \
+	vpu_hw_layer.o \
+	vpu_frame_ctrl.o \
+	vpu_trans_data.o \
+	vpu_osd.o \
+	vpu_ext_buf.o \
+	vpu_loopbuf.o

@@ -37,7 +37,9 @@ start() {
 		}
 
 	if [ ! -L "/sys/class/net/$vtund_iface" ]; then
-		run_cmd "" "" false daemon.err modprobe tun || return 1
+		# A neo kernel without module support has tun built in, and modprobe
+		# fails there for want of /lib/modules (#2835).
+		[ -c /dev/net/tun ] || run_cmd "" "" false daemon.err modprobe tun || return 1
 		run_cmd "" "" false daemon.err tunctl -t "$vtund_iface" || return 1
 	fi
 

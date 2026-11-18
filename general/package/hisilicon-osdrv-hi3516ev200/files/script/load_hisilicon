@@ -275,6 +275,18 @@ insert_ko() {
 	#	modprobe open_user
 	modprobe open_wdt
 
+	# LSADC -> /dev/lsadc, two 10-bit inputs where boards wire a photocell
+	# (OpenIPC/majestic#359). majestic reads it for nightMode.adcReadout,
+	# picking the input with nightMode.adcChannel. Loaded family-wide like
+	# open_pwm and open_wdt: the block is on every chip, and whether a
+	# photocell is wired to it is the camera's config, not the image's.
+	# Without a reader it only gates the block's clock on.
+	# An image that prunes the module skips it quietly; one that ships it
+	# and cannot load it says so, since the light input is then missing.
+	if grep -q '/open_adc\.ko:' /lib/modules/$(uname -r)/modules.dep 2>/dev/null; then
+		modprobe open_adc || echo "open_adc failed to load: no /dev/lsadc"
+	fi
+
 	# Cipher engine -> /dev/cipher. majestic's native WebRTC takes AES-CTR
 	# for its SRTP transform from here: measured on an hi3516ev300, 86.0us of
 	# CPU per 1100-byte packet in software against 41.9 through the engine,
@@ -302,6 +314,7 @@ insert_ko() {
 
 remove_ko() {
 	rmmod -w open_cipher 2>/dev/null
+	rmmod open_adc 2>/dev/null
 	rmmod -w open_wdt
 	#	rmmod -w hi_user
 	remove_audio

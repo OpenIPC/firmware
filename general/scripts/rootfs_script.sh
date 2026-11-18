@@ -11,6 +11,11 @@ echo BUILD_ID=${BUILD_ID:-local-$(date -u +%Y%m%d)-${GIT_HASH-build}} >> ${FILE}
 echo BUILD_SHA=${BUILD_SHA:-${GIT_HASH-build}} >> ${FILE}
 PLATFORM=${BUILD_PLATFORM:-${OPENIPC_SOC_MODEL}_${OPENIPC_VARIANT}}
 echo BUILD_PLATFORM=${PLATFORM} >> ${FILE}
+# The chips this image also serves (BR2_OPENIPC_SOC_ALIASES), for the scripts
+# that have to tell the die they run on from the image they were built as.
+if [ -n "${OPENIPC_SOC_ALIASES}" ]; then
+	echo SOC_ALIASES="\"${OPENIPC_SOC_ALIASES}\"" >> ${FILE}
+fi
 date +TIME_STAMP=%s >> ${FILE}
 
 # The image ships no majestic.yaml: majestic runs on its own defaults until a
@@ -19,9 +24,27 @@ date +TIME_STAMP=%s >> ${FILE}
 # whose recipe changed, so it is removed here on every build.
 rm -f ${TARGET_DIR}/etc/majestic.yaml
 
-CONF="USES_GLIBC=y|OSDRV_T30=y|OSDRV_V85X=y|LIBV4L=y|MAVLINK_ROUTER=y|RUBYFPV=y|ONYXFPV=y|WIFIBROADCAST=y|WIFIBROADCAST_NG=y|AUDIO_PROCESSING_OPENIPC=y"
+CONF="OSDRV_T30=y|OSDRV_V85X=y|LIBV4L=y|MAVLINK_ROUTER=y|RUBYFPV=y|ONYXFPV=y|WIFIBROADCAST=y|WIFIBROADCAST_NG=y|AUDIO_PROCESSING_OPENIPC=y"
 if ! grep -qP ${CONF} ${BR2_CONFIG}; then
-	rm -f ${TARGET_DIR}/usr/lib/libstdc++*
+	if grep -q "USES_GLIBC=y" "${BR2_CONFIG}"; then
+		# A glibc board used to keep libstdc++ unconditionally, because its
+		# vendor blobs may link it. Keep it only when something on the image
+		# names it -- as DT_NEEDED or as a dlopen() string, both raw bytes
+		# here. That over-matches, which is the safe way round. On
+		# ssc338q_ultimate nothing does (zerotier-one links its C++ runtime
+		# statically), and its 1.4 MB, 427 KB of xz, was what pushed the
+		# rootfs over 8192 KB. As in prune-libnl.sh, the pass must be able to
+		# see inside a binary (every dynamic ELF names libc.so) before an
+		# empty result is trusted.
+		libc_seen=$(find "${TARGET_DIR}" -type f ! -name 'libstdc++*' -print0 | xargs -0 -r grep -laF -e 'libc.so' 2>/dev/null | head -n 1)
+		stdcpp_used=$(find "${TARGET_DIR}" -type f ! -name 'libstdc++*' -print0 | xargs -0 -r grep -laF -e 'libstdc++.so' 2>/dev/null | head -n 1)
+		if [ -n "${libc_seen}" ] && [ -z "${stdcpp_used}" ]; then
+			echo "rootfs_script: nothing on this glibc image names libstdc++.so, dropping it"
+			rm -f "${TARGET_DIR}"/usr/lib/libstdc++*
+		fi
+	else
+		rm -f ${TARGET_DIR}/usr/lib/libstdc++*
+	fi
 fi
 
 if grep -q "USES_MUSL=y" ${BR2_CONFIG}; then
@@ -62,10 +85,11 @@ if [ -z "$(find ${TARGET_DIR}/bin ${TARGET_DIR}/sbin ${TARGET_DIR}/usr/bin ${TAR
 	fi
 fi
 
-# The overlay's WireGuard client drives wg, which only wireguard-tools installs.
+# The overlay's WireGuard client drives wg, which only wireguard-tools (or
+# wireguard-tools-openipc, its fork for 3.0-header toolchains) installs.
 # Without it /usr/sbin/wireguard can never bring wg0 up, so it goes with its
 # init script and interface stanza: 0.7KB of squashfs on hi3516cv6xx lite.
-if ! grep -q '^BR2_PACKAGE_WIREGUARD_TOOLS=y' ${BR2_CONFIG}; then
+if ! grep -qE '^BR2_PACKAGE_WIREGUARD_TOOLS(_OPENIPC)?=y' ${BR2_CONFIG}; then
 	rm -f ${TARGET_DIR}/usr/sbin/wireguard ${TARGET_DIR}/etc/init.d/S98wireguard \
 		${TARGET_DIR}/etc/network/interfaces.d/wg0
 fi
@@ -185,6 +209,9 @@ if [ -x "${TARGET_DIR}${CLAIM_SHELL}" ]; then
 	grep -qsE "^${CLAIM_SHELL}\$" "${TARGET_DIR}/etc/shells" \
 		|| echo "${CLAIM_SHELL}" >> "${TARGET_DIR}/etc/shells"
 fi
+
+# GDB's pretty-printers for libstdc++, copied in beside it from the toolchain.
+rm -f "${TARGET_DIR}"/usr/lib/*-gdb.py
 
 # Mozilla's whole store is 121 roots and ~100KB of squashfs; most of it is
 # national and regional roots a camera's outbound HTTPS never meets. Lite keeps

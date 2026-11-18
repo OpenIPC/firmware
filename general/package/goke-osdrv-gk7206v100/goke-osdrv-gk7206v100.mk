@@ -72,6 +72,9 @@ define GOKE_OSDRV_GK7206V100_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/script/load_goke
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/sensor/config/*.ini
 endef
 
 $(eval $(generic-package))

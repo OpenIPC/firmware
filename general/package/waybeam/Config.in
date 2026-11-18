@@ -1,12 +1,61 @@
 config BR2_PACKAGE_WAYBEAM
 	bool "waybeam"
 	depends on BR2_TOOLCHAIN_HAS_THREADS
-	depends on BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY6E
+	# One arm per SoC family whose backend this build can drive. Each arm
+	# names the driver packages the backend links against -- on Infinity6E
+	# the SigmaStar OSDRV MI libraries, on Hi3516CV610 the vendor MPP
+	# libraries and the OpenHisilicon source the daemon compiles against --
+	# so the encoder is offered exactly where those exist.
+	#
+	# The HiSilicon arm also names the family: neither of those two packages
+	# restricts itself to hi3516cv6xx, while the makefile picks the cv610
+	# backend only for that family and builds the SigmaStar one for every
+	# other, so without the family test a board elsewhere in the tree could
+	# select this arm and get an encoder for the wrong hardware.
+	depends on BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY6E || \
+		(BR2_PACKAGE_HISILICON_OSDRV_HI3516CV6XX && \
+		 BR2_PACKAGE_HISILICON_OPENSDK && \
+		 BR2_OPENIPC_SOC_FAMILY = "hi3516cv6xx")
 	depends on !BR2_PACKAGE_MAJESTIC
 	help
-	  Standalone H.265 video encoder and streamer for SigmaStar
-	  Infinity6E (SSC338Q/SSC30KQ). Provides a dual encoder
-	  backend, sensor unlock and an HTTP configuration API.
+	  Standalone H.265 video encoder and streamer (OpenIPC/waybeam),
+	  with one backend per SoC family: SigmaStar Infinity6E
+	  (SSC338Q/SSC30KQ) and Hisilicon Hi3516CV610 (V5).
+
+	  On Infinity6E it provides a dual encoder backend, sensor unlock and
+	  an HTTP configuration API, and it builds the unlocked imx335/imx415
+	  sensor modules here, against the kernel this build produced.
+
+	  On Hi3516CV610 the backend compiles against the public
+	  OpenHisilicon V5 headers, links the vendor MPP userspace libraries and
+	  drives the sensor as a userspace plugin it dlopens by name. IMX335 is
+	  that plugin from hisilicon-opensdk (OpenIPC/openhisilicon), opened at
+	  /usr/lib/sensors. IMX662 is this package's own build, opened at
+	  /usr/lib/cv610: it drives the sensor clock from the mode the backend
+	  picked, while the openhisilicon copy assumes a fixed 37.125 MHz and
+	  refuses anything above 90 fps. hisilicon-opensdk therefore drops its
+	  copy when waybeam is selected, so the image carries one build of each
+	  sensor rather than two.
+
+	  No kernel modules are built here: the image's own loader
+	  (S70vendor -> load_hisilicon) has brought the MPP module set up before
+	  the daemon starts, and the daemon re-initialises the graph around it.
+	  That set is the whole vendor one, which is why this arm adds no modules
+	  of its own -- measured at 18.7 MiB of the 92 MiB zone with a 1280x720
+	  output on a 128 MiB CV610. The vendor MPP shared objects it links are
+	  installed here, though: OSDRV stopped shipping them when majestic began
+	  linking the SDK from static archives.
+
+	  /etc/waybeam.json is waybeam's own CV610 default: it encodes into
+	  the frame-shm ring venc_wfb, which wfb_tx drains. An image that
+	  streams over the network retargets outgoing.server there or through
+	  the API; with nothing draining the ring the daemon's frame gate
+	  throttles the encoder rather than stalling it.
+
+	  The vendor PQ binary library is not distributed (vendor licence), so
+	  isp.sensorBin and the iq bin import/export routes stay unavailable
+	  on an image built here. `make stage ... CV610_PQ_LIB=<file>` stages
+	  a locally obtained one for bench work, never for an image.
 
 	  Infinity6C (SSC378QE) is not offered here even though the
 	  encoder has a backend for it: waybeam's I6C backend targets
@@ -22,10 +71,12 @@ config BR2_PACKAGE_WAYBEAM
 
 	  Installs:
 	    - /usr/bin/waybeam
-	    - /usr/bin/json_cli
 	    - /etc/waybeam.json
 	    - /etc/init.d/S95waybeam
-	    - unlocked imx335/imx415 sensor modules, compiled here
-	      against this board's kernel
+	    - Infinity6E: /usr/bin/json_cli and unlocked imx335/imx415
+	      sensor modules, compiled here against this board's kernel
+	    - Hi3516CV610: /usr/lib/cv610/libsns_imx662.so and the vendor MPP
+	      shared objects the backend links; the IMX335 plugin comes from
+	      hisilicon-opensdk
 
 	  https://github.com/OpenIPC/waybeam

@@ -108,7 +108,7 @@ void * memmap(unsigned long phy_addr, unsigned long size)
   addr = mmap((void *)0, size_in_page, PROT_READ, MAP_SHARED, fd, phy_addr_in_page);
   if(addr == MAP_FAILED)
   {
-    printf("memmap():mmap @ 0x%x error!\n", phy_addr_in_page);
+    printf("memmap():mmap @ 0x%lx error!\n", phy_addr_in_page);
     return NULL;
   }
   /* add this mmap to MMAP Node */
@@ -167,7 +167,7 @@ unsigned long parse_int (char *str) {
 	char *endptr; 
 
 	result = strtoll(str, &endptr, 0);
-	if (str == '\0' || *endptr != '\0') {
+	if (*str == '\0' || *endptr != '\0') {
 		fprintf(stderr, "\"%s\" is not a valid number\n", str);
 		exit(EXIT_FAILURE);
 	}
@@ -180,7 +180,7 @@ unsigned long parse_int (char *str) {
  ****************************************************************/ 
 int gpio_get_value(unsigned int gpio, unsigned long *value)  
 {  
-    int fd, len;  
+    int fd, len, n;  
     char buf[MAX_BUF];  
     char ch;  
   
@@ -192,7 +192,15 @@ int gpio_get_value(unsigned int gpio, unsigned long *value)
         return fd;  
     }  
    
-    read(fd, &ch, 1);  
+    n = read(fd, &ch, 1);
+    if (n != 1) {
+        if (n < 0)
+            perror("gpio/get-value");
+        else
+            fprintf(stderr, "gpio/get-value: %s: empty read\n", buf);
+        close(fd);
+        return -1;
+    }
   
     if (ch != '0') {  
         *value = 1;  
@@ -220,7 +228,12 @@ int gpio_get_dir(unsigned int gpio, unsigned long *value)
         perror("gpio/direction");  
         return fd;  
     }  
-	i = read(fd, ch, 5); 
+	i = read(fd, ch, sizeof(ch) - 1);
+	if (i < 0) {
+		perror("gpio/direction");
+		close(fd);
+		return -1;
+	}
 	ch[i] = 0;
 	
 	
@@ -240,7 +253,7 @@ void check_run(unsigned char *runsh, int chkbit, int chkstat, int chkdirect)
 		{	
 			if(debug)
 				{
-					if (chkdirect==1) {printf("Direction: Output\n");} else {printf("Direction: Input\n");}
+					printf("Direction: %s\n", chkdirect==1 ? "Output" : chkdirect==0 ? "Input" : "Unknown");
 						printf("Check Level:%d Current Level:%d\n",chkstat,chkbit);
 				printf("Run Script: %s\n", runsh);}
 			system (runsh);
@@ -250,7 +263,7 @@ void check_run(unsigned char *runsh, int chkbit, int chkstat, int chkdirect)
 		{	
 			if(debug)
 				{
-					if (chkdirect==1) {printf("Direction: Output\n");} else {printf("Direction: Input\n");}
+					printf("Direction: %s\n", chkdirect==1 ? "Output" : chkdirect==0 ? "Input" : "Unknown");
 					printf("Check Level:%d Current Level:%d\n",chkstat,chkbit);
 					printf("Run Script: %s\n", runsh);}
 			system (runsh);
@@ -298,6 +311,7 @@ int main(int argc, char *argv[])
 	unsigned long value = 0;
 	unsigned long OldValue= 0;
 	int GPIO_Group, GPIO_Bit, old_bit, new_bit, status;
+	int primed = 0;
 	
 	if(set_handler()==-1)
 	  {
@@ -322,11 +336,9 @@ int main(int argc, char *argv[])
 			exit(EXIT_FAILURE);}
 			
 		sfs = 1;
-		stat = malloc(strlen(argv[2]));
-		strcpy(stat, argv[2]);							//Status_on|off|both
-		cmd = malloc(strlen(argv[3]));
-		strcpy(cmd, argv[3]);							//Programm_run
-		gpio_get_value(gpio, &OldValue);				//Save current value
+		stat = argv[2];									//Status_on|off|both
+		cmd = argv[3];									//Programm_run
+		primed = gpio_get_value(gpio, &OldValue) == 0;	//Save current value
 	}
 	else
 	{	
@@ -338,10 +350,8 @@ int main(int argc, char *argv[])
 		GPIO_Offset=parse_int(argv[2]); 				//GPIO_Offset
 		GPIO_Group=atoi(argv[3]);						//GPIO_Group
 		GPIO_Bit = atoi(argv[4]);						//GPIO_Bit
-		stat = malloc(strlen(argv[5]));
-		strcpy(stat, argv[5]);							//Status_on|off|both
-		cmd = malloc(strlen(argv[6]));
-		strcpy(cmd, argv[6]);							//Programm_run
+		stat = argv[5];									//Status_on|off|both
+		cmd = argv[6];									//Programm_run
 	}
 														//Status
 	if(!strcmp("on",stat)){status = 1;}					//on = 1 
@@ -357,8 +367,13 @@ int main(int argc, char *argv[])
 			adress=GPIO_Base+(GPIO_Group*GPIO_Offset)+0x3fc;
 			value = GetValueRegister(adress);
 		}
-		else {
-			gpio_get_value(gpio, &value);
+		else if (gpio_get_value(gpio, &value) < 0) {
+			usleep(250000);								//No level to compare, try again
+			continue;
+		}
+		else if (!primed) {
+			OldValue = value;							//First good read is the baseline, not an edge
+			primed = 1;
 		}
 			
       if(OldValue!=value)
@@ -377,7 +392,8 @@ int main(int argc, char *argv[])
             }
 			}
 			else {
-				gpio_get_dir(gpio, &direct);
+				if (gpio_get_dir(gpio, &direct) < 0)
+					direct = -1;
 				check_run(cmd,value,status,direct);
 			  }
 			

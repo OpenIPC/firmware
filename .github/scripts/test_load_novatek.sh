@@ -30,7 +30,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
 cat >"$work/wrapper" <<'EOF'
-insmod() { echo "insmod $1" >>"$CALLS"; }
+insmod() { echo "insmod $*" >>"$CALLS"; }
 devmem() { :; }
 logger() { :; }
 ipcinfo() { echo sc501ai; }
@@ -43,7 +43,7 @@ fw_setenv() {
 		echo "fw_setenv $*" >>"$CALLS"
 	fi
 }
-export SENSOR=sc501ai
+export SENSOR=${TEST_SENSOR:-sc501ai}
 set -- -i
 . "$SCRIPT"
 EOF
@@ -69,7 +69,7 @@ run() {
 	done
 	: >"$work/calls"
 	rc=0
-	(cd "$work" && SCRIPT="$script" CALLS="$work/calls" ENV_FILE="$work/env" \
+	(cd "$work" && TEST_SENSOR="${TEST_SENSOR:-}" SCRIPT="$script" CALLS="$work/calls" ENV_FILE="$work/env" \
 		LOAD_NOVATEK_DT="$work/dt" LOAD_NOVATEK_CMDLINE="$work/cmdline" \
 		busybox sh "$work/wrapper" >"$work/out" 2>&1) || rc=$?
 }
@@ -92,6 +92,17 @@ loaded() {
 
 lit='earlyprintk console=ttyS0,115200 mem=32M panic=20 root=/dev/mtdblock3 rootfstype=squashfs'
 ph='earlyprintk console=ttyS0,115200 mem=${osmem} panic=20 root=/dev/mtdblock3 rootfstype=squashfs'
+
+echo "=== sensors ==="
+
+TEST_SENSOR=imx415
+run 128 48 "$lit" "osmem=48M" "bootargs=$lit" "osmem_default=48M"
+has "insmod nvt_sen_imx415.ko sen_cfg_path=/etc/sensors/sen_imx415.cfg" "imx415 loads its own driver and cfg"
+lacks "Invalid sensor" "... and is not refused"
+exited 0 "... and the script runs to its end"
+TEST_SENSOR=
+run 128 48 "$lit" "osmem=48M" "bootargs=$lit" "osmem_default=48M"
+has "insmod nvt_sen_sc501ai.ko sen_cfg_path=/etc/sensors/sen_sc501ai.cfg" "sc501ai is unchanged"
 
 echo "=== the 48M default on 128 MB boards ==="
 

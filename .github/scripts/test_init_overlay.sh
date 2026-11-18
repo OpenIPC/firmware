@@ -194,6 +194,67 @@ else
 	bad "a carry-over kept for the next boot must not reach the jffs2 mount in $SRC"
 fi
 
+# ---------------------------------------------------------------------------
+# Part 4: flash_aliased() on a kernel without partition offsets in sysfs (3.x).
+#
+# The partitions' positions then come from their order. A 16 MB layout on an
+# 8 MB chip that wraps past its end: the block at 8 MB reads as block 0, so the
+# answer is "aliased". The split layout lists "firmware" before the kernel,
+# rootfs and rootfs_data it holds; taken as one more partition in a row it
+# pushed them all past the chip, and the check never looked at 8 MB.
+sed -n '/^flash_aliased() {/,/^}/p' "$SRC" |
+	sed -e "s|/proc/mtd|$SB/proc/mtd|g" -e "s|/sys/class/mtd|$SB/sys/class/mtd|g" \
+		-e "s|if=/dev/|if=$SB/dev/|g" > "$SB/alias.sh"
+[ -s "$SB/alias.sh" ] || bad "flash_aliased() not found in $SRC"
+# shellcheck disable=SC1091
+. "$SB/alias.sh"
+
+# mtd_layout "name:offset:size"...: /proc/mtd and one file per partition, the
+# chip's 8 MB repeated across the 16 MB, block 0 marked.
+mtd_layout() {
+	local i=0 spec name off size
+	rm -rf "$SB/proc" "$SB/dev" "$SB/sys"; mkdir -p "$SB/proc" "$SB/dev" "$SB/sys/class/mtd"
+	head -c 65536 /dev/zero | tr '\000' 'B' > "$SB/block0"
+	printf 'dev:    size   erasesize  name\n' > "$SB/proc/mtd"
+	for spec in "$@"; do
+		name=${spec%%:*}; spec=${spec#*:}; off=$((${spec%%:*})); size=$((${spec#*:}))
+		printf 'mtd%d: %08x 00010000 "%s"\n' "$i" "$size" "$name" >> "$SB/proc/mtd"
+		truncate -s "$size" "$SB/dev/mtd$i"
+		# the chip's block 0 wherever this partition covers 0 or 8 MB
+		for at in 0 $((0x800000)); do
+			[ "$at" -ge "$off" ] && [ "$at" -lt $((off + size)) ] &&
+				dd if="$SB/block0" of="$SB/dev/mtd$i" bs=65536 seek=$(((at - off) / 65536)) conv=notrunc 2>/dev/null
+		done
+		i=$((i + 1))
+	done
+}
+M16=0x1000000
+mtd_layout boot:0:0x40000 env:0x40000:0x10000 firmware:0x50000:$((M16 - 0x50000)) \
+	kernel:0x50000:0x1e0000 rootfs:0x230000:0x280000 rootfs_data:0x4b0000:$((M16 - 0x4b0000))
+if flash_aliased; then
+	ok "split layout, no sysfs offsets: a 16 MB layout on a mirrored 8 MB chip is found aliased"
+else
+	bad "split layout without sysfs offsets: the mirror at 8 MB must be found"
+fi
+mtd_layout boot:0:0x40000 env:0x40000:0x10000 kernel:0x50000:0x200000 \
+	rootfs:0x250000:0x500000 firmware:0x50000:0x700000 rootfs_data:0x750000:$((M16 - 0x750000))
+if flash_aliased; then
+	ok "fixed slots, no sysfs offsets: the same mirror is found past the firmware alias"
+else
+	bad "fixed slots without sysfs offsets: the mirror at 8 MB must be found"
+fi
+# Not mirrored: block 0 only at 0.
+mtd_layout boot:0:0x40000 env:0x40000:0x10000 firmware:0x50000:$((M16 - 0x50000)) \
+	kernel:0x50000:0x1e0000 rootfs:0x230000:0x280000 rootfs_data:0x4b0000:$((M16 - 0x4b0000))
+# firmware (mtd2) and rootfs_data (mtd5) both reach 8 MB: neither mirrors
+head -c $((M16 - 0x50000)) /dev/zero | tr '\000' '\377' > "$SB/dev/mtd2"
+head -c $((M16 - 0x4b0000)) /dev/zero | tr '\000' '\377' > "$SB/dev/mtd5"
+if ! flash_aliased; then
+	ok "split layout, no sysfs offsets: a chip that does not wrap is not aliased"
+else
+	bad "split layout without sysfs offsets: an unwrapped chip must not be called aliased"
+fi
+
 echo
 [ "$fail" -eq 0 ] && echo "All init overlay checks passed." || echo "$fail check(s) failed."
 exit "$fail"

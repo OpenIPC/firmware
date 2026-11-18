@@ -4,6 +4,15 @@ BR_LINK = https://github.com/buildroot/buildroot/archive
 BR_FILE = /tmp/buildroot-$(BR_VER).tar.gz
 BR_CONF = $(TARGET)/openipc_defconfig
 TARGET ?= $(PWD)/output
+# TARGET is this Makefile's name for the output directory, and it stops here. A
+# variable given on the make command line is exported to every recipe and handed
+# to sub-makes through MAKEFLAGS, so `make TARGET=...` used to reach Buildroot and
+# every package's configure. host-libffi's AX_ENABLE_BUILDDIR takes $TARGET as a
+# build subdirectory, then re-runs ../../configure from it and fails (#2794).
+# Buildroot is told where to build by O=$(TARGET); the one sub-make of this file
+# that needs TARGET, repack-final's, passes it explicitly.
+MAKEOVERRIDES := $(filter-out TARGET=%,$(MAKEOVERRIDES))
+unexport TARGET
 export CMAKE_POLICY_VERSION_MINIMUM := 3.5
 
 # GCC 15 defaults to -std=gnu23, where an empty parameter list means "takes no
@@ -186,7 +195,7 @@ ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
 # sysupgrade and defib install from the -split package.
 ifeq ($(BR2_OPENIPC_NOR_FIXED_PACKAGE),y)
 ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
-	@$(if $(call FIXED_SLOTS_FIT,5120),$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,5120,nor),$(call FIXED_SLOTS_SKIP,5120))
+	@$(if $(and $(call FIXED_SLOTS_FIT,5120),$(UBOOT_ROOTMTD_FITS)),$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,5120,nor),$(call FIXED_SLOTS_SKIP,5120))
 else
 	@$(if $(call FIXED_SLOTS_FIT,8192),$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,8192,nor),$(call FIXED_SLOTS_SKIP,8192))
 endif
@@ -199,6 +208,9 @@ ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
 ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
 	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.squashfs,8192,nor)
 else ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
+ifneq ($(UBOOT_ROOTMTD_VENDOR),)
+	@$(call CHECK_UBOOT_ROOTMTD)
+endif
 	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,5120,nor)
 else
 	@$(call PREPARE_REPACK,uImage,2048,rootfs.squashfs,8192,nor)
@@ -344,6 +356,25 @@ define CHECK_KERNEL_READ
 		echo "-- size exceeded by: $$((size - limit)) bytes; bootloaders reading $$((limit / 1024))KB would cut it short"; exit 1; fi
 endef
 
+# OpenIPC's SigmaStar and XMedia U-Boot size the rootfs partition on every boot
+# from the squashfs at 0x250000, not from the chip: 8192k once bytes_used + 4K
+# reaches 5120K (cmd_sf.c). On 8 MB that leaves no rootfs_data, so their fixed
+# 5120K slot holds 4K less. An image over the slot is CHECK_SIZE's to report.
+UBOOT_ROOTMTD_VENDOR = $(filter $(BR2_OPENIPC_SOC_VENDOR),"sigmastar" "xiongmai")
+UBOOT_ROOTMTD_LIMIT = $(shell echo $$((5120 * 1024 - 4096)))
+UBOOT_ROOTMTD_USED = $(shell od -An -tu8 -j40 -N8 $(TARGET)/images/rootfs.squashfs 2>/dev/null | tr -d ' ')
+UBOOT_ROOTMTD_FITS = $(if $(UBOOT_ROOTMTD_VENDOR),$(shell [ -n "$(UBOOT_ROOTMTD_USED)" ] && \
+	[ $(UBOOT_ROOTMTD_USED) -lt $(UBOOT_ROOTMTD_LIMIT) ] && echo y),y)
+
+define CHECK_UBOOT_ROOTMTD
+	used=$$(od -An -tu8 -j40 -N8 $(TARGET)/images/rootfs.squashfs | tr -d ' '); \
+	test -n "$$used" || exit 1; \
+	limit=$(UBOOT_ROOTMTD_LIMIT); \
+	if test $$used -ge $$limit && test $$used -le $$((5120 * 1024)); then \
+		echo "- rootfs.squashfs: [$$used/$$limit bytes used, U-Boot's 5120k rootfs limit]"; \
+		echo "-- size exceeded by: $$((used - limit + 1)) bytes; U-Boot would boot it with an 8192k rootfs and no overlay"; exit 1; fi
+endef
+
 define CHECK_SIZE
 	$(eval FILE_SIZE = $(shell expr $(shell stat -c %s $(TARGET)/images/$(1) || echo 0) / 1024))
 	if test $(FILE_SIZE) -eq 0; then exit 1; fi
@@ -386,6 +417,7 @@ define FIXED_SLOTS_SKIP
 	over=; \
 	[ $$k -le 1983 ] || over="uImage $${k}KB/1983KB"; \
 	[ $$r -le $(1) ] || over="$${over:+$$over, }rootfs.squashfs $${r}KB/$(1)KB"; \
+	[ -n "$$over" ] || over="rootfs.squashfs $(UBOOT_ROOTMTD_USED)B (U-Boot's 5120k slot takes under $(UBOOT_ROOTMTD_LIMIT)B)"; \
 	echo "::warning::$(BR2_OPENIPC_SOC_MODEL) $(BR2_OPENIPC_VARIANT): $$over outgrew the fixed slot;" \
 		"shipping the split package only"
 endef

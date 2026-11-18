@@ -10,25 +10,98 @@ set_gpio()
     echo $2 > /sys/class/gpio/GPIO$1/value
 }
 
-cd /lib/modules/3.0.8/fullhan
+# Where the media pool (vmm.ko's mmz) and the ARC's ring and firmware go.
+# The ARC image is linked to run at 0xA7F00000, the top 1 MB of a 128 MB DDR;
+# a 64 MB FH8852 sees it 64 MB lower, at 0xA3F00000, where this script always
+# put it. A 128 MB FH8856 does not alias, so the old fixed layout loaded the
+# ARC where it never looks, and the stock mem=36M also put the kernel 4 MB
+# into the pool (#1610). So the ARC takes the top 2 MB of the DDR the PMU
+# reports -- ring, then firmware, as the vendor's 0xa7e00000/0xa7f00000 on
+# 128 MB -- and the pool runs from the end of mem= up to it: the vendor's
+# 0xA2400000,90M with mem=36M. A 64 MB chip (FH8852, FH8632) keeps the fixed
+# layout it has always run, whatever mem= says, and so does any chip whose
+# sizes cannot be read.
+mem_layout()
+{
+	pool=0xA1D00000,33M
+	arc=0xA3E00000
+	# One mem=, in megabytes, at the start of the DDR (no @, @0, or the
+	# DDR's own address); more than one describes a layout this does not.
+	os_mb=$(awk 'BEGIN { RS = "[ \n]" }
+		/^mem=/ { n++; v = tolower($0) }
+		END {
+			if (n == 1 && v ~ /^mem=[0-9]+m(@(0|0x0+|0xa0000000))?$/) {
+				sub(/^mem=/, "", v); sub(/m.*$/, "", v); print v
+			}
+		}' "${LOAD_FULLHAN_CMDLINE:-/proc/cmdline}")
+	# fh_chipid prints the PMU's DDR size in Mbit; anything but a size these
+	# chips are made with is a misread.
+	ddr_mbit=$(sed -n 's/^ddr_size[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)Mbit$/\1/p' \
+		"${LOAD_FULLHAN_CHIP:-/proc/driver/chip}" 2>/dev/null)
+	case "$ddr_mbit" in
+		512) return ;;
+		1024) ddr_mb=128 ;;
+		*) ddr_mb= ;;
+	esac
 
-insmod vmm.ko mmz=anonymous,0,0xA1D00000,33M anony=1
-#insmod vmm.ko mmz=anonymous,0,0xA2000000,64M anony=1
+	if [ -z "$os_mb" ] || [ -z "$ddr_mb" ] || [ "$os_mb" -lt 16 ] || [ $((ddr_mb - 2 - os_mb)) -lt 8 ]; then
+		logger -s -t load_fullhan "mem=${os_mb:-?}M on ${ddr_mb:-?} MB of DDR: fixed 64 MB layout kept"
+		return
+	fi
+
+	pool_mb=$((ddr_mb - 2 - os_mb))
+	[ "$pool_mb" -lt 32 ] && \
+		logger -s -t load_fullhan "mem=${os_mb}M leaves the media pool ${pool_mb}M; the ISP may not start"
+	pool=$(printf '0x%X,%dM' $(((0xA00 + os_mb) << 20)) "$pool_mb")
+	arc=$(printf '0x%X' $(((0xA00 + ddr_mb - 2) << 20)))
+}
+
+mem_layout
+modprobe vmm mmz=anonymous,0,$pool anony=1
 
 #reset sensor
 set_gpio 13 0
 
-insmod rtvbus.ko ra=0xa3e00000 rs=65536 fn=rtthread_arc_FH8852.bin fa=0xa3f00000
-#insmod rtvbus.ko ra=0xa7e00000 rs=65536 fn=rtthread_arc_FH8856.bin fa=0xa7f00000
+# rtvbus loads whether or not the ARC starts. It clears the word at +0x7c of
+# both ring halves (ra, ra + rs/2) and the ARC sets it; vbus_mesg_doinit()
+# refuses until then, media_process fails, and that failure path leaves a
+# dangling misc device that oopses the kernel when majestic opens it. So wait
+# for the ARC before loading the media modules.
+arc_ready()
+{
+	# a hex value with a nonzero digit; a failed read prints nothing
+	case "$(devmem $1 32 2>/dev/null)" in
+		0x*[1-9a-fA-F]*) return 0 ;;
+	esac
+	return 1
+}
+
+# rtthread_arc_FH8852.bin and _FH8856.bin are the same file.
+up=0
+if modprobe rtvbus ra=$(printf '0x%x' $((arc))) rs=65536 fn=rtthread_arc_FH8852.bin fa=$(printf '0x%x' $((arc + 0x100000))); then
+	for i in 1 2 3 4 5 6 7 8 9 10; do
+		if arc_ready $(printf '0x%x' $((arc + 0x7c))) || arc_ready $(printf '0x%x' $((arc + 0x807c))); then
+			up=1
+			break
+		fi
+		usleep 200000
+	done
+fi
 
 #reset sensor
 set_gpio 13 1
 
-insmod media_process.ko
-insmod isp.ko
-insmod vpu.ko vpu_mode=buf_0_3,buf_1_4
-insmod enc.ko
-insmod hevc.ko
-insmod jpeg.ko
-insmod bgm.ko
-insmod vbus_ac.ko
+if [ "$up" = 0 ]; then
+	echo "load_fullhan: the ARC did not start, media modules not loaded"
+	exit 1
+fi
+
+modprobe media_process
+modprobe isp
+modprobe vpu vpu_mode=buf_0_3,buf_1_4
+modprobe enc
+# FH8833 (FH8632) has no HEVC encoder
+grep -q FH8833 /proc/cpuinfo || modprobe hevc
+modprobe jpeg
+modprobe bgm
+modprobe vbus_ac

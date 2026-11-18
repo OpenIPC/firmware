@@ -216,6 +216,36 @@ check_set_allocator hisilicon-osdrv-hi3516ev200 hisi
 check_set_allocator hisilicon-osdrv-hi3516cv6xx ot
 check_set_allocator hisilicon-osdrv-hi3519dv500 ot
 
+# hybrid, cv6xx only: a CMA zone above the OS share, the carve-out above it.
+# The default layout is the one run on a 64M hi3516cv608 (OS 36M, CMA 8M,
+# carve-out 20M).
+sa_script=$(pwd)/general/package/hisilicon-osdrv-hi3516cv6xx/files/script/set_allocator
+env="bootargs=console=ttyAMA0,115200 mem=36M|osmem=36M"
+params="64 36 ot anonymous,0,0x42400000,28M"
+echo
+echo "=== hisilicon-osdrv-hi3516cv6xx: set_allocator hybrid ==="
+expect "mem=64M console=ttyAMA0,115200 mmz_allocator=hybrid mmz=cma,0,0x42400000,8M:anonymous,0,0x42c00000,20M" \
+	"$(sa "$env" '' $params -- hybrid)" \
+	"hybrid: 8M of CMA above the OS share this boot runs with, the rest a carve-out"
+expect "mem=64M console=ttyAMA0,115200 mmz_allocator=hybrid mmz=cma,0,0x42000000,12M:anonymous,0,0x42c00000,20M" \
+	"$(sa "$env" '' $params -- hybrid 32M 12M)" \
+	"hybrid 32M 12M: the OS share and the CMA share as asked"
+expect "mem=64M console=ttyAMA0,115200 mmz_allocator=hybrid mmz=cma,0,0x42400000,8M:anonymous,0,0x42c00000,20M" \
+	"$(sa "$env" '' $params -- hybrid 36M 6M)" \
+	"hybrid 36M 6M: the CMA share rounded up to whole 4M"
+expect refused "$(sa "$env" '' $params -- hybrid 36M 28M)" \
+	"hybrid 36M 28M: refused, no carve-out left"
+expect refused "$(sa "$env" '' $params -- hybrid 36M 0M)" \
+	"hybrid 36M 0M: refused, that is ot"
+expect refused "$(sa "$env" '' $params -- hybrid 36M 1M)" \
+	"hybrid 36M 1M: refused, below the 4M minimum before any rounding"
+expect "mem=64M console=ttyAMA0,115200 mmz_allocator=hybrid mmz=cma,0,0x42400000,20M:anonymous,0,0x43800000,8M" \
+	"$(sa "$env" '' $params -- hybrid 36M 020M)" \
+	"hybrid 36M 020M: 20M, not the octal 16M"
+expect "mem=64M console=ttyAMA0,115200 mmz_allocator=hybrid mmz=cma,0,0x42400000,8M:anonymous,0,0x42c00000,20M" \
+	"$(sa "$env" '' $params -- hybrid 036M)" \
+	"hybrid 036M: an OS share of 36M, not the octal 30M"
+
 echo
 if [ "$fail" -eq 0 ]; then
 	echo "All load_hisilicon layout checks passed."

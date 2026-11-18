@@ -1,0 +1,8 @@
+config BR2_PACKAGE_FH8626_3AD
+	bool "fh8626-3ad"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Automatic exposure and white balance for the FH8626V100 ISP.
+	  The daemon reads the ISP's zone statistics through its V4L2
+	  subdevice and drives the sensor and ISP controls, alongside
+	  whichever application streams from the capture device.

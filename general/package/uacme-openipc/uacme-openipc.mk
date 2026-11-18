@@ -27,4 +27,10 @@ else
 UACME_OPENIPC_CONF_OPTS += --without-ualpn
 endif
 
+# nsupdate.sh is the DNS-01 hook for BIND's nsupdate, which no image ships.
+define UACME_OPENIPC_REMOVE_NSUPDATE_HOOK
+	rm -f $(TARGET_DIR)/usr/share/uacme/nsupdate.sh
+endef
+UACME_OPENIPC_POST_INSTALL_TARGET_HOOKS += UACME_OPENIPC_REMOVE_NSUPDATE_HOOK
+
 $(eval $(autotools-package))

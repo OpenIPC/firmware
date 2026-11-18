@@ -305,6 +305,18 @@ insert_ko() {
 	# insmod gk7205v200_pm.ko                       # unused on OpenIPC
 	modprobe open_wdt
 
+	# LSADC -> /dev/lsadc, two 10-bit inputs where boards wire a photocell
+	# (OpenIPC/majestic#359). majestic reads it for nightMode.adcReadout,
+	# picking the input with nightMode.adcChannel. Loaded family-wide like
+	# open_pwm and open_wdt: the block is on every chip, and whether a
+	# photocell is wired to it is the camera's config, not the image's.
+	# Without a reader it only gates the block's clock on.
+	# An image that prunes the module skips it quietly; one that ships it
+	# and cannot load it says so, since the light input is then missing.
+	if grep -q '/open_adc\.ko:' /lib/modules/$(uname -r)/modules.dep 2>/dev/null; then
+		modprobe open_adc || echo "open_adc failed to load: no /dev/lsadc"
+	fi
+
 	# Cipher engine -> /dev/cipher. majestic's native WebRTC takes AES-CTR
 	# for its SRTP transform from here, a burst of packets per ioctl: on a
 	# gk7205v200 with one viewer at 4 Mbit/s that is 20.0% of a core in
@@ -339,6 +351,7 @@ remove_ko() {
 	# filename, but rmmod takes the in-kernel module name — so this list
 	# must be open_* to match what `lsmod` actually shows.
 	rmmod -w open_cipher 2>/dev/null
+	rmmod open_adc 2>/dev/null
 	rmmod -w open_wdt
 	# rmmod -w open_pm                                 # unused on OpenIPC
 	remove_audio

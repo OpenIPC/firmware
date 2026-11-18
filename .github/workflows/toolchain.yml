@@ -31,7 +31,13 @@ jobs:
         run: |
           set -eu
           ALL=$(sed -e 's/#.*//' <<'LIST'
+          # Axera: toolchain-only configs, no firmware image yet (#2670).
+          ax620e_toolchain
+          ax620u_toolchain
+
           # Sigmastar
+          # infinity3: msc313e/msc316dc/msc316dm share this one.
+          msc313e_lite
           ssc325_lite
           ssc335_lite
           ssc377_lite
@@ -64,14 +70,20 @@ jobs:
           t21_lite
           t31_lite
           t40_lite
+          # Toolchain-only config: the T41 boards come in #2877.
+          t41_toolchain
 
           # Allwinner
           v851s_lite
+
+          # Ambarella
+          s3l_ultimate
 
           # Anyka
           ak3918ev300_lite
 
           # Fullhan
+          fh8626v100_lite
           fh8852v100_lite
           fh8852v200_lite
 

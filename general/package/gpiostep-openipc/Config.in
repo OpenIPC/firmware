@@ -13,9 +13,15 @@ config BR2_PACKAGE_GPIOSTEP_OPENIPC
 	  sleep up to a whole 10ms tick; the sub-tick pacing holds on an
 	  idle core, not under load.
 
-	  Pin map defaults to the GK7205V510 (NC-IPTC2200_DL) layout and is
-	  overridable via module params, e.g.
+	  On Goke the pin map defaults to the GK7205V510 (NC-IPTC2200_DL)
+	  layout. Other SoCs have no default: the board's pins must be
+	  given as module params, or the module refuses to load. E.g.
 	  insmod gpiostep.ko pan_gpios=3,4,72,73 tilt_gpios=69,59,58,57
+
+	  Heads that clock the coils into a 74HC595 shift register instead
+	  name its three pins, sck,si,rck, and the module drives the
+	  register (see Readme.md):
+	  insmod gpiostep.ko sr_gpios=53,47,52
 
 	  https://openipc.org
 

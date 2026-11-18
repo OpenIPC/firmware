@@ -1,0 +1,12 @@
+config BR2_PACKAGE_ANYKA_OSDRV_AK3918AV100
+	bool "anyka-osdrv-ak3918av100"
+	depends on BR2_LINUX_KERNEL
+	help
+	  anyka-osdrv-ak3918av100 - Anyka AK3918AV100 family kernel
+	  modules, prebuilt for the 4.4.282 kernel: ISP, video encoder,
+	  ION, I2C, audio, SD, USB host, Ethernet and the sensor drivers,
+	  and the load_anyka script that brings them up. The AK3918AV100
+	  (N/P/X/XP, KM01N/KM01D) gets the AnyCloud39AV100 SDK V1.12's
+	  modules, the AK3918EV300L those of an EV300L camera.
+
+	  https://github.com/KD0000001/ak3918av100

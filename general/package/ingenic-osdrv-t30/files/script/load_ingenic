@@ -38,6 +38,8 @@ else
 	SENSOR_INFO=$(cat /proc/jz/sinfo/info)
 	check_return "get sensor type"
 	SENSOR=${SENSOR_INFO#*:}
+	# sinfo prints "sensor: <name>"
+	SENSOR=${SENSOR# }
 	if [ "sensor not found" = "$SENSOR" ]; then
 		unset SENSOR
 		fw_setenv sensor

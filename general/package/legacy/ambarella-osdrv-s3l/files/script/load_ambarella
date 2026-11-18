@@ -1,0 +1,171 @@
+#!/bin/sh
+#
+# Ambarella S3L driver bring-up, in the vendor's order: iav and what it needs,
+# then the sensor, then the DSP microcode.
+#
+# The sensor sits in reset until its driver loads, so a probe to find out which
+# driver to load finds nothing. A board profile setting sensor= avoids the
+# question and is the path to rely on. Otherwise the pin, which differs by board,
+# comes from the device tree and is released here, before iav.ko claims it.
+#
+# Releasing it is not enough on its own: the sensor also needs a clock to answer
+# I2C, and of everything here only its driver starts one. So the probe works only
+# if U-Boot left the sensor PLL running, as the Dahua U-Boot on the IP4M-1026E
+# does. A board whose U-Boot stops it detects nothing and needs sensor=.
+#
+# iav registers plain character devices and no device class, so mdev never sees
+# them and the nodes have to be made here. The major comes from /proc/devices;
+# the minors are fixed.
+#
+# The microcode (orccode.bin, orcme.bin, default_binary.bin) is Ambarella's, from
+# the package's files/firmware; load_ucode, which puts it in place, is built from
+# the package's src/. Without the microcode the drivers load and the DSP does
+# not start, so no video. An image that prunes it from /lib/firmware still boots.
+
+vendor=$(ipcinfo -v)
+ucode_dir=/lib/firmware
+
+log_vendor() {
+	logger -s -p daemon.info -t "${vendor:-ambarella}" "$1"
+}
+
+load() {
+	mod=$1
+	shift
+	grep -q "^${mod} " /proc/modules && return 0
+	# modprobe, not insmod: iav needs dsp, hw_timer, imgproc and vout, and
+	# modules.dep knows that.
+	modprobe "${mod}" "$@"
+}
+
+make_node() {
+	major=$(awk -v name="$1" '$2 == name { print $1; exit }' /proc/devices)
+	if [ -z "${major}" ]; then
+		log_vendor "No $1 in /proc/devices, /dev/$1 not created"
+		return 1
+	fi
+	[ -c "/dev/$1" ] || mknod -m 600 "/dev/$1" c "${major}" "$2"
+}
+
+# The pin in /iav/vinc0/vinrst-gpios, on the SoC's own GPIO. A vendor board may
+# put it on an I2C expander, which sysfs numbers differently: leave that alone.
+# iav.ko resets with flag bit 0 as the level, so flag 0 is held low.
+release_sensor() {
+	prop=/proc/device-tree/iav/vinc0/vinrst-gpios
+	soc=/proc/device-tree/apb@e8000000/pinctrl@e8009000/gpio@0
+	[ -r "$prop" ] || return 1
+
+	# shellcheck disable=SC2046
+	set -- $(od -An -tu1 -v "$prop")
+	[ $# -eq 12 ] || return 1
+	phandle="$1 $2 $3 $4"
+	pin=$(($5 << 24 | $6 << 16 | $7 << 8 | $8))
+	flags=${12}
+
+	for name in phandle linux,phandle; do
+		[ -r "$soc/$name" ] || continue
+		# shellcheck disable=SC2046
+		set -- $(od -An -tu1 -v "$soc/$name")
+		[ "$*" = "$phandle" ] || return 1
+		level=high
+		[ $((flags & 1)) -eq 1 ] && level=low
+
+		echo "$pin" >/sys/class/gpio/export || return 1
+		ret=0
+		echo "$level" >"/sys/class/gpio/gpio$pin/direction" || ret=1
+		# Even after a failed direction: iav.ko can't claim a pin sysfs holds.
+		echo "$pin" >/sys/class/gpio/unexport || ret=1
+		return $ret
+	done
+	return 1
+}
+
+find_sensor() {
+	sensor=$(fw_printenv -n sensor 2>/dev/null | tr 'A-Z' 'a-z')
+	# A failed probe may have been stored as "unknown". That must not stop
+	# this one from trying again.
+	if [ -z "${sensor}" ] || [ "${sensor}" = unknown ]; then
+		release_sensor || log_vendor "Sensor reset not released, detection may find nothing"
+		sensor=$(ipcinfo -s 2>/dev/null | tr 'A-Z' 'a-z')
+	fi
+}
+
+# ipcinfo reports a bare name and cannot tell the interface, so a bare name
+# means MIPI. imx290 and imx326 also come as LVDS drivers, reached by setting
+# sensor=imx290_lvds or sensor=imx326_lvds.
+sensor_module() {
+	case "$1" in
+		ov4689 | ov2718 | imx290 | imx274 | imx326)
+			echo "$1_mipi"
+			;;
+		*_mipi)
+			case "$1" in
+				ov4689_mipi | ov2718_mipi | imx290_mipi | imx274_mipi | imx326_mipi)
+					echo "$1"
+					;;
+			esac
+			;;
+		imx290_lvds | imx326_lvds)
+			echo "${1%_lvds}"
+			;;
+		ar0230 | ar0237 | imx172 | imx178 | imx226)
+			echo "$1"
+			;;
+	esac
+}
+
+load_sensor() {
+	if [ -z "${sensor}" ]; then
+		log_vendor "No sensor in the environment and none detected"
+		return 1
+	fi
+
+	module=$(sensor_module "${sensor}")
+	if [ -z "${module}" ]; then
+		log_vendor "No driver in this package for sensor ${sensor}"
+		return 1
+	fi
+
+	load "${module}" || log_vendor "Failed to load ${module}"
+}
+
+load_microcode() {
+	if ! command -v load_ucode >/dev/null || [ ! -f "${ucode_dir}/orccode.bin" ]; then
+		log_vendor "No DSP microcode on this image, video will not start"
+		return 1
+	fi
+
+	# The version is the first thing to compare when the DSP misbehaves: cameras
+	# in the field run many different builds of this microcode (#2767).
+	if output=$(load_ucode "${ucode_dir}"); then
+		# load_ucode succeeds without this line when only the version ioctl fails.
+		version=$(echo "${output}" | grep '^ucode version')
+		log_vendor "${version:-Microcode loaded, version unknown}"
+	else
+		log_vendor "load_ucode failed"
+	fi
+}
+
+insert_ko() {
+	find_sensor
+
+	if ! load iav; then
+		log_vendor "Failed to load iav"
+		return 1
+	fi
+
+	make_node iav 0
+	make_node ucode 1
+	load_sensor
+	load_microcode
+}
+
+case "$1" in
+	-i | "")
+		insert_ko
+		;;
+	*)
+		echo "Usage: $0 [-i]"
+		exit 1
+		;;
+esac

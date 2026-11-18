@@ -1,0 +1,12 @@
+config BR2_PACKAGE_ATBM6441_OPENIPC
+	bool "atbm6441-openipc"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Driver for the AltoBeam ATBM6441 SDIO Wi-Fi in IoT mode, the
+	  chip of battery doorbells such as the Merkury MI-CW074-125W.
+	  The chip runs its own Wi-Fi stack and DHCP; the host module
+	  only bridges frames and passes AT commands through
+	  /dev/atbm_ioctl. Builds atbm6441_wifi_sdio.ko; needs the
+	  kernel's cfg80211.
+
+	  https://github.com/openipc/atbm6441

@@ -11,6 +11,23 @@ EXTERNAL_VENDOR := $(BR2_EXTERNAL)/../br-ext-chip-$(OPENIPC_SOC_VENDOR)
 OPENIPC_KERNEL := $(OPENIPC_SOC_VENDOR)-$(OPENIPC_SOC_FAMILY)
 OPENIPC_TOOLCHAIN := toolchain/toolchain.$(OPENIPC_KERNEL)
 
+# linux.mk's target-finalize depmod, the one pass that indexes every module the
+# packages installed, runs only if lib/modules/$(LINUX_VERSION_PROBED) exists.
+# That probe runs `make kernelrelease` outside the package environment, without
+# the GIT_DIR=. every build step gets, and a kernel whose setlocalversion has no
+# `git rev-parse --show-cdup` guard (the XM 3.10.103 trees) finds this checkout
+# above it and appends "+": 3.10.103++, against modules built as 3.10.103+. The
+# test fails silently, and modules.dep is whichever per-package copy rsync laid
+# down last -- on the xm530v200 nightly it has no xiongmai/ or extra/ module at
+# all, so every V200 Wi-Fi arm's modprobe failed (#2853). An empty .scmversion
+# is what setlocalversion reads instead of asking git, so the probe agrees with
+# the build; kernels that have the guard, or (6.3 on) ignore the file, are
+# unchanged.
+define OPENIPC_LINUX_NO_SCMVERSION
+	touch $(LINUX_DIR)/.scmversion
+endef
+LINUX_POST_EXTRACT_HOOKS += OPENIPC_LINUX_NO_SCMVERSION
+
 # Buildroot leaves upstream's wpa_supplicant defconfig defaults for TDLS and
 # 802.11r in place and offers no Kconfig switch for either, so every board that
 # enables wpa_supplicant carries both. Neither can fire on a camera: TDLS sets

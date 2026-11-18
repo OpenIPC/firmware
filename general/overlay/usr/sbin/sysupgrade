@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.76
+scr_version=1.0.84
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -60,6 +60,9 @@ INITTAB=${INITTAB:-/etc/inittab}
 # Where MTD publishes its partitions, and the block devices the split NOR
 # layout is written through. Overridable for the same reason.
 MTD_SYS=${MTD_SYS:-/sys/class/mtd}
+# The NOR layout this run found before its first write (nor_split_devs), never
+# one handed in from outside: a stale value would decide where the image goes.
+nor_split_layout=
 MTDBLOCK=${MTDBLOCK:-/dev/mtdblock}
 MTDCHR=${MTDCHR:-/dev/mtd}
 # Where a handed-off flash phase writes its log, and the port that serves it.
@@ -72,6 +75,10 @@ FOLLOW_PORT=${FOLLOW_PORT:-80}
 mount_wait=${mount_wait:-45}
 # Seconds the operator gets to Ctrl-C out of a run that will force a reboot.
 abort_wait=${abort_wait:-5}
+# Every upgrade this camera has been through, one line each, on the overlay so
+# that it outlives the flash and goes with `-n` like the rest of the settings.
+# Read back by --history; see record_transition.
+HISTORY_FILE=${HISTORY_FILE:-/etc/sysupgrade.history}
 # Route to firmware or builder manifest. A stock OpenIPC/firmware build
 # stamps BUILD_PLATFORM=${soc}_${variant} with variant in {lite,ultimate,
 # neo}. Anything else — a per-device override (${soc}_${variant}_${device},
@@ -92,7 +99,11 @@ case "$_plat" in
 		;;
 esac
 MANIFEST_URL=${MANIFEST_URL:-https://openipc.github.io/${_manifest_repo}/manifest.flat}
-MANIFEST_CACHE=/tmp/manifest.flat
+# One per run, and gone with it: the WebUI's update notice runs --list-builds on
+# page loads, with no lock, so it can overlap an upgrade, and 1.7 MB left in /tmp
+# after a listing is RAM the next flash does not have.
+MANIFEST_CACHE=/tmp/manifest.$$.flat
+trap 'rm -f "$MANIFEST_CACHE"' EXIT
 # What this run unpacked into /tmp, one name per line as tar -v lists it, so a
 # refusal can take back exactly that and nothing else (discard_unpacked). Made
 # by mktemp when the unpack starts, never a fixed name: a fixed one could be a
@@ -100,6 +111,17 @@ MANIFEST_CACHE=/tmp/manifest.flat
 # before the lock, even -- would find the first run's list and delete that
 # run's images. Empty until this run has unpacked something.
 unpacked_list=
+# Where the image is unpacked: /tmp, or the idle media zone (stage_in_mmz).
+# The second phase is a fresh shell -- PID 1 after a hand-off, or the re-exec in
+# the RAM root without one -- that knows only what was exported, so the first
+# passes the zone on. Taken only where that path really is the stage's jffs2
+# mount, so a stray variable in the environment cannot point a run elsewhere.
+stage_dir=/tmp
+[ -n "$handoff_stage_dir" ] &&
+	grep -q " $handoff_stage_dir jffs2 " /proc/mounts 2>/dev/null &&
+	stage_dir=$handoff_stage_dir
+mmz_stage_mounted=
+mmz_phram_ours=
 unset _osr _plat _manifest_repo
 # Every online fetch verifies the server's certificate against the bundle the
 # image ships at /etc/ssl/certs/ca-certificates.crt (libcurl's built-in default
@@ -140,6 +162,9 @@ die() {
 		# is cleared only on the flash path below (and clearing it is harmless
 		# even if no flash follows), so there is nothing to undo here.
 		discard_unpacked
+		# Before majestic is back: its media buffers come from the zone the
+		# stage maps, and the zone's allocator does not know the stage is there.
+		release_mmz_stage
 		restore_resources
 		# Only ever remove a lock this process owns. die() is reachable before
 		# create_lock has run (get_system_info, called from print_sysinfo, can
@@ -165,6 +190,10 @@ check_soc() {
 	# dies that report a different id (hi3516cv610/608) via fw_printenv/ipcinfo.
 	[ "1" = "$skip_soc" ] && echo "Skip SoC validation" && return 0
 	[ "$1" = "$model" ] && echo "SoC OK" && return 0
+	# The SoC this camera's own build was made for, before resolve_model_alias
+	# renamed it: a builder device profile on an aliased SoC is built, named and
+	# stamped for that one (see image_soc).
+	[ -n "$1" ] && [ "$1" = "$platform_soc" ] && echo "SoC OK ($1, aliased to $model)" && return 0
 	die "Wrong SoC! (image '$1' != build '$model')"
 }
 
@@ -180,13 +209,13 @@ compare_versions() {
 # of the defaults would drift.
 rootfs_image() {
 	[ -n "$rootfs_file" ] && { echo "$rootfs_file"; return 0; }
-	[ "$ubi_layout" = "ubifs" ] && echo "/tmp/rootfs.ubifs.$model" || echo "/tmp/rootfs.squashfs.$model"
+	[ "$ubi_layout" = "ubifs" ] && echo "$stage_dir/rootfs.ubifs.$image_soc" || echo "$stage_dir/rootfs.squashfs.$image_soc"
 }
 
 kernel_image() {
 	[ -n "$kernel_file" ] && { echo "$kernel_file"; return 0; }
-	[ "$ubi_layout" = "ubifs" ] && { echo "/tmp/fitImage.$model"; return 0; }
-	[ "$vendor" = "rockchip" ] && echo "/tmp/zboot.img.$model" || echo "/tmp/uImage.$model"
+	[ "$ubi_layout" = "ubifs" ] && { echo "/tmp/fitImage.$image_soc"; return 0; }
+	[ "$vendor" = "rockchip" ] && echo "$stage_dir/zboot.img.$image_soc" || echo "$stage_dir/uImage.$image_soc"
 }
 
 # Where the rootfs is written: the `rootfs` UBI volume on a UBI layout, the
@@ -336,11 +365,15 @@ check_combined_fits() {
 	nor_split_image "$x" ||
 		die "$x is not a split-layout firmware.bin for this camera (a uImage, then a squashfs), or the flash is laid out neither as the split layout nor as fixed slots. Nothing was written."
 	ovl=$(nor_split_overlay_at "$x") end=$(nor_split_end)
-	[ "$(nor_split_soc "$x")" = "$model" ] ||
+	nor_split_soc_ok "$x" ||
 		die "$x is built for $(nor_split_soc "$x"), this camera is a $model. Nothing was written."
 	[ $(($(nor_split_base) + $(stat -c %s "$x"))) -le "$ovl" ] ||
 		die "$x runs past the end of its squashfs ($(printf 0x%x "$ovl")): not a firmware.bin as the build packs it. Nothing was written."
 	blob=$(nor_split_blob_size)
+	# Whether there are settings to carry: the hand-off takes the overlay's
+	# mount away before the write (release_old_root), so the RAM phase cannot
+	# tell from /proc/mounts any more. See do_update_firmware_split.
+	[ -n "$(nor_split_overlay_mp)" ] && split_overlay_mounted=1
 	[ $((ovl + blob)) -le "$end" ] ||
 		die "$x and the settings do not fit the flash: the image ends at $(printf 0x%x "$ovl"), the settings need $((blob / 1024)) KB, the flash ends at $(printf 0x%x "$end"). Nothing was written; -n upgrades without the settings."
 }
@@ -362,7 +395,7 @@ check_combined_fits() {
 # camera is intact, is the more useful answer than "nothing to update".
 preflight_image_sizes() {
 	if [ "1" = "$image_combined" ]; then
-		check_combined_fits "/tmp/firmware.bin.$model"
+		check_combined_fits "$stage_dir/firmware.bin.$image_soc"
 		free_staged_archive
 		return 0
 	fi
@@ -416,7 +449,7 @@ do_update_kernel() {
 			local fsoc=$(fit_soc "$x")
 			[ -n "$fsoc" ] && check_soc "$fsoc"
 		else
-			local ksoc=$(od -j 32 -N 32 -S 1 -A n "$x" | cut -d- -f3)
+			local ksoc=$(nor_split_soc "$x")
 			if [ "$vendor" != "ingenic" ] && [ "$vendor" != "rockchip" ]; then
 				check_soc "$ksoc"
 			fi
@@ -449,16 +482,23 @@ do_update_kernel() {
 # and the flash write, so an unbounded mount that wedges is indistinguishable from
 # a dead tool: the upgrade stops with no error, taking any GUI driving it down too.
 #
-# Best-effort, not a guarantee: timeout sends TERM and then waits to reap, so a
-# mount stuck in uninterruptible sleep still outlives it. It bounds the realistic
-# failures — a slow loop/probe, or a decompressor the kernel lacks — which is what
-# strands upgrades in practice.
+# KILL, not timeout's default TERM: this runs after `trap '' HUP INT TERM PIPE`
+# (#2025), and SIG_IGN survives exec, so mount ignores a TERM. busybox timeout
+# execs the program in its own place and only signals it, so with TERM the bound
+# never fired on a camera, and the run waited on the mount for as long as it took.
+# GNU timeout hid that on CI hosts: it catches TERM itself, so its child execs
+# with TERM at default. Ubuntu 26.04's uutils timeout does not, which is how it
+# surfaced.
+#
+# Best-effort, not a guarantee: a mount stuck in uninterruptible sleep outlives
+# even KILL. It bounds the realistic failures — a slow loop/probe, or a
+# decompressor the kernel lacks — which is what strands upgrades in practice.
 #
 # -t squashfs skips kernel fs autoprobing of what may be a garbage file; the error
 # text is returned rather than discarded, so the caller can print it.
 mount_rootfs() {
 	if command -v timeout >/dev/null 2>&1; then
-		timeout "$mount_wait" mount -t squashfs -o ro "$1" "$2" 2>&1
+		timeout -s KILL "$mount_wait" mount -t squashfs -o ro "$1" "$2" 2>&1
 	else
 		mount -t squashfs -o ro "$1" "$2" 2>&1
 	fi
@@ -475,7 +515,7 @@ mount_rootfs() {
 soc_guarded_by_kernel() {
 	local k=
 	if [ "kernel_follows" = "$1" ]; then
-		k="/tmp/uImage.$model"
+		k="$stage_dir/uImage.$image_soc"
 	elif [ "1" = "$update_kernel" ]; then
 		k=$(kernel_image)
 	else
@@ -672,8 +712,11 @@ verify_rootfs() {
 	local verdict=
 	rootfs_version=
 
-	if mkdir -p "$y" && loop=$(losetup -f) && err=$(losetup "$loop" "$x" 2>&1) \
-		&& err=$(mount_rootfs "$loop" "$y"); then
+	# read_candidate_build already tried this mount before the pivot; one that
+	# failed there fails here too, and is not worth waiting out twice.
+	[ "1" = "$rootfs_unmountable" ] && err=$rootfs_mount_err
+	if [ "1" != "$rootfs_unmountable" ] && mkdir -p "$y" && loop=$(losetup -f) &&
+		err=$(losetup "$loop" "$x" 2>&1) && err=$(mount_rootfs "$loop" "$y"); then
 		rootfs_version=$(get_system_version "$y")
 		check_soc "$(head -1 $y/etc/hostname | cut -d- -f2)"
 		if ! verdict=$(check_platform "$y"); then
@@ -691,6 +734,10 @@ verify_rootfs() {
 		# a property of the kernel being replaced, and irrelevant the moment the new
 		# one boots. flashcp writes the partition raw and never needs the mount, so
 		# aborting here rejects an image that would have flashed fine.
+		# A KILL from mount_rootfs can land after the kernel finished the mount
+		# but before mount exited, so a failed mount may still be attached; it
+		# has to go before any path below detaches the loop under it.
+		umount "$y" 2>/dev/null
 		echo_c 33 "\nCannot mount $x to verify it."
 		[ -n "$err" ] && echo_c 33 "  $err"
 		echo_c 33 "The running kernel may lack its squashfs decompressor; the image itself may be fine."
@@ -778,9 +825,42 @@ nor_split_blocks() {
 	echo $(((64 + size + 65535) / 65536))
 }
 
-# The SoC a uImage was built for: its name field, "Linux-<version>-<soc>".
+# The SoC a uImage was built for: the last word of its name field,
+# "Linux-<version>-<soc>", or "Linux-3.4.43-Goke-gk7102" as the gk710x kernel
+# names itself -- whose third word, "Goke", no camera is.
 nor_split_soc() {
-	od -j 32 -N 32 -S 1 -A n "$1" 2>&3 | cut -d- -f3 | tr -d ' '
+	od -j 32 -N 32 -S 1 -A n "$1" 2>&3 | tr -d ' ' | sed 's/.*-//'
+}
+
+# "mtdN offset size name" for every partition, in device order. Kernels from
+# 4.1 on give each partition's offset in sysfs. The older ones -- 3.18 on the
+# Hi3516CV300 and Hi3519V101 families and on Hi3536CV100, 3.0 and 3.4 on the
+# oldest SoCs -- give only names and sizes, and then the offsets follow from
+# the order every OpenIPC NOR layout has: each partition starts where the one
+# before it ends, except "firmware". That one starts where the kernel does --
+# the fixed slots' alias over kernel and rootfs, listed after them -- or, on
+# the split layout, where the next partition would, holding kernel, rootfs and
+# rootfs_data after it; either way it moves nothing on.
+mtd_geometry() {
+	local n d off size name next=0 kern=
+	for n in $(ls "$MTD_SYS" 2>&3 | sed -n 's/^mtd\([0-9][0-9]*\)$/\1/p' | sort -n); do
+		d=$MTD_SYS/mtd$n
+		size=$(cat "$d/size" 2>&3) && name=$(cat "$d/name" 2>&3) || continue
+		# Not the flash: the media zone mapped by stage_in_mmz is an MTD too,
+		# with no offset, and laid out after rootfs_data it made the chip 24 MB
+		# longer and every image "not a split-layout firmware.bin".
+		[ "$(cat "$d/type" 2>&3)" = ram ] && continue
+		if [ -r "$d/offset" ]; then
+			off=$(cat "$d/offset")
+		elif [ "$name" = firmware ]; then
+			off=${kern:-$next}
+		else
+			off=$next
+		fi
+		[ "$name" = kernel ] && kern=$off
+		[ "$name" = firmware ] || next=$((off + size))
+		echo "mtd$n $off $size $name"
+	done
 }
 
 # "mtdN offset size" for the partitions that together cover the firmware area
@@ -789,23 +869,42 @@ nor_split_soc() {
 # rootfs_data back to back (fixed slots, on the way to the split layout). The
 # area starts where the board puts it; nothing here assumes where. From sysfs, which the
 # ramfs pivot carries along; nothing printed means neither shape is there.
+#
+# Offsets worked out from the order (mtd_geometry) are only taken when the
+# partitions hold what they are named for: a uImage at the start of "kernel"
+# and a squashfs at the start of "rootfs".
 nor_split_devs() {
-	local d n o z end=0 chip=0
-	for d in "$MTD_SYS"/mtd*; do
-		case "$d" in *ro) continue ;; esac
-		[ -r "$d/offset" ] || continue
-		o=$(cat "$d/offset") z=$(cat "$d/size")
+	local geo dev o z name chip=0 derived=
+	# Once the write has started, the partitions no longer hold what they did
+	# (the old rootfs slot is in the middle of the new image): the upgrade
+	# takes the layout once, before it, and every write and read-back goes
+	# by that (do_update_firmware_split).
+	if [ -n "$nor_split_layout" ]; then
+		echo "$nor_split_layout"
+		return 0
+	fi
+	geo=$(mtd_geometry)
+	[ -n "$geo" ] || return 1
+	firmware_dev= kernel_dev= rootfs_dev= rootfs_data_dev=
+	while read -r dev o z name; do
 		[ $((o + z)) -gt "$chip" ] && chip=$((o + z))
-	done
+		# one offset not from sysfs is enough to want the images checked
+		[ -r "$MTD_SYS/$dev/offset" ] || derived=1
+		case "$name" in
+			firmware) [ -n "$firmware_dev" ] || firmware_dev=$dev firmware_off=$o firmware_size=$z ;;
+			kernel) [ -n "$kernel_dev" ] || kernel_dev=$dev kernel_off=$o kernel_size=$z ;;
+			rootfs) [ -n "$rootfs_dev" ] || rootfs_dev=$dev rootfs_off=$o rootfs_size=$z ;;
+			rootfs_data) [ -n "$rootfs_data_dev" ] || rootfs_data_dev=$dev rootfs_data_off=$o rootfs_data_size=$z ;;
+		esac
+	done <<EOF
+$geo
+EOF
 	[ "$chip" -gt 0 ] || return 1
-	for n in firmware kernel rootfs rootfs_data; do
-		for d in "$MTD_SYS"/mtd*; do
-			case "$d" in *ro) continue ;; esac
-			[ "$(cat "$d/name" 2>/dev/null)" = "$n" ] || continue
-			eval "${n}_dev=${d##*/} ${n}_off=$(cat "$d/offset") ${n}_size=$(cat "$d/size")"
-			break
-		done
-	done
+	if [ -n "$derived" ]; then
+		[ -n "$kernel_dev" ] && [ -n "$rootfs_dev" ] &&
+			[ "$(xxd -p -l 4 "$MTDCHR${kernel_dev#mtd}" 2>&3)" = "27051956" ] &&
+			[ "$(xxd -p -l 4 "$MTDCHR${rootfs_dev#mtd}" 2>&3)" = "68737173" ] || return 1
+	fi
 	if [ -n "$firmware_dev" ] && [ "$firmware_off" -gt 0 ] &&
 		[ $((firmware_off + firmware_size)) -eq "$chip" ]; then
 		echo "$firmware_dev $firmware_off $firmware_size"
@@ -900,13 +999,15 @@ url_exists() {
 
 # The -split package's URL for a plain firmware package's, when the release
 # carries one for this camera, else the URL as it is:
-# openipc.<soc>-nor-<variant>.tgz becomes ...-<variant>-split.tgz. A board
+# openipc.<soc>-nor-<variant>.tgz becomes ...-<variant>-split.tgz, and a
+# builder device's <soc>_<variant>_<device>-nor.tgz ...-nor-split.tgz. A board
 # built for the split layout publishes it, whatever its SoC; any bootloader
 # boots it, as the kernel sits where the fixed slots put it and finds its own
 # partitions.
 nor_split_url() {
 	local split
-	split=$(echo "$1" | sed 's|\(/openipc\.[^/]*-nor-[a-z0-9]*\)\.tgz$|\1-split.tgz|')
+	split=$(echo "$1" | sed -e 's|\(/openipc\.[^/]*-nor-[a-z0-9]*\)\.tgz$|\1-split.tgz|' \
+		-e 's|\(/[a-z0-9]*_[a-z0-9]*_[^/]*-nor\)\.tgz$|\1-split.tgz|')
 	if [ "$(pkg_flash)" = nor ] && [ "$split" != "$1" ] && url_exists "$split"; then
 		echo "$split"
 	else
@@ -914,11 +1015,16 @@ nor_split_url() {
 	fi
 }
 
+# Where the jffs2 overlay on rootfs_data is mounted, if it is.
+nor_split_overlay_mp() {
+	awk -v d="$(get_device rootfs_data | sed 's|/dev/mtd|/dev/mtdblock|')" '$1 == d { print $2; exit }' /proc/mounts
+}
+
 # The settings blob this run will write, in bytes: the header, the gzipped tar
 # of the overlay, whole 64 KiB blocks; one block for -n.
 nor_split_blob_size() {
 	local mp n=0
-	mp=$(awk -v d="$(get_device rootfs_data | sed 's|/dev/mtd|/dev/mtdblock|')" '$1 == d { print $2; exit }' /proc/mounts)
+	mp=$(nor_split_overlay_mp)
 	if [ "1" != "$clear_overlay" ] && [ -n "$mp" ]; then
 		n=$(tar -C "$mp" -cf - . 2>&3 | gzip | wc -c)
 	fi
@@ -927,15 +1033,24 @@ nor_split_blob_size() {
 
 # The image is one for the split layout, for a camera whose flash is laid out
 # as either layout.
+# check_soc's question, asked of a firmware.bin's uImage.
+nor_split_soc_ok() {
+	local s=$(nor_split_soc "$1")
+	[ "$s" = "$model" ] || { [ -n "$s" ] && [ "$s" = "$platform_soc" ]; }
+}
+
 nor_split_image() {
 	[ -n "$(nor_split_devs)" ] && nor_split_overlay_at "$1" >/dev/null
 }
 
 do_update_firmware_split() {
 	local x=$1 ovl end base blob=/tmp/overlay.blob tgz=/tmp/overlay.tgz mp
+	nor_split_layout=$(nor_split_devs)
+	[ -n "$nor_split_layout" ] ||
+		die "The flash layout is neither the split one nor fixed slots this upgrade can turn into it. Nothing was written."
 	base=$(nor_split_base)
 	echo "Split NOR layout: firmware.bin at $(printf 0x%x "$base"), the kernel divides it at boot"
-	[ "$(nor_split_soc "$x")" = "$model" ] ||
+	nor_split_soc_ok "$x" ||
 		die "$x is built for $(nor_split_soc "$x"), this camera is a $model. Nothing was written."
 	ovl=$(nor_split_overlay_at "$x") || die "$x is not a uImage followed by a squashfs. Nothing was written."
 	[ $((base + $(stat -c %s "$x"))) -le "$ovl" ] ||
@@ -944,10 +1059,32 @@ do_update_firmware_split() {
 	[ -n "$end" ] || die "The flash layout is neither the split one nor fixed slots this upgrade can turn into it. Nothing was written."
 	rm -f "$blob" "$tgz"
 	quiesce_overlay
-	mp=$(awk -v d="$(get_device rootfs_data | sed 's|/dev/mtd|/dev/mtdblock|')" '$1 == d { print $2; exit }' /proc/mounts)
+	mp=$(nor_split_overlay_mp)
+	# Handed off, the overlay is no longer mounted: release_old_root let go of
+	# everything behind /mnt, the overlay with it. Reading /proc/mounts alone
+	# then took the camera for one without settings and staged an empty blob,
+	# which the first boot honours by starting from defaults -- every NOR
+	# upgrade since the hand-off (#2648). Nothing holds rootfs_data any more,
+	# so mount it read-only here and copy the settings from that, as
+	# rewrite_ubifs does on UBI. Refusing costs a reboot with nothing written;
+	# going on would cost the settings.
+	if [ "1" != "$clear_overlay" ] && [ -z "$mp" ] && [ "1" = "$split_overlay_mounted" ]; then
+		mp=/tmp/overlay.old
+		mkdir -p "$mp" &&
+			mount -t jffs2 -o ro "$(get_device rootfs_data | sed 's|/dev/mtd|/dev/mtdblock|')" "$mp" 2>&3 ||
+			die "Could not read the settings to carry them over. Nothing was written; -n upgrades without them."
+		overlay_mounted_here=1
+	fi
 	if [ "1" != "$clear_overlay" ] && [ -n "$mp" ]; then
 		tar -C "$mp" -cf - . 2>&3 | gzip > "$tgz" ||
 			die "Could not copy the settings into RAM. Nothing was written; -n upgrades without them."
+		# Read-only, but still a filesystem on the flash about to be
+		# rewritten: let go of it before the write, or do not write.
+		if [ "1" = "$overlay_mounted_here" ]; then
+			busybox umount "$mp" 2>&3 ||
+				die "Could not release the settings partition after copying it. Nothing was written."
+			rmdir "$mp" 2>&3
+		fi
 	else
 		# Length 0: the first boot erases the overlay and restores nothing.
 		: > "$tgz"
@@ -961,7 +1098,12 @@ do_update_firmware_split() {
 		die "The new firmware and the settings do not fit the flash ($(( (ovl + $(stat -c %s "$blob") - base) / 1024 )) KB of $(( (end - base) / 1024 )) KB). Nothing was written; -n upgrades without the settings."
 	mark_live_flash_dirty
 	echo "Writing $x at $(printf 0x%x "$base")"
-	nor_write_at "$x" "$base" || die "Writing $x failed: the flash does not read back as the image."
+	# Once more before giving up: the image is still in RAM, and a failure here
+	# ends in a reboot onto whatever part of it reached the flash.
+	nor_write_at "$x" "$base" || {
+		echo_c 33 "The flash does not read back as the image; writing it again."
+		nor_write_at "$x" "$base"
+	} || die "Writing $x failed: the flash does not read back as the image."
 	nor_write_at "$blob" "$ovl" ||
 		die "Writing the settings at $(printf 0x%x "$ovl") failed; the camera starts from defaults."
 	rm -f "$blob"
@@ -971,7 +1113,7 @@ do_update_firmware_split() {
 }
 
 do_update_firmware() {
-	local x=/tmp/firmware.bin.$model
+	local x=$stage_dir/firmware.bin.$image_soc
 	echo_c 33 "\nFirmware (split NOR image)"
 	echo "Update firmware from $x"
 	[ ! -f "$x" ] && die "File $x not found"
@@ -1116,6 +1258,7 @@ fetch_manifest() {
 	probe_url "$MANIFEST_URL"
 	curl --connect-timeout 30 -s -m 60 -L $(tls_opts "$MANIFEST_URL") "$MANIFEST_URL" -o "$MANIFEST_CACHE" \
 		|| die "Cannot fetch manifest $MANIFEST_URL"
+	manifest_fetched=1
 }
 
 # resolve_channel <nightly|latest>  -> echoes a build_id
@@ -1161,7 +1304,7 @@ resolve_model_alias() {
 # Not "everything the archive brought": a plain `-k` downloads both halves and
 # writes one, and whether the other arrived intact is not this run's business.
 images_this_run() {
-	[ -f "/tmp/firmware.bin.$model" ] && { echo "/tmp/firmware.bin.$model"; return 0; }
+	[ -f "$stage_dir/firmware.bin.$image_soc" ] && { echo "$stage_dir/firmware.bin.$image_soc"; return 0; }
 	[ "1" = "$update_kernel" ] && kernel_image
 	[ "1" = "$update_rootfs" ] && rootfs_image
 	return 0
@@ -1174,7 +1317,7 @@ images_this_run() {
 # Refusing those would block a perfectly good archive from installing at all --
 # a worse failure than the one this guard exists to catch.
 md5_names() {
-	awk '{ n = $2; sub(/^[*]/, "", n); while (sub(/^[.]\//, "", n)) ; print n }' /tmp/*.md5sum 2>&3
+	awk '{ n = $2; sub(/^[*]/, "", n); while (sub(/^[.]\//, "", n)) ; print n }' "$stage_dir"/*.md5sum 2>&3
 }
 
 # An image no manifest mentions has not been checksummed, and must not pass for
@@ -1235,6 +1378,14 @@ check_unpack_room() {
 	# RAM that tmpfs is made of. They are different numbers -- see
 	# check_unpack_ram -- and either can be the one that binds.
 	check_unpack_ram "$((need / 1024))" "$a"
+	# Staged in the media zone, the unpack does not touch /tmp: what has to fit
+	# is the stage, and only the archive stays behind in the tmpfs.
+	if [ "$stage_dir" != /tmp ]; then
+		free=$(df -k "$stage_dir" 2>&3 | awk 'END { print $(NF - 2) }')
+		[ -n "$free" ] && [ "$free" -gt 0 ] 2>&3 || return 0
+		[ "$((need / 1024))" -lt "$free" ] && return 0
+		die "No room to unpack $a in the media zone: needs $((need / 1024)) KB, $free KB free. Nothing was written."
+	fi
 	# Anchored on the Use% column rather than a field number, so a long device
 	# name that wraps the row does not shift the answer.
 	free=$(df -k /tmp 2>&3 | awk 'END { print $(NF - 2) }')
@@ -1367,11 +1518,13 @@ stop_majestic_for_memory() {
 	[ "1" = "$majestic_stopped" ] && return 1
 	pid=$(pidof majestic 2>/dev/null) || return 1
 	# "releases": free_resources' early stop, before upgrade mode. majestic's
-	# own stop gives its watchdog back with the magic close, so stopping the
-	# owner there leaves nothing armed; and its ownership is already recorded,
-	# so where a driver ignores the magic close the RAM-phase keeper takes the
-	# device over from the pivot -- the unpack before it is seconds against
-	# majestic's 300 s. Later stops come after upgrade mode let go of the
+	# own stop usually gives its watchdog back with the magic close, so
+	# stopping the owner there leaves nothing armed -- but not when majestic
+	# ignored SIGTERM and S95majestic had to SIGKILL it, which closes the
+	# device without the magic close. Either way its ownership is already
+	# recorded, so where the dog stays armed (that, or a driver that ignores
+	# the magic close) the RAM-phase keeper takes the device over from the
+	# pivot -- the unpack before it is seconds against majestic's 300 s. Later stops come after upgrade mode let go of the
 	# watchdog, and keep the guard.
 	if [ -n "$wdog_owner_pid" ] && [ "releases" != "$2" ]; then
 		case " $pid " in *" $wdog_owner_pid "*) return 1 ;; esac
@@ -1404,6 +1557,79 @@ stop_majestic_for_memory() {
 	majestic_stopped=1
 	sync
 	echo 3 > /proc/sys/vm/drop_caches
+	return 0
+}
+
+# Unpack into the media zone instead of RAM, where RAM is what is short.
+#
+# A 64 MB HiSilicon part with hisi_mem's carve-out ("ot") gives the OS 32-36 MB
+# and the media zone the rest, out of the kernel's sight. Once majestic has
+# stopped, that zone is idle -- the kernel modules keep a few hundred KB at its
+# start -- and is far larger than an image. phram maps its free part as an MTD,
+# jffs2 on that is a filesystem that costs the OS nothing, and every step after
+# the unpack -- checksums, the rootfs peek, the write -- reads files from it as
+# it would from /tmp. It sits under /tmp, so the pivot to the RAM root carries
+# it along.
+#
+# The start of the zone is left alone (MMZ_STAGE_SKIP_KB), and nothing is mapped
+# unless every block the modules hold ends below it: the zone's own allocator
+# does not know about the mapping.
+MMZ_STAGE_SKIP_KB=${MMZ_STAGE_SKIP_KB:-4096}
+# Whether stage_in_mmz could run at all here: a carve-out zone and phram.
+mmz_stage_possible() {
+	[ "ot" = "$(cat /sys/module/hisi_mem/parameters/allocator 2>&3)" ] || return 1
+	# A phram someone already loaded is theirs, mapping who knows what.
+	grep -q '^phram ' /proc/modules 2>&3 && return 1
+	find "/lib/modules/$(uname -r)" -name phram.ko 2>&3 | grep -q .
+}
+
+stage_in_mmz() {
+	local need=$1 p=/sys/module/hisi_mem/parameters base size_kb top start len_kb n
+	[ -z "$(pidof majestic 2>&3)" ] || return 1
+	[ "ot" = "$(cat $p/allocator 2>&3)" ] || return 1
+	base=$(cut -d, -f3 $p/mmz 2>&3)
+	size_kb=$(cut -d, -f4 $p/mmz 2>&3 | tr -d M)
+	[ -n "$base" ] && [ -n "$size_kb" ] || return 1
+	size_kb=$((size_kb * 1024))
+	start=$((base + MMZ_STAGE_SKIP_KB * 1024))
+	# Every block the modules hold, by where it ENDS (the second address of
+	# "phys(start, end)"), so one that starts below the mapping and runs into it
+	# is refused too. A zone whose occupancy cannot be read is not mapped at all.
+	grep -q "total size=" /proc/umap/media-mem 2>&3 || return 1
+	top=$(awk -F'[(), ]+' '/MMB: phys/ { for (i = 1; i < NF; i++) if ($i == "phys") print $(i + 2) }' /proc/umap/media-mem 2>&3 |
+		while read -r e; do echo $((e)); done | sort -n | tail -1)
+	[ -n "$top" ] && [ "$top" -ge "$start" ] && return 1
+	len_kb=$((size_kb - MMZ_STAGE_SKIP_KB))
+	[ "$len_kb" -ge $((need + 1024)) ] || return 1
+	# Ours only if this run loads it: modprobe of a loaded module ignores the
+	# parameters, and one already loaded may map something else.
+	grep -q '^phram ' /proc/modules 2>&3 && return 1
+	# In bytes: the 5.10 parser takes no "Ki".
+	modprobe phram phram=sysupgrade,$(printf 0x%x "$start"),$((len_kb * 1024)) 2>&3 || return 1
+	mmz_phram_ours=1
+	n=$(awk -F: '/"sysupgrade"/ { sub("mtd", "", $1); print $1 }' /proc/mtd)
+	if [ -z "$n" ] || ! flash_eraseall -q "/dev/mtd$n" 2>&3 ||
+		! mkdir -p /tmp/stage || ! mount -t jffs2 "/dev/mtdblock$n" /tmp/stage 2>&3; then
+		release_mmz_stage
+		return 1
+	fi
+	mmz_stage_mounted=1
+	stage_dir=/tmp/stage
+	export handoff_stage_dir=$stage_dir
+	echo_c 33 "Unpacking into the idle media zone ($((len_kb / 1024)) MB at $(printf 0x%x "$start")) instead of RAM."
+}
+
+release_mmz_stage() {
+	if [ "1" = "$mmz_stage_mounted" ]; then
+		umount /tmp/stage 2>&3
+		mmz_stage_mounted=
+	fi
+	rmdir /tmp/stage 2>&3
+	if [ "1" = "$mmz_phram_ours" ]; then
+		rmmod phram 2>&3
+		mmz_phram_ours=
+	fi
+	stage_dir=/tmp
 	return 0
 }
 
@@ -1464,6 +1690,16 @@ On this kernel that tmpfs is ramfs, which cannot use the $ram_cma_kb KB free in 
 CMA (MMZ) area, so that is not counted."
 	need_handoff && stage=$(ramfs_stage_kb)
 	want=$((need + UNPACK_RESERVE_KB + stage))
+	# Where the media zone is a carve-out, it is the first choice and not a
+	# fallback. Passing this check is not the end of what the run needs: the
+	# rootfs peek mounts the new image, and its squashfs caches come out of the
+	# same RAM -- 4 MB more for a 1 MiB-block image, where a 64 MB hi3516cv608
+	# that had passed here ran out and thrashed until power was cut. In the
+	# zone, the image costs the OS nothing.
+	if mmz_stage_possible; then
+		[ -z "$(pidof majestic 2>&3)" ] || stop_majestic_for_memory "$need"
+		stage_in_mmz "$need" && return 0
+	fi
 	[ "$want" -lt "$avail" ] && return 0
 	if stop_majestic_for_memory "$((want - avail))"; then
 		# A second reading that will not parse is no opinion, as the first is.
@@ -1471,6 +1707,9 @@ CMA (MMZ) area, so that is not counted."
 		avail=$ram_kb
 		[ "$want" -lt "$avail" ] && return 0
 	fi
+	# The image itself can go to the media zone; the tools unpacking it and the
+	# RAM root still need the OS's own memory.
+	[ $((UNPACK_RESERVE_KB + stage)) -lt "$avail" ] 2>&3 && stage_in_mmz "$need" && return 0
 	local out="Not enough memory to unpack $src: it needs $want KB -- $need KB of image
 plus $UNPACK_RESERVE_KB KB for the tools unpacking it"
 	[ "$stage" -gt 0 ] && out="$out and $stage KB for the RAM root
@@ -1722,7 +1961,7 @@ discard_unpacked() {
 	while read -r f; do
 		f=${f#./}
 		case "$f" in "" | . | .. | */*) continue ;; esac
-		rm -f "/tmp/$f"
+		rm -f "$stage_dir/$f"
 	done < "$unpacked_list"
 	rm -f "$unpacked_list"
 	unpacked_list=
@@ -1741,18 +1980,14 @@ download_firmware() {
 	if [ -n "$archive" ]; then
 		[ ! -f "$archive" ] && die "File $archive not found"
 		check_unpack_room "$archive"
-		gzip -d "$archive" -c | tar xvf - -C /tmp $(tar_excludes) >"$unpacked_list" && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
+		gzip -d "$archive" -c | tar xvf - -C "$stage_dir" $(tar_excludes) >"$unpacked_list" && echo_c 32 "Local archive unpacked" || die "Cannot extract $archive"
 	else
 		if [ -n "$channel" ] || [ -n "$build_id" ]; then
 			fetch_manifest
 			resolve_model_alias
 			[ -n "$channel" ] && build_id=$(resolve_channel "$channel")
 			[ -z "$build_id" ] && die "Unknown channel/build"
-			# Rewrite only the leading SoC token of BUILD_PLATFORM to the
-			# canonical $model (preserving any rich _variant_device suffix used
-			# by builder); fall back to ${model}_${osr} for pre-1.0.51 images.
-			platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
-			if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
+			platform=$(manifest_platform)
 			url=$(resolve_url "$build_id" "$platform" "$(pkg_flash)")
 			[ -z "$url" ] && die "No artifact for $platform in $build_id"
 			# The manifest lists the plain package, which older cameras
@@ -1761,9 +1996,20 @@ download_firmware() {
 			echo "Resolved $build_id for $platform"
 			device_pinned=1
 		fi
-		[ -z "$url" ] && url=$(fw_printenv -n upgrade || default_upgrade_url)
+		# A builder device writes its plain package's URL into `upgrade` on
+		# first boot; its -split one, where published, is beside it.
+		# default_upgrade_url has looked for it already.
+		if [ -z "$url" ]; then
+			if url=$(fw_printenv -n upgrade); then
+				url=$(nor_split_url "$url")
+			else
+				url=$(default_upgrade_url)
+			fi
+		fi
 		# Named for this device, so verify_rootfs can trust it when it cannot mount it.
-		[ "${url##*/}" = "$system_platform-$(pkg_flash).tgz" ] && device_pinned=1
+		case "${url##*/}" in
+			"$system_platform-$(pkg_flash).tgz"|"$system_platform-$(pkg_flash)-split.tgz") device_pinned=1 ;;
+		esac
 		echo "Download from $url"
 		probe_url "$url"
 		# The streamed route stages no second copy, so it never had a room
@@ -1784,15 +2030,40 @@ download_firmware() {
 		# link completes. -m stays as a far outer backstop against a trickle that
 		# never trips the stall check.
 		curl --connect-timeout 30 $dl_meter --speed-limit 1024 --speed-time 60 -m 1800 \
-			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xvf - -C /tmp $(tar_excludes) >"$unpacked_list" && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
+			-L $(tls_opts "$url") "$url" -o - | gzip -d | tar xvf - -C "$stage_dir" $(tar_excludes) >"$unpacked_list" && echo_c 32 "Received and unpacked" || die "Cannot retrieve $url"
 	fi
+	pick_image_soc
 	if [ "1" != "$skip_md5" ]; then
-		(cd /tmp && md5sum -s -c *.md5sum) || die "Wrong checksum!"
+		(cd "$stage_dir" && md5sum -s -c *.md5sum) || die "Wrong checksum!"
 		check_md5_covered
 	fi
 	# The split NOR image (a uImage and the rootfs in one firmware.bin):
 	# flashed as a unit by do_update_firmware.
-	[ -f "/tmp/firmware.bin.$model" ] && image_combined=1
+	[ -f "$stage_dir/firmware.bin.$image_soc" ] && image_combined=1
+}
+
+# The SoC the images this run unpacked are named for (#2688).
+#
+# An image is named for $model, the canonical SoC resolve_model_alias makes of
+# a retired or shared one -- except a builder device profile on an aliased SoC.
+# builder builds it for the chip it was made for and names and stamps it so:
+# a gk7205v210 profile's archive holds uImage.gk7205v210 and a rootfs whose
+# hostname says gk7205v210, while $model is gk7205v200. Every upgrade of such
+# a camera was refused with "No kernel image for this camera (gk7205v200)".
+#
+# So when nothing this run unpacked is named for $model, and something is
+# named for the SoC the camera's own build was made for, the images are that
+# one's.
+# check_soc accepts the same SoC: it is the one the running image was built
+# for, so it says no more about a foreign image than $model does.
+pick_image_soc() {
+	image_soc=$model
+	[ -n "$platform_soc" ] && [ "$platform_soc" != "$model" ] || return 0
+	# What this run unpacked, as tar listed it -- not whatever /tmp holds.
+	grep -q "\.$model\$" "$unpacked_list" 2>&3 && return 0
+	grep -q "\.$platform_soc\$" "$unpacked_list" 2>&3 || return 0
+	image_soc=$platform_soc
+	echo "Images named for $platform_soc, the SoC this camera's build was made for (aliased to $model)"
 }
 
 # Who is petting the hardware watchdog, if anyone.
@@ -1884,8 +2155,69 @@ majestic_api() {
 		"http://127.0.0.1:$port/api/v1/upgrade/$1" 2>/dev/null)" ]
 }
 
+# Two kernel defaults that leave a 32 MB camera nothing to flash from, both
+# measured on a hi3516cv608 (26 MB for Linux, ~10 MB of it the kernel's own
+# slab and vmalloc) with the 9 MB image in /tmp, where check_flash_ram had
+# seen 3 MB available. Each time, the dd writing the image was OOM-killed in
+# the mtdblock page cache within its first blocks -- "Killed", then "the
+# flash does not read back as the image", then a reboot onto a half-written
+# kernel that never started; the SPI-NOR driver's writeback hit the same wall
+# on its per-operation ioremap.
+#
+# - Watermark boosting (watermark_boost_factor, 15000 by default since 5.0)
+#   raises all three zone watermarks by a whole pageblock, 4 MB with 4 KiB
+#   pages, whenever an allocation falls back to another migratetype: the min
+#   watermark stood at 4736 KB instead of 640 KB. The vendor's own firmware
+#   for that board sets the factor to 0 at boot.
+# - With boosting off, dirty pages took the rest: dd fills the page cache far
+#   faster than NOR erases and programs, and dirty_ratio lets 20% of what is
+#   available go dirty before the writer is throttled -- 3.6 MB of it at the
+#   kill. A fixed 256 KB keeps dd at the flash's pace instead.
+#
+# Held from here until the camera reboots; restore_resources gives the values
+# back to a camera that stays up. Each knob is skipped where the kernel has
+# none (watermark_boost_factor is 5.0+).
+VM=/proc/sys/vm
+hold_vm_for_flash() {
+	vm_saved=
+	local k v kv
+	for k in watermark_boost_factor dirty_ratio dirty_background_ratio dirty_bytes dirty_background_bytes; do
+		[ -w "$VM/$k" ] && v=$(cat "$VM/$k" 2>&3) && vm_saved="$vm_saved $k=$v"
+	done
+	# Not a reason to refuse the upgrade: most cameras have the memory to
+	# spare, and these are values the kernel always takes from root. But a
+	# camera that does run short should be able to say why, so say it.
+	for kv in watermark_boost_factor=0 dirty_bytes=262144 dirty_background_bytes=65536; do
+		k=${kv%%=*} v=${kv#*=}
+		[ -w "$VM/$k" ] || continue
+		echo "$v" > "$VM/$k" 2>&3 ||
+			echo_c 33 "Warning: could not set vm.$k=$v; the flash runs without that memory guard."
+	done
+	return 0
+}
+
+# The bytes and ratio knobs each zero the other when written, so only the one
+# that was in force (the non-zero one) is written back.
+release_vm_for_flash() {
+	[ -n "$vm_saved" ] || return 0
+	local kv k v
+	for kv in $vm_saved; do
+		k=${kv%%=*} v=${kv#*=}
+		case "$k" in dirty_bytes | dirty_background_bytes) [ "$v" = 0 ] && continue ;; esac
+		case "$k" in dirty_ratio | dirty_background_ratio) [ "$v" = 0 ] && continue ;; esac
+		echo "$v" > "$VM/$k" 2>&3
+	done
+	vm_saved=
+}
+
 free_resources() {
 	echo_c 37 "\nStop services, sync files, free up memory"
+	# From here until the flash takes the signals away, an interrupt is a
+	# refusal with nothing written: die() then restarts what this stops and
+	# gives back the VM settings held below.
+	trap 'die "Interrupted before the first write; nothing was written."' INT TERM HUP
+	# First, before anything is downloaded or unpacked: see hold_vm_for_flash.
+	hold_vm_for_flash
 	# --web: majestic freed its own video pipeline and is streaming this log
 	# over /ws/upgrade; keep it alive until just before the flash (see below).
 	#
@@ -2015,6 +2347,7 @@ free_resources() {
 #
 # Started low-number-first, the reverse of the order they were stopped in.
 restore_resources() {
+	release_vm_for_flash
 	# Best effort: a /tmp still holding more than the old cap keeps the new one.
 	[ -n "$tmp_cap_kb" ] && mount -o remount,size=${tmp_cap_kb}k /tmp 2>&3
 	[ "1" = "$services_stopped" ] || return 0
@@ -2341,6 +2674,27 @@ stage_handoff() {
 	[ -x "$RAM_ROOT/sbin/init" ]
 }
 
+# Let init get past a boot that never finished.
+#
+# busybox init looks at its signals only between inittab's stages, and the
+# ::sysinit: stage lasts until rcS exits. A foreground loop in /etc/rc.local
+# (S99 runs it from rcS) therefore holds SIGQUIT unread for as long as the
+# camera is up: the hand-off waits out handoff_wait, reboots with nothing
+# written, and every later attempt does the same. init is waiting on rcS's pid
+# alone, so ending rcS lets it reach the signal; what rcS left running is killed
+# by the hand-off along with everything else.
+release_boot_scripts() {
+	local p cmd
+	for p in "$WDOG_PROC"/[0-9]*; do
+		cmd=$(tr '\0' ' ' < "$p/cmdline" 2>&3) || continue
+		case "$cmd" in *'/etc/init.d/rcS'*) ;; *) continue ;; esac
+		[ "1" = "$(awk '/^PPid:/ { print $2; exit }' "$p/status" 2>&3)" ] || continue
+		echo_c 33 "The boot scripts have not finished (often a command in /etc/rc.local running in the foreground), and PID 1 cannot take over until they do: ending them."
+		busybox kill -KILL "${p##*/}" 2>&3
+	done
+	return 0
+}
+
 # Hand PID 1 to the ramfs, and never come back.
 #
 # pivot_root has already moved PID 1's root and cwd here along with ours. What
@@ -2369,6 +2723,7 @@ hand_off_pid1() {
 	fi
 	echo_c 33 "Progress also goes to the serial console. The camera reboots by itself when it is done."
 	sync
+	release_boot_scripts
 	busybox kill -QUIT 1
 	sleep "${handoff_wait:-30}"
 	echo_c 31 "PID 1 did not hand over; rebooting (nothing was flashed)"
@@ -2584,7 +2939,7 @@ enter_ramfs() {
 	export live_flash_dirty root_on_flash flash_touched services_stopped
 	# remote_update: verify_rootfs branches on it for an unmountable rootfs.
 	# lock_owned: die() needs it to know the lock is ours to remove.
-	export remote_update lock_owned
+	export remote_update lock_owned split_overlay_mounted
 	# wdog_userspace_owned: watchdog_keep must not claim a device nobody was
 	# petting, and the scan behind that answer needs a /proc this pivot is about
 	# to move and a majestic it is about to leave behind /mnt.
@@ -2594,10 +2949,16 @@ enter_ramfs() {
 	# $RAM_ROOT names a directory in the NEW root, not the one being judged.
 	export ram_root_shipped
 	export kernel_version system_version rootfs_version mount_wait abort_wait
+	# rootfs_unmountable/rootfs_mount_err: read_candidate_build's mount of the
+	# same image failed; verify_rootfs takes its word rather than retrying.
+	export rootfs_unmountable rootfs_mount_err
 	# system_platform: check_platform runs in the ramfs, which has no
 	# /etc/os-release to read it from (#2484).
 	# device_pinned: the image was fetched under this device's own name.
 	export system_platform device_pinned
+	# platform_soc/image_soc: the pre-alias SoC check_soc also accepts, and the
+	# one the unpacked images are named for -- found from /tmp before the pivot.
+	export platform_soc image_soc
 	# The UBI layout and its volumes, resolved on the whole system: the flash
 	# phase may have no /sys to resolve them from.
 	export ubi_layout ubi_rootfs_dev ubi_data_dev UBI_SYS INITTAB overlay_kb
@@ -2953,7 +3314,9 @@ get_system_info() {
 	soc=$(fw_printenv -n soc 2>/dev/null)
 	[ -z "$model" ] && model="$soc"
 	[ -z "$model" ] && die "Cannot determine SoC: no BUILD_PLATFORM and no U-Boot 'soc'"
+	platform_soc=$model
 	resolve_model_alias
+	image_soc=$model
 	detect_ubi_layout
 	# A ubiblock camera running an image from before the hand-off has no
 	# ::restart: entry, and only the upgrade being run would ship one. Its
@@ -3096,7 +3459,7 @@ default_upgrade_url() {
 	plat=$(get_system_platform)
 	case "$plat" in
 		*_*_*)
-			echo "https://github.com/OpenIPC/builder/releases/download/latest/$plat-$(pkg_flash).tgz"
+			nor_split_url "https://github.com/OpenIPC/builder/releases/download/latest/$plat-$(pkg_flash).tgz"
 			return ;;
 	esac
 	osr=$(get_system_build)
@@ -3148,6 +3511,211 @@ get_build_id() {
 	grep '^BUILD_ID=' /etc/os-release 2>/dev/null | head -1 | cut -d= -f2
 }
 
+# The platform key this camera's builds are listed under in the manifest: the
+# leading SoC token of BUILD_PLATFORM rewritten to the canonical $model, any
+# rich _variant_device suffix builder uses kept; ${model}_<variant> for
+# pre-1.0.51 images, which carry no BUILD_PLATFORM.
+#
+# Except where the manifest lists nothing under that key and does list the
+# camera's own BUILD_PLATFORM: builder publishes a device profile under the
+# chip it was built for, so a gk7205v210 profile is gk7205v210_<...> there
+# while $model has been aliased to gk7205v200. Checked on a lab gk7205v210
+# profile against builder's manifest.
+manifest_platform() {
+	local p=$(get_system_platform) k
+	[ -n "$p" ] || { echo "${model}_$(get_system_build)"; return 0; }
+	k="${model}_${p#*_}"
+	if [ "$k" != "$p" ] && [ -s "$MANIFEST_CACHE" ] &&
+		! awk -v k="$k" '$2==k { f = 1; exit } END { exit !f }' "$MANIFEST_CACHE" &&
+		awk -v k="$p" '$2==k { f = 1; exit } END { exit !f }' "$MANIFEST_CACHE"; then
+		k=$p
+	fi
+	echo "$k"
+}
+
+# Every build the fetched manifest lists for this camera, newest first.
+manifest_builds() {
+	awk -v p="$(manifest_platform)" -v f="$(pkg_flash)" \
+		'$2==p && ($3==f || (f=="nor" && $3=="nor_split")) && !seen[$1]++ { print $1 }' "$MANIFEST_CACHE"
+}
+
+# One field of the os-release under root $1, quotes dropped.
+release_field() {
+	grep "^$2=" "$1/etc/os-release" 2>/dev/null | head -1 | cut -d= -f2- | sed 's/"//g'
+}
+
+# The build this run is about to write, read out of the candidate image while
+# nothing is written yet, for the banner and the history (#2676).
+#
+# verify_rootfs reads the same os-release, but it runs in the flash phase --
+# inside the ramfs, past the last moment an operator can still note anything
+# down or press Ctrl-C. So the read is made here, before the pivot.
+#
+# The mount also gets the image's SoC stamp and device profile, so they are
+# judged here, as verify_rootfs judges them: there a refusal is a reboot with
+# nothing written, here it leaves the camera as it was -- and comes before the
+# history records an upgrade that is never going to happen. Seen on a lab
+# gk7205v210 builder profile, whose image says gk7205v210 to a model aliased
+# to gk7205v200: the camera rebooted, and its history named the build it had
+# refused.
+#
+# Fails open, like every other look inside the image before the write: an
+# image this kernel cannot mount is not refused for it. A UBIFS rootfs cannot
+# be read without UBI under it at all; then the build the manifest resolved,
+# if any, is the best that can be said. A squashfs that did not mount is
+# remembered, so verify_rootfs does not wait out the same mount a second time
+# -- on a mount that hangs, that is mount_wait seconds each.
+read_candidate_build() {
+	local x n loop err ofs= soc= verdict= refusal= y=/tmp/rootfs.peek
+	to_build=$build_id to_version= to_note= kernel_only=
+	if [ "1" = "$image_combined" ]; then
+		# firmware.bin: the uImage, then the squashfs at the next 64 KiB boundary.
+		x=$stage_dir/firmware.bin.$image_soc
+		n=$(nor_split_blocks "$x") && ofs="-o $((n * 65536))"
+	elif [ "1" = "$update_rootfs" ]; then
+		x=$(rootfs_image)
+	else
+		# The rootfs carries the BUILD_ID, and it is not being written: the
+		# camera stays on the build it runs, with another kernel under it.
+		kernel_only=1
+		return 0
+	fi
+	[ -f "$x" ] || return 0
+	if is_ubifs "$x"; then
+		to_note="UBIFS image: not readable before it is written"
+		return 0
+	fi
+	if mkdir -p "$y" && loop=$(losetup -f) && err=$(losetup $ofs "$loop" "$x" 2>&1) &&
+		err=$(mount_rootfs "$loop" "$y"); then
+		to_build=$(release_field "$y" BUILD_ID)
+		to_version=$(release_field "$y" GITHUB_VERSION)
+		# firmware.bin's SoC is its uImage's, which check_combined_fits read.
+		# Its device profile is only in the squashfs, and nothing else on the
+		# split path looked at it, so it is judged here like any rootfs's
+		# (#2689 review): a profile camera must not take another profile's
+		# firmware.bin.
+		[ "1" != "$image_combined" ] && soc=$(head -1 "$y/etc/hostname" 2>&3 | cut -d- -f2)
+		verdict=$(check_platform "$y") || refusal=$verdict
+		umount "$y"
+	else
+		# As in verify_rootfs: a KILLed mount may still be attached.
+		umount "$y" 2>/dev/null
+		[ "1" = "$image_combined" ] || { rootfs_unmountable=1; rootfs_mount_err=$err; }
+		to_note="not readable: this kernel cannot mount the image"
+	fi
+	[ -n "$loop" ] && losetup -d "$loop" 2>/dev/null
+	rmdir "$y" 2>/dev/null
+	[ -n "$refusal" ] && die "$refusal"
+	[ -n "$soc" ] && check_soc "$soc"
+	[ -n "$to_build" ] || to_build=$build_id
+	return 0
+}
+
+# The from -> to block, printed once every image is on the camera and checked,
+# and before the first write: the last point at which the build being left is
+# still on screen and the run can still be abandoned for free (#2676). Users
+# upgrade nightly by nightly and, once a build misbehaves, often cannot say
+# which one they came from -- --build can take them back, but only to a build
+# they can name.
+#
+# Warn, never ask: the WebUI and scripts run this non-interactively, and with
+# --web the block simply reaches /ws/upgrade with the rest of the log.
+print_transition() {
+	local from=$(get_build_id) to rb
+	from_build=${from:-unknown}
+	to=${to_build:-unknown}
+	if [ "1" = "$kernel_only" ]; then
+		to="$from_build, with the kernel from ${to_build:-$(kernel_image)} (the rootfs stays)"
+	elif [ -n "$to_version" ]; then
+		to="$to ($to_version)"
+	elif [ -n "$to_note" ] || [ -z "$to_build" ]; then
+		to="$to (${to_note:-the image carries no build ID})"
+	fi
+	# Whether --build can still reach the build being left. Asked of the
+	# manifest this run fetched, or fetched now on a run that downloaded its
+	# image and so is online -- soft, a manifest that does not come is no
+	# reason to stop an upgrade the operator asked for. A run from local files
+	# may be offline, with its services already stopped: it does not wait on
+	# the network for this, and gets the unverified wording instead.
+	if [ "1" != "$manifest_fetched" ] && [ "1" = "$remote_update" ] && [ -z "$archive" ]; then
+		curl --connect-timeout 10 -s -f -m 20 -L $(tls_opts "$MANIFEST_URL") "$MANIFEST_URL" \
+			-o "$MANIFEST_CACHE" 2>&3 && manifest_fetched=1
+	fi
+	echo_c 36 "\n=================================================================="
+	echo_c 36 " UPDATING: $from_build${system_version:+ ($system_version)}"
+	echo_c 36 "       TO: $to"
+	case "$from_build" in
+	unknown | local-*)
+		echo_c 36 " The running build was never published, so --build cannot return to it."
+		;;
+	*)
+		rb="sysupgrade --build=$from_build"
+		if [ "1" = "$manifest_fetched" ] && [ -s "$MANIFEST_CACHE" ] &&
+			! manifest_builds | grep -qxF "$from_build"; then
+			echo_c 36 " $from_build is no longer in the manifest; 'sysupgrade --list-builds'"
+			echo_c 36 " shows the builds --build can still return to."
+		elif [ "1" = "$manifest_fetched" ] && [ -s "$MANIFEST_CACHE" ]; then
+			echo_c 36 " If the new build misbehaves, return to this one with:"
+			echo_c 36 "   $rb"
+		else
+			echo_c 36 " If the new build misbehaves, and $from_build is still published"
+			echo_c 36 " ('sysupgrade --list-builds'), return to it with:"
+			echo_c 36 "   $rb"
+		fi
+		;;
+	esac
+	[ "1" = "$clear_overlay" ] || [ "$to_build" = "$from_build" ] ||
+		echo_c 36 " Recorded on the camera: 'sysupgrade --history' lists every upgrade."
+	case "$to_build" in nightly-*)
+		echo_c 33 " Daily builds are not release-tested: features may regress." ;;
+	esac
+	echo_c 36 "=================================================================="
+	# Nothing reads the manifest after this, and /tmp is RAM: kept, its 1.7 MB
+	# was what check_flash_ram found missing on a 32 MB hi3516ev200 (1016 KB
+	# left of the 2048 it wants; 2328 KB without it).
+	rm -f "$MANIFEST_CACHE"
+}
+
+# One line per upgrade in $HISTORY_FILE: UTC time, from, to, and which door
+# started it. Written before the first write, because after it there may be no
+# writable /etc left to write to (the pivot, the hand-off), and kept to the
+# last 50 lines so a camera upgraded nightly for years does not grow its
+# overlay for it. A run that wipes the overlay records nothing: the wipe would
+# take the line with it. Nor does one that stays on the build it runs: the
+# flash phase skips a same-version image, and a forced reflash of the same
+# build is not a transition. A kernel-only run is recorded as kernel:<source>,
+# because the rootfs, and with it the build the camera reports, stays.
+#
+# Not to syslog: free_resources stops syslogd before the download (#2415), so
+# by the time the target is known there is no daemon to hear it. The remote
+# line free_resources sends already names the build being left.
+record_transition() {
+	[ "1" = "$clear_overlay" ] && return 0
+	local door=cli to=${to_build:-unknown}
+	[ "1" = "$web_update" ] && door=web
+	if [ "1" = "$kernel_only" ]; then
+		to=${kernel_file##*/}
+		to="kernel:${to_build:-${to:-unknown}}"
+	elif [ "$to_build" = "$from_build" ]; then
+		return 0
+	fi
+	{
+		tail -n 49 "$HISTORY_FILE" 2>/dev/null
+		echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $from_build $to $door"
+	} > "$HISTORY_FILE.new" 2>&3 && mv "$HISTORY_FILE.new" "$HISTORY_FILE" 2>&3 && sync ||
+		{ rm -f "$HISTORY_FILE.new"; echo_c 33 "Could not record this upgrade in $HISTORY_FILE."; }
+	return 0
+}
+
+print_history() {
+	if [ ! -s "$HISTORY_FILE" ]; then
+		echo_c 33 "\nNo upgrades recorded on this camera since its last factory reset."
+		return 0
+	fi
+	echo_c 33 "\nUpgrades started on this camera, oldest first (UTC, from, to, started from):"
+	cat "$HISTORY_FILE"
+}
+
 # Is this camera forwarding its log off-box? Only then is it worth spending a
 # second letting a datagram out before syslogd stops -- see free_resources.
 # Matches the knob S01syslogd reads (#2415).
@@ -3183,6 +3751,8 @@ Where:
                         e.g. nightly-20260520-b9d5883.
       --list-builds[=N] List the last N (default 20) builds available for
                         this platform; mark the running build with '*'.
+      --history         List the upgrades this camera has been through since
+                        its last factory reset (from, to, when).
   -f, --force_all       Do not validate anything.
   -n, --wipe_overlay    Wipe overlay partition.
   -x, --no_reboot       Do not reboot after updating. Ignored when the update
@@ -3255,6 +3825,9 @@ reboot_system() {
 		# The images first, as die() does: they are of no further use, and
 		# while they sit in /tmp a cap raised for them cannot be put back.
 		discard_unpacked
+		# Before majestic is back: its media buffers come from the zone the
+		# stage maps, and the zone's allocator does not know the stage is there.
+		release_mmz_stage
 		restore_resources
 		rm $LOCK_FILE
 		restore_majestic
@@ -3395,6 +3968,11 @@ for i in "$@"; do
 			shift
 			;;
 
+		--history)
+			history_only=1
+			shift
+			;;
+
 		--archive=*)
 			update_kernel=1
 			update_rootfs=1
@@ -3493,6 +4071,10 @@ if [ "1" = "$_ramfs_phase" ]; then
 	# Handed off: this is PID 1 now, and nothing else is left running from the
 	# old root, so it can finally be let go -- see need_handoff.
 	[ "1" = "$_handoff" ] && release_old_root
+	# Stage 1 exports the SoC the images are named for; one that did not (or
+	# a caller that sets up this phase by hand) names them for $model, as
+	# every image did before #2688.
+	image_soc=${image_soc:-$model}
 	[ -n "$ramfs_kernel_file" ] && kernel_file=$ramfs_kernel_file
 	[ -n "$ramfs_rootfs_file" ] && rootfs_file=$ramfs_rootfs_file
 	flash_and_reboot
@@ -3500,16 +4082,19 @@ fi
 
 print_sysinfo
 
+if [ "1" = "$history_only" ]; then
+	print_history
+	exit 0
+fi
+
 if [ "1" = "$list_only" ]; then
+	# `timeout 15` ends a slow listing with TERM, which would skip the EXIT trap.
+	trap 'exit 1' INT TERM HUP
 	fetch_manifest
 	resolve_model_alias
-	osr=$(get_system_build)
-	platform=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
-	if [ -n "$platform" ]; then platform="${model}_${platform#*_}"; else platform="${model}_${osr}"; fi
+	platform=$(manifest_platform)
 	here=$(get_build_id)
-	builds=$(awk -v p="$platform" -v f="$(pkg_flash)" \
-		'$2==p && ($3==f || (f=="nor" && $3=="nor_split")) && !seen[$1]++ { print $1 }' "$MANIFEST_CACHE" \
-		| head -n "${list_n:-20}")
+	builds=$(manifest_builds | head -n "${list_n:-20}")
 	if [ -z "$builds" ]; then
 		echo_c 33 "\nNo builds available for $platform yet."
 		echo "Manifest: $MANIFEST_URL"
@@ -3576,6 +4161,17 @@ free_resources
 # Now that every image is on the camera, and while the camera is still whole.
 preflight_image_sizes
 
+read_candidate_build
+print_transition
+
+# Seconds to Ctrl-C out, before the trap below takes the signals away: always
+# for the -x notice, and for an operator at a console so the block above can be
+# read (#2676). Never for --web or a script, which have no one to wait for.
+# Through die(), which puts the services back: an interrupt left to its default
+# would leave the camera without syslog, cron and ntpd until a reboot.
+pause_before_flash=
+[ -t 0 ] && [ "1" != "$web_update" ] && pause_before_flash=1
+
 # -x cannot be honoured for a write that lands on the flash this camera runs
 # from (see reboot_system). Say so before the first write rather than after it:
 # the trap below takes Ctrl-C away, deliberately, for the rest of the run, so
@@ -3587,9 +4183,15 @@ if [ "1" = "$skip_reboot" ] && rewrites_live_flash; then
 	echo_c 31 "\nNOTICE: -x was requested, but this run rewrites the flash this camera"
 	echo_c 31 "is running from. -x cannot be honoured for that: the running filesystem"
 	echo_c 31 "does not survive it. The camera will be rebooted once flashing is done."
+	pause_before_flash=1
+fi
+if [ "1" = "$pause_before_flash" ]; then
+	trap 'die "Interrupted before the first write; nothing was written."' INT TERM HUP
 	echo_c 37 "Press Ctrl-C now to abort. Continuing in $abort_wait seconds..."
 	sleep "$abort_wait"
 fi
+# After the pause: a run abandoned there was never an upgrade.
+record_transition
 
 # Clear the bootloader's boot counter so the freshly written image starts with a
 # clean slate: if it never reaches a healthy userspace, U-Boot boots FAILSAFE

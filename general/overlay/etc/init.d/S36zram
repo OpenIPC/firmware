@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# Compressed swap in RAM. When memory runs out, a camera without swap evicts
+# the code of running programs and reads it back from flash, over and over: a
+# start of the streamer at that point stalled for 1.5 to 9 minutes on a 64 MB
+# hi3516cv608, which the watchdog then answers with a reset. With zram the
+# kernel compresses idle anonymous pages instead, and the same start came up in
+# 11 s with nothing killed.
+#
+# A kernel without zram, or an image without mkswap and swapon, makes this a
+# no-op. fw_setenv zram 0 turns it off.
+
+dev=/sys/block/zram0
+
+start() {
+	[ "$(fw_printenv -n zram 2>/dev/null)" = 0 ] && return 0
+	# The swap applets come with busybox-swap.fragment, which only the images
+	# that were measured with zram carry; elsewhere (an rv1126 kernel builds
+	# zram in, its busybox has no swapon) this leaves the camera as it was.
+	command -v mkswap > /dev/null && command -v swapon > /dev/null || return 0
+	# From here the image is one that means to have it: say why when it does not.
+	if ! modprobe zram num_devices=1 || [ ! -d $dev ]; then
+		echo "zram swap: the zram module did not load, no swap"
+		return 1
+	fi
+	grep -q '^/dev/zram0 ' /proc/swaps && return 0
+
+	# Half of what Linux has, uncompressed. lzo-rle is built into the kernel;
+	# the RAM it takes is the compressed size, and only while pages are in it.
+	size=$(awk '/^MemTotal:/ { print int($2 / 2) }' /proc/meminfo)
+	echo lzo-rle > $dev/comp_algorithm 2>/dev/null
+	echo "${size}K" > $dev/disksize || return 1
+	mkswap /dev/zram0 > /dev/null && swapon -p 100 /dev/zram0 || return 1
+	# Swap rather than drop the page cache, which holds the code being run.
+	echo 100 > /proc/sys/vm/swappiness
+	echo "zram swap: ${size} KB"
+}
+
+stop() {
+	command -v swapoff > /dev/null || return 0
+	if grep -q '^/dev/zram0 ' /proc/swaps; then
+		swapoff /dev/zram0
+	fi
+}
+
+case "$1" in
+	start)
+		echo "Starting zram swap..."
+		start
+		;;
+
+	stop)
+		stop
+		;;
+
+	*)
+		echo "Usage: $0 {start|stop}"
+		exit 1
+		;;
+esac

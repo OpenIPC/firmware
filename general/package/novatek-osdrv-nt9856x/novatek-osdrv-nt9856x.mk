@@ -12,6 +12,7 @@ NOVATEK_OSDRV_NT9856X_LICENSE_FILES = LICENSE
 define NOVATEK_OSDRV_NT9856X_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(NOVATEK_OSDRV_NT9856X_PKGDIR)/files/sensor/config/sen_sc*.cfg
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(NOVATEK_OSDRV_NT9856X_PKGDIR)/files/sensor/config/sen_imx415.cfg
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(NOVATEK_OSDRV_NT9856X_PKGDIR)/files/sensor/*.yaml
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/profiles
@@ -76,6 +77,7 @@ define NOVATEK_OSDRV_NT9856X_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(NOVATEK_OSDRV_NT9856X_PKGDIR)/files/script/load*
 	#$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(NOVATEK_OSDRV_NT9856X_PKGDIR)/files/script/ircut_demo
 
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.19.91/novatek $(NOVATEK_OSDRV_NT9856X_PKGDIR)/files/sensor/sen_imx415/*.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.19.91/novatek $(NOVATEK_OSDRV_NT9856X_PKGDIR)/files/sensor/sen_sc401ai/*.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.19.91/novatek $(NOVATEK_OSDRV_NT9856X_PKGDIR)/files/sensor/sen_sc500ai/*.ko
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.19.91/novatek $(NOVATEK_OSDRV_NT9856X_PKGDIR)/files/sensor/sen_sc501ai/*.ko

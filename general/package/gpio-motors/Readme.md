@@ -37,6 +37,18 @@ fw_setenv gpio_motors '51 52 53 54 55 28 29 30'
 fw_setenv gpio_motors '60 61 37 38 54 55 56 57'
 ```
 
+#### HI3518EV200, Baolian 11R6W25-HX20Y (zoom/focus lens, active-low)
+```
+fw_setenv ptz_gpio '31 33 3 32 49 7 34 6'
+fw_setenv ptz_coil_active 0
+```
+The two "axes" are the lens motors: zoom on GPIOs `31 33 3 32`, focus on
+`49 7 34 6`, each listed in coil order, decoded from the factory `motor.ko`
+(firmware#2675). A positive zoom step goes wide and a positive focus step goes
+far. Pad GPIO0_6 (gpio 6) boots as `FLASH_TRIG`, so mux it first:
+`devmem 0x200f0008 32 0`. Home each motor against its negative stop. From
+there zoom has about 370 safe steps and focus about 510.
+
 #### SSC337DE, Foscam
 ```
 fw_setenv gpio_motors '1 2 12 13 62 63 64 65'
@@ -99,6 +111,25 @@ Add a fifth value of `1` for active-high. Without `ptz_limits` nothing changes.
 
 `gpio-motors status` prints each switch and whether it is pressed. Use it to
 check the wiring and polarity before moving the head.
+
+## Active-low coils (optional)
+
+Most boards drive the coils through a ULN2803-style driver, where a pin set
+to `1` energises its coil. Some switch a coil on by pulling its pin low
+instead:
+```
+fw_setenv ptz_coil_active 0
+```
+- Every coil write is inverted, so the step sequence is the same.
+- Each coil pin is exported straight into its off level (`high`). A plain
+  `out` would start it low, which on such a board is "on".
+- A move ends with every coil off.
+- The release leaves the pins at their off level. Unexporting keeps the last
+  value, so that value is what the board is left with.
+
+Without this setting, on an active-low board both motors stay energised after
+every move and overheat. Without `ptz_coil_active`, or with `1`, nothing
+changes. Any other value keeps the default and prints a message.
 
 ## More info
 

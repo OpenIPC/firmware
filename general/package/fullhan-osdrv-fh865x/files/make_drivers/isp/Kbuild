@@ -1,0 +1,13 @@
+# isp.ko from the FP13 (FH885XV200_IPC_V1.1.0.FP13_20211202) SDK objects
+obj-m := isp.o
+isp-y := \
+	gme_cal.o \
+	isp_common.o \
+	isp_os.o \
+	isp_linux.o \
+	isp_rtt.o \
+	buf_switch_cfg.o \
+	mipi_linux.o \
+	mipi_driver.o \
+	mipi_proc.o \
+	mipi_rtt.o

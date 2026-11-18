@@ -2,7 +2,7 @@
 #
 # hisilicon-osdrv-hi3516cv6xx
 #
-# Load script + vendor userspace MPP libraries for the Hi3516CV6xx (V5)
+# Load script, set_allocator and sensor profiles for the Hi3516CV6xx (V5)
 # family. Kernel modules and sensor drivers are no longer shipped here:
 #  * kernel modules now built against the running openipc/linux tree by
 #    hisilicon-opensdk (see ../hisilicon-opensdk/hisilicon-opensdk.mk).
@@ -11,19 +11,13 @@
 #  * sensor drivers now built from vendor SDK source by hisilicon-opensdk
 #    via libraries/sensor/hi3516cv6xx/ and HISILICON_OPENSDK_SENSORS_hi3516cv6xx.
 #
-# Vendor MPP userspace .so blobs ship from files/lib/ — no openhisilicon
-# V5 source mirror exists. The install list below is the transitive
-# NEEDED closure of the majestic binary against the vendor lib set
-# (computed via readelf -d), with libopus.so excluded because
-# BR2_PACKAGE_OPUS_OPENIPC + BR2_PACKAGE_OPUS_OPENIPC_HISI_SHIM build
-# an open equivalent that covers both the standard opus_* API and the
-# 6 HiSi-only ot_opus_* extensions used by libss_mpi_audio_adp.so (the
-# shim source lives in general/package/opus-openipc/src/ot_opus_shim.c
-# and is baked into libopus.so by the package's gated POST_EXTRACT
-# hook). The 13 libs not in the closure (libss_mpi_aibnr/bla/cipher/
-# devstat/km/otp/smartae/syskol/uvc, libss_bcd,
-# libmbedtls_harden_adapt, libsvp_aicpu, libvqe_common) save ~660 KB
-# and are intentionally omitted.
+# No vendor MPP userspace libraries ship any more. majestic links the gen 5
+# SDK from its static archives and carries only the code it reaches, and
+# nothing else in the image links one: the sensor drivers declare only libc
+# and take the ISP/AE/AWB callbacks and securec's functions from the
+# majestic that dlopens them. As shared objects they were 44 files, 3.7 MB
+# before compression, 20 of which nothing reached at all. An image without
+# them needs a majestic built that way; the published master one is.
 #
 ################################################################################
 
@@ -32,28 +26,11 @@ HISILICON_OSDRV_HI3516CV6XX_SITE =
 HISILICON_OSDRV_HI3516CV6XX_LICENSE = MIT
 HISILICON_OSDRV_HI3516CV6XX_LICENSE_FILES = LICENSE
 
-# Vendor MPP userspace .so files needed by majestic (transitive NEEDED
-# closure). Excludes libopus.so (provided by BR2_PACKAGE_OPUS_OPENIPC).
-HISILICON_OSDRV_HI3516CV6XX_MPP_LIBS = \
-	libaac_comm.so libaac_dec.so libaac_enc.so \
-	libaac_sbr_dec.so libaac_sbr_enc.so \
-	libacs.so libaiisp.so libbnr.so libcalcflicker.so \
-	libdehaze.so libdnvqe.so libdrc.so \
-	libextend_stats.so libir_auto.so libldci.so \
-	libmp3_dec.so libmp3_enc.so libmp3_lame.so \
-	libot_mpi_isp.so libot_osal.so libsecurec.so \
-	libss_ivs_md.so \
-	libss_mpi.so libss_mpi_ae.so libss_mpi_audio.so libss_mpi_audio_adp.so \
-	libss_mpi_awb.so libss_mpi_isp.so libss_mpi_ive.so \
-	libss_mpi_sysbind.so libss_mpi_sysmem.so \
-	libsvp_acl.so libupvqe.so libvoice_engine.so \
-	libvqe_aec.so libvqe_agc.so libvqe_anr.so libvqe_eq.so \
-	libvqe_hpf.so libvqe_hs.so libvqe_record.so libvqe_res.so libvqe_talkv2.so
-
 # Sensor .so blobs shipped from vendor flash where the openhisilicon
 # V5 SDK has no source mirror. Extracted from the original CV608 DEMO
 # board flash (Hi3516CV610_MPP_V1.0.1.0 B040, Sep 2024). Source-built
-# sensors (gc4023, os04d10, sc4336p, sc450ai, sc500ai, sc431hai, sp2308)
+# sensors (gc4023, os04d10, sc4336p, sc450ai, sc500ai, sc431hai, sp2308,
+# imx335, imx662, cv2003, gc4653, vs4388)
 # come from hisilicon-opensdk and are not duplicated here. The demo board's
 # libsns_os02m10.so is gone: built for B040, it overran the B051 ISP's stack
 # in pfn_cmos_get_standby_cfg and majestic aborted on every start. Its sensor
@@ -63,18 +40,83 @@ HISILICON_OSDRV_HI3516CV6XX_SENSOR_BLOBS = \
 
 # hi3516cv6xx_lite ships the same 5120 KB squashfs slot on an 8 MB NOR part
 # that master is already 0.68 KB short of (CI run 39116182919), so the IMX335
-# profiles stay with hi3516cv6xx_ultimate (16 MB). The driver itself is dropped
-# from the sensor list in hisilicon-opensdk.mk; here only the profiles go away,
-# which is why the gate is repeated: a profile without its driver is dead weight.
+# and IMX662 profiles stay with hi3516cv6xx_ultimate (16 MB). The drivers are
+# dropped from the sensor list in hisilicon-opensdk.mk; here only the profiles
+# go away, which is why the gate is repeated: a profile without its driver is
+# dead weight.
 ifeq ($(OPENIPC_SOC_MODEL)/$(OPENIPC_VARIANT),hi3516cv6xx/lite)
-HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES =
+HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES =
+HISILICON_OSDRV_HI3516CV6XX_K662C6S_PROFILES =
 else
-define HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES
+define HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx335_*.ini
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/modes
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/modes $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/modes/*.ini
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx662_i2c_1080p.ini
+	# The IMX662's 3DNR ladder and day scene, from the stock firmware of a K662C6S. About
+	# 3 KB compressed.
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx662.ini
 endef
+
+# The other sensors a SIP-K662C6S module's stock firmware carries, whose drivers
+# openhisilicon recovered from it: GC2063, SC850SL, IMX415, IMX664, IMX675 and
+# IMX678, held to ultimate with their drivers. Each profile is the driver's own
+# primary mode, linear: GC2063 1080p30 RAW10 and IMX664 2688x1520p30 RAW12 on
+# two lanes (lanes 0 and 2 of the first port, the SDK's single-sensor wiring);
+# SC850SL 3840x2160p30 RAW12 BGGR, IMX415 3840x2160p30 RAW10 GBRG, IMX675
+# 2592x1944p30 RAW10 and IMX678 3840x2160p30 RAW12 on four. None has run on its
+# sensor under majestic yet. ipcinfo names all but the IMX678, which needs
+# `fw_setenv sensor imx678`.
+#
+# With them, the vendor's day scene for those six, recovered from the same
+# firmware: AE pace and route, Bayer NR, dynamic DPC and saturation, each about
+# 1 KB compressed. The same firmware's SC450AI and SC500AI scenes are not
+# shipped: those sensors already run on cameras here with the driver's own
+# tuning, and the vendor's has not been tried on them.
+define HISILICON_OSDRV_HI3516CV6XX_K662C6S_PROFILES
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/gc2063_i2c_1080p.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/sc850sl_i2c_8M.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx415_i2c_8M.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx664_i2c_4M.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx675_i2c_5M.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/imx678_i2c_8M.ini
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/gc2063.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/sc850sl.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx415.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx664.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx675.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/imx678.ini
+endef
+endif
+
+# AIBNR models for the Hi3516CV610 NPU, read from /usr/share/aiisp by
+# majestic's isp.aibnr setting. The vendor's AIISP reference has one model file
+# per frame size; the high_iso one is the second model its sample switches to
+# above ISO bucket 1.
+#
+# Source: Hi3516CV610_SDK_V1.0.2.0, out/model/aiisp. 2560x1440 is the SDK's
+# prebuilt pair, unchanged. The SDK carries no 1080p pair, so 1920x1080 is the
+# SDK's own model_convert.py run unmodified (`-s 1920x1080`) with the CANN 6.10
+# ATC from SVP_NNN_PC_V5.0.2.3 of the same release.
+#
+# Sizes: the six profiles above that run at 1920x1080 (CV2003, IMX662, SP2308)
+# or 2560x1440 (GC4653, SC4336P, VS4388). IMX335 at 2592x1944 is left out:
+# measured on a hi3516cv613, the NPU takes 33 ms per 1080p frame, so 5 MP
+# would run near 10 fps. About 460 KB of squashfs. Ultimate only, the flavour
+# whose majestic has the setting.
+ifeq ($(OPENIPC_VARIANT),ultimate)
+define HISILICON_OSDRV_HI3516CV6XX_AIISP_MODELS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/share/aiisp
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/share/aiisp $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/aiisp/aibnr_model_*.bin
+endef
+else
+HISILICON_OSDRV_HI3516CV6XX_AIISP_MODELS =
 endif
 
 define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
@@ -82,11 +124,6 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/script/load*
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/script/set_allocator
-
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
-	$(foreach lib,$(HISILICON_OSDRV_HI3516CV6XX_MPP_LIBS), \
-		$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/lib/$(lib) ; \
-	)
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(foreach lib,$(HISILICON_OSDRV_HI3516CV6XX_SENSOR_BLOBS), \
@@ -99,7 +136,14 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# and are named without the imx335_i2c_ prefix so they cannot be picked
 	# up by auto-selection. Their rates are the ones the T6 crop timing
 	# actually reaches (1520p 30, flex 1920x1080 30, full10 40), not "high fps".
-	$(HISILICON_OSDRV_HI3516CV6XX_IMX335_PROFILES)
+	# IMX662 has one, 1080p30 RAW12 on four lanes, RGGB, as the driver's
+	# author runs it on a CV610. ipcinfo does not detect the IMX662, so a
+	# camera needs `fw_setenv sensor imx662`; majestic then finds it by name.
+	$(HISILICON_OSDRV_HI3516CV6XX_SONY_PROFILES)
+
+	$(HISILICON_OSDRV_HI3516CV6XX_K662C6S_PROFILES)
+
+	$(HISILICON_OSDRV_HI3516CV6XX_AIISP_MODELS)
 
 	# SP2308, on both variants with its driver: ipcinfo names chip ID
 	# 0x5302 sp2308, which is the name majestic looks this profile up by.
@@ -107,6 +151,64 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 	# and blue light).
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/sp2308_i2c_1080p.ini
+
+	# SC4336P, on both variants with its driver: 2560x1440p30 RAW10, BGGR,
+	# linear, wired like the SP2308 above. The values are the SDK's own for
+	# this sensor (its MIPI and ISP public attributes, and the driver's
+	# linear VMAX), and a CV610 runs on them (OpenIPC/majestic#361).
+	# ipcinfo names it sc4336p.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/sc4336p_i2c_4M.ini
+
+	# Its ISP tuning: the vendor SDK's own scene_auto profile for SC4336P,
+	# day and IR halves in one file, trimmed to the sections majestic reads
+	# on gen 5 (sharpen, NR, demosaic, the 3DNR ladder, LDCI, dehaze, DPC,
+	# AE pace and route, AE weights, CA, saturation, gamma). majestic finds it as
+	# /etc/sensors/iq/<sensor>.ini; about 26 KB compressed.
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/sc4336p.ini
+
+	# CV2003's: the tuning the vendor's own firmware runs on this sensor
+	# (OpenIPC/majestic#355), day and IR halves, trimmed the same way. About
+	# 10 KB compressed.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/cv2003.ini
+
+	# GC4653, VS4388 and MIS20S1: the same vendor's own tuning for them, from
+	# the stock firmware of its CV610 cameras (OpenIPC/majestic#356, #357),
+	# trimmed the same way. About 10 KB compressed each.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/gc4653.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/vs4388.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/mis20s1.ini
+
+	# GC4023's: the vendor SDK's own scene_auto tuning for it, day and IR
+	# halves, trimmed the same way as sc4336p.ini. About 12 KB compressed.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/iq/gc4023.ini
+
+	# CV2003, GC4653 and VS4388, on both variants with their drivers: the
+	# sensors of one vendor's CV610/CV608 cameras, which are 8 MB lite-class
+	# boards (OpenIPC/majestic#355, #356, #357). Every one of them wires the
+	# sensor to the second MIPI port in 2+2 mode on lanes 1 and 3, with its
+	# clock on the second clock lane, into VI device 1 -- devno 1 and
+	# lane_divide_mode 1 in the profile. RGGB, RAW10, linear: CV2003
+	# 1080p30, GC4653 and VS4388 2560x1440p30. ipcinfo names them cv2003,
+	# gc4653 and vs4388, the names majestic looks these profiles up by.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/cv2003_i2c_1080p.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/gc4653_i2c_4M.ini \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/vs4388_i2c_4M.ini
+
+	# MIS20S1, on both variants with its driver: 1920x1080p30 RAW12, RGGB,
+	# linear, from the vendor's own CV610 driver for it, wired like the
+	# boards above. ipcinfo names it mis20s1.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/mis20s1_i2c_1080p.ini
+
+	# GC4023, on both variants with its driver: 2560x1440p30 RAW10, RGGB,
+	# linear, wired like the GC4653 above. The values are the SDK's own for
+	# this sensor (its VI-device-1 MIPI attributes and ISP public
+	# attributes), not measured on a board. ipcinfo names chip ID 0x4023
+	# gc4023.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors \
+		$(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/config/gc4023_i2c_4M.ini
 
 endef
 

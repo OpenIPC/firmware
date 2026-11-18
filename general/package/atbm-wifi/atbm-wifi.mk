@@ -4,8 +4,10 @@
 #
 ################################################################################
 
-ATBM_WIFI_SITE = $(call github,gtxaspec,atbm-wifi,$(ATBM_WIFI_VERSION))
-ATBM_WIFI_VERSION = HEAD
+# OpenIPC's fork of gtxaspec/atbm-wifi, for the make 4.4 build fix and RX
+# copies that cannot pin 32 KiB each (OpenIPC/firmware#2455).
+ATBM_WIFI_SITE = $(call github,openipc,atbm-wifi,$(ATBM_WIFI_VERSION))
+ATBM_WIFI_VERSION = 5a0a920b9d8e5161606764dac27761e9e985495d
 
 define ATBM_WIFI_INSTALL_TARGET_CMDS
 #	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/share/ATBM-WIFI_conf

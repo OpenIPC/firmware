@@ -1,0 +1,122 @@
+#!/bin/sh
+# Loads the XM535D1 vendor modules, from a X6E-WEQ, V5.07.X02.20250906 camera's
+# firmware, in the order its own loadxm530 and loadpublic use.
+MODULE=/lib/modules/3.10.103+/xiongmai
+
+# MMZ is the RAM above the kernel's mem=. The camera's RAM size is not
+# probed: OpenIPC's U-Boot keeps it in totalmem, and this chip's usual size
+# is assumed without it.
+MEM_ALL=$(fw_printenv -n totalmem 2>/dev/null | sed 's/[^0-9]//g')
+[ -n "$MEM_ALL" ] || MEM_ALL=64
+MEM_OS=$(awk '{print $1}' /proc/cmdline | sed -e 's/mem=//' -e 's/M//')
+MEM_START=$(printf "0x%03x00000" $((0x800 + MEM_OS)))
+MEM_LEN=$(printf "0x%03x00000" $((MEM_ALL - MEM_OS)))
+echo MEM_START="$MEM_START" MEM_LEN="$MEM_LEN"
+
+# The SD card's power pad differs between boards; sdio_pdn in the U-Boot
+# environment overrides this chip's usual one.
+SDIO_PDN=$(fw_printenv -n sdio_pdn 2>/dev/null)
+[ -n "$SDIO_PDN" ] || SDIO_PDN=90
+
+report_error() {
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+# The vendor's pll.sh, through devmem instead of its regs tool
+set_pll() {
+	devmem 0x20000000 32 0x1
+	devmem 0x20000054 32 0x07050703
+	devmem 0x20000068 32 0x0e030603
+	devmem 0x20000074 32 0x87020000		# PLLC 1332/3 = 444 MHz
+	devmem 0x20000078 32 0x85040000
+	devmem 0x2000007C 32 0x8105
+	# NPU clock and reset
+	devmem 0x20000124 32 0x0
+	devmem 0x20000124 32 0x3
+	devmem 0x20000120 32 0x0
+	devmem 0x20000120 32 0x7
+	devmem 0x20000000 32 0x0
+	devmem 0x20050490 32 0x1
+	devmem 0x20050540 32 0x1
+	devmem 0x200505F0 32 0x1
+	devmem 0x200506A0 32 0x1
+}
+
+insert_ko() {
+	set_pll
+	insmod i2c.ko
+	insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN" || report_error
+	insmod vb.ko
+	insmod sys.ko
+	insmod log.ko
+	insmod ddr.ko
+	insmod vpss.ko line=0
+	insmod isp.ko
+	insmod rgn.ko
+	insmod venc.ko
+	insmod h264.ko
+	insmod hevc.ko
+	insmod nn.ko
+	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko:
+	# see OpenIPC/firmware#2611.
+	insmod acodec.ko
+	insmod i2s.ko
+	insmod adc.ko
+	# The kernel's xm_v200_sd, not the vendor's sdio0_sd/sdio1_sd: those hand
+	# the arasan driver their own kernel's platform data layout.
+	modprobe xm_v200_sd detect=1 pdn="$SDIO_PDN"
+	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
+	modprobe dwc2
+	modprobe xm_usb0
+}
+
+remove_ko() {
+	modprobe -r xm_v200_sd
+	rmmod -w xm_usb0
+	rmmod -w dwc2
+	rmmod -w adc
+	rmmod -w i2s
+	rmmod -w acodec
+	rmmod -w nn
+	rmmod -w hevc
+	rmmod -w h264
+	rmmod -w venc
+	rmmod -w rgn
+	rmmod -w isp
+	rmmod -w vpss
+	rmmod -w ddr
+	rmmod -w log
+	rmmod -w sys
+	rmmod -w vb
+	rmmod -w mmz
+	rmmod -w i2c
+}
+
+load_usage() {
+	echo "Usage: $0 [-option]"
+	echo "options:"
+	echo "    -i                  insert modules"
+	echo "    -r                  remove modules"
+	echo "    -h                  help information"
+}
+
+cd $MODULE || exit 1
+
+if [ "$1" = "-i" ]; then
+	insert_ko
+fi
+
+if [ "$1" = "-r" ]; then
+	remove_ko
+fi
+
+if [ "$1" = "-h" ]; then
+	load_usage
+	exit
+fi
+
+if [ $# -eq 0 ] || [ "$1" = "-a" ]; then
+	remove_ko
+	insert_ko
+fi

@@ -1,9 +1,17 @@
 config BR2_PACKAGE_XIONGMAI_OPENSDK
 	bool "xiongmai-opensdk"
+	depends on BR2_LINUX_KERNEL
 	default n
 	help
 	  Opensource Xiongmai SoCs SDK: the XM530 sensor libraries
 	  (libsns_X50_XM530.so, libsns_X123_XM530.so) and the ISP
-	  application layer (libispapp_XM530.so), built from source.
+	  application layer (libispapp_XM530.so), built from source,
+	  and the open VI and MMZ drivers (open_vi.ko, open_mmz.ko).
+
+	  It also installs the open ISP library
+	  (/usr/lib/openxiongmai/libisp_XM530.so, for every sensor the
+	  two sensor libraries start)
+	  beside the vendor's. Majestic uses it in the vendor's place
+	  when system.openIsp is on.
 
 	  https://github.com/OpenIPC/openxiongmai

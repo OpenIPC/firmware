@@ -6,10 +6,12 @@ config BR2_PACKAGE_MAJESTIC_AF
 	  from source. majestic loads /usr/lib/majestic-af.so at runtime when a
 	  motorized lens is declared and the majestic binary exports the plugin
 	  HAL seams; the contrast search, the motorized-lens actuators, and the
-	  worker threads live here. Two actuator families are implemented: a UART
-	  wire for the XiongMai near-Pelco and standard Pelco-D lenses, and an
-	  MS41908M SPI stepper (ptz.actuator=ms41908) for the Hi3516A/D
-	  V100 boards whose zoom/focus lens is on SPI with no UART lens MCU.
+	  worker threads live here. Three actuator families are implemented: a
+	  UART wire for the XiongMai near-Pelco and standard Pelco-D lenses, a
+	  Sony VISCA lens MCU over a tty (ptz.actuator=visca, the Xiongmai
+	  N51813L zoom block on Hi3518CV100), and an MS41908M SPI stepper
+	  (ptz.actuator=ms41908) for the Hi3516A/D V100 boards whose zoom/focus
+	  lens is on SPI with no UART lens MCU.
 
 	  For the UART families it is the ONLY writer on that tty, and it is now
 	  required for manual PTZ as well as autofocus: the WebUI asks majestic

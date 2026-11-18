@@ -2,7 +2,7 @@
 
 insert_sns() {
     case $SENSOR in
-    sc401ai | sc500ai | sc501ai)
+    imx415 | sc401ai | sc500ai | sc501ai)
         devmem 0xf0220000 32 0x00001473
         devmem 0xF0220004 32 0x10000000
         devmem 0xF0220008 32 0x00048100
@@ -251,6 +251,87 @@ set_default_osmem() {
 	rm -f "$batch"
 }
 
+# Some sensors answer on I2C only while powered. A Sony part needs its XCLR
+# released and its INCK running, and on Novatek both are the sensor driver's
+# job when the video pipeline opens the sensor -- which is after detection,
+# so detection finds nothing (an IMX415 on the XM IVG-N8S, #1889). When it
+# does, power the sensor the way each driver we ship would, from its own
+# config's [POWER] section: the SIE master clock (CG_CLK_EN_REG0 bit 2,
+# "f0c00000.siemck") and a pulse on its reset pin, then ask again. Only on a
+# failed detection, so a camera that is found today never takes this path,
+# and everything goes back as it was found: the driver powers the sensor up
+# again by itself when majestic opens it.
+#
+# The pads come first. A board whose device tree leaves the sensor pinmux
+# off boots with SN_MCLK not on its pad and I2C_1 not on S_GPIO7/8, so the
+# clock never reaches the sensor and ipcinfo cannot reach it either (the
+# N8S, #1889; its device tree comes from XM's loader in flash, not from
+# us). Route them as the video pipeline will, for the drivers we ship and
+# from their own configs: a SIE MCLK sensor (id_0_mclk 0) gets sensor
+# 0x220, MIPI | MCLK on S_GPIO0, and one on I2C id 0 gets i2c 0x1, I2C_1
+# on S_GPIO7/8 -- adding to what is set, and the old values go back after.
+# I2C id 1 is left alone: its first pads include S_GPIO4, a reset pin.
+nvt_pinmux=/proc/nvt_info/nvt_pinmux
+
+pinmux_get() {
+	sed -n "s/^$1{pinmux=<\(0x[0-9a-fA-F]*\)>.*/\1/p" $nvt_pinmux/pinmux_summary
+}
+probe_powered_sensor() {
+	local clk=0xf0020070 en pins pin cfg name dir val own found
+	local sen i2c senmux i2cmux
+	for cfg in /etc/sensors/sen_*.cfg; do
+		name=$(basename "$cfg" .cfg)
+		[ -f "nvt_$name.ko" ] || continue
+		pin=$(sed -n 's/^id_0_rst_pin *= *\(0x[0-9a-fA-F]*\).*/\1/p' "$cfg")
+		[ -n "$pin" ] && [ "$pin" != 0xFFFFFFFF ] && pins="$pins $((pin))"
+		[ "$(sed -n 's/^id_0_mclk *= *\([0-9a-fA-Fx]*\).*/\1/p' "$cfg")" = 0 ] && senmux=0x220
+		[ "$(sed -n 's/^id_0_i2c_id *= *\([0-9a-fA-Fx]*\).*/\1/p' "$cfg")" = 0 ] && i2cmux=0x1
+	done
+	pins=$(echo $pins | tr ' ' '\n' | sort -un)
+	[ -n "$pins" ] || return
+	if [ -f $nvt_pinmux/pinmux_summary ]; then
+		[ -n "$senmux" ] && sen=$(pinmux_get sensor)
+		[ -n "$i2cmux" ] && i2c=$(pinmux_get i2c)
+	fi
+	# One write per command: the proc node takes each write as a whole
+	# command, and busybox printf writes "sensor 0x22" and "0" separately.
+	[ -n "$sen" ] && echo "sensor $(printf 0x%x $((sen | senmux)))" >$nvt_pinmux/pinmux_set
+	[ -n "$i2c" ] && echo "i2c $(printf 0x%x $((i2c | i2cmux)))" >$nvt_pinmux/pinmux_set
+	en=$(devmem $clk 32)
+	devmem $clk 32 $((en | 0x4))
+	for pin in $pins; do
+		# A pin someone else exported is put back exactly as found and left
+		# exported; only an export this probe made is released.
+		own=
+		if [ ! -d /sys/class/gpio/gpio$pin ]; then
+			echo $pin >/sys/class/gpio/export || continue
+			own=1
+		fi
+		dir=$(cat /sys/class/gpio/gpio$pin/direction)
+		val=$(cat /sys/class/gpio/gpio$pin/value)
+		echo low >/sys/class/gpio/gpio$pin/direction
+		usleep 1000
+		echo 1 >/sys/class/gpio/gpio$pin/value
+		usleep 2000
+		found=$(ipcinfo --short-sensor)
+		echo 0 >/sys/class/gpio/gpio$pin/value
+		if [ "$dir" = in ]; then
+			echo in >/sys/class/gpio/gpio$pin/direction
+		else
+			echo $val >/sys/class/gpio/gpio$pin/value
+		fi
+		[ -n "$own" ] && echo $pin >/sys/class/gpio/unexport
+		if [ -n "$found" ]; then
+			logger -s -p daemon.info -t novatek "$found answered with its reset (GPIO $pin) released and its clock on"
+			break
+		fi
+	done
+	devmem $clk 32 $en
+	[ -n "$i2c" ] && echo i2c $i2c >$nvt_pinmux/pinmux_set
+	[ -n "$sen" ] && echo sensor $sen >$nvt_pinmux/pinmux_set
+	echo $found
+}
+
 check_mem
 set_default_osmem
 
@@ -281,6 +362,7 @@ else
     else
         #insert_ko
         SENSOR_DETECT=$(ipcinfo --short-sensor)
+        [ -n "$SENSOR_DETECT" ] || SENSOR_DETECT=$(probe_powered_sensor)
         export SENSOR=${SENSOR_DETECT:=unknown}
         logger -s -p daemon.info -t novatek "Get data from ipcinfo and set SENSOR as ${SENSOR}"
         # Do not persist a failed detection. The fw_printenv branch above wins

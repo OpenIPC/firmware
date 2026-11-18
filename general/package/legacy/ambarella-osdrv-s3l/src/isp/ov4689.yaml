@@ -1,0 +1,14 @@
+# OmniVision OV4689: S3L ISP configuration, generated at build time (no vendor tuning).
+# Values here are the sensor's, shared by every OV4689 board; a board that needs its own file points the
+# streamer at it (Divinus: system.sensor_config), which takes precedence over /etc/sensors/ov4689.bin.
+width: 2688
+height: 1520
+bayer: 1
+black_level: 244        # the sensor's BLC target 0x40 (10-bit) is a nominal 256; a dark frame's median sits at ~244
+wb_gain: 1.5,1.8        # starting point only: the streamer's auto white balance replaces it from the first frames
+dbp: 4,32               # dynamic bad-pixel correction
+sharpness: medium
+temporal_nr: med        # motion-compensated temporal noise reduction
+rgb2yuv: bt709-full
+saturation: 1.5
+tone_curve: 0:0,20:4,30:11,40:17,50:30,60:42,70:58,80:75,90:90,100:105,120:132,140:160,160:186,180:204,200:222,220:237,240:247,250:252,255:255

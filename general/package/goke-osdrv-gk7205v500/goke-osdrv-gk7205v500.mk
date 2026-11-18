@@ -108,6 +108,10 @@ ifeq ($(OPENIPC_SOC_MODEL),gk7201v200)
 define GOKE_OSDRV_GK7205V500_INSTALL_V200_LIBS
 	cd $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/v200 && sha256sum -c --quiet SHA256SUMS
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/lib/v200/*.so
+	# Sensor profiles only GK7201V200 boards carry (SP2308, see
+	# hisilicon-opensdk), kept out of the family-wide *.ini glob above so the
+	# other dies' rootfs do not pay for them.
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/config/gk7201v200/*.ini
 endef
 endif
 
@@ -134,6 +138,7 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/iq/sc2232.ini
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/iq/sc2336.ini
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/iq/sc401ai.ini
 	ln -sf sc2232.ini $(TARGET_DIR)/etc/sensors/iq/default.ini
 
 	$(GOKE_OSDRV_GK7205V500_INSTALL_KMODS)
@@ -194,7 +199,6 @@ define GOKE_OSDRV_GK7205V500_INSTALL_TARGET_CMDS
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc3235.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc3335.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc3336.so
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc401ai.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc4236.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc4336.so
 	# $(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(GOKE_OSDRV_GK7205V500_PKGDIR)/files/sensor/libsns_sc500ai.so

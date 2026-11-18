@@ -6,6 +6,25 @@ WATCHDOG="waybeam-wd"
 DAEMON_PATH="/usr/bin/waybeam"
 LOG_PATH="/tmp/waybeam.log"
 
+# The backend picks its sensor by name from $SENSOR, which rcS exports from
+# the u-boot `sensor` variable, so a boot always has it. A start from a context
+# that did not inherit it -- a non-login ssh command, a script, an init script
+# run by hand -- asks where rcS does instead of letting the backend fall back to
+# a default sensor this board may not carry. Both tools are image guarantees
+# rather than this package's to select: fw_printenv comes from Buildroot's
+# uboot-tools, which every OpenIPC image enables (the stock overlay's own
+# S31hostname and S36zram call it), and ipcinfo from ipctool, which every
+# HiSilicon board defconfig sets. If neither answers, say so: the backend's own
+# fallback is one of its table entries, and IMX662 is not on most CV610 boards.
+if [ -z "${SENSOR:-}" ]; then
+	SENSOR=$(fw_printenv -n sensor 2>/dev/null)
+	[ -n "$SENSOR" ] || SENSOR=$(ipcinfo --short-sensor 2>/dev/null)
+	if [ -z "$SENSOR" ]; then
+		echo "$DAEMON: no SENSOR in the environment, no u-boot sensor, and no sensor detected; the backend will fall back to its first table entry" >&2
+	fi
+	export SENSOR
+fi
+
 # waybeam forks a respawn child (comm "waybeam-resp") on an API restart and a
 # watchdog ("waybeam-wd"). pidof and killall match by comm, so every restart
 # path must cover all three names, otherwise stop() returns while a helper is

@@ -269,20 +269,12 @@ insert_sns()
 			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
             ;;
 
-	jxf22_i2c)
-			# get from hi3516ev100 profile (!!! check viu_frequency and isp_div !!!)
-			bus_type="i2c";
-			pinmux_mode="i2c_mipi";
-			sensor_clk_freq=24000000;
-			intf_mode="default";
-			viu_frequency=83300000;   # 83.3M, viu clock frequency
-			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
-			echo "66" > /sys/class/gpio/export;     # GPIO8_2
-			echo "out" > /sys/class/gpio/gpio66/direction;
-			echo "0" > /sys/class/gpio/gpio66/value;
-            ;;
-
-	jxf22_i2c_dc|ar0237_hispi)
+	# ipcinfo names every JXF22 jxf22_i2c, but the only JXF22 driver and profile
+	# this family ships are the parallel ones (libsns_jxf22_i2c_dc.so, picked
+	# by majestic for jxf22_i2c too). The MIPI pinmux and ev100 clocks the
+	# name used to get here left the data lines unrouted on a cv300 board:
+	# the driver reported init ok and vicap-state stayed down (#2530).
+	jxf22_i2c|jxf22_i2c_dc|ar0237_hispi)
 			# This was added by ZigFisher
 			bus_type="i2c";
 			pinmux_mode="i2c_dc";
@@ -332,7 +324,12 @@ insert_sns()
 			isp_div=1;                # isp div clk, freq = viu_clk_freq / div
             ;;
 
-	sc2310_i2c|sc2235p_i2c|sc2235p_i2c_dc)
+	# ipcinfo names a plain SC2235 (chip ID 0x2235) sc2235_i2c. Without an arm
+	# for it this script stopped at "Invalid sensor type" before loading any
+	# module, and majestic then failed with "Cannot get chip id" (#1418). The
+	# driver is hisilicon-opensdk's libsns_sc2235, a DVP sensor from the same
+	# vendor as the SC2235P, so it takes the same bus, pinmux and clock.
+	sc2310_i2c|sc2235p_i2c|sc2235p_i2c_dc|sc2235_i2c|sc2235_i2c_dc)
 			# This was added by ZigFisher
 			bus_type="i2c";
 			pinmux_mode="i2c_dc";
