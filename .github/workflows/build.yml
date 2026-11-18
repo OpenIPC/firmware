@@ -842,16 +842,46 @@ jobs:
           # release: one written after that belongs to a later build and stays.
           # Not a job-level concurrency group: that keeps one pending publish
           # and cancels the one before it, losing a whole build's upload.
+          #
+          # The delete is by the asset id read with that timestamp, not by
+          # name. --clobber replaces an asset with a new id, so a plain package
+          # re-uploaded between the read and the delete is not the one deleted:
+          # the old id is gone, and that answer means keep.
+          # drop_asset <tag> <name> <repos/.../releases/assets/ID>: delete
+          # that asset id. Not gh_retry: an id another run has since replaced
+          # answers 404 on every attempt, which is the expected outcome, not a
+          # reason to spend seven minutes backing off and fail the publish.
+          drop_asset() {
+            local n=0 delay=15
+            until gh api -X DELETE "$3" >/dev/null; do
+              if ! gh api "$3" >/dev/null 2>&1; then
+                echo "[$1] $2: asset ${3##*/} is gone (replaced by another run); keeping what is there"
+                return 0
+              fi
+              n=$((n + 1))
+              # Cleanup, not publishing: a stale package left one more night
+              # costs less than the latest uploads still to come.
+              if [ "$n" -ge 6 ]; then
+                echo "::warning::could not delete $2 (${3##*/}) from $1; it stays until the next publish"
+                return 0
+              fi
+              echo "::warning::delete of $2 failed, sleeping ${delay}s before retry"
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+
           drop_superseded_fixed() { # <tag>
-            local tag="$1" have split plain t_split t_plain
+            local tag="$1" have split plain t_split t_plain api
             have=$(gh_retry gh release view "$tag" --json assets \
-              --jq '.assets[] | "\(.name) \(.updatedAt)"')
+              --jq '.assets[] | "\(.name) \(.updatedAt) \(.apiUrl)"')
             for split in "${IMAGES[@]}"; do
               case "${split##*/}" in *-nor-*-split.tgz) ;; *) continue ;; esac
               plain="${split##*/}"
               plain="${plain%-split.tgz}.tgz"
               [ -e "dist/${plain}" ] && continue
               t_plain=$(awk -v n="$plain" '$1 == n { print $2 }' <<<"$have")
+              api=$(awk -v n="$plain" '$1 == n { print $3 }' <<<"$have")
               [ -n "$t_plain" ] || continue
               t_split=$(awk -v n="${split##*/}" '$1 == n { print $2 }' <<<"$have")
               # ISO 8601 UTC from the same API: string order is time order.
@@ -859,8 +889,8 @@ jobs:
                 echo "[${tag}] ${plain}: written at ${t_plain}, not before ${split##*/} (${t_split:-absent}); keeping"
                 continue
               fi
-              echo "[${tag}] ${plain}: superseded by ${split##*/}, deleting"
-              gh_retry gh release delete-asset "$tag" "$plain" --yes
+              echo "[${tag}] ${plain}: superseded by ${split##*/}, deleting ${api##*/}"
+              drop_asset "$tag" "$plain" "${api#https://api.github.com/}"
               sleep 1
             done
           }
