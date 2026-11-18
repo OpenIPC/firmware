@@ -1,3 +1,8 @@
+axera: an Axera HAL for the AX620E and AX620U
+
+Upstream: https://github.com/OpenIPC/ipctool/pull/290 (axera-hal @ e6386eb),
+diffed against its merge base e2ebc24. Drop once #290 is merged.
+
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 580f26f..07fc9b1 100644
 --- a/CMakeLists.txt
@@ -12,30 +17,22 @@ index 580f26f..07fc9b1 100644
      "Vendor HALs to compile into libipchw: 'all', 'none', or a ;-separated \
  subset of: ${IPCHW_OPTIONAL_VENDORS}")
 diff --git a/src/chipid.c b/src/chipid.c
-index 8d10b1c..0e91dd6 100644
+index 8d10b1c..6b0aaee 100644
 --- a/src/chipid.c
 +++ b/src/chipid.c
-@@ -80,6 +80,9 @@ static const manufacturers_t manufacturers[] = {
- #ifdef IPCHW_VENDOR_ANYKA
-     {NULL /* Generic */, anyka_detect_cpu, VENDOR_ANYKA, anyka_setup_hal},
- #endif
-+#ifdef IPCHW_VENDOR_AXERA
-+    {NULL /* Generic */, axera_detect_cpu, VENDOR_AXERA, axera_setup_hal},
-+#endif
- #ifdef IPCHW_VENDOR_ROCKCHIP
-     {NULL /* Generic */, rockchip_detect_cpu, VENDOR_ROCKCHIP,
-      rockchip_setup_hal},
-@@ -98,6 +101,10 @@ static const manufacturers_t manufacturers[] = {
- #ifdef IPCHW_VENDOR_NOVATEK
-     {NULL, novatek_detect_cpu, VENDOR_NOVATEK, novatek_setup_hal},
- #endif
-+#ifdef IPCHW_VENDOR_AXERA
-+    /* AX620E/AX630C run an arm64 kernel */
-+    {NULL /* Generic */, axera_detect_cpu, VENDOR_AXERA, axera_setup_hal},
-+#endif
+@@ -101,6 +101,12 @@ static const manufacturers_t manufacturers[] = {
  #ifdef IPCHW_VENDOR_TEGRA
      {NULL, tegra_detect_cpu, "Nvidia", tegra_setup_hal},
  #endif
++#endif
++#if defined(IPCHW_VENDOR_AXERA) &&                                            \
++    (defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64))
++    /* One entry for both ABIs: AX620U runs a 32-bit ARM kernel, AX620E an
++     * arm64 one, and detection reads the devicetree either way. */
++    {NULL /* Generic */, axera_detect_cpu, VENDOR_AXERA, axera_setup_hal},
+ #endif
+     /* Sentinel, so the array stays well-formed when every optional vendor is
+      * compiled out; generic_detect_cpu() skips entries without a detect_fn. */
 diff --git a/src/chipid.h b/src/chipid.h
 index e1007e4..bc68c68 100644
 --- a/src/chipid.h
@@ -50,12 +47,13 @@ index e1007e4..bc68c68 100644
  #define VENDOR_GM "GrainMedia"
 diff --git a/src/hal/axera.c b/src/hal/axera.c
 new file mode 100644
-index 0000000..cdbe17f
+index 0000000..0104ca2
 --- /dev/null
 +++ b/src/hal/axera.c
-@@ -0,0 +1,55 @@
+@@ -0,0 +1,75 @@
 +#include "hal/axera.h"
 +
++#include <stdio.h>
 +#include <stdlib.h>
 +#include <string.h>
 +#include <unistd.h>
@@ -79,17 +77,36 @@ index 0000000..cdbe17f
 + * kernel's root compatible names the die. AX620U's own devicetree (real
 + * deployed firmware) says "axera,ax620x", AX620E/AX630C/AX620Q's say
 + * "axera,ax620e", so map the AX620U spelling to the family OpenIPC builds.
++ * The property is a list of NUL-separated strings and a board string
++ * usually comes first ("xm,ipc", "axera,ax620e"), so every entry is
++ * checked, not just the first.
 + */
 +bool axera_detect_cpu(char *chip_name) {
-+    char buf[64];
++    char compat[512];
++    size_t len, off;
++    FILE *f = fopen("/proc/device-tree/compatible", "r");
 +
-+    if (!line_from_file("/proc/device-tree/compatible", "axera,(ax[0-9a-z]+)",
-+                        buf, sizeof(buf)))
++    if (!f)
 +        return false;
-+    if (!strcmp(buf, "ax620x"))
-+        strcpy(buf, "ax620u");
-+    strcpy(chip_name, buf);
-+    return true;
++    len = fread(compat, 1, sizeof(compat) - 1, f);
++    fclose(f);
++    compat[len] = '\0';
++
++    for (off = 0; off < len; off += strlen(compat + off) + 1) {
++        const char *c = compat + off;
++
++        if (strncmp(c, "axera,ax", 8) || strlen(c + 6) >= 16)
++            continue;
++        strcpy(chip_name, c + 6);
++        if (!strcmp(chip_name, "ax620x"))
++            strcpy(chip_name, "ax620u");
++        /* chip_generation stays 0 on purpose, as for Ambarella: it keys
++         * the pad-mux, clock and boot ROM tables, and ipctool has none for
++         * Axera, so 0 sends those paths to their no-table answer and
++         * getchipfamily() back to the name. */
++        return true;
++    }
++    return false;
 +}
 +
 +/*
