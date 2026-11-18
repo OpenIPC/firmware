@@ -23,12 +23,18 @@ sub-tick pacing only holds on an idle core.
 ### Load
 
 ```
-insmod /lib/modules/$(uname -r)/extra/gpiostep.ko          # GK7205V510 defaults
+insmod /lib/modules/$(uname -r)/extra/gpiostep.ko          # GK7205V510 defaults (Goke builds)
 # or override the pin map:
 insmod gpiostep.ko pan_gpios=3,4,72,73 tilt_gpios=69,59,58,57
 ```
 
 The module creates `/dev/motorDev`.
+
+Only a Goke build has a default pin map, the GK7205V510's above. On any other
+SoC those GPIO numbers are other pads, so a build for it has none, and an
+`insmod` or `/etc/modules` line without `pan_gpios` and `tilt_gpios` (or
+`sr_gpios`) is refused before it claims a pin:
+`gpiostep: no pin map: name the board's pan_gpios and tilt_gpios (or sr_gpios)`.
 
 ### Use
 
