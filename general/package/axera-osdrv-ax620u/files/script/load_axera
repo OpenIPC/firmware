@@ -25,15 +25,14 @@ mem_total=${mem_total:-256}
 mmz_start=$(printf "0x%x" $((mem_start + os_mem * 1024 * 1024)))
 mmz_size=$((mem_total - os_mem))M
 
-# ax_audio and ax_pcal6416a are left out: on the OpenIPC 4.19.125 kernel
-# both oops in probe (they read struct snd_soc_* / struct gpio_chip fields
-# at the vendor kernel's offsets), and the oops leaves a lock held that
-# stalls every CPU after it. Load them only on a kernel whose config
-# matches the vendor's.
-modules="ax_osal ax_sys ax_cmm ax_npu ax_sdio_host ax_pool ax_proton ax_mipi
-	ax_venc ax_jenc ax_vdec ax_vo ax_ivps ax_gdc ax_hwinfo ax_logctl
-	ax_dma_hal ax_ddr_retention ax_ives ax_rtc ax_avs
-	XmCommon XmDemux XmGpio XmGpioI2c"
+# The stock order: /usr/etc/loadpublic loads XmCommon, XmDemux and XmGpio,
+# then Load_AX620U the ax_* modules, then XmGpioI2c. XmIrCut, which the
+# stock App loads itself, goes last.
+modules="XmCommon XmDemux XmGpio
+	ax_osal ax_sys ax_cmm ax_npu ax_sdio_host ax_pool ax_proton ax_mipi
+	ax_venc ax_jenc ax_vdec ax_audio ax_vo ax_ivps ax_gdc ax_hwinfo
+	ax_pcal6416a ax_logctl ax_dma_hal ax_ddr_retention ax_ives ax_rtc ax_avs
+	XmGpioI2c XmIrCut"
 
 insert_ko() {
 	[ -d "$KO_DIR" ] || {
