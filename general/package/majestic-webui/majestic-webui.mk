@@ -95,14 +95,17 @@ endef
 # The PTZ controls are code for moving motors, and only an image with a motor
 # driver can move one: gpio-motors, or the majestic-af plugin for the Pelco,
 # MS41908 and gpiostep backends. BR2_PACKAGE_MAJESTIC_WEBUI_PTZ follows those
-# two by default.
+# two by default. The same paths are listed in the WebUI's sbin/updatewebui,
+# which installs them only where the image carries /usr/bin/gpio-motors or
+# /usr/lib/majestic-af.so; the two lists must stay the same set.
 #
 # The Live PTZ Suite (majestic-webui #722: presets, Box PTZ, AF peaks and
 # triggers) is PTZ too. Its scripts are loaded only from p/motor.cgi, and its
 # CGIs only steer the motor or the autofocus; the settings page that reads
 # af_triggers.cgi takes a failed request as no triggers. Left in, it was some
 # 30 KB of xz on every image without a motor, and took the ssc377 lite rootfs
-# past its 5120 KB.
+# past its 5120 KB. updatewebui's list does not carry these yet, so an
+# updatewebui run on a camera without a motor still installs them.
 #
 # p/motor.cgi is emptied, never removed: live.cgi pulls it in with <%in %>,
 # which haserl opens while parsing the page, before any shell around it runs,
@@ -114,6 +117,7 @@ define MAJESTIC_WEBUI_PTZ_FIXUP
 	rm -f $(TARGET_DIR)/var/www/a/ptz-centre.js
 	rm -f $(TARGET_DIR)/var/www/a/ptz-follow.js
 	rm -f $(TARGET_DIR)/var/www/a/ptz-speed.js
+	rm -f $(TARGET_DIR)/var/www/a/ptz-orient.js
 	rm -f $(TARGET_DIR)/var/www/a/af-state.js
 	[ ! -e $(TARGET_DIR)/var/www/cgi-bin/p/motor.cgi ] || : >$(TARGET_DIR)/var/www/cgi-bin/p/motor.cgi
 	rm -f $(TARGET_DIR)/var/www/cgi-bin/j/ptz.cgi
