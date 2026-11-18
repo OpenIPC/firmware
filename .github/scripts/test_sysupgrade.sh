@@ -4169,6 +4169,29 @@ else
 fi
 rm -f "$SB"/tmp/*.gk7205v300
 
+# ...but only images this archive brought: a kernel an interrupted run left in
+# /tmp under that name is not taken for one the archive lacks.
+reset_env
+STUB_VENDOR=goke STUB_SOC=gk7205v210
+set_platform gk7205v210_lite_acme-cam1
+STUB_IMG_PLATFORM=gk7205v210_lite_acme-cam1
+STUB_IMG_SOC=gk7205v300
+rm -f "$SB"/tmp/*.gk7205v300
+make_rootfs "$SB/tmp/rootfs.squashfs.gk7205v300"
+make_archive "$SB/tmp/rootfs.squashfs.gk7205v300"
+mkdir -p "$SB/keep" && mv "$SB/tmp/fw.tgz" "$SB/keep/dl.tgz"
+rm -f "$SB"/tmp/*.gk7205v300*
+make_uimage "$SB/tmp/uImage.gk7205v300" gk7205v300
+STUB_DL_FILE="$SB/keep/dl.tgz"
+run -z -f -k -r
+if [ "$RC" -ne 0 ] && nothing_wrote && ! rebooted &&
+    printf '%s' "$OUT" | grep -qF "uImage.gk7205v300 did not come from this archive"; then
+    ok "-f: an image left in /tmp by another run is not taken for the archive's"
+else
+    bad "-f, stale foreign kernel in /tmp: rc=$RC out='$OUT'"
+fi
+rm -f "$SB"/tmp/*.gk7205v300
+
 # An archive named for the canonical model is taken as it always was.
 alias_case gk7205v200
 STUB_IMG_SOC=gk7205v200
