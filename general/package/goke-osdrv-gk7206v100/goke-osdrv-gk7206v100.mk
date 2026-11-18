@@ -75,6 +75,22 @@ define GOKE_OSDRV_GK7206V100_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/sensor/config/*.ini
+
+	# Image tuning, as the SDK's PQ bins: the ISP, AE and AWB parameter
+	# blocks xmedia_isp_import() loads. The streamer reads
+	# /etc/sensors/iq/<sensor>.bin (isp.iqProfile overrides the path).
+	#
+	# sc465sl.bin carries the tuning the vendor's own firmware applies to an
+	# SC465SL on GK7206V11 (Xiongmai IPC_GK7206V11_K8, V1.10.T02.20261103):
+	# its per-ISO noise reduction, sharpening, demosaic, defect-pixel,
+	# gamma, DRC, dehaze, LCE and colour tables, its AWB calibration and its
+	# AE compensation curve, over the SDK's defaults. The SDK publishes no
+	# tuning for this sensor; without it every block runs on the ISP
+	# library's generic defaults. Checked side by side with a stock camera
+	# in low light (ISO ~20000): the same picture.
+	cd $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/iq && sha256sum -c --quiet SHA256SUMS
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/iq/*.bin
 endef
 
 $(eval $(generic-package))
