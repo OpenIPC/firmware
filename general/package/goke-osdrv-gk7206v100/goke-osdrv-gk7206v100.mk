@@ -86,8 +86,11 @@ define GOKE_OSDRV_GK7206V100_INSTALL_TARGET_CMDS
 	# gamma, DRC, dehaze, LCE and colour tables, its AWB calibration and its
 	# AE compensation curve, over the SDK's defaults. The SDK publishes no
 	# tuning for this sensor; without it every block runs on the ISP
-	# library's generic defaults. Checked side by side with a stock camera
-	# in low light (ISO ~20000): the same picture.
+	# library's generic defaults. The ISP blocks were read from the vendor
+	# firmware running in a QEMU twin (OpenIPC/qemu-bench); interpolated to
+	# a stock camera's ISO, its noise-reduction and sharpening tables give
+	# the values that camera reports live. Checked side by side with a stock
+	# camera in low light (ISO ~20000).
 	cd $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/iq && sha256sum -c --quiet SHA256SUMS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/iq/*.bin
