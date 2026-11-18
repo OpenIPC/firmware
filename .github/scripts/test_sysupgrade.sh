@@ -3676,6 +3676,36 @@ if [ "$RC" -ne 0 ] && [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && not
 else
     bad "split layout: wrong SoC must be refused, rc=$RC out='$OUT'"
 fi
+
+# An archive whose images are all named for another SoC: what a gk7206v12a
+# camera was handed once the family image was renamed gk7206v11a. Without -f
+# it is refused, naming the camera, before anything is written; with -f it is
+# taken under that SoC's name and written. Offline: no manifest @alias.
+split_env split
+rm -f "$SB/tmp/firmware.bin.gk7205v200"
+make_split_fw "$SB/tmp/firmware.bin.gk7205v300" gk7205v300 30 $((40 * 65536 - 4000))
+make_archive "$SB/tmp/firmware.bin.gk7205v300"
+rm -f "$SB/tmp/firmware.bin.gk7205v300"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && [ "$(xxd -p -l 4 "$SB/dev/mtdblock2")" = 00000000 ] && nothing_wrote &&
+    ! rebooted && ! printf '%s' "$OUT" | grep -qF "Forced:"; then
+    ok "split layout: an archive named for another SoC is refused without -f"
+else
+    bad "split layout, foreign-named archive without -f: rc=$RC out='$OUT'"
+fi
+split_env split
+rm -f "$SB/tmp/firmware.bin.gk7205v200"
+make_split_fw "$SB/tmp/firmware.bin.gk7205v300" gk7205v300 30 $((40 * 65536 - 4000))
+make_archive "$SB/tmp/firmware.bin.gk7205v300"
+rm -f "$SB/tmp/firmware.bin.gk7205v300"
+run -z -f --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] && rebooted &&
+    printf '%s' "$OUT" | grep -qF "Forced: images named for gk7205v300, this camera is gk7205v200"; then
+    ok "split layout: -f takes an archive named for another SoC and writes it"
+else
+    bad "split layout, foreign-named archive with -f: rc=$RC out='$OUT'"
+fi
+rm -f "$SB"/tmp/firmware.bin.gk7205v300*
 # Bytes past the squashfs: not what post-image.sh packs, and they would run
 # into the settings. Refused before anything moves.
 split_env split
@@ -4125,6 +4155,19 @@ if [ "$RC" -ne 0 ] && nothing_wrote && printf '%s' "$OUT" | grep -qF "Wrong SoC!
 else
     bad "aliased builder profile, foreign image: rc=$RC out='$OUT'"
 fi
+
+# -f: the archive's images all carry one other SoC's name, and are taken
+# under it -- the SoC checks themselves are what -f skips.
+alias_case gk7205v300
+STUB_IMG_SOC=gk7205v300
+run -z -f -k -r
+if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && flashed /dev/mtd3 &&
+    printf '%s' "$OUT" | grep -qF "Forced: images named for gk7205v300"; then
+    ok "-f: kernel and rootfs named for another SoC are flashed"
+else
+    bad "-f, images named for another SoC: rc=$RC out='$OUT'"
+fi
+rm -f "$SB"/tmp/*.gk7205v300
 
 # An archive named for the canonical model is taken as it always was.
 alias_case gk7205v200
