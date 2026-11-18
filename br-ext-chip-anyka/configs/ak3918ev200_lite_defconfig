@@ -49,6 +49,9 @@ BR2_OPENIPC_FLASH_SIZE="8"
 # Packages
 BR2_PACKAGE_ANYKA_OSDRV_AK3918EV200=y
 BR2_PACKAGE_DROPBEAR_OPENIPC=y
+# Pan/tilt heads with 4-wire steppers on GPIO, such as the Gwell one;
+# the pin map is board wiring, given at insmod (see the package Readme).
+BR2_PACKAGE_GPIOSTEP_OPENIPC=y
 BR2_PACKAGE_IPCTOOL=y
 BR2_PACKAGE_LIBCURL_OPENIPC=y
 BR2_PACKAGE_LIBCURL_OPENIPC_CURL=y
