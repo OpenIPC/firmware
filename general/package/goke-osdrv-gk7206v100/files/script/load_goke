@@ -187,18 +187,34 @@ remove_ko() {
 # environment, as load_goke does on the GK7205 families. A streamer that stops
 # releases the sensor through the SDK, which switches its clock off, so a
 # later probe finds nothing on the bus: the saved name is what the next start
-# reads. A failed probe is not saved (#2428).
+# reads.
+#
+# Only a name this image has a driver for is saved, or trusted once saved: a
+# probe can answer with something that is not a sensor at all, and a name with
+# no libsns_<name>.so would otherwise be kept and never probed for again.
+# A failed probe is not saved either (#2428).
+sensor_has_driver() {
+	[ -n "$1" ] && [ -e "/usr/lib/sensors/libsns_$1.so" ]
+}
+
 detect_sensor() {
 	if [ "$SENSOR" = "unknown" ]; then
 		SENSOR=
 		fw_setenv sensor
 	fi
-	[ -n "$SENSOR" ] && return
-	fw_printenv -n sensor >/dev/null 2>&1 && return
+	sensor_has_driver "$SENSOR" && return
+	saved=$(fw_printenv -n sensor 2>/dev/null)
+	sensor_has_driver "$saved" && return
+	if [ -n "$saved" ]; then
+		logger -s -p daemon.warn -t goke "No driver for the saved sensor ${saved}; probing again"
+		fw_setenv sensor
+	fi
 	SENSOR=$(ipcinfo --short-sensor)
-	if [ -n "$SENSOR" ]; then
+	if sensor_has_driver "$SENSOR"; then
 		fw_setenv sensor "$SENSOR" &&
 			logger -s -p daemon.info -t goke "Writing ${SENSOR} to U-Boot ENV"
+	elif [ -n "$SENSOR" ]; then
+		logger -s -p daemon.warn -t goke "Detected ${SENSOR}, which this image has no driver for; not saved"
 	else
 		logger -s -p daemon.warn -t goke "No sensor detected"
 	fi
