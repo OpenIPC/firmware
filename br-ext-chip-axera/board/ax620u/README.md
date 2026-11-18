@@ -34,6 +34,21 @@ stock dump + U-Boot + rootfs.ubi) for QEMU or a programmer.
 The stock Xiongmai U-Boot is not used: it has ubi/ubifs commands, but it
 password-protects its prompt, and OpenIPC ships its own U-Boot per family.
 
+## Tested
+
+In QEMU only (OpenIPC/qemu-bench `-M ax620u -smp 4`), from `mknand.py`'s
+whole-flash image (vendor SPL, OpenIPC U-Boot, this build's `rootfs.ubi`):
+
+- U-Boot boots `/boot/fitImage` from UBIFS; kernel `4.19.125` on 4 CPUs,
+  `root=ubi0:rootfs`, `ubi0:rootfs_data` (UBIFS) on `/overlay`, overlayfs
+  on `/`;
+- first login sets the root password; `ipcinfo -v/-c/-f` print
+  `axera`/`ax620u`/`ax620u`; `S70vendor` runs `load_axera`: all 28
+  modules in `modules.dep` load, no failure logged, no oops;
+- a file written to `/etc` and the password survive a reboot.
+
+Real hardware has not run this image yet.
+
 ## Not yet
 
 - The AX620U clock driver is not in the SDK: every clock is a fixed 24 MHz

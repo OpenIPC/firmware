@@ -40,6 +40,25 @@ At boot `S70vendor` runs `load_axera` (ipcinfo -v says `axera`): the 21
 vendor modules load in the stock loader's order, `ax_cmm` gets the DRAM
 above `mem=` as its pool.
 
+## Tested
+
+In QEMU only (OpenIPC/qemu-bench `-M ax620e`, `-global
+axera-spi-nor.env-from-flash=on`), from a whole-flash image of the vendor
+SPL, the OpenIPC U-Boot, this build's `uImage` at 0x50000 and
+`rootfs.squashfs` at 0x250000, env blank:
+
+- U-Boot saves its default env and boots the kernel slot; kernel
+  `5.15.73`, `mtdparts=spi_nor.0:256k(boot),64k(env),2048k(kernel),5120k(rootfs),-(rootfs_data)`;
+- squashfs root, `/dev/mtdblock4` (rootfs_data) mounted as jffs2 on
+  `/overlay`, overlayfs on `/`;
+- first login sets the root password; `ipcinfo -v/-c/-f` print
+  `axera`/`ax620e`/`ax620e`; `S70vendor` runs `load_axera`: all 21
+  modules in `modules.dep` load (`lsmod`), no failure logged, no oops;
+- a file written to `/etc` and the password survive a reboot.
+
+Real hardware has not run this image yet: clocks, EPHY, watchdog, SPI
+dual reads and the vendor SPL's secure-boot check are unverified there.
+
 Known gaps: no majestic build for Axera (BR2_PACKAGE_MAJESTIC is off);
 `ax_vdec` fails its probe in QEMU (no decoder model) exactly as on the
 stock firmware there.
