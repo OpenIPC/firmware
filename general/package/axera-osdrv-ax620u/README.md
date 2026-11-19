@@ -49,3 +49,38 @@ Installed under `/lib/modules/4.19.125/axera` and indexed by Buildroot's
 the stock order, `ax_cmm` with its `cmmpool=` before anything that
 depends on it. A failed load is logged and makes `load_axera` exit
 non-zero.
+
+## Sensor tuning
+
+`files/sensor/` carries the image tuning the stock firmware runs the
+camera's OS04A10 with, copied unmodified from the same JFtech
+IPC_AX620U_A8 firmware. Any streamer driving Axera's ISP needs it:
+without a bin `AX_ISP_LoadBinParams` leaves the ISP on the sensor
+driver's built-in defaults.
+
+| Package file | Installed at | Stock path | Size |
+| --- | --- | --- | --- |
+| `configs/os04a10_{sdr,deepdark}{,_ONE,_TWO,_THREE}.bin` | `/etc/sensors/` | `/mnt/custom/isp_bin/` | 976 KB each |
+| `lib/libsns_os04a10.so` | `/usr/lib/sensors/` | `/usr/lib/` | 951 KB |
+| `ai_isp/OS04A10_*_AX620A.pro` (3 models) | `/etc/sensors/ai_isp/` | `/mnt/custom/ai_isp/` | 880 KB in all |
+
+- The bins are the `AX_ISP_LoadBinParams` parameter sets the stock App
+  picks per scene: `_sdr` linear (the default), `_deepdark` low light,
+  each with its `_ONE`/`_TWO`/`_THREE` scene variants.
+- `libsns_os04a10.so` is the sensor driver the streamer `dlopen`s for
+  its `gSnsos04a10Obj` and registers with the ISP; the copy in the
+  firmware's `/usr` partition, which the stock App and the modules above
+  run with (the other `usr` image found for this camera carries a
+  byte-identical copy). Linked against glibc (`libc.so.6`), as Axera
+  ships it. Buildroot's strip pass drops its `.comment` section on the
+  way into the image; its code and data are byte-identical to the stock
+  copy.
+- The `.pro` files are the AI-ISP (NPU denoise) models. The bins and
+  `libsns_os04a10.so` name them by their absolute stock path
+  `/mnt/custom/ai_isp/<name>`, so `/mnt/custom/ai_isp` is a link to
+  `/etc/sensors/ai_isp`. The NAND image has room for them.
+- Left out of the same partitions as not tuning: the App's encrypted
+  `jsons/` and `CustomConfig/`, fonts and strings, and the `res/ax_ai/`
+  detection models.
+- `BR2_OPENIPC_SNS_MODEL`, if a board sets it, limits the bins and the
+  sensor library to that sensor.

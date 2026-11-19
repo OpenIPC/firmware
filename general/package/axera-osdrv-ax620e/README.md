@@ -52,3 +52,45 @@ the stock loader's order, which matches every module's `depends=`;
 `ax_cmm` goes first of the Axera modules with its `cmmpool=`, so nothing
 pulls it in without one. A failed load is logged and makes `load_axera`
 exit non-zero.
+
+## Sensor tuning
+
+`files/sensor/` carries the image tuning the stock firmware runs the
+camera's SC450AI with, copied unmodified from the same Xiongmai IVG-A6
+firmware. Any streamer driving Axera's ISP needs it: without a bin
+`AX_ISP_LoadBinParams` leaves the ISP on the sensor driver's built-in
+defaults (the stock App logs "The parameters in sensor.h will be used").
+
+| Package file | Installed at | Stock path | Size |
+| --- | --- | --- | --- |
+| `configs/sc450ai_{sdr,sdr_ONE,sdr_TWO,sdr_THREE,deepdark,hightemp}.bin` | `/etc/sensors/` | `/mnt/custom/isp_bin/` | 657 KB each |
+| `lib/libsns_sc450ai.so` | `/usr/lib/sensors/` | `/usr/lib/` | 1.3 MB |
+| `ai_isp/SC450AI_SDR_2688x1520_..._240221_AX620E.axmodel` | `/etc/sensors/ai_isp/`, only with `BR2_PACKAGE_AXERA_OSDRV_AX620E_AI_ISP` | `/mnt/custom/ai_isp/` | 4.3 MB |
+
+- The bins are the `AX_ISP_LoadBinParams` parameter sets the stock App
+  picks per scene: `_sdr` linear (the default), `_ONE`/`_TWO`/`_THREE`
+  its scene variants, `_deepdark` low light, `_hightemp` the
+  high-temperature gain limit. They compress to about 12 KB each in the
+  squashfs.
+- `libsns_sc450ai.so` is the sensor driver the streamer `dlopen`s for
+  its `gSnssc450aiObj` and registers with the ISP. Like the rest of the
+  stock userspace it is linked against glibc (`libc.so.6`), as Axera
+  ships it. Buildroot's strip pass drops its `.comment` section on the
+  way into the image; its code and data are byte-identical to the stock
+  copy.
+- The AI-ISP model is the NPU denoise network. The bins and
+  `libsns_sc450ai.so` name models by their absolute stock path
+  `/mnt/custom/ai_isp/<name>`, so the option also links
+  `/mnt/custom/ai_isp` to `/etc/sensors/ai_isp`. It is off by default:
+  about 1.3 MB in the xz squashfs, it takes the lite rootfs from 2948 KB
+  to 4460 KB, leaving the 5 MB rootfs slot of the 16 MB NOR image too
+  little room for a streamer. The bins and the sensor library add about
+  110 KB. Without it a streamer has to leave AI-ISP off. (The scene bins and
+  the sensor library name this `MULTI4` model; `sc450ai_sdr.bin` alone
+  names an older `..._MULTI3_..._231124` one that the stock firmware
+  does not ship.)
+- Left out of the same partitions as not tuning: the Xiongmai App's
+  encrypted `jsons/` and `CustomConfig/`, fonts and strings, and the
+  `res/ax_ai/` face/body detection models.
+- `BR2_OPENIPC_SNS_MODEL`, if a board sets it, limits the bins and the
+  sensor library to that sensor, as in `sigmastar-osdrv-infinity6e`.
