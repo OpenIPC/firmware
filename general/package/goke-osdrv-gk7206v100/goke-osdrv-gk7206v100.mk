@@ -93,9 +93,11 @@ define GOKE_OSDRV_GK7206V100_INSTALL_TARGET_CMDS
 	# streamer (GET /api/v1/isp/profile.ini); the file's header has the
 	# steps. The text is the source from here on. Checked against the PQ bin
 	# it replaces on an IVG-K8: the same attribute blocks and ISP state, but
-	# for white balance. The [awb*] sections are read live from a stock
-	# camera in daylight, because the dump caught the App before it set
-	# them (colour matrix in manual, washed-out colour, a cyan cast).
+	# for white balance and exposure. The [awb*] and [ae*] sections are read
+	# live from a stock camera in daylight, because the dump caught the App
+	# before it set them (colour matrix in manual, washed-out colour, a cyan
+	# cast); the AE compensation table is fitted to the stock camera's
+	# target at four gains, since its App rewrites that table as gain moves.
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/iq/*.ini
 endef
