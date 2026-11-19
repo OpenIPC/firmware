@@ -196,19 +196,27 @@ record_sensor() {
 
 # The XM530 install commands give Linux mem=35M of the XM530's 64 MB, and an
 # XM550 installed with them unchanged keeps that 35M of its 128 MB: Linux
-# runs in 32 MB beside a 93 MB media zone the pipeline uses about 25 MB of,
-# and majestic cannot offer 1440p (#2853). 64/64 is what that board ran
-# 2560x1440 H.265 with. Only the untouched 35M of the plain xm layout moves:
-# any other split, and every cma or hybrid boot, is the owner's. It applies
-# at the next boot; this one keeps the zone it already handed out.
+# runs in 32 MB beside a 93 MB media zone, and majestic cannot offer more
+# than 1080p (#2853). 72/56 is what that board ran for days with a 5 MP
+# main stream and a sub-stream: 31.3 MB of the zone in use, and 64 MB for
+# Linux had been too tight. Only the untouched 35M of the plain xm layout
+# moves: any other split, and every cma or hybrid boot, is the owner's. It
+# applies at the next boot; this one keeps the zone it already handed out.
+# What decides is the environment as well as this boot: a builder customizer
+# that has just written its own split reboots into it a few seconds later,
+# and this must not overwrite that split before then.
 fix_xm550_split() {
 	[ "$chipid" = xm550 ] && [ "$MEM_OS" = 35 ] || return 0
 	grep -q -E '(^| )(cma|mmz_allocator)=' /proc/cmdline && return 0
+	case " $(fw_printenv -n bootargs 2>/dev/null) " in
+	*" mem=35M "*) ;;
+	*) return 0 ;;
+	esac
 	command -v set_allocator >/dev/null 2>&1 || return 0
 	local out
-	if out=$(set_allocator xm 64 2>&1); then
+	if out=$(set_allocator xm 72 2>&1); then
 		logger -s -p daemon.info -t xiongmai \
-			"XM550 booted with the XM530's mem=35M; mem=64M from the next boot"
+			"XM550 booted with the XM530's mem=35M; mem=72M from the next boot"
 	else
 		logger -s -p daemon.warn -t xiongmai \
 			"XM550 left at mem=35M: $(echo "$out" | tail -1)"
