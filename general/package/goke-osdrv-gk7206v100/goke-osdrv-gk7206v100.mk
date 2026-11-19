@@ -98,6 +98,9 @@ define GOKE_OSDRV_GK7206V100_INSTALL_TARGET_CMDS
 	# before it set them (colour matrix in manual, washed-out colour, a cyan
 	# cast); the AE compensation table is fitted to the stock camera's
 	# target at four gains, since its App rewrites that table as gain moves.
+	# DRC is the App's own per-ISO table for this sensor (read from its
+	# binary, checked against the stock camera's live strength), run as the
+	# SDK's DRC auto mode; AINR runs in auto, as on the stock camera.
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/iq/*.ini
 endef
