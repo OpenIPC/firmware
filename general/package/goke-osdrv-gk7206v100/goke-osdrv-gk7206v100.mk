@@ -87,8 +87,13 @@ define GOKE_OSDRV_GK7206V100_INSTALL_TARGET_CMDS
 	# gamma, DRC, dehaze, LCE and colour tables, its AWB calibration and its
 	# AE compensation curve. The SDK publishes no tuning for this sensor;
 	# without it every block runs on the ISP library's generic defaults.
-	# Checked against the PQ bin it replaces on an IVG-K8: the same
-	# attribute blocks and ISP state, the same picture.
+	# The values are vendor-derived, not from a datasheet: read from that
+	# firmware running in a QEMU twin (OpenIPC/qemu-bench f0c2fcbe5,
+	# tools/xm-isp-tuning) as a PQ bin, then exported as text by the
+	# streamer (GET /api/v1/isp/profile.ini); the file's header has the
+	# steps. The text is the source from here on. Checked against the PQ bin
+	# it replaces on an IVG-K8: the same attribute blocks and ISP state, the
+	# same picture.
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/iq/*.ini
 endef
