@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.84
+scr_version=1.0.85
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -1036,7 +1036,9 @@ nor_split_blob_size() {
 # check_soc's question, asked of a firmware.bin's uImage.
 nor_split_soc_ok() {
 	local s=$(nor_split_soc "$1")
-	[ "$s" = "$model" ] || { [ -n "$s" ] && [ "$s" = "$platform_soc" ]; }
+	[ "$s" = "$model" ] || { [ -n "$s" ] && [ "$s" = "$platform_soc" ]; } && return 0
+	[ "1" = "$skip_soc" ] && echo "Skip SoC validation (image '$s', build '$model')" && return 0
+	return 1
 }
 
 nor_split_image() {
@@ -2040,6 +2042,26 @@ download_firmware() {
 	# The split NOR image (a uImage and the rootfs in one firmware.bin):
 	# flashed as a unit by do_update_firmware.
 	[ -f "$stage_dir/firmware.bin.$image_soc" ] && image_combined=1
+	[ "1" = "$image_soc_forced" ] && check_images_unpacked
+	return 0
+}
+
+# A forced run's images came out of this run's archive.
+#
+# The images are found by name in $stage_dir, and an interrupted run can leave
+# some there. The name a forced run takes is one the camera would never match
+# otherwise, and -f skips the checksums that tie an image to its archive, so
+# a partial archive could pass with an older run's kernel, rootfs or
+# firmware.bin beside it. Explicit --kernel=/--rootfs= files are the
+# operator's own and are not this check's business.
+check_images_unpacked() {
+	local f
+	for f in $(images_this_run); do
+		[ "$f" = "$kernel_file" ] || [ "$f" = "$rootfs_file" ] && continue
+		awk '{ n = $0; while (sub(/^[.]\//, "", n)) ; print n }' "$unpacked_list" 2>&3 |
+			grep -qxF "${f##*/}" && continue
+		die "${f##*/} did not come from this archive (it holds images for $image_soc, but not this one). Nothing was written."
+	done
 }
 
 # The SoC the images this run unpacked are named for (#2688).
@@ -2056,14 +2078,39 @@ download_firmware() {
 # one's.
 # check_soc accepts the same SoC: it is the one the running image was built
 # for, so it says no more about a foreign image than $model does.
+#
+# And -f (skip_soc) is the operator saying the images are for this camera
+# whatever they are named: an archive whose images all carry one other SoC's
+# name is taken under that name. Without it such an archive matched nothing
+# here, the run fell through to the kernel/rootfs path and was refused with a
+# message that never named the SoC -- seen when the GK7206 family image was
+# renamed from gk7206v12a to gk7206v11a and a gk7206v12a camera was handed
+# the new archive with -f, offline, where no manifest @alias could apply.
 pick_image_soc() {
+	local other
 	image_soc=$model
-	[ -n "$platform_soc" ] && [ "$platform_soc" != "$model" ] || return 0
+	image_soc_forced=
 	# What this run unpacked, as tar listed it -- not whatever /tmp holds.
 	grep -q "\.$model\$" "$unpacked_list" 2>&3 && return 0
-	grep -q "\.$platform_soc\$" "$unpacked_list" 2>&3 || return 0
-	image_soc=$platform_soc
-	echo "Images named for $platform_soc, the SoC this camera's build was made for (aliased to $model)"
+	if [ -n "$platform_soc" ] && [ "$platform_soc" != "$model" ] &&
+		grep -q "\.$platform_soc\$" "$unpacked_list" 2>&3; then
+		image_soc=$platform_soc
+		echo "Images named for $platform_soc, the SoC this camera's build was made for (aliased to $model)"
+		return 0
+	fi
+	[ "1" = "$skip_soc" ] || return 0
+	other=$(image_socs_unpacked)
+	[ -n "$other" ] && [ "$(echo "$other" | wc -l)" -eq 1 ] || return 0
+	image_soc=$other
+	image_soc_forced=1
+	echo_c 33 "Forced: images named for $other, this camera is $model"
+}
+
+# The SoC suffixes of the images this run unpacked, one per line.
+image_socs_unpacked() {
+	awk '{ n = $0; while (sub(/^[.]\//, "", n)) ;
+		if (match(n, /^(uImage|zboot[.]img|fitImage|firmware[.]bin|rootfs[.]squashfs|rootfs[.]ubifs)[.][a-z0-9]+$/)) {
+			sub(/^.*[.]/, "", n); print n } }' "$unpacked_list" 2>&3 | sort -u
 }
 
 # Who is petting the hardware watchdog, if anyone.
