@@ -103,6 +103,26 @@ prepare:
 		sed -i 's|^HOST_CXXFLAGS += \$$(HOST_CFLAGS)$$|HOST_CXXFLAGS += $$(filter-out -std=%,$$(HOST_CFLAGS))|' \
 			$(TARGET)/buildroot-$(BR_VER)/package/Makefile.in; \
 	fi
+	@# Build host-tar without POSIX ACLs. Its configure finds the build host's
+	@# libacl on its own, and acl 2.4.0 declares acl_get_file_at(),
+	@# acl_set_file_at() and acl_delete_def_file_at() in <sys/acl.h>, with an
+	@# at_flags argument. tar 1.34's src/xattrs.c defines static wrappers of
+	@# the same names and different types, so host-tar stops with "conflicting
+	@# types for 'acl_get_file_at'", and with it every build from a fresh output
+	@# directory. Buildroot already builds the target tar --without-posix-acls
+	@# unless BR2_PACKAGE_ACL is set. The host tar only packs archives here and
+	@# needs no ACL support, and the wrappers sit under HAVE_POSIX_ACLS.
+	@# The flag goes in as its own `+=` line ahead of the host package's eval,
+	@# so it does not depend on how tar.mk spells HOST_TAR_CONF_OPTS; and if a
+	@# Buildroot bump moves that eval, prepare says so instead of leaving
+	@# host-tar to fail with the original error.
+	@if test -f $(TARGET)/buildroot-$(BR_VER)/package/tar/tar.mk; then \
+		tarmk=$(TARGET)/buildroot-$(BR_VER)/package/tar/tar.mk; \
+		grep -q '^HOST_TAR_CONF_OPTS += --without-posix-acls$$' $$tarmk || \
+		sed -i 's|^\$$(eval \$$(host-autotools-package))$$|HOST_TAR_CONF_OPTS += --without-posix-acls\n&|' $$tarmk; \
+		grep -q '^HOST_TAR_CONF_OPTS += --without-posix-acls$$' $$tarmk || { \
+			echo "prepare: could not add --without-posix-acls to host-tar in $$tarmk" >&2; exit 1; }; \
+	fi
 
 help:
 	@printf "BR-OpenIPC usage:\n \
