@@ -92,8 +92,9 @@ define GOKE_OSDRV_GK7206V100_INSTALL_TARGET_CMDS
 	# tools/xm-isp-tuning) as a PQ bin, then exported as text by the
 	# streamer (GET /api/v1/isp/profile.ini); the file's header has the
 	# steps. The text is the source from here on. Checked against the PQ bin
-	# it replaces on an IVG-K8: the same attribute blocks and ISP state, the
-	# same picture.
+	# it replaces on an IVG-K8: the same attribute blocks and ISP state, but
+	# for [awb_ccm] op_type, which the dump caught in manual and the
+	# vendor's firmware runs in auto (without it colour is washed out).
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/iq/*.ini
 endef
