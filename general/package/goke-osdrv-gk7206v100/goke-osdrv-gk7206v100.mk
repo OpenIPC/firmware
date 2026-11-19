@@ -101,6 +101,11 @@ define GOKE_OSDRV_GK7206V100_INSTALL_TARGET_CMDS
 	# DRC is the App's own per-ISO table for this sensor (read from its
 	# binary, checked against the stock camera's live strength), run as the
 	# SDK's DRC auto mode; AINR runs in auto, as on the stock camera.
+	#
+	# sc465sl.night.ini is the vendor's IR night set as a delta over the day
+	# profile (night sharpening, noise reduction, LCE, dehaze, DRC strength,
+	# AWB bypassed), read from the App's own ISP code with its day/night
+	# switch called each way. A streamer without night profiles ignores it.
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/iq/*.ini
 endef
