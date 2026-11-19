@@ -112,11 +112,16 @@ prepare:
 	@# directory. Buildroot already builds the target tar --without-posix-acls
 	@# unless BR2_PACKAGE_ACL is set. The host tar only packs archives here and
 	@# needs no ACL support, and the wrappers sit under HAVE_POSIX_ACLS.
+	@# The flag goes in as its own `+=` line ahead of the host package's eval,
+	@# so it does not depend on how tar.mk spells HOST_TAR_CONF_OPTS; and if a
+	@# Buildroot bump moves that eval, prepare says so instead of leaving
+	@# host-tar to fail with the original error.
 	@if test -f $(TARGET)/buildroot-$(BR_VER)/package/tar/tar.mk; then \
-		grep -q '^HOST_TAR_CONF_OPTS = .*--without-posix-acls' \
-			$(TARGET)/buildroot-$(BR_VER)/package/tar/tar.mk || \
-		sed -i 's|^HOST_TAR_CONF_OPTS = --without-selinux$$|HOST_TAR_CONF_OPTS = --without-selinux --without-posix-acls|' \
-			$(TARGET)/buildroot-$(BR_VER)/package/tar/tar.mk; \
+		tarmk=$(TARGET)/buildroot-$(BR_VER)/package/tar/tar.mk; \
+		grep -q '^HOST_TAR_CONF_OPTS += --without-posix-acls$$' $$tarmk || \
+		sed -i 's|^\$$(eval \$$(host-autotools-package))$$|HOST_TAR_CONF_OPTS += --without-posix-acls\n&|' $$tarmk; \
+		grep -q '^HOST_TAR_CONF_OPTS += --without-posix-acls$$' $$tarmk || { \
+			echo "prepare: could not add --without-posix-acls to host-tar in $$tarmk" >&2; exit 1; }; \
 	fi
 
 help:
