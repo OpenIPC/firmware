@@ -33,7 +33,16 @@ cat >"$work/wrapper" <<'EOF'
 insmod() { echo "insmod $*" >>"$CALLS"; }
 devmem() { :; }
 logger() { :; }
-ipcinfo() { echo sc501ai; }
+# With a fake pinmux node, ipcinfo records the last pinmux command written
+# before it ran, and finds an IMX415 only once I2C_1 is on its pads.
+ipcinfo() {
+	if [ -n "${PINMUX:-}" ]; then
+		echo "ipcinfo after: $(cat "$PINMUX/pinmux_set" 2>/dev/null)" >>"$CALLS"
+		[ "$(cat "$PINMUX/pinmux_set" 2>/dev/null)" = "i2c 0x1" ] && echo imx415
+	else
+		echo sc501ai
+	fi
+}
 fw_printenv() { [ "$1" = -n ] && shift; sed -n "s/^$1=//p" "$ENV_FILE" | grep . || return 1; }
 fw_setenv() {
 	if [ "$1" = --script ]; then
@@ -44,6 +53,7 @@ fw_setenv() {
 	fi
 }
 export SENSOR=${TEST_SENSOR:-sc501ai}
+[ -n "${PINMUX:-}" ] && SENSOR=
 set -- -i
 . "$SCRIPT"
 EOF
@@ -71,6 +81,7 @@ run() {
 	rc=0
 	(cd "$work" && TEST_SENSOR="${TEST_SENSOR:-}" SCRIPT="$script" CALLS="$work/calls" ENV_FILE="$work/env" \
 		LOAD_NOVATEK_DT="$work/dt" LOAD_NOVATEK_CMDLINE="$work/cmdline" \
+		PINMUX="${PINMUX:-}" LOAD_NOVATEK_PINMUX="${PINMUX:-}" LOAD_NOVATEK_SENSORS="$work/sensors" \
 		busybox sh "$work/wrapper" >"$work/out" 2>&1) || rc=$?
 }
 
@@ -144,6 +155,42 @@ exited 0 "... and the script runs to its end"
 
 run 128 32 "$lit" "osmem=32M" "bootargs=earlyprintk mem=32M panic=20 mem=40M"
 lacks "fw_setenv" "two mem= in saved bootargs: not touched, not half-moved"
+
+echo "=== detection: the sensor pads are routed before the first ipcinfo ==="
+
+# pads SENSOR I2C [driver]: a pinmux node whose summary holds these values,
+# and an IMX415 config (SIE MCLK, I2C id 0) whose driver is there or not
+pads() {
+	rm -rf "$work/pinmux" "$work/sensors" "$work"/nvt_sen_*.ko
+	mkdir -p "$work/pinmux" "$work/sensors"
+	printf 'sensor{pinmux=<%s>;};\nmipi_lvds{pinmux=<0x301>;};\ni2c{pinmux=<%s>;};\n' "$1" "$2" \
+		>"$work/pinmux/pinmux_summary"
+	printf 'id_0_mclk = 0\nid_0_i2c_id = 0\nid_0_rst_pin = 0xFFFFFFFF\n' >"$work/sensors/sen_imx415.cfg"
+	[ -z "${3:-}" ] || : >"$work/nvt_sen_imx415.ko"
+	PINMUX=$work/pinmux
+}
+after() {
+	got=$(cat "$work/pinmux/pinmux_set" 2>/dev/null || echo "(never written)")
+	if [ "$got" = "$1" ]; then ok "$2"; else bad "$2 -- pinmux_set holds '$got', want '$1'"; fi
+}
+boot='earlyprintk mem=48M panic=20'
+
+pads 0x0 0x0 driver
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+has "ipcinfo after: i2c 0x1" "pads off (the N8S): the first ipcinfo runs with I2C_1 routed"
+has "fw_setenv sensor imx415" "... finds the sensor and stores it"
+after "sensor 0x0" "... and the pads go back as found"
+exited 0 "... and the script runs to its end"
+
+pads 0x220 0x1 driver
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+after "(never written)" "pads already routed: nothing written"
+
+pads 0x0 0x0
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+after "(never written)" "no driver for the config: its pads are not touched"
+lacks "fw_setenv sensor" "... and a miss is not stored"
+PINMUX=
 
 rm -rf "$work/dt"
 echo "=== the mem= / osmem guard ==="
