@@ -271,32 +271,49 @@ set_default_osmem() {
 # 0x220, MIPI | MCLK on S_GPIO0, and one on I2C id 0 gets i2c 0x1, I2C_1
 # on S_GPIO7/8 -- adding to what is set, and the old values go back after.
 # I2C id 1 is left alone: its first pads include S_GPIO4, a reset pin.
-nvt_pinmux=/proc/nvt_info/nvt_pinmux
+# This is done around the first ipcinfo too, not only this fallback: with
+# I2C_1 off its pads that one jams bus 0 ("timeout waiting for bus ready")
+# and the fallback then finds nothing (#1889, on the 2026-11-18 nightly). A
+# board whose pads are already routed writes nothing.
+nvt_pinmux=${LOAD_NOVATEK_PINMUX:-/proc/nvt_info/nvt_pinmux}
+sensor_cfgs=${LOAD_NOVATEK_SENSORS:-/etc/sensors}
 
 pinmux_get() {
 	sed -n "s/^$1{pinmux=<\(0x[0-9a-fA-F]*\)>.*/\1/p" $nvt_pinmux/pinmux_summary
 }
+route_sensor_pads() {
+	local cfg senmux i2cmux
+	pad_sen= pad_i2c=
+	[ -f $nvt_pinmux/pinmux_summary ] || return
+	for cfg in $sensor_cfgs/sen_*.cfg; do
+		[ -f "nvt_$(basename "$cfg" .cfg).ko" ] || continue
+		[ "$(sed -n 's/^id_0_mclk *= *\([0-9a-fA-Fx]*\).*/\1/p' "$cfg")" = 0 ] && senmux=0x220
+		[ "$(sed -n 's/^id_0_i2c_id *= *\([0-9a-fA-Fx]*\).*/\1/p' "$cfg")" = 0 ] && i2cmux=0x1
+	done
+	[ -n "$senmux" ] && pad_sen=$(pinmux_get sensor)
+	[ -n "$i2cmux" ] && pad_i2c=$(pinmux_get i2c)
+	# Nothing to add: nothing written, nothing to put back.
+	[ -n "$pad_sen" ] && [ $((pad_sen | senmux)) = $((pad_sen)) ] && pad_sen=
+	[ -n "$pad_i2c" ] && [ $((pad_i2c | i2cmux)) = $((pad_i2c)) ] && pad_i2c=
+	# One write per command: the proc node takes each write as a whole
+	# command, and busybox printf writes "sensor 0x22" and "0" separately.
+	[ -n "$pad_sen" ] && echo "sensor $(printf 0x%x $((pad_sen | senmux)))" >$nvt_pinmux/pinmux_set
+	[ -n "$pad_i2c" ] && echo "i2c $(printf 0x%x $((pad_i2c | i2cmux)))" >$nvt_pinmux/pinmux_set
+}
+restore_sensor_pads() {
+	[ -n "$pad_i2c" ] && echo i2c $pad_i2c >$nvt_pinmux/pinmux_set
+	[ -n "$pad_sen" ] && echo sensor $pad_sen >$nvt_pinmux/pinmux_set
+}
 probe_powered_sensor() {
 	local clk=0xf0020070 en pins pin cfg name dir val own found
-	local sen i2c senmux i2cmux
-	for cfg in /etc/sensors/sen_*.cfg; do
+	for cfg in $sensor_cfgs/sen_*.cfg; do
 		name=$(basename "$cfg" .cfg)
 		[ -f "nvt_$name.ko" ] || continue
 		pin=$(sed -n 's/^id_0_rst_pin *= *\(0x[0-9a-fA-F]*\).*/\1/p' "$cfg")
 		[ -n "$pin" ] && [ "$pin" != 0xFFFFFFFF ] && pins="$pins $((pin))"
-		[ "$(sed -n 's/^id_0_mclk *= *\([0-9a-fA-Fx]*\).*/\1/p' "$cfg")" = 0 ] && senmux=0x220
-		[ "$(sed -n 's/^id_0_i2c_id *= *\([0-9a-fA-Fx]*\).*/\1/p' "$cfg")" = 0 ] && i2cmux=0x1
 	done
 	pins=$(echo $pins | tr ' ' '\n' | sort -un)
 	[ -n "$pins" ] || return
-	if [ -f $nvt_pinmux/pinmux_summary ]; then
-		[ -n "$senmux" ] && sen=$(pinmux_get sensor)
-		[ -n "$i2cmux" ] && i2c=$(pinmux_get i2c)
-	fi
-	# One write per command: the proc node takes each write as a whole
-	# command, and busybox printf writes "sensor 0x22" and "0" separately.
-	[ -n "$sen" ] && echo "sensor $(printf 0x%x $((sen | senmux)))" >$nvt_pinmux/pinmux_set
-	[ -n "$i2c" ] && echo "i2c $(printf 0x%x $((i2c | i2cmux)))" >$nvt_pinmux/pinmux_set
 	en=$(devmem $clk 32)
 	devmem $clk 32 $((en | 0x4))
 	for pin in $pins; do
@@ -327,8 +344,6 @@ probe_powered_sensor() {
 		fi
 	done
 	devmem $clk 32 $en
-	[ -n "$i2c" ] && echo i2c $i2c >$nvt_pinmux/pinmux_set
-	[ -n "$sen" ] && echo sensor $sen >$nvt_pinmux/pinmux_set
 	echo $found
 }
 
@@ -361,8 +376,10 @@ else
         logger -s -p daemon.info -t novatek "Get data from environment and set SENSOR as ${SENSOR}"
     else
         #insert_ko
+        route_sensor_pads
         SENSOR_DETECT=$(ipcinfo --short-sensor)
         [ -n "$SENSOR_DETECT" ] || SENSOR_DETECT=$(probe_powered_sensor)
+        restore_sensor_pads
         export SENSOR=${SENSOR_DETECT:=unknown}
         logger -s -p daemon.info -t novatek "Get data from ipcinfo and set SENSOR as ${SENSOR}"
         # Do not persist a failed detection. The fw_printenv branch above wins
