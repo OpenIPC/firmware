@@ -394,8 +394,12 @@ insert_ko
 
 if [ -n "$detecting" ]; then
     # A sensor that answers only once the modules are up is still found, by
-    # the one plain probe detection always ran here.
-    [ -n "$SENSOR_DETECT" ] || SENSOR_DETECT=$(ipcinfo --short-sensor)
+    # the one plain probe detection always ran here -- on routed pads too.
+    if [ -z "$SENSOR_DETECT" ]; then
+        route_sensor_pads
+        SENSOR_DETECT=$(ipcinfo --short-sensor)
+        restore_sensor_pads
+    fi
     export SENSOR=${SENSOR_DETECT:=unknown}
     logger -s -p daemon.info -t novatek "Get data from ipcinfo and set SENSOR as ${SENSOR}"
     # Do not persist a failed detection. The fw_printenv branch above wins

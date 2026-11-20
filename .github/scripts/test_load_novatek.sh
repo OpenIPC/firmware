@@ -35,12 +35,13 @@ devmem() { :; }
 logger() { :; }
 # With a fake pinmux node, ipcinfo records the last pinmux command written
 # before it ran, and finds an IMX415 only once I2C_1 is on its pads -- or,
-# with LATE set, only once the vendor modules are in.
+# with LATE set, only once the vendor modules are in and I2C_1 is routed.
 ipcinfo() {
 	if [ -n "${PINMUX:-}" ]; then
 		echo "ipcinfo after: $(cat "$PINMUX/pinmux_set" 2>/dev/null)" >>"$CALLS"
 		if [ -n "${LATE:-}" ]; then
-			grep -q '^insmod hdal/kwrap.ko' "$CALLS" && echo imx415
+			grep -q '^insmod hdal/kwrap.ko' "$CALLS" &&
+				[ "$(cat "$PINMUX/pinmux_set" 2>/dev/null)" = "i2c 0x1" ] && echo imx415
 		else
 			[ "$(cat "$PINMUX/pinmux_set" 2>/dev/null)" = "i2c 0x1" ] && echo imx415
 		fi
@@ -202,6 +203,7 @@ pads 0x0 0x0 driver
 run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
 has "fw_setenv sensor imx415" "a sensor that answers only with the modules loaded: still found"
 has "insmod nvt_sen_imx415.ko sen_cfg_path=/etc/sensors/sen_imx415.cfg" "... and its driver loaded"
+after "sensor 0x0" "... and the pads go back as found after that probe too"
 LATE=
 
 pads 0x220 0x1 driver
