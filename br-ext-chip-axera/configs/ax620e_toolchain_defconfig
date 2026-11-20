@@ -18,7 +18,7 @@ BR2_cortex_a53=y
 
 # Toolchain -- aarch64 musl, 5.15 kernel headers (the real deployed
 # AX620E firmware's own kernel version, confirmed from its modules'
-# vermagic -- see br-ext-chip-axera/board/ax620e/README.md). Same block
+# vermagic). Same block
 # as ax620e_lite so the produced toolchain matches byte-for-byte what
 # the firmware expects.
 BR2_TOOLCHAIN_EXTERNAL=y
