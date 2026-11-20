@@ -35,9 +35,24 @@ struct isp_tuning {
 	int32_t ccm[9];
 	uint32_t ccm_weight;	/* 0..256 between the two nearest matrices */
 	unsigned int ccm_a, ccm_b;
+	int32_t black_fixed;
 };
 
-int isp_tuning_init(struct isp_tuning *t, int isp_fd);
+/*
+ * What a sensor module has been measured for. Blocks it has no
+ * measurements for are left at the ISP driver's defaults.
+ */
+#define TUNE_BLACK	(1U << 0)	/* black pedestal */
+#define TUNE_GAMMA	(1U << 1)	/* luma tone curve */
+#define TUNE_REST	(1U << 2)	/* noise, sharpening, saturation, colour, highlights */
+
+struct isp_profile {
+	uint32_t blocks;
+	/* 12-bit pedestal for every site and gain; 0: the scheduled table */
+	int32_t black_fixed;
+};
+
+int isp_tuning_init(struct isp_tuning *t, int isp_fd, const struct isp_profile *p);
 /*
  * total_gain is sensor analogue gain times ISP digital gain, Q6 (64 = 1x),
  * and again the analogue gain alone. exposure_us is the sensor integration
