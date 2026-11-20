@@ -343,7 +343,9 @@ probe_powered_sensor() {
 			break
 		fi
 	done
-	devmem $clk 32 $en
+	# Only the bit this probe set goes back: the rest of the register may have
+	# changed under a driver meanwhile.
+	[ $((en & 0x4)) = 0 ] && devmem $clk 32 $(($(devmem $clk 32) & ~0x4))
 	echo $found
 }
 
@@ -351,7 +353,6 @@ check_mem
 set_default_osmem
 
 cd /lib/modules/4.19.91/novatek
-insert_ko
 
 # Sensor config
 # SENSOR=${SENSOR:=imx307}
@@ -367,6 +368,7 @@ if [ "$SENSOR" = "unknown" ]; then
 	fw_setenv sensor
 fi
 
+detecting=
 if [ -n "$SENSOR" ]; then
     logger -s -p daemon.info -t novatek "Manualy set SENSOR as ${SENSOR}"
 else
@@ -375,22 +377,39 @@ else
         export SENSOR=${SENSOR_ENV}
         logger -s -p daemon.info -t novatek "Get data from environment and set SENSOR as ${SENSOR}"
     else
-        #insert_ko
+        # Detection runs before the vendor modules load. Run after them, the
+        # fallback's clock gate and reset pulse left an IMX415 on the XM
+        # IVG-N8S sending no frames until power was cut, through any number
+        # of warm reboots; the same sequence before them, the whole detection
+        # included, left it streaming on every cold boot tried (#1889).
+        detecting=1
         route_sensor_pads
         SENSOR_DETECT=$(ipcinfo --short-sensor)
         [ -n "$SENSOR_DETECT" ] || SENSOR_DETECT=$(probe_powered_sensor)
         restore_sensor_pads
-        export SENSOR=${SENSOR_DETECT:=unknown}
-        logger -s -p daemon.info -t novatek "Get data from ipcinfo and set SENSOR as ${SENSOR}"
-        # Do not persist a failed detection. The fw_printenv branch above wins
-        # whenever `sensor` exists, so writing "unknown" here latches the camera
-        # into "SENSOR is not detected, aborting..." for good -- detection never
-        # runs again and nothing says why. Seen on a GK7202V500 in #2428.
-        # load_ingenic has always cleared the variable instead of storing the
-        # miss; this is the same behaviour, reached by not writing at all.
-        if [ "$SENSOR" != "unknown" ]; then
-        	fw_setenv sensor $SENSOR && logger -s -p daemon.info -t novatek "Write detected ${SENSOR} to U-Boot ENV"
-        fi
+    fi
+fi
+
+insert_ko
+
+if [ -n "$detecting" ]; then
+    # A sensor that answers only once the modules are up is still found, by
+    # the one plain probe detection always ran here -- on routed pads too.
+    if [ -z "$SENSOR_DETECT" ]; then
+        route_sensor_pads
+        SENSOR_DETECT=$(ipcinfo --short-sensor)
+        restore_sensor_pads
+    fi
+    export SENSOR=${SENSOR_DETECT:=unknown}
+    logger -s -p daemon.info -t novatek "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+    # Do not persist a failed detection. The fw_printenv branch above wins
+    # whenever `sensor` exists, so writing "unknown" here latches the camera
+    # into "SENSOR is not detected, aborting..." for good -- detection never
+    # runs again and nothing says why. Seen on a GK7202V500 in #2428.
+    # load_ingenic has always cleared the variable instead of storing the
+    # miss; this is the same behaviour, reached by not writing at all.
+    if [ "$SENSOR" != "unknown" ]; then
+    	fw_setenv sensor $SENSOR && logger -s -p daemon.info -t novatek "Write detected ${SENSOR} to U-Boot ENV"
     fi
 fi
 
