@@ -55,8 +55,6 @@ ALL_BOARDS = [
     "ssc378de_lite", "ssc378qe_lite",
     # Sigmastar [I6E]
     "ssc30kd_lite", "ssc30kq_lite", "ssc338q_lite",
-    # Axera
-    "ax620e_lite", "ax620u_lite",
     # Ingenic
     "t10_lite", "t20_lite", "t21_lite", "t30_lite", "t23_lite", "t31_lite", "t40_lite",
     "t41_lite",
@@ -178,7 +176,8 @@ UNBUILT_BOARDS = {
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
     "hi3519dv500_toolchain": "toolchain config, produces no firmware image",
-    # Axera's toolchain configs publish toolchain.axera-ax620{e,u} (#2852).
+    # Axera's toolchain configs publish toolchain.axera-ax620{e,u} (#2852) for
+    # the ax620e_lite and ax620u_lite boards, which are in WEEKLY_BOARDS.
     "ax620e_toolchain": "toolchain config, produces no firmware image",
     "ax620u_toolchain": "toolchain config, produces no firmware image",
     # T41 publishes its toolchain ahead of its boards (#2877), whose build
@@ -278,13 +277,14 @@ SMOKE_BOARDS = [
     "ak3918ev330_lite",       # Anyka, the one 4.4 kernel's EV330 image
     "xm530_lite",             # Xiongmai
     "s3l_ultimate",           # Ambarella, and squashfs NOR with UBI NAND
-    "ax620u_lite",            # Axera, and an all-in-UBI NAND image
 ]
 
 # Boards the nightly builds once a week, on WEEKLY_DAY, rather than every night.
 # They are part of the tree like any other built board, so --self-test holds
 # them to the same contract, but they cost more than they are touched: the v83x
 # pair compile their own gcc and musl before the firmware, and change rarely.
+# The Axera pair are new and not yet run on a camera, so a weekly image is
+# enough until they are (#2670).
 #
 # A pull request builds them only for a change nothing else covers: their own
 # defconfigs, their board directory, or a package no nightly board builds. A
@@ -296,7 +296,7 @@ SMOKE_BOARDS = [
 # six days their last images stay where flashers and sysupgrade find them. A
 # nightly that skips because HEAD has not moved skips them too; they wait for the
 # next WEEKLY_DAY with a new commit.
-WEEKLY_BOARDS = ["v83x_lite", "v83x_ultimate"]
+WEEKLY_BOARDS = ["v83x_lite", "v83x_ultimate", "ax620e_lite", "ax620u_lite"]
 WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 
 # Board directories with no board in ALL_BOARDS. Their defconfigs exist but are
