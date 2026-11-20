@@ -17,19 +17,23 @@ tree, so the stock `ax_*.ko`/`Xm*.ko` in `axera-osdrv-ax620u` load unchanged
 
 | offset    | size      | mtd | content                                        |
 |-----------|-----------|-----|------------------------------------------------|
-| 0x000000  | 1 MiB     | 0   | spl: vendor SPL (DDR init), kept as shipped    |
-| 0x100000  | 1.5 MiB   | 1   | boot: OpenIPC U-Boot (u-boot `openipc-ax620u`) |
-| 0x280000  | 512 KiB   | 2   | env                                            |
-| 0x300000  | 125 MiB   | 3   | ubi: `rootfs` (UBIFS, /boot/fitImage), `rootfs_data` |
+| 0x000000  | 768 KiB   | 0   | boot: OpenIPC's first stage (DDR init) at 0 and 0x20000, U-Boot at 0x40000 (u-boot `openipc-axera`, `u-boot-ax620u-nand.bin`) |
+| 0x0c0000  | 256 KiB   | 1   | env                                            |
+| 0x100000  | 127 MiB   | 2   | ubi: `rootfs` (UBIFS, /boot/fitImage), `rootfs_data` |
 
-`mtdparts=spi4.0_nand:1024k(spl),1536k(boot),512k(env),-(ubi)`,
-`root=ubi0:rootfs rootfstype=ubifs ubi.mtd=3,2048`; U-Boot boots with
-`ubi part ubi; ubifsmount ubi0:rootfs; ubifsload ${baseaddr} /boot/fitImage;
-bootm`. The kernel FIT comes from `nand-fit.its` (rootfs_script.sh, NAND FIT
-step), the UBI image from `ubinize-nand.cfg`; the package carries
-fitImage, rootfs.ubifs and rootfs.ubi, and sysupgrade works as on the other
-NAND boards. `mknand.py` assembles a whole-flash image (vendor SPL from a
-stock dump + U-Boot + rootfs.ubi) for QEMU or a programmer.
+`mtdparts=spi4.0_nand:768k(boot),256k(env),-(ubi)`,
+`root=ubi0:rootfs rootfstype=ubifs ubi.mtd=2,2048`, as on the other OpenIPC
+NAND boards; U-Boot boots with `ubi part ubi; ubifsmount ubi0:rootfs;
+ubifsload ${baseaddr} /boot/fitImage; bootm`. The kernel FIT comes from
+`nand-fit.its` (rootfs_script.sh, NAND FIT step), the UBI image from
+`ubinize-nand.cfg`; the package carries fitImage, rootfs.ubifs and
+rootfs.ubi, and sysupgrade works as on the other NAND boards. `mknand.py`
+assembles a whole-flash image (`u-boot-ax620u-nand.bin` + rootfs.ubi) for
+QEMU or a programmer.
+
+The cameras' own layout (`1024k(spl),1536k(boot),512k(env),-(ubi)`: the
+vendor first stage's 1 MiB, U-Boot at 0x100000) is not used; moving a camera
+to OpenIPC means writing the whole flash.
 
 The stock Xiongmai U-Boot is not used: it has ubi/ubifs commands, but it
 password-protects its prompt, and OpenIPC ships its own U-Boot per family.
@@ -37,7 +41,7 @@ password-protects its prompt, and OpenIPC ships its own U-Boot per family.
 ## Tested
 
 In QEMU only (OpenIPC/qemu-bench `-M ax620u -smp 4`), from `mknand.py`'s
-whole-flash image (vendor SPL, OpenIPC U-Boot, this build's `rootfs.ubi`):
+whole-flash image (`u-boot-ax620u-nand.bin`, this build's `rootfs.ubi`):
 
 - U-Boot boots `/boot/fitImage` from UBIFS; kernel `4.19.125` on 4 CPUs,
   `root=ubi0:rootfs`, `ubi0:rootfs_data` (UBIFS) on `/overlay`, overlayfs
@@ -45,7 +49,11 @@ whole-flash image (vendor SPL, OpenIPC U-Boot, this build's `rootfs.ubi`):
 - first login sets the root password; `ipcinfo -v/-c/-f` print
   `axera`/`ax620u`/`ax620u`; `S70vendor` runs `load_axera`: all 28
   modules in `modules.dep` load, no failure logged, no oops;
-- a file written to `/etc` and the password survive a reboot.
+- a file written to `/etc` and the password survive a reboot (checked in
+  the cameras' layout, before the move to OpenIPC's);
+- in OpenIPC's layout: `/proc/mtd` is `boot`, `env`, `ubi` (768 KiB,
+  256 KiB, the rest), `ubi.mtd=2`, the overlay on `/`, and `fw_printenv`
+  reads U-Boot's environment.
 
 Real hardware has not run this image yet.
 
