@@ -2,7 +2,7 @@
 
 case "$1" in
 	start)
-		if [ $(fw_printenv -n wlandev) ]; then
+		if [ -n "$(wlan_settings dev)" ]; then
 			qrscan.sh >/dev/null 2>&1 &
 		fi
 	;;

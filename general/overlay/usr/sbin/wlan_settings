@@ -1,0 +1,69 @@
+#!/bin/sh
+#
+# Where this camera keeps its Wi-Fi settings, and access to them.
+#
+#   wlan_settings dev          print the wlandev name (empty: no Wi-Fi)
+#   wlan_settings configured   exit 0 when a network has been saved
+#   wlan_settings save         save a network: SSID on line 1, key on line 2
+#                              of stdin (empty key: open network)
+#   wlan_settings conf         print the wpa_supplicant configuration to join
+#                              the saved network with
+#
+# By default the settings are wlandev, wlanssid and wlanpass in the U-Boot
+# environment. A board whose bootloader environment must not be written --
+# one that keeps a vendor U-Boot and shares its environment -- ships
+# /etc/default/wlan with WLAN_STORE=overlay and its WLANDEV; the network is
+# then kept in /etc/wlan.conf on the overlay, readable by root only, and a
+# factory reset clears it along with the other settings. (Not
+# /etc/wpa_supplicant.conf: the wpa_supplicant package installs a stub there.)
+#
+# Keys travel on stdin and in the environment, never on a command line, so
+# they do not show in ps.
+
+WLAN_STORE=env
+WLANDEV=
+[ -r /etc/default/wlan ] && . /etc/default/wlan
+CONF=/etc/wlan.conf
+
+overlay() { [ "$WLAN_STORE" = overlay ]; }
+
+case "$1" in
+	dev)
+		dev=$(fw_printenv -n wlandev 2>/dev/null)
+		echo "${dev:-$WLANDEV}"
+		;;
+
+	configured)
+		if overlay; then
+			[ -s "$CONF" ]
+		else
+			[ -n "$(fw_printenv -n wlanssid 2>/dev/null)" ]
+		fi
+		;;
+
+	save)
+		read -r ssid
+		IFS= read -r key || :
+		[ -n "$ssid" ] || { echo "wlan_settings: no SSID" >&2; exit 1; }
+		if overlay; then
+			umask 077
+			WLAN_KEY=$key wlan_conf "$ssid" > "$CONF.new" && mv "$CONF.new" "$CONF" && sync
+		else
+			fw_setenv wlanssid "$ssid" && fw_setenv wlanpass "$key"
+		fi
+		;;
+
+	conf)
+		if overlay; then
+			cat "$CONF"
+		else
+			WLAN_KEY=$(fw_printenv -n wlanpass 2>/dev/null) \
+				wlan_conf "$(fw_printenv -n wlanssid 2>/dev/null)"
+		fi
+		;;
+
+	*)
+		echo "usage: wlan_settings {dev|configured|save|conf}" >&2
+		exit 1
+		;;
+esac
