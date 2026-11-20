@@ -5,7 +5,11 @@
 ################################################################################
 
 LINUX_PATCHER_DEPENDENCIES = linux
-export UIMAGE_NAME = Linux-$(LINUX_VERSION_PROBED)-$(OPENIPC_SOC_MODEL)
+# The release without a vendor's "__..." local version: the Ingenic 3.10
+# kernels' (3.10.14__isvp_swan_1.0__) ran the name past the uImage header's
+# 32 bytes, cut to "...-t", where sysupgrade reads the SoC. The probe is a
+# command the shell runs when mkimage does, so the cut goes into it.
+export UIMAGE_NAME = Linux-`$(subst `,,$(LINUX_VERSION_PROBED)) | sed 's/__.*//'`-$(OPENIPC_SOC_MODEL)
 
 # Exclude buildroot yylloc patches
 LINUX_POST_PATCH_HOOKS = LINUX_APPLY_LOCAL_PATCHES

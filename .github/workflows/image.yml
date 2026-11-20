@@ -190,6 +190,7 @@ jobs:
                 hi3519dv500) boot_kib=512 env_kib=256 read_kib=6144 ;;
                 ssc325|ssc333|ssc335|ssc335de|ssc337|ssc337de) boot_kib=256 env_kib=64 read_kib=2048 ;;
                 ssc377|ssc377d|ssc377de|ssc377qe|ssc378de|ssc378qe) boot_kib=256 env_kib=64 read_kib=2048 ;;
+                t10|t20|t21|t23|t30|t31|t40|t41) boot_kib=256 env_kib=64 read_kib=2048 ;;
                 *) echo "::error::create_split: no NOR boot area known for $1"; return 1 ;;
               esac
             }
@@ -295,9 +296,19 @@ jobs:
               create $soc $soc ultimate
             done
 
+            # An Ingenic build whose uImage or rootfs outgrew the fixed slots
+            # ships the split package alone, as the SigmaStar ones above.
             for soc in $INGENIC; do
-              create $soc ${soc:0:3} lite
-              create $soc ${soc:0:3} ultimate
+              if [ -z "$(firmware_url ${soc:0:3} lite)" ] && [ -n "$(firmware_url ${soc:0:3} lite nor_split)" ]; then
+                create_split u-boot-$soc-nor.bin ${soc:0:3} lite $soc 8192 || split_failed=1
+              else
+                create $soc ${soc:0:3} lite
+              fi
+              if [ -z "$(firmware_url ${soc:0:3} ultimate)" ] && [ -n "$(firmware_url ${soc:0:3} ultimate nor_split)" ]; then
+                create_split u-boot-$soc-nor.bin ${soc:0:3} ultimate $soc 16384 || split_failed=1
+              else
+                create $soc ${soc:0:3} ultimate
+              fi
             done
 
             # The split NOR layout. hi3516cv6xx: one firmware.bin for every
