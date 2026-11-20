@@ -647,8 +647,12 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False,
         return _decision(list(tree.built), True, reason=f"{FULL_LABEL} label set")
 
     # On a pull request the full matrix is the nightly one: a change that
-    # widens leaves the weekly boards to their weekly run.
+    # widens leaves the weekly boards to their weekly run. A weekly board this
+    # pull request adds to the matrix is the exception: nothing has built it
+    # yet, so it is built here rather than first on a Sunday.
     full = list(tree.nightly)
+    if base_boards is not None and f".github/scripts/{SELECTOR}" in changed:
+        full += [b for b in tree.weekly if b not in base_boards]
 
     if draft:
         return _decision([], False, reason="draft pull request")
@@ -1179,6 +1183,10 @@ def self_test():
     if len(classify(tree, selector + ["general/overlay/etc/passwd"],
                     base_boards=set(tree.built))["rows"]) != full:
         problems.append("selector edit plus an overlay file must still widen")
+    added = set(tree.built) - {WEEKLY_BOARDS[0]}
+    if set(classify(tree, selector + ["general/overlay/etc/passwd"],
+                    base_boards=added)["rows"]) != set(tree.nightly) | {WEEKLY_BOARDS[0]}:
+        problems.append("a widening PR that adds a weekly board must build it too")
     # 5c. A change to the package index made only of source lines builds the
     #     boards enabling those packages plus the smoke set; anything else in
     #     it, or a diff we could not read, widens.
