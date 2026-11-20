@@ -13,10 +13,10 @@ INGENIC_OSDRV_T41_LICENSE_FILES = LICENSE
 # dropped and stripped -- the treatment that reproduces the T40 libs byte
 # for byte from their SDK. files/sensor/params: that SDK's
 # resource/sensor_settings_t41, every sensor it tunes (sc301IoT renamed to
-# sc301iot, the name its driver and yaml use). GC5603 is from Ingenic T41
-# Zeratul (2023-11), tools/make_tag/sensor_calibration_bin/gc5603_t41.bin;
-# SHA256 c7075ff33ba3ab562919134a934c0d18bacfd583506a3f28edcec31d3a8d7f58.
-# Provenance and SDK compatibility: OpenIPC/majestic#376 (comment 6957162370).
+# sc301iot, the name its driver and yaml use). No GC5603: Ingenic's
+# Zeratul SDK tunes it only for its fast-boot driver, and with the
+# openingenic driver that tuning stripes the picture on a T41NQ
+# (OpenIPC/majestic#376, comment 6993134070).
 ifeq ($(OPENIPC_SNS_MODEL),)
 INGENIC_OSDRV_T41_SENSORS = $(notdir $(basename $(wildcard $(INGENIC_OSDRV_T41_PKGDIR)/files/sensor/*.yaml)))
 else
