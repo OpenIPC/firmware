@@ -176,9 +176,8 @@ UNBUILT_BOARDS = {
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
     "hi3519dv500_toolchain": "toolchain config, produces no firmware image",
-    # Axera has no image yet. These two configs publish its toolchains so
-    # majestic can be ported first. The boards follow once a camera has run
-    # them (#2670).
+    # Axera's toolchain configs publish toolchain.axera-ax620{e,u} (#2852) for
+    # the ax620e_lite and ax620u_lite boards, which are in WEEKLY_BOARDS.
     "ax620e_toolchain": "toolchain config, produces no firmware image",
     "ax620u_toolchain": "toolchain config, produces no firmware image",
     # T41 publishes its toolchain ahead of its boards (#2877), whose build
@@ -284,6 +283,8 @@ SMOKE_BOARDS = [
 # They are part of the tree like any other built board, so --self-test holds
 # them to the same contract, but they cost more than they are touched: the v83x
 # pair compile their own gcc and musl before the firmware, and change rarely.
+# The Axera pair are new and not yet run on a camera, so a weekly image is
+# enough until they are (#2670).
 #
 # A pull request builds them only for a change nothing else covers: their own
 # defconfigs, their board directory, or a package no nightly board builds. A
@@ -295,7 +296,7 @@ SMOKE_BOARDS = [
 # six days their last images stay where flashers and sysupgrade find them. A
 # nightly that skips because HEAD has not moved skips them too; they wait for the
 # next WEEKLY_DAY with a new commit.
-WEEKLY_BOARDS = ["v83x_lite", "v83x_ultimate"]
+WEEKLY_BOARDS = ["v83x_lite", "v83x_ultimate", "ax620e_lite", "ax620u_lite"]
 WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 
 # Board directories with no board in ALL_BOARDS. Their defconfigs exist but are
@@ -646,8 +647,12 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False,
         return _decision(list(tree.built), True, reason=f"{FULL_LABEL} label set")
 
     # On a pull request the full matrix is the nightly one: a change that
-    # widens leaves the weekly boards to their weekly run.
+    # widens leaves the weekly boards to their weekly run. A weekly board this
+    # pull request adds to the matrix is the exception: nothing has built it
+    # yet, so it is built here rather than first on a Sunday.
     full = list(tree.nightly)
+    if base_boards is not None and f".github/scripts/{SELECTOR}" in changed:
+        full += [b for b in tree.weekly if b not in base_boards]
 
     if draft:
         return _decision([], False, reason="draft pull request")
@@ -1178,6 +1183,10 @@ def self_test():
     if len(classify(tree, selector + ["general/overlay/etc/passwd"],
                     base_boards=set(tree.built))["rows"]) != full:
         problems.append("selector edit plus an overlay file must still widen")
+    added = set(tree.built) - {WEEKLY_BOARDS[0]}
+    if set(classify(tree, selector + ["general/overlay/etc/passwd"],
+                    base_boards=added)["rows"]) != set(tree.nightly) | {WEEKLY_BOARDS[0]}:
+        problems.append("a widening PR that adds a weekly board must build it too")
     # 5c. A change to the package index made only of source lines builds the
     #     boards enabling those packages plus the smoke set; anything else in
     #     it, or a diff we could not read, widens.

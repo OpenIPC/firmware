@@ -1,0 +1,81 @@
+#!/bin/sh
+#
+# Axera AX620E module load. Order and parameters follow the stock Xiongmai
+# IVG-A6 firmware (/usr/lib/modules/Load_AX620E + /usr/etc/loadpublic), which
+# matches each module's own depends=. modprobe, not insmod: the package
+# installs them under /lib/modules/$(uname -r)/axera, where Buildroot's depmod
+# indexes them, so a dependency is resolved from modules.dep rather than from
+# this list. The list stays ordered anyway: ax_cmm has to be loaded first with
+# its pool, or modprobe would pull it in as a dependency without one.
+#
+# ax_cmm owns the DRAM above the kernel's mem= (osmem): cmmpool is
+# <name>,0,<phys start>,<size>, start = 0x40000000 + osmem.
+
+KO_DIR=/lib/modules/$(uname -r)/axera
+failed=0
+
+mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d M)
+mem_total=${mem_total:-256}
+os_mem=$(sed -n 's/.*mem=\([0-9]*\)M.*/\1/p' /proc/cmdline)
+
+load() {
+	mod=$1
+	shift
+	grep -q "^${mod} " /proc/modules && return 0
+	modprobe "$mod" "$@" && return 0
+	logger -s -p daemon.err -t axera "modprobe $mod failed"
+	failed=1
+	return 1
+}
+
+insert_ko() {
+	[ -d "$KO_DIR" ] || {
+		logger -s -p daemon.err -t axera "no $KO_DIR, see axera-osdrv-ax620e's README"
+		return 1
+	}
+	[ -n "$os_mem" ] || {
+		logger -s -p daemon.err -t axera "no mem= on the kernel command line, ax_cmm has no pool"
+		return 1
+	}
+	cmm_start=$(printf '0x%x' $((0x40000000 + os_mem * 1024 * 1024)))
+	cmm_size=$((mem_total - os_mem))M
+
+	load XmCommon
+	load XmDemux
+	load XmGpio
+
+	load ax_sys
+	load ax_cmm cmmpool=anonymous,0,$cmm_start,$cmm_size || return 1
+	load ax_pool
+	load ax_base
+	load ax_npu
+	load ax_vo
+	load ax_ivps
+	load ax_vpp
+	load ax_gdc
+	load ax_tdp
+	load ax_venc
+	load ax_jenc
+	load ax_mipi_rx
+	load ax_proton
+	load ax_audio
+	load ax_vdec
+
+	load XmGpioI2c
+	load XmIrCut
+	return $failed
+}
+
+remove_ko() {
+	for m in XmIrCut XmGpioI2c ax_vdec ax_audio ax_proton ax_mipi_rx ax_jenc \
+		ax_venc ax_tdp ax_gdc ax_vpp ax_ivps ax_vo ax_npu ax_base ax_pool \
+		ax_cmm ax_sys XmGpio XmDemux XmCommon; do
+		rmmod $m 2>/dev/null
+	done
+}
+
+case "$1" in
+	-r) remove_ko ;;
+	-a) remove_ko; insert_ko ;;
+	*) insert_ko ;;
+esac
