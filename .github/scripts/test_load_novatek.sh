@@ -34,11 +34,16 @@ insmod() { echo "insmod $*" >>"$CALLS"; }
 devmem() { :; }
 logger() { :; }
 # With a fake pinmux node, ipcinfo records the last pinmux command written
-# before it ran, and finds an IMX415 only once I2C_1 is on its pads.
+# before it ran, and finds an IMX415 only once I2C_1 is on its pads -- or,
+# with LATE set, only once the vendor modules are in.
 ipcinfo() {
 	if [ -n "${PINMUX:-}" ]; then
 		echo "ipcinfo after: $(cat "$PINMUX/pinmux_set" 2>/dev/null)" >>"$CALLS"
-		[ "$(cat "$PINMUX/pinmux_set" 2>/dev/null)" = "i2c 0x1" ] && echo imx415
+		if [ -n "${LATE:-}" ]; then
+			grep -q '^insmod hdal/kwrap.ko' "$CALLS" && echo imx415
+		else
+			[ "$(cat "$PINMUX/pinmux_set" 2>/dev/null)" = "i2c 0x1" ] && echo imx415
+		fi
 	else
 		echo sc501ai
 	fi
@@ -81,7 +86,7 @@ run() {
 	rc=0
 	(cd "$work" && TEST_SENSOR="${TEST_SENSOR:-}" SCRIPT="$script" CALLS="$work/calls" ENV_FILE="$work/env" \
 		LOAD_NOVATEK_DT="$work/dt" LOAD_NOVATEK_CMDLINE="$work/cmdline" \
-		PINMUX="${PINMUX:-}" LOAD_NOVATEK_PINMUX="${PINMUX:-}" LOAD_NOVATEK_SENSORS="$work/sensors" \
+		PINMUX="${PINMUX:-}" LATE="${LATE:-}" LOAD_NOVATEK_PINMUX="${PINMUX:-}" LOAD_NOVATEK_SENSORS="$work/sensors" \
 		busybox sh "$work/wrapper" >"$work/out" 2>&1) || rc=$?
 }
 
@@ -181,6 +186,23 @@ has "ipcinfo after: i2c 0x1" "pads off (the N8S): the first ipcinfo runs with I2
 has "fw_setenv sensor imx415" "... finds the sensor and stores it"
 after "sensor 0x0" "... and the pads go back as found"
 exited 0 "... and the script runs to its end"
+# Before the vendor modules: after them, the fallback left an IMX415 stuck
+# with no frames until power was cut (#1889).
+first_probe=$(grep -n '^ipcinfo after' "$work/calls" | head -1 | cut -d: -f1)
+first_insmod=$(grep -n '^insmod ' "$work/calls" | head -1 | cut -d: -f1)
+if [ -n "$first_probe" ] && [ -n "$first_insmod" ] && [ "$first_probe" -lt "$first_insmod" ]; then
+	ok "... and detection runs before the vendor modules load"
+else
+	bad "... and detection runs before the vendor modules load -- probe at line ${first_probe:-none}, first insmod at ${first_insmod:-none}"
+fi
+has "insmod nvt_sen_imx415.ko sen_cfg_path=/etc/sensors/sen_imx415.cfg" "... and loads the driver it found"
+
+LATE=1
+pads 0x0 0x0 driver
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+has "fw_setenv sensor imx415" "a sensor that answers only with the modules loaded: still found"
+has "insmod nvt_sen_imx415.ko sen_cfg_path=/etc/sensors/sen_imx415.cfg" "... and its driver loaded"
+LATE=
 
 pads 0x220 0x1 driver
 run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
