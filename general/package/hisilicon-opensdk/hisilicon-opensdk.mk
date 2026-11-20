@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 5a18160707292296866e5b047fb2d03f9f2ee9a5
+HISILICON_OPENSDK_VERSION = 560559da3e58814d841f0624cd421990bd0b69bb
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -316,6 +316,14 @@ HISILICON_OPENSDK_SENSORS_gk7206v100 = \
 	smartsens_sc465sl/libsns_sc465sl \
 	smartsens_sc500ai/libsns_sc500ai
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
+
+# gk7206v100's AI noise reduction networks, which the ISP runs on the NPU:
+# the SDK's own, kept beside each sensor driver as ainr_<W>x<H>.xmm and
+# installed as /usr/share/aiisp/<sensor>/ainr_<W>x<H>.xmm (about 190 KB each
+# in the squashfs). Only the sensors measured on a camera; add one here once
+# it has been.
+HISILICON_OPENSDK_AINR_gk7206v100 = \
+	smartsens_sc465sl:sc465sl:ainr_2560x1440
 
 # SC2315E on hi3516ev200 builds from openhisilicon's smart_sc2315e, the source
 # of the libsns_sc2315e.so hisilicon-osdrv-hi3516ev200 used to carry as a
@@ -695,6 +703,10 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
 		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/gk7206v100/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
+	$(foreach a,$(HISILICON_OPENSDK_AINR_gk7206v100), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/gk7206v100/$(word 1,$(subst :, ,$(a)))/$(word 3,$(subst :, ,$(a))).xmm \
+			$(TARGET_DIR)/usr/share/aiisp/$(word 2,$(subst :, ,$(a)))/$(word 3,$(subst :, ,$(a))).xmm ; \
 	)
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	for ko in $(@D)/kernel/open_*.ko; do \

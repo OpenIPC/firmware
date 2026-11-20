@@ -189,6 +189,7 @@ jobs:
                 hi3516cv6xx) boot_kib=256 env_kib=64 read_kib=2048 ;;
                 hi3519dv500) boot_kib=512 env_kib=256 read_kib=6144 ;;
                 ssc325|ssc333|ssc335|ssc335de|ssc337|ssc337de) boot_kib=256 env_kib=64 read_kib=2048 ;;
+                ssc377|ssc377d|ssc377de|ssc377qe|ssc378de|ssc378qe) boot_kib=256 env_kib=64 read_kib=2048 ;;
                 *) echo "::error::create_split: no NOR boot area known for $1"; return 1 ;;
               esac
             }
