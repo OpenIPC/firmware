@@ -199,27 +199,9 @@ ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
 # kernel splits at boot, whatever bootloader loaded it, shipped as the -split
 # package. Only its whole is bounded: the chip, less what comes before the
 # firmware partition (BR2_OPENIPC_NOR_FIRMWARE_OFFSET) and the smallest overlay
-# worth keeping (256K).
-#
-# A board whose older cameras upgrade from fixed slots also ships those, the
-# plain package of uImage and rootfs. The uImage stays a 64 KiB block short of
-# its 2 MiB slot: under 1984K, which CHECK_SIZE, counting whole KB, enforces as
-# 1983K. The kernel, U-Boot and sysupgrade tell the layouts apart by where the
-# squashfs is: at the block right after the uImage is the split layout, at the
-# slot boundary fixed slots. A fixed-slot uImage ending in the slot's last block
-# would be both.
-#
-# The fixed-slot package is the extra: a build whose uImage or rootfs has
-# outgrown its slot ships the split package alone rather than failing, and
-# says so. Cameras on fixed slots then upgrade to the split layout, which
-# sysupgrade and defib install from the -split package.
-ifeq ($(BR2_OPENIPC_NOR_FIXED_PACKAGE),y)
-ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
-	@$(if $(and $(call FIXED_SLOTS_FIT,5120),$(UBOOT_ROOTMTD_FITS)),$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,5120,nor),$(call FIXED_SLOTS_SKIP,5120))
-else
-	@$(if $(call FIXED_SLOTS_FIT,8192),$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,8192,nor),$(call FIXED_SLOTS_SKIP,8192))
-endif
-endif
+# worth keeping (256K). The split package is the only NOR package such a
+# board ships: cameras still on fixed slots move to it through sysupgrade
+# and defib, which install it over either layout.
 	@$(call CHECK_SIZE,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024 - $$(( $(or $(BR2_OPENIPC_NOR_FIRMWARE_OFFSET),0x50000) / 1024 )) - 256))
 	@$(call CHECK_KERNEL_READ)
 	@$(call REPACK_NOR_SPLIT)
@@ -382,9 +364,6 @@ endef
 # 5120K slot holds 4K less. An image over the slot is CHECK_SIZE's to report.
 UBOOT_ROOTMTD_VENDOR = $(filter $(BR2_OPENIPC_SOC_VENDOR),"sigmastar" "xiongmai")
 UBOOT_ROOTMTD_LIMIT = $(shell echo $$((5120 * 1024 - 4096)))
-UBOOT_ROOTMTD_USED = $(shell od -An -tu8 -j40 -N8 $(TARGET)/images/rootfs.squashfs 2>/dev/null | tr -d ' ')
-UBOOT_ROOTMTD_FITS = $(if $(UBOOT_ROOTMTD_VENDOR),$(shell [ -n "$(UBOOT_ROOTMTD_USED)" ] && \
-	[ $(UBOOT_ROOTMTD_USED) -lt $(UBOOT_ROOTMTD_LIMIT) ] && echo y),y)
 
 define CHECK_UBOOT_ROOTMTD
 	used=$$(od -An -tu8 -j40 -N8 $(TARGET)/images/rootfs.squashfs | tr -d ' '); \
@@ -422,24 +401,6 @@ define REPACK_FIRMWARE
 	# `md5sum -c *.md5sum` then cannot see at all.
 	cd $(TARGET)/images && tar -czf $(ARCHIVE) $(KERNEL_MD5) $(ROOTFS_MD5) $(KERNEL) $(ROOTFS)
 	rm -f $(TARGET)/images/*.md5sum
-endef
-
-# Whether uImage and rootfs.squashfs fit the fixed slots beside a split image:
-# the uImage under 1984K (see the repack target), the rootfs within $(1) KB,
-# both counted in whole KB as CHECK_SIZE counts them. "y" or empty.
-FIXED_SLOTS_FIT = $(shell k=$$(( $$(stat -c %s $(TARGET)/images/uImage 2>/dev/null || echo 0) / 1024 )); \
-	r=$$(( $$(stat -c %s $(TARGET)/images/rootfs.squashfs 2>/dev/null || echo 0) / 1024 )); \
-	[ $$k -gt 0 ] && [ $$k -le 1983 ] && [ $$r -gt 0 ] && [ $$r -le $(1) ] && echo y)
-
-define FIXED_SLOTS_SKIP
-	k=$$(( $$(stat -c %s $(TARGET)/images/uImage) / 1024 )); \
-	r=$$(( $$(stat -c %s $(TARGET)/images/rootfs.squashfs) / 1024 )); \
-	over=; \
-	[ $$k -le 1983 ] || over="uImage $${k}KB/1983KB"; \
-	[ $$r -le $(1) ] || over="$${over:+$$over, }rootfs.squashfs $${r}KB/$(1)KB"; \
-	[ -n "$$over" ] || over="rootfs.squashfs $(UBOOT_ROOTMTD_USED)B (U-Boot's 5120k slot takes under $(UBOOT_ROOTMTD_LIMIT)B)"; \
-	echo "::warning::$(BR2_OPENIPC_SOC_MODEL) $(BR2_OPENIPC_VARIANT): $$over outgrew the fixed slot;" \
-		"shipping the split package only"
 endef
 
 # The split NOR package: firmware.bin alone, under its own name so a sysupgrade
