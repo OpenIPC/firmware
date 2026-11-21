@@ -67,6 +67,20 @@ the stock driver writes. Use a delay of 2 ms or more: at 1 ms a pan loses steps
 (24-32 px off after 100 steps out and back), at 2 ms three such moves land
 where they started.
 
+### Anyka AK3918EV300L, V380 pan/tilt
+
+```
+insmod gpiostep.ko pan_gpios=25,24,56,55 tilt_gpios=68,58,26,27
+```
+
+From the stock device tree's `motor0` and `motor1` nodes (`pwm-pins`): two
+28BYJ-48 steppers, pan 2500 and tilt 600 half-steps end to end. Their coil
+table (`pwm-tbl-cw`: 9, 1, 3, 2, 6, 4, C, 8) is this module's half-step
+sequence, so the pins go in the device tree's order. The EV300L pinctrl muxes
+each pad to GPIO when `gpio_direction_output()` claims it, pad 68 included,
+whose GPIO is function 2 rather than 0. Not yet run on the camera: the
+direction of a positive step and the delay it needs are unchecked.
+
 ### Coils on a 74HC595 shift register
 
 Some heads do not wire the eight coil lines to SoC pins. They clock the coil
