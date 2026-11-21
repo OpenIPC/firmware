@@ -65,8 +65,19 @@ ANYKA_OSDRV_AK3918AV100_LICENSE = PROPRIETARY
 # ak3918ev300l machine: the EV300L set loads and its ISP, encoder, bridge
 # and audio drivers probe (/dev/video-0-*, /dev/venc-chn*, /dev/pcmC0D0*);
 # the AV100 set's ak_i2c, ak_pcm, ak_ion and ak_venc_adapter do too, and its
-# ak_isp is for the AV100. None has run on a camera under OpenIPC yet, which
-# keeps these boards out of ALL_BOARDS.
+# ak_isp is for the AV100. None of them has run on a camera under OpenIPC
+# yet: they have booted only in qemu-bench, and the image is published so
+# that owners of these cameras can be the first to run it.
+#
+# files/script/S09wdt: the AK3918AV100 vendor U-Boot arms the hardware
+# watchdog as part of every boot, and nothing on these lite images feeds it
+# -- the lite variant ships no majestic, and the Anyka driver runs no
+# kernel-side daemon. Measured on an oQo ICF001 (AK3918AV100N, vendor
+# U-Boot 2019.10.0-V4.0.21): without a feeder the camera resets 55-60 s into
+# every boot; with busybox's watchdog applet petting the device every
+# second, no reset across many consecutive boots. This is a workaround, not
+# a fix: if the vendor U-Boot stops arming the watchdog, or the driver grows
+# a kernel-side keepalive, delete the script. See the script.
 ANYKA_OSDRV_AK3918AV100_KVER = 4.4.282
 
 ifeq ($(BR2_OPENIPC_SOC_MODEL),"ak3918ev300l")
@@ -98,6 +109,12 @@ define ANYKA_OSDRV_AK3918AV100_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/script/load_anyka
+endef
+
+# The watchdog the vendor U-Boot arms: see files/script/S09wdt.
+define ANYKA_OSDRV_AK3918AV100_INSTALL_INIT_SYSV
+	$(INSTALL) -D -m 755 $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/script/S09wdt \
+		$(TARGET_DIR)/etc/init.d/S09wdt
 endef
 
 $(eval $(generic-package))
