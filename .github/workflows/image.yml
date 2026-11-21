@@ -284,18 +284,20 @@ jobs:
               echo -e "Created: $release (firmware.bin ${fw_kib} KiB at ${off} KiB, rootfs_data from $(( off + end_kib )) KiB)\n"
             }
 
-            # A SigmaStar lite build on the split layout ships the split package
-            # alone; its full image is then the split one. The infinity6e parts
-            # (ssc30kd, ssc30kq, ssc338q) are 16 MiB, the others 8 MiB.
+            # A SigmaStar build on the split layout ships the split package
+            # alone; its full image is then the split one. Ultimate and the
+            # infinity6e parts (ssc30kd, ssc30kq, ssc338q) are 16 MiB, the
+            # other lite builds 8 MiB.
             split_failed=
             for soc in $SIGMASTAR $ALLWINNER; do
-              if [ -z "$(firmware_url $soc lite)" ] && [ -n "$(firmware_url $soc lite nor_split)" ]; then
-                case $soc in ssc30kd|ssc30kq|ssc338q) nor=16384 ;; *) nor=8192 ;; esac
-                create_split u-boot-$soc-nor.bin $soc lite $soc $nor || split_failed=1
-              else
-                create $soc $soc lite
-              fi
-              create $soc $soc ultimate
+              for variant in lite ultimate; do
+                if [ -z "$(firmware_url $soc $variant)" ] && [ -n "$(firmware_url $soc $variant nor_split)" ]; then
+                  case $soc/$variant in ssc30kd/*|ssc30kq/*|ssc338q/*|*/ultimate) nor=16384 ;; *) nor=8192 ;; esac
+                  create_split u-boot-$soc-nor.bin $soc $variant $soc $nor || split_failed=1
+                else
+                  create $soc $soc $variant
+                fi
+              done
             done
 
             # An Ingenic build whose uImage or rootfs outgrew the fixed slots
