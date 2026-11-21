@@ -17,9 +17,25 @@ else ifeq ($(BR2_PACKAGE_SIGMASTAR_OSDRV_MSC313E),y)
 	# default stack; musl's 128 KiB one overflows in the camera pipeline.
 	DIVINUS_DEPENDENCIES += glibc-compat
 	DIVINUS_OPTIONS = "-rdynamic -s -Os -DGLIBC_COMPAT -Wl,-z,stack-size=1048576 -Wl,--no-as-needed -lglibc-compat"
-else ifeq ($(BR2_PACKAGE_FULLHAN_OSDRV_FH8626),y)
+else ifneq ($(filter y,$(BR2_PACKAGE_FULLHAN_OSDRV_FH8626) $(BR2_PACKAGE_INGENIC_OSDRV_T23_V4L2)),)
 	DIVINUS_DEPENDENCIES += alsa-lib
+ifeq ($(BR2_PACKAGE_INGENIC_OSDRV_T23_V4L2),y)
+	DIVINUS_OPTIONS = "-rdynamic -s -Os -DDIVINUS_T23 -lasound"
+# Upstream divinus.yaml targets 4K sensors with continuous MJPEG and OSD;
+# T23 has 1080p default capture, 24 MiB CMA, and no OSD HAL region backend yet.
+define DIVINUS_T23_CONFIG
+	$(SED) '/^osd:/,/^[^ ]/s/enable: true/enable: false/' $(TARGET_DIR)/etc/divinus.yaml
+	$(SED) '/^mp4:/,/^[^ ]/{s/width: 3840/width: 1920/;s/height: 2160/height: 1080/}' $(TARGET_DIR)/etc/divinus.yaml
+	$(SED) '/^mjpeg:/,/^[^ ]/{s/enable: true/enable: false/;s/width: 3840/width: 640/;s/height: 2160/height: 360/}' $(TARGET_DIR)/etc/divinus.yaml
+	sed -n '/^osd:/,/^[^ ]/p' $(TARGET_DIR)/etc/divinus.yaml | grep -q 'enable: false'
+	sed -n '/^mp4:/,/^[^ ]/p' $(TARGET_DIR)/etc/divinus.yaml | grep -q 'width: 1920'
+	sed -n '/^mp4:/,/^[^ ]/p' $(TARGET_DIR)/etc/divinus.yaml | grep -q 'height: 1080'
+	sed -n '/^mjpeg:/,/^[^ ]/p' $(TARGET_DIR)/etc/divinus.yaml | grep -q 'enable: false'
+endef
+DIVINUS_POST_INSTALL_TARGET_HOOKS += DIVINUS_T23_CONFIG
+else
 	DIVINUS_OPTIONS = "-rdynamic -s -Os -DDIVINUS_V4L2 -lasound"
+endif
 define DIVINUS_INSTALL_INIT_SYSV
 	$(INSTALL) -D -m 755 $(DIVINUS_PKGDIR)/files/S95divinus \
 		$(TARGET_DIR)/etc/init.d/S95divinus

@@ -1,0 +1,131 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2026 Difan Zhang
+# Start V4L2/Media-Controller AE, AWB, colour and day/night tuning daemon.
+
+DAEMON="t23-ipa"
+PIDFILE="/var/run/$DAEMON.pid"
+BIN="/usr/sbin/$DAEMON"
+INPUT=0
+TUNING_FILE=
+AE_MODE=auto
+AWB_MODE=auto
+DAYNIGHT_MODE=auto
+FLICKER_HZ=0
+MIN_FPS=15
+ILLUMINATOR="ir:illumination"
+EXTRA_ARGS=
+[ ! -r /etc/default/t23-ipa ] || . /etc/default/t23-ipa
+
+read_pid()
+{
+	pid=
+	[ -r "$PIDFILE" ] && read -r pid < "$PIDFILE"
+	case "$pid" in ''|*[!0-9]*) return 1 ;; esac
+	[ "$pid" -gt 1 ] || return 1
+}
+
+is_running()
+{
+	read_pid && kill -0 "$pid" 2>/dev/null &&
+		[ "$(readlink "/proc/$pid/exe" 2>/dev/null)" = "$BIN" ]
+}
+
+case "$1" in
+	start)
+		printf 'Starting %s: ' "$DAEMON"
+		if [ ! -x "$BIN" ]; then
+			echo "FAIL ($BIN not found)"
+			exit 1
+		fi
+		if is_running; then
+			echo "already running (pid $pid)"
+			exit 0
+		fi
+		rm -f "$PIDFILE"
+
+		# Wait for the ISP core and bound sensor subdevices, not just an unrelated node.
+		for i in 1 2 3 4 5 6 7 8 9 10; do
+			isp_ready=0
+			sensor_ready=0
+			for name_file in /sys/class/video4linux/v4l-subdev*/name; do
+				[ -r "$name_file" ] || continue
+				read -r name < "$name_file"
+				case "$name" in
+					t23-isp-core*) isp_ready=1 ;;
+					gc2053*|sc*|jx*|sp140a*|imx290*|imx327*)
+						sensor_ready=1
+						;;
+				esac
+			done
+			[ "$isp_ready" -eq 1 ] && [ "$sensor_ready" -eq 1 ] && break
+			sleep 1
+		done
+
+		if [ "$isp_ready" -ne 1 ] || [ "$sensor_ready" -ne 1 ]; then
+			echo 'FAIL (ISP or sensor subdevice unavailable after 10 seconds)'
+			exit 1
+		fi
+
+		min_fps=$MIN_FPS
+		[ "$min_fps" = off ] && min_fps=0
+		flicker_hz=$FLICKER_HZ
+		[ "$flicker_hz" = off ] && flicker_hz=0
+
+		set -- -i "$INPUT" -F "$min_fps" -f "$flicker_hz" \
+			-d "$DAYNIGHT_MODE" -L "$ILLUMINATOR"
+		[ -z "$TUNING_FILE" ] || set -- "$@" -c "$TUNING_FILE"
+		[ "$AE_MODE" = off ] && set -- "$@" -A
+		[ "$AWB_MODE" = off ] && set -- "$@" -W
+		[ -n "$EXTRA_ARGS" ] && set -- "$@" $EXTRA_ARGS
+
+		mkdir -p /var/run
+		if start-stop-daemon -S -q -b -m -p "$PIDFILE" -x "$BIN" -- "$@"; then
+			echo OK
+			exit 0
+		else
+			echo FAIL
+			exit 1
+		fi
+		;;
+	stop)
+		printf 'Stopping %s: ' "$DAEMON"
+		if ! is_running; then
+			rm -f "$PIDFILE"
+			echo "not running"
+			exit 0
+		fi
+		stopped_pid=$pid
+		if ! start-stop-daemon -K -q -p "$PIDFILE" -x "$BIN"; then
+			echo FAIL
+			exit 1
+		fi
+		for i in 1 2 3 4 5; do
+			if ! kill -0 "$stopped_pid" 2>/dev/null ||
+			   [ "$(readlink "/proc/$stopped_pid/exe" 2>/dev/null)" != "$BIN" ]; then
+				rm -f "$PIDFILE"
+				echo OK
+				exit 0
+			fi
+			sleep 1
+		done
+		echo "FAIL (pid $stopped_pid has not exited)"
+		exit 1
+		;;
+	restart|reload)
+		"$0" stop && "$0" start
+		;;
+	status)
+		if is_running; then
+			echo "$DAEMON is running (pid $pid)"
+			exit 0
+		else
+			echo "$DAEMON is not running"
+			exit 1
+		fi
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart|status}"
+		exit 1
+		;;
+esac
