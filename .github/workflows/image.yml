@@ -188,7 +188,7 @@ jobs:
               case "$1" in
                 hi3516cv6xx) boot_kib=256 env_kib=64 read_kib=2048 ;;
                 hi3519dv500) boot_kib=512 env_kib=256 read_kib=6144 ;;
-                ssc325|ssc333|ssc335|ssc335de|ssc337|ssc337de) boot_kib=256 env_kib=64 read_kib=2048 ;;
+                ssc30kd|ssc30kq|ssc325|ssc333|ssc335|ssc335de|ssc337|ssc337de|ssc338q) boot_kib=256 env_kib=64 read_kib=2048 ;;
                 ssc377|ssc377d|ssc377de|ssc377qe|ssc378de|ssc378qe) boot_kib=256 env_kib=64 read_kib=2048 ;;
                 t10|t20|t21|t23|t30|t31|t40|t41) boot_kib=256 env_kib=64 read_kib=2048 ;;
                 *) echo "::error::create_split: no NOR boot area known for $1"; return 1 ;;
@@ -284,12 +284,14 @@ jobs:
               echo -e "Created: $release (firmware.bin ${fw_kib} KiB at ${off} KiB, rootfs_data from $(( off + end_kib )) KiB)\n"
             }
 
-            # A SigmaStar lite build whose rootfs outgrew the fixed slot ships
-            # the split package alone; its full image is then the split one.
+            # A SigmaStar lite build on the split layout ships the split package
+            # alone; its full image is then the split one. The infinity6e parts
+            # (ssc30kd, ssc30kq, ssc338q) are 16 MiB, the others 8 MiB.
             split_failed=
             for soc in $SIGMASTAR $ALLWINNER; do
               if [ -z "$(firmware_url $soc lite)" ] && [ -n "$(firmware_url $soc lite nor_split)" ]; then
-                create_split u-boot-$soc-nor.bin $soc lite $soc 8192 || split_failed=1
+                case $soc in ssc30kd|ssc30kq|ssc338q) nor=16384 ;; *) nor=8192 ;; esac
+                create_split u-boot-$soc-nor.bin $soc lite $soc $nor || split_failed=1
               else
                 create $soc $soc lite
               fi
