@@ -132,6 +132,15 @@ T "bc:24:11:aa:bb:cc" "$(env_mac)" "a real vendor MAC is left alone"
 T "0" "$(setenv_runs)" "...and nothing is written to the environment"
 T "bc:24:11:aa:bb:cc" "$(get_mac eth0)" "...and get_mac reports it"
 
+# A camera with no Ethernet at all (Wi-Fi only) has no eth0 to give an
+# address, so even an empty environment must not cause a write.
+reset_camera
+rm -rf "$SB/sys/class/net/eth0"
+check_mac >/dev/null
+T "0" "$(setenv_runs)" "no eth0: nothing is written to the environment"
+T "" "$(cat "$SB/etc/ethaddr" 2>/dev/null)" "...nor to /etc/ethaddr"
+mkdir -p "$SB/sys/class/net/eth0"
+
 # The #2405 case: a full image carries no environment.
 reset_camera
 check_mac >/dev/null
