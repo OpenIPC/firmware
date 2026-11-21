@@ -72,10 +72,10 @@ expect not-ours "$SB/does-not-exist"                  "an unreadable partition i
 # Part 2: drift. The format must stay behind the check, and the branch that
 # keeps an unreadable overlay must fall back to RAM rather than give up.
 body=$(sed -n '/Magic bitmask/,/^elif \$is_nfs_root/p' "$SRC")
-if echo "$body" | awk '/overlay_is_ours/ && !g {g=NR} /flash_eraseall/ && !e {e=NR} END {exit !(g && e && g < e)}'; then
-	ok "flash_eraseall is reached only after overlay_is_ours"
+if echo "$body" | awk '/overlay_is_ours/ && !g {g=NR} /erase_overlay|flash_eraseall/ && !e {e=NR} END {exit !(g && e && g < e)}'; then
+	ok "the overlay is erased only after overlay_is_ours"
 else
-	bad "flash_eraseall is no longer gated on overlay_is_ours in $SRC"
+	bad "the overlay erase is no longer gated on overlay_is_ours in $SRC"
 fi
 if grep -q '> "/overlay/$OVERLAY_MARK"' "$SRC"; then
 	ok "init marks the overlay as ours once it is mounted"
@@ -93,7 +93,7 @@ fi
 # rootfs_data now starts: "OPENIPC-OVL1", a 12-digit decimal length, a gzipped
 # tar. The function runs for real; mount, umount and flash_eraseall are stubs
 # that log, and /overlay and /mnt are moved into the sandbox.
-sed -n '/^overlay_carry_in() {/,/^}/p; /^carry_report() {/,/^}/p' "$SRC" |
+sed -n '/^erase_overlay() {/,/^}/p; /^overlay_carry_in() {/,/^}/p; /^carry_report() {/,/^}/p' "$SRC" |
 	sed -e "s| /overlay| $SB/ovl|g; s|/overlay/|$SB/ovl/|g; s| /mnt| $SB/mnt|g" > "$SB/carry.sh"
 [ -s "$SB/carry.sh" ] || { echo "FAIL overlay_carry_in() not found in $SRC"; exit 1; }
 mount() {
@@ -125,7 +125,7 @@ tar -C "$SB/settings" -czf "$SB/settings.tgz" .
 blob "$SB/part" "$SB/settings.tgz"
 carry "$SB/part"
 if [ "$(cat "$SB/mnt/etc/marker" 2>/dev/null)" = kept ] && cmp -s "$SB/mnt/etc/big" "$SB/settings/etc/big" &&
-	grep -q "flash_eraseall -j $SB/part" "$SB/log" && echo "$OUT" | grep -q "Settings restored"; then
+	grep -q "flash_eraseall $SB/part" "$SB/log" && echo "$OUT" | grep -q "Settings restored"; then
 	ok "a carried-over blob is restored into a freshly erased rootfs_data"
 else
 	bad "carry-over restore, out='$OUT' log='$(cat "$SB/log")'"
@@ -134,10 +134,16 @@ e=$(grep -n flash_eraseall "$SB/log" | cut -d: -f1); m=$(grep -n "mount -t jffs2
 [ -n "$e" ] && [ -n "$m" ] && [ "$e" -lt "$m" ] \
 	&& ok "...the erase comes before the jffs2 mount" \
 	|| bad "carry-over must erase before it mounts, log='$(cat "$SB/log")'"
+# No cleanmarkers: they would be spaced by the erase size the MTD reports
+# before the mount, which infinity6c's jffs2 changes from 4 KiB to 64 KiB at
+# mount, and it then writes its nodes over them (#2758).
+! grep -q -- "flash_eraseall -j" "$SB/log" \
+	&& ok "...and leaves the cleanmarkers to jffs2" \
+	|| bad "carry-over erase writes cleanmarkers, log='$(cat "$SB/log")'"
 
 blob "$SB/part" ""
 carry "$SB/part"
-if grep -q "flash_eraseall -j $SB/part" "$SB/log" && ! grep -q "jffs2" "$SB/log" &&
+if grep -q "flash_eraseall $SB/part" "$SB/log" && ! grep -q "jffs2" "$SB/log" &&
 	echo "$OUT" | grep -q "Clearing settings"; then
 	ok "a blob of length 0 (sysupgrade -n) erases and restores nothing"
 else
