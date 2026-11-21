@@ -69,15 +69,30 @@ ANYKA_OSDRV_AK3918AV100_LICENSE = PROPRIETARY
 # yet: they have booted only in qemu-bench, and the image is published so
 # that owners of these cameras can be the first to run it.
 #
-# files/script/S09wdt: the AK3918AV100 vendor U-Boot arms the hardware
-# watchdog as part of every boot, and nothing on these lite images feeds it
-# -- the lite variant ships no majestic, and the Anyka driver runs no
-# kernel-side daemon. Measured on an oQo ICF001 (AK3918AV100N, vendor
-# U-Boot 2019.10.0-V4.0.21): without a feeder the camera resets 55-60 s into
-# every boot; with busybox's watchdog applet petting the device every
-# second, no reset across many consecutive boots. This is a workaround, not
-# a fix: if the vendor U-Boot stops arming the watchdog, or the driver grows
-# a kernel-side keepalive, delete the script. See the script.
+# files/lib: the AnyCloud39AV100 SDK V1.12 libraries majestic drives these
+# modules with (libplat_vi, libplat_vpss, libmpi_venc and the libplat_* they
+# call), from the same image/usr.sqsh4, /usr/lib. They are uClibc builds;
+# like ingenic-osdrv-t41's, their DT_NEEDED libc.so.0 is dropped and they are
+# stripped, nothing else. sha256 of the SDK's files:
+#   faa04949482fa55d52f9f32ad16170022301655d5dd25d6ae938ee161771fe0b  libmpi_venc.so
+#   ecdc634da07c9087a3817f20ec01fadbe7d180cf2ec620725f5a94ac019c4f17  libplat_common.so
+#   89b67330127100248e12d1bcd16525dcd4c2c643146b3dd00c2e91913dfd890b  libplat_dbg.so
+#   ed7c7577fb83fa0db4f4903fdca8a68eeb7a8bfd6a38e4375295ccacd2577248  libplat_isp_sdk.so
+#   01eb68eba1f6e5ff8dab5a56faec8885397d18b935698c2a17be7250fb4830a2  libplat_log.so
+#   90f5673b0b4f0f3e15ab18a8d3b492d6fa65b27492d462954b9cdf87744ac38f  libplat_mem.so
+#   2a433e2292fb32f62093960655d7579da7148020be2e3428e1a833ee98cfd81f  libplat_osal.so
+#   47b127752384f07e80cfcc3afdf1cfe4a39713c3b8ec2508e5acca2eca0fb438  libplat_thread.so
+#   a88b8ed307b7d72e55fe480479e643ce606594735729a6bb09036ab28ab58b83  libplat_vi.so
+#   0e41057caf20e9fd1c11b741a1720d1a677581d45dfd14729549f1237f7f74a6  libplat_vpss.so
+# files/sensor: that image's /etc ISP tuning for the single-sensor boards
+# whose drivers files/kmod/av100 carries, unmodified:
+#   77c0a40549b7edca0f506b35ba7d03a56e85ab44b1dd39b33cc4c07620bd528b  isp_gc3003_mipi_2lane_av100_hp.conf
+#   4d0b175f9abb80e3798ab7a4bf4a147c842af62aff5550bc337377dc8b85a8fd  isp_gc4653_mipi_2lane_av100_hp.conf
+#   584712be6ca5e83991d0c21424f14828b0c009c2c02cdfbd6632d6fa5166600f  isp_sc2336_mipi_2lane_av100.conf
+#   bb2b7ee2f0fdc6d78f1d9141d607c21a46e2cca262926e7ae34ec298a91250c1  isp_sc5238_mipi_2lane_av100_hp.conf
+# majestic tries each until the library takes one; another sensor's is
+# refused. The libraries and the tuning serve majestic alone, so they are
+# installed only beside it.
 ANYKA_OSDRV_AK3918AV100_KVER = 4.4.282
 
 ifeq ($(BR2_OPENIPC_SOC_MODEL),"ak3918ev300l")
@@ -109,12 +124,16 @@ define ANYKA_OSDRV_AK3918AV100_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/script/load_anyka
+	$(ANYKA_OSDRV_AK3918AV100_INSTALL_MAJESTIC_SDK)
 endef
 
-# The watchdog the vendor U-Boot arms: see files/script/S09wdt.
-define ANYKA_OSDRV_AK3918AV100_INSTALL_INIT_SYSV
-	$(INSTALL) -D -m 755 $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/script/S09wdt \
-		$(TARGET_DIR)/etc/init.d/S09wdt
+ifeq ($(BR2_PACKAGE_MAJESTIC),y)
+define ANYKA_OSDRV_AK3918AV100_INSTALL_MAJESTIC_SDK
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/lib/*.so
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensor
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/sensor/*.conf
 endef
+endif
 
 $(eval $(generic-package))
