@@ -255,6 +255,55 @@ else
 	bad "split layout without sysfs offsets: an unwrapped chip must not be called aliased"
 fi
 
+# ---------------------------------------------------------------------------
+# Part 5: flash_aliased() with Linux 6.12 recursive DT subpartitions.
+# Subpartitions live beneath firmware (mtd2) in sysfs, so their /offset is
+# relative to mtd2 (kernel starts at 0 within firmware, 0x50000 on flash).
+mtd_nested_layout() {
+	local i=0 spec name off size rel dev_dir
+	rm -rf "$SB/proc" "$SB/dev" "$SB/sys"
+	mkdir -p "$SB/proc" "$SB/dev" "$SB/sys/class/mtd" "$SB/sys/devices/mtd/mtd2"
+	head -c 65536 /dev/zero | tr '\000' 'B' > "$SB/block0"
+	printf 'dev:    size   erasesize  name\n' > "$SB/proc/mtd"
+	for spec in "$@"; do
+		name=${spec%%:*}; spec=${spec#*:}; off=$((${spec%%:*})); size=$((${spec#*:}))
+		printf 'mtd%d: %08x 00010000 "%s"\n' "$i" "$size" "$name" >> "$SB/proc/mtd"
+		truncate -s "$size" "$SB/dev/mtd$i"
+		for at in 0 $((0x800000)); do
+			[ "$at" -ge "$off" ] && [ "$at" -lt $((off + size)) ] &&
+				dd if="$SB/block0" of="$SB/dev/mtd$i" bs=65536 seek=$(((at - off) / 65536)) conv=notrunc 2>/dev/null
+		done
+		if [ "$i" -ge 3 ]; then
+			rel=$((off - 0x50000))
+			dev_dir="$SB/sys/devices/mtd/mtd2/mtd$i"
+		else
+			rel=$off
+			dev_dir="$SB/sys/devices/mtd/mtd$i"
+		fi
+		mkdir -p "$dev_dir"
+		echo "$rel" > "$dev_dir/offset"
+		ln -s "$dev_dir" "$SB/sys/class/mtd/mtd$i"
+		i=$((i + 1))
+	done
+}
+mtd_nested_layout boot:0:0x40000 env:0x40000:0x10000 firmware:0x50000:$((M16 - 0x50000)) \
+	kernel:0x50000:0x1e0000 rootfs:0x230000:0x280000 rootfs_data:0x4b0000:$((M16 - 0x4b0000))
+# Give child mtd3 (kernel, sysfs offset=0) non-block0 bytes so mis-picking it as
+# head_dev would break the block-0 comparison against the mirror in mtd2.
+printf 'KRNL' | dd of="$SB/dev/mtd3" bs=1 conv=notrunc 2>/dev/null
+if flash_aliased; then
+	ok "nested DT subpartitions: parent ../offset walked, head_dev stays at mtd0, mirror detected"
+else
+	bad "nested DT subpartitions: aliased 8 MB mirror not detected"
+fi
+head -c $((M16 - 0x50000)) /dev/zero | tr '\000' '\377' > "$SB/dev/mtd2"
+head -c $((M16 - 0x4b0000)) /dev/zero | tr '\000' '\377' > "$SB/dev/mtd5"
+if ! flash_aliased; then
+	ok "nested DT subpartitions: unwrapped flash is not called aliased"
+else
+	bad "nested DT subpartitions: unwrapped flash must not be called aliased"
+fi
+
 echo
 [ "$fail" -eq 0 ] && echo "All init overlay checks passed." || echo "$fail check(s) failed."
 exit "$fail"

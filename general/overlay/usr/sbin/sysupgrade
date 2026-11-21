@@ -842,7 +842,7 @@ nor_split_soc() {
 # the split layout, where the next partition would, holding kernel, rootfs and
 # rootfs_data after it; either way it moves nothing on.
 mtd_geometry() {
-	local n d off size name next=0 kern=
+	local n d p off parent_off size name next=0 kern=
 	for n in $(ls "$MTD_SYS" 2>&3 | sed -n 's/^mtd\([0-9][0-9]*\)$/\1/p' | sort -n); do
 		d=$MTD_SYS/mtd$n
 		size=$(cat "$d/size" 2>&3) && name=$(cat "$d/name" 2>&3) || continue
@@ -852,6 +852,16 @@ mtd_geometry() {
 		[ "$(cat "$d/type" 2>&3)" = ram ] && continue
 		if [ -r "$d/offset" ]; then
 			off=$(cat "$d/offset")
+			# Recursive DT subpartitions report mtd->part.offset relative to their
+			# parent MTD in sysfs; walk up the device tree to get the chip offset.
+			p=$(readlink -f "$d" 2>&3)
+			while [ -n "$p" ] && [ -r "$p/../offset" ]; do
+				p=${p%/*}
+				[ -n "$p" ] || break
+				parent_off=$(cat "$p/offset" 2>&3)
+				[ -n "$parent_off" ] || break
+				off=$((off + parent_off))
+			done
 		elif [ "$name" = firmware ]; then
 			off=${kern:-$next}
 		else
