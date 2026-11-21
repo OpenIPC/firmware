@@ -56,8 +56,8 @@ ALL_BOARDS = [
     # Sigmastar [I6E]
     "ssc30kd_lite", "ssc30kq_lite", "ssc338q_lite",
     # Ingenic
-    "t10_lite", "t20_lite", "t21_lite", "t30_lite", "t23_lite", "t31_lite", "t40_lite",
-    "t41_lite",
+    "t10_lite", "t20_lite", "t21_lite", "t30_lite", "t23_lite", "t23_v4l2_lite",
+    "t31_lite", "t40_lite", "t41_lite",
     # Hisilicon [HI3516AV100]
     "hi3516av100_lite", "hi3516av100_neo", "hi3516dv100_lite",
     # Hisilicon [HI3516CV100]
@@ -269,6 +269,7 @@ SMOKE_BOARDS = [
     "gk7205v200_lite",        # Goke
     "ssc338q_lite",           # SigmaStar
     "t31_lite",               # Ingenic, the only mips
+    "t23_v4l2_lite",          # the v4l2_lite variant
     "rv1126_lite",            # Rockchip, and UBI with no squashfs
     "gm8136_lite",            # GrainMedia, the only uclibc toolchain
     "nt98566_lite",           # Novatek
