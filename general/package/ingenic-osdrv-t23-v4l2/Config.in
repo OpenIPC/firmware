@@ -1,0 +1,9 @@
+config BR2_PACKAGE_INGENIC_OSDRV_T23_V4L2
+	bool "ingenic-osdrv-t23-v4l2"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Load the Ingenic T23 Linux 6.12 device-tree kernel modules
+	  and adjust the U-Boot osmem environment for the mainline
+	  V4L2 and Media Controller stack.
+
+	  https://openipc.org

@@ -1,0 +1,39 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 Difan Zhang
+#
+# Ingenic T23 (Linux 6.12): the media, audio and remaining SoC drivers are
+# kernel modules bound from the device tree, which also reserves their memory,
+# so Linux is given all of the DDR. An environment saved under the 3.10 SDK
+# kernel holds osmem 40M/41M, leaving the rest outside Linux; raise osmem to
+# totalmem (64M by default) once and reboot when an OpenIPC U-Boot env exists.
+
+check_mem() {
+	osmem=$(fw_printenv -n osmem 2>/dev/null) || return 0
+	total_mem=$(fw_printenv -n totalmem 2>/dev/null) || total_mem=64M
+	case "$total_mem" in
+		[0-9]*[Mm]) ;;
+		*) total_mem=64M ;;
+	esac
+	[ "$osmem" != "$total_mem" ] || return 0
+	fw_setenv osmem "$total_mem" || return 0
+	logger -s -p daemon.info -t ingenic "osmem $total_mem; rebooting"
+	reboot
+	exit 0
+}
+
+case "$1" in
+	-i)
+		check_mem
+		# mdev does not load modules for devices that exist at boot; run two
+		# passes so children registered by newly probed bus drivers also bind.
+		for _pass in 1 2; do
+			find /sys/devices -name modalias -exec cat {} + | sort -u |
+				xargs modprobe -qa || true
+		done
+		;;
+	*)
+		echo "Usage: $0 -i"
+		exit 1
+		;;
+esac
