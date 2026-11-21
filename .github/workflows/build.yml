@@ -825,9 +825,8 @@ jobs:
             done
           }
 
-          # A board whose rootfs outgrew its fixed slot ships only the -split
-          # package (Makefile, FIXED_SLOTS_SKIP), and --clobber never touches
-          # the plain package it no longer builds. That left
+          # A board on the split layout ships only the -split package, and
+          # --clobber never touches the plain package it no longer builds. That left
           # openipc.hi3518cv100-nor-lite.tgz on nightly and latest as of
           # 2026-11-15, without the sensor-clock fix #1352's reporter was
           # told to install the day after. The fixed slots are not coming

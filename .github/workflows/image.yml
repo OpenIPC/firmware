@@ -300,8 +300,8 @@ jobs:
               done
             done
 
-            # An Ingenic build whose uImage or rootfs outgrew the fixed slots
-            # ships the split package alone, as the SigmaStar ones above.
+            # An Ingenic build on the split layout ships the split package
+            # alone, as the SigmaStar ones above.
             for soc in $INGENIC; do
               if [ -z "$(firmware_url ${soc:0:3} lite)" ] && [ -n "$(firmware_url ${soc:0:3} lite nor_split)" ]; then
                 create_split u-boot-$soc-nor.bin ${soc:0:3} lite $soc 8192 || split_failed=1

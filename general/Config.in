@@ -56,14 +56,6 @@ config BR2_OPENIPC_ARM64_UIMAGE_COMP
 	  U-Boot bootm can unpack (the Axera AX620E Xiongmai U-Boot has no
 	  gunzip).
 
-config BR2_OPENIPC_NOR_FIXED_PACKAGE
-	bool "Also ship the fixed-slot NOR package"
-	help
-	  Next to the split package, ship uImage and rootfs.squashfs as the
-	  plain fixed-slot package (a 2 MiB kernel slot, then the rootfs), for
-	  cameras whose sysupgrade predates the split layout. Both must fit
-	  their slots.
-
 config BR2_OPENIPC_MAJESTIC
 	string "OpenIPC Majestic"
 	default "lite"
