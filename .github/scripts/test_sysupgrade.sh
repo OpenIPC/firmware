@@ -3599,6 +3599,61 @@ else
     bad "split layout without sysfs offsets, rc=$RC out='$OUT'"
 fi
 
+# Linux 6.12 recursive DT subpartitions: kernel, rootfs and rootfs_data sit
+# beneath mtd2 (firmware) in sysfs with parent-relative offsets. mtd_geometry()
+# walks ../offset so every subpartition resolves to its chip-absolute offset.
+nested_split_sysfs() {
+    local base=$((0x50000))
+    rm -rf "$SB/sys/devices" "$SB/sys/class/mtd"
+    mkdir -p "$SB/sys/devices/mtd/mtd0" "$SB/sys/devices/mtd/mtd1" \
+        "$SB/sys/devices/mtd/mtd2/mtd3" "$SB/sys/devices/mtd/mtd2/mtd4" \
+        "$SB/sys/devices/mtd/mtd2/mtd5" "$SB/sys/class/mtd"
+    printf 'u-boot\n' > "$SB/sys/devices/mtd/mtd0/name"
+    printf '0\n' > "$SB/sys/devices/mtd/mtd0/offset"
+    printf '%d\n' $((0x40000)) > "$SB/sys/devices/mtd/mtd0/size"
+    printf 'env\n' > "$SB/sys/devices/mtd/mtd1/name"
+    printf '%d\n' $((0x40000)) > "$SB/sys/devices/mtd/mtd1/offset"
+    printf '%d\n' $((0x10000)) > "$SB/sys/devices/mtd/mtd1/size"
+    printf 'firmware\n' > "$SB/sys/devices/mtd/mtd2/name"
+    printf '%d\n' "$base" > "$SB/sys/devices/mtd/mtd2/offset"
+    printf '%d\n' $((0x800000 - base)) > "$SB/sys/devices/mtd/mtd2/size"
+    printf 'kernel\n' > "$SB/sys/devices/mtd/mtd2/mtd3/name"
+    printf '0\n' > "$SB/sys/devices/mtd/mtd2/mtd3/offset"
+    printf '%d\n' $((0x1e0000)) > "$SB/sys/devices/mtd/mtd2/mtd3/size"
+    printf 'rootfs\n' > "$SB/sys/devices/mtd/mtd2/mtd4/name"
+    printf '%d\n' $((0x1e0000)) > "$SB/sys/devices/mtd/mtd2/mtd4/offset"
+    printf '%d\n' $((0x280000)) > "$SB/sys/devices/mtd/mtd2/mtd4/size"
+    printf 'rootfs_data\n' > "$SB/sys/devices/mtd/mtd2/mtd5/name"
+    printf '%d\n' $((0x460000)) > "$SB/sys/devices/mtd/mtd2/mtd5/offset"
+    printf '%d\n' $((0x800000 - base - 0x460000)) > "$SB/sys/devices/mtd/mtd2/mtd5/size"
+    for n in 0 1 2; do
+        ln -s "$SB/sys/devices/mtd/mtd$n" "$SB/sys/class/mtd/mtd$n"
+    done
+    for n in 3 4 5; do
+        ln -s "$SB/sys/devices/mtd/mtd2/mtd$n" "$SB/sys/class/mtd/mtd$n"
+    done
+}
+nested_split_sysfs
+geo_nested=$(MTD_SYS="$SB/sys/class/mtd" dash -c "$(sed -n '/^mtd_geometry()/,/^}/p' "$SRC"); mtd_geometry" 3>/dev/null)
+if printf '%s\n' "$geo_nested" | grep -qx "mtd3 $((0x50000)) $((0x1e0000)) kernel" &&
+    printf '%s\n' "$geo_nested" | grep -qx "mtd4 $((0x230000)) $((0x280000)) rootfs" &&
+    printf '%s\n' "$geo_nested" | grep -qx "mtd5 $((0x4b0000)) $((0x350000)) rootfs_data"; then
+    ok "nested DT subpartitions: mtd_geometry resolves parent-relative offsets to chip offsets"
+else
+    bad "nested DT subpartitions: unexpected mtd_geometry output: [$geo_nested]"
+fi
+split_env split
+nested_split_sysfs
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -eq 0 ] && [ "$(flash_at 2 0x50000 0x50000 8)" = "$FW_HEAD" ] &&
+    [ "$(dd if="$SB/dev/mtdblock2" bs=1 skip=$((OVL - 0x50000)) count=12 2>/dev/null)" = OPENIPC-OVL1 ] &&
+    blob_files 2 "$OVL" 0x50000 | grep -q 'etc/marker' && rebooted; then
+    ok "nested DT subpartitions: split firmware.bin flashed through mtd2 and settings staged"
+else
+    bad "nested DT subpartitions: split upgrade failed, rc=$RC out='$OUT'"
+fi
+rm -rf "$SB/sys/devices"
+
 # Some offsets in sysfs and some not: still checked as worked out.
 split_env fixed
 rm -f "$SB"/sys/class/mtd/mtd3/offset
