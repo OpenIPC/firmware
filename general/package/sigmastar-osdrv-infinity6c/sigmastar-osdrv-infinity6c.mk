@@ -10,11 +10,12 @@ SIGMASTAR_OSDRV_INFINITY6C_LICENSE = MIT
 SIGMASTAR_OSDRV_INFINITY6C_LICENSE_FILES = LICENSE
 
 # Text tuning majestic lays over a bin after loading it: <sensor>.ini always,
-# <sensor>_hdr.ini when the sensor runs HDR (isp.wdrMode). Only the selected
-# sensor's, as with the bins; most sensors have none.
+# <sensor>_hdr.ini when the sensor runs HDR (isp.wdrMode), <sensor>_night.ini
+# last while the night picture is grey. Only the selected sensor's, as with
+# the bins; most sensors have none.
 SIGMASTAR_OSDRV_INFINITY6C_PROFILES = $(wildcard $(addprefix \
 	$(SIGMASTAR_OSDRV_INFINITY6C_PKGDIR)/files/sensor/configs/, \
-	$(if $(OPENIPC_SNS_MODEL),$(OPENIPC_SNS_MODEL).ini $(OPENIPC_SNS_MODEL)_hdr.ini,*.ini)))
+	$(if $(OPENIPC_SNS_MODEL),$(OPENIPC_SNS_MODEL).ini $(OPENIPC_SNS_MODEL)_hdr.ini $(OPENIPC_SNS_MODEL)_night.ini,*.ini)))
 
 define SIGMASTAR_OSDRV_INFINITY6C_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/5.10.61/sigmastar
