@@ -26,9 +26,17 @@ case "$1" in
 	start)
 		[ -c /dev/watchdog ] || exit 0
 		command -v watchdog >/dev/null 2>&1 || exit 0
-		watchdog -t 1 -T 357 /dev/watchdog
-		logger -s -p daemon.info -t watchdog \
-			"feeding /dev/watchdog (interval 1s, timeout 357s)"
+		# The applet dies nonzero before daemonizing if it cannot open the
+		# device or set the timeout: say so, or the boot log shows success
+		# while the armed timer counts down unfed.
+		if watchdog -t 1 -T 357 /dev/watchdog; then
+			logger -s -p daemon.info -t watchdog \
+				"feeding /dev/watchdog (interval 1s, timeout 357s)"
+		else
+			logger -s -p daemon.err -t watchdog \
+				"failed to start feeding /dev/watchdog: the armed vendor watchdog stays unfed"
+			exit 1
+		fi
 		;;
 	stop)
 		# No magic close: the dog stays armed across the reboot on purpose.

@@ -75,7 +75,9 @@ ANYKA_OSDRV_AK3918AV100_LICENSE = PROPRIETARY
 # kernel-side daemon. Measured on an oQo ICF001 (AK3918AV100N, vendor
 # U-Boot 2019.10.0-V4.0.21): without a feeder the camera resets 55-60 s into
 # every boot; with busybox's watchdog applet petting the device every
-# second, no reset across many consecutive boots. See the script.
+# second, no reset across many consecutive boots. This is a workaround, not
+# a fix: if the vendor U-Boot stops arming the watchdog, or the driver grows
+# a kernel-side keepalive, delete the script. See the script.
 ANYKA_OSDRV_AK3918AV100_KVER = 4.4.282
 
 ifeq ($(BR2_OPENIPC_SOC_MODEL),"ak3918ev300l")
