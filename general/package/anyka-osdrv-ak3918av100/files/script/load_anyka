@@ -47,7 +47,8 @@ insert_ko() {
 	# OpenIPC U-Boot ticks on timer 0 (SYSCTRL 0xB4/0xB8) and leaves it running
 	# into Linux; the kernel uses timers 1 and 7. Timer 0 is PWM0's, and
 	# ak_pwm_char refuses one it finds enabled ("timer/pwm0 is used"), so
-	# stop it first.
+	# stop it first. U-Boot should stop it itself (OpenIPC/u-boot#162), but
+	# cameras keep the U-Boot they have, so this stays.
 	switched=$(switched_sensors)
 	if [ -n "${switched}" ] && [ -e "${moddir}/ak_pwm_char.ko" ]; then
 		grep -q "^ak_pwm_char " /proc/modules || devmem 0x080000B8 32 0
