@@ -54,13 +54,14 @@ insert_mmz() {
 		report_error
 }
 
-# The pan/tilt motors (open_motor), as the vendor firmware loads kmotor.ko:
-# the reference board's pins without the self-test; motor_params in the U-Boot
-# environment replaces them, "off" leaves the module out.
+# The pan/tilt motors (open_motor), only where motor_params in the U-Boot
+# environment gives the board's pins: they differ between boards, and a
+# reference board's may be another board's keys or LEDs. The vendor
+# reference board's, for its kmotor.ko:
+#   motor_params="IIC_SCL=4 IIC_SDA=5 IIC_EN=88 pin_antitone1=2 auto_test=0"
 insert_motor() {
 	params=$(fw_printenv -n motor_params 2>/dev/null)
-	[ "$params" = off ] && return 0
-	[ -n "$params" ] || params="IIC_SCL=4 IIC_SDA=5 IIC_EN=88 pin_antitone1=2 auto_test=0"
+	[ -n "$params" ] && [ "$params" != off ] || return 0
 	modprobe open_motor $params
 }
 
@@ -75,7 +76,8 @@ insert_ko() {
 	modprobe open_vpss line=0 2>/dev/null || insmod /usr/lib/xiongmai/vpss.ko line=0 2>/dev/null || insmod vpss.ko line=0
 	modprobe open_isp 2>/dev/null || insmod isp.ko
 	# VI, which scales a single-ISP product's picture (rgn takes its covers)
-	modprobe open_vi 2>/dev/null
+	# (no vendor vi.ko on these chips to fall back to)
+	modprobe open_vi || echo "load_xiongmai: open_vi did not load" >&2
 	modprobe open_rgn 2>/dev/null || insmod /usr/lib/xiongmai/rgn.ko 2>/dev/null || insmod rgn.ko
 	modprobe open_venc 2>/dev/null || insmod venc.ko
 	modprobe open_h264 2>/dev/null || insmod h264.ko

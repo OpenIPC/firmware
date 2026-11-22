@@ -49,13 +49,14 @@ insert_mmz() {
 		report_error
 }
 
-# The pan/tilt motors (open_motor), as the vendor firmware loads kmotor.ko:
-# the reference board's pins without the self-test; motor_params in the U-Boot
-# environment replaces them, "off" leaves the module out.
+# The pan/tilt motors (open_motor), only where motor_params in the U-Boot
+# environment gives the board's pins: they differ between boards, and a
+# reference board's may be another board's keys or LEDs. The vendor
+# reference board's, for its kmotor.ko:
+#   motor_params="gpio_pin=8,9,1007,1006,33,36,89,1009,-1,-1,-1,-1 auto_test=0"
 insert_motor() {
 	params=$(fw_printenv -n motor_params 2>/dev/null)
-	[ "$params" = off ] && return 0
-	[ -n "$params" ] || params="gpio_pin=8,9,1007,1006,33,36,89,1009,-1,-1,-1,-1 auto_test=0"
+	[ -n "$params" ] && [ "$params" != off ] || return 0
 	modprobe open_motor $params
 }
 

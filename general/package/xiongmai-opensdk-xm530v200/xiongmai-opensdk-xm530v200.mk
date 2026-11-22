@@ -5,7 +5,7 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = 1d6c9eb27364187201f27c0663a043e102eb50f3
+XIONGMAI_OPENSDK_XM530V200_VERSION = a4686613de4309ab24d946147cbbd5bb442aa8c7
 
 XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io, open_h264, open_jpeg, open_venc_mem, open_nn, open_ive, open_vo, open_isp, open_xm_usb0, open_rtc, open_vdec, open_var, open_dma, open_motor kernel modules), GPL-2.0+ or BSD-3-Clause (open_dwc2 kernel module)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
@@ -25,9 +25,11 @@ define XIONGMAI_OPENSDK_XM530V200_INSTALL_STAGING_CMDS
 	$(INSTALL) -m 644 -D $(@D)/libraries/libxmv200/xmv200.h $(STAGING_DIR)/usr/include/xmv200.h
 endef
 
+ifeq ($(BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200_TEST),y)
 define XIONGMAI_OPENSDK_XM530V200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -D $(@D)/tools/xmv200-test/xmv200-test $(TARGET_DIR)/usr/bin/xmv200-test
 endef
+endif
 
 # The open drivers, which load_xiongmai prefers over the vendor modules:
 # drivers/xm_mmz (open_mmz.ko) with the V200 series' allocator,
