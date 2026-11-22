@@ -10,7 +10,14 @@ case "$1" in
 					continue
 					;;
 			esac
-			modprobe "$module" "$args" > /dev/null
+			# One argument per parameter: quoted, "a=1 b=2" reached modprobe
+			# as a single word and a line with two parameters never loaded
+			# ("gpiostep pan_gpios=... tilt_gpios=..."). Globbing is off, so
+			# a value is passed as written.
+			set -f
+			# shellcheck disable=SC2086
+			modprobe "$module" $args > /dev/null
+			set +f
 		done < /etc/modules
 		;;
 
