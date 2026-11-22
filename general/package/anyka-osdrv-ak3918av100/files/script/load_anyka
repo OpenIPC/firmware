@@ -44,8 +44,13 @@ insert_ko() {
 	# The ISP alternates switched sensors with PWM0 (the device tree's
 	# gen-pwm-sel), which only ak_pwm_char provides. It stays out otherwise:
 	# loaded, it starts every PWM the device tree enables.
+	# OpenIPC U-Boot ticks on timer 0 (SYSCTRL 0xB4/0xB8) and leaves it running
+	# into Linux; the kernel uses timers 1 and 7. Timer 0 is PWM0's, and
+	# ak_pwm_char refuses one it finds enabled ("timer/pwm0 is used"), so
+	# stop it first.
 	switched=$(switched_sensors)
 	if [ -n "${switched}" ] && [ -e "${moddir}/ak_pwm_char.ko" ]; then
+		grep -q "^ak_pwm_char " /proc/modules || devmem 0x080000B8 32 0
 		load ak_pwm_char
 	fi
 
