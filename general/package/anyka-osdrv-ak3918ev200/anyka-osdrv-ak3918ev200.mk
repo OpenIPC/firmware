@@ -17,8 +17,9 @@ ANYKA_OSDRV_AK3918EV200_LICENSE = PROPRIETARY
 # A tuning is kept whenever a stock firmware yields one, driver or not:
 # tunings are the scarce part, found only inside camera images, so the
 # one for a sensor the kernel cannot drive yet is here when it can. A
-# file without a driver is never opened. Today gc1054, sc2335 (an EV300
-# MIPI driver that ak-cam refuses on EV200), mis2006 and sc1346 are such.
+# file without a driver is never opened: today mis2006 and sc1346. gc1054
+# and sc2335 run over DVP since OpenIPC/linux#292; sc2335's 1280x960 does
+# not fit the 24 MiB video pool yet.
 #
 # Every file is a vendor tuning from the stock firmware of an EV200-class
 # camera, converted from the vendor's "3.0xx" layout to the "3.05_032401"
