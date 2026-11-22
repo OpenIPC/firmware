@@ -8,7 +8,12 @@ MODULE=/lib/modules/3.10.103+/xiongmai
 # is assumed without it.
 MEM_ALL=$(fw_printenv -n totalmem 2>/dev/null | sed 's/[^0-9]//g')
 [ -n "$MEM_ALL" ] || MEM_ALL=64
-MEM_OS=$(awk '{print $1}' /proc/cmdline | sed -e 's/mem=//' -e 's/M//')
+# the mem=<n>M argument wherever it is on the command line
+MEM_OS=$(tr ' ' '\n' </proc/cmdline | sed -n 's/^mem=\([0-9]*\)M$/\1/p' | head -1)
+if [ -z "$MEM_OS" ] || [ "$MEM_OS" -ge "$MEM_ALL" ]; then
+	echo "load_xiongmai: no usable mem=<n>M below ${MEM_ALL}M on the kernel command line" >&2
+	exit 1
+fi
 MEM_START=$(printf "0x%03x00000" $((0x800 + MEM_OS)))
 MEM_LEN=$(printf "0x%03x00000" $((MEM_ALL - MEM_OS)))
 echo MEM_START="$MEM_START" MEM_LEN="$MEM_LEN"
