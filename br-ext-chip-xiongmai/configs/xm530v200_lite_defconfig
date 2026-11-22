@@ -55,14 +55,14 @@ BR2_PACKAGE_LIBEVENT_OPENIPC=y
 BR2_PACKAGE_LIBOGG_OPENIPC=y
 BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC=y
 BR2_PACKAGE_LINUX_FIRMWARE_OPENIPC_MEDIATEK_MT7601U=y
-# No majestic yet: its xm backend drives the XM530's media interface, and
-# the V200 series' is a different one (sys/vb/vpss/venc), linked into
-# the vendor's Sofia with no shared library to call.
+# No majestic yet: its xm backend drives the XM530's media interface. The
+# V200's open one is libxmv200 (xiongmai-opensdk-xm530v200).
 BR2_PACKAGE_MBEDTLS_OPENIPC=y
 BR2_PACKAGE_MOTORS=y
 BR2_PACKAGE_OPUS_OPENIPC=y
 BR2_PACKAGE_VTUND_OPENIPC=y
 BR2_PACKAGE_XIONGMAI_OSDRV_XM530V200=y
+BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200=y
 # Wi-Fi: the X6C-WEQ's AltoBeam ATBM6012B-X and the X2-WQ2's XM713G (AsmLite), USB
 BR2_PACKAGE_ATBM603X_COMB_OPENIPC=y
 BR2_PACKAGE_YAML_CLI=y
