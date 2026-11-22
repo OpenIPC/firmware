@@ -69,7 +69,7 @@ ANYKA_OSDRV_AK3918AV100_LICENSE = PROPRIETARY
 # yet: they have booted only in qemu-bench, and the image is published so
 # that owners of these cameras can be the first to run it.
 #
-# files/lib: the AnyCloud39AV100 SDK V1.12 libraries majestic drives these
+# files/lib/av100: the AnyCloud39AV100 SDK V1.12 libraries majestic drives these
 # modules with (libplat_vi, libplat_vpss, libmpi_venc and the libplat_* they
 # call), from the same image/usr.sqsh4, /usr/lib. They are uClibc builds;
 # like ingenic-osdrv-t41's, their DT_NEEDED libc.so.0 is dropped and they are
@@ -84,12 +84,36 @@ ANYKA_OSDRV_AK3918AV100_LICENSE = PROPRIETARY
 #   47b127752384f07e80cfcc3afdf1cfe4a39713c3b8ec2508e5acca2eca0fb438  libplat_thread.so
 #   a88b8ed307b7d72e55fe480479e643ce606594735729a6bb09036ab28ab58b83  libplat_vi.so
 #   0e41057caf20e9fd1c11b741a1720d1a677581d45dfd14729549f1237f7f74a6  libplat_vpss.so
-# files/sensor: that image's /etc ISP tuning for the single-sensor boards
+# files/sensor/av100: that image's /etc ISP tuning for the single-sensor boards
 # whose drivers files/kmod/av100 carries, unmodified:
 #   77c0a40549b7edca0f506b35ba7d03a56e85ab44b1dd39b33cc4c07620bd528b  isp_gc3003_mipi_2lane_av100_hp.conf
 #   4d0b175f9abb80e3798ab7a4bf4a147c842af62aff5550bc337377dc8b85a8fd  isp_gc4653_mipi_2lane_av100_hp.conf
 #   584712be6ca5e83991d0c21424f14828b0c009c2c02cdfbd6632d6fa5166600f  isp_sc2336_mipi_2lane_av100.conf
 #   bb2b7ee2f0fdc6d78f1d9141d607c21a46e2cca262926e7ae34ec298a91250c1  isp_sc5238_mipi_2lane_av100_hp.conf
+# files/lib/ev300l: the libraries the EV300L set's camera firmware drives
+# those modules with. They are not the SDK's: libplat_vi V3.4.17,
+# libplat_vpss V2.1.09, libmpi_venc V2.0.40 and libplat_common V1.0.23, where
+# the SDK has V3.4.23, V2.1.17, V2.0.46 and V1.0.25. They export every symbol
+# majestic.ak3918av100 calls. They come from the /usr of an EV300L camera
+# (EVB_CBDM_AK3918EV300L_V1.0.0, two SC1346), whose /usr/modules are
+# byte-identical to files/kmod/ev300l. Treated as files/lib/av100's are, with
+# DT_NEEDED libc.so.0 dropped; they ship stripped. sha256 of the camera's files:
+#   890f4e54f1b4c49cf24521576c355d2c5508f5f2f28cbd6f88f929f80dcca6e3  libmpi_venc.so
+#   593304e69493e465fab3abe79a3ca1b0ddd4d2037b0245e11d12673ed8764d45  libplat_common.so
+#   6974fde4bb1426b589432165c7775e3173dd00ceb10dd1ffcf55a803e7d50a6d  libplat_dbg.so
+#   557687bcc624e242350d05f353fca59d843b919bb7580a106e623edac5b4773c  libplat_isp_sdk.so
+#   3066bb105ee4cc8b58904a71dca735b99f5ce6b3a1cd2d79863925de3f774aab  libplat_log.so
+#   90f5673b0b4f0f3e15ab18a8d3b492d6fa65b27492d462954b9cdf87744ac38f  libplat_mem.so
+#   75018adf596948b694bf9d33f010ea347d6dd8977da18443600e29ddbf00c02f  libplat_osal.so
+#   47b127752384f07e80cfcc3afdf1cfe4a39713c3b8ec2508e5acca2eca0fb438  libplat_thread.so
+#   7027af4e3be00cacb5a664350f0ff75c3aa2177b5b308b14f736c57c1b8bf423  libplat_vi.so
+#   516777f7ae6fd9fd876c9dc3fcda2102cd2f7179063485b34d01b49b73e32275  libplat_vpss.so
+# files/sensor/ev300l: the same camera's /mvs/isp_cfg tuning, unmodified.
+# The SC1346 has one file per MIPI input, and the two differ:
+#   ecf3ed63114104fbf6b3a18707c8703af877f805b6d4b8ec4eaad3c130daf824  isp_sc1346_mipi_0.conf
+#   35fbff49096ecee68ee579493ae0b86caa51ab6b845044958a1798d97c5e8856  isp_sc1346_mipi_1.conf
+#   b89bcf6933efcd4946789b9d68421712e64129f6c2baf56f324b6a5bbc52fb6e  isp_sc2331_mipi_0.conf
+#   2d1a51948cae94639791fcf82a272714e0fc6c15be75c8e988f5b96815f376e6  isp_sc2336_mipi_0.conf
 # majestic tries each until the library takes one; another sensor's is
 # refused. The libraries and the tuning serve majestic alone, so they are
 # installed only beside it.
@@ -130,9 +154,9 @@ endef
 ifeq ($(BR2_PACKAGE_MAJESTIC),y)
 define ANYKA_OSDRV_AK3918AV100_INSTALL_MAJESTIC_SDK
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/lib/*.so
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/lib/$(ANYKA_OSDRV_AK3918AV100_KMOD)/*.so
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensor
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/sensor/*.conf
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensor $(ANYKA_OSDRV_AK3918AV100_PKGDIR)/files/sensor/$(ANYKA_OSDRV_AK3918AV100_KMOD)/*.conf
 endef
 endif
 
