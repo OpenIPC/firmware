@@ -277,6 +277,7 @@ set_default_osmem() {
 # board whose pads are already routed writes nothing.
 nvt_pinmux=${LOAD_NOVATEK_PINMUX:-/proc/nvt_info/nvt_pinmux}
 sensor_cfgs=${LOAD_NOVATEK_SENSORS:-/etc/sensors}
+gpio=${LOAD_NOVATEK_GPIO:-/sys/class/gpio}
 
 pinmux_get() {
 	sed -n "s/^$1{pinmux=<\(0x[0-9a-fA-F]*\)>.*/\1/p" $nvt_pinmux/pinmux_summary
@@ -320,32 +321,36 @@ probe_powered_sensor() {
 		# A pin someone else exported is put back exactly as found and left
 		# exported; only an export this probe made is released.
 		own=
-		if [ ! -d /sys/class/gpio/gpio$pin ]; then
-			echo $pin >/sys/class/gpio/export || continue
+		if [ ! -d $gpio/gpio$pin ]; then
+			echo $pin >$gpio/export || continue
 			own=1
 		fi
-		dir=$(cat /sys/class/gpio/gpio$pin/direction)
-		val=$(cat /sys/class/gpio/gpio$pin/value)
-		echo low >/sys/class/gpio/gpio$pin/direction
+		dir=$(cat $gpio/gpio$pin/direction)
+		val=$(cat $gpio/gpio$pin/value)
+		echo low >$gpio/gpio$pin/direction
 		usleep 1000
-		echo 1 >/sys/class/gpio/gpio$pin/value
+		echo 1 >$gpio/gpio$pin/value
 		usleep 2000
 		found=$(ipcinfo --short-sensor)
-		echo 0 >/sys/class/gpio/gpio$pin/value
+		echo 0 >$gpio/gpio$pin/value
 		if [ "$dir" = in ]; then
-			echo in >/sys/class/gpio/gpio$pin/direction
+			echo in >$gpio/gpio$pin/direction
 		else
-			echo $val >/sys/class/gpio/gpio$pin/value
+			echo $val >$gpio/gpio$pin/value
 		fi
-		[ -n "$own" ] && echo $pin >/sys/class/gpio/unexport
+		[ -n "$own" ] && echo $pin >$gpio/unexport
 		if [ -n "$found" ]; then
 			logger -s -p daemon.info -t novatek "$found answered with its reset (GPIO $pin) released and its clock on"
 			break
 		fi
 	done
-	# Only the bit this probe set goes back: the rest of the register may have
-	# changed under a driver meanwhile.
-	[ $((en & 0x4)) = 0 ] && devmem $clk 32 $(($(devmem $clk 32) & ~0x4))
+	# A sensor that answered keeps its clock, and its driver takes it over. An
+	# IMX415 still powered from the stream before a warm reboot survives the
+	# gate opening, but not closing again at the boot-time clock rate: no
+	# frames until power is cut (#1889, on the N8S). Nothing answered: only
+	# the bit this probe set goes back, as the rest of the register is not
+	# this probe's.
+	[ -z "$found" ] && [ $((en & 0x4)) = 0 ] && devmem $clk 32 $(($(devmem $clk 32) & ~0x4))
 	echo $found
 }
 
