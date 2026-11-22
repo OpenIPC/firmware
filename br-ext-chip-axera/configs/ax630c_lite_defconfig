@@ -54,8 +54,8 @@ BR2_PACKAGE_UBOOT_TOOLS=y
 BR2_PACKAGE_ZLIB=y
 
 # Packages
-# No axera-osdrv-ax620e: its load_axera follows the Xiongmai IVG-A6 firmware
-# (XmCommon, XmGpio, ...), and media is not brought up on this board yet.
+# The Xiongmai IVG-A6 AX620E media modules (5.15.73), tried on the AX630C
+BR2_PACKAGE_AXERA_OSDRV_AX620E=y
 BR2_PACKAGE_DROPBEAR_OPENIPC=y
 BR2_PACKAGE_IPCTOOL=y
 BR2_PACKAGE_LIBCURL_OPENIPC=y
