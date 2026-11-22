@@ -15,6 +15,7 @@ XIONGMAI_OSDRV_XM530V200_LICENSE = PROPRIETARY
 #   xm535d1    X6E-WEQ, V5.07.X02.20250906
 #   xm535d2    X9-WE2Q, V5.02.X02.20251223 (the same media modules as the D1)
 #   xm535w1    X2W-WNG, V5.00.R02.20240410
+#   xm232      X6S-WEQ-H (XM232W1), V5.03.C01
 # They are built for their 3.10.103 vendor kernels. This family's kernel
 # matches their vermagic (SMP on xm530v200, UP on the others) and exports
 # what those kernels add (clk_get_pts, kthread_set_prio).

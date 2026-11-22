@@ -1,0 +1,134 @@
+#!/bin/sh
+# Loads the XM232 vendor modules, from a X6S-WEQ-H (XM232W1), V5.03.C01
+# camera's firmware, in the order its own loadxm530 and loadpublic use.
+MODULE=/lib/modules/3.10.103+/xiongmai
+
+# MMZ is the RAM above the kernel's mem=. The camera's RAM size is not
+# probed: OpenIPC's U-Boot keeps it in totalmem, and this chip's usual size
+# is assumed without it.
+MEM_ALL=$(fw_printenv -n totalmem 2>/dev/null | sed 's/[^0-9]//g')
+[ -n "$MEM_ALL" ] || MEM_ALL=64
+# the mem=<n>M argument wherever it is on the command line
+MEM_OS=$(tr ' ' '\n' </proc/cmdline | sed -n 's/^mem=\([0-9]*\)M$/\1/p' | head -1)
+if [ -z "$MEM_OS" ] || [ "$MEM_OS" -ge "$MEM_ALL" ]; then
+	echo "load_xiongmai: no usable mem=<n>M below ${MEM_ALL}M on the kernel command line" >&2
+	exit 1
+fi
+MEM_START=$(printf "0x%03x00000" $((0x800 + MEM_OS)))
+MEM_LEN=$(printf "0x%03x00000" $((MEM_ALL - MEM_OS)))
+echo MEM_START="$MEM_START" MEM_LEN="$MEM_LEN"
+
+# The SD card's power pad differs between boards; sdio_pdn in the U-Boot
+# environment overrides this chip's usual one.
+SDIO_PDN=$(fw_printenv -n sdio_pdn 2>/dev/null)
+[ -n "$SDIO_PDN" ] || SDIO_PDN=88
+
+# The vendor's two-sensor mode (loadxm530's mode 3): two sensors, one
+# capture path switched between them, spliced into one 2160-line picture
+VI_MODE=3
+VI_LINE=2160
+
+report_error() {
+	echo "******* Error: There's something wrong, please check! *****"
+	exit 1
+}
+
+# The vendor's pll.sh, through devmem instead of its regs tool
+set_pll() {
+	devmem 0x20000124 32 0x0
+	devmem 0x20000000 32 0x1
+	devmem 0x2000011C 32 0x01590000
+	usleep 100000
+	devmem 0x2000011C 32 0x1
+	usleep 100000
+	devmem 0x20000054 32 0x503
+	devmem 0x20000074 32 0x1e02		# video encoder 444 MHz
+	devmem 0x20000068 32 0x02020501		# NPU clock, PLL C / 2
+	usleep 100000
+	devmem 0x20000120 32 0x0
+	usleep 100000
+	devmem 0x20000120 32 0x7
+	devmem 0x20000000 32 0x0
+	devmem 0x20000124 32 0x1
+	usleep 100000
+	devmem 0x200505F0 32 0x1
+}
+
+insert_ko() {
+	set_pll
+	insmod i2c.ko
+	insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN" || report_error
+	insmod vb.ko
+	insmod sys.ko
+	insmod log.ko
+	insmod ddr.ko
+	insmod isp.ko
+	insmod vi_mu.ko sensor_max=2 mode=$VI_MODE line=$VI_LINE
+	insmod rgn.ko
+	insmod venc.ko
+	insmod hevc.ko joint_sensor_num=2
+	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko:
+	# see OpenIPC/firmware#2611.
+	insmod acodec.ko
+	insmod i2s.ko
+	insmod adc.ko
+	insmod dma.ko
+	# The NN accelerator (0x22000000), SPI 27
+	insmod XmVtaMte.ko vta_irq_num=59
+	# The kernel's xm_v200_sd, not the vendor's sdio0_sd: that hands the
+	# arasan driver its own kernel's platform data layout.
+	modprobe xm_v200_sd detect=1 pdn="$SDIO_PDN"
+	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
+	modprobe dwc2
+	modprobe xm_usb0
+}
+
+remove_ko() {
+	modprobe -r xm_v200_sd
+	rmmod -w xm_usb0
+	rmmod -w dwc2
+	rmmod -w XmVtaMte
+	rmmod -w dma
+	rmmod -w adc
+	rmmod -w i2s
+	rmmod -w acodec
+	rmmod -w hevc
+	rmmod -w venc
+	rmmod -w rgn
+	rmmod -w vi_mu
+	rmmod -w isp
+	rmmod -w ddr
+	rmmod -w log
+	rmmod -w sys
+	rmmod -w vb
+	rmmod -w mmz
+	rmmod -w i2c
+}
+
+load_usage() {
+	echo "Usage: $0 [-option]"
+	echo "options:"
+	echo "    -i                  insert modules"
+	echo "    -r                  remove modules"
+	echo "    -h                  help information"
+}
+
+cd $MODULE || exit 1
+
+if [ "$1" = "-i" ]; then
+	insert_ko
+fi
+
+if [ "$1" = "-r" ]; then
+	remove_ko
+fi
+
+if [ "$1" = "-h" ]; then
+	load_usage
+	exit
+fi
+
+if [ $# -eq 0 ] || [ "$1" = "-a" ]; then
+	remove_ko
+	insert_ko
+fi
