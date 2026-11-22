@@ -5,7 +5,7 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_XM530V200_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_XM530V200_VERSION))
-XIONGMAI_OPENSDK_XM530V200_VERSION = 76c9ec5229a70227eff55a91309762e82e53d62c
+XIONGMAI_OPENSDK_XM530V200_VERSION = 054821e2a0216096fad10461e17140da34f3f898
 
 XIONGMAI_OPENSDK_XM530V200_LICENSE = MIT (libxmv200), GPL-2.0 (open_mmz, open_hevc, open_i2c, open_sys, open_vb, open_venc, open_rgn, open_vi, open_vpss, open_acodec, open_i2s, open_adc, open_ddr, open_log, open_mipi_io, open_h264, open_jpeg, open_venc_mem, open_nn, open_ive, open_vo, open_isp, open_xm_usb0, open_rtc, open_vdec, open_var, open_dma, open_motor kernel modules), GPL-2.0+ or BSD-3-Clause (open_dwc2 kernel module)
 XIONGMAI_OPENSDK_XM530V200_LICENSE_FILES = libraries/libxmv200/LICENSE
@@ -45,7 +45,10 @@ endef
 # XM530V200's open_jpeg, the XM535s' open_isp) replace vendor
 # modules nothing links against,
 # which stay as the fallback. On the XM530V200 drivers/xm530v200_vo
-# (open_vo.ko) replaces vo.ko, which the VPSS links against; on the XM533
+# (open_vo.ko) replaces vo.ko, which the VPSS links against; on the XM232
+# only open_mmz (its frame compression, MMZ_CHIP=xm232), open_i2c,
+# open_sys, open_log, open_ddr, open_acodec, open_adc, open_dma,
+# open_dwc2 and open_xm_usb0, its media modules staying the vendor's; on the XM533
 # drivers/xm533_isp (open_isp.ko) replaces isp.ko, which vi.ko links
 # against, and on the XM530V200 drivers/xm530v200_isp, which vpss.ko links
 # against. On the XM530V200 and XM535s drivers/dwc2 (open_dwc2.ko) and
@@ -58,6 +61,16 @@ endef
 # The kernel-module infrastructure installs them under /lib/modules/<kver>/extra/;
 # xiongmai-osdrv-xm530v200 then leaves out the vendor mmz.ko, sys.ko,
 # vb.ko, rgn.ko and those vi.ko, vpss.ko, vo.ko and isp.ko.
+ifeq ($(OPENIPC_SOC_MODEL),xm232)
+# The XM232: only the drivers with an XM232 variant. Its media modules
+# (vb.ko with its own descriptors, vi_mu.ko, isp.ko, rgn.ko, venc.ko,
+# hevc.ko, i2s.ko, XmVtaMte.ko) stay the vendor's, and open_vb, open_rgn
+# and the rest are not built, so depmod finds their symbols only in those.
+XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz drivers/xm_v200_i2c \
+	drivers/xm_v200_sys drivers/xm_v200_log drivers/xm_v200_ddr \
+	drivers/xm_v200_acodec drivers/xm_v200_adc drivers/xm_v200_dma \
+	drivers/dwc2 drivers/xm_v200_usb0
+else
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS = drivers/xm_mmz drivers/xm_hevc \
 	drivers/xm_v200_i2c drivers/xm_v200_sys drivers/xm_v200_vb \
 	drivers/xm_v200_venc drivers/xm_v200_rgn drivers/xm_v200_acodec \
@@ -89,12 +102,16 @@ endif
 ifneq ($(filter xm530v200 xm535%,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_MODULE_SUBDIRS += drivers/dwc2 drivers/xm_v200_usb0
 endif
+endif
 ifneq ($(filter xm530v200 xm533,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT = v3
 else
 XIONGMAI_OPENSDK_XM530V200_HEVC_LAYOUT = v1
 endif
-ifneq ($(filter xm535%,$(OPENIPC_SOC_MODEL)),)
+ifeq ($(OPENIPC_SOC_MODEL),xm232)
+XIONGMAI_OPENSDK_XM530V200_I2C_CHIP = xm232
+XIONGMAI_OPENSDK_XM530V200_VB_LAYOUT = v200
+else ifneq ($(filter xm535%,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OPENSDK_XM530V200_I2C_CHIP = xm535
 XIONGMAI_OPENSDK_XM530V200_VB_LAYOUT = xm535
 else
@@ -109,7 +126,10 @@ else
 XIONGMAI_OPENSDK_XM530V200_RGN_CHIP = xm535
 endif
 # the small modules' chip variants
-ifeq ($(OPENIPC_SOC_MODEL),xm530v200)
+ifeq ($(OPENIPC_SOC_MODEL),xm232)
+XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=xm232 ADC_CHIP=xm232 DDR_CHIP=xm232 \
+	DMA_CHIP=xm232 USB0_CHIP=xm232 MMZ_CHIP=xm232
+else ifeq ($(OPENIPC_SOC_MODEL),xm530v200)
 XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=v200 I2S_CHIP=v200 ADC_CHIP=v200 DDR_CHIP=v200 NN_CHIP=v200
 else ifeq ($(OPENIPC_SOC_MODEL),xm533)
 XIONGMAI_OPENSDK_XM530V200_SMALL = ACODEC_CHIP=xm533 I2S_CHIP=v200 ADC_CHIP=v200 NN_CHIP=xm533

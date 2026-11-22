@@ -6,6 +6,9 @@ config BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200
 	  sensors, ISP bring-up, VPSS, H.265 encoding and AE/AWB,
 	  without the vendor userspace. Installs xmv200-test (brings a
 	  board's pipeline up and encodes its streams to files), and
-	  libxmv200 for applications to link.
+	  libxmv200 for applications to link. On the XM232 it brings
+	  only open kernel modules so far (MMZ, I2C, DMA, ADC, audio
+	  codec, USB host and the small ones), under its vendor media
+	  modules.
 
 	  https://github.com/OpenIPC/openxiongmai

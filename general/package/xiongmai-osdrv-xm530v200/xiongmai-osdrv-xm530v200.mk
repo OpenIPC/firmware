@@ -27,7 +27,12 @@ XIONGMAI_OSDRV_XM530V200_FILES = $(XIONGMAI_OSDRV_XM530V200_PKGDIR)/files/$(OPEN
 # tree depmod reads, to where load_xiongmai finds them only when the open
 # ones do not load.
 ifeq ($(BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200),y)
+ifeq ($(OPENIPC_SOC_MODEL),xm232)
+# the XM232 keeps its vendor vb.ko and rgn.ko (no open driver for them yet)
+XIONGMAI_OSDRV_XM530V200_REPLACED = mmz sys
+else
 XIONGMAI_OSDRV_XM530V200_REPLACED = mmz sys vb rgn
+endif
 ifneq ($(filter xm533 xm535w1,$(OPENIPC_SOC_MODEL)),)
 XIONGMAI_OSDRV_XM530V200_REPLACED += vi
 endif

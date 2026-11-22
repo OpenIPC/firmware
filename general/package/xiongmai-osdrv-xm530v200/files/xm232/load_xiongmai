@@ -54,14 +54,28 @@ set_pll() {
 	devmem 0x200505F0 32 0x1
 }
 
+# MMZ: the open driver (open_mmz, its frame compression) where the image
+# has it, the vendor's otherwise; an image with open_mmz keeps the vendor
+# module outside the depmod tree.
+insert_mmz() {
+	vendor_mmz=mmz.ko
+	[ -f "$vendor_mmz" ] || vendor_mmz=/usr/lib/xiongmai/mmz.ko
+	modprobe open_mmz mmz_start="$MEM_START" mmz_size="$MEM_LEN" 2>/dev/null ||
+		insmod "$vendor_mmz" mmz_start="$MEM_START" mmz_size="$MEM_LEN" ||
+		report_error
+}
+
+# The open drivers (openxiongmai) where the image has them, the vendor
+# modules otherwise; vb.ko, isp.ko, vi_mu.ko, rgn.ko, venc.ko, hevc.ko,
+# i2s.ko and XmVtaMte.ko are always the vendor's.
 insert_ko() {
 	set_pll
-	insmod i2c.ko
-	insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN" || report_error
+	modprobe open_i2c 2>/dev/null || insmod i2c.ko
+	insert_mmz
 	insmod vb.ko
-	insmod sys.ko
-	insmod log.ko
-	insmod ddr.ko
+	modprobe open_sys 2>/dev/null || insmod /usr/lib/xiongmai/sys.ko 2>/dev/null || insmod sys.ko
+	modprobe open_log 2>/dev/null || insmod log.ko
+	modprobe open_ddr 2>/dev/null || insmod ddr.ko
 	insmod isp.ko
 	insmod vi_mu.ko sensor_max=2 mode=$VI_MODE line=$VI_LINE
 	insmod rgn.ko
@@ -69,40 +83,40 @@ insert_ko() {
 	insmod hevc.ko joint_sensor_num=2
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko:
 	# see OpenIPC/firmware#2611.
-	insmod acodec.ko
+	modprobe open_acodec 2>/dev/null || insmod acodec.ko
 	insmod i2s.ko
-	insmod adc.ko
-	insmod dma.ko
+	modprobe open_adc 2>/dev/null || insmod adc.ko
+	modprobe open_dma 2>/dev/null || insmod dma.ko
 	# The NN accelerator (0x22000000), SPI 27
 	insmod XmVtaMte.ko vta_irq_num=59
 	# The kernel's xm_v200_sd, not the vendor's sdio0_sd: that hands the
 	# arasan driver its own kernel's platform data layout.
 	modprobe xm_v200_sd detect=1 pdn="$SDIO_PDN"
 	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
-	modprobe dwc2
-	modprobe xm_usb0
+	modprobe open_dwc2 2>/dev/null || modprobe dwc2
+	modprobe open_xm_usb0 2>/dev/null || modprobe xm_usb0
 }
 
 remove_ko() {
 	modprobe -r xm_v200_sd
-	rmmod -w xm_usb0
-	rmmod -w dwc2
+	rmmod -w open_xm_usb0 2>/dev/null || rmmod -w xm_usb0
+	rmmod -w open_dwc2 2>/dev/null || rmmod -w dwc2
 	rmmod -w XmVtaMte
-	rmmod -w dma
-	rmmod -w adc
+	rmmod -w open_dma 2>/dev/null || rmmod -w dma
+	rmmod -w open_adc 2>/dev/null || rmmod -w adc
 	rmmod -w i2s
-	rmmod -w acodec
+	rmmod -w open_acodec 2>/dev/null || rmmod -w acodec
 	rmmod -w hevc
 	rmmod -w venc
 	rmmod -w rgn
 	rmmod -w vi_mu
 	rmmod -w isp
-	rmmod -w ddr
-	rmmod -w log
-	rmmod -w sys
+	rmmod -w open_ddr 2>/dev/null || rmmod -w ddr
+	rmmod -w open_log 2>/dev/null || rmmod -w log
+	rmmod -w open_sys 2>/dev/null || rmmod -w sys
 	rmmod -w vb
-	rmmod -w mmz
-	rmmod -w i2c
+	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
+	rmmod -w open_i2c 2>/dev/null || rmmod -w i2c
 }
 
 load_usage() {
