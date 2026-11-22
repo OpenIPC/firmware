@@ -1,0 +1,22 @@
+config BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200
+	bool "xiongmai-opensdk-xm530v200"
+	depends on BR2_LINUX_KERNEL
+	help
+	  The open media pipeline of the V200 series (XM530V200, XM533,
+	  XM535D1/D2/W1; libxmv200) on the vendor kernel modules:
+	  sensors, ISP bring-up, VPSS, H.265 encoding and AE/AWB,
+	  without the vendor userspace: libxmv200 for applications to
+	  link. On the XM232 it brings
+	  only open kernel modules so far (MMZ, I2C, DMA, ADC, audio
+	  codec, USB host and the small ones), under its vendor media
+	  modules.
+
+	  https://github.com/OpenIPC/openxiongmai
+
+config BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200_TEST
+	bool "xmv200-test"
+	depends on BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200
+	help
+	  Installs xmv200-test, which brings a board's pipeline up and
+	  encodes its streams to files: a development tool, not part
+	  of the images.

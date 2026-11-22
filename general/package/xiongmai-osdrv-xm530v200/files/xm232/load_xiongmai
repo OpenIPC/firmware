@@ -54,55 +54,74 @@ set_pll() {
 	devmem 0x200505F0 32 0x1
 }
 
+# Each module: the open driver (openxiongmai) where the image has it, the
+# vendor's otherwise. The vendor modules whose exports the open ones
+# duplicate live outside the depmod tree, in /usr/lib/xiongmai.
+vendor_ko() {
+	[ -f "$1.ko" ] && echo "$1.ko" || echo "/usr/lib/xiongmai/$1.ko"
+}
+
+# $1: the open module, $2: the vendor one, then their parameters
+load() {
+	open=$1
+	vendor=$2
+	shift 2
+	modprobe "$open" "$@" 2>/dev/null || insmod "$(vendor_ko "$vendor")" "$@"
+}
+
+unload() {
+	rmmod -w "$1" 2>/dev/null || rmmod -w "$2"
+}
+
 insert_ko() {
 	set_pll
-	insmod i2c.ko
-	insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN" || report_error
-	insmod vb.ko
-	insmod sys.ko
-	insmod log.ko
-	insmod ddr.ko
-	insmod isp.ko
-	insmod vi_mu.ko sensor_max=2 mode=$VI_MODE line=$VI_LINE
-	insmod rgn.ko
-	insmod venc.ko
-	insmod hevc.ko joint_sensor_num=2
+	load open_i2c i2c
+	load open_mmz mmz mmz_start="$MEM_START" mmz_size="$MEM_LEN" || report_error
+	load open_vb vb
+	load open_sys sys
+	load open_log log
+	load open_ddr ddr
+	load open_isp isp
+	load open_vi_mu vi_mu sensor_max=2 mode=$VI_MODE line=$VI_LINE
+	load open_rgn rgn
+	load open_venc venc
+	load open_hevc hevc joint_sensor_num=2
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko:
 	# see OpenIPC/firmware#2611.
-	insmod acodec.ko
-	insmod i2s.ko
-	insmod adc.ko
-	insmod dma.ko
+	load open_acodec acodec
+	load open_i2s i2s
+	load open_adc adc
+	load open_dma dma
 	# The NN accelerator (0x22000000), SPI 27
-	insmod XmVtaMte.ko vta_irq_num=59
+	load open_XmVtaMte XmVtaMte vta_irq_num=59
 	# The kernel's xm_v200_sd, not the vendor's sdio0_sd: that hands the
 	# arasan driver its own kernel's platform data layout.
 	modprobe xm_v200_sd detect=1 pdn="$SDIO_PDN"
 	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
-	modprobe dwc2
-	modprobe xm_usb0
+	modprobe open_dwc2 2>/dev/null || modprobe dwc2
+	modprobe open_xm_usb0 2>/dev/null || modprobe xm_usb0
 }
 
 remove_ko() {
 	modprobe -r xm_v200_sd
-	rmmod -w xm_usb0
-	rmmod -w dwc2
-	rmmod -w XmVtaMte
-	rmmod -w dma
-	rmmod -w adc
-	rmmod -w i2s
-	rmmod -w acodec
-	rmmod -w hevc
-	rmmod -w venc
-	rmmod -w rgn
-	rmmod -w vi_mu
-	rmmod -w isp
-	rmmod -w ddr
-	rmmod -w log
-	rmmod -w sys
-	rmmod -w vb
-	rmmod -w mmz
-	rmmod -w i2c
+	unload open_xm_usb0 xm_usb0
+	unload open_dwc2 dwc2
+	unload open_XmVtaMte XmVtaMte
+	unload open_dma dma
+	unload open_adc adc
+	unload open_i2s i2s
+	unload open_acodec acodec
+	unload open_hevc hevc
+	unload open_venc venc
+	unload open_rgn rgn
+	unload open_vi_mu vi_mu
+	unload open_isp isp
+	unload open_ddr ddr
+	unload open_log log
+	unload open_sys sys
+	unload open_vb vb
+	unload open_mmz mmz
+	unload open_i2c i2c
 }
 
 load_usage() {
