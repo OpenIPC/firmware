@@ -1,0 +1,49 @@
+diff --git a/tools/env/fw_env.c b/tools/env/fw_env.c
+--- a/tools/env/fw_env.c
++++ b/tools/env/fw_env.c
+@@ -1785,6 +1785,36 @@
+ 	return addr;
+ }
+ 
++/*
++ * A board without MTD flash (eMMC and SD card only, e.g. ax630c) keeps the
++ * U-Boot environment where OpenIPC's eMMC layout puts it, after the 768 KiB
++ * boot area: 256 KiB at 0xc0000 on the eMMC. Taken only when a valid
++ * environment is found there, so anything else at that offset (a vendor's
++ * own boot data) is never written.
++ */
++#define MMC_ENV_DEV	"/dev/mmcblk0"
++#define MMC_ENV_OFFSET	0xc0000
++#define MMC_ENV_AREA	0x40000
++
++static int detect_env_mmc(void) {
++	static char buf[MMC_ENV_AREA];
++	int fd = open(MMC_ENV_DEV, O_RDONLY);
++
++	if (fd < 0)
++		return 0;
++	ssize_t n = pread(fd, buf, sizeof buf, MMC_ENV_OFFSET);
++	close(fd);
++	if (n != sizeof buf || uboot_detect_env(buf, sizeof buf, sizeof buf) != 0)
++		return 0;
++
++	DEVNAME(0) = MMC_ENV_DEV;
++	DEVOFFSET(0) = MMC_ENV_OFFSET;
++	ENVSIZE(0) = env_len;
++	DEVESIZE(0) = env_len;
++	ENVSECTORS(0) = 1;
++	return 1;
++}
++
+ static char dev[80];
+ static int detect_env(void) {
+ 	FILE *fp;
+@@ -1826,6 +1856,8 @@
+ 		}
+ 		fclose(fp);
+ 	}
++	if (!res)
++		res = detect_env_mmc();
+ 	return res;
+ }
+ 
