@@ -30,6 +30,12 @@ sensors() {
 	done
 }
 
+# With ak_isp in switch mode, the sensor modules modprobe.d gives options to
+switched_sensors() {
+	grep -qs '^options ak_isp .*multi_cis_switch=1' /etc/modprobe.d/*.conf || return 1
+	sed -n 's/^options sensor_\([a-z0-9]*\) .*/\1/p' /etc/modprobe.d/*.conf | sort -u
+}
+
 insert_ko() {
 	load ak_i2c
 	load ak_pcm
@@ -44,10 +50,24 @@ insert_ko() {
 		[ -n "${SENSOR}" ] && log_vendor "Get data from ipcinfo and set SENSOR as ${SENSOR}"
 	fi
 	SENSOR=$(echo "${SENSOR}" | tr 'A-Z' 'a-z')
+	# Two sensors behind a MIPI switch (ak_isp multi_cis_switch=1, set by the
+	# board's /etc/modprobe.d): the stock firmware loads the one sensor module
+	# its board names, with no check_id, and the module moves the two sensors
+	# to the addresses it is given (addr0, addr1, also from modprobe.d).
+	switched=$(switched_sensors)
+	if [ -n "${switched}" ]; then
+		# A sensor named above narrows the list only when it is one of them:
+		# nothing answers on I2C before its module is in, so a guess can be
+		# wrong.
+		echo "${switched}" | grep -qx "${SENSOR}" && switched=${SENSOR}
+		for s in ${switched}; do
+			log_vendor "Two sensors behind the MIPI switch: sensor_${s}"
+			load "sensor_${s}"
+		done
 	# Each sensor module reads its chip ID with check_id=1 and stays unbound
 	# on a mismatch, which is how the stock firmware loads all of them when it
 	# does not know the sensor.
-	if [ -n "${SENSOR}" ] && [ -e "${moddir}/sensor_${SENSOR}.ko" ]; then
+	elif [ -n "${SENSOR}" ] && [ -e "${moddir}/sensor_${SENSOR}.ko" ]; then
 		load "sensor_${SENSOR}" check_id=1
 	else
 		log_vendor "No driver named for sensor '${SENSOR}', trying each"
