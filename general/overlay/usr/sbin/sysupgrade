@@ -4176,6 +4176,15 @@ fi
 if { [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } && is_split_nand; then
 	die "This camera uses the retired split NAND layout (kernel in its own partition, UBIFS root beside it), which this upgrade cannot write safely. Reinstall it from U-Boot with the current NAND instructions: https://openipc.org/cameras/vendors/$vendor/socs/$model -- nothing was written."
 fi
+# A camera with no MTD flash at all (ax630c: SD card and eMMC only) has
+# nothing this upgrade can write: its firmware is the card image in
+# openipc.<soc>-sd-<variant>.tgz. Without this it would go on to look for a
+# NOR package that does not exist. An SD-booted camera WITH flash is still
+# upgraded as before.
+if { [ "1" = "$update_kernel" ] || [ "1" = "$update_rootfs" ]; } &&
+	! grep -q '^mtd[0-9]' /proc/mtd 2>/dev/null; then
+	die "This camera has no flash for sysupgrade to write; it runs from an SD card or eMMC. Write the card image from openipc.$model-sd-*.tgz instead -- nothing was written."
+fi
 # The NAND layouts with a kernel volume of their own are retired on the SoCs
 # that moved to the kernel-in-rootfs one: current images for them carry the
 # kernel inside the UBIFS rootfs and size the volumes to it. ubiblock stays

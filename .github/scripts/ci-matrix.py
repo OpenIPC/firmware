@@ -177,7 +177,8 @@ UNBUILT_BOARDS = {
     # step or the manifest knows how to name.
     "hi3519dv500_toolchain": "toolchain config, produces no firmware image",
     # Axera's toolchain configs publish toolchain.axera-ax620{e,u} (#2852) for
-    # the ax620e_lite and ax620u_lite boards, which are in WEEKLY_BOARDS.
+    # the ax620e_lite, ax630c_lite and ax620u_lite boards, which are in
+    # WEEKLY_BOARDS.
     "ax620e_toolchain": "toolchain config, produces no firmware image",
     "ax620u_toolchain": "toolchain config, produces no firmware image",
     # T41 publishes its toolchain ahead of its boards (#2877), whose build
@@ -283,8 +284,9 @@ SMOKE_BOARDS = [
 # They are part of the tree like any other built board, so --self-test holds
 # them to the same contract, but they cost more than they are touched: the v83x
 # pair compile their own gcc and musl before the firmware, and change rarely.
-# The Axera pair are new and not yet run on a camera, so a weekly image is
-# enough until they are (#2670).
+# The Axera boards are new and not yet run on a camera, so a weekly image is
+# enough until they are (#2670); ax630c_lite (Sipeed MaixCAM2, an SD card
+# image) has been booted only in QEMU.
 #
 # A pull request builds them only for a change nothing else covers: their own
 # defconfigs, their board directory, or a package no nightly board builds. A
@@ -296,7 +298,8 @@ SMOKE_BOARDS = [
 # six days their last images stay where flashers and sysupgrade find them. A
 # nightly that skips because HEAD has not moved skips them too; they wait for the
 # next WEEKLY_DAY with a new commit.
-WEEKLY_BOARDS = ["v83x_lite", "v83x_ultimate", "ax620e_lite", "ax620u_lite"]
+WEEKLY_BOARDS = ["v83x_lite", "v83x_ultimate", "ax620e_lite", "ax620u_lite",
+                 "ax630c_lite"]
 WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 
 # Board directories with no board in ALL_BOARDS. Their defconfigs exist but are
@@ -557,8 +560,9 @@ class Tree:
         else:
             architecture = "arm"
         # UBI vs squashfs decides which images `make repack` emits and so which
-        # of build.yml's `find output/images -name openipc*no{r,and}*` fires.
-        rootfs = ",".join(kind for kind in ("CPIO", "SQUASHFS", "UBI")
+        # of build.yml's `find output/images -name openipc*no{r,and}*` fires;
+        # EXT2 is the SD card package (openipc.<soc>-sd-<variant>.tgz).
+        rootfs = ",".join(kind for kind in ("CPIO", "SQUASHFS", "UBI", "EXT2")
                           if re.search(rf"^BR2_TARGET_ROOTFS_{kind}=y", body, re.M))
         return {
             "vendor:" + path[len(self.root) + 1:].split(os.sep)[0][len("br-ext-chip-"):],
