@@ -253,6 +253,13 @@ endif
 ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
 	@$(call PREPARE_REPACK,uImage,16384,,,initramfs)
 endif
+# An SD card board (ax630c_lite) has no flash image: genimage's sdcard.img
+# (board/<family>/*-genimage.cfg) is the whole card, kernel and ext4 rootfs.
+ifeq ($(BR2_TARGET_ROOTFS_EXT2),y)
+ifneq ($(wildcard $(TARGET)/images/sdcard.img),)
+	@$(call REPACK_SD)
+endif
+endif
 endif
 
 size-report:
@@ -411,6 +418,17 @@ define REPACK_NOR_SPLIT
 	# Checksums first, as in REPACK_FIRMWARE.
 	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-nor-$(BR2_OPENIPC_VARIANT)-split.tgz \
 		firmware.bin.$(BR2_OPENIPC_SOC_MODEL).md5sum firmware.bin.$(BR2_OPENIPC_SOC_MODEL)
+	rm -f $(TARGET)/images/*.md5sum
+endef
+
+# The SD card package: the card image, written whole with dd or a card
+# flasher. Copies, as REPACK_NAND_FIT does.
+define REPACK_SD
+	cd $(TARGET)/images && cp -f sdcard.img sdcard.img.$(BR2_OPENIPC_SOC_MODEL) && \
+		md5sum sdcard.img.$(BR2_OPENIPC_SOC_MODEL) > sdcard.img.$(BR2_OPENIPC_SOC_MODEL).md5sum
+	# Checksums first, as in REPACK_FIRMWARE.
+	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-sd-$(BR2_OPENIPC_VARIANT).tgz \
+		sdcard.img.$(BR2_OPENIPC_SOC_MODEL).md5sum sdcard.img.$(BR2_OPENIPC_SOC_MODEL)
 	rm -f $(TARGET)/images/*.md5sum
 endef
 
