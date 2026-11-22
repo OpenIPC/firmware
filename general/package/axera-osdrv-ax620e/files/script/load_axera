@@ -14,7 +14,19 @@
 KO_DIR=/lib/modules/$(uname -r)/axera
 failed=0
 
+# DRAM size in MiB from the devicetree memory node, which the bootloader
+# fills in: for boards whose U-Boot sets no totalmem (stock bootloaders).
+# reg is <addr-hi addr-lo size-hi size-lo>, big-endian.
+dt_mem() {
+	for reg in /proc/device-tree/memory*/reg; do
+		[ -f "$reg" ] || continue
+		size=$(od -An -v -tx1 "$reg" | tr -d ' \n' | cut -c17-32)
+		[ -n "$size" ] && echo $((0x$size / 1048576)) && return
+	done
+}
+
 mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d M)
+mem_total=${mem_total:-$(dt_mem)}
 mem_total=${mem_total:-256}
 os_mem=$(sed -n 's/.*mem=\([0-9]*\)M.*/\1/p' /proc/cmdline)
 
