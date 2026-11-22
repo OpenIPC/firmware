@@ -37,12 +37,19 @@ flash_aliased() {
 		while read -r dev size name; do
 			size=$((0x$size))
 			offset=$(cat /sys/class/mtd/$dev/offset 2>/dev/null)
-			if [ -z "$offset" ]; then
-				if [ "$name" = firmware ]; then
-					offset=${kern:-$next}
-				else
-					offset=$next
-				fi
+			if [ -n "$offset" ]; then
+				p=$(readlink -f "/sys/class/mtd/$dev" 2>/dev/null)
+				while [ -n "$p" ] && [ -r "$p/../offset" ]; do
+					p=${p%/*}
+					[ -n "$p" ] || break
+					parent_off=$(cat "$p/offset" 2>/dev/null)
+					[ -n "$parent_off" ] || break
+					offset=$((offset + parent_off))
+				done
+			elif [ "$name" = firmware ]; then
+				offset=${kern:-$next}
+			else
+				offset=$next
 			fi
 			[ "$name" = kernel ] && kern=$offset
 			echo "$dev $offset $size"
@@ -56,7 +63,7 @@ flash_aliased() {
 	while read -r dev offset size; do
 		[ -n "$size" ] || continue
 		[ $((offset + size)) -gt $total ] && total=$((offset + size))
-		[ "$offset" -eq 0 ] && head_dev=$dev
+		[ -z "$head_dev" ] && [ "$offset" -eq 0 ] && [ "$size" -gt 0 ] && head_dev=$dev
 	done <<EOF
 $geometry
 EOF
