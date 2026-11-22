@@ -428,6 +428,12 @@ if [ "$1" = "atbm606x-xm535d2-x9-we2q" ]; then
 	exit $?
 fi
 
+# XM232 X6S-WEQ-H: ATBM6132CU, its power pad 11 (the vendor's wifi_pdn value)
+if [ "$1" = "atbm606x-xm232-x6s-weq-h" ]; then
+	xm_v200_wifi 11 atbm606x_wifi_usb
+	exit $?
+fi
+
 # XM535W1 X2W-WNG: ATBM6012B-X
 if [ "$1" = "atbm603x-xm535w1-x2w-wng" ]; then
 	xm_v200_wifi 163 atbm603x_comb_wifi_usb
