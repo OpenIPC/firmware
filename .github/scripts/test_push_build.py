@@ -176,9 +176,11 @@ class Platforms(unittest.TestCase):
         plats = push_build.collect_platforms(None, self.assets(
             "gk7205v200_lite_hisilicon-ipc-a-nor.tgz",
             "ssc338q_fpv_emax-wyvern-link-nand.tgz",
-            "openipc.t31-nor-lite.tgz"))
+            "openipc.t31-nor-lite.tgz",
+            "openipc.t23-nor-v4l2_lite-split.tgz"))
         self.assertEqual([p["name"] for p in plats], [
-            "gk7205v200_lite_hisilicon-ipc-a", "ssc338q_fpv_emax-wyvern-link", "t31-lite"])
+            "gk7205v200_lite_hisilicon-ipc-a", "ssc338q_fpv_emax-wyvern-link",
+            "t23-v4l2_lite", "t31-lite"])
 
     def test_builder_compound_devices_with_reports(self):
         with tempfile.TemporaryDirectory() as t:

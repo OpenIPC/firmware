@@ -79,6 +79,9 @@ struct ipa_sensor {
 	int vblank;
 	int vblank_min;		/* shortest frame AE may use */
 	int vblank_max;		/* longest frame AE may use */
+	int vblank_hw_min;	/* sensor V4L2_CID_VBLANK minimum */
+	int vblank_hw_max;	/* sensor V4L2_CID_VBLANK maximum */
+	int follow_bad_vblank;	/* last rejected master vblank, -1 when clear */
 };
 
 int ipa_sensor_gain_init(struct ipa_sensor *s, const char *name, int maximum);

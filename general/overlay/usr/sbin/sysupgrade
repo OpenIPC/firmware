@@ -81,20 +81,22 @@ abort_wait=${abort_wait:-5}
 HISTORY_FILE=${HISTORY_FILE:-/etc/sysupgrade.history}
 # Route to firmware or builder manifest. A stock OpenIPC/firmware build
 # stamps BUILD_PLATFORM=${soc}_${variant} with variant in {lite,ultimate,
-# neo}. Anything else — a per-device override (${soc}_${variant}_${device},
-# two or more underscores) or a non-stock variant (${soc}_wfbng etc.) — is
-# built by OpenIPC/builder. Pre-1.0.51 cameras lack BUILD_PLATFORM; fall
-# back to BUILD_OPTION (variant) alone.
+# neo,v4l2_lite}. Anything else — a per-device override (${soc}_${variant}_${device},
+# two or more underscores past the variant) or a non-stock variant (${soc}_wfbng
+# etc.) — is built by OpenIPC/builder. Pre-1.0.51 cameras lack BUILD_PLATFORM;
+# fall back to BUILD_OPTION (variant) alone.
 _plat=$(grep '^BUILD_PLATFORM=' /etc/os-release 2>/dev/null | cut -d= -f2)
 case "$_plat" in
+	*_*_*_*)                          _manifest_repo=builder  ;;
+	*_v4l2_lite)                      _manifest_repo=firmware ;;
 	*_*_*)                            _manifest_repo=builder  ;;
 	*_lite|*_ultimate|*_neo)          _manifest_repo=firmware ;;
 	?*)                               _manifest_repo=builder  ;;
 	*)
 		_osr=$(grep '^BUILD_OPTION=' /etc/os-release 2>/dev/null | cut -d= -f2)
 		case "${_osr:-lite}" in
-			lite|ultimate|neo) _manifest_repo=firmware ;;
-			*)                 _manifest_repo=builder  ;;
+			lite|ultimate|neo|v4l2_lite) _manifest_repo=firmware ;;
+			*)                           _manifest_repo=builder  ;;
 		esac
 		;;
 esac
@@ -1016,8 +1018,8 @@ url_exists() {
 # partitions.
 nor_split_url() {
 	local split
-	split=$(echo "$1" | sed -e 's|\(/openipc\.[^/]*-nor-[a-z0-9]*\)\.tgz$|\1-split.tgz|' \
-		-e 's|\(/[a-z0-9]*_[a-z0-9]*_[^/]*-nor\)\.tgz$|\1-split.tgz|')
+	split=$(echo "$1" | sed -e 's|\(/openipc\.[^/]*-nor-[a-z0-9_]*\)\.tgz$|\1-split.tgz|' \
+		-e 's|\(/[a-z0-9]*_[a-z0-9_]*_[^/]*-nor\)\.tgz$|\1-split.tgz|')
 	if [ "$(pkg_flash)" = nor ] && [ "$split" != "$1" ] && url_exists "$split"; then
 		echo "$split"
 	else
@@ -3514,13 +3516,12 @@ get_system_platform() {
 default_upgrade_url() {
 	local plat osr repo=builder
 	plat=$(get_system_platform)
-	case "$plat" in
-		*_*_*)
-			nor_split_url "https://github.com/OpenIPC/builder/releases/download/latest/$plat-$(pkg_flash).tgz"
-			return ;;
-	esac
+	if is_device_platform "$plat"; then
+		nor_split_url "https://github.com/OpenIPC/builder/releases/download/latest/$plat-$(pkg_flash).tgz"
+		return
+	fi
 	osr=$(get_system_build)
-	case "$osr" in lite|ultimate|neo) repo=firmware ;; esac
+	case "$osr" in lite|ultimate|neo|v4l2_lite) repo=firmware ;; esac
 	# A bootloader that boots the split NOR layout takes firmware.bin, from its
 	# own archive: the plain one keeps the fixed-slot images every older
 	# camera and installer expects.
@@ -3532,7 +3533,11 @@ default_upgrade_url() {
 }
 
 is_device_platform() {
-	case "$1" in *_*_*) return 0 ;; esac
+	case "$1" in
+		*_*_*_*)     return 0 ;;
+		*_v4l2_lite) return 1 ;;
+		*_*_*)       return 0 ;;
+	esac
 	return 1
 }
 

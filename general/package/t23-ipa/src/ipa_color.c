@@ -61,11 +61,12 @@ int ipa_color_init(struct ipa_color *c, const struct ipa_tuning *t)
 	for (i = 0; i < T23_ISP_GAMMA_POINTS; i++)
 		c->gamma[i] = gamma[i];
 
-	if (words[0] > T23_ISP_LSC_MAX_WORDS || words[0] % 3 || scale[0] > 3)
+	if (words[0] <= 0 || words[0] > T23_ISP_LSC_MAX_WORDS ||
+	    words[0] % 3 || scale[0] < 0 || scale[0] > 3)
 		return -EINVAL;
 	c->lsc_words = words[0];
 	for (i = 0; i < 3; i++) {
-		c->lsc_lut[i] = ipa_tuning_get(t, "lsc", lsc[i], 0);
+		c->lsc_lut[i] = ipa_tuning_get(t, "lsc", lsc[i], c->lsc_words);
 		if (!c->lsc_lut[i])
 			return -EINVAL;
 	}

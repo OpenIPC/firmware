@@ -24,7 +24,8 @@ BR2_LINUX_KERNEL_VMLINUX_BIN=y
 BR2_LINUX_KERNEL_DTS_SUPPORT=y
 BR2_LINUX_KERNEL_INTREE_DTS_NAME="ingenic/t23-openipc"
 
-# Skip legacy 3.x/4.9 kernel patches (not needed for 6.12)
+# Skip the 5 legacy 3.x/4.9 kernel patches (all-patches/linux/0010..0014) while
+# keeping non-Linux symlinks (busybox, uboot-tools 0011-env-partition-autosearch, etc.).
 BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL)/package/all-patches-neo"
 
 # Filesystem

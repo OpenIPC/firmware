@@ -56,7 +56,7 @@ ALL_BOARDS = [
     # Sigmastar [I6E]
     "ssc30kd_lite", "ssc30kq_lite", "ssc338q_lite",
     # Ingenic
-    "t10_lite", "t20_lite", "t21_lite", "t30_lite", "t23_lite", "t23_v4l2_lite",
+    "t10_lite", "t20_lite", "t21_lite", "t30_lite", "t23_lite",
     "t31_lite", "t40_lite", "t41_lite",
     # Hisilicon [HI3516AV100]
     "hi3516av100_lite", "hi3516av100_neo", "hi3516dv100_lite",
@@ -270,7 +270,6 @@ SMOKE_BOARDS = [
     "gk7205v200_lite",        # Goke
     "ssc338q_lite",           # SigmaStar
     "t31_lite",               # Ingenic, the only mips
-    "t23_v4l2_lite",          # the v4l2_lite variant
     "rv1126_lite",            # Rockchip, and UBI with no squashfs
     "gm8136_lite",            # GrainMedia, the only uclibc toolchain
     "nt98566_lite",           # Novatek
@@ -287,7 +286,8 @@ SMOKE_BOARDS = [
 # pair compile their own gcc and musl before the firmware, and change rarely.
 # The Axera boards are new and not yet run on a camera, so a weekly image is
 # enough until they are (#2670); ax630c_lite (Sipeed MaixCAM2, an SD card
-# image) has been booted only in QEMU.
+# image) has been booted only in QEMU. t23_v4l2_lite is staged there too while
+# its kernel/divinus dependencies finish landing.
 #
 # A pull request builds them only for a change nothing else covers: their own
 # defconfigs, their board directory, or a package no nightly board builds. A
@@ -300,7 +300,7 @@ SMOKE_BOARDS = [
 # nightly that skips because HEAD has not moved skips them too; they wait for the
 # next WEEKLY_DAY with a new commit.
 WEEKLY_BOARDS = ["v83x_lite", "v83x_ultimate", "ax620e_lite", "ax620u_lite",
-                 "ax630c_lite"]
+                 "ax630c_lite", "t23_v4l2_lite"]
 WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 
 # Board directories with no board in ALL_BOARDS. Their defconfigs exist but are

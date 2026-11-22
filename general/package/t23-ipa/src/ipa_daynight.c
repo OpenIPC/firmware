@@ -126,8 +126,17 @@ static int set_filter(struct ipa_daynight *dn, bool in)
 		}
 	}
 	values.bits = 0;
-	if (ioctl(dn->ircut_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values) < 0)
-		return -errno;
+	for (int attempt = 0; attempt < 3; attempt++) {
+		if (ioctl(dn->ircut_fd, GPIO_V2_LINE_SET_VALUES_IOCTL, &values) == 0)
+			goto cleared;
+	}
+	ret = errno ? -errno : -EIO;
+	ipa_warn("ir-cut: failed to clear pulse (%s); releasing GPIO lines\n",
+		 strerror(-ret));
+	close(dn->ircut_fd);
+	dn->ircut_fd = -1;
+	return ret;
+cleared:
 	if (!ret) {
 		ssize_t n = pwrite(dn->state_fd, &state, 1, 0);
 
@@ -341,8 +350,8 @@ bool ipa_daynight_run(struct ipa_daynight *dn, double ev_us, bool settled)
 			else
 				dn->dwell = DN_DWELL_S;
 			dn->ev_dark = ev_us;
-			dn->measuring = true;
-			enter(dn, true, t);
+			if (enter(dn, true, t) == 0)
+				dn->measuring = true;
 		}
 		return dn->changed;
 	}
@@ -351,8 +360,8 @@ bool ipa_daynight_run(struct ipa_daynight *dn, double ev_us, bool settled)
 		return false;
 	if (dwelt(dn, t) &&
 	    held(dn, 1 / ev_us - dn->illuminator >= 1 / dn->to_day, t)) {
-		dn->last_day = t;
-		enter(dn, false, t);
+		if (enter(dn, false, t) == 0)
+			dn->last_day = t;
 	}
 	return dn->changed;
 }

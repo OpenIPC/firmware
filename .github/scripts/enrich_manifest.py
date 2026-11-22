@@ -38,7 +38,7 @@ TAG_RE = re.compile(r"^nightly-(\d{8})-([0-9a-f]{7})$")
 # match the flash column exactly, so one that asks for "nor" never takes it.
 # An SD/eMMC board (ax630c) publishes openipc.<soc>-sd-<variant>.tgz, listed
 # under flash "sd".
-ASSET_RE = re.compile(r"^openipc\.([^.]+)-(nor|nand|sd)-(lite|ultimate|neo)(-split)?\.tgz$")
+ASSET_RE = re.compile(r"^openipc\.([^.]+)-(nor|nand|sd)-(lite|ultimate|neo|v4l2_lite)(-split)?\.tgz$")
 
 # Retry budget for transient GitHub API failures (HTTP 401 Bad credentials,
 # 5xx, rate-limit) observed on workflow_run-triggered runs 2026-05-23.

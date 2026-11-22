@@ -134,7 +134,7 @@ static const uint32_t sc1346_gain_log2[] = {
 	217702, 220018, 222351, 224557, 226713, 228821, 230949, 232966,
 	234940, 236874, 238830, 240687, 242508, 244294, 246104, 247825,
 	249515, 251175, 252858, 254461, 256038, 257588, 259162, 260663,
-	262140, 265026, 270634, 273276, 275846, 278427, 280863, 283237,
+	262140, 265026, 267916, 270634, 273276, 275846, 278427, 280863, 283237,
 	285553, 287886, 290092, 292248, 294356, 296484, 298501, 300475,
 	302409, 304365, 306222, 308043, 309829, 311639, 313360, 315050,
 	316710, 318393, 319996, 321573, 323123, 324697, 326198, 327675,
@@ -264,7 +264,7 @@ static const struct {
 	{ "jxf37pa", jxh63p_gain_log2, 64 },
 	{ "jxf38p", jxh63p_gain_log2, 64 },
 	{ "jxh63p", jxh63p_gain_log2, 80 },
-	{ "sc1346", sc1346_gain_log2, 191 },
+	{ "sc1346", sc1346_gain_log2, 192 },
 	{ "sc1a4t", sc1a4t_gain_log2, 191 },
 	{ "sc1a4ts1", sc1a4t_gain_log2, 191 },
 	{ "sc200ai", sc200ai_gain_log2, 365 },
@@ -396,6 +396,9 @@ int ipa_sensor_init(struct ipa_sensor *s, int fd, const char *name)
 	 * otherwise; an earlier run may have left a longer one.
 	 */
 	s->vblank_min = s->vblank_max = vblank.default_value;
+	s->vblank_hw_min = vblank.minimum;
+	s->vblank_hw_max = vblank.maximum;
+	s->follow_bad_vblank = -1;
 	s->exposure_margin = s->height + s->vblank - s->exposure_max;
 	s->line_us = line_time_us(fd, width);
 	return 0;
@@ -494,14 +497,41 @@ int ipa_sensor_apply(struct ipa_sensor *s, int exposure, int gain_index,
  */
 int ipa_sensor_follow(struct ipa_sensor *s, int master_fd)
 {
-	int vblank = 0, longest;
+	int vblank = 0, longest, prev_exposure;
 
-	if (get_ctrl(master_fd, V4L2_CID_VBLANK, &vblank) || vblank == s->vblank)
+	if (get_ctrl(master_fd, V4L2_CID_VBLANK, &vblank))
 		return 0;
-	s->vblank_min = s->vblank_max = vblank;
+	if (vblank < s->vblank_hw_min || vblank > s->vblank_hw_max) {
+		if (vblank != s->follow_bad_vblank) {
+			s->follow_bad_vblank = vblank;
+			ipa_warn("sensor: master vblank %d outside slave range [%d, %d]\n",
+				 vblank, s->vblank_hw_min, s->vblank_hw_max);
+		}
+		return 0;
+	}
+	if (vblank == s->vblank) {
+		s->vblank_min = s->vblank_max = vblank;
+		s->follow_bad_vblank = -1;
+		return 0;
+	}
 	longest = ipa_sensor_exposure_max(s, vblank);
-	if (s->exposure > longest &&
-	    !set_ctrl(s->fd, V4L2_CID_EXPOSURE, longest))
+	prev_exposure = s->exposure;
+	if (s->exposure > longest) {
+		if (set_ctrl(s->fd, V4L2_CID_EXPOSURE, longest))
+			return 0;
 		s->exposure = longest;
-	return set_vblank(s, vblank) ? 0 : 1;
+	}
+	if (set_vblank(s, vblank)) {
+		if (s->exposure != prev_exposure &&
+		    !set_ctrl(s->fd, V4L2_CID_EXPOSURE, prev_exposure))
+			s->exposure = prev_exposure;
+		if (vblank != s->follow_bad_vblank) {
+			s->follow_bad_vblank = vblank;
+			ipa_warn("sensor: slave rejected vblank %d\n", vblank);
+		}
+		return 0;
+	}
+	s->vblank_min = s->vblank_max = vblank;
+	s->follow_bad_vblank = -1;
+	return 1;
 }

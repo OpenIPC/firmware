@@ -10,7 +10,7 @@ INPUT=0
 TUNING_FILE=
 AE_MODE=auto
 AWB_MODE=auto
-DAYNIGHT_MODE=auto
+DAYNIGHT_MODE=
 FLICKER_HZ=0
 MIN_FPS=15
 ILLUMINATOR="ir:illumination"
@@ -73,7 +73,8 @@ case "$1" in
 		[ "$flicker_hz" = off ] && flicker_hz=0
 
 		set -- -i "$INPUT" -F "$min_fps" -f "$flicker_hz" \
-			-d "$DAYNIGHT_MODE" -L "$ILLUMINATOR"
+			-L "$ILLUMINATOR"
+		[ -z "$DAYNIGHT_MODE" ] || set -- "$@" -d "$DAYNIGHT_MODE"
 		[ -z "$TUNING_FILE" ] || set -- "$@" -c "$TUNING_FILE"
 		[ "$AE_MODE" = off ] && set -- "$@" -A
 		[ "$AWB_MODE" = off ] && set -- "$@" -W

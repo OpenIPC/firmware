@@ -4,7 +4,9 @@ INPUT=0
 TUNING_FILE=
 AE_MODE=auto
 AWB_MODE=auto
-DAYNIGHT_MODE=auto
+# Leave DAYNIGHT_MODE empty so t23-ipa picks its per-input default
+# (auto for input 0, follow for secondary inputs); set auto|day|night|follow to override.
+DAYNIGHT_MODE=
 FLICKER_HZ=0
 MIN_FPS=15
 ILLUMINATOR=ir:illumination

@@ -67,12 +67,6 @@ for f in "$VMLINUX_BIN" "$DTB" "$VMLINUX_ELF" "$KREL_FILE"; do
 	}
 done
 
-vmlinux_sz=$(stat -c %s "$VMLINUX_BIN")
-if [ "$vmlinux_sz" -ge 4718592 ]; then
-	echo "v4l2-post-image: ERROR: vmlinux.bin ($vmlinux_sz bytes) >= 4718592 (4.5 MiB U-Boot decompression limit)" >&2
-	exit 1
-fi
-
 LOADADDR=$("$READELF" -lW "$VMLINUX_ELF" | awk '$1 == "LOAD" { print $3; exit }')
 ENTRY=$("$READELF" -h "$VMLINUX_ELF" | awk '/Entry point address:/ { print $NF }')
 KREL=$(tr -d '-' < "$KREL_FILE")
@@ -90,6 +84,11 @@ cleanup() {
 trap cleanup EXIT HUP INT TERM
 
 cat "$VMLINUX_BIN" "$DTB" > "$TMP_BIN"
+payload_sz=$(stat -c %s "$TMP_BIN")
+if [ "$payload_sz" -ge 4718592 ]; then
+	echo "v4l2-post-image: ERROR: vmlinux.bin+DTB ($payload_sz bytes) >= 4718592 (4.5 MiB U-Boot decompression limit)" >&2
+	exit 1
+fi
 "$XZ" --format=lzma -9 -c "$TMP_BIN" > "$TMP_LZMA"
 "$MKIMAGE" -A mips -O linux -T kernel -C lzma \
 	-a "$LOADADDR" -e "$ENTRY" \

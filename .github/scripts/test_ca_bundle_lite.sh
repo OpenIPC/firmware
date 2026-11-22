@@ -103,6 +103,13 @@ for root in "ISRG Root X1" "ISRG Root X2" "USERTrust ECC Certification Authority
 	has_root "$cut" "$root" && ok "lite keeps $root" || bad "lite dropped $root"
 done
 
+# ----- v4l2_lite (derived 8 MB lite variant) -----
+t=$(fresh v4l2_lite)
+if run v4l2_lite "$t"; then ok "v4l2_lite build succeeds"; else bad "v4l2_lite build failed: $(cat "$work/out.txt")"; fi
+v4l2_cut_n=$(grep -c 'BEGIN CERTIFICATE' "$t/etc/ssl/certs/ca-certificates.crt" || true)
+[ "$v4l2_cut_n" -eq "$cut_n" ] && ok "v4l2_lite keeps the same $v4l2_cut_n roots as lite" \
+	|| bad "v4l2_lite kept $v4l2_cut_n roots instead of $cut_n"
+
 # ----- ultimate -----
 t=$(fresh ultimate)
 if run ultimate "$t"; then ok "ultimate build succeeds"; else bad "ultimate build failed"; fi
