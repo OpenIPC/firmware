@@ -31,13 +31,23 @@ trap 'rm -rf "$work"' EXIT
 
 cat >"$work/wrapper" <<'EOF'
 insmod() { echo "insmod $*" >>"$CALLS"; }
-devmem() { :; }
+# The sensor clock gate reads as closed; a write to it is recorded.
+devmem() {
+	if [ "$1" = 0xf0020070 ]; then
+		if [ $# = 3 ]; then echo "devmem gate $(printf 0x%x $3)" >>"$CALLS"; else echo 0x00010002; fi
+	fi
+	:
+}
 logger() { :; }
 # With a fake pinmux node, ipcinfo records the last pinmux command written
 # before it ran, and finds an IMX415 only once I2C_1 is on its pads -- or,
 # with LATE set, only once the vendor modules are in and I2C_1 is routed.
 ipcinfo() {
-	if [ -n "${PINMUX:-}" ]; then
+	if [ -n "${GPIO:-}" ]; then
+		# The fallback: a sensor that answers only out of reset, or never.
+		[ -z "${DEAD:-}" ] && [ "$(cat "$GPIO/gpio65/value")" = 1 ] && echo imx415
+		:
+	elif [ -n "${PINMUX:-}" ]; then
 		echo "ipcinfo after: $(cat "$PINMUX/pinmux_set" 2>/dev/null)" >>"$CALLS"
 		if [ -n "${LATE:-}" ]; then
 			grep -q '^insmod hdal/kwrap.ko' "$CALLS" &&
@@ -88,6 +98,7 @@ run() {
 	(cd "$work" && TEST_SENSOR="${TEST_SENSOR:-}" SCRIPT="$script" CALLS="$work/calls" ENV_FILE="$work/env" \
 		LOAD_NOVATEK_DT="$work/dt" LOAD_NOVATEK_CMDLINE="$work/cmdline" \
 		PINMUX="${PINMUX:-}" LATE="${LATE:-}" LOAD_NOVATEK_PINMUX="${PINMUX:-}" LOAD_NOVATEK_SENSORS="$work/sensors" \
+		GPIO="${GPIO:-}" DEAD="${DEAD:-}" LOAD_NOVATEK_GPIO="${GPIO:-/nonexistent}" \
 		busybox sh "$work/wrapper" >"$work/out" 2>&1) || rc=$?
 }
 
@@ -214,6 +225,42 @@ pads 0x0 0x0
 run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
 after "(never written)" "no driver for the config: its pads are not touched"
 lacks "fw_setenv sensor" "... and a miss is not stored"
+
+echo "=== detection: the fallback, a sensor held in reset ==="
+
+# gpio65 already exported as a low input, as on the N8S at boot; the sensor
+# answers only while it is high
+held() {
+	pads 0x220 0x1 driver
+	printf 'id_0_mclk = 0\nid_0_i2c_id = 0\nid_0_rst_pin = 0x41\n' >"$work/sensors/sen_imx415.cfg"
+	rm -rf "$work/gpio"
+	mkdir -p "$work/gpio/gpio65"
+	echo in >"$work/gpio/gpio65/direction"
+	echo 0 >"$work/gpio/gpio65/value"
+	GPIO=$work/gpio
+}
+
+held
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+has "fw_setenv sensor imx415" "found with its reset released"
+has "devmem gate 0x10006" "... with its clock gate opened"
+# Closing it again at the boot-time rate left a sensor still powered from a
+# warm reboot with no frames until power was cut (#1889).
+lacks "devmem gate 0x10002" "... and the gate is left open for its driver"
+if [ "$(cat "$work/gpio/gpio65/direction") $(cat "$work/gpio/gpio65/value")" = "in 0" ]; then
+	ok "... and gpio65 goes back to a low input"
+else
+	bad "... and gpio65 goes back to a low input -- $(cat "$work/gpio/gpio65/direction") $(cat "$work/gpio/gpio65/value")"
+fi
+
+held
+DEAD=1
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+has "devmem gate 0x10002" "nothing answers: the gate is closed again"
+lacks "fw_setenv sensor" "... and nothing is stored"
+exited 0 "... and the script runs to its end"
+DEAD=
+GPIO=
 PINMUX=
 
 rm -rf "$work/dt"
