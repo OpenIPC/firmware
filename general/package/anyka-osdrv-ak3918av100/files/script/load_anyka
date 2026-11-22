@@ -41,6 +41,14 @@ insert_ko() {
 	load ak_pcm
 	load ak_ion
 
+	# The ISP alternates switched sensors with PWM0 (the device tree's
+	# gen-pwm-sel), which only ak_pwm_char provides. It stays out otherwise:
+	# loaded, it starts every PWM the device tree enables.
+	switched=$(switched_sensors)
+	if [ -n "${switched}" ] && [ -e "${moddir}/ak_pwm_char.ko" ]; then
+		load ak_pwm_char
+	fi
+
 	load ak_isp
 	SENSOR=$(fw_printenv -n sensor 2>/dev/null)
 	if [ -n "${SENSOR}" ]; then
@@ -54,7 +62,6 @@ insert_ko() {
 	# board's /etc/modprobe.d): the stock firmware loads the one sensor module
 	# its board names, with no check_id, and the module moves the two sensors
 	# to the addresses it is given (addr0, addr1, also from modprobe.d).
-	switched=$(switched_sensors)
 	if [ -n "${switched}" ]; then
 		# A sensor named above narrows the list only when it is one of them:
 		# nothing answers on I2C before its module is in, so a guess can be
@@ -88,6 +95,7 @@ remove_ko() {
 		grep -q "^sensor_${s} " /proc/modules && rmmod "sensor_${s}"
 	done
 	grep -q "^ak_isp " /proc/modules && rmmod ak_isp
+	grep -q "^ak_pwm_char " /proc/modules && rmmod ak_pwm_char
 }
 
 case "$1" in

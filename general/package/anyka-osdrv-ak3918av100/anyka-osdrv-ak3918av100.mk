@@ -53,6 +53,7 @@ ANYKA_OSDRV_AK3918AV100_LICENSE = PROPRIETARY
 #   b5f7b91e9f0c25a9b77579ac6c2fcff4930971815f965d0a6ee8bb2162a5dee9  ak_pcm.ko
 #   f510acfa81af03c834dbcffe6a90622ad74f3350e9f5eaf84f0a2ec065c39306  ak_venc_adapter.ko
 #   4941fb8e4db7837df26f41c49cf8b96c03d9e567371b902f600a9b6225f8d3ce  ak_venc_bridge.ko
+#   fc23bf88da7006f2819d1968ea41020427db15428f9d6f7cc9d82da22dec93ca  ak_pwm_char.ko
 #   a77faa572d5f72a087806199aca5626d7901825c4958479581e4ebdea6834932  sensor_gc3003.ko
 #   78ea187589b0f9c7ca2a3c0e9496ac3be1c20e9724bab4b26402bd557e93e359  sensor_mis2006.ko
 #   7fde778cafaf22dd5582298ad5b18bc7cdde01b85d76bdf2b87dd5a09f00e04c  sensor_mis2008.ko
