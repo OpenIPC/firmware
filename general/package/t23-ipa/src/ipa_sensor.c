@@ -316,11 +316,14 @@ static int get_ctrl(int fd, uint32_t id, int *value)
 	return 0;
 }
 
-static int set_ctrl(int fd, uint32_t id, int value)
+static int set_ctrl(int fd, uint32_t id, int *value)
 {
-	struct v4l2_control c = { .id = id, .value = value };
+	struct v4l2_control c = { .id = id, .value = *value };
 
-	return ioctl(fd, VIDIOC_S_CTRL, &c) < 0 ? -errno : 0;
+	if (ioctl(fd, VIDIOC_S_CTRL, &c) < 0)
+		return -errno;
+	*value = c.value;
+	return 0;
 }
 
 /* Line period from the pixel rate and the line length, 0 when unknown */
@@ -407,15 +410,25 @@ int ipa_sensor_init(struct ipa_sensor *s, int fd, const char *name)
 /* Allow AE to lengthen frames down to min_fps. */
 void ipa_sensor_frame_limits(struct ipa_sensor *s, double min_fps)
 {
-	struct v4l2_queryctrl q = { .id = V4L2_CID_VBLANK };
-	int vblank;
+	int hw_max = s->vblank_hw_max;
+	double vblank;
 
-	if (min_fps <= 0 || !s->line_us || ioctl(s->fd, VIDIOC_QUERYCTRL, &q) < 0)
+	if (min_fps <= 0 || !s->line_us)
 		return;
-	vblank = (int)(1e6 / (min_fps * s->line_us)) - s->height;
-	if (vblank > q.maximum)
-		vblank = q.maximum;
-	s->vblank_max = vblank > s->vblank_min ? vblank : s->vblank_min;
+	if (hw_max <= 0) {
+		struct v4l2_queryctrl q = { .id = V4L2_CID_VBLANK };
+
+		if (ioctl(s->fd, VIDIOC_QUERYCTRL, &q) < 0)
+			return;
+		hw_max = q.maximum;
+	}
+	vblank = 1e6 / (min_fps * s->line_us) - s->height;
+	if (!(vblank > s->vblank_min))
+		s->vblank_max = s->vblank_min;
+	else if (vblank >= hw_max)
+		s->vblank_max = hw_max > s->vblank_min ? hw_max : s->vblank_min;
+	else
+		s->vblank_max = (int)vblank;
 }
 
 int ipa_sensor_exposure_max(const struct ipa_sensor *s, int vblank)
@@ -447,14 +460,16 @@ int ipa_sensor_gain_index(const struct ipa_sensor *s, uint32_t gain_log2_q16)
 
 static int set_vblank(struct ipa_sensor *s, int vblank)
 {
-	int ret;
+	int ret, exp = s->exposure;
 
 	if (vblank == s->vblank)
 		return 0;
-	ret = set_ctrl(s->fd, V4L2_CID_VBLANK, vblank);
+	ret = set_ctrl(s->fd, V4L2_CID_VBLANK, &vblank);
 	if (!ret) {
 		s->vblank = vblank;
 		s->exposure_max = ipa_sensor_exposure_max(s, vblank);
+		if (get_ctrl(s->fd, V4L2_CID_EXPOSURE, &exp) == 0)
+			s->exposure = exp;
 	}
 	return ret;
 }
@@ -476,19 +491,42 @@ int ipa_sensor_apply(struct ipa_sensor *s, int exposure, int gain_index,
 	if (exposure > s->exposure_max)
 		exposure = s->exposure_max;
 	if (!ret && exposure != s->exposure) {
-		ret = set_ctrl(s->fd, V4L2_CID_EXPOSURE, exposure);
+		int applied = exposure;
+
+		ret = set_ctrl(s->fd, V4L2_CID_EXPOSURE, &applied);
 		if (!ret)
-			s->exposure = exposure;
+			s->exposure = applied;
 	}
 	if (!ret && gain_index != s->gain_index) {
-		ret = set_ctrl(s->fd, V4L2_CID_ANALOGUE_GAIN, gain_index);
+		int applied = gain_index;
+
+		ret = set_ctrl(s->fd, V4L2_CID_ANALOGUE_GAIN, &applied);
 		if (!ret)
-			s->gain_index = gain_index;
+			s->gain_index = applied;
 	}
 	if (!ret && vblank < s->vblank &&
 	    s->exposure <= ipa_sensor_exposure_max(s, vblank))
 		ret = set_vblank(s, vblank);
 	return ret;
+}
+
+/* Sync cached sensor controls in case another V4L2 user changed them. */
+void ipa_sensor_sync(struct ipa_sensor *s, double min_fps)
+{
+	int cur = 0;
+
+	if (get_ctrl(s->fd, V4L2_CID_VBLANK, &cur) == 0 && cur != s->vblank) {
+		s->vblank = cur;
+		s->vblank_min = cur;
+		s->vblank_max = cur;
+		s->exposure_max = ipa_sensor_exposure_max(s, cur);
+		if (min_fps > 0)
+			ipa_sensor_frame_limits(s, min_fps);
+	}
+	if (get_ctrl(s->fd, V4L2_CID_EXPOSURE, &cur) == 0)
+		s->exposure = cur;
+	if (get_ctrl(s->fd, V4L2_CID_ANALOGUE_GAIN, &cur) == 0)
+		s->gain_index = cur;
 }
 
 /*
@@ -517,14 +555,18 @@ int ipa_sensor_follow(struct ipa_sensor *s, int master_fd)
 	longest = ipa_sensor_exposure_max(s, vblank);
 	prev_exposure = s->exposure;
 	if (s->exposure > longest) {
-		if (set_ctrl(s->fd, V4L2_CID_EXPOSURE, longest))
+		int applied = longest;
+
+		if (set_ctrl(s->fd, V4L2_CID_EXPOSURE, &applied))
 			return 0;
-		s->exposure = longest;
+		s->exposure = applied;
 	}
 	if (set_vblank(s, vblank)) {
+		int restored = prev_exposure;
+
 		if (s->exposure != prev_exposure &&
-		    !set_ctrl(s->fd, V4L2_CID_EXPOSURE, prev_exposure))
-			s->exposure = prev_exposure;
+		    !set_ctrl(s->fd, V4L2_CID_EXPOSURE, &restored))
+			s->exposure = restored;
 		if (vblank != s->follow_bad_vblank) {
 			s->follow_bad_vblank = vblank;
 			ipa_warn("sensor: slave rejected vblank %d\n", vblank);

@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <syslog.h>
 #include <linux/media/ingenic/t23-isp-config.h>
 
 #define IPA_PARAM_WB		(1U << 0)
@@ -33,9 +34,14 @@ struct ipa_params_staging {
 	uint32_t dmsc[T23_ISP_DMSC_WORDS];
 };
 
-#define ipa_err(fmt, ...)   fprintf(stderr, "ipa: " fmt, ##__VA_ARGS__)
-#define ipa_warn(fmt, ...)  fprintf(stderr, "ipa: " fmt, ##__VA_ARGS__)
-#define ipa_info(fmt, ...)  fprintf(stdout, "ipa: " fmt, ##__VA_ARGS__)
+void ipa_log_open(bool use_syslog);
+void ipa_log_close(void);
+void ipa_log(int priority, const char *fmt, ...)
+	__attribute__((format(printf, 2, 3)));
+
+#define ipa_err(fmt, ...)   ipa_log(LOG_ERR, fmt, ##__VA_ARGS__)
+#define ipa_warn(fmt, ...)  ipa_log(LOG_WARNING, fmt, ##__VA_ARGS__)
+#define ipa_info(fmt, ...)  ipa_log(LOG_INFO, fmt, ##__VA_ARGS__)
 
 #define Q16_ONE             65536.0
 #define Q12_ONE             4096.0
@@ -95,6 +101,7 @@ uint32_t ipa_sensor_gain_log2(const struct ipa_sensor *s, int index);
 int ipa_sensor_gain_index(const struct ipa_sensor *s, uint32_t gain_log2_q16);
 int ipa_sensor_apply(struct ipa_sensor *s, int exposure, int gain_index,
 		     int vblank);
+void ipa_sensor_sync(struct ipa_sensor *s, double min_fps);
 int ipa_sensor_follow(struct ipa_sensor *s, int master_fd);
 
 #define AE_CURVE_POINTS	10
@@ -129,7 +136,7 @@ struct ipa_awb_locus_point {
 struct ipa_awb {
 	double axis_rg[15], axis_bg[15];
 	double weight[15][15];		/* white likelihood, rows are bg */
-	double weight_dim[15][15];	/* used below 200 EV units */
+	double weight_dim[15][15];	/* used at 200 EV units and above (dim scenes) */
 	double mired[15][15];
 	double spatial[15][15];
 	double mult_rg, mult_bg;	/* grid coordinate = 256 * ratio * mult */

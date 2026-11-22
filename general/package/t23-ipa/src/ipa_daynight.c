@@ -218,11 +218,11 @@ int ipa_daynight_init(struct ipa_daynight *dn, enum ipa_dn_mode mode,
 		}
 		dn->state_fd = open(IRCUT_STATE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
 		if (dn->state_fd < 0) {
-			int ret = -errno;
-
+			ipa_warn("ir-cut state %s: %s; day/night disabled\n",
+				 IRCUT_STATE, strerror(errno));
 			close(dn->ircut_fd);
 			dn->ircut_fd = -1;
-			return ret;
+			return 0;
 		}
 	}
 	if (mode != IPA_DN_FOLLOW && led && *led) {
@@ -239,10 +239,26 @@ int ipa_daynight_init(struct ipa_daynight *dn, enum ipa_dn_mode mode,
 		dn->changed = dn->night;
 		return 0;
 	case IPA_DN_NIGHT:
-		return enter(dn, true, now_s());
 	default:
 		/* The filter position cannot be read back; set it. */
-		return enter(dn, false, now_s());
+		if (enter(dn, mode == IPA_DN_NIGHT, now_s())) {
+			ipa_warn("ir-cut initial move failed; day/night disabled\n");
+			if (dn->led_fd >= 0) {
+				close(dn->led_fd);
+				dn->led_fd = -1;
+			}
+			if (dn->ircut_fd >= 0) {
+				close(dn->ircut_fd);
+				dn->ircut_fd = -1;
+			}
+			if (dn->state_fd >= 0) {
+				close(dn->state_fd);
+				dn->state_fd = -1;
+			}
+			dn->night = false;
+			dn->changed = false;
+		}
+		return 0;
 	}
 }
 

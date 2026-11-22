@@ -58,8 +58,11 @@ int ipa_color_init(struct ipa_color *c, const struct ipa_tuning *t)
 		c->sat_ev[i] = ev[i];
 		c->sat[i] = sat[i] / Q8_ONE;
 	}
-	for (i = 0; i < T23_ISP_GAMMA_POINTS; i++)
+	for (i = 0; i < T23_ISP_GAMMA_POINTS; i++) {
+		if (gamma[i] < 0 || gamma[i] > 4095)
+			return -EINVAL;
 		c->gamma[i] = gamma[i];
+	}
 
 	if (words[0] <= 0 || words[0] > T23_ISP_LSC_MAX_WORDS ||
 	    words[0] % 3 || scale[0] < 0 || scale[0] > 3)

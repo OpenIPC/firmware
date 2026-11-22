@@ -7,6 +7,8 @@
 # so Linux is given all of the DDR. An environment saved under the 3.10 SDK
 # kernel holds osmem 40M/41M, leaving the rest outside Linux; raise osmem to
 # totalmem (64M by default) once and reboot when an OpenIPC U-Boot env exists.
+# If downgrading back to 3.10 t23_lite, restore osmem (e.g. fw_setenv osmem 40M)
+# because 3.10 ingenic-osdrv-t23 does not reset it.
 
 check_mem() {
 	osmem=$(fw_printenv -n osmem 2>/dev/null) || return 0
@@ -17,6 +19,11 @@ check_mem() {
 	esac
 	[ "$osmem" != "$total_mem" ] || return 0
 	fw_setenv osmem "$total_mem" || return 0
+	if [ "$(fw_printenv -n osmem 2>/dev/null)" != "$total_mem" ]; then
+		logger -s -p daemon.warn -t ingenic \
+			"failed to verify osmem=$total_mem in env; skipping reboot"
+		return 0
+	fi
 	logger -s -p daemon.info -t ingenic "osmem $total_mem; rebooting"
 	reboot
 	exit 0

@@ -72,7 +72,7 @@ case "$1" in
 		flicker_hz=$FLICKER_HZ
 		[ "$flicker_hz" = off ] && flicker_hz=0
 
-		set -- -i "$INPUT" -F "$min_fps" -f "$flicker_hz" \
+		set -- -s -i "$INPUT" -F "$min_fps" -f "$flicker_hz" \
 			-L "$ILLUMINATOR"
 		[ -z "$DAYNIGHT_MODE" ] || set -- "$@" -d "$DAYNIGHT_MODE"
 		[ -z "$TUNING_FILE" ] || set -- "$@" -c "$TUNING_FILE"
@@ -82,8 +82,14 @@ case "$1" in
 
 		mkdir -p /var/run
 		if start-stop-daemon -S -q -b -m -p "$PIDFILE" -x "$BIN" -- "$@"; then
-			echo OK
-			exit 0
+			sleep 1
+			if is_running; then
+				echo OK
+				exit 0
+			fi
+			rm -f "$PIDFILE"
+			echo "FAIL (exited; check logread)"
+			exit 1
 		else
 			echo FAIL
 			exit 1

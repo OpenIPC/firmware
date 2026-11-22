@@ -347,6 +347,7 @@ static void usage(const char *name)
 	       "  -n, --frames <count>   stop after count statistics buffers\n"
 	       "  -b, --blocks <mask>    IPA_PARAM_* blocks to program (default all)\n"
 	       "  -E, --ext-params       use extensible V4L2_META_FMT_T23_ISP_EXT_PARAMS (default)\n"
+	       "  -s, --syslog           log errors and status messages to syslog\n"
 	       "  -v, --verbose          print the state every 15 frames\n",
 	       name);
 }
@@ -369,6 +370,7 @@ int main(int argc, char **argv)
 		{ "frames", required_argument, NULL, 'n' },
 		{ "blocks", required_argument, NULL, 'b' },
 		{ "ext-params", no_argument, NULL, 'E' },
+		{ "syslog", no_argument, NULL, 's' },
 		{ "verbose", no_argument, NULL, 'v' },
 		{ "help", no_argument, NULL, 'h' },
 		{ NULL, 0, NULL, 0 }
@@ -382,7 +384,8 @@ int main(int argc, char **argv)
 	double tolerance = 20, lsc_ct = -1e9, min_fps = 15;
 	uint32_t dns_gain = UINT32_MAX, lsc_gain = UINT32_MAX;
 	uint32_t blocks = IPA_PARAM_ALL;
-	bool do_ae = true, do_awb = true, verbose = false, idle = true;
+	bool do_ae = true, do_awb = true, use_syslog = false, verbose = false;
+	bool idle = true;
 	struct sigaction action = { .sa_handler = on_signal };
 	struct meta_queue stats_q = {0}, params_q = {0};
 	struct ipa_params_staging *scratch_cfg = NULL;
@@ -399,7 +402,7 @@ int main(int argc, char **argv)
 	int sensor_fd = -1, video = -1, stats_fd = -1, params_fd = -1, master = -1;
 	int opt, ret = EXIT_FAILURE;
 
-	while ((opt = getopt_long(argc, argv, "i:c:t:l:F:f:AWd:N:D:L:n:b:Evh", options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "i:c:t:l:F:f:AWd:N:D:L:n:b:Esvh", options, NULL)) != -1) {
 		switch (opt) {
 		case 'i': input = strtoul(optarg, NULL, 0); break;
 		case 'c': tuning_path = optarg; break;
@@ -424,6 +427,7 @@ int main(int argc, char **argv)
 		case 'n': frames = strtoul(optarg, NULL, 0); break;
 		case 'b': blocks = strtoul(optarg, NULL, 0); break;
 		case 'E': break;
+		case 's': use_syslog = true; break;
 		case 'v': verbose = true; break;
 		case 'h': usage(argv[0]); return EXIT_SUCCESS;
 		default: usage(argv[0]); return EXIT_FAILURE;
@@ -431,12 +435,15 @@ int main(int argc, char **argv)
 	}
 	if (dn_mode < 0)
 		dn_mode = input ? IPA_DN_FOLLOW : IPA_DN_AUTO;
-	if (input > 1 || target > 254 || tolerance < 0 || min_fps < 0 ||
+	if (input > 1 || target > 254 || !isfinite(tolerance) || tolerance < 0 ||
+	    !isfinite(min_fps) || min_fps < 0 ||
 	    (mains_hz && mains_hz != 50 && mains_hz != 60) ||
+	    !isfinite(to_day) || !isfinite(to_night) ||
 	    to_day <= 0 || to_night <= to_day) {
 		usage(argv[0]);
 		return EXIT_FAILURE;
 	}
+	ipa_log_open(use_syslog);
 
 	snprintf(name, sizeof(name), "T23 stats%u", input);
 	stats_fd = find_node(name);
@@ -546,7 +553,8 @@ int main(int argc, char **argv)
 	if (ioctl(stats_fd, VIDIOC_STREAMON, &type) < 0)
 		goto out;
 
-	setvbuf(stdout, NULL, _IOLBF, 0);
+	if (!use_syslog)
+		setvbuf(stdout, NULL, _IOLBF, 0);
 
 	ret = EXIT_SUCCESS;
 	while (!stop && (!frames || count < frames)) {
@@ -589,6 +597,7 @@ int main(int argc, char **argv)
 			idle = false;
 		}
 
+		ipa_sensor_sync(&sensor, master >= 0 ? 0 : min_fps);
 		if (master >= 0)
 			ipa_sensor_follow(&sensor, master);
 		if (do_ae)
@@ -620,6 +629,7 @@ int main(int argc, char **argv)
 		slot = params_get(&params_q, &index);
 		if (slot) {
 			struct ipa_params_staging *cfg = scratch_cfg;
+			bool update_lsc = false, update_dns = false;
 			size_t bytesused;
 
 			memset(cfg, 0, sizeof(*cfg));
@@ -633,19 +643,24 @@ int main(int argc, char **argv)
 			    gain_moved(gain, lsc_gain)) {
 				ipa_color_lsc(&color, awb.ct, gain, &cfg->lsc);
 				cfg->update |= IPA_PARAM_LSC;
-				lsc_ct = awb.ct;
-				lsc_gain = gain;
+				update_lsc = true;
 			}
-			if (gain_moved(gain, dns_gain)) {
-				if (ipa_dns_pack(&tuning, gain, cfg) == 0)
-					dns_gain = gain;
-			}
+			if (gain_moved(gain, dns_gain))
+				update_dns = ipa_dns_pack(&tuning, gain, cfg) == 0;
 			cfg->update &= blocks;
 
 			bytesused = ipa_pack_ext_params(slot, cfg);
 
-			if (params_queue(&params_q, index, bytesused))
+			if (params_queue(&params_q, index, bytesused)) {
 				ipa_warn("params QBUF: %s\n", strerror(errno));
+			} else {
+				if (update_lsc) {
+					lsc_ct = awb.ct;
+					lsc_gain = gain;
+				}
+				if (update_dns)
+					dns_gain = gain;
+			}
 		}
 
 		if (verbose && count % 15 == 1)
@@ -682,5 +697,6 @@ out:
 		close(master);
 	ipa_daynight_close(&dn);
 	ipa_tuning_free(&tuning);
+	ipa_log_close();
 	return ret;
 }
