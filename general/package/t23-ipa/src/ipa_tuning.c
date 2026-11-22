@@ -145,8 +145,9 @@ void ipa_tuning_free(struct ipa_tuning *t)
 	memset(t, 0, sizeof(*t));
 }
 
-const int64_t *ipa_tuning_get(const struct ipa_tuning *t, const char *module,
-			      const char *name, unsigned int count)
+static const struct ipa_field *ipa_tuning_find(const struct ipa_tuning *t,
+					       const char *module,
+					       const char *name)
 {
 	const struct ipa_tuning_set *set = &t->set[t->night];
 	struct ipa_field key, *found;
@@ -160,9 +161,34 @@ const int64_t *ipa_tuning_get(const struct ipa_tuning *t, const char *module,
 		ipa_err("tuning %s.%s: missing\n", module, name);
 		return NULL;
 	}
+	return found;
+}
+
+const int64_t *ipa_tuning_get(const struct ipa_tuning *t, const char *module,
+			      const char *name, unsigned int count)
+{
+	const struct ipa_field *found = ipa_tuning_find(t, module, name);
+
+	if (!found)
+		return NULL;
 	if (count && found->count != count) {
 		ipa_err("tuning %s.%s: %u values, expected %u\n",
 			module, name, found->count, count);
+		return NULL;
+	}
+	return found->values;
+}
+
+const int64_t *ipa_tuning_get_min(const struct ipa_tuning *t, const char *module,
+				  const char *name, unsigned int min_count)
+{
+	const struct ipa_field *found = ipa_tuning_find(t, module, name);
+
+	if (!found)
+		return NULL;
+	if (found->count < min_count) {
+		ipa_err("tuning %s.%s: %u values, need at least %u\n",
+			module, name, found->count, min_count);
 		return NULL;
 	}
 	return found->values;

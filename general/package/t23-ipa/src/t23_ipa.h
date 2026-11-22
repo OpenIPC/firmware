@@ -61,6 +61,9 @@ void ipa_tuning_free(struct ipa_tuning *t);
 /* @count 0 accepts any length; a mismatch or a missing field returns NULL. */
 const int64_t *ipa_tuning_get(const struct ipa_tuning *t, const char *module,
 			      const char *name, unsigned int count);
+/* Accept any length >= @min_count; a short or missing field returns NULL. */
+const int64_t *ipa_tuning_get_min(const struct ipa_tuning *t, const char *module,
+				  const char *name, unsigned int min_count);
 /* Vendor 9-point interpolation over log2(total gain) in Q16 */
 int64_t ipa_intp9(const int64_t *v, uint32_t gain_log2_q16);
 

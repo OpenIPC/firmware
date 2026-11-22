@@ -66,7 +66,8 @@ int ipa_color_init(struct ipa_color *c, const struct ipa_tuning *t)
 		return -EINVAL;
 	c->lsc_words = words[0];
 	for (i = 0; i < 3; i++) {
-		c->lsc_lut[i] = ipa_tuning_get(t, "lsc", lsc[i], c->lsc_words);
+		/* Shipped YAMLs pad LSC tables to the 2047-word HW buffer. */
+		c->lsc_lut[i] = ipa_tuning_get_min(t, "lsc", lsc[i], c->lsc_words);
 		if (!c->lsc_lut[i])
 			return -EINVAL;
 	}
