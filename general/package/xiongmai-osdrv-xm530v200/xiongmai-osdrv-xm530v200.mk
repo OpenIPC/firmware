@@ -28,8 +28,8 @@ XIONGMAI_OSDRV_XM530V200_FILES = $(XIONGMAI_OSDRV_XM530V200_PKGDIR)/files/$(OPEN
 # ones do not load.
 ifeq ($(BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200),y)
 ifeq ($(OPENIPC_SOC_MODEL),xm232)
-# the XM232 keeps its vendor vb.ko and rgn.ko (no open driver for them yet)
-XIONGMAI_OSDRV_XM530V200_REPLACED = mmz sys
+# the XM232's vendor modules that export what other modules import
+XIONGMAI_OSDRV_XM530V200_REPLACED = i2c mmz sys vb isp vi_mu rgn acodec
 else
 XIONGMAI_OSDRV_XM530V200_REPLACED = mmz sys vb rgn
 endif
