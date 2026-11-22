@@ -30,10 +30,30 @@ sensors() {
 	done
 }
 
+# With ak_isp in switch mode, the sensor modules modprobe.d gives options to
+switched_sensors() {
+	grep -qs '^options ak_isp .*multi_cis_switch=1' /etc/modprobe.d/*.conf || return 1
+	sed -n 's/^options sensor_\([a-z0-9]*\) .*/\1/p' /etc/modprobe.d/*.conf | sort -u
+}
+
 insert_ko() {
 	load ak_i2c
 	load ak_pcm
 	load ak_ion
+
+	# The ISP alternates switched sensors with PWM0 (the device tree's
+	# gen-pwm-sel), which only ak_pwm_char provides. It stays out otherwise:
+	# loaded, it starts every PWM the device tree enables.
+	# OpenIPC U-Boot ticks on timer 0 (SYSCTRL 0xB4/0xB8) and leaves it running
+	# into Linux; the kernel uses timers 1 and 7. Timer 0 is PWM0's, and
+	# ak_pwm_char refuses one it finds enabled ("timer/pwm0 is used"), so
+	# stop it first. U-Boot should stop it itself (OpenIPC/u-boot#162), but
+	# cameras keep the U-Boot they have, so this stays.
+	switched=$(switched_sensors)
+	if [ -n "${switched}" ] && [ -e "${moddir}/ak_pwm_char.ko" ]; then
+		grep -q "^ak_pwm_char " /proc/modules || devmem 0x080000B8 32 0
+		load ak_pwm_char
+	fi
 
 	load ak_isp
 	SENSOR=$(fw_printenv -n sensor 2>/dev/null)
@@ -44,10 +64,23 @@ insert_ko() {
 		[ -n "${SENSOR}" ] && log_vendor "Get data from ipcinfo and set SENSOR as ${SENSOR}"
 	fi
 	SENSOR=$(echo "${SENSOR}" | tr 'A-Z' 'a-z')
+	# Two sensors behind a MIPI switch (ak_isp multi_cis_switch=1, set by the
+	# board's /etc/modprobe.d): the stock firmware loads the one sensor module
+	# its board names, with no check_id, and the module moves the two sensors
+	# to the addresses it is given (addr0, addr1, also from modprobe.d).
+	if [ -n "${switched}" ]; then
+		# A sensor named above narrows the list only when it is one of them:
+		# nothing answers on I2C before its module is in, so a guess can be
+		# wrong.
+		echo "${switched}" | grep -qx "${SENSOR}" && switched=${SENSOR}
+		for s in ${switched}; do
+			log_vendor "Two sensors behind the MIPI switch: sensor_${s}"
+			load "sensor_${s}"
+		done
 	# Each sensor module reads its chip ID with check_id=1 and stays unbound
 	# on a mismatch, which is how the stock firmware loads all of them when it
 	# does not know the sensor.
-	if [ -n "${SENSOR}" ] && [ -e "${moddir}/sensor_${SENSOR}.ko" ]; then
+	elif [ -n "${SENSOR}" ] && [ -e "${moddir}/sensor_${SENSOR}.ko" ]; then
 		load "sensor_${SENSOR}" check_id=1
 	else
 		log_vendor "No driver named for sensor '${SENSOR}', trying each"
@@ -68,6 +101,7 @@ remove_ko() {
 		grep -q "^sensor_${s} " /proc/modules && rmmod "sensor_${s}"
 	done
 	grep -q "^ak_isp " /proc/modules && rmmod ak_isp
+	grep -q "^ak_pwm_char " /proc/modules && rmmod ak_pwm_char
 }
 
 case "$1" in
