@@ -174,9 +174,9 @@ UNBUILT_BOARDS = {
     # joins ALL_BOARDS once those modules have run on an AV130 camera.
     "ak3918av130_lite": "prebuilt SDK modules not yet run on an AV130 camera",
 
-    # Mainline kernel, no video yet, run only under qemu-bench. It joins
+    # Mainline kernel, no streamer yet, run only under qemu-bench. It joins
     # ALL_BOARDS once its kernel branch is published and it streams.
-    "gm8126_neo": "kernel branch not published yet, no video",
+    "gm8126_lite": "kernel branch not published yet, no streamer",
 
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
