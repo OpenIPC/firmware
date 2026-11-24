@@ -1,0 +1,11 @@
+config BR2_PACKAGE_SGSNPU_MODELS
+	bool "sgsnpu-models"
+	default n
+	help
+	  YOLOv8n object detector compiled for the NPU ("IPU") of SigmaStar's
+	  infinity6c (SSC377x/SSC378x), for majestic's object detection. Eight
+	  classes: person, bicycle, car, motorcycle, bus, truck, cat and dog
+	  (majestic reports them as human, vehicle and animal). 2.6 MB in a
+	  squashfs. AGPL-3.0, from the Ultralytics weights.
+
+	  https://github.com/OpenIPC/sgsnpu-models
