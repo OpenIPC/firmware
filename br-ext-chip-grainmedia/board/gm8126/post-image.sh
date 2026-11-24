@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 # Post-image: append the GM8126 DTB to zImage and wrap it as a uImage for gm8126_lite.
 IMAGES_DIR="${BINARIES_DIR:-$1}"
 BUILD_DIR="${BUILD_DIR:-$(dirname $IMAGES_DIR)/build}"
