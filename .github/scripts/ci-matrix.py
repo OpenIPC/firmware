@@ -174,6 +174,10 @@ UNBUILT_BOARDS = {
     # joins ALL_BOARDS once those modules have run on an AV130 camera.
     "ak3918av130_lite": "prebuilt SDK modules not yet run on an AV130 camera",
 
+    # Mainline kernel, no streamer yet, run only under qemu-bench. It joins
+    # ALL_BOARDS once it streams and has run on a camera.
+    "gm8126_lite": "no streamer, not run on a camera yet",
+
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
     "hi3519dv500_toolchain": "toolchain config, produces no firmware image",
@@ -308,6 +312,7 @@ WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 # listed rather than inferred so that a family silently falling out of the
 # matrix fails --self-test instead of quietly skipping CI.
 UNBUILT_FAMILIES = {
+    ("br-ext-chip-grainmedia", "gm8126"),
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
@@ -378,7 +383,7 @@ NOT_BUILT = {
     "anyka-osdrv-ak3918av130",
     "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
-    "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
+    "go2rtc", "grainmedia-osdrv-gm8126", "herald", "hisi-gpio", "i2c-telemetry",
     "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
     "matter",
     "mavfwd", "mdnsd-openipc", "mini", "mqtt-bot", "msposd", "n3n-openipc", "nabto",
