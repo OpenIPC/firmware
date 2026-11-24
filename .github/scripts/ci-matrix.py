@@ -174,6 +174,10 @@ UNBUILT_BOARDS = {
     # joins ALL_BOARDS once those modules have run on an AV130 camera.
     "ak3918av130_lite": "prebuilt SDK modules not yet run on an AV130 camera",
 
+    # Mainline kernel, no video yet, run only under qemu-bench. It joins
+    # ALL_BOARDS once its kernel branch is published and it streams.
+    "gm8126_neo": "kernel branch not published yet, no video",
+
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
     "hi3519dv500_toolchain": "toolchain config, produces no firmware image",
@@ -308,6 +312,7 @@ WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 # listed rather than inferred so that a family silently falling out of the
 # matrix fails --self-test instead of quietly skipping CI.
 UNBUILT_FAMILIES = {
+    ("br-ext-chip-grainmedia", "gm8126"),
     ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
