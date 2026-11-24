@@ -31,12 +31,16 @@ trap 'rm -rf "$work"' EXIT
 
 cat >"$work/wrapper" <<'EOF'
 insmod() { echo "insmod $*" >>"$CALLS"; }
-# The sensor clock gate reads as closed; a write to it is recorded.
+# The sensor clock's gate, source and divider registers hold what is written
+# to them, in files under $REGS; every write to them is recorded.
 devmem() {
-	if [ "$1" = 0xf0020070 ]; then
-		if [ $# = 3 ]; then echo "devmem gate $(printf 0x%x $3)" >>"$CALLS"; else echo 0x00010002; fi
+	[ -f "${REGS:-/nonexistent}/$1" ] || return 0
+	if [ $# = 3 ]; then
+		printf '0x%08x\n' "$(($3))" >"$REGS/$1"
+		echo "devmem $1 $(cat "$REGS/$1")" >>"$CALLS"
+	else
+		cat "$REGS/$1"
 	fi
-	:
 }
 logger() { :; }
 # With a fake pinmux node, ipcinfo records the last pinmux command written
@@ -98,7 +102,7 @@ run() {
 	(cd "$work" && TEST_SENSOR="${TEST_SENSOR:-}" SCRIPT="$script" CALLS="$work/calls" ENV_FILE="$work/env" \
 		LOAD_NOVATEK_DT="$work/dt" LOAD_NOVATEK_CMDLINE="$work/cmdline" \
 		PINMUX="${PINMUX:-}" LATE="${LATE:-}" LOAD_NOVATEK_PINMUX="${PINMUX:-}" LOAD_NOVATEK_SENSORS="$work/sensors" \
-		GPIO="${GPIO:-}" DEAD="${DEAD:-}" LOAD_NOVATEK_GPIO="${GPIO:-/nonexistent}" \
+		GPIO="${GPIO:-}" DEAD="${DEAD:-}" REGS="${REGS:-}" LOAD_NOVATEK_GPIO="${GPIO:-/nonexistent}" \
 		busybox sh "$work/wrapper" >"$work/out" 2>&1) || rc=$?
 }
 
@@ -238,15 +242,31 @@ held() {
 	echo in >"$work/gpio/gpio65/direction"
 	echo 0 >"$work/gpio/gpio65/value"
 	GPIO=$work/gpio
+	# The N8S at boot, with the source's other bits and the divider's other
+	# bytes (other clocks) set. $1: the gate register, $2: the source.
+	rm -rf "$work/regs"
+	mkdir -p "$work/regs"
+	echo "${1:-0x00010002}" >"$work/regs/0xf0020070"
+	echo "${2:-0x00c00000}" >"$work/regs/0xf0020018"
+	echo 0x01010101 >"$work/regs/0xf0020030"
+	REGS=$work/regs
+}
+reg_is() {
+	got=$(cat "$work/regs/$1")
+	if [ "$got" = "$2" ]; then ok "$3"; else bad "$3 -- $1 holds $got, want $2"; fi
+}
+# writes WANT MESSAGE: the register writes, in order
+writes() {
+	got=$(sed -n 's/^devmem 0xf00200//p' "$work/calls" | tr '\n' ';')
+	if [ "$got" = "$1" ]; then ok "$2"; else bad "$2 -- wrote '$got', want '$1'"; fi
 }
 
 held
 run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
 has "fw_setenv sensor imx415" "found with its reset released"
-has "devmem gate 0x10006" "... with its clock gate opened"
-# Closing it again at the boot-time rate left a sensor still powered from a
-# warm reboot with no frames until power was cut (#1889).
-lacks "devmem gate 0x10002" "... and the gate is left open for its driver"
+# At the boot-time 240 MHz an IMX415 still powered from a warm reboot sent no
+# frames until power was cut; at 24 MHz it streamed (#1889).
+writes "18 0x00c00000;30 0x01010113;70 0x00010006;" "... its clock set to 24 MHz before the gate opens, and both left for its driver"
 if [ "$(cat "$work/gpio/gpio65/direction") $(cat "$work/gpio/gpio65/value")" = "in 0" ]; then
 	ok "... and gpio65 goes back to a low input"
 else
@@ -256,11 +276,25 @@ fi
 held
 DEAD=1
 run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
-has "devmem gate 0x10002" "nothing answers: the gate is closed again"
+writes "18 0x00c00000;30 0x01010113;70 0x00010006;70 0x00010002;18 0x00c00000;30 0x01010101;" "nothing answers: the gate closes, then the boot-time rate goes back"
 lacks "fw_setenv sensor" "... and nothing is stored"
 exited 0 "... and the script runs to its end"
+
+held 0x00010002 0x00c00100
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+reg_is 0xf0020018 0x00c00100 "nothing answers, the clock on another source: that source goes back"
 DEAD=
+
+held 0x00010002 0x00c00100
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+reg_is 0xf0020018 0x00c00000 "found with the clock on another source: 480 MHz is selected"
+
+held 0x00010006 0x04c00101
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+has "fw_setenv sensor imx415" "the clock already running: the sensor is found"
+writes "70 0x00010006;" "... and its source and rate are left alone"
 GPIO=
+REGS=
 PINMUX=
 
 rm -rf "$work/dt"
