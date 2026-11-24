@@ -28,8 +28,8 @@ BR2_LINUX_KERNEL_DTS_SUPPORT=y
 BR2_LINUX_KERNEL_INTREE_DTS_NAME="grainmedia/gm8126-ipcam"
 BR2_LINUX_KERNEL_XZ=y
 
-# Not the 4.9-era patches
-# (the directory of every mainline-kernel board)
+# all-patches has compiler patches for old kernels, which do not belong on
+# 7.3: the mainline-kernel boards all use this directory instead
 BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL)/package/all-patches-neo"
 
 # Filesystem

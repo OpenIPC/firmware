@@ -18,8 +18,11 @@ for p in \
 done
 [ -z "$MKIMAGE" ] && echo "post-image: ERROR: mkimage not found" >&2 && exit 1
 
-[ -f "$ZIMAGE" ] || exit 0
-[ -f "$DTB" ] || exit 0
+# never leave an earlier build's kernel to be packed
+rm -f "${IMAGES_DIR}/uImage" "${IMAGES_DIR}/uImage.gm8126"
+for f in "$ZIMAGE" "$DTB"; do
+	[ -f "$f" ] || { echo "post-image: ERROR: no $f" >&2; exit 1; }
+done
 
 KREL=$(sed 's/-//g' "$KDIR/include/config/kernel.release")
 
