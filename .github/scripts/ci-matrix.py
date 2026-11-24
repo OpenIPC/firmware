@@ -129,7 +129,7 @@ ALL_BOARDS = [
     "xm232_lite",
     # Ultimate
     "ssc333_ultimate", "ssc335_ultimate", "ssc335de_ultimate", "ssc337_ultimate",
-    "ssc337de_ultimate", "ssc30kd_ultimate", "ssc30kq_ultimate", "ssc338q_ultimate",
+    "ssc337de_ultimate", "ssc30kd_ultimate", "ssc30kq_ultimate", "ssc338q_ultimate", "ssc378de_ultimate",
     "t20_ultimate", "t21_ultimate", "t31_ultimate", "t40_ultimate", "t41_ultimate",
     "hi3516av100_ultimate", "hi3516dv100_ultimate", "hi3518ev200_ultimate",
     "hi3516cv300_ultimate", "hi3516ev200_ultimate", "hi3516ev300_ultimate",
@@ -1058,9 +1058,9 @@ def self_test():
         (["general/package/uclibc-compat/src/uclibc-compat-static.c"],
          4, "reached via .mk _DEPENDENCIES"),
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
-         24, "reached via Config.in select"),
+         25, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 109, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 110, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -1164,7 +1164,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         109, "markdown inside a package is that package"),
+         110, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],

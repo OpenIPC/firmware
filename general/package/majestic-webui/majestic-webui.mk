@@ -133,8 +133,8 @@ endef
 
 # The Counting page reads what majestic's object detection counts, so it is of
 # use only on an image with a detection model: BR2_PACKAGE_MAJESTIC_WEBUI_COUNTING
-# follows xmnpu-models and cpu-models' person detector by default (the drum
-# reader alone is no detection model). The same three paths are
+# follows xmnpu-models, sgsnpu-models and cpu-models' person detector by default
+# (the drum reader alone is no detection model). The same three paths are
 # listed in the WebUI's sbin/updatewebui, which installs them only where the
 # image carries the page itself (/var/www/cgi-bin/counting.cgi). The Settings
 # page's line and zone editor is not part of it: it is drawn only where
