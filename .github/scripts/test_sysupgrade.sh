@@ -628,7 +628,7 @@ run() {
         UBI_SYS="$SB/sys/class/ubi" INITTAB="$SB/etc/inittab" handoff_wait=0 \
         FOLLOW_LOG="${FOLLOW_LOG:-}" STUB_UBI_SLOW="${STUB_UBI_SLOW:-}" \
         ${RUN_ENV:-} \
-        sh "$SB/sysupgrade" "$@" 2>&1)
+        sh "${SCRIPT:-$SB/sysupgrade}" "$@" 2>&1)
     RC=$?
 }
 flashed()      { grep -q "flashcp .*$1" "$SB/tmp/flash.log"; }
@@ -2174,6 +2174,26 @@ fi
 [ -e "$SB/tmp/sysupgrade" ] \
     && bad "the stale script survived the failed fetch and will be seen by the next run" \
     || ok "...and the leftover is gone"
+rm -f "$SB/tmp/sysupgrade"
+
+# ...but the copy this run is executing is not a leftover. The previous run
+# fetched it and exec'd it, and the second self-update pass that follows used
+# to remove it before its own fetch. When that fetch failed too, enter_ramfs
+# had no script left to copy into the RAM root, gave up the pivot, and the run
+# flashed in place: on a fixed-slot camera moving to the split layout, the
+# whole firmware written under the processes paging from it (hi3518ev200 twin,
+# 2026-11-25). The pivot_root stub records the attempt, which is only made once
+# the script has been staged.
+reset_env
+STUB_CURL_RC=7           # the re-fetch fails
+cp "$SB/sysupgrade" "$SB/tmp/sysupgrade"
+SCRIPT="$SB/tmp/sysupgrade" run --kernel="$K" --rootfs="$R"
+if printf '%s\n' "$OUT" | grep -q 'Version checking failed' &&
+   [ -e "$SB/tmp/sysupgrade" ] && grep -q "pivot_root" "$SB/tmp/flash.log"; then
+    ok "a run started as /tmp/sysupgrade keeps itself through a failed re-fetch and still pivots"
+else
+    bad "the running /tmp/sysupgrade was removed or the pivot was not attempted, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
 rm -f "$SB/tmp/sysupgrade"
 
 # --- aborting on a recovery file left on the SD card ------------------------
