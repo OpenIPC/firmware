@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/* The same board with SPI NOR in place of the SPI NAND. */
+#include "rv1106g-luckfox-pico-pro.dts"
+
+&sfc {
+	flash@0 {
+		compatible = "jedec,spi-nor";
+	};
+};
