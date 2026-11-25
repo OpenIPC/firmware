@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-# Remakes files/UbuntuMono-Regular.ttf ("OpenIPC Mono") from Noto Sans Mono 2.014
+# Remakes files/OpenIPCMono-Regular.ttf ("OpenIPC Mono") from Noto Sans Mono 2.014
 # (google/fonts, ofl/notosansmono), byte for byte, with fontTools 4.61.1:
 #
 #   curl -Lo NotoSansMono.ttf "https://github.com/google/fonts/raw/8064df88b17c53a56c84330e31566fbb972726cb/ofl/notosansmono/NotoSansMono%5Bwdth%2Cwght%5D.ttf"
-#   python3 make-subset.py NotoSansMono.ttf files/UbuntuMono-Regular.ttf
+#   python3 make-subset.py NotoSansMono.ttf files/OpenIPCMono-Regular.ttf
 #
-# The file keeps its old name: osd.font in deployed configs, the wiki, msposd
-# and divinus all name it. The subset is ASCII, Russian Cyrillic, the degree
-# and numero signs; anything outside it renders as an empty box. Of what
+# UbuntuMono-Regular.ttf, the old name, is installed as a symlink to it. The
+# subset is ASCII, Russian Cyrillic, the degree and numero signs; anything
+# outside it renders as an empty box. Of what
 # upstream lacks, U+0182 is drawn as U+0411. The control codes are blank.
 # Hinting is dropped. Renamed because Noto is a trademark of Google; the
 # copyright, trademark and licence records stay as upstream has them.
