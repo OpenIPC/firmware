@@ -660,7 +660,7 @@ reset_env() {
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
     unset STUB_BIND_RC
-    rm -f "$SB/tmp/inittab.handoff"
+    rm -f "$SB"/tmp/inittab.handoff*
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB FLASH_RAM_FLOOR_KB
     unset STUB_MEM_AFTER_STOP STUB_MAJESTIC_PID STUB_STOP_FAILS WDOG WDOG_PROC
     unset STUB_VIGILD_PID STUB_VIGIL_STOP_FAILS
@@ -2030,10 +2030,27 @@ if [ -n "$bline" ] && [ -n "$hline" ] && [ -n "$qline" ] &&
 else
     bad "NOR without ::restart: -> expected bind, HUP, then the hand-off, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
-grep -q '^::restart:/sbin/init$' "$SB/tmp/inittab.handoff" 2>/dev/null &&
-    grep -q '^::shutdown:/bin/umount -a -f$' "$SB/tmp/inittab.handoff" \
+taught=$(ls "$SB"/tmp/inittab.handoff.* 2>/dev/null | head -1)
+[ -n "$taught" ] && grep -q '^::restart:/sbin/init$' "$taught" &&
+    grep -q '^::shutdown:/bin/umount -a -f$' "$taught" \
     && ok "...from a copy in /tmp carrying the image's own entries and the new one" \
-    || bad "the taught copy must be the image's inittab plus ::restart:, got '$(cat "$SB/tmp/inittab.handoff" 2>&1)'"
+    || bad "the taught copy must be the image's inittab plus ::restart:, got '$(cat "$taught" 2>&1)'"
+
+# Root writes that copy, so its name is mktemp's: a link planted at a fixed
+# name must not aim the write at the file it points to.
+reset_env
+STUB_PIVOT_RC=0
+printf '::sysinit:/etc/init.d/rcS\n' > "$SB/etc/inittab"
+printf 'root:x:0:0::/root:/bin/sh\n' > "$SB/victim"
+ln -s "$SB/victim" "$SB/tmp/inittab.handoff"
+run -z --kernel="$K" --rootfs="$R"
+if [ "$(cat "$SB/victim")" = "root:x:0:0::/root:/bin/sh" ] &&
+    grep -q "^kill -QUIT 1" "$SB/tmp/flash.log"; then
+    ok "a link planted at the old fixed name is not written through"
+else
+    bad "planted link -> victim='$(cat "$SB/victim")' log='$(cat "$SB/tmp/flash.log")'"
+fi
+rm -f "$SB/victim" "$SB/tmp/inittab.handoff"
 
 # An init that cannot be taught -- the bind refused -- is written as it always
 # was, from a plain RAM root, and init is never signalled.

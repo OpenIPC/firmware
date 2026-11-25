@@ -2695,14 +2695,19 @@ want_handoff() {
 # reboot drops it. If init does not take it, hand_off_pid1 waits, says so and
 # reboots with nothing written, which is where every refusal ends.
 teach_init_restart() {
-	local t=/tmp/inittab.handoff
+	local t
 	[ "1" = "$gluebi_fallback" ] && return 1
 	[ -r "$INITTAB" ] || return 1
-	{ cat "$INITTAB" && echo "::restart:/sbin/init"; } > "$t" 2>&3 || return 1
-	if ! mount -o bind "$t" "$INITTAB" 2>&3; then
+	# mktemp, never a fixed name: root writes this, and a link planted at a
+	# fixed one would aim the write at whatever it points to -- /etc/passwd
+	# on the overlay, say, for good.
+	t=$(mktemp /tmp/inittab.handoff.XXXXXX 2>&3) || return 1
+	if ! { cat "$INITTAB" && echo "::restart:/sbin/init"; } > "$t" 2>&3 ||
+		! mount -o bind "$t" "$INITTAB" 2>&3; then
 		rm -f "$t"
 		return 1
 	fi
+	inittab_copy=$t
 	inittab_taught=1
 	echo "Teaching init the ::restart: entry its image lacks, so PID 1 can leave the flash"
 	busybox kill -HUP 1
@@ -2716,7 +2721,8 @@ teach_init_restart() {
 untaught_init() {
 	[ "1" = "$inittab_taught" ] || return 0
 	busybox umount "$INITTAB" 2>&3 && busybox kill -HUP 1
-	rm -f /tmp/inittab.handoff
+	rm -f "$inittab_copy"
+	inittab_copy=
 	inittab_taught=
 }
 
