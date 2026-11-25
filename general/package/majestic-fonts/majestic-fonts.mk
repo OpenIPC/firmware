@@ -4,15 +4,16 @@
 #
 ################################################################################
 
-# files/UbuntuMono-Regular.ttf ("OpenIPC Mono") is a subset of Ubuntu Mono
-# 0.80: ASCII, Cyrillic, the degree sign and the numero sign. make-subset.py
+# files/UbuntuMono-Regular.ttf ("OpenIPC Mono") is a subset of Noto Sans Mono
+# 2.014: ASCII, Cyrillic, the degree sign and the numero sign. make-subset.py
 # remakes it byte for byte from the upstream font; anything majestic draws
-# outside it renders as an empty box.
-MAJESTIC_FONTS_VERSION = 0.13
+# outside it renders as an empty box. The file name predates the face and
+# stays, because deployed configs point osd.font at it.
+MAJESTIC_FONTS_VERSION = 0.14
 MAJESTIC_FONTS_SITE_METHOD = local
 MAJESTIC_FONTS_SITE = $(MAJESTIC_FONTS_PKGDIR)/files
 
-MAJESTIC_FONTS_LICENSE = UFL-1.0
+MAJESTIC_FONTS_LICENSE = OFL-1.1
 MAJESTIC_FONTS_LICENSE_FILES = LICENSE
 
 define MAJESTIC_FONTS_INSTALL_TARGET_CMDS
