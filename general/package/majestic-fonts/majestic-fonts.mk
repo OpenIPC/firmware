@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-# files/UbuntuMono-Regular.ttf ("OpenIPC Mono") is a subset of Roboto Mono
-# 3.001: ASCII, Cyrillic, the degree sign and the numero sign. make-subset.py
+# files/UbuntuMono-Regular.ttf ("OpenIPC Mono") is a subset of Noto Sans Mono
+# 2.014: ASCII, Cyrillic, the degree sign and the numero sign. make-subset.py
 # remakes it byte for byte from the upstream font; anything majestic draws
 # outside it renders as an empty box. The file name predates the face and
 # stays, because deployed configs point osd.font at it.
