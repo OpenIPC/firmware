@@ -410,6 +410,13 @@ exit 0'
 stub mount '
 [ $# -eq 0 ] && { cat "$SDMOUNTS" 2>/dev/null; exit 0; }
 target=${!#}
+# teach_init_restart binds a copy of the inittab over the real one. Copying it
+# there stands in for the bind; STUB_BIND_RC injects a kernel that refuses.
+case " $* " in *" -o bind "*)
+    echo "mount bind ${@: -2:1} $target" >> "$FLASH_LOG"
+    [ "${STUB_BIND_RC:-0}" = 0 ] || exit "$STUB_BIND_RC"
+    cp "${@: -2:1}" "$target"; exit 0 ;;
+esac
 # STUB_MOUNT models the VERIFY-mount (a squashfs image over a loop device). The
 # ramfs pivot mounts tmpfs and relocates existing mounts; those are a different
 # operation and must not inherit the fault being injected, or the hang case
@@ -618,6 +625,7 @@ run() {
         STUB_ISIZE="${STUB_ISIZE:-}" \
         STUB_RANGE_IGNORED="${STUB_RANGE_IGNORED:-}" \
         STUB_SPLIT_PUBLISHED="${STUB_SPLIT_PUBLISHED:-}" \
+        STUB_BIND_RC="${STUB_BIND_RC:-0}" \
         UNPACK_RESERVE_KB="${UNPACK_RESERVE_KB:-512}" \
         STUB_MEM_AFTER_STOP="${STUB_MEM_AFTER_STOP:-}" STUB_MEMINFO="$SB/proc/meminfo" \
         STUB_LOCK="$SB/tmp/sysupgrade.lock" \
@@ -651,6 +659,8 @@ reset_env() {
     rm -f "$SB/etc/sysupgrade.history"
     set_platform ssc338q_lite
     unset STUB_FLASHCP_FAIL STUB_FLASHCP_FAIL_DEV STUB_PIVOT_RC STUB_REMOUNT_RC STUB_CURL_RC
+    unset STUB_BIND_RC
+    rm -f "$SB/tmp/inittab.handoff"
     unset STUB_DL_BYTES STUB_ISIZE STUB_RANGE_IGNORED UNPACK_RESERVE_KB FLASH_RAM_FLOOR_KB
     unset STUB_MEM_AFTER_STOP STUB_MAJESTIC_PID STUB_STOP_FAILS WDOG WDOG_PROC
     unset STUB_VIGILD_PID STUB_VIGIL_STOP_FAILS
@@ -1999,17 +2009,46 @@ else
     bad "NOR rootfs write -> expected the hand-off, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
-# An image whose inittab has no ::restart: cannot hand off. That is no reason to
-# refuse on NOR -- it is written as it always was, from a plain RAM root.
+# An image whose inittab has no ::restart: -- every image from before the entry
+# shipped -- used to be written from a plain RAM root with PID 1 still running
+# from the flash. A fixed-slot camera moving to the split layout rewrites that
+# flash whole, and init faulting on it rebooted the camera half-written
+# (hi3518ev200 twin, "Attempted to kill init! exitcode=0x00000007"). The
+# running init is taught the entry for this boot -- a copy bound over the file,
+# then SIGHUP -- and handed off like any other, before anything is written.
 reset_env
 STUB_PIVOT_RC=0
 printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n' > "$SB/etc/inittab"
 run -z --kernel="$K" --rootfs="$R"
-if ! nor_handed_off && grep -q "pivot_root" "$SB/tmp/flash.log" && [ ! -e "$SB/ram/sbin/init" ]; then
-    ok "NOR without ::restart: still moves into a plain RAM root, not refused"
+bline=$(grep -n "^mount bind .*inittab" "$SB/tmp/flash.log" | head -1 | cut -d: -f1)
+hline=$(grep -n "^kill -HUP 1" "$SB/tmp/flash.log" | head -1 | cut -d: -f1)
+qline=$(grep -n "^kill -QUIT 1" "$SB/tmp/flash.log" | head -1 | cut -d: -f1)
+if [ -n "$bline" ] && [ -n "$hline" ] && [ -n "$qline" ] &&
+    [ "$bline" -lt "$hline" ] && [ "$hline" -lt "$qline" ] && nothing_wrote &&
+    grep -q '::restart:/sbin/init' "$SB/etc/inittab" && [ -x "$SB/ram/sbin/init" ]; then
+    ok "NOR without ::restart: teaches init the entry, then hands PID 1 off before any write"
 else
-    bad "NOR without ::restart: -> expected the plain pivot, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+    bad "NOR without ::restart: -> expected bind, HUP, then the hand-off, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
+grep -q '^::restart:/sbin/init$' "$SB/tmp/inittab.handoff" 2>/dev/null &&
+    grep -q '^::shutdown:/bin/umount -a -f$' "$SB/tmp/inittab.handoff" \
+    && ok "...from a copy in /tmp carrying the image's own entries and the new one" \
+    || bad "the taught copy must be the image's inittab plus ::restart:, got '$(cat "$SB/tmp/inittab.handoff" 2>&1)'"
+
+# An init that cannot be taught -- the bind refused -- is written as it always
+# was, from a plain RAM root, and init is never signalled.
+reset_env
+STUB_PIVOT_RC=0
+STUB_BIND_RC=1
+printf '::sysinit:/etc/init.d/rcS\n::shutdown:/bin/umount -a -f\n' > "$SB/etc/inittab"
+run -z --kernel="$K" --rootfs="$R"
+if ! nor_handed_off && ! grep -q "^kill -HUP" "$SB/tmp/flash.log" &&
+    grep -q "pivot_root" "$SB/tmp/flash.log" && [ ! -e "$SB/ram/sbin/init" ]; then
+    ok "NOR without ::restart: and a refused bind still moves into a plain RAM root"
+else
+    bad "NOR refused bind -> expected the plain pivot and no HUP, rc=$RC log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+STUB_BIND_RC=0
 
 # Neither does an image the hand-off would take with the old root: an SD card
 # goes behind /mnt and init's exec would leave it there.

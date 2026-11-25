@@ -2525,6 +2525,7 @@ restore_majestic() {
 # rmdir fails harmlessly where a recursive delete would pull the floor out from
 # under the flash. An empty directory is all there is to remove.
 ramfs_discard() {
+	untaught_init
 	# Only ever detach a tmpfs of our own. RAM_ROOT is overridable from the
 	# environment (the test harness relies on that), so an unconditional umount
 	# would happily detach real storage if it were pointed at some — the same
@@ -2658,20 +2659,65 @@ need_handoff() {
 # written, in three runs of four (#2647). The free-RAM floor does not cover it:
 # what it counts as reclaimable is exactly those pages.
 #
-# Unlike need_handoff this is a preference, not a requirement: an image without
-# the ::restart: entry, a run without a RAM root, or an image only reachable
-# behind the old root flashes as it did before.
+# A split firmware.bin is the rootfs too, whichever of -k and -r asked for it.
+#
+# Unlike need_handoff this is a preference, not a requirement: a run without a
+# RAM root, an image only reachable behind the old root, or an init that will
+# not take the ::restart: entry flashes as it did before.
 want_handoff() {
 	need_handoff && return 0
-	[ "1" = "$update_rootfs" ] || return 1
+	[ "1" = "$update_rootfs" ] || [ "1" = "$image_combined" ] || return 1
 	[ "1" = "$skip_ramfs" ] && return 1
 	command -v pivot_root >/dev/null 2>&1 || return 1
-	inittab_hands_off || return 1
 	local f
 	for f in "$([ "1" = "$update_kernel" ] && echo "$kernel_file")" "$rootfs_file"; do
 		case "$(path_after_pivot "$f")" in /mnt/*) return 1 ;; esac
 	done
-	return 0
+	inittab_hands_off || teach_init_restart
+}
+
+# Give a running init the ::restart: entry its image was built without.
+#
+# Every image from before the entry shipped is a fixed-slot NOR camera, and
+# moving one to the split layout rewrites the squashfs it runs from. Without the
+# hand-off its PID 1 stayed on that flash: majestic, or a Wi-Fi daemon, died of
+# SIGBUS mid-write, init woke to reap it, faulted on its own text, and the
+# kernel's "Attempted to kill init! exitcode=0x00000007" rebooted the camera
+# with its squashfs half written -- a boot loop on "VFS: Unable to mount root
+# fs" that only a UART recovers. Reproduced three runs of three on a
+# hi3518ev200 twin booted from a lab HS303's flash, with the flash timed like
+# the chip; the field reports are an HS303 and a hi3516ev200 on Wi-Fi.
+#
+# busybox init re-reads /etc/inittab on SIGHUP and takes the entries it did not
+# have. So the entry goes in for this boot only: a copy in /tmp with the line
+# added, bound over the file. Nothing on flash changes -- an inittab in the
+# overlay would outlive the upgrade and shadow the new image's -- and the
+# reboot drops it. If init does not take it, hand_off_pid1 waits, says so and
+# reboots with nothing written, which is where every refusal ends.
+teach_init_restart() {
+	local t=/tmp/inittab.handoff
+	[ "1" = "$gluebi_fallback" ] && return 1
+	[ -r "$INITTAB" ] || return 1
+	{ cat "$INITTAB" && echo "::restart:/sbin/init"; } > "$t" 2>&3 || return 1
+	if ! mount -o bind "$t" "$INITTAB" 2>&3; then
+		rm -f "$t"
+		return 1
+	fi
+	inittab_taught=1
+	echo "Teaching init the ::restart: entry its image lacks, so PID 1 can leave the flash"
+	busybox kill -HUP 1
+	# init takes the signal between passes of its main loop; give it one.
+	sleep 1
+	inittab_hands_off
+}
+
+# Take the entry back from a run that stopped before the hand-off, so the init
+# left running is the one the camera booted with.
+untaught_init() {
+	[ "1" = "$inittab_taught" ] || return 0
+	busybox umount "$INITTAB" 2>&3 && busybox kill -HUP 1
+	rm -f /tmp/inittab.handoff
+	inittab_taught=
 }
 
 # Can PID 1 be handed off at all? Asked before anything is written, where a
@@ -3395,6 +3441,9 @@ get_system_info() {
 	if [ "$ubi_layout" = "ubiblock" ] && ! nand_layout_moved && ! inittab_hands_off &&
 		[ "/dev/" != "$(get_device "rootfs")" ]; then
 		ubi_layout=
+		# ...and as it always did: teach_init_restart is for NOR, where it was
+		# measured, not for a gluebi write beside a mounted ubiblock root.
+		gluebi_fallback=1
 	fi
 	if [ -n "$ubi_layout" ]; then
 		# Resolved here, on the whole system: the flash phase may run in a ramfs
