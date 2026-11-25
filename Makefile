@@ -187,7 +187,7 @@ repack-final: build
 
 repack:
 ifeq ($(BR2_PACKAGE_OPENIPC_NFS_ROOT),y)
-ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
+ifeq ($(BR2_OPENIPC_SOC_FAMILY),"rv11xx")
 	@$(call PREPARE_REPACK,zboot.img,16384,,,nfs-root)
 else
 	@$(call PREPARE_REPACK,uImage,16384,,,nfs-root)
@@ -207,9 +207,7 @@ ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
 	@$(call REPACK_NOR_SPLIT)
 else
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
-ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
-	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.squashfs,8192,nor)
-else ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
+ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
 ifneq ($(UBOOT_ROOTMTD_VENDOR),)
 	@$(call CHECK_UBOOT_ROOTMTD)
 endif
@@ -222,7 +220,7 @@ endif
 # A NOR+NAND build (ultimate with BR2_TARGET_ROOTFS_UBI) packages its NAND
 # image whichever NOR layout it ships.
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
-ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"rockchip" "sigmastar"),)
+ifneq ($(or $(filter "sigmastar",$(BR2_OPENIPC_SOC_VENDOR)),$(filter "rv11xx",$(BR2_OPENIPC_SOC_FAMILY))),)
 	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
 else ifneq ($(wildcard $(PWD)/br-ext-chip-$(subst ",,$(BR2_OPENIPC_SOC_VENDOR))/board/$(subst ",,$(BR2_OPENIPC_SOC_FAMILY))/nand-fit.its),)
 # FIT NAND (board/<family>/nand-fit.its): the kernel lives inside the UBIFS

@@ -215,7 +215,7 @@ rootfs_image() {
 kernel_image() {
 	[ -n "$kernel_file" ] && { echo "$kernel_file"; return 0; }
 	[ "$ubi_layout" = "ubifs" ] && { echo "/tmp/fitImage.$image_soc"; return 0; }
-	[ "$vendor" = "rockchip" ] && echo "$stage_dir/zboot.img.$image_soc" || echo "$stage_dir/uImage.$image_soc"
+	echo "$stage_dir/uImage.$image_soc"
 }
 
 # Where the rootfs is written: the `rootfs` UBI volume on a UBI layout, the
@@ -2119,7 +2119,7 @@ pick_image_soc() {
 # The SoC suffixes of the images this run unpacked, one per line.
 image_socs_unpacked() {
 	awk '{ n = $0; while (sub(/^[.]\//, "", n)) ;
-		if (match(n, /^(uImage|zboot[.]img|fitImage|firmware[.]bin|rootfs[.]squashfs|rootfs[.]ubifs)[.][a-z0-9]+$/)) {
+		if (match(n, /^(uImage|fitImage|firmware[.]bin|rootfs[.]squashfs|rootfs[.]ubifs)[.][a-z0-9]+$/)) {
 			sub(/^.*[.]/, "", n); print n } }' "$unpacked_list" 2>&3 | sort -u
 }
 
@@ -3544,10 +3544,10 @@ is_split_nand() {
 # The SoCs whose NAND images moved to the kernel-in-rootfs layout (ubifs).
 # On these the older NAND layouts with a kernel volume of their own are
 # retired and reinstalled; every other SoC keeps its ubiblock layout, which is
-# still what its NAND images are (SigmaStar, Rockchip).
+# still what its NAND images are (SigmaStar).
 nand_layout_moved() {
 	case "$model" in
-		gk7205v500|gk7205v510|gk7205v530|hi3516ev200|hi3516ev300|hi3518ev300|hi3516dv200) return 0 ;;
+		gk7205v500|gk7205v510|gk7205v530|hi3516ev200|hi3516ev300|hi3518ev300|hi3516dv200|rv1103|rv1106) return 0 ;;
 	esac
 	return 1
 }
@@ -3862,8 +3862,8 @@ Where:
                         rootfs, so -k and -r both write rootfs.ubifs.
       --url=[URL]       Custom URL to update from (.tgz format).
       --archive=[FILE]  Custom archive to update from (.tgz format).
-      --kernel=[FILE]   Update kernel from file (uImage or FIT; zboot.img on
-                        Rockchip). Not on a UBIFS NAND camera: pass the
+      --kernel=[FILE]   Update kernel from file (uImage or FIT).
+                        Not on a UBIFS NAND camera: pass the
                         rootfs.ubifs that carries the kernel with --rootfs.
       --rootfs=[FILE]   Update rootfs from file (squashfs; rootfs.ubifs on a
                         UBIFS NAND camera).
