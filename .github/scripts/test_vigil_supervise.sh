@@ -36,9 +36,10 @@ sed -e "s|DAEMON_PATH=\"/usr/bin/\$DAEMON\"|DAEMON_PATH=\"$SB/bin/vigild\"|" \
     -e "s|CONFIG=/etc/vigil.json|CONFIG=$SB/etc/vigil.json|" \
     -e "s|LEGACY=/etc/vigil.yaml|LEGACY=$SB/etc/vigil.yaml|" \
     -e "s|ROM=/rom|ROM=$SB/rom|" \
+    -e "s|HELD=/etc/vigil.rec-held|HELD=$SB/etc/vigil.rec-held|" \
     "$SRC" > "$SB/S95vigil"
 for p in 'DAEMON_PATH="/usr/bin/$DAEMON"' /var/run/ CRASH=/etc/crash UPGRADE_LOCK=/tmp/sysupgrade.lock 'BACKOFF="5 30 120"' /proc/mounts CARD_POLL=10 \
-    CONFIG=/etc/vigil.json LEGACY=/etc/vigil.yaml ROM=/rom; do
+    CONFIG=/etc/vigil.json LEGACY=/etc/vigil.yaml ROM=/rom HELD=/etc/vigil.rec-held; do
     grep -qF "$p" "$SRC" || bad "$p is gone from S95vigil; this test is testing nothing there"
 done
 chmod +x "$SB/S95vigil"
@@ -202,6 +203,11 @@ supervise
 [ "$(args)" = "$BASE -o none" ] && ok "a card mounted read-only is refused" || bad "read-only card: $(args)"
 
 reset exit
+echo "$SB/disk/x/../../../escape" > "$SB/cfg/.record.path"
+supervise
+[ "$(args)" = "$BASE -o none" ] && ok "a path that climbs out of the disk with '..' is refused" || bad "dot-dot path: $(args)"
+
+reset exit
 echo "$SB/back\\slash/rec/" > "$SB/cfg/.record.path"
 supervise
 [ "$(args)" = "$BASE" ] && ok "a disk mounted at a path with a backslash is recorded to (trailing slash and all)" \
@@ -262,21 +268,78 @@ sh "$SB/S95vigil" stop > /dev/null
 sleep 0.5
 cp "$SB/mounts.boot" "$SB/mounts"
 
-# 5b. Recording held off, and then the file asks for none (saved through the
-#     API): vigild is started again without the override.
+# 5b. Held off, an API change saves record.path as empty meanwhile (what is
+#     in force): the path asked for is kept, and recorded into, with -o, once
+#     the disk is there. vigild's next save puts it back in the file.
+HELDF="$SB/etc/vigil.rec-held"
+wait_starts() { for _ in $(seq 60); do [ "$(starts)" -ge "$1" ] && break; sleep 0.1; done; sleep 0.3; }
 reset run
+echo '{"record":{"path":"held"}}' > "$CONF"
 echo "$SB/card/rec" > "$SB/cfg/.record.path"
 sh "$SB/S95vigil" start > /dev/null
-for _ in $(seq 50); do [ "$(starts)" -ge 1 ] && break; sleep 0.1; done
-rm -f "$SB/cfg/.record.path"
-for _ in $(seq 60); do [ "$(starts)" -ge 2 ] && break; sleep 0.1; done
-sleep 0.3
-[ "$(starts)" = 2 ] && [ "$(args)" = "$BASE" ] && ok "recording turned off meanwhile: vigild started again with the file as it is" \
-    || bad "override dropped: starts $(starts), now '$(args)'"
+wait_starts 1
+[ "$(cat "$HELDF" 2>/dev/null)" = "$SB/card/rec" ] && ok "the path held off is remembered" || bad "held file: $(cat "$HELDF" 2>&1)"
+rm -f "$SB/cfg/.record.path"; echo '{"record":{"path":""}}' > "$CONF"
+sleep 2.5
+[ "$(starts)" = 1 ] && ok "record.path saved empty while held off: vigild is not started again for it" || bad "empty save: starts $(starts)"
+mkdir -p "$SB/card"
+echo "/dev/mmcblk0p1 $SB/card vfat rw 0 0" >> "$SB/mounts"
+wait_starts 2
+[ "$(starts)" = 2 ] && [ "$(args)" = "$BASE -o $SB/card/rec" ] && grep -q "saved empty while recording was held off" "$SB/log" \
+    && ok "...and once the disk is there, vigild records into the path asked for (-o), and the log says why" \
+    || bad "restore: starts $(starts), args '$(args)'"
+echo "$SB/card/rec" > "$SB/cfg/.record.path"; echo '{"record":{"path":"saved back"}}' > "$CONF"
+sleep 2.5
+[ ! -e "$HELDF" ] && [ "$(starts)" = 2 ] && ok "vigild's next save puts the path back; nothing is held any more, no restart" \
+    || bad "after save-back: held '$(cat "$HELDF" 2>&1)', starts $(starts)"
+
+# 5c. Recording, and then the disk goes away: held off at once (vigild would
+#     create the path on the flash), not at the next start.
+cp "$SB/mounts.boot" "$SB/mounts"
+wait_starts 3
+[ "$(starts)" = 3 ] && [ "$(args)" = "$BASE -o none" ] && grep -q "is not on a disk or card now" "$SB/log" \
+    && ok "a disk gone while recording: vigild started again with recording held off" || bad "disk gone: starts $(starts), '$(args)'"
 sh "$SB/S95vigil" stop > /dev/null
 sleep 0.5
 
-# 5c. An old /etc/vigil.yaml is converted once into /etc/vigil.json.
+# 5d. A path the API sets while vigild runs that is not on a disk: held off.
+reset run
+mkdir -p "$SB/disk/live"
+echo "$SB/disk/live" > "$SB/cfg/.record.path"
+sh "$SB/S95vigil" start > /dev/null
+wait_starts 1
+echo "$SB/ram/rec" > "$SB/cfg/.record.path"
+wait_starts 2
+[ "$(starts)" = 2 ] && [ "$(args)" = "$BASE -o none" ] && ok "a path set while running onto tmpfs: held off within a poll" \
+    || bad "live unsafe path: starts $(starts), '$(args)'"
+sh "$SB/S95vigil" stop > /dev/null
+sleep 0.5
+
+# 5e. Started with -o and a held path, the owner turns recording off through
+#     the API: the save (path empty, the file changed) is theirs, and nothing
+#     is held any more.
+reset run
+mkdir -p "$SB/disk/live"
+echo "$SB/disk/live" > "$HELDF"
+echo '{"record":{"path":""}}' > "$CONF"
+sh "$SB/S95vigil" start > /dev/null
+wait_starts 1
+first=$(args)
+echo '{"record":{"path":"", "saved":1}}' > "$CONF"
+sleep 2.5
+sh "$SB/S95vigil" stop > /dev/null
+sleep 0.5
+sh "$SB/S95vigil" start > /dev/null
+wait_starts 2
+if [ "$first" = "$BASE -o $SB/disk/live" ] && [ ! -e "$HELDF" ] && [ "$(args)" = "$BASE" ]; then
+    ok "recording turned off through the API after a restore: not restored again"
+else
+    bad "turned off: first '$first', held '$(cat "$HELDF" 2>&1)', now '$(args)'"
+fi
+sh "$SB/S95vigil" stop > /dev/null
+sleep 0.5
+
+# 5f. An old /etc/vigil.yaml is converted once into /etc/vigil.json.
 shipped='{ "version": 1, "cameras": [] }'
 migrate_start() {
     sh "$SB/S95vigil" start > /dev/null

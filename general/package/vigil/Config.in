@@ -17,7 +17,12 @@ config BR2_PACKAGE_VIGIL
 	  boot and restarted after a crash, as majestic is) and
 	  /etc/vigil.json (cameras, recording, the API), which vigild
 	  keeps itself. Its HTTP/WebSocket API listens on port 8080 and
-	  asks for root's password; an /etc/vigil.yaml from an earlier
-	  image is converted into vigil.json once.
+	  asks for root's password, which it refuses to accept while root
+	  has none (an unclaimed image). The API is plain HTTP: the
+	  password crosses the network in clear on every request, as with
+	  the camera web UI, so use it on a trusted network or through an
+	  SSH tunnel, or set api.listen to 127.0.0.1:8080. An
+	  /etc/vigil.yaml from an earlier image is converted into
+	  vigil.json once.
 
 	  https://github.com/OpenIPC/vigil
