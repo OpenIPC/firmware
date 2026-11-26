@@ -5,7 +5,7 @@
 ################################################################################
 
 SIGMASTAR_OPENSDK_SITE = $(call github,openipc,opensigmastar,$(SIGMASTAR_OPENSDK_VERSION))
-SIGMASTAR_OPENSDK_VERSION = 66591998bb7cee2879b77ac6483389eaf6f20a96
+SIGMASTAR_OPENSDK_VERSION = 695bf4f1ab7bf70aa5733df10ea23a3f373126ff
 
 SIGMASTAR_OPENSDK_LICENSE = GPL-3.0
 SIGMASTAR_OPENSDK_LICENSE_FILES = LICENSE
