@@ -6,7 +6,11 @@ permissions:
   contents: write
 
 jobs:
-  # Clones and runs three u-boot trees' build.sh, so it holds no id-token: a
+  # SigmaStar's U-Boot is OpenIPC/u-boot's build-sigmastar.yml, which
+  # publishes its own NOR images here; the u-boot-*-nand.bin that
+  # OpenIPC/u-boot-sigmastar built stay on `latest` as they are.
+  #
+  # Clones and runs two u-boot trees' build.sh, so it holds no id-token: a
   # token that authorizes pushes to openipc.org must never be reachable from
   # code this repository does not pin. The push is the report job below.
   toolchain:
@@ -32,12 +36,6 @@ jobs:
         run: |
           git clone https://github.com/openipc/u-boot-ingenic --depth 1
           cd u-boot-ingenic
-          bash build.sh
-
-      - name: Sigmastar
-        run: |
-          git clone https://github.com/openipc/u-boot-sigmastar --depth 1
-          cd u-boot-sigmastar
           bash build.sh
 
       # softprops/action-gh-release@v2 cannot update the `latest` release: its
