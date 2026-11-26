@@ -7,7 +7,10 @@
 SIGMASTAR_OPENSDK_SITE = $(call github,openipc,opensigmastar,$(SIGMASTAR_OPENSDK_VERSION))
 SIGMASTAR_OPENSDK_VERSION = 695bf4f1ab7bf70aa5733df10ea23a3f373126ff
 
-SIGMASTAR_OPENSDK_LICENSE = GPL-3.0
+# The repository is GPL-3.0 and open_hdmi GPL-2.0; the relinked SDK modules
+# and the vendor sources built here keep SigmaStar's terms (each module's
+# MODULE_LICENSE is the vendor's own).
+SIGMASTAR_OPENSDK_LICENSE = GPL-3.0, GPL-2.0 (open_hdmi), PROPRIETARY (SigmaStar objects and sources: open_mhal, open_mi_*, open_fbdev, open_hdmitx)
 SIGMASTAR_OPENSDK_LICENSE_FILES = LICENSE
 
 SIGMASTAR_OPENSDK_DEPENDENCIES = linux

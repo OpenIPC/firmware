@@ -9,38 +9,51 @@
 # (panel timings, PQ, memory map, decoder firmware), a path built into them.
 #
 # load_sigmastar [-i]    load (S70vendor passes -i)
-# load_sigmastar -r      unload
+# load_sigmastar -r      unload (for debugging: the SDK modules leave timers
+#                        armed, and the kernel can oops after it)
 
 MODULE=/lib/modules/4.9.84/sigmastar
 # MI modules in the SDK's dependency order; each gets /dev/<name>
 MI="mi_sys mi_ao mi_gfx mi_divp mi_vdec mi_ai mi_disp mi_panel"
+# Everything an NVR needs, in load order; -r unloads in reverse
+ALL="open_mhal open_mi_common $(for m in $MI; do printf 'open_%s ' $m; done)open_fbdev open_hdmitx open_hdmi"
+
+log() {
+	echo "load_sigmastar: $*" | logger -s -t OpenIPC
+}
+
+# Load one module unless it is already there, so a run after a failed one
+# completes the stack instead of stopping at what is loaded. Nothing is
+# unloaded on failure: the SDK modules leave timers armed when removed.
+load() {
+	m=$1
+	shift
+	[ -e /sys/module/$m ] && return 0
+	insmod $MODULE/$m.ko "$@" || { log "$m failed"; return 1; }
+}
 
 insert_ko() {
-	insmod $MODULE/open_mhal.ko || return 1
-	insmod $MODULE/open_mi_common.ko || return 1
+	load open_mhal || return 1
+	load open_mi_common || return 1
 	major=$(awk '$2=="mi" {print $1}' /proc/devices)
 	minor=0
 	for m in $MI; do
-		if insmod $MODULE/open_$m.ko; then
-			[ -e /dev/$m ] || mknod /dev/$m c "$major" $minor
-			minor=$((minor + 1))
-		else
-			echo "load_sigmastar: $m failed" | logger -s -t OpenIPC
-		fi
+		load open_$m || return 1
+		[ -e /dev/$m ] || mknod /dev/$m c "$major" $minor
+		minor=$((minor + 1))
 	done
 	major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
 	[ -n "$major" ] && [ ! -e /dev/mi_poll ] && mknod /dev/mi_poll c "$major" 0
-	insmod $MODULE/open_fbdev.ko default_config_path_file=/config/fbdev.ini
+	load open_fbdev default_config_path_file=/config/fbdev.ini || return 1
 
 	# HDMI transmitter, built from source; the application switches it
 	# on with /sys/kernel/open_hdmi/output
-	insmod $MODULE/open_hdmitx.ko && insmod $MODULE/open_hdmi.ko
+	load open_hdmitx || return 1
+	load open_hdmi
 }
 
 remove_ko() {
-	for m in open_hdmi open_hdmitx open_fbdev open_mi_panel open_mi_disp \
-		open_mi_ai open_mi_vdec open_mi_divp open_mi_gfx open_mi_ao \
-		open_mi_sys open_mi_common open_mhal; do
+	for m in $(echo $ALL | tr ' ' '\n' | sed -n '1!G;h;$p'); do
 		[ -e /sys/module/$m ] && rmmod $m
 	done
 }
@@ -50,6 +63,9 @@ case "$1" in
 		remove_ko
 		;;
 	*)
-		[ -e /sys/module/open_mi_common ] || insert_ko
+		if ! insert_ko; then
+			log "media stack incomplete"
+			exit 1
+		fi
 		;;
 esac

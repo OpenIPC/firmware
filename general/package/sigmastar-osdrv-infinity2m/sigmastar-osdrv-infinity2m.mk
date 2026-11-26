@@ -6,8 +6,10 @@
 
 SIGMASTAR_OSDRV_INFINITY2M_VERSION =
 SIGMASTAR_OSDRV_INFINITY2M_SITE =
-SIGMASTAR_OSDRV_INFINITY2M_LICENSE = MIT
-SIGMASTAR_OSDRV_INFINITY2M_LICENSE_FILES = LICENSE
+# The SDK's libraries, /config files and config_tool are SigmaStar's,
+# redistributed as in the other sigmastar-osdrv packages; load_sigmastar
+# and the logo are OpenIPC's.
+SIGMASTAR_OSDRV_INFINITY2M_LICENSE = PROPRIETARY (SigmaStar SDK libraries, /config, config_tool), MIT (load_sigmastar)
 
 # The i2m NVR SDK (2020-03), its userspace side: the MI libraries, and
 # /config, where the media modules look for the panel timings, PQ tables,
