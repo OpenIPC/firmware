@@ -1,0 +1,49 @@
+# vigild configuration: https://github.com/OpenIPC/vigil/blob/main/docs/api.md
+# vigild rewrites this file when the settings are changed through its HTTP
+# API or on-screen UI. The comments come from vigild's own description of
+# each setting: comments and formatting written by hand are not kept.
+
+# The format of this file.
+version: 1
+
+# Cameras: In tile order: the first is CAM1. At most 16. Each one:
+#   url: Source URL. rtsp://[user:pass@]host[:554]/path,
+#     netip://[user:pass@]host[:34567]/[?ch=N&stream=main|extra] or capture:N.
+#     The password is shown as *** and kept when sent back unchanged.
+#     Required.
+#   name: Name. Shown in the status and the API; empty: the camera's host.
+#   enabled: Enabled. A disabled camera keeps its tile, empty. Default true.
+cameras: []
+
+# Recording
+record:
+  # Recording directory: Where the streams are recorded, as received. Empty:
+  # no recording.
+  path: ""
+  # Segment length (s): A new file starts at the first keyframe after this
+  # many seconds. 10..3600, default 60.
+  segment: 60
+  # Segments kept per camera: 0: all (the oldest recordings are deleted anyway
+  # when the disk runs low). 0..64, default 3.
+  keep: 0
+  # Record onto the root filesystem: Off: recording waits until a disk is
+  # mounted where the path leads, and never writes to the root filesystem (on
+  # a board, its flash). On only where the root filesystem is itself a disk.
+  # RAM and flash filesystems are refused either way, the root included.
+  # Default false.
+  allow_rootfs: false
+
+# HTTP API
+api:
+  # Listen on: IPv4 address and port of the HTTP API, or just the port. Empty:
+  # no API. Takes effect when vigild starts. Default 0.0.0.0:8080.
+  listen: "0.0.0.0:8080"
+  # Require a password: HTTP Basic authentication against the system account.
+  # Turning it off lets anyone on the network change the configuration.
+  # Default true.
+  auth: true
+  # Account: The system account whose password the API asks for. Default root.
+  user: root
+  # Password file: The shadow file holding the account's password hash.
+  # Default /etc/shadow.
+  shadow: /etc/shadow

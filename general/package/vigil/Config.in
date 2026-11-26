@@ -7,7 +7,7 @@ config BR2_PACKAGE_VIGIL
 	depends on BR2_LINUX_KERNEL
 	depends on !BR2_PACKAGE_MAJESTIC
 	depends on !BR2_PACKAGE_VDEC_OPENIPC
-	select BR2_PACKAGE_YAML_CLI
+	select BR2_PACKAGE_LIBYAML
 	help
 	  vigil - DVR/NVR application: network cameras (RTSP, NETIP)
 	  decoded to HDMI in a 2x2 view with a status UI, and recorded
@@ -15,15 +15,19 @@ config BR2_PACKAGE_VIGIL
 
 	  Installs /usr/bin/vigild, /etc/init.d/S95vigil (started at
 	  boot and restarted after a crash, as majestic is) and
-	  /etc/vigil.json (cameras, recording, the API), which vigild
-	  keeps itself. Its HTTP/WebSocket API listens on port 8080 and
-	  asks for root's password, which it refuses to accept while root
-	  has none (an unclaimed image). The API is plain HTTP: the
-	  password crosses the network in clear on every request, as with
-	  the camera web UI, so use it on a trusted network or through an
-	  SSH tunnel, or set api.listen to 127.0.0.1:8080. An
-	  /etc/vigil.yaml from an earlier image is converted into
-	  vigil.json once. vigild records only onto a mounted disk, card
+	  /etc/vigil.yaml (cameras, recording, the API), a YAML file
+	  like majestic's, which vigild keeps itself: it rewrites it
+	  when settings change, with each setting explained in a
+	  comment (comments written by hand are not kept). Its
+	  HTTP/WebSocket API listens on port 8080 and asks for root's
+	  password, which it refuses to accept while root has none (an
+	  unclaimed image). The API is plain HTTP: the password crosses
+	  the network in clear on every request, as with the camera web
+	  UI, so use it on a trusted network or through an SSH tunnel, or
+	  set api.listen to 127.0.0.1:8080. An /etc/vigil.json from an
+	  earlier image is converted into vigil.yaml once, and kept as
+	  vigil.json.migrated; the vigil.yaml of images before that one
+	  is read as it is. vigild records only onto a mounted disk, card
 	  or share, never onto the flash or into RAM, and starts recording
 	  by itself once the disk is there.
 

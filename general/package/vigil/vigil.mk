@@ -6,7 +6,7 @@
 
 VIGIL_SITE_METHOD = git
 VIGIL_SITE = https://github.com/openipc/vigil
-VIGIL_VERSION = 3bc463742f7d9d478c7bdb12d20f964a57f7a43f
+VIGIL_VERSION = 04b8e236d39844aadb031aeaf09400001e3f45da
 # LVGL, cJSON and CivetWeb are submodules (third_party/).
 VIGIL_GIT_SUBMODULES = YES
 VIGIL_LICENSE = GPL-3.0-or-later, MIT (LVGL, cJSON, CivetWeb)
@@ -36,10 +36,17 @@ VIGIL_CONF_OPTS += \
 	-DSIGMASTAR_LIB_DIR=$(SIGMASTAR_OSDRV_INFINITY2M_PKGDIR)/files/lib
 endif
 
+# The configuration file is YAML, read with libyaml.
+VIGIL_DEPENDENCIES += libyaml
+
+# files/vigil.yaml is what this vigild writes for its defaults with every
+# camera's segments kept (vigild -f /dev/null -K 0 -w -): the comments are
+# its own, so the file reads the same before and after its first save.
 define VIGIL_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -D $(@D)/vigild $(TARGET_DIR)/usr/bin/vigild
 	$(INSTALL) -m 755 -D $(VIGIL_PKGDIR)/files/S95vigil $(TARGET_DIR)/etc/init.d/S95vigil
-	$(INSTALL) -m 600 -D $(VIGIL_PKGDIR)/files/vigil.json $(TARGET_DIR)/etc/vigil.json
+	rm -f $(TARGET_DIR)/etc/vigil.json
+	$(INSTALL) -m 600 -D $(VIGIL_PKGDIR)/files/vigil.yaml $(TARGET_DIR)/etc/vigil.yaml
 endef
 
 $(eval $(cmake-package))
