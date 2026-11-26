@@ -10,7 +10,9 @@
  * The DTB is demb-flash: demb with the eMMC controller disabled. Its pins are
  * the SPI flash's (CLK, CMD, D0-D3, RSTn at iocfg 0x34-0x4c), and an enabled
  * mmc0 switches them to eMMC at probe, after which every NAND read returns a
- * bit pattern.
+ * bit pattern. The kernel builds it whatever the defconfig's DTS is: its
+ * dts/vendor/Makefile builds the one CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES
+ * names. The NOR uImage keeps demb, untested on NOR with demb-flash.
  */
 / {
 	/* "OpenIPC <soc>": sysupgrade's SoC check reads it (fit_soc). */
