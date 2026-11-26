@@ -12,9 +12,18 @@
 
 DAEMON="vigild"
 DAEMON_PATH="/usr/bin/$DAEMON"
-# vigil: the arguments come from this file, read again before every start
-# (vigil_config); -s sends vigild's log, and the SDK's, to syslog.
-CONFIG=/etc/vigil.yaml
+# vigil: vigild keeps its configuration in this file itself -- cameras,
+# recording, its HTTP API -- and saves what the API changes into it, applying
+# it while it runs. Options on its command line would override the file and be
+# saved by the API's next change, so it is given none of its settings, only -f;
+# -s sends vigild's log, and the SDK's, to syslog.
+CONFIG=/etc/vigil.json
+# vigil: what this script read the settings from before vigild kept its own;
+# converted once into $CONFIG (migrate).
+LEGACY=/etc/vigil.yaml
+# vigil: the image's own files, under the writable root (init mounts the
+# squashfs here).
+ROM=/rom
 
 # vigild is run by a small supervisor (this script, `supervise`), which starts
 # it again when it dies of a fault: an NVR that crashed would otherwise show
@@ -28,9 +37,6 @@ UPGRADE_LOCK=/tmp/sysupgrade.lock
 BACKOFF="5 30 120"
 WINDOW=600
 LIMIT=5
-# vigil: how often a configured recording directory that is not there yet (a
-# card or disk still to be mounted) is looked for while vigild runs without it.
-CARD_POLL=10
 
 # Find the daemon by executable, never through a pidfile. Given -p, busybox
 # start-stop-daemon inspects only the pid that file holds and never scans
@@ -61,6 +67,7 @@ start() {
 	# A start, by hand or at boot, is a fresh run: the note that the last one
 	# was given up on is about a vigild that is no longer there.
 	rm -f "$CRASH/vigil.loop"
+	migrate
 	(
 		trap '' HUP
 		exec sh "$0" supervise
@@ -138,72 +145,127 @@ crashed() {
 	return 1
 }
 
-# vigil: the mount that holds $1 must be a disk, a card or a network share --
-# a filesystem from the list below. RAM (tmpfs, ramfs) would eat the memory the
-# decoders and the system need, the flash root (squashfs, overlay, jffs2,
-# ubifs) would wear out and fill, and virtual ones (proc, sysfs, devtmpfs)
-# hold nothing; and it must be mounted read-write. The longest mount point
-# that is a prefix wins.
-recordable() {
-	# /proc/mounts escapes space, tab, newline and backslash in a mount point
-	# as \040, \011, \012 and \134; decoded before the comparison, or a disk
-	# mounted at "/mnt/Disk One" could never be recorded to.
-	# The path goes in through the environment: awk -v would interpret the
-	# backslashes in it as escapes.
-	VIGIL_REC="$1" awk '
-		BEGIN { p = ENVIRON["VIGIL_REC"] }
-		{ m = $2
-		  gsub(/\\040/, " ", m); gsub(/\\011/, "\t", m); gsub(/\\012/, "\n", m)
-		  gsub(/\\134/, "\\", m)
-		  if (p == m || index(p, m == "/" ? "/" : m "/") == 1)
-			if (length(m) > length(best)) { best = m; fs = $3; opts = "," $4 "," } }
-		END { exit !(best != "" && best != "/" && opts !~ /,ro,/ &&
-			fs ~ /^(vfat|msdos|exfat|ext[234]|f2fs|xfs|btrfs|ntfs|ntfs3|fuseblk|nfs|nfs4|cifs|smb3)$/) }
-	' /proc/mounts
+# vigil: JSON string contents for $1: backslash, quote and control
+# characters escaped. Through the environment: awk -v would interpret the
+# backslashes in it as escapes.
+json_str() {
+	VIGIL_S="$1" awk 'BEGIN {
+		for (i = 1; i < 32; i++) ctl = ctl sprintf("%c", i)
+		s = ENVIRON["VIGIL_S"]
+		for (i = 1; i <= length(s); i++) {
+			c = substr(s, i, 1)
+			if (c == "\\" || c == "\"") o = o "\\" c
+			else if ((k = index(ctl, c)) > 0) o = o sprintf("\\u%04x", k)
+			else o = o c
+		}
+		printf "%s", o
+	}'
 }
 
-# vigil: what $CONFIG asks for, read again before every start. Camera URLs
-# carry no whitespace (they go to the caller word-split, with globbing off:
-# URLs carry '?'); the recording directory may, so it is kept apart and passed
-# as one argument. It is resolved first, so a link from a card to /tmp is
-# judged by where it lands, and that resolved path is what vigild gets.
-vigil_config() {
-	# yaml-cli exits 1 for a key that is absent (no cameras, no recording --
-	# the shipped default) and for a file it cannot open or parse alike; only
-	# its message tells them apart, and the second is worth a line in the log.
-	cams=$(yaml-cli -i "$CONFIG" -g .cameras 2>"$SUPERVISOR.err")
-	if [ "$1" != quiet ] && grep -qE 'Parse error|Failed to open' "$SUPERVISOR.err" 2>/dev/null; then
-		logger -t vigil "cannot read $CONFIG ($(head -1 "$SUPERVISOR.err")); starting with no cameras and no recording" 2>/dev/null
+# vigil: $LEGACY's $1 as an integer in $2..$3, as vigild's schema has it (a
+# value out of range would make vigild refuse the whole file); nothing when
+# it is not set or not a number, for vigild's default.
+legacy_int() {
+	v=$(yaml-cli -i "$LEGACY" -g ".record.$1" 2>/dev/null)
+	case "$v" in
+		'') return 0 ;;
+		*[!0-9]*)
+			logger -t vigil "$LEGACY: record.$1 '$v' is not a number; not converted, vigild's default applies" 2>/dev/null
+			return 0 ;;
+	esac
+	v=${v#"${v%%[!0]*}"}
+	[ -n "$v" ] || v=0
+	if [ ${#v} -gt 6 ] || [ "$v" -gt "$3" ]; then
+		v=$3
+	elif [ "$v" -lt "$2" ]; then
+		v=$2
+	fi
+	echo "$v"
+}
+
+# vigil: a board upgraded from a vigil that had no configuration of its own
+# may carry the $LEGACY its owner edited (in the overlay: the image ships
+# $CONFIG instead). It is converted once into $CONFIG -- the cameras and the
+# recording, all it held -- and kept as $LEGACY.migrated. Only over the
+# $CONFIG the image ships (or none): one that differs from it was written
+# since, through the API or by hand, and is the newer of the two.
+migrate() {
+	[ -f "$LEGACY" ] || return 0
+	if [ -e "$CONFIG" ] && ! cmp -s "$CONFIG" "$ROM$CONFIG"; then
+		logger -t vigil "$LEGACY is not converted: $CONFIG has been changed since, and is used" 2>/dev/null
+		return 0
+	fi
+	cams=$(yaml-cli -i "$LEGACY" -g .cameras 2>"$SUPERVISOR.err")
+	if [ -s "$SUPERVISOR.err" ]; then
+		logger -t vigil "$LEGACY is not converted: $(head -1 "$SUPERVISOR.err")" 2>/dev/null
+		rm -f "$SUPERVISOR.err"
+		return 0
 	fi
 	rm -f "$SUPERVISOR.err"
-	rec_dir= rec_seg= rec_keep=
-	rec_path=$(yaml-cli -i "$CONFIG" -g .record.path 2>/dev/null)
-	[ -n "$rec_path" ] || return 0
-	real=$(readlink -f "$rec_path" 2>/dev/null)
-	if [ -n "$real" ] && [ -d "$real" ] && recordable "$real"; then
-		rec_dir=$real
-		rec_seg=$(yaml-cli -i "$CONFIG" -g .record.segment 2>/dev/null)
-		rec_keep=$(yaml-cli -i "$CONFIG" -g .record.keep 2>/dev/null)
-	elif [ "$1" != quiet ]; then
-		logger -t vigil "not recording: $rec_path is not a directory on a disk or card" 2>/dev/null
+	path=$(yaml-cli -i "$LEGACY" -g .record.path 2>/dev/null)
+	case "$path" in
+		'' | /*) ;;
+		*)
+			logger -t vigil "$LEGACY: record.path '$path' is not an absolute path; not converted" 2>/dev/null
+			path= ;;
+	esac
+	case "$path/" in
+		*/./* | */../*)
+			logger -t vigil "$LEGACY: record.path '$path' has a \".\" or \"..\" in it; not converted" 2>/dev/null
+			path= ;;
+	esac
+	if [ ${#path} -gt 191 ]; then
+		logger -t vigil "$LEGACY: record.path is longer than vigild takes; not converted" 2>/dev/null
+		path=
 	fi
-}
-
-# vigil: while vigild runs without the recording directory it was configured
-# with, look for it every CARD_POLL seconds: a card or disk mounted after boot
-# (the automounter knows nothing of vigil) would otherwise go unused until
-# someone restarted it. Once the directory is usable, vigild is ended and
-# the supervisor, seeing the note, starts it again with it.
-card_watch() {
-	trap 'exit 0' TERM
-	while sleep "$CARD_POLL"; do
-		vigil_config quiet
-		[ -n "$rec_dir" ] || continue
-		: > "$SUPERVISOR.card"
-		logger -t vigil "$rec_path is available now; starting vigild again to record into it" 2>/dev/null
-		start-stop-daemon -K -q -x "$DAEMON_PATH"
-		return 0
+	seg=$(legacy_int segment 10 3600)
+	keep=$(legacy_int keep 0 64)
+	# The URLs were word-split, as when they were passed as options. One
+	# vigild would refuse would make it refuse the whole file, so what is
+	# plainly not a camera URL is left out (named by its place: URLs hold
+	# passwords, and the log is not the place for them).
+	list= n=0 i=0
+	set -f
+	for url in $cams; do
+		i=$((i + 1))
+		case "$url" in
+			rtsp://?* | netip://?* | capture:[0-9]*) ;;
+			*)
+				logger -t vigil "$LEGACY: camera $i is not a camera URL; not converted" 2>/dev/null
+				continue ;;
+		esac
+		if [ ${#url} -gt 511 ] || [ $n -ge 16 ]; then
+			logger -t vigil "$LEGACY: camera $i is too long, or one too many; not converted" 2>/dev/null
+			continue
+		fi
+		list="$list${list:+,}$(printf '\n\t\t{ "url": "%s" }' "$(json_str "$url")")"
+		n=$((n + 1))
 	done
+	set +f
+	[ -n "$list" ] && list="$list$(printf '\n\t')"
+	rec=$(printf '\n\t\t"path": "%s"' "$(json_str "$path")")
+	[ -n "$seg" ] && rec="$rec$(printf ',\n\t\t"segment": %s' "$seg")"
+	[ -n "$keep" ] && rec="$rec$(printf ',\n\t\t"keep": %s' "$keep")"
+	# 0600 from the start: it holds the cameras' passwords.
+	if ! (
+		umask 077
+		printf '{\n\t"version": 1,\n\t"cameras": [%s],\n\t"record": {%s\n\t}\n}\n' \
+			"$list" "$rec" > "$CONFIG.migrate"
+	); then
+		rm -f "$CONFIG.migrate"
+		logger -t vigil "$LEGACY is not converted: cannot write $CONFIG" 2>/dev/null
+		return 0
+	fi
+	# The new file in place first: interrupted before the old one is moved
+	# aside, the next start finds $CONFIG changed and leaves both be.
+	if ! mv -f "$CONFIG.migrate" "$CONFIG"; then
+		rm -f "$CONFIG.migrate"
+		logger -t vigil "$LEGACY is not converted: cannot write $CONFIG" 2>/dev/null
+		return 0
+	fi
+	mv -f "$LEGACY" "$LEGACY.migrated" && chmod 600 "$LEGACY.migrated"
+	sync
+	logger -t vigil "converted $LEGACY into $CONFIG: $n camera(s), recording ${path:-off}; the old file is kept as $LEGACY.migrated" 2>/dev/null
 }
 
 supervise() {
@@ -211,44 +273,19 @@ supervise() {
 	# A stop while it waits ends the wait, not just the run after it.
 	# The pidfile goes only while it still names this supervisor: by then a
 	# new start may have written its own.
-	trap 'kill $waiting $watcher 2>/dev/null; rm -f "$SUPERVISOR.card"; release; exit 0' TERM INT
+	trap 'kill $waiting 2>/dev/null; release; exit 0' TERM INT
 	echo $$ > "$SUPERVISOR"
 	waiting=
-	watcher=
 	crashes=
-	rm -f "$SUPERVISOR.card"
 	while :; do
 		# An upgrade has the board: it reboots it when done. Asked
 		# before every start, the first and each one after a wait.
 		[ -f "$UPGRADE_LOCK" ] && break
-		vigil_config
-		set -f
-		set -- -s
-		for url in $cams; do
-			set -- "$@" -c "$url"
-		done
-		set +f
-		if [ -n "$rec_dir" ]; then
-			set -- "$@" -o "$rec_dir"
-			[ -n "$rec_seg" ] && set -- "$@" -S "$rec_seg"
-			[ -n "$rec_keep" ] && set -- "$@" -K "$rec_keep"
-		else
-			set -- "$@" -o none
-		fi
-		if [ -z "$rec_dir" ] && [ -n "$rec_path" ]; then
-			card_watch &
-			watcher=$!
-		fi
+		# vigil: vigild records only onto a mounted disk, and waits for one
+		# by itself (OpenIPC/vigil#14), so the file is all it needs.
+		set -- -s -f "$CONFIG"
 		start-stop-daemon -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- "$@"
 		rc=$?
-		[ -n "$watcher" ] && kill "$watcher" 2>/dev/null
-		watcher=
-		# vigil: ended by card_watch because its recording directory turned
-		# up -- a fresh start, not a crash and not a stop.
-		if [ -f "$SUPERVISOR.card" ]; then
-			rm -f "$SUPERVISOR.card"
-			continue
-		fi
 		if ! { [ "$rc" -gt 128 ] && crashed $((rc - 128)); }; then
 			# vigil: an exit of its own is not restarted, but is said: an NVR
 			# with a blank screen should leave a reason in the log.
@@ -350,7 +387,8 @@ case "$1" in
 		;;
 
 	reload)
-		# vigil: no reload signal; a new configuration needs a fresh start.
+		# vigil: no reload signal. A change made through the API is applied
+		# while vigild runs; a hand edit of $CONFIG needs a fresh start.
 		stop || exit 1
 		start
 		;;

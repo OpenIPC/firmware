@@ -1,12 +1,12 @@
 #!/bin/bash
 # Regression tests for S95vigil: the supervisor it shares with S95majestic
 # (restarted after a crash, never in a loop, never during an upgrade, never
-# after a stop), and what is its own -- the arguments built from
-# /etc/vigil.yaml, and the recording directory it refuses.
+# after a stop), and what is its own -- vigild given /etc/vigil.json and none
+# of its settings, and the one-time conversion of an old /etc/vigil.yaml.
 #
 # The same sandbox as test_majestic_supervise.sh: the real script with its
 # paths rewritten under $SB and its waits shortened; vigild, start-stop-daemon,
-# yaml-cli and logger are stubs, and /proc/mounts is a file the test writes.
+# yaml-cli and logger are stubs. The conversion's JSON is checked with python3.
 #
 # Lightweight: pure shell, no root, runs in a few seconds.
 
@@ -21,34 +21,22 @@ bad() { echo "FAIL $*"; fail=$((fail + 1)); }
 
 SB=$(mktemp -d)
 trap 'pkill -f "$SB/" 2>/dev/null; rm -rf "$SB"' EXIT
-mkdir -p "$SB/bin" "$SB/run" "$SB/crash" "$SB/cfg" "$SB/disk" "$SB/ram" "$SB/proc/self"
+mkdir -p "$SB/bin" "$SB/run" "$SB/crash" "$SB/cfg" "$SB/legacy" "$SB/etc" "$SB/rom$SB/etc"
 
 sed -e "s|DAEMON_PATH=\"/usr/bin/\$DAEMON\"|DAEMON_PATH=\"$SB/bin/vigild\"|" \
     -e "s|/var/run/|$SB/run/|g" \
     -e "s|CRASH=/etc/crash|CRASH=$SB/crash|" \
     -e "s|UPGRADE_LOCK=/tmp/sysupgrade.lock|UPGRADE_LOCK=$SB/sysupgrade.lock|" \
     -e "s|BACKOFF=\"5 30 120\"|BACKOFF=\"\${TEST_BACKOFF:-0 0 0}\"|" \
-    -e "s|/proc/mounts|$SB/mounts|" \
-    -e "s|CARD_POLL=10|CARD_POLL=1|" \
+    -e "s|CONFIG=/etc/vigil.json|CONFIG=$SB/etc/vigil.json|" \
+    -e "s|LEGACY=/etc/vigil.yaml|LEGACY=$SB/etc/vigil.yaml|" \
+    -e "s|ROM=/rom|ROM=$SB/rom|" \
     "$SRC" > "$SB/S95vigil"
-for p in 'DAEMON_PATH="/usr/bin/$DAEMON"' /var/run/ CRASH=/etc/crash UPGRADE_LOCK=/tmp/sysupgrade.lock 'BACKOFF="5 30 120"' /proc/mounts CARD_POLL=10; do
+for p in 'DAEMON_PATH="/usr/bin/$DAEMON"' /var/run/ CRASH=/etc/crash UPGRADE_LOCK=/tmp/sysupgrade.lock 'BACKOFF="5 30 120"' \
+    CONFIG=/etc/vigil.json LEGACY=/etc/vigil.yaml ROM=/rom; do
     grep -qF "$p" "$SRC" || bad "$p is gone from S95vigil; this test is testing nothing there"
 done
 chmod +x "$SB/S95vigil"
-
-# A disk, a RAM disk and the flash root, as /proc/mounts would list them.
-# A mount point with a space in it is listed with the space escaped (\040).
-mkdir -p "$SB/Disk One" "$SB/rocard/rec" "$SB/back\\slash/rec"
-cat > "$SB/mounts" <<EOF
-/dev/root / squashfs ro 0 0
-tmpfs $SB/ram tmpfs rw 0 0
-/dev/sda1 $SB/disk ext4 rw 0 0
-/dev/sdb1 $SB/Disk\\040One ext4 rw 0 0
-proc $SB/proc proc rw 0 0
-/dev/sdc1 $SB/rocard vfat ro,relatime 0 0
-/dev/sdd1 $SB/back\\134slash ext4 rw 0 0
-EOF
-cp "$SB/mounts" "$SB/mounts.boot"
 
 # vigild: counts its starts, keeps its arguments one per line, then does what
 # $SB/mode says.
@@ -87,15 +75,17 @@ case "$mode" in
         exit 0 ;;
 esac
 EOF
-# yaml-cli -i FILE -g .a.b: the value is the file $SB/cfg/.a.b, absent = not set;
-# with $SB/cfg/.broken present it fails to parse, as the real one does.
+# yaml-cli -i FILE -g .a.b: the value is the file $SB/cfg/.a.b for vigil.json,
+# $SB/legacy/.a.b for vigil.yaml; absent = not set (exit 1, nothing said); with
+# .broken present there it fails to parse, as the real one does.
 cat > "$SB/bin/yaml-cli" <<EOF
 #!/bin/sh
-if [ -f "$SB/cfg/.broken" ]; then
+case "\$2" in *.yaml) d="$SB/legacy" ;; *) d="$SB/cfg" ;; esac
+if [ -f "\$d/.broken" ]; then
     echo "Parse error: while parsing a block collection at line 2, column 3" >&2
     exit 1
 fi
-[ "\$3" = -g ] && [ -f "$SB/cfg/\$4" ] && cat "$SB/cfg/\$4"
+[ "\$3" = -g ] && [ -f "\$d/\$4" ] && cat "\$d/\$4"
 EOF
 printf '#!/bin/sh\necho "$*" >> "%s/log"\n' "$SB" > "$SB/bin/logger"
 chmod +x "$SB/bin"/*
@@ -103,7 +93,8 @@ export PATH="$SB/bin:$PATH" SB_DIR="$SB"
 
 starts() { [ -f "$SB/starts" ] && wc -l < "$SB/starts" | tr -d ' ' || echo 0; }
 reset() {
-    rm -f "$SB/starts" "$SB/args" "$SB/log" "$SB/crash"/* "$SB/sysupgrade.lock" "$SB/run"/* "$SB/cfg"/.*[a-z]* 2>/dev/null
+    rm -f "$SB/starts" "$SB/args" "$SB/log" "$SB/crash"/* "$SB/sysupgrade.lock" "$SB/run"/* "$SB/cfg"/.*[a-z]* \
+        "$SB/legacy"/.*[a-z]* "$SB/etc"/* 2>/dev/null
     echo "$1" > "$SB/mode"
 }
 supervise() { timeout 20 sh "$SB/S95vigil" supervise; }
@@ -136,113 +127,108 @@ touch "$SB/sysupgrade.lock"
 supervise
 [ "$(starts)" = 0 ] && ok "during an upgrade vigild is not started" || bad "upgrade: $(starts) starts"
 
-# 4. Arguments from the configuration.
+# 4. vigild reads its configuration itself, and decides where it may record
+#    (only onto a mounted disk, OpenIPC/vigil#14): it is given the file and
+#    none of its settings, whatever the file says.
+CONF="$SB/etc/vigil.json"
+BASE="-s -f $CONF"
 reset exit
 supervise
-[ "$(args)" = "-s -o none" ] && ok "no configuration: no cameras, no recording, syslog" || bad "empty config: $(args)"
+[ "$(args)" = "$BASE" ] && ok "vigild is given its configuration file and syslog, nothing else" || bad "empty config: $(args)"
 
 reset exit
-printf 'rtsp://u:p@10.0.0.1/stream=0\nnetip://admin:@10.0.0.2:34567/?ch=1&stream=extra\n' > "$SB/cfg/.cameras"
-touch "$SB/x1" "$SB/x2"         # would match a '?' glob if one were expanded
-supervise
-[ "$(args)" = "-s -c rtsp://u:p@10.0.0.1/stream=0 -c netip://admin:@10.0.0.2:34567/?ch=1&stream=extra -o none" ] \
-    && ok "each camera URL is one -c, '?' and '&' untouched" || bad "cameras: $(args)"
-
-reset exit
-mkdir -p "$SB/disk/My Recordings"
-echo "$SB/disk/My Recordings" > "$SB/cfg/.record.path"
+printf 'rtsp://u:p@10.0.0.1/stream=0\n' > "$SB/cfg/.cameras"
+echo /mnt/sda1/rec > "$SB/cfg/.record.path"
 echo 300 > "$SB/cfg/.record.segment"
-echo 5 > "$SB/cfg/.record.keep"
 supervise
-if [ "$(sed -n 3p "$SB/args")" = "$SB/disk/My Recordings" ] && [ "$(sed -n 2p "$SB/args")" = -o ] \
-    && [ "$(sed -n '4,7p' "$SB/args" | tr '\n' ' ')" = "-S 300 -K 5 " ]; then
-    ok "a recording directory on a disk is passed as one argument, spaces and all, with -S and -K"
-else
-    bad "disk path: $(args)"
-fi
+[ "$(args)" = "$BASE" ] && ok "cameras and recording stay in the file, not on the command line" || bad "settings: $(args)"
 
-reset exit
-echo "$SB/ram" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "-s -o none" ] && grep -q "not recording: $SB/ram" "$SB/log" \
-    && ok "a directory on tmpfs is refused, and the log says so" || bad "tmpfs path: $(args)"
+# 5. An old /etc/vigil.yaml is converted once into /etc/vigil.json.
+shipped='{ "version": 1, "cameras": [] }'
+migrate_start() {
+    sh "$SB/S95vigil" start > /dev/null
+    for _ in $(seq 50); do [ "$(starts)" -ge 1 ] && break; sleep 0.1; done
+    sh "$SB/S95vigil" stop > /dev/null
+    sleep 0.3
+}
+json() { python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), sort_keys=True))' "$1" 2>&1; }
+mode() { stat -c %a "$1" 2>/dev/null; }
 
-reset exit
-ln -s "$SB/ram" "$SB/disk/rec"
-echo "$SB/disk/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "-s -o none" ] && ok "a link on the disk that leads to tmpfs is refused" || bad "linked path: $(args)"
-
-reset exit
-echo "$SB/proc/self" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "-s -o none" ] && ok "a directory on proc (not a disk, card or share) is refused" || bad "proc path: $(args)"
-
-reset exit
-echo "$SB/rocard/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "-s -o none" ] && ok "a card mounted read-only is refused" || bad "read-only card: $(args)"
-
-reset exit
-echo "$SB/back\\slash/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(sed -n 3p "$SB/args")" = "$SB/back\\slash/rec" ] && ok "a disk mounted at a path with a backslash is recorded to" \
-    || bad "backslash mount point: $(args)"
-
-reset exit
-touch "$SB/cfg/.broken"
-supervise
-if [ "$(args)" = "-s -o none" ] && grep -q "cannot read .*Parse error" "$SB/log" 2>/dev/null; then
-    ok "a configuration yaml-cli cannot parse is said in the log, not taken for an empty one"
-else
-    bad "broken config: args '$(args)', log '$(cat "$SB/log" 2>/dev/null)'"
-fi
-rm -f "$SB/cfg/.broken"
-
-reset exit
-mkdir -p "$SB/flash"
-echo "$SB/flash" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "-s -o none" ] && ok "a directory on the flash root is refused" || bad "root path: $(args)"
-
-reset exit
-mkdir -p "$SB/disk/real"
-ln -s "$SB/disk/real" "$SB/disk/alias"
-echo "$SB/disk/alias" > "$SB/cfg/.record.path"
-supervise
-[ "$(sed -n 3p "$SB/args")" = "$SB/disk/real" ] && ok "a link within the disk is followed, and vigild gets where it leads" \
-    || bad "alias path: $(args)"
-
-reset exit
-mkdir -p "$SB/Disk One/rec"
-echo "$SB/Disk One/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(sed -n 3p "$SB/args")" = "$SB/Disk One/rec" ] && ok "a disk mounted at a path with a space (escaped in /proc/mounts) is recorded to" \
-    || bad "escaped mount point: $(args)"
-
-# 5. A card mounted after vigild started: found, and vigild started again with it.
 reset run
-echo "$SB/card/rec" > "$SB/cfg/.record.path"
-sh "$SB/S95vigil" start > /dev/null
-for _ in $(seq 50); do [ "$(starts)" -ge 1 ] && break; sleep 0.1; done
-first=$(args)
-mkdir -p "$SB/card/rec"
-echo "/dev/mmcblk0p1 $SB/card vfat rw 0 0" >> "$SB/mounts"
-for _ in $(seq 60); do [ "$(starts)" -ge 2 ] && break; sleep 0.1; done
-sleep 0.3
-if [ "$first" = "-s -o none" ] && [ "$(starts)" = 2 ] && [ "$(sed -n 3p "$SB/args")" = "$SB/card/rec" ]; then
-    ok "a card mounted later is found, and vigild is started again to record to it"
+echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo 'cameras: ...' > "$SB/etc/vigil.yaml"
+printf 'rtsp://u:p@10.0.0.1/stream=0\nnetip://admin:@10.0.0.2:34567/?ch=1&stream=extra\n' > "$SB/legacy/.cameras"
+printf '%s\n' '/mnt/sda1/my "rec"\dir' > "$SB/legacy/.record.path"
+echo 300 > "$SB/legacy/.record.segment"
+echo 5 > "$SB/legacy/.record.keep"
+migrate_start
+want='{"cameras": [{"url": "rtsp://u:p@10.0.0.1/stream=0"}, {"url": "netip://admin:@10.0.0.2:34567/?ch=1&stream=extra"}], "record": {"keep": 5, "path": "/mnt/sda1/my \"rec\"\\dir", "segment": 300}, "version": 1}'
+if [ "$(json "$CONF")" = "$want" ]; then
+    ok "vigil.yaml is converted: cameras, recording path (quotes, backslash), segment and keep"
 else
-    bad "late card: first '$first', starts $(starts), now '$(args)'"
+    bad "converted: $(json "$CONF")"
 fi
-if pgrep -f "$SB/S95vigil supervise" > /dev/null && [ ! -f "$SB/crash/vigil.loop" ]; then
-    ok "...by the same supervisor, with no crash counted"
-else
-    bad "late card: supervisor gone or a crash counted"
-fi
-sh "$SB/S95vigil" stop > /dev/null
-sleep 0.5
-cp "$SB/mounts.boot" "$SB/mounts"
+[ "$(mode "$CONF")" = 600 ] && ok "...into a vigil.json only root can read (camera passwords)" || bad "vigil.json mode $(mode "$CONF")"
+[ ! -e "$SB/etc/vigil.yaml" ] && [ -f "$SB/etc/vigil.yaml.migrated" ] && [ "$(mode "$SB/etc/vigil.yaml.migrated")" = 600 ] \
+    && ok "...and the old file is kept as vigil.yaml.migrated, root only" || bad "old file: $(ls -l "$SB/etc")"
+grep -q "converted $SB/etc/vigil.yaml into $CONF: 2 camera(s)" "$SB/log" 2>/dev/null && ok "...and the log says so" \
+    || bad "conversion log: $(cat "$SB/log" 2>/dev/null)"
+! grep -q 'u:p@' "$SB/log" 2>/dev/null && ok "...without a password in it" || bad "a password reached the log"
+cp "$CONF" "$SB/converted"
+: > "$SB/log"
+migrate_start
+cmp -s "$CONF" "$SB/converted" && [ ! -s "$SB/log" ] && ok "a second start converts nothing" || bad "second start: $(cat "$SB/log")"
+
+reset run
+echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo 'cameras: ...' > "$SB/etc/vigil.yaml"
+printf 'rtsp://u:p@10.0.0.1/a\nfoo://bar\nrtsp://u:p@10.0.0.3/c\n' > "$SB/legacy/.cameras"
+echo 'rec' > "$SB/legacy/.record.path"
+echo 5 > "$SB/legacy/.record.segment"
+echo 1000 > "$SB/legacy/.record.keep"
+migrate_start
+want='{"cameras": [{"url": "rtsp://u:p@10.0.0.1/a"}, {"url": "rtsp://u:p@10.0.0.3/c"}], "record": {"keep": 64, "path": "", "segment": 10}, "version": 1}'
+[ "$(json "$CONF")" = "$want" ] && grep -q "camera 2 is not a camera URL" "$SB/log" && grep -q "not an absolute path" "$SB/log" \
+    && ok "what vigild would refuse is left out or brought into range, so it loads the rest" || bad "ranges: $(json "$CONF"); $(cat "$SB/log")"
+
+reset run
+echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo 'cameras: ...' > "$SB/etc/vigil.yaml"
+echo '/mnt/sda1/x/../../../flash' > "$SB/legacy/.record.path"
+migrate_start
+[ "$(json "$CONF")" = '{"cameras": [], "record": {"path": ""}, "version": 1}' ] && grep -q 'has a "." or ".."' "$SB/log" \
+    && ok "a record.path with '..' (vigild refuses it) is not converted" || bad "dot-dot: $(json "$CONF"); $(cat "$SB/log")"
+
+reset run
+echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo 'cameras: []' > "$SB/etc/vigil.yaml"
+migrate_start
+want='{"cameras": [], "record": {"path": ""}, "version": 1}'
+[ "$(json "$CONF")" = "$want" ] && ok "an empty vigil.yaml converts to no cameras, no recording" || bad "empty: $(json "$CONF")"
+
+reset run
+echo '{ "version": 1, "cameras": [ { "url": "rtsp://10.0.0.9/x" } ] }' > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo 'cameras: ...' > "$SB/etc/vigil.yaml"
+printf 'rtsp://u:p@10.0.0.1/a\n' > "$SB/legacy/.cameras"
+migrate_start
+grep -q 10.0.0.9 "$CONF" && [ -f "$SB/etc/vigil.yaml" ] && grep -q "is not converted: .* has been changed since" "$SB/log" \
+    && ok "a vigil.json changed since (the API, by hand) is not converted over" || bad "changed json: $(cat "$CONF"); $(cat "$SB/log")"
+
+reset run
+echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo 'cameras: [' > "$SB/etc/vigil.yaml"
+touch "$SB/legacy/.broken"
+migrate_start
+[ "$(cat "$CONF")" = "$shipped" ] && [ -f "$SB/etc/vigil.yaml" ] && grep -q "is not converted: Parse error" "$SB/log" \
+    && ok "a vigil.yaml yaml-cli cannot parse is not converted, and the log says why" || bad "broken yaml: $(cat "$SB/log")"
+rm -f "$SB/legacy/.broken"
+
+reset run
+rm -f "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo 'cameras: ...' > "$SB/etc/vigil.yaml"
+printf 'rtsp://u:p@10.0.0.1/a\n' > "$SB/legacy/.cameras"
+migrate_start
+grep -q 10.0.0.1 "$CONF" 2>/dev/null && ok "with no vigil.json at all, vigil.yaml is converted" || bad "no json: $(cat "$CONF" 2>&1)"
 
 # 6. A lock left with no pid -- its command killed between mkdir and writing
 #    its pid -- is taken over after a short grace, not waited on forever.
