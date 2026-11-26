@@ -5,14 +5,17 @@
 # infinity2m (SSR621Q NVR): the SigmaStar media stack for decoding to the
 # display, as OpenIPC/opensigmastar builds it (sigmastar-opensdk): the SDK's
 # modules relinked for this kernel (open_mhal, open_mi_*, open_fbdev) and the
-# HDMI transmitter from source. They read their configuration from /config
-# (panel timings, PQ, memory map, decoder firmware), a path built into them.
+# HDMI transmitter from source. open_mi_sys runs config_tool from TOOL_DIR for
+# the memory map, panel timings and PQ defaults; open_fbdev reads its screen
+# from FBDEV_INI; open_mi_vdec finds its firmware in /lib/firmware.
 #
 # load_sigmastar [-i]    load (S70vendor passes -i)
 # load_sigmastar -r      unload (for debugging: the SDK modules leave timers
 #                        armed, and the kernel can oops after it)
 
 MODULE=/lib/modules/4.9.84/sigmastar
+TOOL_DIR=/usr/lib/sigmastar
+FBDEV_INI=/usr/share/sigmastar/fbdev.ini
 # MI modules in the SDK's dependency order; each gets /dev/<name>
 MI="mi_sys mi_ao mi_gfx mi_divp mi_vdec mi_ai mi_disp mi_panel"
 # Everything an NVR needs, in load order; -r unloads in reverse
@@ -26,10 +29,10 @@ log() {
 # completes the stack instead of stopping at what is loaded. Nothing is
 # unloaded on failure: the SDK modules leave timers armed when removed.
 load() {
-	m=$1
+	ko=$1
 	shift
-	[ -e /sys/module/$m ] && return 0
-	insmod $MODULE/$m.ko "$@" || { log "$m failed"; return 1; }
+	[ -e /sys/module/$ko ] && return 0
+	insmod $MODULE/$ko.ko "$@" || { log "$ko failed"; return 1; }
 }
 
 insert_ko() {
@@ -38,13 +41,15 @@ insert_ko() {
 	major=$(awk '$2=="mi" {print $1}' /proc/devices)
 	minor=0
 	for m in $MI; do
-		load open_$m || return 1
+		arg=
+		[ $m = mi_sys ] && arg=default_config_path=$TOOL_DIR
+		load open_$m $arg || return 1
 		[ -e /dev/$m ] || mknod /dev/$m c "$major" $minor
 		minor=$((minor + 1))
 	done
 	major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
 	[ -n "$major" ] && [ ! -e /dev/mi_poll ] && mknod /dev/mi_poll c "$major" 0
-	load open_fbdev default_config_path_file=/config/fbdev.ini || return 1
+	load open_fbdev default_config_path_file=$FBDEV_INI || return 1
 
 	# HDMI transmitter, built from source; the application switches it
 	# on with /sys/kernel/open_hdmi/output
