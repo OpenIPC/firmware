@@ -2,13 +2,11 @@
 # Regression tests for S95vigil: the supervisor it shares with S95majestic
 # (restarted after a crash, never in a loop, never during an upgrade, never
 # after a stop), and what is its own -- vigild given /etc/vigil.json and none
-# of its settings, the recording it holds off while the directory is not on a
-# disk, and the one-time conversion of an old /etc/vigil.yaml.
+# of its settings, and the one-time conversion of an old /etc/vigil.yaml.
 #
 # The same sandbox as test_majestic_supervise.sh: the real script with its
 # paths rewritten under $SB and its waits shortened; vigild, start-stop-daemon,
-# yaml-cli and logger are stubs, and /proc/mounts is a file the test writes.
-# The conversion's JSON is checked with python3.
+# yaml-cli and logger are stubs. The conversion's JSON is checked with python3.
 #
 # Lightweight: pure shell, no root, runs in a few seconds.
 
@@ -23,40 +21,22 @@ bad() { echo "FAIL $*"; fail=$((fail + 1)); }
 
 SB=$(mktemp -d)
 trap 'pkill -f "$SB/" 2>/dev/null; rm -rf "$SB"' EXIT
-mkdir -p "$SB/bin" "$SB/run" "$SB/crash" "$SB/cfg" "$SB/legacy" "$SB/etc" "$SB/rom$SB/etc" \
-    "$SB/disk" "$SB/ram" "$SB/proc/self"
+mkdir -p "$SB/bin" "$SB/run" "$SB/crash" "$SB/cfg" "$SB/legacy" "$SB/etc" "$SB/rom$SB/etc"
 
 sed -e "s|DAEMON_PATH=\"/usr/bin/\$DAEMON\"|DAEMON_PATH=\"$SB/bin/vigild\"|" \
     -e "s|/var/run/|$SB/run/|g" \
     -e "s|CRASH=/etc/crash|CRASH=$SB/crash|" \
     -e "s|UPGRADE_LOCK=/tmp/sysupgrade.lock|UPGRADE_LOCK=$SB/sysupgrade.lock|" \
     -e "s|BACKOFF=\"5 30 120\"|BACKOFF=\"\${TEST_BACKOFF:-0 0 0}\"|" \
-    -e "s|/proc/mounts|$SB/mounts|" \
-    -e "s|CARD_POLL=10|CARD_POLL=1|" \
     -e "s|CONFIG=/etc/vigil.json|CONFIG=$SB/etc/vigil.json|" \
     -e "s|LEGACY=/etc/vigil.yaml|LEGACY=$SB/etc/vigil.yaml|" \
     -e "s|ROM=/rom|ROM=$SB/rom|" \
-    -e "s|HELD=/etc/vigil.rec-held|HELD=$SB/etc/vigil.rec-held|" \
     "$SRC" > "$SB/S95vigil"
-for p in 'DAEMON_PATH="/usr/bin/$DAEMON"' /var/run/ CRASH=/etc/crash UPGRADE_LOCK=/tmp/sysupgrade.lock 'BACKOFF="5 30 120"' /proc/mounts CARD_POLL=10 \
-    CONFIG=/etc/vigil.json LEGACY=/etc/vigil.yaml ROM=/rom HELD=/etc/vigil.rec-held; do
+for p in 'DAEMON_PATH="/usr/bin/$DAEMON"' /var/run/ CRASH=/etc/crash UPGRADE_LOCK=/tmp/sysupgrade.lock 'BACKOFF="5 30 120"' \
+    CONFIG=/etc/vigil.json LEGACY=/etc/vigil.yaml ROM=/rom; do
     grep -qF "$p" "$SRC" || bad "$p is gone from S95vigil; this test is testing nothing there"
 done
 chmod +x "$SB/S95vigil"
-
-# A disk, a RAM disk and the flash root, as /proc/mounts would list them.
-# A mount point with a space in it is listed with the space escaped (\040).
-mkdir -p "$SB/Disk One" "$SB/rocard/rec" "$SB/back\\slash/rec"
-cat > "$SB/mounts" <<EOF
-/dev/root / squashfs ro 0 0
-tmpfs $SB/ram tmpfs rw 0 0
-/dev/sda1 $SB/disk ext4 rw 0 0
-/dev/sdb1 $SB/Disk\\040One ext4 rw 0 0
-proc $SB/proc proc rw 0 0
-/dev/sdc1 $SB/rocard vfat ro,relatime 0 0
-/dev/sdd1 $SB/back\\134slash ext4 rw 0 0
-EOF
-cp "$SB/mounts" "$SB/mounts.boot"
 
 # vigild: counts its starts, keeps its arguments one per line, then does what
 # $SB/mode says.
@@ -147,9 +127,9 @@ touch "$SB/sysupgrade.lock"
 supervise
 [ "$(starts)" = 0 ] && ok "during an upgrade vigild is not started" || bad "upgrade: $(starts) starts"
 
-# 4. vigild reads its configuration itself: it is given the file and none of
-#    its settings, except recording held off while the directory is not on a
-#    disk or card.
+# 4. vigild reads its configuration itself, and decides where it may record
+#    (only onto a mounted disk, OpenIPC/vigil#14): it is given the file and
+#    none of its settings, whatever the file says.
 CONF="$SB/etc/vigil.json"
 BASE="-s -f $CONF"
 reset exit
@@ -158,188 +138,12 @@ supervise
 
 reset exit
 printf 'rtsp://u:p@10.0.0.1/stream=0\n' > "$SB/cfg/.cameras"
+echo /mnt/sda1/rec > "$SB/cfg/.record.path"
 echo 300 > "$SB/cfg/.record.segment"
 supervise
-[ "$(args)" = "$BASE" ] && ok "cameras and segment length stay in the file, not on the command line" || bad "cameras: $(args)"
+[ "$(args)" = "$BASE" ] && ok "cameras and recording stay in the file, not on the command line" || bad "settings: $(args)"
 
-reset exit
-mkdir -p "$SB/disk/My Recordings"
-echo "$SB/disk/My Recordings" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE" ] && ok "a recording directory on a disk: recorded, as the file says" || bad "disk path: $(args)"
-
-reset exit
-echo "$SB/disk/not/yet" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE" ] && ok "a directory not made yet on a mounted disk: left to vigild to create" || bad "new dir on disk: $(args)"
-
-reset exit
-echo "$SB/card/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE -o none" ] && grep -q "not recording for now: $SB/card/rec" "$SB/log" \
-    && ok "a card not mounted: recording held off (vigild would create the path on the flash root), and logged" \
-    || bad "card not mounted: $(args)"
-
-reset exit
-echo "$SB/ram" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE -o none" ] && grep -q "not recording for now: $SB/ram" "$SB/log" \
-    && ok "a directory on tmpfs is refused, and the log says so" || bad "tmpfs path: $(args)"
-
-reset exit
-ln -s "$SB/ram" "$SB/disk/rec"
-echo "$SB/disk/rec/cams" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE -o none" ] && ok "a link on the disk that leads to tmpfs is refused" || bad "linked path: $(args)"
-
-reset exit
-echo "$SB/proc/self" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE -o none" ] && ok "a directory on proc (not a disk, card or share) is refused" || bad "proc path: $(args)"
-
-reset exit
-echo "$SB/rocard/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE -o none" ] && ok "a card mounted read-only is refused" || bad "read-only card: $(args)"
-
-reset exit
-echo "$SB/disk/x/../../../escape" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE -o none" ] && ok "a path that climbs out of the disk with '..' is refused" || bad "dot-dot path: $(args)"
-
-reset exit
-echo "$SB/back\\slash/rec/" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE" ] && ok "a disk mounted at a path with a backslash is recorded to (trailing slash and all)" \
-    || bad "backslash mount point: $(args)"
-
-reset exit
-touch "$SB/cfg/.broken"
-supervise
-if [ "$(args)" = "$BASE" ] && grep -q "cannot check the recording directory .*Parse error" "$SB/log" 2>/dev/null; then
-    ok "a configuration yaml-cli cannot parse is said in the log, and left to vigild"
-else
-    bad "broken config: args '$(args)', log '$(cat "$SB/log" 2>/dev/null)'"
-fi
-rm -f "$SB/cfg/.broken"
-
-reset exit
-mkdir -p "$SB/flash"
-echo "$SB/flash" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE -o none" ] && ok "a directory on the flash root is refused" || bad "root path: $(args)"
-
-reset exit
-mkdir -p "$SB/disk/real"
-ln -s "$SB/disk/real" "$SB/disk/alias"
-echo "$SB/disk/alias" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE" ] && ok "a link within the disk is followed, and recorded to" || bad "alias path: $(args)"
-
-reset exit
-mkdir -p "$SB/Disk One/rec"
-echo "$SB/Disk One/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "$BASE" ] && ok "a disk mounted at a path with a space (escaped in /proc/mounts) is recorded to" \
-    || bad "escaped mount point: $(args)"
-
-# 5. A card mounted after vigild started: found, and vigild started again,
-#    now recording as the file says.
-reset run
-echo "$SB/card/rec" > "$SB/cfg/.record.path"
-sh "$SB/S95vigil" start > /dev/null
-for _ in $(seq 50); do [ "$(starts)" -ge 1 ] && break; sleep 0.1; done
-first=$(args)
-mkdir -p "$SB/card"
-echo "/dev/mmcblk0p1 $SB/card vfat rw 0 0" >> "$SB/mounts"
-for _ in $(seq 60); do [ "$(starts)" -ge 2 ] && break; sleep 0.1; done
-sleep 0.3
-if [ "$first" = "$BASE -o none" ] && [ "$(starts)" = 2 ] && [ "$(args)" = "$BASE" ]; then
-    ok "a card mounted later is found, and vigild is started again to record to it"
-else
-    bad "late card: first '$first', starts $(starts), now '$(args)'"
-fi
-if pgrep -f "$SB/S95vigil supervise" > /dev/null && [ ! -f "$SB/crash/vigil.loop" ]; then
-    ok "...by the same supervisor, with no crash counted"
-else
-    bad "late card: supervisor gone or a crash counted"
-fi
-sh "$SB/S95vigil" stop > /dev/null
-sleep 0.5
-cp "$SB/mounts.boot" "$SB/mounts"
-
-# 5b. Held off, an API change saves record.path as empty meanwhile (what is
-#     in force): the path asked for is kept, and recorded into, with -o, once
-#     the disk is there. vigild's next save puts it back in the file.
-HELDF="$SB/etc/vigil.rec-held"
-wait_starts() { for _ in $(seq 60); do [ "$(starts)" -ge "$1" ] && break; sleep 0.1; done; sleep 0.3; }
-reset run
-echo '{"record":{"path":"held"}}' > "$CONF"
-echo "$SB/card/rec" > "$SB/cfg/.record.path"
-sh "$SB/S95vigil" start > /dev/null
-wait_starts 1
-[ "$(cat "$HELDF" 2>/dev/null)" = "$SB/card/rec" ] && ok "the path held off is remembered" || bad "held file: $(cat "$HELDF" 2>&1)"
-rm -f "$SB/cfg/.record.path"; echo '{"record":{"path":""}}' > "$CONF"
-sleep 2.5
-[ "$(starts)" = 1 ] && ok "record.path saved empty while held off: vigild is not started again for it" || bad "empty save: starts $(starts)"
-mkdir -p "$SB/card"
-echo "/dev/mmcblk0p1 $SB/card vfat rw 0 0" >> "$SB/mounts"
-wait_starts 2
-[ "$(starts)" = 2 ] && [ "$(args)" = "$BASE -o $SB/card/rec" ] && grep -q "saved empty while recording was held off" "$SB/log" \
-    && ok "...and once the disk is there, vigild records into the path asked for (-o), and the log says why" \
-    || bad "restore: starts $(starts), args '$(args)'"
-echo "$SB/card/rec" > "$SB/cfg/.record.path"; echo '{"record":{"path":"saved back"}}' > "$CONF"
-sleep 2.5
-[ ! -e "$HELDF" ] && [ "$(starts)" = 2 ] && ok "vigild's next save puts the path back; nothing is held any more, no restart" \
-    || bad "after save-back: held '$(cat "$HELDF" 2>&1)', starts $(starts)"
-
-# 5c. Recording, and then the disk goes away: held off at once (vigild would
-#     create the path on the flash), not at the next start.
-cp "$SB/mounts.boot" "$SB/mounts"
-wait_starts 3
-[ "$(starts)" = 3 ] && [ "$(args)" = "$BASE -o none" ] && grep -q "is not on a disk or card now" "$SB/log" \
-    && ok "a disk gone while recording: vigild started again with recording held off" || bad "disk gone: starts $(starts), '$(args)'"
-sh "$SB/S95vigil" stop > /dev/null
-sleep 0.5
-
-# 5d. A path the API sets while vigild runs that is not on a disk: held off.
-reset run
-mkdir -p "$SB/disk/live"
-echo "$SB/disk/live" > "$SB/cfg/.record.path"
-sh "$SB/S95vigil" start > /dev/null
-wait_starts 1
-echo "$SB/ram/rec" > "$SB/cfg/.record.path"
-wait_starts 2
-[ "$(starts)" = 2 ] && [ "$(args)" = "$BASE -o none" ] && ok "a path set while running onto tmpfs: held off within a poll" \
-    || bad "live unsafe path: starts $(starts), '$(args)'"
-sh "$SB/S95vigil" stop > /dev/null
-sleep 0.5
-
-# 5e. Started with -o and a held path, the owner turns recording off through
-#     the API: the save (path empty, the file changed) is theirs, and nothing
-#     is held any more.
-reset run
-mkdir -p "$SB/disk/live"
-echo "$SB/disk/live" > "$HELDF"
-echo '{"record":{"path":""}}' > "$CONF"
-sh "$SB/S95vigil" start > /dev/null
-wait_starts 1
-first=$(args)
-echo '{"record":{"path":"", "saved":1}}' > "$CONF"
-sleep 2.5
-sh "$SB/S95vigil" stop > /dev/null
-sleep 0.5
-sh "$SB/S95vigil" start > /dev/null
-wait_starts 2
-if [ "$first" = "$BASE -o $SB/disk/live" ] && [ ! -e "$HELDF" ] && [ "$(args)" = "$BASE" ]; then
-    ok "recording turned off through the API after a restore: not restored again"
-else
-    bad "turned off: first '$first', held '$(cat "$HELDF" 2>&1)', now '$(args)'"
-fi
-sh "$SB/S95vigil" stop > /dev/null
-sleep 0.5
-
-# 5f. An old /etc/vigil.yaml is converted once into /etc/vigil.json.
+# 5. An old /etc/vigil.yaml is converted once into /etc/vigil.json.
 shipped='{ "version": 1, "cameras": [] }'
 migrate_start() {
     sh "$SB/S95vigil" start > /dev/null
@@ -386,6 +190,14 @@ migrate_start
 want='{"cameras": [{"url": "rtsp://u:p@10.0.0.1/a"}, {"url": "rtsp://u:p@10.0.0.3/c"}], "record": {"keep": 64, "path": "", "segment": 10}, "version": 1}'
 [ "$(json "$CONF")" = "$want" ] && grep -q "camera 2 is not a camera URL" "$SB/log" && grep -q "not an absolute path" "$SB/log" \
     && ok "what vigild would refuse is left out or brought into range, so it loads the rest" || bad "ranges: $(json "$CONF"); $(cat "$SB/log")"
+
+reset run
+echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo 'cameras: ...' > "$SB/etc/vigil.yaml"
+echo '/mnt/sda1/x/../../../flash' > "$SB/legacy/.record.path"
+migrate_start
+[ "$(json "$CONF")" = '{"cameras": [], "record": {"path": ""}, "version": 1}' ] && grep -q 'has a "." or ".."' "$SB/log" \
+    && ok "a record.path with '..' (vigild refuses it) is not converted" || bad "dot-dot: $(json "$CONF"); $(cat "$SB/log")"
 
 reset run
 echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"

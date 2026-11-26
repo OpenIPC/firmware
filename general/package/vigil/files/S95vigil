@@ -24,9 +24,6 @@ LEGACY=/etc/vigil.yaml
 # vigil: the image's own files, under the writable root (init mounts the
 # squashfs here).
 ROM=/rom
-# vigil: the recording directory asked for, while recording is held off
-# (vigil_config).
-HELD=/etc/vigil.rec-held
 
 # vigild is run by a small supervisor (this script, `supervise`), which starts
 # it again when it dies of a fault: an NVR that crashed would otherwise show
@@ -40,9 +37,6 @@ UPGRADE_LOCK=/tmp/sysupgrade.lock
 BACKOFF="5 30 120"
 WINDOW=600
 LIMIT=5
-# vigil: how often, while vigild runs, the recording directory is looked at
-# again: for a card or disk mounted later, or one that has gone (rec_watch).
-CARD_POLL=10
 
 # Find the daemon by executable, never through a pidfile. Given -p, busybox
 # start-stop-daemon inspects only the pid that file holds and never scans
@@ -151,155 +145,6 @@ crashed() {
 	return 1
 }
 
-# vigil: the mount that holds $1 must be a disk, a card or a network share --
-# a filesystem from the list below. RAM (tmpfs, ramfs) would eat the memory the
-# decoders and the system need, the flash root (squashfs, overlay, jffs2,
-# ubifs) would wear out and fill, and virtual ones (proc, sysfs, devtmpfs)
-# hold nothing; and it must be mounted read-write. The longest mount point
-# that is a prefix wins.
-recordable() {
-	# /proc/mounts escapes space, tab, newline and backslash in a mount point
-	# as \040, \011, \012 and \134; decoded before the comparison, or a disk
-	# mounted at "/mnt/Disk One" could never be recorded to.
-	# The path goes in through the environment: awk -v would interpret the
-	# backslashes in it as escapes.
-	VIGIL_REC="$1" awk '
-		BEGIN { p = ENVIRON["VIGIL_REC"] }
-		{ m = $2
-		  gsub(/\\040/, " ", m); gsub(/\\011/, "\t", m); gsub(/\\012/, "\n", m)
-		  gsub(/\\134/, "\\", m)
-		  if (p == m || index(p, m == "/" ? "/" : m "/") == 1)
-			if (length(m) > length(best)) { best = m; fs = $3; opts = "," $4 "," } }
-		END { exit !(best != "" && best != "/" && opts !~ /,ro,/ &&
-			fs ~ /^(vfat|msdos|exfat|ext[234]|f2fs|xfs|btrfs|ntfs|ntfs3|fuseblk|nfs|nfs4|cifs|smb3)$/) }
-	' /proc/mounts
-}
-
-# vigil: where a recording into $1 would land. vigild creates the directory
-# itself, so it need not exist yet: the deepest part of it that does is
-# resolved -- a link from a card to /tmp is judged by where it lands -- and the
-# rest is kept as written.
-landing() {
-	p=$1 rest=
-	while :; do
-		case "$p" in
-			?*/) p=${p%/} ;;
-			*) break ;;
-		esac
-	done
-	while [ -n "$p" ] && [ ! -e "$p" ]; do
-		rest="/${p##*/}$rest"
-		case "$p" in
-			*/*) p=${p%/*} ;;
-			*) p= ;;
-		esac
-	done
-	p=$(readlink -f "${p:-/}" 2>/dev/null)
-	[ "$p" = / ] && p=
-	echo "$p$rest"
-}
-
-# vigil: whether the recording $CONFIG asks for may go ahead, asked before
-# every start and every CARD_POLL seconds while vigild runs (rec_watch).
-# vigild creates and records into whatever directory it is given: with the
-# card or disk not mounted (yet, or any more) it would create the path in the
-# flash root beneath the mount point and record there, and a path on /tmp
-# would fill RAM. Then vigild runs with recording held off (-o none) until
-# the disk is there.
-#
-# What the API shows, and saves at its next change, is the configuration in
-# force, so an unrelated change made while recording is held off saves
-# record.path as empty. The path asked for is therefore kept in $HELD until
-# vigild records into it again, and an empty record.path does not replace it
-# meanwhile: once the disk is there, vigild is started with -o and that path,
-# which the API's next change saves back. Sets rec_off (hold it off) or
-# rec_set (the path to pass), or neither (the file as it is).
-vigil_config() {
-	rec_off= rec_set=
-	# yaml-cli reads JSON (it is YAML), and exits 1 for a key that is absent
-	# and for a file it cannot open or parse alike; only the second says
-	# anything. vigild reports a file it cannot load itself.
-	file_path=$(yaml-cli -i "$CONFIG" -g .record.path 2>"$SUPERVISOR.err")
-	rec_path=$file_path
-	if [ "$1" != quiet ] && [ -s "$SUPERVISOR.err" ]; then
-		logger -t vigil "cannot check the recording directory in $CONFIG ($(head -1 "$SUPERVISOR.err"))" 2>/dev/null
-	fi
-	rm -f "$SUPERVISOR.err"
-	held=$(cat "$HELD" 2>/dev/null)
-	if [ -n "$rec_path" ]; then
-		# The owner's own choice: what was held is history.
-		if [ -n "$held" ] && [ "$held" != "$rec_path" ]; then
-			rm -f "$HELD"
-			held=
-		fi
-	elif [ -n "$held" ]; then
-		rec_path=$held
-	else
-		return 0
-	fi
-	# A relative path is refused by vigild with the rest of the file.
-	case "$rec_path" in
-		/*) ;;
-		*) return 0 ;;
-	esac
-	# "." and ".." are not followed: the part of the path vigild would
-	# create cannot be judged by its text once it climbs out of a mount.
-	case "$rec_path/" in
-		*/./* | */../*) ;;
-		*)
-			if recordable "$(landing "$rec_path")"; then
-				# vigild gets the path from the file, or from -o when
-				# an API change saved it as empty meanwhile.
-				if [ -n "$held" ]; then
-					if [ -z "$file_path" ]; then
-						rec_set=$held
-					else
-						rm -f "$HELD"
-					fi
-				fi
-				return 0
-			fi ;;
-	esac
-	rec_off=1
-	[ "$held" = "$rec_path" ] || printf '%s\n' "$rec_path" > "$HELD"
-	[ "$1" != quiet ] &&
-		logger -t vigil "not recording for now: $rec_path is not on a disk or card; looking for it every ${CARD_POLL}s" 2>/dev/null
-}
-
-# vigil: while vigild runs, look at the recording every CARD_POLL seconds: a
-# card or disk mounted after boot (the automounter knows nothing of vigil)
-# would otherwise go unused until someone restarted it, and one that goes away,
-# or a path the API sets that is not on a disk, would have vigild record onto
-# the flash. When the answer changes, vigild is ended and the supervisor,
-# seeing the note, starts it again with the new answer. $1 is how it runs now
-# (off: held off, on: recording, or nothing to record); $2 the path it was
-# given with -o, if any.
-rec_watch() {
-	trap 'exit 0' TERM
-	sum=$(cksum "$CONFIG" 2>/dev/null)
-	while sleep "$CARD_POLL"; do
-		# Started with -o and a held path, vigild saves that path with any
-		# change made through the API; whatever the file says after a
-		# save is the owner's, an empty path included.
-		if [ -n "$2" ] && [ "$(cksum "$CONFIG" 2>/dev/null)" != "$sum" ]; then
-			rm -f "$HELD"
-			set -- "$1"
-		fi
-		vigil_config quiet
-		now=on
-		[ -n "$rec_off" ] && now=off
-		[ "$now" = "$1" ] && continue
-		: > "$SUPERVISOR.card"
-		if [ "$now" = on ]; then
-			logger -t vigil "$rec_path is on a disk now; starting vigild again to record into it" 2>/dev/null
-		else
-			logger -t vigil "$rec_path is not on a disk or card now; starting vigild again with recording held off" 2>/dev/null
-		fi
-		start-stop-daemon -K -q -x "$DAEMON_PATH"
-		return 0
-	done
-}
-
 # vigil: JSON string contents for $1: backslash, quote and control
 # characters escaped. Through the environment: awk -v would interpret the
 # backslashes in it as escapes.
@@ -364,6 +209,11 @@ migrate() {
 			logger -t vigil "$LEGACY: record.path '$path' is not an absolute path; not converted" 2>/dev/null
 			path= ;;
 	esac
+	case "$path/" in
+		*/./* | */../*)
+			logger -t vigil "$LEGACY: record.path '$path' has a \".\" or \"..\" in it; not converted" 2>/dev/null
+			path= ;;
+	esac
 	if [ ${#path} -gt 191 ]; then
 		logger -t vigil "$LEGACY: record.path is longer than vigild takes; not converted" 2>/dev/null
 		path=
@@ -423,39 +273,19 @@ supervise() {
 	# A stop while it waits ends the wait, not just the run after it.
 	# The pidfile goes only while it still names this supervisor: by then a
 	# new start may have written its own.
-	trap 'kill $waiting $watcher 2>/dev/null; rm -f "$SUPERVISOR.card"; release; exit 0' TERM INT
+	trap 'kill $waiting 2>/dev/null; release; exit 0' TERM INT
 	echo $$ > "$SUPERVISOR"
 	waiting=
-	watcher=
 	crashes=
-	rm -f "$SUPERVISOR.card"
 	while :; do
 		# An upgrade has the board: it reboots it when done. Asked
 		# before every start, the first and each one after a wait.
 		[ -f "$UPGRADE_LOCK" ] && break
-		vigil_config
+		# vigil: vigild records only onto a mounted disk, and waits for one
+		# by itself (OpenIPC/vigil#14), so the file is all it needs.
 		set -- -s -f "$CONFIG"
-		mode=on
-		if [ -n "$rec_off" ]; then
-			set -- "$@" -o none
-			mode=off
-		elif [ -n "$rec_set" ]; then
-			set -- "$@" -o "$rec_set"
-			logger -t vigil "record.path was saved empty while recording was held off; recording into $rec_set as asked before" 2>/dev/null
-		fi
-		# Its own process, so it is not taken for a second supervisor.
-		sh "$0" watch "$mode" "$rec_set" </dev/null >/dev/null 2>&1 &
-		watcher=$!
 		start-stop-daemon -S -q -x "$DAEMON_PATH" -a "$DAEMON" -- "$@"
 		rc=$?
-		[ -n "$watcher" ] && kill "$watcher" 2>/dev/null
-		watcher=
-		# vigil: ended by rec_watch because whether it may record has
-		# changed -- a fresh start, not a crash and not a stop.
-		if [ -f "$SUPERVISOR.card" ]; then
-			rm -f "$SUPERVISOR.card"
-			continue
-		fi
 		if ! { [ "$rc" -gt 128 ] && crashed $((rc - 128)); }; then
 			# vigil: an exit of its own is not restarted, but is said: an NVR
 			# with a blank screen should leave a reason in the log.
@@ -548,10 +378,6 @@ case "$1" in
 
 	supervise)
 		supervise
-		;;
-
-	watch)
-		rec_watch "$2" "$3"
 		;;
 
 	restart)
