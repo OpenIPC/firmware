@@ -171,7 +171,12 @@ NAND_FIT_ITS="${BR2_EXTERNAL_GENERAL_PATH}/../br-ext-chip-${OPENIPC_SOC_VENDOR}/
 # which runs after this.)
 rm -f "${BINARIES_DIR}/fitImage"
 if [ -f "${NAND_FIT_ITS}" ] && grep -q "^BR2_TARGET_ROOTFS_UBI=y" "${BR2_CONFIG}"; then
-	KBOOT=$(ls -d "${BUILD_DIR}"/linux-*/arch/arm/boot "${BUILD_DIR}"/linux-*/arch/arm64/boot 2>/dev/null | grep -v headers | head -1)
+	# The kernel's architecture comes from the config: an arm64 kernel tree
+	# has an arch/arm/boot directory too, so testing which one exists can
+	# pick the wrong one.
+	KARCH=arm
+	grep -q "^BR2_aarch64=y" "${BR2_CONFIG}" && KARCH=arm64
+	KBOOT=$(ls -d "${BUILD_DIR}"/linux-*/arch/${KARCH}/boot 2>/dev/null | grep -v headers | head -1)
 	FIT_DIR="${BINARIES_DIR}/nand-fit"
 	rm -rf "${FIT_DIR}" && mkdir -p "${FIT_DIR}" || exit 1
 	# @SOC@ is the SoC the FIT is stamped with (sysupgrade's fit_soc reads it);
