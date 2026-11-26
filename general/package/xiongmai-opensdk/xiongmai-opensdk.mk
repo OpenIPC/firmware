@@ -5,9 +5,9 @@
 ################################################################################
 
 XIONGMAI_OPENSDK_SITE = $(call github,openipc,openxiongmai,$(XIONGMAI_OPENSDK_VERSION))
-XIONGMAI_OPENSDK_VERSION = 4e94dc20b4a9bf15b660f8b76d9a568bbc2cc89a
+XIONGMAI_OPENSDK_VERSION = f58d9d57237fef5dee8f1331e1fbd044deee60ab
 
-XIONGMAI_OPENSDK_LICENSE = GPL-3.0 (libraries), GPL-2.0 (open_vi, open_mmz, open_isp, open_rgn kernel modules)
+XIONGMAI_OPENSDK_LICENSE = GPL-3.0 (libraries), GPL-2.0 (open_vi, open_mmz, open_isp, open_rgn, open_h264, open_log, open_i2s, open_mve kernel modules)
 XIONGMAI_OPENSDK_LICENSE_FILES = LICENSE
 
 # Install after osdrv, the same order hisilicon-opensdk keeps with its osdrv.
@@ -19,10 +19,16 @@ endif
 # drivers/xm_vi (open_vi.ko), the vendor's xm530_vi.ko without its freeze at
 # VI init or its vmalloc leak, drivers/xm_mmz (open_mmz.ko), its mmz.ko, and
 # drivers/xm530_isp (open_isp.ko), its xm530_isp.ko, and drivers/xm530_rgn
-# (open_rgn.ko), its xm530_rgn.ko. The kernel-module infrastructure installs
-# them under /lib/modules/<kver>/extra/; xiongmai-osdrv-xm530 then leaves out
-# the vendor mmz.ko.
-XIONGMAI_OPENSDK_MODULE_SUBDIRS = drivers/xm_vi drivers/xm_mmz drivers/xm530_isp drivers/xm530_rgn
+# (open_rgn.ko), its xm530_rgn.ko. drivers/hx280enc (open_h264.ko),
+# drivers/xm_v200_log (open_log.ko, LOG_CHIP=xm530), drivers/xm530_i2s
+# (open_i2s.ko) and drivers/xm530_mve (open_mve.ko, on the vendor's
+# mve_rsrc.ko) replace xm530_h264.ko, log.ko, xm_i2s.ko and mve_base.ko,
+# which leak slab on every open of their /proc/umap file (#2956). The
+# kernel-module infrastructure installs them under /lib/modules/<kver>/extra/;
+# xiongmai-osdrv-xm530 then leaves out the vendor mmz.ko.
+XIONGMAI_OPENSDK_MODULE_SUBDIRS = drivers/xm_vi drivers/xm_mmz drivers/xm530_isp drivers/xm530_rgn \
+	drivers/hx280enc drivers/xm_v200_log drivers/xm530_i2s drivers/xm530_mve
+XIONGMAI_OPENSDK_MODULE_MAKE_OPTS = LOG_CHIP=xm530
 
 define XIONGMAI_OPENSDK_BUILD_CMDS
 	$(MAKE) $(TARGET_CONFIGURE_OPTS) CHIPARCH=$(OPENIPC_SOC_FAMILY) -C $(@D)/libraries all

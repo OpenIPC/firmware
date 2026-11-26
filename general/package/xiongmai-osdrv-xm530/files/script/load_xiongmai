@@ -17,16 +17,36 @@ report_error() {
 	exit 1
 }
 
+# The vendor h264, log, xm_i2s and mve_base modules each leak 4 KiB of slab
+# on every open of their /proc/umap file, and rmmod does not return it:
+# majestic's /metrics reads venc twice, so a camera scraped every half
+# minute loses about 17 MB a day (OpenIPC/firmware#2956). The open drivers
+# (OpenIPC/openxiongmai hx280enc, xm_v200_log, xm530_i2s and xm530_mve), when
+# xiongmai-opensdk installed them, have the same devices without the leak;
+# the vendor's are the fallback.
+insert_h264() {
+	modprobe open_h264 2>/dev/null || insmod xm530_h264.ko
+}
+
+remove_h264() {
+	rmmod -w open_h264 2>/dev/null || rmmod -w xm530_h264
+}
+
+insert_log() {
+	modprobe open_log 2>/dev/null || insmod log.ko
+}
+
 insert_audio() {
 	echo "insert audio"
-	insmod xm_i2s.ko
+	modprobe open_i2s 2>/dev/null || insmod xm_i2s.ko
 	insmod acodec.ko
 }
 
+# open_mve, like mve_base, runs on the vendor's mve_rsrc.
 insert_h265() {
 	echo "insert h265"
 	insmod mve_rsrc.ko
-	insmod mve_base.ko
+	modprobe open_mve 2>/dev/null || insmod mve_base.ko
 }
 
 insert_vo() {
@@ -44,7 +64,7 @@ insert_vo() {
 remove_audio() {
 	echo "remove audio"
 	rmmod -w acodec
-	rmmod -w xm_i2s
+	rmmod -w open_i2s 2>/dev/null || rmmod -w xm_i2s
 }
 
 # VI: the open driver when xiongmai-opensdk installed it (OpenIPC/openxiongmai
@@ -136,11 +156,11 @@ insert_ko() {
 	insert_vi
 	insert_isp
 	insert_rgn
-	insmod xm530_h264.ko
+	insert_h264
 	insmod xm_rtc.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko: see
 	# OpenIPC/firmware#2611.
-	insmod log.ko
+	insert_log
 	insert_audio
 	insert_h265
 	#insert_vo
@@ -149,7 +169,7 @@ insert_ko() {
 remove_ko() {
 	remove_audio
 	rmmod -w xm_rtc
-	rmmod -w xm530_h264
+	remove_h264
 	remove_rgn
 	remove_isp
 	remove_vi
