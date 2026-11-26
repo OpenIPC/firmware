@@ -1,0 +1,76 @@
+#!/bin/sh
+#
+# OpenIPC.org | 2026
+#
+# infinity2m (SSR621Q NVR): the SigmaStar media stack for decoding to the
+# display, as OpenIPC/opensigmastar builds it (sigmastar-opensdk): the SDK's
+# modules relinked for this kernel (open_mhal, open_mi_*, open_fbdev) and the
+# HDMI transmitter from source. open_mi_sys runs config_tool from TOOL_DIR for
+# the memory map, panel timings and PQ defaults; open_fbdev reads its screen
+# from FBDEV_INI; open_mi_vdec finds its firmware in /lib/firmware.
+#
+# load_sigmastar [-i]    load (S70vendor passes -i)
+# load_sigmastar -r      unload (for debugging: the SDK modules leave timers
+#                        armed, and the kernel can oops after it)
+
+MODULE=/lib/modules/4.9.84/sigmastar
+TOOL_DIR=/usr/lib/sigmastar
+FBDEV_INI=/usr/share/sigmastar/fbdev.ini
+# MI modules in the SDK's dependency order; each gets /dev/<name>
+MI="mi_sys mi_ao mi_gfx mi_divp mi_vdec mi_ai mi_disp mi_panel"
+# Everything an NVR needs, in load order; -r unloads in reverse
+ALL="open_mhal open_mi_common $(for m in $MI; do printf 'open_%s ' $m; done)open_fbdev open_hdmitx open_hdmi"
+
+log() {
+	echo "load_sigmastar: $*" | logger -s -t OpenIPC
+}
+
+# Load one module unless it is already there, so a run after a failed one
+# completes the stack instead of stopping at what is loaded. Nothing is
+# unloaded on failure: the SDK modules leave timers armed when removed.
+load() {
+	ko=$1
+	shift
+	[ -e /sys/module/$ko ] && return 0
+	insmod $MODULE/$ko.ko "$@" || { log "$ko failed"; return 1; }
+}
+
+insert_ko() {
+	load open_mhal || return 1
+	load open_mi_common || return 1
+	major=$(awk '$2=="mi" {print $1}' /proc/devices)
+	minor=0
+	for m in $MI; do
+		arg=
+		[ $m = mi_sys ] && arg=default_config_path=$TOOL_DIR
+		load open_$m $arg || return 1
+		[ -e /dev/$m ] || mknod /dev/$m c "$major" $minor
+		minor=$((minor + 1))
+	done
+	major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
+	[ -n "$major" ] && [ ! -e /dev/mi_poll ] && mknod /dev/mi_poll c "$major" 0
+	load open_fbdev default_config_path_file=$FBDEV_INI || return 1
+
+	# HDMI transmitter, built from source; the application switches it
+	# on with /sys/kernel/open_hdmi/output
+	load open_hdmitx || return 1
+	load open_hdmi
+}
+
+remove_ko() {
+	for m in $(echo $ALL | tr ' ' '\n' | sed -n '1!G;h;$p'); do
+		[ -e /sys/module/$m ] && rmmod $m
+	done
+}
+
+case "$1" in
+	-r)
+		remove_ko
+		;;
+	*)
+		if ! insert_ko; then
+			log "media stack incomplete"
+			exit 1
+		fi
+		;;
+esac

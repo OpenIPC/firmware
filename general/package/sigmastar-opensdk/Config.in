@@ -1,0 +1,19 @@
+config BR2_PACKAGE_SIGMASTAR_OPENSDK
+	bool "sigmastar-opensdk"
+	depends on BR2_LINUX_KERNEL
+	depends on BR2_OPENIPC_SOC_FAMILY = "infinity2m"
+	help
+	  SigmaStar kernel modules for this kernel, from OpenIPC's
+	  opensigmastar. On infinity2m, the whole media stack:
+	  - open_mhal.ko, open_mi_*.ko and open_fbdev.ko: the i2m NVR SDK's
+	    modules relinked (SigmaStar's code; open_mhal's display, panel
+	    and region parts built from SigmaStar's source);
+	  - open_hdmitx.ko (HDMI transmitter, from SigmaStar's source) and
+	    open_hdmi.ko, which switches the output on from
+	    /sys/kernel/open_hdmi.
+	  Also provides the MI headers applications build against.
+
+	  https://github.com/OpenIPC/opensigmastar
+
+comment "SIGMASTAR_OPENSDK needs a Linux kernel to be built"
+	depends on !BR2_LINUX_KERNEL
