@@ -162,14 +162,16 @@ fi
 # volumes right after this script and before post-image, so the FIT has to
 # exist by now. The kernel and its DTB come straight from the kernel tree --
 # BINARIES_DIR only gets the uImage, which has the DTB appended and is what the
-# NOR image still boots.
+# NOR image still boots. The .its names them as the kernel tree has them:
+# its kernel (zImage on arm, Image.gz on arm64) from arch/<arch>/boot, each DTB
+# from arch/<arch>/boot/dts, by its path there (vendor/<name>.dtb on arm64).
 NAND_FIT_ITS="${BR2_EXTERNAL_GENERAL_PATH}/../br-ext-chip-${OPENIPC_SOC_VENDOR}/board/${OPENIPC_SOC_FAMILY}/nand-fit.its"
 # One built for another board in a reused output directory must not ride along:
 # repack packs whatever fitImage it finds. (cv6xx makes its own in post-image,
 # which runs after this.)
 rm -f "${BINARIES_DIR}/fitImage"
 if [ -f "${NAND_FIT_ITS}" ] && grep -q "^BR2_TARGET_ROOTFS_UBI=y" "${BR2_CONFIG}"; then
-	KBOOT=$(ls -d "${BUILD_DIR}"/linux-*/arch/arm/boot 2>/dev/null | grep -v headers | head -1)
+	KBOOT=$(ls -d "${BUILD_DIR}"/linux-*/arch/arm/boot "${BUILD_DIR}"/linux-*/arch/arm64/boot 2>/dev/null | grep -v headers | head -1)
 	FIT_DIR="${BINARIES_DIR}/nand-fit"
 	rm -rf "${FIT_DIR}" && mkdir -p "${FIT_DIR}" || exit 1
 	# @SOC@ is the SoC the FIT is stamped with (sysupgrade's fit_soc reads it);
@@ -180,10 +182,15 @@ if [ -f "${NAND_FIT_ITS}" ] && grep -q "^BR2_TARGET_ROOTFS_UBI=y" "${BR2_CONFIG}
 	sed -e "s/@SOC@/${OPENIPC_SOC_MODEL}/" -e "s/@PLATFORM@/${PLATFORM}/" \
 		-e "s/@DTB@/${OPENIPC_SOC_MODEL}-demb.dtb/g" \
 		"${NAND_FIT_ITS}" > "${FIT_DIR}/nand-fit.its" || exit 1
-	cp "${KBOOT}/zImage" "${FIT_DIR}/" || { echo "NAND FIT: no zImage in ${KBOOT}" >&2; exit 1; }
-	# Every DTB the stamped .its names, from the kernel's dts output.
-	for dtb in $(grep -o '/incbin/("[^"]*\.dtb")' "${FIT_DIR}/nand-fit.its" | sed 's/.*("\(.*\)")/\1/'); do
-		cp "${KBOOT}/dts/${dtb}" "${FIT_DIR}/" || { echo "NAND FIT: no ${dtb} in ${KBOOT}/dts" >&2; exit 1; }
+	# Every file the stamped .its names: DTBs from the kernel's dts output, at
+	# the path the .its gives them, the kernel from the boot directory.
+	for f in $(grep -o '/incbin/("[^"]*")' "${FIT_DIR}/nand-fit.its" | sed 's/.*("\(.*\)")/\1/'); do
+		case "${f}" in
+			*.dtb) src="${KBOOT}/dts/${f}" ;;
+			*) src="${KBOOT}/${f}" ;;
+		esac
+		mkdir -p "${FIT_DIR}/$(dirname "${f}")" &&
+			cp "${src}" "${FIT_DIR}/${f}" || { echo "NAND FIT: no ${src}" >&2; exit 1; }
 	done
 	"${HOST_DIR}/bin/mkimage" -f "${FIT_DIR}/nand-fit.its" "${BINARIES_DIR}/fitImage" || exit 1
 	rm -rf "${FIT_DIR}"
