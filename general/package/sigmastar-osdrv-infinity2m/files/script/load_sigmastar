@@ -1,0 +1,54 @@
+#!/bin/sh
+#
+# OpenIPC.org | 2026
+#
+# infinity2m (SSR621Q NVR): the SigmaStar media stack for decoding to the
+# display. The modules read their configuration from /config (panel timings,
+# PQ, memory map, decoder firmware), a path built into them.
+#
+# load_sigmastar [-i]    load (S70vendor passes -i)
+# load_sigmastar -r      unload
+
+MODULE=/lib/modules/4.9.84/sigmastar
+# MI modules in the SDK's dependency order; each gets /dev/<name>
+MI="mi_sys mi_ao mi_gfx mi_divp mi_vdec mi_ai mi_disp mi_panel"
+
+insert_ko() {
+	insmod $MODULE/mhal.ko || return 1
+	insmod $MODULE/mi_common.ko || return 1
+	major=$(awk '$2=="mi" {print $1}' /proc/devices)
+	minor=0
+	for m in $MI; do
+		if insmod $MODULE/$m.ko; then
+			[ -e /dev/$m ] || mknod /dev/$m c "$major" $minor
+			minor=$((minor + 1))
+		else
+			echo "load_sigmastar: $m failed" | logger -s -t OpenIPC
+		fi
+	done
+	major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
+	[ -n "$major" ] && [ ! -e /dev/mi_poll ] && mknod /dev/mi_poll c "$major" 0
+	insmod $MODULE/fbdev.ko default_config_path_file=/config/fbdev.ini
+
+	# HDMI transmitter, built from source (sigmastar-opensdk); the
+	# application switches it on with /sys/kernel/open_hdmi/output
+	if [ -e $MODULE/open_hdmitx.ko ]; then
+		insmod $MODULE/open_hdmitx.ko && insmod $MODULE/open_hdmi.ko
+	fi
+}
+
+remove_ko() {
+	for m in open_hdmi open_hdmitx fbdev mi_panel mi_disp mi_ai mi_vdec \
+		mi_divp mi_gfx mi_ao mi_sys mi_common mhal; do
+		[ -e /sys/module/$m ] && rmmod $m
+	done
+}
+
+case "$1" in
+	-r)
+		remove_ko
+		;;
+	*)
+		[ -e /sys/module/mi_common ] || insert_ko
+		;;
+esac

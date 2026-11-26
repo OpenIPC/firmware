@@ -46,6 +46,8 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 # one edit. Every entry must have a br-ext-chip-*/configs/<board>_defconfig;
 # --self-test enforces that.
 ALL_BOARDS = [
+    # Sigmastar [I2M]
+    "ssr621q_lite",
     # Sigmastar [I6]
     "ssc325_lite", "ssc325de_lite",
     # Sigmastar [I6B]
