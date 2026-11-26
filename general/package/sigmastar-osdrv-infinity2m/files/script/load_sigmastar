@@ -3,8 +3,10 @@
 # OpenIPC.org | 2026
 #
 # infinity2m (SSR621Q NVR): the SigmaStar media stack for decoding to the
-# display. The modules read their configuration from /config (panel timings,
-# PQ, memory map, decoder firmware), a path built into them.
+# display, as OpenIPC/opensigmastar builds it (sigmastar-opensdk): the SDK's
+# modules relinked for this kernel (open_mhal, open_mi_*, open_fbdev) and the
+# HDMI transmitter from source. They read their configuration from /config
+# (panel timings, PQ, memory map, decoder firmware), a path built into them.
 #
 # load_sigmastar [-i]    load (S70vendor passes -i)
 # load_sigmastar -r      unload
@@ -14,12 +16,12 @@ MODULE=/lib/modules/4.9.84/sigmastar
 MI="mi_sys mi_ao mi_gfx mi_divp mi_vdec mi_ai mi_disp mi_panel"
 
 insert_ko() {
-	insmod $MODULE/mhal.ko || return 1
-	insmod $MODULE/mi_common.ko || return 1
+	insmod $MODULE/open_mhal.ko || return 1
+	insmod $MODULE/open_mi_common.ko || return 1
 	major=$(awk '$2=="mi" {print $1}' /proc/devices)
 	minor=0
 	for m in $MI; do
-		if insmod $MODULE/$m.ko; then
+		if insmod $MODULE/open_$m.ko; then
 			[ -e /dev/$m ] || mknod /dev/$m c "$major" $minor
 			minor=$((minor + 1))
 		else
@@ -28,18 +30,17 @@ insert_ko() {
 	done
 	major=$(awk '$2=="mi_poll" {print $1}' /proc/devices)
 	[ -n "$major" ] && [ ! -e /dev/mi_poll ] && mknod /dev/mi_poll c "$major" 0
-	insmod $MODULE/fbdev.ko default_config_path_file=/config/fbdev.ini
+	insmod $MODULE/open_fbdev.ko default_config_path_file=/config/fbdev.ini
 
-	# HDMI transmitter, built from source (sigmastar-opensdk); the
-	# application switches it on with /sys/kernel/open_hdmi/output
-	if [ -e $MODULE/open_hdmitx.ko ]; then
-		insmod $MODULE/open_hdmitx.ko && insmod $MODULE/open_hdmi.ko
-	fi
+	# HDMI transmitter, built from source; the application switches it
+	# on with /sys/kernel/open_hdmi/output
+	insmod $MODULE/open_hdmitx.ko && insmod $MODULE/open_hdmi.ko
 }
 
 remove_ko() {
-	for m in open_hdmi open_hdmitx fbdev mi_panel mi_disp mi_ai mi_vdec \
-		mi_divp mi_gfx mi_ao mi_sys mi_common mhal; do
+	for m in open_hdmi open_hdmitx open_fbdev open_mi_panel open_mi_disp \
+		open_mi_ai open_mi_vdec open_mi_divp open_mi_gfx open_mi_ao \
+		open_mi_sys open_mi_common open_mhal; do
 		[ -e /sys/module/$m ] && rmmod $m
 	done
 }
@@ -49,6 +50,6 @@ case "$1" in
 		remove_ko
 		;;
 	*)
-		[ -e /sys/module/mi_common ] || insert_ko
+		[ -e /sys/module/open_mi_common ] || insert_ko
 		;;
 esac

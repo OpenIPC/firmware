@@ -1,6 +1,10 @@
 config BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY2M
 	bool "sigmastar-osdrv-infinity2m"
+	depends on BR2_LINUX_KERNEL
+	select BR2_PACKAGE_SIGMASTAR_OPENSDK
 	help
 	  Sigmastar infinity2m (SSR621Q NVR) media stack from the i2m NVR
-	  SDK: MHAL, the MI modules and libraries for decoding to HDMI and
-	  VGA, the framebuffer, and the /config files they read.
+	  SDK: the MI libraries for decoding to HDMI and VGA, the /config
+	  files the media modules read, and load_sigmastar. The modules
+	  (MHAL, MI, framebuffer, HDMI transmitter) come from
+	  sigmastar-opensdk, built for this kernel.

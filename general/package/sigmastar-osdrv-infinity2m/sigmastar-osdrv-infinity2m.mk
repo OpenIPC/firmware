@@ -9,13 +9,11 @@ SIGMASTAR_OSDRV_INFINITY2M_SITE =
 SIGMASTAR_OSDRV_INFINITY2M_LICENSE = MIT
 SIGMASTAR_OSDRV_INFINITY2M_LICENSE_FILES = LICENSE
 
-# The i2m NVR SDK (2020-03): MHAL and the MI modules for decoding to HDMI
-# and VGA, the framebuffer, and /config, where the modules look for the
-# panel timings, PQ tables, memory map and decoder firmware.
+# The i2m NVR SDK (2020-03), its userspace side: the MI libraries, and
+# /config, where the media modules look for the panel timings, PQ tables,
+# memory map and decoder firmware. The modules themselves are built for this
+# kernel by sigmastar-opensdk (OpenIPC/opensigmastar).
 define SIGMASTAR_OSDRV_INFINITY2M_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/4.9.84/sigmastar
-	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/4.9.84/sigmastar $(SIGMASTAR_OSDRV_INFINITY2M_PKGDIR)/files/kmod/*
-
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/config
 	cp -a $(SIGMASTAR_OSDRV_INFINITY2M_PKGDIR)/files/config/. $(TARGET_DIR)/config/
 	ln -sf config_tool $(TARGET_DIR)/config/dump_config
