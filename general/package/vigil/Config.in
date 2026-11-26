@@ -15,6 +15,9 @@ config BR2_PACKAGE_VIGIL
 
 	  Installs /usr/bin/vigild, /etc/init.d/S95vigil (started at
 	  boot and restarted after a crash, as majestic is) and
-	  /etc/vigil.yaml (cameras and recording).
+	  /etc/vigil.json (cameras, recording, the API), which vigild
+	  keeps itself. Its HTTP/WebSocket API listens on port 8080 and
+	  asks for root's password; an /etc/vigil.yaml from an earlier
+	  image is converted into vigil.json once.
 
 	  https://github.com/OpenIPC/vigil

@@ -6,11 +6,12 @@
 
 VIGIL_SITE_METHOD = git
 VIGIL_SITE = https://github.com/openipc/vigil
-VIGIL_VERSION = 1dac27fca937d570df44c496372fe57645721c89
-# LVGL is a submodule (third_party/lvgl).
+VIGIL_VERSION = 173fc06d7295341ef507a3129b0b6bec888873d3
+# LVGL, cJSON and CivetWeb are submodules (third_party/).
 VIGIL_GIT_SUBMODULES = YES
-VIGIL_LICENSE = GPL-3.0-or-later
-VIGIL_LICENSE_FILES = LICENSE
+VIGIL_LICENSE = GPL-3.0-or-later, MIT (LVGL, cJSON, CivetWeb)
+VIGIL_LICENSE_FILES = LICENSE third_party/lvgl/LICENCE.txt \
+	third_party/cJSON/LICENSE third_party/civetweb/LICENSE.md
 
 VIGIL_CONF_OPTS = -DBUILD_TESTING=OFF
 
@@ -38,7 +39,7 @@ endif
 define VIGIL_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -D $(@D)/vigild $(TARGET_DIR)/usr/bin/vigild
 	$(INSTALL) -m 755 -D $(VIGIL_PKGDIR)/files/S95vigil $(TARGET_DIR)/etc/init.d/S95vigil
-	$(INSTALL) -m 644 -D $(VIGIL_PKGDIR)/files/vigil.yaml $(TARGET_DIR)/etc/vigil.yaml
+	$(INSTALL) -m 600 -D $(VIGIL_PKGDIR)/files/vigil.json $(TARGET_DIR)/etc/vigil.json
 endef
 
 $(eval $(cmake-package))
