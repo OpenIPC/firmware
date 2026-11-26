@@ -5,6 +5,8 @@
 
 SNS_TYPE0=sc450ai;
 SNS_TYPE1=sc450ai;
+SNS_SET0=0
+SNS_SET1=0
 SYS_PROFILE=0
 IR_AUTO=0
 DEBUG=1
@@ -129,6 +131,10 @@ insert_ko() {
 	modprobe open_chnl
 	modprobe open_rc
 	modprobe open_venc g_venc_max_chn_num=8
+	# The encoders' venc server, between venc and the encoders as the SDK's
+	# load3519dv500 has it. Without it the first encoder call majestic makes
+	# (VENC get mod param) is a NULL dereference in open_venc and a panic.
+	modprobe open_venc_svr
 	modprobe open_h264e
 	modprobe open_h265e
 
@@ -172,6 +178,7 @@ remove_ko() {
 	rmmod open_h265e
 	rmmod open_svac3e &> /dev/null
 	rmmod open_h264e
+	rmmod open_venc_svr
 	rmmod open_venc
 	rmmod open_rc
 	rmmod open_chnl
@@ -242,6 +249,7 @@ function parse_arg()
 		if [ $b_arg_sensor0 -eq 1 ] ; then
 			b_arg_sensor0=0;
 			SNS_TYPE0=$arg;
+			SNS_SET0=1
 			# Mirror ev200: explicit sensor flag also seeds SENSOR
 			# so the auto-detect probe path is skipped.
 			export SENSOR=$arg
@@ -249,6 +257,7 @@ function parse_arg()
 		if [ $b_arg_sensor1 -eq 1 ] ; then
 			b_arg_sensor1=0;
 			SNS_TYPE1=$arg;
+			SNS_SET1=1
 		fi
 
 		if [ $b_arg_ir_auto -eq 1 ] ; then
@@ -390,6 +399,13 @@ fi
 if [ "$SENSOR" = "unknown" ]; then
 	exit 1
 else
+	# open_sys_config takes each port's master clock from the sensor name
+	# (0x4001 for os04a10/os08a20, 0xA001 for sc450ai/sc850sl). The defaults
+	# are only good for the auto-detect probe above, so give it the sensor
+	# this boot resolved unless -sensor0/-sensor1 named one, as hi3516cv6xx
+	# does.
+	[ $SNS_SET0 -eq 0 ] && SNS_TYPE0=$SENSOR
+	[ $SNS_SET1 -eq 0 ] && SNS_TYPE1=$SENSOR
 	if [ $b_arg_modprobe -eq 1 ]; then
 		cd /lib/modules/$(uname -r)/hisilicon
 		insert_ko
