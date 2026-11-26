@@ -129,6 +129,10 @@ insert_ko() {
 	modprobe open_chnl
 	modprobe open_rc
 	modprobe open_venc g_venc_max_chn_num=8
+	# The encoders' venc server, between venc and the encoders as the SDK's
+	# load3519dv500 has it. Without it the first encoder call majestic makes
+	# (VENC get mod param) is a NULL dereference in open_venc and a panic.
+	modprobe open_venc_svr
 	modprobe open_h264e
 	modprobe open_h265e
 
@@ -172,6 +176,7 @@ remove_ko() {
 	rmmod open_h265e
 	rmmod open_svac3e &> /dev/null
 	rmmod open_h264e
+	rmmod open_venc_svr
 	rmmod open_venc
 	rmmod open_rc
 	rmmod open_chnl

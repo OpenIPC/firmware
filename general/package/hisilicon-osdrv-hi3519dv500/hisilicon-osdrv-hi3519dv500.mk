@@ -27,6 +27,12 @@ define HISILICON_OSDRV_HI3519DV500_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(HISILICON_OSDRV_HI3519DV500_PKGDIR)/files/script/load*
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(HISILICON_OSDRV_HI3519DV500_PKGDIR)/files/script/set_allocator
+
+	# majestic finds the sensor's config here by name (SENSOR from ipcinfo):
+	# without one it logs "No matches for '<sensor>' in /etc/sensors" and
+	# never starts the SDK.
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(HISILICON_OSDRV_HI3519DV500_PKGDIR)/files/sensor/config/*.ini
 endef
 
 $(eval $(generic-package))
