@@ -191,11 +191,39 @@ grep -qF "$mine" "$CONF" 2>/dev/null && [ -f "$JSON.migrated" ] && ok "with no v
     || bad "no yaml: $(cat "$CONF" 2>&1)"
 
 reset run
+echo "$mine" > "$JSON"; touch -d '-1 hour' "$JSON"
 printf 'cameras:\n  - url: "rtsp://10.0.0.9/x"\n' > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
-echo "$mine" > "$JSON"
 migrate_start
 grep -q 10.0.0.9 "$CONF" && [ -f "$JSON" ] && [ ! -e "$SB/wargs" ] && grep -q "is not converted: .* has been changed since" "$SB/log" \
     && ok "a vigil.yaml changed since (the API, by hand) is not converted over" || bad "changed yaml: $(cat "$CONF"); $(cat "$SB/log")"
+
+reset run
+printf 'cameras:\n  - url: "rtsp://10.0.0.9/x"\n' > "$CONF"; touch -d '-1 hour' "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo "$mine" > "$JSON"
+migrate_start
+if grep -qF "$mine" "$CONF" && grep -q 10.0.0.9 "$CONF.pre-json" && [ "$(mode "$CONF.pre-json")" = 600 ] &&
+   [ -f "$JSON.migrated" ] && grep -q "was older than $JSON: kept as $CONF.pre-json" "$SB/log"; then
+    ok "a vigil.yaml older than vigil.json (left by the image before) is kept as vigil.yaml.pre-json, vigil.json converted"
+else
+    bad "older yaml: $(cat "$CONF"); $(cat "$SB/log"); $(ls -l "$SB/etc")"
+fi
+
+reset run
+echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo "$mine" > "$JSON"
+printf '#!/bin/sh\nexit 1\n' > "$SB/bin/mv"; chmod +x "$SB/bin/mv"
+migrate_start
+rm -f "$SB/bin/mv"
+if grep -qF "$mine" "$CONF" && [ -f "$JSON" ] && [ ! -e "$JSON.migrated" ] &&
+   grep -q "could not be kept as $JSON.migrated (root only): remove it" "$SB/log" && ! grep -q "the old file is kept" "$SB/log"; then
+    ok "vigil.json that cannot be moved aside is said, not claimed kept"
+else
+    bad "failed move: $(cat "$SB/log"); $(ls -l "$SB/etc")"
+fi
+rm -f "$SB/wargs"; : > "$SB/log"
+migrate_start
+grep -qF "$mine" "$CONF" && [ ! -e "$SB/wargs" ] && grep -q "is not converted: .* has been changed since" "$SB/log" \
+    && ok "...and the next start uses the converted vigil.yaml, converting nothing again" || bad "after failed move: $(cat "$SB/log")"
 
 reset run
 echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"

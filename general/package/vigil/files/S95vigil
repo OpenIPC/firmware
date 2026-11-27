@@ -150,15 +150,26 @@ crashed() {
 # $LEGACY its API wrote (in the overlay: no image ships it now). vigild
 # itself converts it once into $CONFIG -- it reads the JSON and writes the
 # same settings as YAML, 0600, without starting anything -- and the JSON is
-# kept as $LEGACY.migrated. Only over the $CONFIG the image ships (or none):
-# one that differs from it was written since, and is the newer of the two.
-# A conversion vigild refuses (a file it cannot load) leaves both as they
+# kept as $LEGACY.migrated. Over the $CONFIG the image ships, or none, it
+# just converts. Over a $CONFIG changed since, the newer of the two wins: a
+# $CONFIG written after $LEGACY (by the API, or by hand) is used as it is; an
+# older one is what the image before the JSON one left there (one its script
+# would not convert), and is kept as $CONFIG.pre-json before $LEGACY replaces
+# it. A conversion vigild refuses (a file it cannot load) leaves both as they
 # are, with its reasons in the log.
 migrate() {
 	[ -f "$LEGACY" ] || return 0
+	old=
 	if [ -e "$CONFIG" ] && ! cmp -s "$CONFIG" "$ROM$CONFIG"; then
-		logger -t vigil "$LEGACY is not converted: $CONFIG has been changed since, and is used" 2>/dev/null
-		return 0
+		if [ ! "$LEGACY" -nt "$CONFIG" ]; then
+			logger -t vigil "$LEGACY is not converted: $CONFIG has been changed since, and is used" 2>/dev/null
+			return 0
+		fi
+		old=$CONFIG.pre-json
+		if ! { cp -p "$CONFIG" "$old" && chmod 600 "$old"; }; then
+			logger -t vigil "$LEGACY is not converted: $CONFIG, older, cannot be kept as $old" 2>/dev/null
+			return 0
+		fi
 	fi
 	if ! "$DAEMON_PATH" -f "$LEGACY" -w "$CONFIG" >/dev/null 2>"$SUPERVISOR.err"; then
 		# vigild's messages name settings, never a camera URL or password;
@@ -168,12 +179,20 @@ migrate() {
 			logger -t vigil "$LEGACY is not converted: ${line#vigil: }" 2>/dev/null
 		done
 		rm -f "$SUPERVISOR.err"
+		[ -n "$old" ] && rm -f "$old"
 		return 0
 	fi
 	rm -f "$SUPERVISOR.err"
-	mv -f "$LEGACY" "$LEGACY.migrated" && chmod 600 "$LEGACY.migrated"
+	[ -n "$old" ] && logger -t vigil "$CONFIG was older than $LEGACY: kept as $old" 2>/dev/null
+	# The JSON holds the cameras' passwords in clear: aside, root only. If it
+	# cannot be moved, $CONFIG is now the newer file and wins at the next
+	# start; it is said, so the clear copy is not forgotten.
+	if mv -f "$LEGACY" "$LEGACY.migrated" && chmod 600 "$LEGACY.migrated"; then
+		logger -t vigil "converted $LEGACY into $CONFIG; the old file is kept as $LEGACY.migrated" 2>/dev/null
+	else
+		logger -t vigil "converted $LEGACY into $CONFIG, but it could not be kept as $LEGACY.migrated (root only): remove it" 2>/dev/null
+	fi
 	sync
-	logger -t vigil "converted $LEGACY into $CONFIG; the old file is kept as $LEGACY.migrated" 2>/dev/null
 }
 
 supervise() {
