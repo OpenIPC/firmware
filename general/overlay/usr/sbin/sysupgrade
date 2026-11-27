@@ -672,16 +672,27 @@ verify_ubifs_rootfs() {
 	rootfs_version=
 	check_ubifs_image "$x"
 	echo "UBIFS rootfs; its SoC and version cannot be read without mounting it."
-	# The FIT that ships beside it says which SoC the pair was built for --
-	# the one witness a UBIFS rootfs has. Taken whether or not this run
-	# writes the kernel: the package carries it either way.
-	local fsoc=$(fit_soc "$(kernel_image)")
+	# The FIT (or legacy uImage on U-Boots without FIT, e.g. openipc-novatek)
+	# that ships beside it says which SoC the pair was built for -- the one
+	# witness a UBIFS rootfs has. Taken whether or not this run writes the
+	# kernel: the package carries it either way.
+	local kw=$(kernel_image)
+	local fsoc=$(fit_soc "$kw")
+	local witness="FIT"
+	if [ -z "$fsoc" ]; then
+		local ku=$kw
+		[ -f "$ku" ] || ku="$stage_dir/uImage.$image_soc"
+		if [ -f "$ku" ] && [ "$(xxd -p -l 4 "$ku" 2>&3)" = "27051956" ]; then
+			fsoc=$(nor_split_soc "$ku")
+			witness="uImage"
+		fi
+	fi
 	if [ "1" != "$skip_soc" ] && is_device_platform "$system_platform" && [ "1" != "$device_pinned" ]; then
 		# Named for this device by its download, or by the FIT beside it --
 		# without either, every local archive for a profile camera needed
 		# --force_soc, which also gives up the SoC check below. Compared past
 		# the SoC token, as check_platform does.
-		local fplat=$(fit_platform "$(kernel_image)")
+		local fplat=$(fit_platform "$kw")
 		[ -n "$fplat" ] ||
 			die "Cannot verify that a UBIFS rootfs is built for this camera's device profile ('$system_platform'): the FIT kernel beside it names no platform. Nothing was written. Pass --force_soc if you are sure it is."
 		[ "${fplat#*_}" = "${system_platform#*_}" ] ||
@@ -691,7 +702,7 @@ verify_ubifs_rootfs() {
 	if [ "1" = "$skip_soc" ]; then
 		echo_c 33 "Skipping the rootfs SoC pre-check (SoC validation disabled)."
 	elif [ -n "$fsoc" ]; then
-		echo "SoC from the FIT kernel beside it: $fsoc"
+		echo "SoC from the $witness kernel beside it: $fsoc"
 		check_soc "$fsoc"
 	elif [ "1" = "$remote_update" ] && [ -z "$archive" ]; then
 		# A download, named for this camera's model. A local archive is
