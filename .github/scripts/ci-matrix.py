@@ -108,10 +108,15 @@ ALL_BOARDS = [
     # Allwinner
     "v851s_lite",
     # Anyka [AK3918EV300]
-    # One 4.4.302 kernel and toolchain for every AK39 part. ak3918av130_lite
-    # is in UNBUILT_BOARDS until its prebuilt SDK modules have run on a camera.
+    # One 4.4.302 kernel and toolchain for every AK39 part. ak3918av130_lite's
+    # ISP, encoder, Ethernet and SD drivers are the AnyCloud39AV130 SDK's
+    # prebuilt modules, matched to that kernel by vermagic and a struct-layout
+    # probe. On a Yoton WS03 (#2962) the I2C, ION, RTC, eFuse, PCM, SD, UIO and
+    # USB host modules have run; ak_isp and the encoder modules have not (see
+    # anyka-osdrv-ak3918av130.mk).
     "ak3910_lite", "ak3918_lite", "ak3918ev200_lite", "ak3918ev300_lite",
     "ak3916ev300_lite", "ak3918ev330_lite", "ak3918ev331_lite",
+    "ak3918av130_lite",
     # Anyka [AK3918AV100]
     # The AnyCloud39AV100 SDK's own 4.4.282 kernel (OpenIPC/linux#208) and its
     # prebuilt modules. They have booted only in qemu-bench; the image is
@@ -175,14 +180,6 @@ UNBUILT_BOARDS = {
     "hi3516ev300_dev": "variant 'dev', not a standard matrix variant",
     "hi3516ev300_glibc": "variant 'glibc', not a standard matrix variant",
     "t31glibc_lite": "glibc toolchain variant of t31_lite",
-
-    # Real, and built locally. The other Anyka boards build every driver from
-    # source; this one's ISP, encoder, Ethernet and SD drivers are the
-    # AnyCloud39AV130 SDK's prebuilt modules, matched to the family kernel by
-    # vermagic and a struct-layout probe rather than by a boot (see
-    # general/package/anyka-osdrv-ak3918av130/anyka-osdrv-ak3918av130.mk). It
-    # joins ALL_BOARDS once those modules have run on an AV130 camera.
-    "ak3918av130_lite": "prebuilt SDK modules not yet run on an AV130 camera",
 
     # Mainline kernel, no streamer yet, run only under qemu-bench. It joins
     # ALL_BOARDS once it streams and has run on a camera.
@@ -368,12 +365,6 @@ UNBUILT_FAMILIES = {
 # would spend flash on a radio that is not there. A mainline board with a
 # driver choosing it would take it off this list.
 #
-# anyka-osdrv-ak3918av130 is selected only by ak3918av130_lite, which is in
-# UNBUILT_BOARDS: its prebuilt SDK modules are matched to the kernel by
-# vermagic and a struct-layout probe, not by a boot (see its .mk). It leaves
-# this list when that board joins ALL_BOARDS, which waits for those modules
-# to have run on an AV130 camera.
-#
 # exfat-nofuse-openipc is the exFAT module for the 3.x kernels that
 # exfat-openipc does not build on. Its only user is OpenIPC/builder's
 # msc316dc_lite_imou-looc2 (infinity3, kernel 3.18); the mainline infinity3
@@ -389,7 +380,6 @@ UNBUILT_FAMILIES = {
 # board with a button in a gpio.conf would take it off this list.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc",
-    "anyka-osdrv-ak3918av130",
     "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
     "go2rtc", "grainmedia-osdrv-gm8126", "herald", "hisi-gpio", "i2c-telemetry",
