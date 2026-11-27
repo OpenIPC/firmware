@@ -3014,15 +3014,38 @@ reset_env; ubi_setup ubifs
 RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS"
 run
 u=$(logged_at "umount -l /mnt"); bk=$(logged_at "mount ubifs ro"); rm=$(logged_at "ubirmvol /dev/ubi0 -N rootfs_data")
-rs=$(logged_at "ubirsvol /dev/ubi0 -n 0 -s $(stat -c %s "$UFS")"); w=$(logged_at "ubiupdatevol /dev/ubi0_0 $UFS")
+rs=$(logged_at "ubirsvol /dev/ubi0 -n 0 -s $(( $(stat -c %s "$UFS") + 4194304 ))$"); w=$(logged_at "ubiupdatevol /dev/ubi0_0 $UFS")
 mk=$(logged_at "ubimkvol /dev/ubi0 -N rootfs_data -m"); rs2=$(logged_at "mount ubifs rw"); b=$(logged_at "^reboot")
 if [ -n "$u" ] && [ -n "$bk" ] && [ -n "$rm" ] && [ -n "$rs" ] && [ -n "$w" ] && [ -n "$mk" ] && [ -n "$rs2" ] && [ -n "$b" ] &&
     [ "$u" -lt "$bk" ] && [ "$bk" -lt "$rm" ] && [ "$rm" -lt "$rs" ] && [ "$rs" -lt "$w" ] && [ "$w" -lt "$mk" ] &&
     [ "$mk" -lt "$rs2" ] && [ "$rs2" -lt "$b" ] && [ -f "$SB/tmp/overlay.old/etc/marker" ] &&
     printf '%s' "$OUT" | grep -q "Settings carried over"; then
-    ok "stage 2: settings copied, volumes resized to the image, settings restored, then reboot"
+    ok "stage 2: settings copied, rootfs resized to the image plus 4 MiB headroom, settings restored, then reboot"
 else
     bad "stage 2 order release/copy/rmvol/rsvol/write/mkvol/restore/reboot = ${u:-none}/${bk:-none}/${rm:-none}/${rs:-none}/${w:-none}/${mk:-none}/${rs2:-none}/${b:-none} log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+
+# The headroom only where the device has it: 2 rootfs LEBs + 26 overlay LEBs
+# leave 4 above the overlay's floor, room for the image but not 4 MiB more, so
+# the volume is sized to the image alone and the settings still come back.
+reset_env; ubi_setup ubifs
+set_ubi 2 "rootfs rootfs_data" 26
+RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS"
+run
+if grep -q "ubirsvol /dev/ubi0 -n 0 -s $(stat -c %s "$UFS")$" "$SB/tmp/flash.log" && ubi_wrote "/dev/ubi0_0 $UFS" &&
+    printf '%s' "$OUT" | grep -q "Settings carried over"; then
+    ok "stage 2: a device without room for the headroom gets a rootfs volume sized to the image"
+else
+    bad "stage 2 tight device, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
+fi
+# Under -n nothing is carried, so the headroom is measured with no settings.
+reset_env; ubi_setup ubifs
+RUN_ENV="$S2 update_rootfs=1 rootfs_file=$UFS clear_overlay=1"
+run
+if grep -q "ubirsvol /dev/ubi0 -n 0 -s $(( $(stat -c %s "$UFS") + 4194304 ))$" "$SB/tmp/flash.log" && ubi_wrote "/dev/ubi0_0 $UFS"; then
+    ok "stage 2 under -n: the rootfs volume keeps the headroom too"
+else
+    bad "stage 2 -n headroom, log='$(cat "$SB/tmp/flash.log")' out='$OUT'"
 fi
 
 # --- the rootfs write says how far it has got: busybox ubiupdatevol does not,

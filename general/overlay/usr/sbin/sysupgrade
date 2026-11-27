@@ -259,13 +259,21 @@ check_rootfs_fits() {
 # nothing holds either volume:
 #   1. copy the overlay (the camera's settings) into RAM, unless -n
 #   2. remove rootfs_data, which frees every block it held
-#   3. resize rootfs to the image -- bigger or smaller, the UBI device decides
+#   3. resize rootfs to the image plus ROOTFS_HEADROOM when the device has
+#      the room, else to the image alone -- the UBI device decides
 #   4. write the image
 #   5. recreate rootfs_data on everything that is left
 #   6. put the settings back; UBIFS formats the empty volume as it mounts
 # A power cut between 2 and 6 costs the settings, not the camera: init mounts a
 # tmpfs overlay when rootfs_data is missing or empty. One between 3 and 4
 # leaves no kernel to boot, as any rootfs write would.
+#
+# The headroom is for U-Boot. Its `run ur`/urwrite and its recovery recreate
+# the rootfs volume from the old one's blocks, and cannot resize rootfs_data,
+# which holds every other block: a rootfs that outgrows the old volume costs
+# them the settings. With headroom, an image that grew by up to 4 MiB still
+# fits where the old volume was.
+ROOTFS_HEADROOM=$((4 * 1024 * 1024))
 rewrite_ubifs() {
 	local x=$1 ubi=${ubi_rootfs_dev%_*} rid=${ubi_rootfs_dev##*_}
 	local name=${ubi#/dev/} bak=/tmp/overlay.tar mnt=/tmp/overlay.old
@@ -296,11 +304,17 @@ rewrite_ubifs() {
 				die "The new rootfs and the settings ($(( need / 1024 )) KB together) do not fit the UBI device ($(( room / 1024 )) KB). Nothing was written; -n upgrades without the settings."
 			}
 		fi
+	fi
+	# Measured while rootfs_data still exists (the room counts its blocks),
+	# and with the settings already in RAM, so their real size is known.
+	local vsize=$size hroom=$(ubifs_rootfs_room "$(stat -c %s "$bak" 2>/dev/null || echo 0)")
+	[ -n "$hroom" ] && [ $((size + ROOTFS_HEADROOM)) -le "$hroom" ] && vsize=$((size + ROOTFS_HEADROOM))
+	if [ -n "$ubi_data_dev" ]; then
 		set_progress ubirmvol "$ubi" -N rootfs_data ||
 			die "Removing the settings volume failed."
 	fi
-	set_progress ubirsvol "$ubi" -n "$rid" -s "$size" ||
-		die "Resizing the rootfs volume to $size bytes failed."
+	set_progress ubirsvol "$ubi" -n "$rid" -s "$vsize" ||
+		die "Resizing the rootfs volume to $vsize bytes failed."
 	ubi_update "$ubi_rootfs_dev" "$x" ||
 		die "Writing $x to $ubi_rootfs_dev failed."
 	set_progress ubimkvol "$ubi" -N rootfs_data -m ||

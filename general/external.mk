@@ -69,6 +69,22 @@ define OPENIPC_UBIFS_BOOT
 	fi
 endef
 ROOTFS_UBIFS_PRE_GEN_HOOKS += OPENIPC_UBIFS_BOOT
+
+# rootfs.ubi gives the rootfs volume 4 MiB above its image, as sysupgrade does
+# (ROOTFS_HEADROOM in rewrite_ubifs). rootfs_data takes every other block, and
+# U-Boot (`run ur`, recovery) recreates the rootfs volume from the old one's
+# blocks: it cannot resize rootfs_data, so an image that outgrew the old volume
+# cost the camera its settings. The board's ubinize-nand.cfg sets no vol_size
+# for the rootfs; it is added here, once the UBIFS image exists to be measured,
+# to a copy that ubi.mk then uses in place of the board's file. ubinize writes
+# only the image's LEBs, so rootfs.ubi does not grow.
+OPENIPC_UBINIZE_CFG = $(BUILD_DIR)/openipc-ubinize-nand.cfg
+define OPENIPC_UBI_ROOTFS_HEADROOM
+	sed "/^image=BR2_ROOTFS_UBIFS_PATH/a vol_size=$$(( $$(stat -c %s $(BINARIES_DIR)/rootfs.ubifs) + 4194304 ))" \
+		$(call qstrip,$(BR2_TARGET_ROOTFS_UBI_CUSTOM_CONFIG_FILE)) > $(OPENIPC_UBINIZE_CFG)
+endef
+ROOTFS_UBI_PRE_GEN_HOOKS += OPENIPC_UBI_ROOTFS_HEADROOM
+UBI_UBINIZE_CONFIG_FILE_PATH = $(OPENIPC_UBINIZE_CFG)
 endif
 
 # linux.mk passes INSTALL_MOD_STRIP=1, which the kernel turns into
