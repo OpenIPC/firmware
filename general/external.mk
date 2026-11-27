@@ -59,7 +59,7 @@ WPA_SUPPLICANT_CONFIG_DISABLE += CONFIG_TDLS CONFIG_IEEE80211R
 # the uImage from the kernel build, the FIT from rootfs_script.sh, which runs
 # before any filesystem is generated. Same include-order dependency as above:
 # the hook list is expanded when the rule runs.
-ifneq ($(wildcard $(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/nand-fit.its),)
+ifneq ($(wildcard $(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/nand-fit.its $(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/ubinize-nand.cfg),)
 define OPENIPC_UBIFS_BOOT
 	mkdir -p $(TARGET_DIR)/boot
 	if [ -f $(BINARIES_DIR)/fitImage ]; then \

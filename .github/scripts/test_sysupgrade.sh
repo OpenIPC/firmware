@@ -3166,6 +3166,35 @@ else
     bad "ubifs: archive without a witness must be refused, rc=$RC out='$OUT'"
 fi
 
+# --- a legacy uImage beside a UBIFS rootfs (e.g. openipc-novatek) vouches for its SoC
+reset_env; ubi_setup ubifs
+stage="$SB/stage"; rm -rf "$stage"; mkdir -p "$stage"
+make_uimage "$stage/uImage.gk7205v500" gk7205v500
+cp "$UFS" "$stage/"
+(cd "$stage" && for f in uImage.gk7205v500 rootfs.ubifs.gk7205v500; do
+    md5sum "$f" > "$f.md5sum"; done && tar cf - . | gzip > "$SB/tmp/fw.tgz")
+rm -f "$UFIT" "$UFS"
+run -z --archive="$SB/tmp/fw.tgz"
+if printf '%s' "$OUT" | grep -q "SoC from the uImage kernel beside it: gk7205v500" &&
+    printf '%s' "$OUT" | grep -q "SoC OK" && nothing_ubi; then
+    ok "ubifs: a legacy uImage naming this SoC vouches for the UBIFS rootfs in a local archive"
+else
+    bad "ubifs: uImage archive witness, rc=$RC out='$OUT'"
+fi
+reset_env; ubi_setup ubifs
+stage="$SB/stage"; rm -rf "$stage"; mkdir -p "$stage"
+make_uimage "$stage/uImage.gk7205v500" hi3516ev300
+cp "$UFS" "$stage/"
+(cd "$stage" && for f in uImage.gk7205v500 rootfs.ubifs.gk7205v500; do
+    md5sum "$f" > "$f.md5sum"; done && tar cf - . | gzip > "$SB/tmp/fw.tgz")
+rm -f "$UFIT" "$UFS"
+run -z --archive="$SB/tmp/fw.tgz"
+if [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -q "Wrong SoC" && nothing_ubi && ! rebooted; then
+    ok "ubifs: a legacy uImage for another SoC stops the run before anything is written"
+else
+    bad "ubifs: foreign uImage archive must be refused, rc=$RC out='$OUT'"
+fi
+
 # --- stage 2 writes nothing when the old root will not let go
 reset_env; ubi_setup ubifs
 RUN_ENV="STUB_BB_UMOUNT_RC=1 $S2 update_rootfs=1 rootfs_file=$UFS"

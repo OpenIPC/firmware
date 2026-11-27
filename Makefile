@@ -244,6 +244,9 @@ else
 	@$(call CHECK_SIZE,rootfs.ubi,24576)
 endif
 	@$(call REPACK_NAND_FIT)
+else ifneq ($(wildcard $(PWD)/br-ext-chip-$(subst ",,$(BR2_OPENIPC_SOC_VENDOR))/board/$(subst ",,$(BR2_OPENIPC_SOC_FAMILY))/ubinize-nand.cfg),)
+	@$(call CHECK_SIZE,rootfs.ubi,24576)
+	@$(call REPACK_NAND_UBIFS)
 else
 	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand)
 endif
@@ -442,5 +445,22 @@ define REPACK_NAND_FIT
 	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-nand-$(BR2_OPENIPC_VARIANT).tgz \
 		$(foreach f,$(NAND_FIT_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL).md5sum) \
 		$(foreach f,$(NAND_FIT_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL))
+	rm -f $(TARGET)/images/*.md5sum
+endef
+
+# UBIFS NAND package without FIT (kernel carried inside UBIFS as /boot/uImage,
+# e.g. Novatek openipc-novatek U-Boot whose fwupd writes rootfs.ubifs.<soc>).
+# When a NOR+NAND ultimate build also ran REPACK_FIRMWARE, uImage has already
+# been renamed to uImage.<soc>, so copy only when the unsuffixed file exists.
+NAND_UBIFS_IMAGES = uImage rootfs.ubifs rootfs.ubi
+define REPACK_NAND_UBIFS
+	cd $(TARGET)/images && for f in $(NAND_UBIFS_IMAGES); do \
+		if [ -f $$f ]; then cp -f $$f $$f.$(BR2_OPENIPC_SOC_MODEL); fi && \
+		test -f $$f.$(BR2_OPENIPC_SOC_MODEL) && \
+		md5sum $$f.$(BR2_OPENIPC_SOC_MODEL) > $$f.$(BR2_OPENIPC_SOC_MODEL).md5sum || exit 1; done
+	# Checksums first, as in REPACK_FIRMWARE.
+	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-nand-$(BR2_OPENIPC_VARIANT).tgz \
+		$(foreach f,$(NAND_UBIFS_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL).md5sum) \
+		$(foreach f,$(NAND_UBIFS_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL))
 	rm -f $(TARGET)/images/*.md5sum
 endef
