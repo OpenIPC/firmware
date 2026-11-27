@@ -7,24 +7,40 @@ config BR2_PACKAGE_VIGIL
 	depends on BR2_LINUX_KERNEL
 	depends on !BR2_PACKAGE_MAJESTIC
 	depends on !BR2_PACKAGE_VDEC_OPENIPC
-	select BR2_PACKAGE_YAML_CLI
+	select BR2_PACKAGE_LIBYAML
+	select BR2_PACKAGE_MBEDTLS_OPENIPC
 	help
-	  vigil - DVR/NVR application: network cameras (RTSP, NETIP)
-	  decoded to HDMI in a 2x2 view with a status UI, and recorded
-	  without re-encoding.
+	  vigil - DVR/NVR application: network cameras (RTSP, NETIP,
+	  ONVIF) decoded to HDMI/VGA with an on-screen UI (mouse and
+	  keyboard), and recorded without re-encoding.
 
 	  Installs /usr/bin/vigild, /etc/init.d/S95vigil (started at
 	  boot and restarted after a crash, as majestic is) and
-	  /etc/vigil.json (cameras, recording, the API), which vigild
-	  keeps itself. Its HTTP/WebSocket API listens on port 8080 and
-	  asks for root's password, which it refuses to accept while root
-	  has none (an unclaimed image). The API is plain HTTP: the
-	  password crosses the network in clear on every request, as with
-	  the camera web UI, so use it on a trusted network or through an
-	  SSH tunnel, or set api.listen to 127.0.0.1:8080. An
-	  /etc/vigil.yaml from an earlier image is converted into
-	  vigil.json once. vigild records only onto a mounted disk, card
-	  or share, never onto the flash or into RAM, and starts recording
-	  by itself once the disk is there.
+	  /etc/vigil.yaml, a YAML file like majestic's, which vigild
+	  keeps itself: it rewrites it when settings change, with each
+	  setting explained in a comment (comments written by hand are
+	  not kept).
+
+	  It listens, by default on every interface:
+	    8080   HTTP/WebSocket API
+	    80     zero channel: the screen, mouse and keyboard in a
+	           browser (web.enabled)
+	    554    RTSP: the cameras' streams (rtsp_server)
+	    8899   ONVIF, and WS-Discovery on UDP 3702 (onvif_server)
+	    34567  NETIP for XM's CMS/XMEye, and its search on UDP
+	           34569 (netip_server)
+	  Each logs in vigil's users (and root) and can be turned off or
+	  moved in Network > Ports or vigil.yaml. None is encrypted: the
+	  API's and the zero channel's passwords cross the network in
+	  clear, as with a camera's web UI, so use them on a trusted
+	  network or through an SSH tunnel. root cannot log in to any of
+	  them while it has no password (an unclaimed image). The
+	  passwords vigild keeps are sealed under /etc/vigil.key
+	  (AES-256-GCM).
+
+	  An /etc/vigil.json from an earlier image is converted into
+	  vigil.yaml once, and kept as vigil.json.migrated. vigild records
+	  only onto a mounted disk, card or share, never onto the flash or
+	  into RAM, and starts recording by itself once the disk is there.
 
 	  https://github.com/OpenIPC/vigil

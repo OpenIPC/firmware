@@ -13,14 +13,15 @@
 DAEMON="vigild"
 DAEMON_PATH="/usr/bin/$DAEMON"
 # vigil: vigild keeps its configuration in this file itself -- cameras,
-# recording, its HTTP API -- and saves what the API changes into it, applying
-# it while it runs. Options on its command line would override the file and be
-# saved by the API's next change, so it is given none of its settings, only -f;
-# -s sends vigild's log, and the SDK's, to syslog.
-CONFIG=/etc/vigil.json
-# vigil: what this script read the settings from before vigild kept its own;
-# converted once into $CONFIG (migrate).
-LEGACY=/etc/vigil.yaml
+# recording, its HTTP API -- and saves what the API changes into it (YAML,
+# like majestic's, with each setting explained in a comment), applying it
+# while it runs. Options on its command line would override the file and be
+# saved by the API's next change, so it is given none of its settings, only
+# -f; -s sends vigild's log, and the SDK's, to syslog.
+CONFIG=/etc/vigil.yaml
+# vigil: the JSON file vigild kept before it read YAML; converted once into
+# $CONFIG (migrate).
+LEGACY=/etc/vigil.json
 # vigil: the image's own files, under the writable root (init mounts the
 # squashfs here).
 ROM=/rom
@@ -145,127 +146,53 @@ crashed() {
 	return 1
 }
 
-# vigil: JSON string contents for $1: backslash, quote and control
-# characters escaped. Through the environment: awk -v would interpret the
-# backslashes in it as escapes.
-json_str() {
-	VIGIL_S="$1" awk 'BEGIN {
-		for (i = 1; i < 32; i++) ctl = ctl sprintf("%c", i)
-		s = ENVIRON["VIGIL_S"]
-		for (i = 1; i <= length(s); i++) {
-			c = substr(s, i, 1)
-			if (c == "\\" || c == "\"") o = o "\\" c
-			else if ((k = index(ctl, c)) > 0) o = o sprintf("\\u%04x", k)
-			else o = o c
-		}
-		printf "%s", o
-	}'
-}
-
-# vigil: $LEGACY's $1 as an integer in $2..$3, as vigild's schema has it (a
-# value out of range would make vigild refuse the whole file); nothing when
-# it is not set or not a number, for vigild's default.
-legacy_int() {
-	v=$(yaml-cli -i "$LEGACY" -g ".record.$1" 2>/dev/null)
-	case "$v" in
-		'') return 0 ;;
-		*[!0-9]*)
-			logger -t vigil "$LEGACY: record.$1 '$v' is not a number; not converted, vigild's default applies" 2>/dev/null
-			return 0 ;;
-	esac
-	v=${v#"${v%%[!0]*}"}
-	[ -n "$v" ] || v=0
-	if [ ${#v} -gt 6 ] || [ "$v" -gt "$3" ]; then
-		v=$3
-	elif [ "$v" -lt "$2" ]; then
-		v=$2
-	fi
-	echo "$v"
-}
-
-# vigil: a board upgraded from a vigil that had no configuration of its own
-# may carry the $LEGACY its owner edited (in the overlay: the image ships
-# $CONFIG instead). It is converted once into $CONFIG -- the cameras and the
-# recording, all it held -- and kept as $LEGACY.migrated. Only over the
-# $CONFIG the image ships (or none): one that differs from it was written
-# since, through the API or by hand, and is the newer of the two.
+# vigil: a board that ran an image whose vigild kept JSON may carry the
+# $LEGACY its API wrote (in the overlay: no image ships it now). vigild
+# itself converts it once into $CONFIG -- it reads the JSON and writes the
+# same settings as YAML, 0600, without starting anything -- and the JSON is
+# kept as $LEGACY.migrated. Over the $CONFIG the image ships, or none, it
+# just converts. Over a $CONFIG changed since, the newer of the two wins: a
+# $CONFIG written after $LEGACY (by the API, or by hand) is used as it is; an
+# older one is what the image before the JSON one left there (one its script
+# would not convert), and is kept as $CONFIG.pre-json before $LEGACY replaces
+# it. A conversion vigild refuses (a file it cannot load) leaves both as they
+# are, with its reasons in the log.
 migrate() {
 	[ -f "$LEGACY" ] || return 0
+	old=
 	if [ -e "$CONFIG" ] && ! cmp -s "$CONFIG" "$ROM$CONFIG"; then
-		logger -t vigil "$LEGACY is not converted: $CONFIG has been changed since, and is used" 2>/dev/null
-		return 0
+		if [ ! "$LEGACY" -nt "$CONFIG" ]; then
+			logger -t vigil "$LEGACY is not converted: $CONFIG has been changed since, and is used" 2>/dev/null
+			return 0
+		fi
+		old=$CONFIG.pre-json
+		if ! { cp -p "$CONFIG" "$old" && chmod 600 "$old"; }; then
+			logger -t vigil "$LEGACY is not converted: $CONFIG, older, cannot be kept as $old" 2>/dev/null
+			return 0
+		fi
 	fi
-	cams=$(yaml-cli -i "$LEGACY" -g .cameras 2>"$SUPERVISOR.err")
-	if [ -s "$SUPERVISOR.err" ]; then
-		logger -t vigil "$LEGACY is not converted: $(head -1 "$SUPERVISOR.err")" 2>/dev/null
+	if ! "$DAEMON_PATH" -f "$LEGACY" -w "$CONFIG" >/dev/null 2>"$SUPERVISOR.err"; then
+		# vigild's messages name settings, never a camera URL or password;
+		# what it says about running with the defaults is about a run this
+		# is not.
+		grep -v -e ': loaded$' -e 'using the defaults' "$SUPERVISOR.err" | head -5 | while read -r line; do
+			logger -t vigil "$LEGACY is not converted: ${line#vigil: }" 2>/dev/null
+		done
 		rm -f "$SUPERVISOR.err"
+		[ -n "$old" ] && rm -f "$old"
 		return 0
 	fi
 	rm -f "$SUPERVISOR.err"
-	path=$(yaml-cli -i "$LEGACY" -g .record.path 2>/dev/null)
-	case "$path" in
-		'' | /*) ;;
-		*)
-			logger -t vigil "$LEGACY: record.path '$path' is not an absolute path; not converted" 2>/dev/null
-			path= ;;
-	esac
-	case "$path/" in
-		*/./* | */../*)
-			logger -t vigil "$LEGACY: record.path '$path' has a \".\" or \"..\" in it; not converted" 2>/dev/null
-			path= ;;
-	esac
-	if [ ${#path} -gt 191 ]; then
-		logger -t vigil "$LEGACY: record.path is longer than vigild takes; not converted" 2>/dev/null
-		path=
+	[ -n "$old" ] && logger -t vigil "$CONFIG was older than $LEGACY: kept as $old" 2>/dev/null
+	# The JSON holds the cameras' passwords in clear: aside, root only. If it
+	# cannot be moved, $CONFIG is now the newer file and wins at the next
+	# start; it is said, so the clear copy is not forgotten.
+	if mv -f "$LEGACY" "$LEGACY.migrated" && chmod 600 "$LEGACY.migrated"; then
+		logger -t vigil "converted $LEGACY into $CONFIG; the old file is kept as $LEGACY.migrated" 2>/dev/null
+	else
+		logger -t vigil "converted $LEGACY into $CONFIG, but it could not be kept as $LEGACY.migrated (root only): remove it" 2>/dev/null
 	fi
-	seg=$(legacy_int segment 10 3600)
-	keep=$(legacy_int keep 0 64)
-	# The URLs were word-split, as when they were passed as options. One
-	# vigild would refuse would make it refuse the whole file, so what is
-	# plainly not a camera URL is left out (named by its place: URLs hold
-	# passwords, and the log is not the place for them).
-	list= n=0 i=0
-	set -f
-	for url in $cams; do
-		i=$((i + 1))
-		case "$url" in
-			rtsp://?* | netip://?* | capture:[0-9]*) ;;
-			*)
-				logger -t vigil "$LEGACY: camera $i is not a camera URL; not converted" 2>/dev/null
-				continue ;;
-		esac
-		if [ ${#url} -gt 511 ] || [ $n -ge 16 ]; then
-			logger -t vigil "$LEGACY: camera $i is too long, or one too many; not converted" 2>/dev/null
-			continue
-		fi
-		list="$list${list:+,}$(printf '\n\t\t{ "url": "%s" }' "$(json_str "$url")")"
-		n=$((n + 1))
-	done
-	set +f
-	[ -n "$list" ] && list="$list$(printf '\n\t')"
-	rec=$(printf '\n\t\t"path": "%s"' "$(json_str "$path")")
-	[ -n "$seg" ] && rec="$rec$(printf ',\n\t\t"segment": %s' "$seg")"
-	[ -n "$keep" ] && rec="$rec$(printf ',\n\t\t"keep": %s' "$keep")"
-	# 0600 from the start: it holds the cameras' passwords.
-	if ! (
-		umask 077
-		printf '{\n\t"version": 1,\n\t"cameras": [%s],\n\t"record": {%s\n\t}\n}\n' \
-			"$list" "$rec" > "$CONFIG.migrate"
-	); then
-		rm -f "$CONFIG.migrate"
-		logger -t vigil "$LEGACY is not converted: cannot write $CONFIG" 2>/dev/null
-		return 0
-	fi
-	# The new file in place first: interrupted before the old one is moved
-	# aside, the next start finds $CONFIG changed and leaves both be.
-	if ! mv -f "$CONFIG.migrate" "$CONFIG"; then
-		rm -f "$CONFIG.migrate"
-		logger -t vigil "$LEGACY is not converted: cannot write $CONFIG" 2>/dev/null
-		return 0
-	fi
-	mv -f "$LEGACY" "$LEGACY.migrated" && chmod 600 "$LEGACY.migrated"
 	sync
-	logger -t vigil "converted $LEGACY into $CONFIG: $n camera(s), recording ${path:-off}; the old file is kept as $LEGACY.migrated" 2>/dev/null
 }
 
 supervise() {
