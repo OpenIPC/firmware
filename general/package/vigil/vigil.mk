@@ -6,7 +6,7 @@
 
 VIGIL_SITE_METHOD = git
 VIGIL_SITE = https://github.com/openipc/vigil
-VIGIL_VERSION = 2cfcd48be9795236fbc9aef8aa45975b029abe2d
+VIGIL_VERSION = 93f59bc650bdeb2ada4db7696ff4705c06a4818e
 # LVGL, cJSON and CivetWeb are submodules (third_party/).
 VIGIL_GIT_SUBMODULES = YES
 VIGIL_LICENSE = GPL-3.0-or-later, MIT (LVGL, cJSON, CivetWeb)

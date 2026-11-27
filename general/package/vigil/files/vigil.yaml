@@ -186,7 +186,10 @@ display:
   # Video aspect: fit: each picture keeps its shape inside its tile or the
   # full screen, with black bars where the shapes differ; a sub-stream
   # (704x576, 352x288, ...) is shown at its main stream's shape. stretch: the
-  # picture fills the tile. One of: fit, stretch. Default fit.
+  # picture fills the tile, whatever its shape. fill: the picture keeps its
+  # shape and covers the whole tile, what overflows cut off (a 4:3 camera in a
+  # 16:9 tile loses a strip at the top and at the bottom). One of: fit,
+  # stretch, fill. Default fit.
   video_aspect: fit
   # Clock: Where the date and time are on the live view; their format is
   # ui.date_format and ui.time_format. One of: off, top-left, top-center,
