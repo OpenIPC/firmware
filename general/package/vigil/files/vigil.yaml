@@ -9,10 +9,13 @@ version: 1
 # Cameras: In tile order: the first is CAM1. At most 16. Each one:
 #   url: Source URL. rtsp://[user:pass@]host[:554]/path,
 #     netip://[user:pass@]host[:34567]/[?ch=N&stream=main|extra] or capture:N.
-#     The password is shown as *** and kept when sent back unchanged.
-#     Required.
+#     The password is shown as *** and kept when sent back unchanged. Empty:
+#     no camera in this channel (the list is in channel order).
 #   name: Name. Shown in the status and the API; empty: the camera's host.
 #   enabled: Enabled. A disabled camera keeps its tile, empty. Default true.
+#   sub_url: Sub-stream URL. Used in multi-window views; the main URL is used
+#     full screen and for recording. Empty: derived for NETIP, otherwise the
+#     main stream everywhere.
 cameras: []
 
 # Recording
@@ -32,18 +35,169 @@ record:
   # RAM and flash filesystems are refused either way, the root included.
   # Default false.
   allow_rootfs: false
+  # When the disk is full: overwrite: the oldest recordings, whichever camera
+  # made them, make room; stop: recording stops (event "REC disk full") until
+  # there is room again. One of: overwrite, stop. Default overwrite.
+  on_full: overwrite
+
+# Recording schedule: A week per camera; a camera without one records all the
+# time. Each day is 48 letters, one per half hour from 00:00: C continuous, M
+# when the camera reports motion, - not at all. At most 16. Each one:
+#   camera: Camera. CAMn: the camera's channel. 1..16, default 0.
+#   mon: Monday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   tue: Tuesday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   wed: Wednesday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   thu: Thursday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   fri: Friday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   sat: Saturday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   sun: Sunday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+schedule: []
+
+# Disk quota: Per camera; a camera without one is limited only by the disk. At
+# most 16. Each one:
+#   camera: Camera. CAMn: the camera's channel. 1..16, default 0.
+#   max_gb: Largest size (GB). The camera's oldest recordings are deleted
+#     beyond this. 0: no limit. 0..1000000, default 0.
+#   max_days: Kept at most (days). Recordings older than this are deleted. 0:
+#     no limit. 0..3650, default 0.
+quota: []
+
+# Network storage
+nas:
+  # Network storage: A share mounted at /mnt/nas; record.path under /mnt/nas
+  # records onto it. none: not used. One of: none, cifs, nfs. Default none.
+  type: none
+  # Server: Host name or IPv4 address.
+  server: ""
+  # Share: SMB: the share's name (and a folder in it: share/dir). NFS: the
+  # exported path (/export/nvr).
+  share: ""
+  # User: SMB only; empty: guest.
+  user: ""
+  # Password: Shown as ***; sent back as *** it is kept.
+  password: ""
+  # Mount options: Added to the mount's own (vers=2.1, ...).
+  options: ""
+
+# Dynamic DNS
+ddns:
+  # Enabled: Tell a dynamic DNS service this recorder's public address.
+  # Default false.
+  enabled: false
+  # Provider: dyndns: the dyndns2 protocol (Dyn and compatibles); noip: No-IP;
+  # custom: the URL below. One of: dyndns, noip, custom. Default dyndns.
+  provider: dyndns
+  # Host name: The name to update (nvr.example.org).
+  host: ""
+  # User.
+  user: ""
+  # Password: Shown as ***; sent back as *** it is kept.
+  password: ""
+  # Update URL: custom: requested with GET; {host}, {user} and {password} are
+  # replaced.
+  url: ""
+  # Update every (min). 5..1440, default 10.
+  interval: 10
+
+# UPnP
+upnp:
+  # Enabled: Ask the router to forward ports to this recorder (not active yet:
+  # vigild has no UPnP client; the settings are kept). Default false.
+  enabled: false
+  # External HTTP port: Forwarded to the HTTP API. 0: none. 0..65535, default
+  # 0.
+  http_port: 0
+  # External RTSP port: 0: none. 0..65535, default 0.
+  rtsp_port: 0
+
+# Mail (SMTP)
+smtp:
+  # Enabled: Mail the events that need attention (disk full, recording failed,
+  # a camera offline) to the addresses below. Default false.
+  enabled: false
+  # Server: The SMTP server (smtp.example.org).
+  server: ""
+  # Port: 587 with STARTTLS, 465 with TLS, 25 without. 1..65535, default 587.
+  port: 587
+  # Encryption. One of: none, starttls, tls. Default starttls.
+  security: starttls
+  # User: Empty: no login.
+  user: ""
+  # Password: Shown as ***; sent back as *** it is kept.
+  password: ""
+  # From: The sender's address.
+  from: ""
+  # To: Addresses, separated by commas.
+  to: ""
+
+# Alarm center
+alarm:
+  # Enabled: Send every event to an alarm center as it happens. Default false.
+  enabled: false
+  # Protocol: http: each event as JSON, POSTed to http://server:port/path. One
+  # of: http. Default http.
+  protocol: http
+  # Server.
+  host: ""
+  # Port. 1..65535, default 80.
+  port: 80
+  # Path. Default /.
+  path: /
+  # Heartbeat (s): A heartbeat this often while there are no events. 0: none.
+  # 0..86400, default 60.
+  interval: 60
+
+# Time
+time:
+  # Synchronise with NTP: Keep the clock from the servers in /etc/ntp.conf
+  # (the firmware's ntpd). Default true.
+  ntp: true
+  # Check every (min): How often vigild asks the servers itself, to show the
+  # last sync and to set the clock if the firmware's ntpd is not running.
+  # 10..1440, default 60.
+  ntp_interval: 60
+
+# On-screen UI
+ui:
+  # Language: Of the on-screen UI. One of: en. Default en.
+  language: en
+  # Date format. One of: YYYY-MM-DD, DD.MM.YYYY, MM/DD/YYYY. Default
+  # YYYY-MM-DD.
+  date_format: YYYY-MM-DD
+  # Time format. One of: 24h, 12h. Default 24h.
+  time_format: "24h"
 
 # HTTP API
 api:
   # Listen on: IPv4 address and port of the HTTP API, or just the port. Empty:
   # no API. Takes effect when vigild starts. Default 0.0.0.0:8080.
   listen: "0.0.0.0:8080"
-  # Require a password: HTTP Basic authentication against the system account.
-  # Turning it off lets anyone on the network change the configuration.
-  # Default true.
+  # Require a password: HTTP Basic authentication: vigil's users (api.users),
+  # or the system account. Turning it off lets anyone on the network change
+  # the configuration. Default true.
   auth: true
-  # Account: The system account whose password the API asks for. Default root.
+  # Account: The system account that logs in with every permission (also as
+  # "admin" while no user of that name exists). Default root.
   user: root
   # Password file: The shadow file holding the account's password hash.
   # Default /etc/shadow.
   shadow: /etc/shadow
+  # Accounts file: vigil's own users and groups, with their permissions
+  # (written by the API and the UI, mode 0600). The account above always logs
+  # in too, with every permission, so nobody is locked out. Default
+  # /etc/vigil.users.yaml.
+  users: /etc/vigil.users.yaml
+
+# Camera search
+discovery:
+  # Search on interfaces: Network interfaces to search for cameras on,
+  # separated by commas. Empty: every IPv4 interface.
+  interfaces: ""
+  # Also ask addresses: IPv4 addresses searched by unicast as well, separated
+  # by commas: cameras on a routed subnet, which searches by broadcast do not
+  # reach.
+  targets: ""
+  # Protocol order: Which protocol a camera found is added with when it
+  # answers more than one: NETIP names both streams, ONVIF asks the camera,
+  # Dahua's RTSP path is fixed. Default netip,onvif,dhip.
+  prefer: "netip,onvif,dhip"
