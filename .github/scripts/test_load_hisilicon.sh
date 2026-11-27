@@ -134,6 +134,33 @@ T "sc1135 writes=2" "$(probe ''     0x5 sc1135)" "nothing at 37.125 MHz -> found
 T "imx122 writes=0" "$(probe imx122 0x6 imx122)" "IMX122 answers the first probe -> kept, no clock write"
 T " writes=2"       "$(probe tpffff 0x9 jxh22)"  "no clock helps -> nothing, so the phantom tpffff is never saved"
 
+# ----- Part 4: hi3519dv500 second sensor from the environment -----
+# A sensor on SENSOR1 is named by `fw_setenv sensor1 <name>`; it sets the
+# second port's sensor type for open_sys_config and muxes I2C5, whose pins are
+# SPI1's otherwise. Without it, neither happens. The functions are taken from
+# the script itself, with fw_printenv and devmem stubbed.
+echo
+echo "=== Part 4: hi3519dv500 SENSOR1 from the environment ==="
+dv500=general/package/hisilicon-osdrv-hi3519dv500/files/script/load_hisilicon
+fn5() { sed -n "/^$1() {/,/^}/p" "$dv500"; }
+eval "$(fn5 sensor1_from_env)"
+eval "$(fn5 sensor1_pinmux)"
+devmem() { pinmux="$pinmux $1=$3"; }
+sensor1() {   # $1: the sensor1 env value, $2: -sensor1 given (1) or not (0)
+    env1="$1"; SNS_SET1="$2"; SNS_TYPE1=${3:-sc450ai}; pinmux=""
+    fw_printenv() { [ -n "$env1" ] && echo "$env1"; }
+    sensor1_from_env
+    [ "$SNS_SET1" -eq 0 ] && SNS_TYPE1=os04a10   # what SENSOR0 resolved to
+    sensor1_pinmux
+    echo "$SNS_TYPE1$pinmux"
+}
+T "os08a20 0x0EFF0024=0x1752 0x0EFF0028=0x1752" "$(sensor1 os08a20 0)" \
+   "sensor1=os08a20 in the environment -> SNS_TYPE1 os08a20, I2C5 muxed"
+T "os04a10" "$(sensor1 '' 0)" \
+   "no sensor1 -> SNS_TYPE1 follows SENSOR0, SPI1 pins left alone"
+T "imx515 0x0EFF0024=0x1752 0x0EFF0028=0x1752" "$(sensor1 os08a20 1 imx515)" \
+   "-sensor1 given -> it wins over the environment, I2C5 muxed"
+
 echo
 if [ "$fail" -eq 0 ]; then
     echo "All load_hisilicon regression checks passed."

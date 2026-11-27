@@ -215,6 +215,33 @@ load_usage()
 	echo -e "for example: $0 -i -sensor0 sc4336p -sensor1 sc4336p -mmz_start 0x42000000 -mmz_size 96M -ir_auto 1\n"
 }
 
+# A sensor on the SENSOR1 connector. Nothing detects it -- the probe above
+# reads SENSOR0's bus, and a sensor answers on I2C only while MPP drives its
+# clock -- so it is named in the environment, as `sensor` can be for SENSOR0:
+#   fw_setenv sensor1 os08a20
+# -sensor1 on the command line wins over the environment.
+sensor1_from_env() {
+	[ $SNS_SET1 -eq 1 ] && return 0
+	env_sensor1=$(fw_printenv -n sensor1 2>/dev/null || true)
+	if [ -n "$env_sensor1" ]; then
+		SNS_TYPE1=$env_sensor1
+		SNS_SET1=1
+		logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR1 as ${SNS_TYPE1}"
+	fi
+}
+
+# SENSOR1 is controlled over I2C5, whose pins (iocfg 0x0EFF0024/0x0EFF0028)
+# are SPI1's until muxed: open_sys_config is built without I2C_EX_EN and
+# leaves them at 0x1300. SENSOR1's clock and reset pins it does mux. Measured
+# on the DMEBPRO kit: without these writes the sensor never answers and VI
+# pipe 1 sees no frames. Only for a configured second sensor, so SPI1 stays
+# SPI1 on every other board.
+sensor1_pinmux() {
+	[ $SNS_SET1 -eq 1 ] || return 0
+	devmem 0x0EFF0024 32 0x1752	# I2C5_SCL
+	devmem 0x0EFF0028 32 0x1752	# I2C5_SDA
+}
+
 calc_mmz_info() {
 	mmz_start=$(echo "$mem_start $os_mem_size" |
 		awk 'BEGIN { temp = 0; }
@@ -404,10 +431,12 @@ else
 	# are only good for the auto-detect probe above, so give it the sensor
 	# this boot resolved unless -sensor0/-sensor1 named one, as hi3516cv6xx
 	# does.
+	sensor1_from_env
 	[ $SNS_SET0 -eq 0 ] && SNS_TYPE0=$SENSOR
 	[ $SNS_SET1 -eq 0 ] && SNS_TYPE1=$SENSOR
 	if [ $b_arg_modprobe -eq 1 ]; then
 		cd /lib/modules/$(uname -r)/hisilicon
 		insert_ko
+		sensor1_pinmux
 	fi
 fi
