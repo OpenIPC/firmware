@@ -1,6 +1,6 @@
 #!/bin/sh
 # OpenIPC.org | 2025
-scr_version=1.0.86
+scr_version=1.0.87
 
 args="$@"
 LOCK_FILE=/tmp/sysupgrade.lock
@@ -3681,6 +3681,45 @@ manifest_platform() {
 	echo "$k"
 }
 
+# Whether the published manifest still lists build $1 for this camera: "yes",
+# "no", or nothing when it could not be read. The same answer manifest_platform
+# and manifest_builds give from the cache, in one pass over the stream, because
+# it is asked after the unpack, when /tmp already holds the image. Staged there,
+# the manifest (1.9 MB and growing with every build) was the allocation that
+# tipped a 32 MB hi3516ev200 into the OOM killer under a WebUI upgrade, with
+# majestic's upgrade mode holding 7.3 MB locked: it picked sysupgrade, as
+# majestic's child, then majestic -- nothing written, nothing left to restart
+# either, a camera answering ping and nothing else (#2976, reproduced on a
+# qemu-bench twin of the reporter's build). A transfer that did not finish
+# answers nothing, never "no": a truncated list would say a build is gone.
+manifest_lists_build() {
+	local p=$(get_system_platform) k
+	if [ -n "$p" ]; then
+		k="${model}_${p#*_}"
+	else
+		k="${model}_$(get_system_build)"
+		p=$k
+	fi
+	{
+		curl --connect-timeout 10 -s -f -m 20 -L $(tls_opts "$MANIFEST_URL") "$MANIFEST_URL" 2>&3
+		r=$?
+		echo
+		echo "@curl $r"
+	} | awk -v b="$1" -v k="$k" -v p="$p" -v f="$(pkg_flash)" '
+		$1 == "@curl" { ok = ($2 == 0); next }
+		$2 == k { sk = 1 }
+		$2 == p { sp = 1 }
+		$1 == b && ($3 == f || (f == "nor" && $3 == "nor_split")) {
+			if ($2 == k) hk = 1
+			if ($2 == p) hp = 1
+		}
+		END {
+			if (!ok) exit
+			if (k != p && !sk && sp) hk = hp
+			print (hk ? "yes" : "no")
+		}'
+}
+
 # Every build the fetched manifest lists for this camera, newest first.
 manifest_builds() {
 	awk -v p="$(manifest_platform)" -v f="$(pkg_flash)" \
@@ -3769,7 +3808,7 @@ read_candidate_build() {
 # Warn, never ask: the WebUI and scripts run this non-interactively, and with
 # --web the block simply reaches /ws/upgrade with the rest of the log.
 print_transition() {
-	local from=$(get_build_id) to rb
+	local from=$(get_build_id) to rb listed
 	from_build=${from:-unknown}
 	to=${to_build:-unknown}
 	if [ "1" = "$kernel_only" ]; then
@@ -3785,9 +3824,11 @@ print_transition() {
 	# reason to stop an upgrade the operator asked for. A run from local files
 	# may be offline, with its services already stopped: it does not wait on
 	# the network for this, and gets the unverified wording instead.
-	if [ "1" != "$manifest_fetched" ] && [ "1" = "$remote_update" ] && [ -z "$archive" ]; then
-		curl --connect-timeout 10 -s -f -m 20 -L $(tls_opts "$MANIFEST_URL") "$MANIFEST_URL" \
-			-o "$MANIFEST_CACHE" 2>&3 && manifest_fetched=1
+	listed=
+	if [ "1" = "$manifest_fetched" ] && [ -s "$MANIFEST_CACHE" ]; then
+		manifest_builds | grep -qxF "$from_build" && listed=yes || listed=no
+	elif [ "1" = "$remote_update" ] && [ -z "$archive" ]; then
+		listed=$(manifest_lists_build "$from_build")
 	fi
 	echo_c 36 "\n=================================================================="
 	echo_c 36 " UPDATING: $from_build${system_version:+ ($system_version)}"
@@ -3798,11 +3839,10 @@ print_transition() {
 		;;
 	*)
 		rb="sysupgrade --build=$from_build"
-		if [ "1" = "$manifest_fetched" ] && [ -s "$MANIFEST_CACHE" ] &&
-			! manifest_builds | grep -qxF "$from_build"; then
+		if [ "no" = "$listed" ]; then
 			echo_c 36 " $from_build is no longer in the manifest; 'sysupgrade --list-builds'"
 			echo_c 36 " shows the builds --build can still return to."
-		elif [ "1" = "$manifest_fetched" ] && [ -s "$MANIFEST_CACHE" ]; then
+		elif [ "yes" = "$listed" ]; then
 			echo_c 36 " If the new build misbehaves, return to this one with:"
 			echo_c 36 "   $rb"
 		else
@@ -3818,9 +3858,10 @@ print_transition() {
 		echo_c 33 " Daily builds are not release-tested: features may regress." ;;
 	esac
 	echo_c 36 "=================================================================="
-	# Nothing reads the manifest after this, and /tmp is RAM: kept, its 1.7 MB
-	# was what check_flash_ram found missing on a 32 MB hi3516ev200 (1016 KB
-	# left of the 2048 it wants; 2328 KB without it).
+	# What --channel or --build fetched. Nothing reads the manifest after this,
+	# and /tmp is RAM: kept, its 1.7 MB was what check_flash_ram found missing
+	# on a 32 MB hi3516ev200 (1016 KB left of the 2048 it wants; 2328 KB
+	# without it).
 	rm -f "$MANIFEST_CACHE"
 }
 

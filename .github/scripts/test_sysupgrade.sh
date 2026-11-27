@@ -292,6 +292,14 @@ if [ "$head" = "1" ]; then
     exit 0
 fi
 [ "$out" = "-" ] && [ -n "${STUB_DL_FILE:-}" ] && cat "$STUB_DL_FILE"
+# manifest_lists_build: the rollback line streams the index to awk and stages
+# nothing in /tmp (#2976). STUB_MANIFEST_RC is a transfer that did not finish.
+case "$out:$url" in :*/manifest.flat)
+    echo "stream" >> "${FLASH_LOG%/*}/manifest-fetches"
+    [ -n "${STUB_MANIFEST:-}" ] && cat "$STUB_MANIFEST"
+    exit "${STUB_MANIFEST_RC:-0}"
+    ;;
+esac
 # fetch_manifest: the channel/build index, when a test supplies one.
 # Each fetch is noted, as the file itself does not outlive the run.
 case "$out" in */manifest.*.flat)
@@ -4132,6 +4140,15 @@ if printf '%s' "$OUT" | grep -qF "return to this one with" &&
 else
     bad "rollback line, listed build: out='$OUT'"
 fi
+# Asked after the unpack, when /tmp already holds the image: a staged 1.9 MB
+# manifest there was what OOM-killed a 32 MB hi3516ev200's WebUI upgrade (#2976).
+if grep -qx stream "$SB/tmp/manifest-fetches" 2>/dev/null &&
+    ! grep -q '/manifest\.' "$SB/tmp/manifest-fetches"; then
+    ok "rollback line: the manifest is streamed, not staged in /tmp"
+else
+    bad "rollback line fetches: '$(cat "$SB/tmp/manifest-fetches" 2>/dev/null)'"
+fi
+manifest_reset
 # /tmp is RAM, and the flash phase still needs it: the manifest goes once the
 # block above is printed, so no write finds it there.
 if [ ! -e "$SB/tmp/manifest-at-flash" ] && flashed /dev/mtd3; then
@@ -4149,6 +4166,18 @@ if printf '%s' "$OUT" | grep -qF "nightly-20260601-aaaaaaa is no longer in the m
 else
     bad "rollback line, pruned build: rc=$RC out='$OUT'"
 fi
+# A transfer cut short is a list cut short: it may simply not have reached the
+# build yet, so it answers nothing rather than "pruned".
+banner_case; banner_dl
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat STUB_MANIFEST_RC=28"
+run -z -k -r
+if printf '%s' "$OUT" | grep -qF "is still published" &&
+    ! printf '%s' "$OUT" | grep -qF "no longer in the manifest" && flashed /dev/mtd3; then
+    ok "rollback line: an unfinished manifest is no verdict"
+else
+    bad "rollback line, unfinished manifest: rc=$RC out='$OUT'"
+fi
+manifest_reset
 # A run from local files may be offline, with its services already stopped:
 # it does not wait on the network for the rollback line, and says the
 # command holds only while the build is published.
