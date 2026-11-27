@@ -130,12 +130,20 @@ define HISILICON_OSDRV_HI3516CV6XX_INSTALL_TARGET_CMDS
 		$(INSTALL) -m 644 -t $(TARGET_DIR)/usr/lib/sensors $(HISILICON_OSDRV_HI3516CV6XX_PKGDIR)/files/sensor/$(lib) ; \
 	)
 
-	# Sensor profiles. majestic, given no isp.sensorConfig, takes the one
-	# file in /etc/sensors whose name starts with the detected sensor, so
-	# imx335_i2c_5M.ini is the default. The alternate modes live in modes/
-	# and are named without the imx335_i2c_ prefix so they cannot be picked
-	# up by auto-selection. Their rates are the ones the T6 crop timing
-	# actually reaches (1520p 30, flex 1920x1080 30, full10 40), not "high fps".
+	# Sensor profiles. majestic, given no isp.sensorConfig, takes the files
+	# in /etc/sensors whose name starts with the detected sensor. With
+	# several it tries them in name order and keeps the first that gets
+	# frames into VI within 2 s. IMX335 has two: imx335_i2c_5M.ini (four
+	# lanes) and imx335_i2c_5M_2lane.ini, for boards that route two lanes
+	# (lanes 0 and 2, the SDK's single-sensor wiring), 2592x1944p30 in
+	# driver mode 6. A four-lane board succeeds on the first file and never
+	# reaches the second; a two-lane board starts about 4 s later. The
+	# alternate modes live in modes/, which auto-selection never reads.
+	# Their rates are the ones the T6 crop timing actually reaches (1520p
+	# 30, flex 1920x1080 30, full10 40), not "high fps". The imx335_2lane_*
+	# ones are for the two-lane boards: 2592x1944 at 40 and 45 fps and a
+	# centred 2560x1440 window at 60 (driver modes 7 to 9; 45 and 60 run the
+	# sensor clock 6.25% fast).
 	# IMX662 has one, 1080p30 RAW12 on four lanes, RGGB, as the driver's
 	# author runs it on a CV610. ipcinfo does not detect the IMX662, so a
 	# camera needs `fw_setenv sensor imx662`; majestic then finds it by name.
