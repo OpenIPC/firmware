@@ -8,6 +8,6 @@ config BR2_PACKAGE_SIGMASTAR_OSDRV_INFINITY2M
 	  SDK: the MI libraries for decoding to HDMI and VGA and the decoder
 	  firmware; config_tool, which mi_sys runs to load the memory map,
 	  panel timings and PQ defaults (OpenIPC's, built from source);
-	  the framebuffer's fbdev.ini; load_sigmastar; and the OpenIPC boot
-	  logo JPEG. The modules (MHAL, MI, framebuffer, HDMI transmitter)
+	  the framebuffer's fbdev.ini; load_sigmastar, which also loads the
+	  kernel's SATA host driver; and the OpenIPC boot logo JPEG. The modules (MHAL, MI, framebuffer, HDMI transmitter)
 	  come from sigmastar-opensdk, built for this kernel.

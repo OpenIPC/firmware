@@ -7,11 +7,13 @@
 # modules relinked for this kernel (open_mhal, open_mi_*, open_fbdev) and the
 # HDMI transmitter from source. open_mi_sys runs config_tool from TOOL_DIR for
 # the memory map, panel timings and PQ defaults; open_fbdev reads its screen
-# from FBDEV_INI; open_mi_vdec finds its firmware in /lib/firmware.
+# from FBDEV_INI; open_mi_vdec finds its firmware in /lib/firmware. Also the
+# SoC's SATA host driver, which is the kernel's own.
 #
 # load_sigmastar [-i]    load (S70vendor passes -i)
-# load_sigmastar -r      unload (for debugging: the SDK modules leave timers
-#                        armed, and the kernel can oops after it)
+# load_sigmastar -r      unload the media stack (for debugging: the SDK
+#                        modules leave timers armed, and the kernel can oops
+#                        after it); SATA stays
 
 MODULE=/lib/modules/4.9.84/sigmastar
 TOOL_DIR=/usr/lib/sigmastar
@@ -33,6 +35,17 @@ load() {
 	shift
 	[ -e /sys/module/$ko ] && return 0
 	insmod $MODULE/$ko.ko "$@" || { log "$ko failed"; return 1; }
+}
+
+# The SATA port. The kernel builds its host driver as a module
+# (CONFIG_SATA_HOST_0=m; libata and the AHCI platform code are built in), and
+# nothing loads it by its alias: its device is there before mdev runs, and
+# S38mdev replays only USB uevents. Without this a SATA disk never appears.
+# Not part of the media stack: a failure here leaves the display alone, and
+# the other way round.
+load_sata() {
+	[ -e /sys/module/mdrv_sata_host ] && return 0
+	modprobe mdrv-sata-host || log "mdrv-sata-host failed"
 }
 
 insert_ko() {
@@ -68,6 +81,7 @@ case "$1" in
 		remove_ko
 		;;
 	*)
+		load_sata
 		if ! insert_ko; then
 			log "media stack incomplete"
 			exit 1
