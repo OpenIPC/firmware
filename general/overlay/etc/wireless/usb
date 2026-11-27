@@ -32,6 +32,13 @@ if [ "$1" = "mt7601u-generic" ]; then
 	exit 0
 fi
 
+# Generic Ralink RT2770/RT2870, RT3070/3071/3072, RT3370, RT3572, RT5370/5372
+# and RT5572: the kernel's own rt2800usb, on mac80211
+if [ "$1" = "rt2800usb-generic" ]; then
+	modprobe rt2800usb
+	exit 0
+fi
+
 # Generic RTL8188EU
 if [ "$1" = "rtl8188eu-generic" ]; then
 	modprobe 8188eu

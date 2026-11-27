@@ -359,13 +359,6 @@ UNBUILT_FAMILIES = {
 # which no defconfig in ALL_BOARDS has. OpenIPC/builder's gk7205v200_otg_generic
 # selects it. A mainline dual-role defconfig would take it off this list.
 #
-# wpa_supplicant-openipc is here because no board in this tree selects it on
-# purpose. It is the WPA3-SAE supplicant (#2449); the camera that wants it is
-# OpenIPC/builder's ssc377_lite_tp-link-tapo-c120, and the generic ssc377_lite
-# ships no Wi-Fi driver to use it with, so flipping a mainline board to it
-# would spend flash on a radio that is not there. A mainline board with a
-# driver choosing it would take it off this list.
-#
 # exfat-nofuse-openipc is the exFAT module for the 3.x kernels that
 # exfat-openipc does not build on. Its only user is OpenIPC/builder's
 # msc316dc_lite_imou-looc2 (infinity3, kernel 3.18); the mainline infinity3
@@ -393,7 +386,7 @@ NOT_BUILT = {
     "rtl8812au", "rtl8812au-openipc", "rtl88x2eu-openipc", "rtw-hostapd", "rubyfpv",
     "siproxd-openipc", "ssv615x-openipc", "ssv635x-openipc", "txw8301-openipc",
     "uqmi-openipc", "usb-dual-role", "vdec-openipc", "venc-openipc",
-    "w1-ds18b20", "waybeam", "wpa_supplicant-openipc",
+    "w1-ds18b20", "waybeam",
     "webface",
     "webrtc-audio-processing-openipc", "wifibroadcast-ng", "wq9001", "yaml-cli-multi",
 }
