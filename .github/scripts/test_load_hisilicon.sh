@@ -135,9 +135,10 @@ T "imx122 writes=0" "$(probe imx122 0x6 imx122)" "IMX122 answers the first probe
 T " writes=2"       "$(probe tpffff 0x9 jxh22)"  "no clock helps -> nothing, so the phantom tpffff is never saved"
 
 # ----- Part 4: hi3519dv500 second sensor from the environment -----
-# A sensor on SENSOR1 is named by `fw_setenv sensor1 <name>`; it sets the
-# second port's sensor type for open_sys_config and muxes I2C5, whose pins are
-# SPI1's otherwise. Without it, neither happens. The functions are taken from
+# A sensor on SENSOR1 can be named by `fw_setenv sensor1 <name>` when it needs
+# another master clock than SENSOR0's; it sets the second port's sensor type
+# for open_sys_config and muxes I2C5. Without it, the port follows SENSOR0 and
+# the pads are left to majestic. The functions are taken from
 # the script itself, with fw_printenv and devmem stubbed.
 echo
 echo "=== Part 4: hi3519dv500 SENSOR1 from the environment ==="
@@ -160,6 +161,43 @@ T "os04a10" "$(sensor1 '' 0)" \
    "no sensor1 -> SNS_TYPE1 follows SENSOR0, SPI1 pins left alone"
 T "imx515 0x0EFF0024=0x1752 0x0EFF0028=0x1752" "$(sensor1 os08a20 1 imx515)" \
    "-sensor1 given -> it wins over the environment, I2C5 muxed"
+
+# ----- Part 5: hi3519dv500 re-detects a swapped sensor -----
+# The sensors on this board are detachable, so the saved `sensor` variable is
+# checked against the bus on every boot: what answers wins and is saved when it
+# differs, the saved name stands when nothing answers, and -sensor0 skips the
+# probe. resolve_sensor is taken from the script itself, with the environment,
+# the probe and the module loading stubbed; probes and writes are counted.
+echo
+echo "=== Part 5: hi3519dv500 sensor re-detected every boot ==="
+eval "$(fn5 resolve_sensor)"
+insert_detect() { :; }
+remove_detect() { :; }
+probe_log=$(mktemp)
+trap 'rm -f "$probe_out" "$probe_log"' EXIT
+# Not "saved"/"detected": resolve_sensor declares those local, and the stubs
+# run inside it. The probe runs in $(...), so it counts into a file.
+resolve() {   # $1: saved `sensor`, $2: what answers, $3: SENSOR on entry, $4: -sensor0 given
+    env_sensor="$1"; on_bus="$2"; SENSOR="$3"; SNS_SET0=${4:-0}; writes=""
+    : > "$probe_log"
+    fw_printenv() { [ -n "$env_sensor" ] && echo "$env_sensor"; }
+    fw_setenv() { writes="$writes $1=${2:-}"; }
+    ipcinfo() { echo x >> "$probe_log"; echo "$on_bus"; }
+    resolve_sensor > /dev/null
+    echo "$SENSOR probes=$(wc -l < "$probe_log") writes=${writes# }"
+}
+T "os04a10 probes=1 writes=" "$(resolve os04a10 os04a10 os04a10)" \
+   "saved sensor still fitted -> kept, nothing written"
+T "os08a10 probes=1 writes=sensor=os08a10" "$(resolve os04a10 os08a10 os04a10)" \
+   "sensor swapped -> the one that answers wins and is saved"
+T "os04a10 probes=1 writes=" "$(resolve os04a10 '' os04a10)" \
+   "nothing answers -> the saved name stands, nothing written"
+T "unknown probes=1 writes=" "$(resolve '' '' '')" \
+   "nothing saved, nothing answers -> unknown, never saved"
+T "os04a10 probes=1 writes=sensor= sensor=os04a10" "$(resolve unknown os04a10 unknown)" \
+   "a saved 'unknown' is dropped and the probe's answer saved (#2428)"
+T "imx515 probes=0 writes=" "$(resolve os04a10 os08a10 imx515 1)" \
+   "-sensor0 given -> taken as given, no probe"
 
 echo
 if [ "$fail" -eq 0 ]; then
