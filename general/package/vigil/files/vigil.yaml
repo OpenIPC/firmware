@@ -219,11 +219,50 @@ display:
   # straight on the video; none: the text alone; box: on a dark box. One of:
   # outline, none, box. Default outline.
   icons_background: outline
+  # Top margin (%): Shrinks everything on HDMI and VGA (the video, the menus,
+  # the pointer) by this much from the edge, black around it: for a TV that
+  # cuts off the picture's edges (overscan). A percentage of the output's
+  # height (left and right: of its width), so it holds at every resolution.
+  # 0..10, default 0.
+  margin_top: 0
+  # Bottom margin (%): As margin_top, at the bottom edge. 0..10, default 0.
+  margin_bottom: 0
+  # Left margin (%): As margin_top, at the left edge (% of the width). 0..10,
+  # default 0.
+  margin_left: 0
+  # Right margin (%): As margin_top, at the right edge. 0..10, default 0.
+  margin_right: 0
+  # Picture: HDMI and VGA: standard (as the display starts), bright (luma up,
+  # mid-tones lifted: gamma 0.8), soft (less contrast, colour and sharpening),
+  # vivid (more contrast and colour, gamma 1.1). Where the board has no such
+  # controls it is ignored. One of: standard, bright, soft, vivid. Default
+  # standard.
+  picture: standard
+  # HDMI volume: 0..100, the sound the HDMI output carries. Where the board
+  # has no sound on HDMI (or nothing plays yet) it is kept for when there is.
+  # 0..100, default 80.
+  hdmi_volume: 80
+  # HDMI mute. Default false.
+  hdmi_mute: false
+  # REC icon: REC in the status icons' corner of each tile while its channel
+  # records. Default true.
+  rec_icon: true
+  # Alarm icons: The events the camera reports (motion, human, face, vehicle)
+  # as icons in the status icons' corner, while they last. Default true.
+  alarm_icons: true
+  # Lines between tiles: A thin line around each tile of the live view. Off:
+  # the pictures touch. Default true.
+  tile_dividers: true
+  # Alarm frame: A red frame, blinking, inside the edge of a tile while its
+  # camera reports an event (the alarm icons' events); none otherwise. Default
+  # false.
+  alert_frame: false
 
 # HTTP API
 api:
   # Listen on: IPv4 address and port of the HTTP API, or just the port. Empty:
-  # no API. Takes effect when vigild starts. Default 0.0.0.0:8080.
+  # no API. A change moves it at once (Network -> Ports); a port that is taken
+  # is refused. Default 0.0.0.0:8080.
   listen: "0.0.0.0:8080"
   # Require a password: HTTP Basic authentication: vigil's users (api.users),
   # or the system account. Turning it off lets anyone on the network change
@@ -249,12 +288,24 @@ web:
   # password. Default true.
   enabled: true
   # Listen on: IPv4 address and port of its web server, or just the port.
-  # Empty: off. Takes effect when vigild starts. Default 0.0.0.0:80.
+  # Empty: off. A change moves it at once (Network -> Ports); a port that is
+  # taken is refused. Default 0.0.0.0:80.
   listen: "0.0.0.0:80"
   # Pictures a second, at most: Fewer when nothing moves, the network or the
   # browser is slower, or encoding would take more than half a CPU core.
   # 1..30, default 15.
   fps: 15
+
+# NETIP server: The cameras over Xiongmai's NETIP (DVRIP), for XM's clients
+# (docs/api.md, NETIP server).
+netip_server:
+  # On: Xiongmai's own clients (CMS, VMS, XMEye on the LAN) see this recorder
+  # as an XM one: they find it by its search and play the cameras' live
+  # streams, as vigil's users with the live permission. Nothing can be changed
+  # through it. Default true.
+  enabled: true
+  # TCP port: NETIP's port, 34567 on XM devices. 1..65535, default 34567.
+  port: 34567
 
 # Camera search
 discovery:
@@ -269,3 +320,58 @@ discovery:
   # answers more than one: NETIP names both streams, ONVIF asks the camera,
   # Dahua's RTSP path is fixed. Default netip,onvif,dhip.
   prefer: "netip,onvif,dhip"
+
+# ONVIF server
+onvif_server:
+  # On: Be an ONVIF device for video management software and other recorders:
+  # a profile for each camera's main and sub-stream with its RTSP address, and
+  # WS-Discovery so they find this recorder (docs/onvif.md). They log in as
+  # vigil's users; the video needs the live permission. Default true.
+  enabled: true
+  # Port: TCP port of its web service, whose device service is
+  # /onvif/device_service (port 80 is the zero channel's). Discovery tells
+  # clients which port it is. 1..65535, default 8899.
+  port: 8899
+
+# QoS: DSCP marking of vigild's packets, so that the network can prioritise
+# them.
+qos:
+  # QoS type: DSCP marking of the packets vigild sends, for switches and
+  # routers that queue by it. off: nothing marked (DSCP 0); standard: video
+  # AF41 (34), management CS2 (16), cameras AF41 (34), alarms AF21 (18);
+  # custom: the values below. One of: off, standard, custom. Default off.
+  type: "off"
+  # Video DSCP: With type custom: the zero channel's picture (web.listen's
+  # WebSocket), the RTSP and NETIP servers' video. 0..63, default 34.
+  video: 34
+  # Management DSCP: With type custom: the HTTP API, the web pages and logins,
+  # the ONVIF service and its WS-Discovery, the RTSP server's requests, the
+  # NETIP server's requests and search answers, DDNS, camera searches. 0..63,
+  # default 16.
+  management: 16
+  # Camera DSCP: With type custom: vigild's connections to cameras, RTSP and
+  # NETIP control and the ACKs of their video; a connection open when this
+  # changes is marked at once. 0..63, default 34.
+  camera: 34
+  # Alarm DSCP: With type custom: events, the API's event WebSocket, the alarm
+  # center's POSTs and mails (curl 8.9 or later marks those). 0..63, default
+  # 18.
+  alarm: 18
+
+# RTSP server
+rtsp_server:
+  # On: The cameras' streams to other clients (a VMS, VLC, another recorder)
+  # at rtsp://<this recorder>/ch1/main and /ch1/sub, as the cameras send them
+  # (docs/rtsp.md). Default true.
+  enabled: true
+  # Port: Its TCP port; RTP over UDP goes from a pair of ports from 6970 up.
+  # 1..65535, default 554.
+  port: 554
+  # Require a password: Digest authentication against vigil's users; their
+  # group needs the live permission. Off: anyone on the network can watch
+  # every camera. Default true.
+  auth: true
+  # Clients at once, at most: Clients being sent a stream at the same time.
+  # Clients of one stream share its buffer (2 to 4 MiB for a main stream, less
+  # for a sub-stream). 1..32, default 8.
+  max_clients: 8
