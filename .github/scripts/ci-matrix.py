@@ -46,6 +46,8 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 # one edit. Every entry must have a br-ext-chip-*/configs/<board>_defconfig;
 # --self-test enforces that.
 ALL_BOARDS = [
+    # MStar [I3]
+    "msc313e_lite", "msc316dc_lite", "msc316dm_lite",
     # Sigmastar [I2M]
     "ssr621q_lite",
     # Sigmastar [I6]
@@ -315,7 +317,6 @@ WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 # matrix fails --self-test instead of quietly skipping CI.
 UNBUILT_FAMILIES = {
     ("br-ext-chip-grainmedia", "gm8126"),
-    ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
 
@@ -1062,7 +1063,7 @@ def self_test():
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
          25, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 111, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 114, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -1166,7 +1167,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         111, "markdown inside a package is that package"),
+         114, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],
