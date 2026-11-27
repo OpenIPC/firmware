@@ -8,6 +8,7 @@ config BR2_PACKAGE_VIGIL
 	depends on !BR2_PACKAGE_MAJESTIC
 	depends on !BR2_PACKAGE_VDEC_OPENIPC
 	select BR2_PACKAGE_LIBYAML
+	select BR2_PACKAGE_MBEDTLS_OPENIPC
 	help
 	  vigil - DVR/NVR application: network cameras (RTSP, NETIP)
 	  decoded to HDMI in a 2x2 view with a status UI, and recorded

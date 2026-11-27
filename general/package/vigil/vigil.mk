@@ -6,7 +6,7 @@
 
 VIGIL_SITE_METHOD = git
 VIGIL_SITE = https://github.com/openipc/vigil
-VIGIL_VERSION = d23346c2515427ef5ff61c97ab727895bea0d059
+VIGIL_VERSION = 045801a80da625b4f42a682eb4131a959160c4cc
 # LVGL, cJSON and CivetWeb are submodules (third_party/).
 VIGIL_GIT_SUBMODULES = YES
 VIGIL_LICENSE = GPL-3.0-or-later, MIT (LVGL, cJSON, CivetWeb)
@@ -38,6 +38,10 @@ endif
 
 # The configuration file is YAML, read with libyaml.
 VIGIL_DEPENDENCIES += libyaml
+
+# The passwords vigild keeps (cameras', users', root's) are sealed with
+# AES-256-GCM from libmbedcrypto under /etc/vigil.key (docs/security.md).
+VIGIL_DEPENDENCIES += mbedtls-openipc
 
 # files/vigil.yaml is what this vigild writes for its defaults with every
 # camera's segments kept (vigild -f /dev/null -K 0 -w -): the comments are

@@ -9,8 +9,9 @@ version: 1
 # Cameras: In tile order: the first is CAM1. At most 16. Each one:
 #   url: Source URL. rtsp://[user:pass@]host[:554]/path,
 #     netip://[user:pass@]host[:34567]/[?ch=N&stream=main|extra] or capture:N.
-#     The password is shown as *** and kept when sent back unchanged. Empty:
-#     no camera in this channel (the list is in channel order).
+#     The password is shown as *** and kept when sent back unchanged; in this
+#     file it is sealed (enc:v1:..., docs/security.md). Empty: no camera in
+#     this channel (the list is in channel order).
 #   name: Name. Shown in the status and the API; empty: the camera's host.
 #   enabled: Enabled. A disabled camera keeps its tile, empty. Default true.
 #   sub_url: Sub-stream URL. Used in multi-window views; the main URL is used
@@ -74,7 +75,8 @@ nas:
   share: ""
   # User: SMB only; empty: guest.
   user: ""
-  # Password: Shown as ***; sent back as *** it is kept.
+  # Password: Shown as ***; sent back as *** it is kept. Sealed in this file
+  # (docs/security.md).
   password: ""
   # Mount options: Added to the mount's own (vers=2.1, ...).
   options: ""
@@ -91,7 +93,8 @@ ddns:
   host: ""
   # User.
   user: ""
-  # Password: Shown as ***; sent back as *** it is kept.
+  # Password: Shown as ***; sent back as *** it is kept. Sealed in this file
+  # (docs/security.md).
   password: ""
   # Update URL: custom: requested with GET; {host}, {user} and {password} are
   # replaced.
@@ -123,7 +126,8 @@ smtp:
   security: starttls
   # User: Empty: no login.
   user: ""
-  # Password: Shown as ***; sent back as *** it is kept.
+  # Password: Shown as ***; sent back as *** it is kept. Sealed in this file
+  # (docs/security.md).
   password: ""
   # From: The sender's address.
   from: ""
