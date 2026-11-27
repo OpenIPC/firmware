@@ -47,11 +47,8 @@ endif
 # XM530V200's open_jpeg, the XM535s' open_isp) replace vendor
 # modules nothing links against,
 # which stay as the fallback. On the XM530V200 drivers/xm530v200_vo
-# (open_vo.ko) replaces vo.ko, which the VPSS links against; on the XM232
-# only open_mmz (its frame compression, MMZ_CHIP=xm232), open_i2c,
-# open_sys, open_log, open_ddr, open_acodec, open_adc, open_dma,
-# open_dwc2 and open_xm_usb0 and every media module (open_vb, open_isp,
-# open_vi_mu, open_rgn, open_venc, open_hevc, open_i2s, open_XmVtaMte); on the XM533
+# (open_vo.ko) replaces vo.ko, which the VPSS links against; the XM232's
+# 18 vendor modules all have open drivers (below); on the XM533
 # drivers/xm533_isp (open_isp.ko) replaces isp.ko, which vi.ko links
 # against, and on the XM530V200 drivers/xm530v200_isp, which vpss.ko links
 # against. On the XM530V200 and XM535s drivers/dwc2 (open_dwc2.ko) and
