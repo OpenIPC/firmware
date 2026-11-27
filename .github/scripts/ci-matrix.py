@@ -46,6 +46,14 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 # one edit. Every entry must have a br-ext-chip-*/configs/<board>_defconfig;
 # --self-test enforces that.
 ALL_BOARDS = [
+    # MStar [I3]
+    # One 3.18 kernel and musl toolchain for the family. These generic images
+    # have booted only in qemu-bench, each on its own machine with the
+    # OpenIPC/u-boot bootloader for it; the vendor stack streams on an MSC316DC
+    # camera (Imou LOOC 2) in OpenIPC/builder's msc316dc_lite_imou-looc2, built
+    # from this family. As for the AK3918AV100 parts, they are published so
+    # that owners of these cameras can be the first to run them.
+    "msc313e_lite", "msc316dc_lite", "msc316dm_lite",
     # Sigmastar [I2M]
     "ssr621q_lite",
     # Sigmastar [I6]
@@ -244,7 +252,7 @@ NO_BUILD_SCRIPTS = {
 
 # CI plumbing: it decides how the build runs but cannot change a byte of what
 # ends up on a camera, so what needs proving is that the steps still work, not
-# that 96 images still come out the same. These get SMOKE_BOARDS.
+# that every image still comes out the same. These get SMOKE_BOARDS.
 #
 # ci-matrix.py is deliberately NOT here: a smoke set alone would never build a
 # board the edit adds to ALL_BOARDS. classify() gives it the smoke set plus
@@ -315,11 +323,10 @@ WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 # matrix fails --self-test instead of quietly skipping CI.
 UNBUILT_FAMILIES = {
     ("br-ext-chip-grainmedia", "gm8126"),
-    ("br-ext-chip-sigmastar", "infinity3"),
     ("br-ext-chip-ti", "dm36x"),
 }
 
-# Packages no board in ALL_BOARDS builds: enabled only by the 29 defconfigs the
+# Packages no board in ALL_BOARDS builds: enabled only by the defconfigs the
 # matrix leaves out, or by the variants that live in OpenIPC/builder. Frozen so
 # that a package dropping off the matrix is a --self-test failure rather than a
 # silent narrowing. This list is only ever read by --self-test: changes to these
@@ -1062,7 +1069,7 @@ def self_test():
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
          25, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 111, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 114, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -1166,7 +1173,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         111, "markdown inside a package is that package"),
+         114, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],
