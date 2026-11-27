@@ -1,3 +1,7 @@
+# The XM IVG-N8S, the one board known to carry this sensor, wires all four
+# MIPI lanes. Mode 0 is the same 3840x2160 30 fps 10-bit frame as the 2-lane
+# mode 3, at half the rate per lane; `lanes` tells majestic which pads to
+# listen on.
 sensor:
   name: imx415
   bus: i2c
@@ -5,4 +9,5 @@ sensor:
   height: 2160
   stream_width: 2560
   stream_height: 1440
-  sensor_mode: 3
+  sensor_mode: 0
+  lanes: 4
