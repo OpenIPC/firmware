@@ -1,4 +1,23 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * SmartSens SC430AI MIPI sensor register tables for Novatek NT9856x.
+ *
+ * Key registers (matching SmartSens SC430AI / OpenIPC/sensors sensor_sc430ai_mipi.c):
+ *   0x0103      : software reset
+ *   0x0100      : stream off (0x00) / stream on (0x01)
+ *   0x3208-0x320b: output window (0x0a80 x 0x05f0 = 2688 x 1520)
+ *   0x320e-0x320f: VTS (0x0672 = 1650 linear, 0x0ce4 = 3300 2-frame HDR)
+ *   0x3221      : mirror [2:1] / flip [6:5]
+ *   0x3e00-0x3e02: long exposure (half-line units)
+ *   0x3e06-0x3e09: long D-gain / A-gain (DCG)
+ *   0x3e22,0x3e04-0x3e05,0x3e10-0x3e13: short frame exposure & gain (HDR)
+ *
+ * Pseudo-commands interpreted by sc430ai_chg_mode():
+ *   SEN_CMD_DELAY     : msleep(val)
+ *   SEN_CMD_SETVD     : program VTS for requested frame rate
+ *   SEN_CMD_PRESET    : apply preset exposure and gain before stream-on
+ *   SEN_CMD_DIRECTION : apply configured mirror/flip to 0x3221
+ */
 #ifndef _SC430AI_REGS_H_
 #define _SC430AI_REGS_H_
 

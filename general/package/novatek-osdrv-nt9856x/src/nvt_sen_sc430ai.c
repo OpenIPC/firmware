@@ -317,6 +317,7 @@ static int sc430ai_i2c_read(u32 id, u16 reg, u8 *val)
 	return (ret == 2) ? 0 : (ret < 0 ? ret : -EIO);
 }
 
+/* Half-line period in 0.1 us units (SC430AI exposure registers use half-lines, 2*VTS/frame). */
 static u32 sc430ai_calc_rowtime_10x(u32 id, u32 mode)
 {
 	u32 pclk_100k;
@@ -401,6 +402,9 @@ static int sc430ai_set_expt(u32 id, const struct isp_sensor_ctrl *ctrl)
 		}
 		req_line[i] = line[i];
 	}
+
+	if (mb->mode_type == SEN_MODE_STAGGER_HDR && line[1] > 0x180)
+		line[1] = 0x180;
 
 	total_lines = (mb->mode_type == SEN_MODE_STAGGER_HDR) ?
 		      (line[0] + line[1]) : line[0];
@@ -809,6 +813,7 @@ static int sc430ai_get_info(u32 id, u32 cfg_id, void *data)
 		memcpy(data, &mipi_param[mode], sizeof(mipi_param[0]));
 		return 0;
 	case CFGID_GET_MIN_EXPT: {
+		/* HDAL 2022 ABI: out[1] is min exposure in 0.1 us (min_line * rowtime_10x), matching nvt_sen_sc401ai. */
 		u32 *out = data;
 		u32 rt, min_line;
 
