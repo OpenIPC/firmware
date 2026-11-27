@@ -1,6 +1,7 @@
 config BR2_PACKAGE_NOVATEK_OSDRV_NT9856X
 	bool "novatek-osdrv-nt9856x"
 	depends on BR2_LINUX_KERNEL
+	depends on BR2_OPENIPC_SOC_FAMILY = "nt9856x"
 	select BR2_PACKAGE_NOVATEK_OPENSDK
 	help
 	  novatek-osdrv-nt9856x - Novatek kernel modules and libs. The

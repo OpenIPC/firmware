@@ -2,6 +2,7 @@ config BR2_PACKAGE_NOVATEK_OPENSDK
 	bool "novatek-opensdk"
 	default n
 	depends on BR2_LINUX_KERNEL
+	depends on BR2_OPENIPC_SOC_FAMILY = "nt9856x"
 	help
 	  Opensource Novatek SoCs SDK: sensor drivers (nvt_sen_*.ko) built
 	  from source against the firmware kernel.

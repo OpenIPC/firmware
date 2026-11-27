@@ -39,6 +39,12 @@ endef
 
 # Where load_novatek looks. Stripped as on hisilicon: target-finalize leaves
 # *.ko alone.
+#
+# Unlike the open_* modules of the other opensdk packages, these keep the
+# vendor's nvt_sen_<model>.ko names: load_novatek insmods nvt_sen_$SENSOR.ko,
+# and each driver registers with HDAL as "nvt_sen_<model>" whatever its file
+# is called, so the same names let it drop in without touching the loader.
+# They are built from source all the same (OpenIPC/opennovatek).
 NOVATEK_OPENSDK_KMOD_DST = $(TARGET_DIR)/lib/modules/$(LINUX_VERSION_PROBED)/novatek
 
 define NOVATEK_OPENSDK_INSTALL_TARGET_CMDS
