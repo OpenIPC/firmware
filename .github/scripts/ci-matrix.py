@@ -111,8 +111,9 @@ ALL_BOARDS = [
     # One 4.4.302 kernel and toolchain for every AK39 part. ak3918av130_lite's
     # ISP, encoder, Ethernet and SD drivers are the AnyCloud39AV130 SDK's
     # prebuilt modules, matched to that kernel by vermagic and a struct-layout
-    # probe (see anyka-osdrv-ak3918av130.mk); they have run on a Yoton WS03
-    # (#2962).
+    # probe. On a Yoton WS03 (#2962) the I2C, ION, RTC, eFuse, PCM, SD, UIO and
+    # USB host modules have run; ak_isp and the encoder modules have not (see
+    # anyka-osdrv-ak3918av130.mk).
     "ak3910_lite", "ak3918_lite", "ak3918ev200_lite", "ak3918ev300_lite",
     "ak3916ev300_lite", "ak3918ev330_lite", "ak3918ev331_lite",
     "ak3918av130_lite",
