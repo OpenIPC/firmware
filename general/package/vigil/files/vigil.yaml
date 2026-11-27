@@ -166,6 +166,56 @@ ui:
   date_format: YYYY-MM-DD
   # Time format. One of: 24h, 12h. Default 24h.
   time_format: "24h"
+  # Log in on screen: The menus and settings ask for a user and its password
+  # (vigil's users, or the system account, which always works); the live view
+  # stays. Default false.
+  login: false
+  # Log out after (min): Without a key or the mouse for this long. 0: never.
+  # 0..240, default 10.
+  idle_logout: 10
+
+# Display: The HDMI/VGA output, and the clock, names and icons over the live
+# view.
+display:
+  # Output resolution: HDMI and VGA, as WIDTHxHEIGHT@HZ. The menus keep their
+  # layout, scaled to it; the video is shown at the output's own resolution. A
+  # mode the board does not drive is ignored. One of: 1280x720@60,
+  # 1280x720@50, 1920x1080@60, 1920x1080@50, 1920x1080@30, 1024x768@60,
+  # 1280x1024@60, 1440x900@60, 3840x2160@30. Default 1280x720@60.
+  output: "1280x720@60"
+  # Video aspect: fit: each picture keeps its shape inside its tile or the
+  # full screen, with black bars where the shapes differ; a sub-stream
+  # (704x576, 352x288, ...) is shown at its main stream's shape. stretch: the
+  # picture fills the tile. One of: fit, stretch. Default fit.
+  video_aspect: fit
+  # Clock: Where the date and time are on the live view; their format is
+  # ui.date_format and ui.time_format. One of: off, top-left, top-center,
+  # top-right, bottom-left, bottom-center, bottom-right. Default top-right.
+  clock_position: top-right
+  # Clock size. One of: small, medium, large, xlarge. Default medium.
+  clock_size: medium
+  # Clock background: outline: hard-edged text with a thin dark edge, straight
+  # on the video; none: the text alone; box: on a dark box. One of: outline,
+  # none, box. Default outline.
+  clock_background: outline
+  # Camera names: The corner of each tile with its camera's name. One of: off,
+  # top-left, top-right, bottom-left, bottom-right. Default bottom-left.
+  name_position: bottom-left
+  # Camera name size: A size smaller in small tiles. One of: small, medium,
+  # large, xlarge. Default medium.
+  name_size: medium
+  # Camera name background: outline: hard-edged text with a thin dark edge,
+  # straight on the video; none: the text alone; box: on a dark box. One of:
+  # outline, none, box. Default outline.
+  name_background: outline
+  # Status icons: The corner of each tile with REC and the camera's events; in
+  # the names' corner they go just above the name (below it at the top). One
+  # of: top-left, top-right, bottom-left, bottom-right. Default bottom-right.
+  icons_position: bottom-right
+  # Status icons background: outline: hard-edged text with a thin dark edge,
+  # straight on the video; none: the text alone; box: on a dark box. One of:
+  # outline, none, box. Default outline.
+  icons_background: outline
 
 # HTTP API
 api:
@@ -187,6 +237,21 @@ api:
   # in too, with every permission, so nobody is locked out. Default
   # /etc/vigil.users.yaml.
   users: /etc/vigil.users.yaml
+
+# Zero channel
+web:
+  # On: This screen, with its mouse and keyboard, in a browser at http://<this
+  # recorder>/ (docs/api.md, Zero channel). Only users whose group has the
+  # remote permission (admin) get in, and nobody until such an account has a
+  # password. Default true.
+  enabled: true
+  # Listen on: IPv4 address and port of its web server, or just the port.
+  # Empty: off. Takes effect when vigild starts. Default 0.0.0.0:80.
+  listen: "0.0.0.0:80"
+  # Pictures a second, at most: Fewer when nothing moves, the network or the
+  # browser is slower, or encoding would take more than half a CPU core.
+  # 1..30, default 15.
+  fps: 15
 
 # Camera search
 discovery:
