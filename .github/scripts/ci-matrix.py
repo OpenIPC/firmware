@@ -47,6 +47,12 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 # --self-test enforces that.
 ALL_BOARDS = [
     # MStar [I3]
+    # One 3.18 kernel and musl toolchain for the family. These generic images
+    # have booted only in qemu-bench, each on its own machine with the
+    # OpenIPC/u-boot bootloader for it; the vendor stack streams on an MSC316DC
+    # camera (Imou LOOC 2) in OpenIPC/builder's msc316dc_lite_imou-looc2, built
+    # from this family. As for the AK3918AV100 parts, they are published so
+    # that owners of these cameras can be the first to run them.
     "msc313e_lite", "msc316dc_lite", "msc316dm_lite",
     # Sigmastar [I2M]
     "ssr621q_lite",
@@ -246,7 +252,7 @@ NO_BUILD_SCRIPTS = {
 
 # CI plumbing: it decides how the build runs but cannot change a byte of what
 # ends up on a camera, so what needs proving is that the steps still work, not
-# that 96 images still come out the same. These get SMOKE_BOARDS.
+# that every image still comes out the same. These get SMOKE_BOARDS.
 #
 # ci-matrix.py is deliberately NOT here: a smoke set alone would never build a
 # board the edit adds to ALL_BOARDS. classify() gives it the smoke set plus
@@ -320,7 +326,7 @@ UNBUILT_FAMILIES = {
     ("br-ext-chip-ti", "dm36x"),
 }
 
-# Packages no board in ALL_BOARDS builds: enabled only by the 29 defconfigs the
+# Packages no board in ALL_BOARDS builds: enabled only by the defconfigs the
 # matrix leaves out, or by the variants that live in OpenIPC/builder. Frozen so
 # that a package dropping off the matrix is a --self-test failure rather than a
 # silent narrowing. This list is only ever read by --self-test: changes to these
