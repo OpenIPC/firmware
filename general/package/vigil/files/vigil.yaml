@@ -1,20 +1,381 @@
-# vigil: cameras shown on HDMI (in tile order, up to four) and recorded.
-#
-# Each camera is a URL:
-#   rtsp://[user:pass@]host[:554]/path
-#   netip://[user:pass@]host[:34567]/[?ch=N&stream=main|extra]
-# Quote a URL that contains '&' or '#'.
-#
-#cameras:
-#  - rtsp://admin:12345@192.168.1.10/stream=0
-#  - "netip://admin:@192.168.1.11:34567/?ch=0&stream=main"
+# vigild configuration: https://github.com/OpenIPC/vigil/blob/main/docs/api.md
+# vigild rewrites this file when the settings are changed through its HTTP
+# API or on-screen UI. The comments come from vigild's own description of
+# each setting: comments and formatting written by hand are not kept.
+
+# The format of this file.
+version: 1
+
+# Cameras: In tile order: the first is CAM1. At most 16. Each one:
+#   url: Source URL. rtsp://[user:pass@]host[:554]/path,
+#     netip://[user:pass@]host[:34567]/[?ch=N&stream=main|extra] or capture:N.
+#     The password is shown as *** and kept when sent back unchanged; in this
+#     file it is sealed (enc:v1:..., docs/security.md). Empty: no camera in
+#     this channel (the list is in channel order).
+#   name: Name. Shown in the status and the API; empty: the camera's host.
+#   enabled: Enabled. A disabled camera keeps its tile, empty. Default true.
+#   sub_url: Sub-stream URL. Used in multi-window views; the main URL is used
+#     full screen and for recording. Empty: derived for NETIP, otherwise the
+#     main stream everywhere.
 cameras: []
 
+# Recording
 record:
-  # A directory on a disk or card (e.g. /mnt/sda1/rec). Empty: no recording.
-  # RAM (/tmp) and the flash root are refused: recordings would fill them.
+  # Recording directory: Where the streams are recorded, as received. Empty:
+  # no recording.
   path: ""
-  # Segment length in seconds, and segments kept per camera (0 = all; the
-  # oldest are deleted anyway when the disk runs low).
+  # Segment length (s): A new file starts at the first keyframe after this
+  # many seconds. 10..3600, default 60.
   segment: 60
+  # Segments kept per camera: 0: all (the oldest recordings are deleted anyway
+  # when the disk runs low). 0..64, default 3.
   keep: 0
+  # Record onto the root filesystem: Off: recording waits until a disk is
+  # mounted where the path leads, and never writes to the root filesystem (on
+  # a board, its flash). On only where the root filesystem is itself a disk.
+  # RAM and flash filesystems are refused either way, the root included.
+  # Default false.
+  allow_rootfs: false
+  # When the disk is full: overwrite: the oldest recordings, whichever camera
+  # made them, make room; stop: recording stops (event "REC disk full") until
+  # there is room again. One of: overwrite, stop. Default overwrite.
+  on_full: overwrite
+
+# Recording schedule: A week per camera; a camera without one records all the
+# time. Each day is 48 letters, one per half hour from 00:00: C continuous, M
+# when the camera reports motion, - not at all. At most 16. Each one:
+#   camera: Camera. CAMn: the camera's channel. 1..16, default 0.
+#   mon: Monday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   tue: Tuesday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   wed: Wednesday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   thu: Thursday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   fri: Friday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   sat: Saturday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+#   sun: Sunday. Default CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC.
+schedule: []
+
+# Disk quota: Per camera; a camera without one is limited only by the disk. At
+# most 16. Each one:
+#   camera: Camera. CAMn: the camera's channel. 1..16, default 0.
+#   max_gb: Largest size (GB). The camera's oldest recordings are deleted
+#     beyond this. 0: no limit. 0..1000000, default 0.
+#   max_days: Kept at most (days). Recordings older than this are deleted. 0:
+#     no limit. 0..3650, default 0.
+quota: []
+
+# Network storage
+nas:
+  # Network storage: A share mounted at /mnt/nas; record.path under /mnt/nas
+  # records onto it. none: not used. One of: none, cifs, nfs. Default none.
+  type: none
+  # Server: Host name or IPv4 address.
+  server: ""
+  # Share: SMB: the share's name (and a folder in it: share/dir). NFS: the
+  # exported path (/export/nvr).
+  share: ""
+  # User: SMB only; empty: guest.
+  user: ""
+  # Password: Shown as ***; sent back as *** it is kept. Sealed in this file
+  # (docs/security.md).
+  password: ""
+  # Mount options: Added to the mount's own (vers=2.1, ...).
+  options: ""
+
+# Dynamic DNS
+ddns:
+  # Enabled: Tell a dynamic DNS service this recorder's public address.
+  # Default false.
+  enabled: false
+  # Provider: dyndns: the dyndns2 protocol (Dyn and compatibles); noip: No-IP;
+  # custom: the URL below. One of: dyndns, noip, custom. Default dyndns.
+  provider: dyndns
+  # Host name: The name to update (nvr.example.org).
+  host: ""
+  # User.
+  user: ""
+  # Password: Shown as ***; sent back as *** it is kept. Sealed in this file
+  # (docs/security.md).
+  password: ""
+  # Update URL: custom: requested with GET; {host}, {user} and {password} are
+  # replaced.
+  url: ""
+  # Update every (min). 5..1440, default 10.
+  interval: 10
+
+# UPnP
+upnp:
+  # Enabled: Ask the router to forward ports to this recorder (not active yet:
+  # vigild has no UPnP client; the settings are kept). Default false.
+  enabled: false
+  # External HTTP port: Forwarded to the HTTP API. 0: none. 0..65535, default
+  # 0.
+  http_port: 0
+  # External RTSP port: 0: none. 0..65535, default 0.
+  rtsp_port: 0
+
+# Mail (SMTP)
+smtp:
+  # Enabled: Mail the events that need attention (disk full, recording failed,
+  # a camera offline) to the addresses below. Default false.
+  enabled: false
+  # Server: The SMTP server (smtp.example.org).
+  server: ""
+  # Port: 587 with STARTTLS, 465 with TLS, 25 without. 1..65535, default 587.
+  port: 587
+  # Encryption. One of: none, starttls, tls. Default starttls.
+  security: starttls
+  # User: Empty: no login.
+  user: ""
+  # Password: Shown as ***; sent back as *** it is kept. Sealed in this file
+  # (docs/security.md).
+  password: ""
+  # From: The sender's address.
+  from: ""
+  # To: Addresses, separated by commas.
+  to: ""
+
+# Alarm center
+alarm:
+  # Enabled: Send every event to an alarm center as it happens. Default false.
+  enabled: false
+  # Protocol: http: each event as JSON, POSTed to http://server:port/path. One
+  # of: http. Default http.
+  protocol: http
+  # Server.
+  host: ""
+  # Port. 1..65535, default 80.
+  port: 80
+  # Path. Default /.
+  path: /
+  # Heartbeat (s): A heartbeat this often while there are no events. 0: none.
+  # 0..86400, default 60.
+  interval: 60
+
+# Time
+time:
+  # Synchronise with NTP: Keep the clock from the servers in /etc/ntp.conf
+  # (the firmware's ntpd). Default true.
+  ntp: true
+  # Check every (min): How often vigild asks the servers itself, to show the
+  # last sync and to set the clock if the firmware's ntpd is not running.
+  # 10..1440, default 60.
+  ntp_interval: 60
+
+# On-screen UI
+ui:
+  # Language: Of the on-screen UI. One of: en. Default en.
+  language: en
+  # Date format. One of: YYYY-MM-DD, DD.MM.YYYY, MM/DD/YYYY. Default
+  # YYYY-MM-DD.
+  date_format: YYYY-MM-DD
+  # Time format. One of: 24h, 12h. Default 24h.
+  time_format: "24h"
+  # Log in on screen: The menus and settings ask for a user and its password
+  # (vigil's users, or the system account, which always works); the live view
+  # stays. Default false.
+  login: false
+  # Log out after (min): Without a key or the mouse for this long. 0: never.
+  # 0..240, default 10.
+  idle_logout: 10
+
+# Display: The HDMI/VGA output, and the clock, names and icons over the live
+# view.
+display:
+  # Output resolution: HDMI and VGA, as WIDTHxHEIGHT@HZ. The menus keep their
+  # layout, scaled to it; the video is shown at the output's own resolution. A
+  # mode the board does not drive is ignored. One of: 1280x720@60,
+  # 1280x720@50, 1920x1080@60, 1920x1080@50, 1920x1080@30, 1024x768@60,
+  # 1280x1024@60, 1440x900@60, 3840x2160@30. Default 1280x720@60.
+  output: "1280x720@60"
+  # Video aspect: fit: each picture keeps its shape inside its tile or the
+  # full screen, with black bars where the shapes differ; a sub-stream
+  # (704x576, 352x288, ...) is shown at its main stream's shape. stretch: the
+  # picture fills the tile, whatever its shape. fill: the picture keeps its
+  # shape and covers the whole tile, what overflows cut off (a 4:3 camera in a
+  # 16:9 tile loses a strip at the top and at the bottom). One of: fit,
+  # stretch, fill. Default fit.
+  video_aspect: fit
+  # Clock: Where the date and time are on the live view; their format is
+  # ui.date_format and ui.time_format. One of: off, top-left, top-center,
+  # top-right, bottom-left, bottom-center, bottom-right. Default top-right.
+  clock_position: top-right
+  # Clock size. One of: small, medium, large, xlarge. Default medium.
+  clock_size: medium
+  # Clock background: outline: hard-edged text with a thin dark edge, straight
+  # on the video; none: the text alone; box: on a dark box. One of: outline,
+  # none, box. Default outline.
+  clock_background: outline
+  # Camera names: The corner of each tile with its camera's name. One of: off,
+  # top-left, top-right, bottom-left, bottom-right. Default bottom-left.
+  name_position: bottom-left
+  # Camera name size: A size smaller in small tiles. One of: small, medium,
+  # large, xlarge. Default medium.
+  name_size: medium
+  # Camera name background: outline: hard-edged text with a thin dark edge,
+  # straight on the video; none: the text alone; box: on a dark box. One of:
+  # outline, none, box. Default outline.
+  name_background: outline
+  # Status icons: The corner of each tile with REC and the camera's events; in
+  # the names' corner they go just above the name (below it at the top). One
+  # of: top-left, top-right, bottom-left, bottom-right. Default bottom-right.
+  icons_position: bottom-right
+  # Status icons background: outline: hard-edged text with a thin dark edge,
+  # straight on the video; none: the text alone; box: on a dark box. One of:
+  # outline, none, box. Default outline.
+  icons_background: outline
+  # Top margin (%): Shrinks everything on HDMI and VGA (the video, the menus,
+  # the pointer) by this much from the edge, black around it: for a TV that
+  # cuts off the picture's edges (overscan). A percentage of the output's
+  # height (left and right: of its width), so it holds at every resolution.
+  # 0..10, default 0.
+  margin_top: 0
+  # Bottom margin (%): As margin_top, at the bottom edge. 0..10, default 0.
+  margin_bottom: 0
+  # Left margin (%): As margin_top, at the left edge (% of the width). 0..10,
+  # default 0.
+  margin_left: 0
+  # Right margin (%): As margin_top, at the right edge. 0..10, default 0.
+  margin_right: 0
+  # Picture: HDMI and VGA: standard (as the display starts), bright (luma up,
+  # mid-tones lifted: gamma 0.8), soft (less contrast, colour and sharpening),
+  # vivid (more contrast and colour, gamma 1.1). Where the board has no such
+  # controls it is ignored. One of: standard, bright, soft, vivid. Default
+  # standard.
+  picture: standard
+  # HDMI volume: 0..100, the sound the HDMI output carries. Where the board
+  # has no sound on HDMI (or nothing plays yet) it is kept for when there is.
+  # 0..100, default 80.
+  hdmi_volume: 80
+  # HDMI mute. Default false.
+  hdmi_mute: false
+  # REC icon: REC in the status icons' corner of each tile while its channel
+  # records. Default true.
+  rec_icon: true
+  # Alarm icons: The events the camera reports (motion, human, face, vehicle)
+  # as icons in the status icons' corner, while they last. Default true.
+  alarm_icons: true
+  # Lines between tiles: A thin line around each tile of the live view. Off:
+  # the pictures touch. Default true.
+  tile_dividers: true
+  # Alarm frame: A red frame, blinking, inside the edge of a tile while its
+  # camera reports an event (the alarm icons' events); none otherwise. Default
+  # false.
+  alert_frame: false
+
+# HTTP API
+api:
+  # Listen on: IPv4 address and port of the HTTP API, or just the port. Empty:
+  # no API. A change moves it at once (Network -> Ports); a port that is taken
+  # is refused. Default 0.0.0.0:8080.
+  listen: "0.0.0.0:8080"
+  # Require a password: HTTP Basic authentication: vigil's users (api.users),
+  # or the system account. Turning it off lets anyone on the network change
+  # the configuration. Default true.
+  auth: true
+  # Account: The system account that logs in with every permission (also as
+  # "admin" while no user of that name exists). Default root.
+  user: root
+  # Password file: The shadow file holding the account's password hash.
+  # Default /etc/shadow.
+  shadow: /etc/shadow
+  # Accounts file: vigil's own users and groups, with their permissions
+  # (written by the API and the UI, mode 0600). The account above always logs
+  # in too, with every permission, so nobody is locked out. Default
+  # /etc/vigil.users.yaml.
+  users: /etc/vigil.users.yaml
+
+# Zero channel
+web:
+  # On: This screen, with its mouse and keyboard, in a browser at http://<this
+  # recorder>/ (docs/api.md, Zero channel). Only users whose group has the
+  # remote permission (admin) get in, and nobody until such an account has a
+  # password. Default true.
+  enabled: true
+  # Listen on: IPv4 address and port of its web server, or just the port.
+  # Empty: off. A change moves it at once (Network -> Ports); a port that is
+  # taken is refused. Default 0.0.0.0:80.
+  listen: "0.0.0.0:80"
+  # Pictures a second, at most: Fewer when nothing moves, the network or the
+  # browser is slower, or encoding would take more than half a CPU core.
+  # 1..30, default 15.
+  fps: 15
+
+# NETIP server: The cameras over Xiongmai's NETIP (DVRIP), for XM's clients
+# (docs/api.md, NETIP server).
+netip_server:
+  # On: Xiongmai's own clients (CMS, VMS, XMEye on the LAN) see this recorder
+  # as an XM one: they find it by its search and play the cameras' live
+  # streams, as vigil's users with the live permission. Nothing can be changed
+  # through it. Default true.
+  enabled: true
+  # TCP port: NETIP's port, 34567 on XM devices. 1..65535, default 34567.
+  port: 34567
+
+# Camera search
+discovery:
+  # Search on interfaces: Network interfaces to search for cameras on,
+  # separated by commas. Empty: every IPv4 interface.
+  interfaces: ""
+  # Also ask addresses: IPv4 addresses searched by unicast as well, separated
+  # by commas: cameras on a routed subnet, which searches by broadcast do not
+  # reach.
+  targets: ""
+  # Protocol order: Which protocol a camera found is added with when it
+  # answers more than one: NETIP names both streams, ONVIF asks the camera,
+  # Dahua's RTSP path is fixed. Default netip,onvif,dhip.
+  prefer: "netip,onvif,dhip"
+
+# ONVIF server
+onvif_server:
+  # On: Be an ONVIF device for video management software and other recorders:
+  # a profile for each camera's main and sub-stream with its RTSP address, and
+  # WS-Discovery so they find this recorder (docs/onvif.md). They log in as
+  # vigil's users; the video needs the live permission. Default true.
+  enabled: true
+  # Port: TCP port of its web service, whose device service is
+  # /onvif/device_service (port 80 is the zero channel's). Discovery tells
+  # clients which port it is. 1..65535, default 8899.
+  port: 8899
+
+# QoS: DSCP marking of vigild's packets, so that the network can prioritise
+# them.
+qos:
+  # QoS type: DSCP marking of the packets vigild sends, for switches and
+  # routers that queue by it. off: nothing marked (DSCP 0); standard: video
+  # AF41 (34), management CS2 (16), cameras AF41 (34), alarms AF21 (18);
+  # custom: the values below. One of: off, standard, custom. Default off.
+  type: "off"
+  # Video DSCP: With type custom: the zero channel's picture (web.listen's
+  # WebSocket), the RTSP and NETIP servers' video. 0..63, default 34.
+  video: 34
+  # Management DSCP: With type custom: the HTTP API, the web pages and logins,
+  # the ONVIF service and its WS-Discovery, the RTSP server's requests, the
+  # NETIP server's requests and search answers, DDNS, camera searches. 0..63,
+  # default 16.
+  management: 16
+  # Camera DSCP: With type custom: vigild's connections to cameras, RTSP and
+  # NETIP control and the ACKs of their video; a connection open when this
+  # changes is marked at once. 0..63, default 34.
+  camera: 34
+  # Alarm DSCP: With type custom: events, the API's event WebSocket, the alarm
+  # center's POSTs and mails (curl 8.9 or later marks those). 0..63, default
+  # 18.
+  alarm: 18
+
+# RTSP server
+rtsp_server:
+  # On: The cameras' streams to other clients (a VMS, VLC, another recorder)
+  # at rtsp://<this recorder>/ch1/main and /ch1/sub, as the cameras send them
+  # (docs/rtsp.md). Default true.
+  enabled: true
+  # Port: Its TCP port; RTP over UDP goes from a pair of ports from 6970 up.
+  # 1..65535, default 554.
+  port: 554
+  # Require a password: Digest authentication against vigil's users; their
+  # group needs the live permission. Off: anyone on the network can watch
+  # every camera. Default true.
+  auth: true
+  # Clients at once, at most: Clients being sent a stream at the same time.
+  # Clients of one stream share its buffer (2 to 4 MiB for a main stream, less
+  # for a sub-stream). 1..32, default 8.
+  max_clients: 8

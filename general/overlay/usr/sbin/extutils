@@ -2,9 +2,14 @@
 CMD=${0##*/}
 ARCH=$(uname -m)
 
-if echo "$ARCH" | grep -q mips; then
-	ARC="-mips32"
-fi
+# The ipctool release names its binaries by architecture: plain "ipctool" is
+# 32-bit ARM, which a 64-bit-only core such as the hi3519dv500's Cortex-A55
+# cannot execute: the shell falls back to reading it as a script and stops at
+# "syntax error". aarch64 gets the arm64 build.
+case "$ARCH" in
+	mips*) ARC="-mips32" ;;
+	aarch64 | arm64) ARC="-arm64" ;;
+esac
 
 MAJESTIC_CFG=/etc/majestic.yaml
 

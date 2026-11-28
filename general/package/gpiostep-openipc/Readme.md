@@ -23,12 +23,18 @@ sub-tick pacing only holds on an idle core.
 ### Load
 
 ```
-insmod /lib/modules/$(uname -r)/extra/gpiostep.ko          # GK7205V510 defaults
+insmod /lib/modules/$(uname -r)/extra/gpiostep.ko          # GK7205V510 defaults (Goke builds)
 # or override the pin map:
 insmod gpiostep.ko pan_gpios=3,4,72,73 tilt_gpios=69,59,58,57
 ```
 
 The module creates `/dev/motorDev`.
+
+Only a Goke build has a default pin map, the GK7205V510's above. On any other
+SoC those GPIO numbers are other pads, so a build for it has none, and an
+`insmod` or `/etc/modules` line without `pan_gpios` and `tilt_gpios` (or
+`sr_gpios`) is refused before it claims a pin:
+`gpiostep: no pin map: name the board's pan_gpios and tilt_gpios (or sr_gpios)`.
 
 ### Use
 
@@ -45,6 +51,35 @@ A "step" is one full 8-phase cycle, matching `gpio-motors`. The default pin map
 `/proc/devcfg` motor block on a GK7205V510. If a coil phase is reversed or
 motion is rough, try the vendor coil order `[0,2,1,3]`:
 `pan_gpios=3,72,4,73 tilt_gpios=69,58,59,57`.
+
+### Anyka AK3918EV200, Gwell pan/tilt (SC1345)
+
+```
+insmod gpiostep.ko pan_gpios=15,14,13,23 tilt_gpios=19,20,10,11
+```
+
+Decoded from the stock `presetmotor.ko` (its `vSetpMotorGPIO_init`), and
+checked on the camera: the first four pins pan it and the last four tilt it, in
+this coil order, and a positive tilt points it up. The module switches the
+eight pads to GPIO itself: the EV200 pinctrl muxes a pad when
+`gpio_direction_output()` claims it, and leaves SHAREPIN_CON2 with the value
+the stock driver writes. Use a delay of 2 ms or more: at 1 ms a pan loses steps
+(24-32 px off after 100 steps out and back), at 2 ms three such moves land
+where they started.
+
+### Anyka AK3918EV300L, V380 pan/tilt
+
+```
+insmod gpiostep.ko pan_gpios=25,24,56,55 tilt_gpios=68,58,26,27
+```
+
+From the stock device tree's `motor0` and `motor1` nodes (`pwm-pins`): two
+28BYJ-48 steppers, pan 2500 and tilt 600 half-steps end to end. Their coil
+table (`pwm-tbl-cw`: 9, 1, 3, 2, 6, 4, C, 8) is this module's half-step
+sequence, so the pins go in the device tree's order. The EV300L pinctrl muxes
+each pad to GPIO when `gpio_direction_output()` claims it, pad 68 included,
+whose GPIO is function 2 rather than 0. Not yet run on the camera: the
+direction of a positive step and the delay it needs are unchecked.
 
 ### Coils on a 74HC595 shift register
 

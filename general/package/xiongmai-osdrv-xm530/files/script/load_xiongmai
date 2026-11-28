@@ -17,16 +17,36 @@ report_error() {
 	exit 1
 }
 
+# The vendor h264, log, xm_i2s and mve_base modules each leak 4 KiB of slab
+# on every open of their /proc/umap file, and rmmod does not return it:
+# majestic's /metrics reads venc twice, so a camera scraped every half
+# minute loses about 17 MB a day (OpenIPC/firmware#2956). The open drivers
+# (OpenIPC/openxiongmai hx280enc, xm_v200_log, xm530_i2s and xm530_mve), when
+# xiongmai-opensdk installed them, have the same devices without the leak;
+# the vendor's are the fallback.
+insert_h264() {
+	modprobe open_h264 2>/dev/null || insmod xm530_h264.ko
+}
+
+remove_h264() {
+	rmmod -w open_h264 2>/dev/null || rmmod -w xm530_h264
+}
+
+insert_log() {
+	modprobe open_log 2>/dev/null || insmod log.ko
+}
+
 insert_audio() {
 	echo "insert audio"
-	insmod xm_i2s.ko
+	modprobe open_i2s 2>/dev/null || insmod xm_i2s.ko
 	insmod acodec.ko
 }
 
+# open_mve, like mve_base, runs on the vendor's mve_rsrc.
 insert_h265() {
 	echo "insert h265"
 	insmod mve_rsrc.ko
-	insmod mve_base.ko
+	modprobe open_mve 2>/dev/null || insmod mve_base.ko
 }
 
 insert_vo() {
@@ -44,7 +64,7 @@ insert_vo() {
 remove_audio() {
 	echo "remove audio"
 	rmmod -w acodec
-	rmmod -w xm_i2s
+	rmmod -w open_i2s 2>/dev/null || rmmod -w xm_i2s
 }
 
 # VI: the open driver when xiongmai-opensdk installed it (OpenIPC/openxiongmai
@@ -136,11 +156,11 @@ insert_ko() {
 	insert_vi
 	insert_isp
 	insert_rgn
-	insmod xm530_h264.ko
+	insert_h264
 	insmod xm_rtc.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko: see
 	# OpenIPC/firmware#2611.
-	insmod log.ko
+	insert_log
 	insert_audio
 	insert_h265
 	#insert_vo
@@ -149,7 +169,7 @@ insert_ko() {
 remove_ko() {
 	remove_audio
 	rmmod -w xm_rtc
-	rmmod -w xm530_h264
+	remove_h264
 	remove_rgn
 	remove_isp
 	remove_vi
@@ -196,19 +216,30 @@ record_sensor() {
 
 # The XM530 install commands give Linux mem=35M of the XM530's 64 MB, and an
 # XM550 installed with them unchanged keeps that 35M of its 128 MB: Linux
-# runs in 32 MB beside a 93 MB media zone the pipeline uses about 25 MB of,
-# and majestic cannot offer 1440p (#2853). 64/64 is what that board ran
-# 2560x1440 H.265 with. Only the untouched 35M of the plain xm layout moves:
-# any other split, and every cma or hybrid boot, is the owner's. It applies
-# at the next boot; this one keeps the zone it already handed out.
+# runs in 32 MB beside a 93 MB media zone, and on that split the #2853 board
+# could not run past 1080p. Moved to 72/56 it ran for days with the SC5332's
+# full 2592x1944 main stream and a sub-stream: 31.3 MB of the zone in use,
+# where 64 MB for Linux had been too tight. Only the untouched 35M of the
+# plain xm layout moves: any other split, and every cma or hybrid layout,
+# booted or written for the next boot, is the owner's. It applies at the
+# next boot; this one keeps the zone it already handed out. The environment
+# decides as well as this boot because a builder customizer that has just
+# written its own split reboots into it a few seconds later, and this must
+# not overwrite that split before then.
 fix_xm550_split() {
 	[ "$chipid" = xm550 ] && [ "$MEM_OS" = 35 ] || return 0
 	grep -q -E '(^| )(cma|mmz_allocator)=' /proc/cmdline && return 0
+	local stored out
+	stored=" $(fw_printenv -n bootargs 2>/dev/null) "
+	case "$stored" in
+	*" cma="* | *" mmz_allocator="*) return 0 ;;
+	*" mem=35M "*) ;;
+	*) return 0 ;;
+	esac
 	command -v set_allocator >/dev/null 2>&1 || return 0
-	local out
-	if out=$(set_allocator xm 64 2>&1); then
+	if out=$(set_allocator xm 72 2>&1); then
 		logger -s -p daemon.info -t xiongmai \
-			"XM550 booted with the XM530's mem=35M; mem=64M from the next boot"
+			"XM550 booted with the XM530's mem=35M; mem=72M from the next boot"
 	else
 		logger -s -p daemon.warn -t xiongmai \
 			"XM550 left at mem=35M: $(echo "$out" | tail -1)"

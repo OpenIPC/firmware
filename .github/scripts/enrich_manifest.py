@@ -36,7 +36,9 @@ TAG_RE = re.compile(r"^nightly-(\d{8})-([0-9a-f]{7})$")
 # (one firmware.bin), beside the plain package or -- hi3516cv6xx, hi3519dv500 --
 # instead of it. It is listed under its own flash key, nor_split: consumers
 # match the flash column exactly, so one that asks for "nor" never takes it.
-ASSET_RE = re.compile(r"^openipc\.([^.]+)-(nor|nand)-(lite|ultimate|neo)(-split)?\.tgz$")
+# An SD/eMMC board (ax630c) publishes openipc.<soc>-sd-<variant>.tgz, listed
+# under flash "sd".
+ASSET_RE = re.compile(r"^openipc\.([^.]+)-(nor|nand|sd)-(lite|ultimate|neo)(-split)?\.tgz$")
 
 # Retry budget for transient GitHub API failures (HTTP 401 Bad credentials,
 # 5xx, rate-limit) observed on workflow_run-triggered runs 2026-05-23.

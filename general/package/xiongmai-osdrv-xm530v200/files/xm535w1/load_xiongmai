@@ -49,52 +49,74 @@ set_pll() {
 	sleep 0.1
 }
 
+# MMZ: the open driver (open_mmz, the V200 series' allocator) where the
+# image has it, the vendor's otherwise; an image with open_mmz keeps the
+# vendor module outside the depmod tree.
+insert_mmz() {
+	vendor_mmz=mmz.ko
+	[ -f "$vendor_mmz" ] || vendor_mmz=/usr/lib/xiongmai/mmz.ko
+	modprobe open_mmz mmz_start="$MEM_START" mmz_size="$MEM_LEN" 2>/dev/null ||
+		insmod "$vendor_mmz" mmz_start="$MEM_START" mmz_size="$MEM_LEN" ||
+		report_error
+}
+
+# The pan/tilt motors (open_motor): this chip's boards have none, as its
+# vendor firmware, unless motor_params in the U-Boot environment gives them.
+insert_motor() {
+	params=$(fw_printenv -n motor_params 2>/dev/null)
+	[ -n "$params" ] && [ "$params" != off ] || return 0
+	modprobe open_motor $params
+}
+
 insert_ko() {
 	set_pll
-	insmod i2c.ko
-	insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN" || report_error
-	insmod vb.ko
-	insmod sys.ko
-	insmod log.ko
-	insmod ddr.ko
-	insmod vi.ko line=0
-	insmod isp.ko
-	insmod rgn.ko
-	insmod venc.ko
-	insmod h264.ko
-	insmod hevc.ko
-	insmod nn.ko
+	modprobe open_i2c 2>/dev/null || insmod i2c.ko
+	insert_mmz
+	modprobe open_vb 2>/dev/null || insmod /usr/lib/xiongmai/vb.ko 2>/dev/null || insmod vb.ko
+	modprobe open_sys 2>/dev/null || insmod /usr/lib/xiongmai/sys.ko 2>/dev/null || insmod sys.ko
+	modprobe open_log 2>/dev/null || insmod log.ko
+	modprobe open_ddr 2>/dev/null || insmod ddr.ko
+	modprobe open_vi line=0 2>/dev/null || insmod /usr/lib/xiongmai/vi.ko line=0 2>/dev/null || insmod vi.ko line=0
+	modprobe open_isp 2>/dev/null || insmod isp.ko
+	modprobe open_rgn 2>/dev/null || insmod /usr/lib/xiongmai/rgn.ko 2>/dev/null || insmod rgn.ko
+	modprobe open_venc 2>/dev/null || insmod venc.ko
+	modprobe open_h264 2>/dev/null || insmod h264.ko
+	# the open driver where the image has it
+	modprobe open_hevc 2>/dev/null || insmod hevc.ko
+	modprobe open_nn 2>/dev/null || insmod nn.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko:
 	# see OpenIPC/firmware#2611.
-	insmod acodec.ko
-	insmod i2s.ko
-	insmod adc.ko
+	modprobe open_acodec 2>/dev/null || insmod acodec.ko
+	modprobe open_i2s 2>/dev/null || insmod i2s.ko
+	modprobe open_adc 2>/dev/null || insmod adc.ko
 	# No SD card: the X2W-WNG has no slot, and its firmware ships no SD
 	# module to take the pads from.
 	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
-	modprobe dwc2
-	modprobe xm_usb0
+	modprobe open_dwc2 2>/dev/null || modprobe dwc2
+	modprobe open_xm_usb0 2>/dev/null || modprobe xm_usb0
+	insert_motor
 }
 
 remove_ko() {
-	rmmod -w xm_usb0
-	rmmod -w dwc2
-	rmmod -w adc
-	rmmod -w i2s
-	rmmod -w acodec
-	rmmod -w nn
-	rmmod -w hevc
-	rmmod -w h264
-	rmmod -w venc
-	rmmod -w rgn
-	rmmod -w isp
-	rmmod -w vi
-	rmmod -w ddr
-	rmmod -w log
-	rmmod -w sys
-	rmmod -w vb
-	rmmod -w mmz
-	rmmod -w i2c
+	rmmod -w open_motor 2>/dev/null
+	rmmod -w open_xm_usb0 2>/dev/null || rmmod -w xm_usb0
+	rmmod -w open_dwc2 2>/dev/null || rmmod -w dwc2
+	rmmod -w open_adc 2>/dev/null || rmmod -w adc
+	rmmod -w open_i2s 2>/dev/null || rmmod -w i2s
+	rmmod -w open_acodec 2>/dev/null || rmmod -w acodec
+	rmmod -w open_nn 2>/dev/null || rmmod -w nn
+	rmmod -w open_hevc 2>/dev/null || rmmod -w hevc
+	rmmod -w open_h264 2>/dev/null || rmmod -w h264
+	rmmod -w open_venc 2>/dev/null || rmmod -w venc
+	rmmod -w open_rgn 2>/dev/null || rmmod -w rgn
+	rmmod -w open_isp 2>/dev/null || rmmod -w isp
+	rmmod -w open_vi 2>/dev/null || rmmod -w vi
+	rmmod -w open_ddr 2>/dev/null || rmmod -w ddr
+	rmmod -w open_log 2>/dev/null || rmmod -w log
+	rmmod -w open_sys 2>/dev/null || rmmod -w sys
+	rmmod -w open_vb 2>/dev/null || rmmod -w vb
+	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
+	rmmod -w open_i2c 2>/dev/null || rmmod -w i2c
 }
 
 load_usage() {

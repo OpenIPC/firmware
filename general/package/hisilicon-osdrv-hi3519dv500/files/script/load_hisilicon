@@ -5,6 +5,8 @@
 
 SNS_TYPE0=sc450ai;
 SNS_TYPE1=sc450ai;
+SNS_SET0=0
+SNS_SET1=0
 SYS_PROFILE=0
 IR_AUTO=0
 DEBUG=1
@@ -113,7 +115,7 @@ function remove_detect()
 
 insert_ko() {
 	# sys config
-	modprobe open_sys_config sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1 board=$BOARD ir_auto=$IR_AUTO
+	modprobe open_sys_config sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1 board=$BOARD ir_auto=$IR_AUTO $(vo_sys_config_arg)
 	# driver load
 	insert_osal
 	modprobe open_base logmpp_show=${DEBUG}
@@ -129,6 +131,10 @@ insert_ko() {
 	modprobe open_chnl
 	modprobe open_rc
 	modprobe open_venc g_venc_max_chn_num=8
+	# The encoders' venc server, between venc and the encoders as the SDK's
+	# load3519dv500 has it. Without it the first encoder call majestic makes
+	# (VENC get mod param) is a NULL dereference in open_venc and a panic.
+	modprobe open_venc_svr
 	modprobe open_h264e
 	modprobe open_h265e
 
@@ -143,6 +149,7 @@ insert_ko() {
 	modprobe open_sensor_spi 2>/dev/null
 
 	insert_audio
+	insert_vo
 	modprobe open_mipi_rx
 	# modprobe open_user
 	case ${socmodel} in 20s|20g|00s|00g) modprobe open_aiisp ;; esac
@@ -161,6 +168,7 @@ remove_ko() {
 	# rmmod open_user
 	rmmod open_mipi_rx
 
+	remove_vo
 	remove_audio
 	rmmod open_sensor_spi &> /dev/null
 	rmmod open_sensor_i2c &> /dev/null
@@ -172,6 +180,7 @@ remove_ko() {
 	rmmod open_h265e
 	rmmod open_svac3e &> /dev/null
 	rmmod open_h264e
+	rmmod open_venc_svr
 	rmmod open_venc
 	rmmod open_rc
 	rmmod open_chnl
@@ -208,6 +217,112 @@ load_usage()
 	echo -e "for example: $0 -i -sensor0 sc4336p -sensor1 sc4336p -mmz_start 0x42000000 -mmz_size 96M -ir_auto 1\n"
 }
 
+# The sensor on the SENSOR1 connector. majestic finds it by probing each
+# connector's bus, and the probe above names the first sensor it finds, so
+# SENSOR1's port gets the same sensor type as SENSOR0's -- right for any pair
+# that shares a master clock (os04a10, os08a20: 0x4001). A sensor on SENSOR1
+# that needs another can be named in the environment:
+#   fw_setenv sensor1 sc450ai
+# -sensor1 on the command line wins over the environment.
+sensor1_from_env() {
+	[ $SNS_SET1 -eq 1 ] && return 0
+	env_sensor1=$(fw_printenv -n sensor1 2>/dev/null || true)
+	if [ -n "$env_sensor1" ]; then
+		SNS_TYPE1=$env_sensor1
+		SNS_SET1=1
+		logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR1 as ${SNS_TYPE1}"
+	fi
+}
+
+# SENSOR1 is controlled over I2C5, whose pins (iocfg 0x0EFF0024/0x0EFF0028)
+# come up as GPIO: open_sys_config is built without I2C_EX_EN and leaves them
+# at 0x1300, while SENSOR1's clock and reset pins it does mux. majestic muxes
+# them itself when it finds a sensor there; for a sensor named in the
+# environment they are muxed here as well, so it answers from the start.
+sensor1_pinmux() {
+	[ $SNS_SET1 -eq 1 ] || return 0
+	devmem 0x0EFF0024 32 0x1752	# I2C5_SCL
+	devmem 0x0EFF0028 32 0x1752	# I2C5_SDA
+}
+
+# Video output. VO_INTF is the interface open_sys_config muxes the pins for;
+# empty means none, and then nothing below loads and the pins are left as they
+# were, which is every camera without a display.
+VO_INTF=
+
+# The demo boards' HDMI adapter: a Lontium LT8618SXB BT.1120-to-HDMI bridge on
+# I2C7 at 0x39, fed by VO over BT.1120. Its chip ID is 0x17 0x02 at registers
+# 0x00/0x01 of bank 0x80. From power-on those read 0x00 until 0xff selects the
+# bank and 0xee enables the registers (measured after a power cycle), so the
+# ID cannot be read without those two writes.
+#
+# The probe leaves any other device as it found it. Nothing is written unless
+# something answers at 0x39; 0xff and 0xee are read before they are written,
+# and when the ID is not the bridge's they get their old values back.
+#
+# I2C7's pads are set first, because the probe runs before open_sys_config
+# loads; they get the value open_sys_config writes on every board anyway.
+hdmi_bridge_present() {
+	local bank enable id
+	devmem 0x179F0000 32 0x1012	# I2C7_SDA
+	devmem 0x179F0004 32 0x1012	# I2C7_SCL
+	bank=$(i2cget -y 7 0x39 0xff 2> /dev/null) || return 1
+	enable=$(i2cget -y 7 0x39 0xee 2> /dev/null) || return 1
+	i2cset -y 7 0x39 0xff 0x80 2> /dev/null || return 1
+	i2cset -y 7 0x39 0xee 0x01 2> /dev/null
+	id="$(i2cget -y 7 0x39 0x00 2> /dev/null) $(i2cget -y 7 0x39 0x01 2> /dev/null)"
+	[ "$id" = "0x17 0x02" ] && return 0
+	i2cset -y 7 0x39 0xee "$enable" 2> /dev/null
+	i2cset -y 7 0x39 0xff "$bank" 2> /dev/null
+	return 1
+}
+
+# BT.1120 takes over pins that are SDIO1, I2C0 and the MIPI DSI lanes
+# elsewhere, so it is chosen only when the bridge answers, or when the
+# environment says so:
+#   fw_setenv vo_intf bt1120     (or mipi_tx, bt656, rgb...)
+#   fw_setenv vo_intf none       no video output, even with the bridge fitted
+resolve_vo() {
+	env_vo=$(fw_printenv -n vo_intf 2>/dev/null || true)
+	if [ -n "$env_vo" ]; then
+		[ "$env_vo" = "none" ] || VO_INTF=$env_vo
+		logger -s -p daemon.info -t hisilicon "Video output ${env_vo} from the environment"
+	elif hdmi_bridge_present; then
+		VO_INTF=bt1120
+		logger -s -p daemon.info -t hisilicon "HDMI bridge (LT8618SXB) answers on I2C7, video output over BT.1120"
+	fi
+}
+
+vo_sys_config_arg() {
+	[ -n "$VO_INTF" ] && echo "vo_intf=$VO_INTF"
+}
+
+# open_vo_dev before open_vo, as the SDK's load3519dv500 has them. The bridge
+# driver programs the LT8618SXB at load and refuses to load without one. That
+# is logged, with what modprobe said, and the boot goes on: the camera streams
+# whether or not the HDMI output can be driven.
+insert_vo() {
+	local err
+	[ -n "$VO_INTF" ] || return 0
+	modprobe open_vo_dev
+	modprobe open_vo
+	case $VO_INTF in
+		bt1120 | bt.1120)
+			if ! err=$(modprobe open_lt8618sx 2>&1); then
+				logger -s -p daemon.err -t hisilicon "The HDMI bridge driver did not load, so HDMI stays dark: ${err:-no reason given}"
+			fi
+			;;
+		mipi_tx | mipitx) modprobe open_mipi_tx ;;
+	esac
+}
+
+remove_vo() {
+	rmmod open_lt8618sx 2>/dev/null
+	rmmod open_mipi_tx 2>/dev/null
+	rmmod open_vo 2>/dev/null
+	rmmod open_vo_dev 2>/dev/null
+}
+
 calc_mmz_info() {
 	mmz_start=$(echo "$mem_start $os_mem_size" |
 		awk 'BEGIN { temp = 0; }
@@ -242,6 +357,7 @@ function parse_arg()
 		if [ $b_arg_sensor0 -eq 1 ] ; then
 			b_arg_sensor0=0;
 			SNS_TYPE0=$arg;
+			SNS_SET0=1
 			# Mirror ev200: explicit sensor flag also seeds SENSOR
 			# so the auto-detect probe path is skipped.
 			export SENSOR=$arg
@@ -249,6 +365,7 @@ function parse_arg()
 		if [ $b_arg_sensor1 -eq 1 ] ; then
 			b_arg_sensor1=0;
 			SNS_TYPE1=$arg;
+			SNS_SET1=1
 		fi
 
 		if [ $b_arg_ir_auto -eq 1 ] ; then
@@ -352,46 +469,66 @@ else
 fi
 echo "mmz: $mmz_args"
 
-# A failed probe used to be stored as sensor=unknown, and rcS exports the
-# stored value into SENSOR before this ever runs -- so an already-latched
-# camera arrives here with SENSOR=unknown, takes the "set manually" branch
-# below, and never probes again however the real fault is fixed. Treat it
-# as unset and drop it from the environment so this boot re-detects. #2428.
-if [ "$SENSOR" = "unknown" ]; then
-	SENSOR=
-	fw_setenv sensor
-fi
+# The sensors on this board plug in with ribbon cables and get swapped, so the
+# name saved on an earlier boot -- the u-boot `sensor` variable, which rcS also
+# exports as SENSOR -- is checked against the bus on every boot. What answers
+# now wins, and is saved when it differs; the saved name stands only when
+# nothing answers (a sensor ipcinfo does not know), so a camera that worked
+# keeps working. -sensor0 on the command line is taken as given, unprobed.
+# The probe costs about 3 s. A saved "unknown" is a failed probe from before
+# #2428 and is dropped.
+resolve_sensor() {
+	local saved detected
+	[ "$SENSOR" = "unknown" ] && SENSOR=
+	saved=$(fw_printenv -n sensor 2>/dev/null)
+	if [ "$saved" = "unknown" ]; then
+		fw_setenv sensor
+		saved=
+	fi
+	if [ $SNS_SET0 -eq 1 ]; then
+		logger -s -p daemon.info -t hisilicon "Manualy set SENSOR as ${SENSOR}"
+		return 0
+	fi
+	[ -z "$SENSOR" ] && SENSOR=$saved
 
-if [ -n "$SENSOR" ]; then
-	logger -s -p daemon.info -t hisilicon "Manualy set SENSOR as ${SENSOR}"
-else
-	if fw_printenv -n sensor >/dev/null; then
-		SENSOR_ENV=$(fw_printenv -n sensor)
-		export SENSOR=${SENSOR_ENV}
-		logger -s -p daemon.info -t hisilicon "Get data from environment and set SENSOR as ${SENSOR}"
-	else
-		insert_detect
-		SENSOR_DETECT=$(ipcinfo --short-sensor)
-		export SENSOR=${SENSOR_DETECT:=unknown}
-		remove_detect
+	insert_detect
+	detected=$(ipcinfo --short-sensor)
+	remove_detect
+
+	if [ -n "$detected" ] && [ "$detected" != "unknown" ]; then
+		if [ -n "$SENSOR" ] && [ "$SENSOR" != "$detected" ]; then
+			logger -s -p daemon.info -t hisilicon "Sensor changed: ${SENSOR} was saved, ${detected} answers"
+		fi
+		SENSOR=$detected
 		logger -s -p daemon.info -t hisilicon "Get data from ipcinfo and set SENSOR as ${SENSOR}"
-		# Do not persist a failed detection. The fw_printenv branch above wins
-		# whenever `sensor` exists, so writing "unknown" here latches the camera
-		# into "SENSOR is not detected, aborting..." for good -- detection never
-		# runs again and nothing says why. Seen on a GK7202V500 in #2428.
-		# load_ingenic has always cleared the variable instead of storing the
-		# miss; this is the same behaviour, reached by not writing at all.
-		if [ "$SENSOR" != "unknown" ]; then
+		if [ "$saved" != "$SENSOR" ]; then
 			fw_setenv sensor $SENSOR && logger -s -p daemon.info -t hisilicon "Write detected ${SENSOR} to U-Boot ENV"
 		fi
+	elif [ -n "$SENSOR" ]; then
+		logger -s -p daemon.info -t hisilicon "No sensor answered; keeping ${SENSOR} from the environment"
+	else
+		SENSOR=unknown
 	fi
-fi
+}
+
+resolve_sensor
+export SENSOR
 
 if [ "$SENSOR" = "unknown" ]; then
 	exit 1
 else
+	# open_sys_config takes each port's master clock from the sensor name
+	# (0x4001 for os04a10/os08a20, 0xA001 for sc450ai/sc850sl). The defaults
+	# are only good for the auto-detect probe above, so give it the sensor
+	# this boot resolved unless -sensor0/-sensor1 named one, as hi3516cv6xx
+	# does.
+	sensor1_from_env
+	[ $SNS_SET0 -eq 0 ] && SNS_TYPE0=$SENSOR
+	[ $SNS_SET1 -eq 0 ] && SNS_TYPE1=$SENSOR
 	if [ $b_arg_modprobe -eq 1 ]; then
 		cd /lib/modules/$(uname -r)/hisilicon
+		resolve_vo
 		insert_ko
+		sensor1_pinmux
 	fi
 fi

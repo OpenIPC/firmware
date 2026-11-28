@@ -43,54 +43,83 @@ set_pll() {
 	devmem 0x200506A0 32 0x1
 }
 
+# MMZ: the open driver (open_mmz, the V200 series' allocator) where the
+# image has it, the vendor's otherwise; an image with open_mmz keeps the
+# vendor module outside the depmod tree.
+insert_mmz() {
+	vendor_mmz=mmz.ko
+	[ -f "$vendor_mmz" ] || vendor_mmz=/usr/lib/xiongmai/mmz.ko
+	modprobe open_mmz mmz_start="$MEM_START" mmz_size="$MEM_LEN" 2>/dev/null ||
+		insmod "$vendor_mmz" mmz_start="$MEM_START" mmz_size="$MEM_LEN" ||
+		report_error
+}
+
+# The pan/tilt motors (open_motor), only where motor_params in the U-Boot
+# environment gives the board's pins: they differ between boards, and a
+# reference board's may be another board's keys or LEDs. The vendor
+# reference board's, for its kmotor.ko:
+#   motor_params="gpio_pin=80,81,82,83,87,86,85,84,-1,-1,-1,-1 auto_test=0"
+insert_motor() {
+	params=$(fw_printenv -n motor_params 2>/dev/null)
+	[ -n "$params" ] && [ "$params" != off ] || return 0
+	modprobe open_motor $params
+}
+
 insert_ko() {
 	set_pll
-	insmod i2c.ko
-	insmod mmz.ko mmz_start="$MEM_START" mmz_size="$MEM_LEN" || report_error
-	insmod vb.ko
-	insmod sys.ko
-	insmod log.ko
-	insmod ddr.ko
-	insmod vpss.ko line=0
-	insmod isp.ko
-	insmod rgn.ko
-	insmod venc.ko
-	insmod h264.ko
-	insmod hevc.ko
-	insmod nn.ko
+	modprobe open_i2c 2>/dev/null || insmod i2c.ko
+	insert_mmz
+	modprobe open_vb 2>/dev/null || insmod /usr/lib/xiongmai/vb.ko 2>/dev/null || insmod vb.ko
+	modprobe open_sys 2>/dev/null || insmod /usr/lib/xiongmai/sys.ko 2>/dev/null || insmod sys.ko
+	modprobe open_log 2>/dev/null || insmod log.ko
+	modprobe open_ddr 2>/dev/null || insmod ddr.ko
+	modprobe open_vpss line=0 2>/dev/null || insmod /usr/lib/xiongmai/vpss.ko line=0 2>/dev/null || insmod vpss.ko line=0
+	modprobe open_isp 2>/dev/null || insmod isp.ko
+	# VI, which scales a single-ISP product's picture (rgn takes its covers)
+	# (no vendor vi.ko on these chips to fall back to)
+	modprobe open_vi || echo "load_xiongmai: open_vi did not load" >&2
+	modprobe open_rgn 2>/dev/null || insmod /usr/lib/xiongmai/rgn.ko 2>/dev/null || insmod rgn.ko
+	modprobe open_venc 2>/dev/null || insmod venc.ko
+	modprobe open_h264 2>/dev/null || insmod h264.ko
+	# the open driver where the image has it
+	modprobe open_hevc 2>/dev/null || insmod hevc.ko
+	modprobe open_nn 2>/dev/null || insmod nn.ko
 	# The watchdog is the kernel's sp805_wdt (/dev/watchdog), not xm_wdt.ko:
 	# see OpenIPC/firmware#2611.
-	insmod acodec.ko
-	insmod i2s.ko
-	insmod adc.ko
+	modprobe open_acodec 2>/dev/null || insmod acodec.ko
+	modprobe open_i2s 2>/dev/null || insmod i2s.ko
+	modprobe open_adc 2>/dev/null || insmod adc.ko
 	# The kernel's xm_v200_sd, not the vendor's sdio0_sd/sdio1_sd: those hand
 	# the arasan driver their own kernel's platform data layout.
 	modprobe xm_v200_sd detect=1 pdn="$SDIO_PDN"
 	# modprobe: a Wi-Fi profile (/etc/wireless/usb) may have loaded them already
-	modprobe dwc2
-	modprobe xm_usb0
+	modprobe open_dwc2 2>/dev/null || modprobe dwc2
+	modprobe open_xm_usb0 2>/dev/null || modprobe xm_usb0
+	insert_motor
 }
 
 remove_ko() {
+	rmmod -w open_motor 2>/dev/null
 	modprobe -r xm_v200_sd
-	rmmod -w xm_usb0
-	rmmod -w dwc2
-	rmmod -w adc
-	rmmod -w i2s
-	rmmod -w acodec
-	rmmod -w nn
-	rmmod -w hevc
-	rmmod -w h264
-	rmmod -w venc
-	rmmod -w rgn
-	rmmod -w isp
-	rmmod -w vpss
-	rmmod -w ddr
-	rmmod -w log
-	rmmod -w sys
-	rmmod -w vb
-	rmmod -w mmz
-	rmmod -w i2c
+	rmmod -w open_xm_usb0 2>/dev/null || rmmod -w xm_usb0
+	rmmod -w open_dwc2 2>/dev/null || rmmod -w dwc2
+	rmmod -w open_adc 2>/dev/null || rmmod -w adc
+	rmmod -w open_i2s 2>/dev/null || rmmod -w i2s
+	rmmod -w open_acodec 2>/dev/null || rmmod -w acodec
+	rmmod -w open_nn 2>/dev/null || rmmod -w nn
+	rmmod -w open_hevc 2>/dev/null || rmmod -w hevc
+	rmmod -w open_h264 2>/dev/null || rmmod -w h264
+	rmmod -w open_venc 2>/dev/null || rmmod -w venc
+	rmmod -w open_rgn 2>/dev/null || rmmod -w rgn
+	rmmod -w open_isp 2>/dev/null || rmmod -w isp
+	rmmod -w open_vi 2>/dev/null
+	rmmod -w open_vpss 2>/dev/null || rmmod -w vpss
+	rmmod -w open_ddr 2>/dev/null || rmmod -w ddr
+	rmmod -w open_log 2>/dev/null || rmmod -w log
+	rmmod -w open_sys 2>/dev/null || rmmod -w sys
+	rmmod -w open_vb 2>/dev/null || rmmod -w vb
+	rmmod -w open_mmz 2>/dev/null || rmmod -w mmz
+	rmmod -w open_i2c 2>/dev/null || rmmod -w i2c
 }
 
 load_usage() {

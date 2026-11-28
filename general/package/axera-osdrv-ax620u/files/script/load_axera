@@ -1,0 +1,73 @@
+#!/bin/sh
+#
+# Axera AX620U module load. Order and parameters follow the stock
+# firmware's own loader (/usr/lib/modules/Load_AX620U and
+# /usr/etc/loadpublic on the JFtech IPC_AX620U_A8 dump): ax_cmm needs its
+# memory pool spelled out, everything above the kernel's mem= up to the
+# end of DRAM.
+#
+# modprobe, not insmod: the package installs the modules under
+# /lib/modules/$(uname -r)/axera, where Buildroot's depmod indexes them, so
+# each module's depends= (ax_osal for nearly all) comes from modules.dep. The
+# list stays in the stock order anyway: ax_cmm has to be loaded with its pool
+# before anything that depends on it, or modprobe would load it without one.
+#
+# usage: load_axera [-i|-r]
+
+KO_DIR=/lib/modules/$(uname -r)/axera
+mem_start=0x40000000
+
+os_mem=
+for arg in $(cat /proc/cmdline); do
+	case "$arg" in
+		mem=*M) os_mem=${arg#mem=}; os_mem=${os_mem%M} ;;
+	esac
+done
+os_mem=${os_mem:-$(fw_printenv -n osmem 2>/dev/null | tr -d 'M')}
+os_mem=${os_mem:-87}
+mem_total=$(fw_printenv -n totalmem 2>/dev/null | tr -d 'M')
+mem_total=${mem_total:-256}
+
+mmz_start=$(printf "0x%x" $((mem_start + os_mem * 1024 * 1024)))
+mmz_size=$((mem_total - os_mem))M
+
+# The stock order: /usr/etc/loadpublic loads XmCommon, XmDemux and XmGpio,
+# then Load_AX620U the ax_* modules, then XmGpioI2c. XmIrCut, which the
+# stock App loads itself, goes last.
+modules="XmCommon XmDemux XmGpio
+	ax_osal ax_sys ax_cmm ax_npu ax_sdio_host ax_pool ax_proton ax_mipi
+	ax_venc ax_jenc ax_vdec ax_audio ax_vo ax_ivps ax_gdc ax_hwinfo
+	ax_pcal6416a ax_logctl ax_dma_hal ax_ddr_retention ax_ives ax_rtc ax_avs
+	XmGpioI2c XmIrCut"
+
+insert_ko() {
+	[ -d "$KO_DIR" ] || {
+		logger -s -p daemon.err -t axera "no $KO_DIR"
+		return 1
+	}
+
+	failed=0
+	for ko in $modules; do
+		case "$ko" in
+			ax_cmm) set -- "cmmpool=anonymous,0,$mmz_start,$mmz_size" ;;
+			*) set -- ;;
+		esac
+		grep -q "^$ko " /proc/modules && continue
+		modprobe "$ko" "$@" || {
+			logger -s -p daemon.err -t axera "modprobe $ko failed"
+			failed=1
+		}
+	done
+	return $failed
+}
+
+remove_ko() {
+	for ko in $(echo $modules | tr ' ' '\n' | sed '1!G;h;$!d'); do
+		rmmod "$ko" 2>/dev/null
+	done
+}
+
+case "$1" in
+	-r) remove_ko ;;
+	*) insert_ko ;;
+esac

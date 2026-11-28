@@ -46,6 +46,16 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 # one edit. Every entry must have a br-ext-chip-*/configs/<board>_defconfig;
 # --self-test enforces that.
 ALL_BOARDS = [
+    # MStar [I3]
+    # One 3.18 kernel and musl toolchain for the family. These generic images
+    # have booted only in qemu-bench, each on its own machine with the
+    # OpenIPC/u-boot bootloader for it; the vendor stack streams on an MSC316DC
+    # camera (Imou LOOC 2) in OpenIPC/builder's msc316dc_lite_imou-looc2, built
+    # from this family. As for the AK3918AV100 parts, they are published so
+    # that owners of these cameras can be the first to run them.
+    "msc313e_lite", "msc316dc_lite", "msc316dm_lite",
+    # Sigmastar [I2M]
+    "ssr621q_lite",
     # Sigmastar [I6]
     "ssc325_lite", "ssc325de_lite",
     # Sigmastar [I6B]
@@ -90,7 +100,7 @@ ALL_BOARDS = [
     # via gk7205v500's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "gk7201v200_lite", "gk7205v500_lite",
     # Goke [GK7206V100]
-    # gk7206v10/v10b/v11/v11a/v11at are firmware-identical to gk7206v12a ---
+    # gk7206v10/v10b/v11/v11at/v12a are firmware-identical to gk7206v11a ---
     # served via gk7206v100's BR2_OPENIPC_SOC_ALIASES (manifest @alias).
     "gk7206v100_lite",
     # Ambarella
@@ -98,10 +108,15 @@ ALL_BOARDS = [
     # Allwinner
     "v851s_lite",
     # Anyka [AK3918EV300]
-    # One 4.4.302 kernel and toolchain for every AK39 part. ak3918av130_lite
-    # is in UNBUILT_BOARDS until its prebuilt SDK modules have run on a camera.
+    # One 4.4.302 kernel and toolchain for every AK39 part. ak3918av130_lite's
+    # ISP, encoder, Ethernet and SD drivers are the AnyCloud39AV130 SDK's
+    # prebuilt modules, matched to that kernel by vermagic and a struct-layout
+    # probe. On a Yoton WS03 (#2962) the I2C, ION, RTC, eFuse, PCM, SD, UIO and
+    # USB host modules have run; ak_isp and the encoder modules have not (see
+    # anyka-osdrv-ak3918av130.mk).
     "ak3910_lite", "ak3918_lite", "ak3918ev200_lite", "ak3918ev300_lite",
     "ak3916ev300_lite", "ak3918ev330_lite", "ak3918ev331_lite",
+    "ak3918av130_lite",
     # Anyka [AK3918AV100]
     # The AnyCloud39AV100 SDK's own 4.4.282 kernel (OpenIPC/linux#208) and its
     # prebuilt modules. They have booted only in qemu-bench; the image is
@@ -126,12 +141,14 @@ ALL_BOARDS = [
     "xm510_lite", "xm530_lite",
     # The V200 series: the xm530 family's kernel, built per chip.
     "xm530v200_lite", "xm533_lite", "xm535d1_lite", "xm535d2_lite", "xm535w1_lite",
+    "xm232_lite",
     # Ultimate
     "ssc333_ultimate", "ssc335_ultimate", "ssc335de_ultimate", "ssc337_ultimate",
-    "ssc337de_ultimate", "ssc30kd_ultimate", "ssc30kq_ultimate", "ssc338q_ultimate",
+    "ssc337de_ultimate", "ssc30kd_ultimate", "ssc30kq_ultimate", "ssc338q_ultimate", "ssc378de_ultimate",
     "t20_ultimate", "t21_ultimate", "t31_ultimate", "t40_ultimate", "t41_ultimate",
     "hi3516av100_ultimate", "hi3516dv100_ultimate", "hi3518ev200_ultimate",
     "hi3516cv300_ultimate", "hi3516ev200_ultimate", "hi3516ev300_ultimate",
+    "nt98566_ultimate",
     "hi3518ev300_ultimate", "hi3516av200_ultimate",
     "gk7202v300_ultimate", "gk7205v200_ultimate", "gk7205v300_ultimate",
     "gk7205v500_ultimate",
@@ -165,20 +182,16 @@ UNBUILT_BOARDS = {
     "hi3516ev300_glibc": "variant 'glibc', not a standard matrix variant",
     "t31glibc_lite": "glibc toolchain variant of t31_lite",
 
-    # Real, and built locally. The other Anyka boards build every driver from
-    # source; this one's ISP, encoder, Ethernet and SD drivers are the
-    # AnyCloud39AV130 SDK's prebuilt modules, matched to the family kernel by
-    # vermagic and a struct-layout probe rather than by a boot (see
-    # general/package/anyka-osdrv-ak3918av130/anyka-osdrv-ak3918av130.mk). It
-    # joins ALL_BOARDS once those modules have run on an AV130 camera.
-    "ak3918av130_lite": "prebuilt SDK modules not yet run on an AV130 camera",
+    # Mainline kernel, no streamer yet, run only under qemu-bench. It joins
+    # ALL_BOARDS once it streams and has run on a camera.
+    "gm8126_lite": "no streamer, not run on a camera yet",
 
     # Not firmware images at all: no BR2_OPENIPC_VARIANT, so nothing the repack
     # step or the manifest knows how to name.
     "hi3519dv500_toolchain": "toolchain config, produces no firmware image",
-    # Axera has no image yet. These two configs publish its toolchains so
-    # majestic can be ported first. The boards follow once a camera has run
-    # them (#2670).
+    # Axera's toolchain configs publish toolchain.axera-ax620{e,u} (#2852) for
+    # the ax620e_lite, ax630c_lite and ax620u_lite boards, which are in
+    # WEEKLY_BOARDS.
     "ax620e_toolchain": "toolchain config, produces no firmware image",
     "ax620u_toolchain": "toolchain config, produces no firmware image",
     # T41 publishes its toolchain ahead of its boards (#2877), whose build
@@ -237,7 +250,7 @@ NO_BUILD_SCRIPTS = {
 
 # CI plumbing: it decides how the build runs but cannot change a byte of what
 # ends up on a camera, so what needs proving is that the steps still work, not
-# that 96 images still come out the same. These get SMOKE_BOARDS.
+# that every image still comes out the same. These get SMOKE_BOARDS.
 #
 # ci-matrix.py is deliberately NOT here: a smoke set alone would never build a
 # board the edit adds to ALL_BOARDS. classify() gives it the smoke set plus
@@ -284,6 +297,9 @@ SMOKE_BOARDS = [
 # They are part of the tree like any other built board, so --self-test holds
 # them to the same contract, but they cost more than they are touched: the v83x
 # pair compile their own gcc and musl before the firmware, and change rarely.
+# The Axera boards are new and not yet run on a camera, so a weekly image is
+# enough until they are (#2670); ax630c_lite (Sipeed MaixCAM2, an SD card
+# image) has been booted only in QEMU.
 #
 # A pull request builds them only for a change nothing else covers: their own
 # defconfigs, their board directory, or a package no nightly board builds. A
@@ -295,7 +311,8 @@ SMOKE_BOARDS = [
 # six days their last images stay where flashers and sysupgrade find them. A
 # nightly that skips because HEAD has not moved skips them too; they wait for the
 # next WEEKLY_DAY with a new commit.
-WEEKLY_BOARDS = ["v83x_lite", "v83x_ultimate"]
+WEEKLY_BOARDS = ["v83x_lite", "v83x_ultimate", "ax620e_lite", "ax620u_lite",
+                 "ax630c_lite"]
 WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 
 # Board directories with no board in ALL_BOARDS. Their defconfigs exist but are
@@ -303,11 +320,11 @@ WEEKLY_DAY = 6  # datetime.weekday(): Sunday, UTC
 # listed rather than inferred so that a family silently falling out of the
 # matrix fails --self-test instead of quietly skipping CI.
 UNBUILT_FAMILIES = {
-    ("br-ext-chip-sigmastar", "infinity3"),
+    ("br-ext-chip-grainmedia", "gm8126"),
     ("br-ext-chip-ti", "dm36x"),
 }
 
-# Packages no board in ALL_BOARDS builds: enabled only by the 29 defconfigs the
+# Packages no board in ALL_BOARDS builds: enabled only by the defconfigs the
 # matrix leaves out, or by the variants that live in OpenIPC/builder. Frozen so
 # that a package dropping off the matrix is a --self-test failure rather than a
 # silent narrowing. This list is only ever read by --self-test: changes to these
@@ -342,19 +359,6 @@ UNBUILT_FAMILIES = {
 # which no defconfig in ALL_BOARDS has. OpenIPC/builder's gk7205v200_otg_generic
 # selects it. A mainline dual-role defconfig would take it off this list.
 #
-# wpa_supplicant-openipc is here because no board in this tree selects it on
-# purpose. It is the WPA3-SAE supplicant (#2449); the camera that wants it is
-# OpenIPC/builder's ssc377_lite_tp-link-tapo-c120, and the generic ssc377_lite
-# ships no Wi-Fi driver to use it with, so flipping a mainline board to it
-# would spend flash on a radio that is not there. A mainline board with a
-# driver choosing it would take it off this list.
-#
-# anyka-osdrv-ak3918av130 is selected only by ak3918av130_lite, which is in
-# UNBUILT_BOARDS: its prebuilt SDK modules are matched to the kernel by
-# vermagic and a struct-layout probe, not by a boot (see its .mk). It leaves
-# this list when that board joins ALL_BOARDS, which waits for those modules
-# to have run on an AV130 camera.
-#
 # exfat-nofuse-openipc is the exFAT module for the 3.x kernels that
 # exfat-openipc does not build on. Its only user is OpenIPC/builder's
 # msc316dc_lite_imou-looc2 (infinity3, kernel 3.18); the mainline infinity3
@@ -370,10 +374,9 @@ UNBUILT_FAMILIES = {
 # board with a button in a gpio.conf would take it off this list.
 NOT_BUILT = {
     "adaptive-link", "aic8800-openipc",
-    "anyka-osdrv-ak3918av130",
     "aura-httpd", "baresip-openipc", "comgt", "exfat-nofuse-openipc", "f2fs-tools-openipc", "faceter-agent",
     "faceter-detector", "fdk-aac-openipc", "ffmpeg-openipc", "gdbserver-lite",
-    "go2rtc", "herald", "hisi-gpio", "i2c-telemetry",
+    "go2rtc", "grainmedia-osdrv-gm8126", "herald", "hisi-gpio", "i2c-telemetry",
     "jsonfilter", "libhv-openipc", "libre-openipc", "libsrt-openipc",
     "matter",
     "mavfwd", "mdnsd-openipc", "mini", "mqtt-bot", "msposd", "n3n-openipc", "nabto",
@@ -383,7 +386,7 @@ NOT_BUILT = {
     "rtl8812au", "rtl8812au-openipc", "rtl88x2eu-openipc", "rtw-hostapd", "rubyfpv",
     "siproxd-openipc", "ssv615x-openipc", "ssv635x-openipc", "txw8301-openipc",
     "uqmi-openipc", "usb-dual-role", "vdec-openipc", "venc-openipc",
-    "w1-ds18b20", "waybeam", "wpa_supplicant-openipc",
+    "w1-ds18b20", "waybeam",
     "webface",
     "webrtc-audio-processing-openipc", "wifibroadcast-ng", "wq9001", "yaml-cli-multi",
 }
@@ -556,8 +559,9 @@ class Tree:
         else:
             architecture = "arm"
         # UBI vs squashfs decides which images `make repack` emits and so which
-        # of build.yml's `find output/images -name openipc*no{r,and}*` fires.
-        rootfs = ",".join(kind for kind in ("CPIO", "SQUASHFS", "UBI")
+        # of build.yml's `find output/images -name openipc*no{r,and}*` fires;
+        # EXT2 is the SD card package (openipc.<soc>-sd-<variant>.tgz).
+        rootfs = ",".join(kind for kind in ("CPIO", "SQUASHFS", "UBI", "EXT2")
                           if re.search(rf"^BR2_TARGET_ROOTFS_{kind}=y", body, re.M))
         return {
             "vendor:" + path[len(self.root) + 1:].split(os.sep)[0][len("br-ext-chip-"):],
@@ -646,8 +650,12 @@ def classify(tree, changed, labels=(), event="pull_request", draft=False,
         return _decision(list(tree.built), True, reason=f"{FULL_LABEL} label set")
 
     # On a pull request the full matrix is the nightly one: a change that
-    # widens leaves the weekly boards to their weekly run.
+    # widens leaves the weekly boards to their weekly run. A weekly board this
+    # pull request adds to the matrix is the exception: nothing has built it
+    # yet, so it is built here rather than first on a Sunday.
     full = list(tree.nightly)
+    if base_boards is not None and f".github/scripts/{SELECTOR}" in changed:
+        full += [b for b in tree.weekly if b not in base_boards]
 
     if draft:
         return _decision([], False, reason="draft pull request")
@@ -1043,9 +1051,9 @@ def self_test():
         (["general/package/uclibc-compat/src/uclibc-compat-static.c"],
          4, "reached via .mk _DEPENDENCIES"),
         (["general/package/sigmastar-osdrv-sensors/Config.in"],
-         24, "reached via Config.in select"),
+         25, "reached via Config.in select"),
         # Shared packages narrow too, just barely.
-        (["general/package/majestic/majestic.mk"], 104, "majestic is nearly everywhere"),
+        (["general/package/majestic/majestic.mk"], 115, "majestic is nearly everywhere"),
         # Board configs and kernel configs.
         (["br-ext-chip-goke/configs/gk7205v200_lite_defconfig"], 1, "one defconfig"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/hi3516ev300.generic.config"],
@@ -1149,7 +1157,7 @@ def self_test():
         (["LICENSES/vendor.txt"], full, "LICENSES/ is not the licence file"),
         (["READMEgenerator.c"], full, "README prefix is not a readme"),
         (["general/package/majestic/README.md"],
-         104, "markdown inside a package is that package"),
+         115, "markdown inside a package is that package"),
         (["br-ext-chip-hisilicon/board/hi3516ev200/NOTES.md"],
          8, "markdown inside a board dir is that family"),
         (["general/scripts/pr_compliance_checklist.yaml"],
@@ -1178,6 +1186,10 @@ def self_test():
     if len(classify(tree, selector + ["general/overlay/etc/passwd"],
                     base_boards=set(tree.built))["rows"]) != full:
         problems.append("selector edit plus an overlay file must still widen")
+    added = set(tree.built) - {WEEKLY_BOARDS[0]}
+    if set(classify(tree, selector + ["general/overlay/etc/passwd"],
+                    base_boards=added)["rows"]) != set(tree.nightly) | {WEEKLY_BOARDS[0]}:
+        problems.append("a widening PR that adds a weekly board must build it too")
     # 5c. A change to the package index made only of source lines builds the
     #     boards enabling those packages plus the smoke set; anything else in
     #     it, or a diff we could not read, widens.

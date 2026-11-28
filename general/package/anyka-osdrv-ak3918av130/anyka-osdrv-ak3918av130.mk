@@ -38,8 +38,20 @@ ANYKA_OSDRV_AK3918AV130_LICENSE = PROPRIETARY
 #     mmc_host_ops, mmc_data, uio_info, usb_hcd, iio_dev and pwm were laid
 #     out the vendor's way under MACH_AK3918AV130. gpio_chip and
 #     watchdog_device still differ; no module here registers either.
-# Neither is a boot. ak3918av130_lite stays out of ALL_BOARDS until these
-# modules have loaded and run on an AV130 camera.
+# That probe missed usb_device, which ak_hcd reaches through every URB: the
+# SDK moves its dev to the end, and with the upstream order EP0 read a max
+# packet of 0 and enumeration failed with -75 (#2962, fixed in OpenIPC/linux
+# #329).
+#
+# On a Yoton WS03 (#2962), RAM-booted: ak_i2c, ak_ion, ak_rtc, ak_efuse,
+# ak_pcm, ak_mci and ak_uio load and run, and ak_hcd with the kernel's
+# usbcore enumerates the board's ATBM6132 Wi-Fi. That radio associated and
+# passed traffic on a test image that added atbm606x-openipc, which this
+# board does not select: its bundled cfg80211 needs the kernel's off, and
+# that would take the other USB Wi-Fi drivers from every AV130 camera, so
+# the WS03's driver belongs in its device profile in OpenIPC/builder.
+# ak_isp and the encoder modules have not run there: OpenIPC has no driver
+# for that board's sensor.
 ANYKA_OSDRV_AK3918AV130_KVER = 4.4.302-cip94
 
 # Installed under the release the built kernel reports, not the literal

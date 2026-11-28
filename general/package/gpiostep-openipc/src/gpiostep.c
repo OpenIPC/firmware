@@ -67,13 +67,21 @@
 
 #include "gpiostep.h"
 
-/* Default pin map: pan (roll) = 3,4,72,73 ; tilt (pitch) = 69,59,58,57. */
+/* module_param_array() writes the count only when the parameter is given.
+ * Built for Goke (GPIOSTEP_GK7205V510_PINS), the counts start at 4, so a plain
+ * insmod drives the GK7205V510 map: pan (roll) = 3,4,72,73 ; tilt (pitch) =
+ * 69,59,58,57. Built for any other SoC there is no default map: the counts
+ * start at 0, and a plain insmod is refused before it claims a pin, since
+ * that SoC's GPIOs 3, 4, 57... may drive something else entirely. */
+#ifdef GPIOSTEP_GK7205V510_PINS
 static int pan_gpios[4] = { 3, 4, 72, 73 };
 static int tilt_gpios[4] = { 69, 59, 58, 57 };
-/* module_param_array() writes the count only when the parameter is given, so
- * these start at the length of the defaults: a plain insmod uses the map above
- * rather than refusing it as "0 pins". */
 static int n_pan = 4, n_tilt = 4;
+#else
+static int pan_gpios[4];
+static int tilt_gpios[4];
+static int n_pan, n_tilt;
+#endif
 module_param_array(pan_gpios, int, &n_pan, 0444);
 MODULE_PARM_DESC(pan_gpios, "4 GPIO numbers for the pan coil");
 module_param_array(tilt_gpios, int, &n_tilt, 0444);
@@ -490,6 +498,10 @@ static int request_outputs(void)
 
 	if (n_pan_bits || n_tilt_bits)
 		pr_warn("gpiostep: pan_bits and tilt_bits only apply with sr_gpios; ignored\n");
+	if (!n_pan && !n_tilt) {
+		pr_err("gpiostep: no pin map: name the board's pan_gpios and tilt_gpios (or sr_gpios)\n");
+		return -EINVAL;
+	}
 	if (n_pan != 4 || n_tilt != 4) {
 		pr_err("gpiostep: need exactly 4 pan_gpios and 4 tilt_gpios\n");
 		return -EINVAL;
