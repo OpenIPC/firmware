@@ -111,7 +111,7 @@ qr_wifi_try() {
 	fi
 	# The same configuration the boot path will build from the saved
 	# settings, so what joins now joins after the reboot.
-	if ! WLAN_KEY=$2 wlan_conf "$1" > "$STATE/wpa.conf"; then
+	if ! wlan_conf "$1" "$2" > "$STATE/wpa.conf"; then
 		echo wrongkey
 		return
 	fi
@@ -148,7 +148,7 @@ qr_wifi_try() {
 # Back onto the network already saved, if there is one: a camera that was
 # working before someone showed it a bad code must not stay off the air.
 qr_wifi_restore() {
-	wlan_settings configured || return 0
+	[ -n "$(fw_printenv -n wlanssid 2>/dev/null)" ] || return 0
 	ifup -f "$IFACE" >/dev/null 2>&1
 }
 
@@ -181,7 +181,8 @@ qr_main() {
 				outcome=$(qr_wifi_try "$ssid" "$pass")
 				chime "$outcome"
 				if [ "$outcome" = connected ]; then
-					printf '%s\n%s\n' "$ssid" "$pass" | wlan_settings save
+					fw_setenv wlanssid "$ssid"
+					fw_setenv wlanpass "$pass"
 					say "Joined \"$ssid\"; credentials saved, rebooting"
 					curl -s --data-binary @/usr/share/openipc/sounds/ready_48k.pcm \
 						http://127.0.0.1/play_audio >/dev/null 2>&1
