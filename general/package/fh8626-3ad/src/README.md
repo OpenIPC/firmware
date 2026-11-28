@@ -65,9 +65,13 @@ which a global exposure change first shows sets every motion block.
   client's write: the daemon restarts the history from the values read and
   waits until they show. Without control events it polls, as before (controls
   every 4 frames, timing every 16).
-- The supported sensor is `gc1054`, the only one the ISP tuning tables are
-  measured for. Its control contract is exposure in integration lines and
-  analogue gain in Q6 (64 = 1x); limits and steps are queried from the driver.
+- The supported sensors are `gc1054` and `gc2083`. Their control contract is
+  exposure in integration lines and analogue gain in Q6 (64 = 1x); limits and
+  steps are queried from the driver. The ISP tuning tables are measured on the
+  GC1054 module and are applied only to it. A GC2083 gets a fixed black level
+  of 64, its pedestal measured at 1x to 8x analogue gain, and keeps the ISP
+  driver's tone curve, noise and colour defaults until those are measured. The
+  3,3,2 frame delays were measured on GC1054 too; `-L` overrides them.
   Automatic discovery requires exactly one supported sensor; otherwise use `-s`.
 - **Timing.** The line time is `(width + HBLANK) / PIXEL_RATE`; frame lines are
   `height + VBLANK`. Without PIXEL_RATE/HBLANK, the frame interval divided by
@@ -259,7 +263,9 @@ fh8626-3ad [-i ISP-subdev] [-s sensor-subdev] [-t target]
 -s <dev>         Sensor subdevice, auto-detected when unique
 -t <level>       Perceived 12-bit AE target, 1..4096 (default 1856)
 -f <50|60|off>   Flicker mode (default off; 50/60 require sensor timing)
--m <mode>        AWB mode (default whitepoint; wp/gw aliases accepted)
+-m <mode>        AWB mode (default per sensor: whitepoint on the GC1054,
+                 whose locus it is, grayworld on the GC2083; wp/gw aliases
+                 accepted)
 -p <normal|motion> Exposure profile (default normal; motion requires sensor timing)
 -A <auto|off>    AE loop ownership (default auto)
 -W <auto|off>    AWB loop ownership (default auto)
