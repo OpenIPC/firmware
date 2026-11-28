@@ -369,6 +369,57 @@ probe_powered_sensor() {
 	echo $found
 }
 
+# SD card (SDIO1): independent of HDAL, so load before check_mem (which may
+# exit on mem=/osmem mismatch). Accepts optional per-board overrides from
+# U-Boot env without per-board DTBs; leading zeros are rejected so kernel
+# kstrtoint(..., 0, ...) cannot fail with -EINVAL on values like "09".
+valid_gpio() {
+	case "$1" in
+	0 | [1-9]) return 0 ;;
+	[1-9]*)
+		case "$1" in
+		*[!0-9]*) return 1 ;;
+		*) return 0 ;;
+		esac
+		;;
+	*) return 1 ;;
+	esac
+}
+
+insert_mmc() {
+	mmc_args=""
+	while IFS='=' read -r k v; do
+		[ -n "$v" ] || continue
+		case "$k" in
+		sd_cd_gpio)
+			if valid_gpio "$v"; then
+				mmc_args="$mmc_args cd_gpio=$v"
+			else
+				logger -s -p daemon.err -t novatek "sd_cd_gpio=$v is not a valid decimal GPIO number; ignoring"
+			fi
+			;;
+		sd_power_gpio)
+			if valid_gpio "$v"; then
+				mmc_args="$mmc_args power_gpio=$v"
+			else
+				logger -s -p daemon.err -t novatek "sd_power_gpio=$v is not a valid decimal GPIO number; ignoring"
+			fi
+			;;
+		sd_power_level)
+			case "$v" in
+			0 | 1) mmc_args="$mmc_args power_level=$v" ;;
+			*) logger -s -p daemon.err -t novatek "sd_power_level=$v must be 0 or 1; ignoring" ;;
+			esac
+			;;
+		esac
+	done <<EOF
+$(fw_printenv sd_cd_gpio sd_power_gpio sd_power_level 2>/dev/null)
+EOF
+	modprobe mmc_block || logger -s -p daemon.err -t novatek "failed to load mmc_block"
+	modprobe mmc_na51055 $mmc_args || logger -s -p daemon.err -t novatek "failed to load mmc_na51055 $mmc_args"
+}
+
+insert_mmc
 check_mem
 set_default_osmem
 
