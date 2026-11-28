@@ -42,8 +42,11 @@ BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
 BR2_OPENIPC_SOC_VENDOR="anyka"
 BR2_OPENIPC_SOC_MODEL="ak3918ev331"
 BR2_OPENIPC_SOC_FAMILY="ak3918ev300"
-# The 128 MB EV331 packages share one image.
-BR2_OPENIPC_SOC_ALIASES="ak3916ev331 ak3919ev331"
+# The 128 MB V500 parts share one image: the EV331 packages, and the
+# AK3919EV330, whose U-Boot reports ramsize 0x08000000 (the qemu-bench
+# AK3919EV330 dump). The ak3918ev330 image boots it with mem=64M, half its
+# memory; ak3918ev331-demb is ak3918ev330-demb with 128 MB.
+BR2_OPENIPC_SOC_ALIASES="ak3916ev331 ak3919ev331 ak3919ev330"
 BR2_OPENIPC_VARIANT="lite"
 BR2_OPENIPC_FLASH_SIZE="8"
 

@@ -43,8 +43,9 @@ BR2_OPENIPC_SOC_VENDOR="anyka"
 BR2_OPENIPC_SOC_MODEL="ak3918ev330"
 BR2_OPENIPC_SOC_FAMILY="ak3918ev300"
 # AnyCloud V500 silicon (chip ID 0x20160101): the 64 MB EV330 packages, and
-# the name the kernel gives them all in /proc/cpuinfo.
-BR2_OPENIPC_SOC_ALIASES="ak3916ev330 ak3919ev330 ak39ev330"
+# the name the kernel gives them all in /proc/cpuinfo. The AK3919EV330 has
+# 128 MB and is the ak3918ev331 image's.
+BR2_OPENIPC_SOC_ALIASES="ak3916ev330 ak39ev330"
 BR2_OPENIPC_VARIANT="lite"
 BR2_OPENIPC_FLASH_SIZE="8"
 

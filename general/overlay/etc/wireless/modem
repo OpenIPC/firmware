@@ -80,6 +80,24 @@ if [ "$1" = "l716-t31-camhi" ]; then
 fi
 
 # SIMCOM7600G/SIMCOM7600G-H
+# AK3918EV300L V380 PTZ (stock hwname V380E6_G1) with a Cat-1 module on USB:
+# Quectel EC200S/T, EC600U, EC800G/K, Luat Air724UG/Air780E and others. The
+# module is powered from GPIO 16, active high (wifi_power in its stock
+# firmware's dev_gpio.cfg; the app drives it to module_pwr_reversal ^ 1, and
+# module_pwr_reversal is 0). Data comes over RNDIS on usb0, or ECM on eth1.
+# The kernel's option table lacks the EC600U (0903) and EC800G (0904) AT ports.
+if [ "$1" = "rndis-ak3918ev300l-v380" ]; then
+	set_gpio 16 1
+	modprobe rndis_host
+	modprobe cdc_ether
+	modprobe option
+	for id in "2c7c 0903" "2c7c 0904"; do
+		echo "$id" > /sys/bus/usb-serial/drivers/option1/new_id
+	done
+	sleep 10
+	exit 0
+fi
+
 if [ "$1" = "sim7600g" ]; then
 	modprobe rndis_host
 	modprobe option

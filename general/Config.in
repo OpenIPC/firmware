@@ -47,13 +47,14 @@ config BR2_OPENIPC_NOR_KERNEL_READ_SIZE
 	  vendor ones); 6 MiB on hi3519dv500's. A uImage larger than this is
 	  read short by them and fails its CRC, so the build refuses it.
 
-config BR2_OPENIPC_NOR_FIXED_PACKAGE
-	bool "Also ship the fixed-slot NOR package"
+config BR2_OPENIPC_ARM64_UIMAGE_COMP
+	string "Compression of the arm64 multi-file uImage"
+	default "gzip"
 	help
-	  Next to the split package, ship uImage and rootfs.squashfs as the
-	  plain fixed-slot package (a 2 MiB kernel slot, then the rootfs), for
-	  cameras whose sysupgrade predates the split layout. Both must fit
-	  their slots.
+	  "gzip" or "lzma". post-image-split.sh compresses an arm64 Image
+	  with this before wrapping it with the DTB; pick what the board's
+	  U-Boot bootm can unpack (the Axera AX620E Xiongmai U-Boot has no
+	  gunzip).
 
 config BR2_OPENIPC_MAJESTIC
 	string "OpenIPC Majestic"

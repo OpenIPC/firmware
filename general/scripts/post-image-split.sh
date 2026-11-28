@@ -17,53 +17,20 @@ BINARIES_DIR=$1
 ERASEBLOCK_SIZE=$((64 * 1024))
 
 # The image is only bootable by a kernel that divides it: mtdsplit
-# (MTD_SPLIT_FIRMWARE) or OpenIPC's split layout (MTD_SPLIT_LAYOUT). Kconfig
-# drops a symbol its tree does not know, so a kernel that predates either
+# (MTD_SPLIT_FIRMWARE), OpenIPC's split layout (MTD_SPLIT_LAYOUT), or the
+# OpenIPC uImage DT partition parser (MTD_PARSER_OPENIPC_UIMAGE). Kconfig
+# drops a symbol its tree does not know, so a kernel that predates all three
 # builds without a word and cannot find its rootfs -- refuse the image instead.
-if ! grep -qsE '^CONFIG_MTD_SPLIT_(FIRMWARE|LAYOUT)=y$' "${BUILD_DIR}"/linux-*/.config; then
-	echo "post-image-split: the kernel (${BUILD_DIR}/linux-*/.config) has neither" \
-		"CONFIG_MTD_SPLIT_FIRMWARE nor CONFIG_MTD_SPLIT_LAYOUT: it cannot boot a split firmware.bin" >&2
+if ! grep -qsE '^CONFIG_MTD_(SPLIT_(FIRMWARE|LAYOUT)|PARSER_OPENIPC_UIMAGE)=y$' "${BUILD_DIR}"/linux-*/.config; then
+	echo "post-image-split: the kernel (${BUILD_DIR}/linux-*/.config) has none of" \
+		"CONFIG_MTD_SPLIT_FIRMWARE, CONFIG_MTD_SPLIT_LAYOUT, or" \
+		"CONFIG_MTD_PARSER_OPENIPC_UIMAGE: it cannot boot a split firmware.bin" >&2
 	exit 1
 fi
 
-if [ -f "${BINARIES_DIR}/Image" ]; then
-	# Buildroot drops the load address from its .config unless it builds a
-	# uImage itself; the board's composed defconfig, beside images/, has it.
-	loadaddr=$(sed -n 's/^BR2_LINUX_KERNEL_UIMAGE_LOADADDR="\(.*\)"$/\1/p' \
-		"${BR2_CONFIG}" "${BINARIES_DIR}/../openipc_defconfig" 2>/dev/null | head -n 1)
-	dtbs=$(ls "${BINARIES_DIR}"/*.dtb)
-	if [ -z "${loadaddr}" ] || [ "$(echo "${dtbs}" | wc -w)" != 1 ]; then
-		echo "post-image-split: an arm64 uImage needs BR2_LINUX_KERNEL_UIMAGE_LOADADDR and one DTB" >&2
-		exit 1
-	fi
-	gzip -9 -n -c "${BINARIES_DIR}/Image" > "${BINARIES_DIR}/Image.gz"
-	# Linux, arm64, multi-file, gzip: Image.gz, a ramdisk, and the DTB, which
-	# bootm hands the kernel from the third component. A multi-file image's
-	# size table ends at the first zero, so the ramdisk cannot be empty: it is
-	# a cpio archive holding only its trailer, an empty initramfs, after which
-	# the kernel mounts its root from the flash as it would without one.
-	# Named as the kernel build names its own uImages, "Linux-<release>-<soc>",
-	# which is what sysupgrade checks against the camera.
-	release=$(cat "${BUILD_DIR}"/linux-*/include/config/kernel.release 2>/dev/null | head -n 1)
-	python3 - "${BINARIES_DIR}/uImage" "${loadaddr}" "Linux-${release}-${OPENIPC_SOC_MODEL}" \
-		"${BINARIES_DIR}/Image.gz" "${dtbs}" <<'PY'
-import struct, sys, time, zlib
-out, load, name, kernel, dtb = sys.argv[1:]
-trailer = b'TRAILER!!!\0'
-cpio = b'070701' + b''.join(b'%08X' % v for v in
-                            (0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, len(trailer), 0)) + trailer
-cpio += b'\0' * (-len(cpio) % 4)
-parts = [open(kernel, 'rb').read(), cpio, open(dtb, 'rb').read()]
-data = struct.pack('>%dI' % (len(parts) + 1), *[len(p) for p in parts], 0)
-for p in parts:
-    data += p + b'\0' * (-len(p) % 4)
-load = int(load, 0)
-hdr = struct.pack('>7I4B32s', 0x27051956, 0, int(time.time()), len(data), load, load,
-                  zlib.crc32(data) & 0xffffffff, 5, 22, 4, 1, name.encode()[:31])
-hdr = hdr[:4] + struct.pack('>I', zlib.crc32(hdr) & 0xffffffff) + hdr[8:]
-open(out, 'wb').write(hdr + data)
-PY
-fi
+# arm64: compose the uImage (Image + DTB) first, as the 32-bit kernel build
+# does itself.
+"$(dirname "$0")/post-image-arm64-uimage.sh" "${BINARIES_DIR}"
 
 KERNEL="${BINARIES_DIR}/uImage"
 KERNEL_SIZE=$(stat -c%s "${KERNEL}")
