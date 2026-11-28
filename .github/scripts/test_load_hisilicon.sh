@@ -199,6 +199,63 @@ T "os04a10 probes=1 writes=sensor= sensor=os04a10" "$(resolve unknown os04a10 un
 T "imx515 probes=0 writes=" "$(resolve os04a10 os08a10 imx515 1)" \
    "-sensor0 given -> taken as given, no probe"
 
+# ----- Part 6: hi3519dv500 video output follows the HDMI bridge -----
+# BT.1120 is muxed and the VO modules loaded only when the LT8618SXB answers on
+# I2C7 (chip ID 0x17 0x02), or when `vo_intf` in the environment names an
+# interface; `none` turns video output off. A bus where nothing answers at
+# 0x39 gets no writes, and another chip there gets back what was in the two
+# registers the probe wrote. A bridge driver that does not load is reported.
+# The functions are taken from the script itself, with the I2C tools, devmem,
+# the environment, logger and modprobe stubbed.
+echo
+echo "=== Part 6: hi3519dv500 video output follows the HDMI bridge ==="
+eval "$(fn5 hdmi_bridge_present)"
+eval "$(fn5 resolve_vo)"
+eval "$(fn5 vo_sys_config_arg)"
+eval "$(fn5 insert_vo)"
+devmem() { :; }
+# 0x39 is modelled as a register file: the ID registers and 0xff/0xee, which
+# start at 0x5a/0x3c so a write that is not undone shows.
+vo() {   # $1: vo_intf in the environment, $2: chip ID at 0x39 ("" = no ACK), $3: bridge driver fails
+    env_vo="$1"; at39="$2"; drv_fails="${3:-0}"; VO_INTF=""; i2c_writes=0; loaded=""; logged=""
+    reg_ff=0x5a; reg_ee=0x3c
+    fw_printenv() { [ -n "$env_vo" ] && echo "$env_vo"; }
+    i2cget() {
+        [ -n "$at39" ] || return 1
+        case $4 in 0x00) echo "${at39% *}" ;; 0x01) echo "${at39#* }" ;;
+            0xff) echo "$reg_ff" ;; 0xee) echo "$reg_ee" ;; esac
+    }
+    i2cset() {
+        i2c_writes=$((i2c_writes + 1))
+        case $4 in 0xff) reg_ff=$5 ;; 0xee) reg_ee=$5 ;; esac
+    }
+    # The bridge driver is loaded inside $(...), to keep what modprobe says,
+    # so loads are counted into a file.
+    : > "$probe_log"
+    modprobe() {
+        printf ' %s' "$1" >> "$probe_log"
+        [ "$1" = open_lt8618sx ] && [ "$drv_fails" = 1 ] && { echo "no such device" >&2; return 1; }
+        return 0
+    }
+    logger() { case "$*" in *daemon.err*) logged=err ;; esac; }
+    resolve_vo
+    insert_vo
+    loaded=$(cat "$probe_log")
+    echo "[$(vo_sys_config_arg)] writes=$i2c_writes regs=$reg_ff/$reg_ee loaded=${loaded# }${logged:+ logged=$logged}"
+}
+T "[vo_intf=bt1120] writes=2 regs=0x80/0x01 loaded=open_vo_dev open_vo open_lt8618sx" "$(vo '' '0x17 0x02')" \
+   "bridge answers -> BT.1120, VO and the bridge driver loaded"
+T "[] writes=0 regs=0x5a/0x3c loaded=" "$(vo '' '')" \
+   "nothing at 0x39 -> no VO, and nothing written to the bus"
+T "[] writes=4 regs=0x5a/0x3c loaded=" "$(vo '' '0x55 0x01')" \
+   "another chip at 0x39 -> not the bridge, no VO, its registers put back"
+T "[vo_intf=bt1120] writes=2 regs=0x80/0x01 loaded=open_vo_dev open_vo open_lt8618sx logged=err" "$(vo '' '0x17 0x02' 1)" \
+   "bridge driver fails to load -> reported, the boot goes on"
+T "[] writes=0 regs=0x5a/0x3c loaded=" "$(vo none '0x17 0x02')" \
+   "vo_intf=none -> no VO even with the bridge, no probe"
+T "[vo_intf=mipi_tx] writes=0 regs=0x5a/0x3c loaded=open_vo_dev open_vo open_mipi_tx" "$(vo mipi_tx '')" \
+   "vo_intf=mipi_tx -> taken as given, MIPI TX loaded, no probe"
+
 echo
 if [ "$fail" -eq 0 ]; then
     echo "All load_hisilicon regression checks passed."
