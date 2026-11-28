@@ -1,0 +1,10 @@
+config BR2_PACKAGE_T23_IPA
+	bool "t23-ipa"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Automatic exposure, white balance, colour correction, noise
+	  reduction and day/night IR-cut control for the Ingenic T23 ISP.
+	  The daemon reads hardware statistics and queues ISP parameters via
+	  V4L2 metadata nodes and drives sensor exposure, gain and vblank
+	  controls via the Media Controller topology, alongside whichever
+	  application streams from the capture device.

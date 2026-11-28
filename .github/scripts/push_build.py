@@ -43,7 +43,7 @@ FIRST_DELAY = 5  # seconds, doubling
 
 # openipc.<board>-<storage>-<edition>.tgz: the platform is <board>-<edition>,
 # the same name size_report.py and kconfig_graph.py give their files.
-FIRMWARE_ASSET_RE = re.compile(r"^openipc\.([^.]+?)-(nor|nand|emmc|sd)-([a-z0-9]+)\.tgz$")
+FIRMWARE_ASSET_RE = re.compile(r"^openipc\.([^.]+?)-(nor|nand|emmc|sd)-([a-z0-9_]+?)(?:-split)?\.tgz$")
 # OpenIPC/builder's compound devices publish <matrix platform>-<storage>.tgz,
 # and their size report is sizes.<matrix platform>.json, so the platform is
 # the name before the storage suffix.

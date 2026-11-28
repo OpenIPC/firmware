@@ -1,6 +1,6 @@
 config BR2_PACKAGE_DIVINUS
 	bool "Divinus streamer"
-	select BR2_PACKAGE_ALSA_LIB if BR2_PACKAGE_FULLHAN_OSDRV_FH8626
+	select BR2_PACKAGE_ALSA_LIB if BR2_PACKAGE_FULLHAN_OSDRV_FH8626 || BR2_PACKAGE_INGENIC_OSDRV_T23_V4L2
 	help
 	  Multi-platform open source streamer
 	  https://github.com/openipc/divinus

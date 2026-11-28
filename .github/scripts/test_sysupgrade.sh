@@ -304,6 +304,7 @@ esac
 # Each fetch is noted, as the file itself does not outlive the run.
 case "$out" in */manifest.*.flat)
     echo "$out" >> "${FLASH_LOG%/*}/manifest-fetches"
+    echo "$url" >> "${FLASH_LOG%/*}/manifest-urls"
     [ -n "${STUB_MANIFEST:-}" ] && cp "$STUB_MANIFEST" "$out"
     # What `timeout 15` does to a listing that is still fetching.
     [ -n "${STUB_TERM_DURING_FETCH:-}" ] && kill -TERM "$PPID"
@@ -1278,6 +1279,11 @@ default_url_is "$B/ssc338q_lite_acme-cam1-nor.tgz" set_platform ssc338q_lite_acm
 default_url_is "$F/openipc.ssc338q-nor-lite.tgz"   set_platform ssc338q_lite
 default_url_is "$F/openipc.ssc338q-nor-ultimate.tgz" set_platform ssc338q_ultimate ultimate
 default_url_is "$B/openipc.ssc338q-nor-fpv.tgz"    set_platform ssc338q_fpv fpv
+STUB_SPLIT_PUBLISHED=1 default_url_is "$F/openipc.t23-nor-v4l2_lite-split.tgz" \
+    eval 'set_platform t23_v4l2_lite v4l2_lite; STUB_SOC=t23'
+STUB_SPLIT_PUBLISHED=1 default_url_is "$B/t23_v4l2_lite_acme-cam1-nor-split.tgz" \
+    eval 'set_platform t23_v4l2_lite_acme-cam1 v4l2_lite; STUB_SOC=t23'
+unset STUB_SOC
 default_url_is "https://mirror.example/x.tgz" eval 'set_platform ssc338q_lite_acme-cam1; STUB_UPGRADE=https://mirror.example/x.tgz'
 
 # Whatever the URL, the rootfs itself says what it was built as. A camera on a
@@ -4073,7 +4079,7 @@ unset STUB_SOC STUB_SPLIT_PUBLISHED
 # back BEFORE the first write, and the history has to keep the line.
 HIST="$SB/etc/sysupgrade.history"
 manifest_left() { ls "$SB"/tmp/manifest.*.flat 2>/dev/null; }
-manifest_reset() { rm -f "$SB"/tmp/manifest.*.flat "$SB/tmp/manifest-fetches"; }
+manifest_reset() { rm -f "$SB"/tmp/manifest.*.flat "$SB/tmp/manifest-fetches" "$SB/tmp/manifest-urls"; }
 banner_case() { reset_env; manifest_reset; STUB_IMG_BUILD_ID=nightly-20260711-bbbbbbb; }
 # The same two images, downloaded by `-k -r` from the default URL: a run that
 # is online, so it may ask the manifest about the build being left.
@@ -4218,6 +4224,37 @@ if [ "$RC" -eq 0 ] && flashed /dev/mtd2 && ! flashed /dev/mtd3 &&
 else
     bad "kernel only: rc=$RC history='$(cat "$HIST" 2>/dev/null)' out='$OUT'"
 fi
+
+# t23_v4l2_lite carries an underscore in its variant name, so it must still
+# route to the OpenIPC/firmware manifest and accept nor_split builds, while
+# t23_v4l2_lite_<device> routes to builder as a device profile.
+reset_env; manifest_reset
+set_platform t23_v4l2_lite v4l2_lite; STUB_SOC=t23
+printf 'nightly-20260711-bbbbbbb t23_v4l2_lite nor_split %s\n' \
+    "$F/openipc.t23-nor-v4l2_lite-split.tgz" > "$SB/manifest.flat"
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+run -z --list-builds
+if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -qF "nightly-20260711-bbbbbbb" &&
+    grep -qxF "https://openipc.github.io/firmware/manifest.flat" "$SB/tmp/manifest-urls"; then
+    ok "v4l2_lite variant routes to firmware manifest and lists nor_split builds"
+else
+    bad "v4l2_lite manifest: rc=$RC urls='$(cat "$SB/tmp/manifest-urls" 2>/dev/null)' out='$OUT'"
+fi
+reset_env; manifest_reset
+set_platform t23_v4l2_lite_acme-cam1 v4l2_lite; STUB_SOC=t23
+printf 'nightly-20260711-bbbbbbb t23_v4l2_lite_acme-cam1 nor_split %s\n' \
+    "$B/t23_v4l2_lite_acme-cam1-nor-split.tgz" > "$SB/manifest.flat"
+RUN_ENV="STUB_MANIFEST=$SB/manifest.flat"
+run -z --list-builds
+if [ "$RC" -eq 0 ] && printf '%s' "$OUT" | grep -qF "nightly-20260711-bbbbbbb" &&
+    grep -qxF "https://openipc.github.io/builder/manifest.flat" "$SB/tmp/manifest-urls"; then
+    ok "v4l2_lite device profile routes to builder manifest"
+else
+    bad "v4l2_lite device profile manifest: rc=$RC urls='$(cat "$SB/tmp/manifest-urls" 2>/dev/null)' out='$OUT'"
+fi
+rm -f "$SB/manifest.flat"
+unset STUB_SOC
+manifest_reset
 
 # builder lists a device profile under the chip it was built for: a
 # gk7205v210 profile is gk7205v210_<...> in its manifest, while $model is

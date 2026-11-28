@@ -232,10 +232,14 @@ rm -f "${TARGET_DIR}"/usr/lib/*-gdb.py
 # nowhere left to fetch from, so a keep-list that has gone stale fails the build
 # here instead.
 CA_BUNDLE="${TARGET_DIR}/etc/ssl/certs/ca-certificates.crt"
-if [ "${OPENIPC_VARIANT}" = "lite" ] && [ -f "${CA_BUNDLE}" ]; then
-	python3 "${BR2_EXTERNAL_GENERAL_PATH}/scripts/filter-ca-bundle.py" \
-		"${BR2_EXTERNAL_GENERAL_PATH}/scripts/ca-bundle-lite.keep" "${CA_BUNDLE}" || exit 1
-fi
+case "${OPENIPC_VARIANT}" in
+	lite|*_lite)
+		if [ -f "${CA_BUNDLE}" ]; then
+			python3 "${BR2_EXTERNAL_GENERAL_PATH}/scripts/filter-ca-bundle.py" \
+				"${BR2_EXTERNAL_GENERAL_PATH}/scripts/ca-bundle-lite.keep" "${CA_BUNDLE}" || exit 1
+		fi
+		;;
+esac
 
 # Comments are worth writing and worth keeping in git; they are not worth
 # flashing. sysupgrade alone had grown to 52KB, 57% of it comment, and on
