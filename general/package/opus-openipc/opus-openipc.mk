@@ -14,6 +14,25 @@ OPUS_OPENIPC_INSTALL_STAGING = YES
 
 OPUS_OPENIPC_CFLAGS = $(TARGET_CFLAGS)
 
+# -O2 on ultimate images for a chip bigger than 8 MB (16 MB NOR, 128 MB
+# NAND), and the tree's -Os everywhere else, keyed on both: the size is what
+# this is about, and an ultimate defconfig for an 8 MB chip should not inherit
+# the cost by its variant name alone. The
+# NEON kernels are hand-written and run at either level; what -O2 speeds up is
+# the C around them, and it costs 32 KB (15%) of library that a lite image has
+# no flash for. Measured on a hi3516ev300, fixed point, APPLICATION_AUDIO
+# mono, one 20 ms frame: 820 to 730 us at 16 kHz, 1047 to 949 us at 48 kHz.
+# The last -O wins, so appending is enough; and this goes ahead of the GCC
+# bug 85180 -O0 below, so that one still wins where it applies.
+#
+# mbedtls-openipc needs nothing of the kind: its CMakeLists sets -O2 for the
+# Release build Buildroot asks for, after TARGET_CFLAGS' -Os.
+ifeq ($(OPENIPC_VARIANT),ultimate)
+ifeq ($(filter 4 8,$(call qstrip,$(BR2_OPENIPC_FLASH_SIZE))),)
+OPUS_OPENIPC_CFLAGS += -O2
+endif
+endif
+
 # Optional HiSilicon ot_opus_* shim. Drops src/ot_opus_shim.c into the
 # tree, edits Makefile.am to add it to libopus_la_SOURCES, and turns on
 # autoreconf so Makefile.in picks up the change. Only enabled when the
