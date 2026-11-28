@@ -15,14 +15,49 @@ XIONGMAI_OSDRV_XM530V200_LICENSE = PROPRIETARY
 #   xm535d1    X6E-WEQ, V5.07.X02.20250906
 #   xm535d2    X9-WE2Q, V5.02.X02.20251223 (the same media modules as the D1)
 #   xm535w1    X2W-WNG, V5.00.R02.20240410
+#   xm232      X6S-WEQ-H (XM232W1), V5.03.C01
 # They are built for their 3.10.103 vendor kernels. This family's kernel
 # matches their vermagic (SMP on xm530v200, UP on the others) and exports
 # what those kernels add (clk_get_pts, kthread_set_prio).
 XIONGMAI_OSDRV_XM530V200_FILES = $(XIONGMAI_OSDRV_XM530V200_PKGDIR)/files/$(OPENIPC_SOC_MODEL)
 
+# xiongmai-opensdk-xm530v200 builds open_mmz.ko, open_sys.ko and open_vb.ko
+# in place of mmz.ko, sys.ko and vb.ko. They export the same symbols, and depmod would make the
+# modules that need them depend on the vendor ones. So those move out of the
+# tree depmod reads, to where load_xiongmai finds them only when the open
+# ones do not load.
+ifeq ($(BR2_PACKAGE_XIONGMAI_OPENSDK_XM530V200),y)
+ifeq ($(OPENIPC_SOC_MODEL),xm232)
+# the XM232's vendor modules that export what other modules import
+XIONGMAI_OSDRV_XM530V200_REPLACED = i2c mmz sys vb isp vi_mu rgn acodec
+else
+XIONGMAI_OSDRV_XM530V200_REPLACED = mmz sys vb rgn
+endif
+ifneq ($(filter xm533 xm535w1,$(OPENIPC_SOC_MODEL)),)
+XIONGMAI_OSDRV_XM530V200_REPLACED += vi
+endif
+ifneq ($(filter xm530v200 xm535d1 xm535d2,$(OPENIPC_SOC_MODEL)),)
+XIONGMAI_OSDRV_XM530V200_REPLACED += vpss
+endif
+ifeq ($(OPENIPC_SOC_MODEL),xm530v200)
+XIONGMAI_OSDRV_XM530V200_REPLACED += vo
+endif
+ifneq ($(filter xm530v200 xm533,$(OPENIPC_SOC_MODEL)),)
+XIONGMAI_OSDRV_XM530V200_REPLACED += isp
+endif
+define XIONGMAI_OSDRV_XM530V200_DROP_REPLACED
+	for m in $(XIONGMAI_OSDRV_XM530V200_REPLACED); do \
+		$(INSTALL) -D -m 644 $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai/$$m.ko \
+			$(TARGET_DIR)/usr/lib/xiongmai/$$m.ko && \
+		rm -f $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai/$$m.ko || exit 1; \
+	done
+endef
+endif
+
 define XIONGMAI_OSDRV_XM530V200_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai
 	$(INSTALL) -m 644 -t $(TARGET_DIR)/lib/modules/3.10.103+/xiongmai $(XIONGMAI_OSDRV_XM530V200_FILES)/kmod/*.ko
+	$(XIONGMAI_OSDRV_XM530V200_DROP_REPLACED)
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(XIONGMAI_OSDRV_XM530V200_FILES)/load_xiongmai

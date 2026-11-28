@@ -1,0 +1,10 @@
+config BR2_PACKAGE_FULLHAN_OPENSDK
+	bool "fullhan-opensdk"
+	default n
+	depends on BR2_PACKAGE_FULLHAN_OSDRV_FH8852V100
+	help
+	  Fullhan sensor libraries built from source, for sensors the
+	  vendor SDK ships no library for (GalaxyCore GC4653 on the
+	  FH885x V100).
+
+	  https://github.com/OpenIPC/openfullhan

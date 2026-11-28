@@ -1,0 +1,69 @@
+# Architecture — Faraday FA626TE, ARMv5TE, no FPU
+BR2_arm=y
+BR2_arm926t=y
+BR2_ARM_EABI=y
+BR2_ARM_SOFT_FLOAT=y
+
+# Toolchain — the musl ARMv5 one of hi3516cv300, whose headers (3.18) are
+# older than the kernel as on the mainline-kernel (neo) boards. The family's own gm8136
+# toolchain is uClibc with 3.3 headers, for vendor libraries not used here.
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
+BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/openipc/firmware/releases/download/toolchain/toolchain.hisilicon-hi3516cv300.tgz"
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="arm-openipc-linux-musleabi"
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_3_18=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_MUSL=y
+BR2_TOOLCHAIN_EXTERNAL_CXX=y
+
+# Kernel — mainline with the GM8126 port, device tree appended
+BR2_LINUX_KERNEL=y
+BR2_LINUX_KERNEL_CUSTOM_TARBALL=y
+BR2_LINUX_KERNEL_CUSTOM_TARBALL_LOCATION="https://github.com/openipc/linux/archive/$(OPENIPC_KERNEL).tar.gz"
+BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
+BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/gm8126.generic.config"
+BR2_LINUX_KERNEL_IMAGE_TARGET_CUSTOM=y
+BR2_LINUX_KERNEL_IMAGE_TARGET_NAME="zImage"
+BR2_LINUX_KERNEL_DTS_SUPPORT=y
+BR2_LINUX_KERNEL_INTREE_DTS_NAME="grainmedia/gm8126-ipcam"
+BR2_LINUX_KERNEL_XZ=y
+
+# all-patches has compiler patches for old kernels, which do not belong on
+# 7.3: the mainline-kernel boards all use this directory instead
+BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL)/package/all-patches-neo"
+
+# Filesystem
+BR2_PACKAGE_BUSYBOX_CONFIG="$(BR2_EXTERNAL)/package/busybox/busybox.config"
+BR2_PACKAGE_UBOOT_TOOLS=y
+BR2_PACKAGE_ZLIB=y
+# BR2_PACKAGE_IFUPDOWN_SCRIPTS is not set
+# WireGuard is in the kernel
+# BR2_PACKAGE_WIREGUARD_LINUX_COMPAT is not set
+BR2_PACKAGE_WIREGUARD_TOOLS=y
+BR2_TARGET_ROOTFS_CPIO=y
+BR2_TARGET_ROOTFS_SQUASHFS=y
+BR2_TARGET_ROOTFS_SQUASHFS4_XZ=y
+
+# OpenIPC
+BR2_OPENIPC_SOC_VENDOR="grainmedia"
+BR2_OPENIPC_SOC_MODEL="gm8126"
+BR2_OPENIPC_SOC_FAMILY="gm8126"
+BR2_OPENIPC_VARIANT="lite"
+BR2_OPENIPC_FLASH_SIZE="8"
+
+# Packages. No majestic: it is built per SoC family and has no GM8126 build.
+BR2_PACKAGE_DROPBEAR_OPENIPC=y
+BR2_PACKAGE_GRAINMEDIA_OSDRV_GM8126=y
+BR2_PACKAGE_IPCTOOL=y
+BR2_PACKAGE_LIBCURL_OPENIPC=y
+BR2_PACKAGE_LIBCURL_OPENIPC_CURL=y
+# BR2_PACKAGE_LIBCURL_OPENIPC_PROXY_SUPPORT is not set
+# BR2_PACKAGE_LIBCURL_OPENIPC_COOKIES_SUPPORT is not set
+# BR2_PACKAGE_LIBCURL_OPENIPC_EXTRA_PROTOCOLS_FEATURES is not set
+BR2_PACKAGE_MBEDTLS_OPENIPC=y
+BR2_PACKAGE_MOTORS=y
+BR2_PACKAGE_VTUND_OPENIPC=y
+BR2_PACKAGE_YAML_CLI=y
+
+# Wrap zImage + DTB as a uImage for bootm
+BR2_ROOTFS_POST_IMAGE_SCRIPT="$(EXTERNAL_VENDOR)/board/$(OPENIPC_SOC_FAMILY)/post-image.sh"

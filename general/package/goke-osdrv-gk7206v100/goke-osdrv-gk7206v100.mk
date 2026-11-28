@@ -72,6 +72,42 @@ define GOKE_OSDRV_GK7206V100_INSTALL_TARGET_CMDS
 
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/bin
 	$(INSTALL) -m 755 -t $(TARGET_DIR)/usr/bin $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/script/load_goke
+
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/sensor/config/*.ini
+
+	# Image tuning, as text profiles: [section] key = values over the
+	# SDK's ISP, AE and AWB attribute structures, the keys their member
+	# paths. The streamer reads /etc/sensors/iq/<sensor>.ini (isp.iqProfile
+	# overrides the path); a key not written keeps the SDK's value.
+	#
+	# sc465sl.ini carries the tuning the vendor's own firmware applies to an
+	# SC465SL on GK7206V11 (Xiongmai IPC_GK7206V11_K8, V1.10.T02.20261103):
+	# its per-ISO noise reduction, sharpening, demosaic, defect-pixel,
+	# gamma, DRC, dehaze, LCE and colour tables, its AWB calibration and its
+	# AE compensation curve. The SDK publishes no tuning for this sensor;
+	# without it every block runs on the ISP library's generic defaults.
+	# The values are vendor-derived, not from a datasheet: read from that
+	# firmware running in a QEMU twin (OpenIPC/qemu-bench f0c2fcbe5,
+	# tools/xm-isp-tuning) as a PQ bin, then exported as text by the
+	# streamer (GET /api/v1/isp/profile.ini); the file's header has the
+	# steps. The text is the source from here on. Checked against the PQ bin
+	# it replaces on an IVG-K8: the same attribute blocks and ISP state, but
+	# for white balance and exposure. The [awb*] and [ae*] sections are read
+	# live from a stock camera in daylight, because the dump caught the App
+	# before it set them (colour matrix in manual, washed-out colour, a cyan
+	# cast); the AE compensation table is fitted to the stock camera's
+	# target at four gains, since its App rewrites that table as gain moves.
+	# DRC is the App's own per-ISO table for this sensor (read from its
+	# binary, checked against the stock camera's live strength), run as the
+	# SDK's DRC auto mode; AINR runs in auto, as on the stock camera.
+	#
+	# sc465sl.night.ini is the vendor's IR night set as a delta over the day
+	# profile (night sharpening, noise reduction, LCE, dehaze, DRC strength,
+	# AWB bypassed), read from the App's own ISP code with its day/night
+	# switch called each way. A streamer without night profiles ignores it.
+	$(INSTALL) -m 755 -d $(TARGET_DIR)/etc/sensors/iq
+	$(INSTALL) -m 644 -t $(TARGET_DIR)/etc/sensors/iq $(GOKE_OSDRV_GK7206V100_PKGDIR)/files/iq/*.ini
 endef
 
 $(eval $(generic-package))

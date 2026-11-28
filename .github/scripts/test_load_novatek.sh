@@ -31,9 +31,38 @@ trap 'rm -rf "$work"' EXIT
 
 cat >"$work/wrapper" <<'EOF'
 insmod() { echo "insmod $*" >>"$CALLS"; }
-devmem() { :; }
+# The sensor clock's gate, source and divider registers hold what is written
+# to them, in files under $REGS; every write to them is recorded.
+devmem() {
+	[ -f "${REGS:-/nonexistent}/$1" ] || return 0
+	if [ $# = 3 ]; then
+		printf '0x%08x\n' "$(($3))" >"$REGS/$1"
+		echo "devmem $1 $(cat "$REGS/$1")" >>"$CALLS"
+	else
+		cat "$REGS/$1"
+	fi
+}
 logger() { :; }
-ipcinfo() { echo sc501ai; }
+# With a fake pinmux node, ipcinfo records the last pinmux command written
+# before it ran, and finds an IMX415 only once I2C_1 is on its pads -- or,
+# with LATE set, only once the vendor modules are in and I2C_1 is routed.
+ipcinfo() {
+	if [ -n "${GPIO:-}" ]; then
+		# The fallback: a sensor that answers only out of reset, or never.
+		[ -z "${DEAD:-}" ] && [ "$(cat "$GPIO/gpio65/value")" = 1 ] && echo imx415
+		:
+	elif [ -n "${PINMUX:-}" ]; then
+		echo "ipcinfo after: $(cat "$PINMUX/pinmux_set" 2>/dev/null)" >>"$CALLS"
+		if [ -n "${LATE:-}" ]; then
+			grep -q '^insmod hdal/kwrap.ko' "$CALLS" &&
+				[ "$(cat "$PINMUX/pinmux_set" 2>/dev/null)" = "i2c 0x1" ] && echo imx415
+		else
+			[ "$(cat "$PINMUX/pinmux_set" 2>/dev/null)" = "i2c 0x1" ] && echo imx415
+		fi
+	else
+		echo sc501ai
+	fi
+}
 fw_printenv() { [ "$1" = -n ] && shift; sed -n "s/^$1=//p" "$ENV_FILE" | grep . || return 1; }
 fw_setenv() {
 	if [ "$1" = --script ]; then
@@ -44,6 +73,7 @@ fw_setenv() {
 	fi
 }
 export SENSOR=${TEST_SENSOR:-sc501ai}
+[ -n "${PINMUX:-}" ] && SENSOR=
 set -- -i
 . "$SCRIPT"
 EOF
@@ -71,6 +101,8 @@ run() {
 	rc=0
 	(cd "$work" && TEST_SENSOR="${TEST_SENSOR:-}" SCRIPT="$script" CALLS="$work/calls" ENV_FILE="$work/env" \
 		LOAD_NOVATEK_DT="$work/dt" LOAD_NOVATEK_CMDLINE="$work/cmdline" \
+		PINMUX="${PINMUX:-}" LATE="${LATE:-}" LOAD_NOVATEK_PINMUX="${PINMUX:-}" LOAD_NOVATEK_SENSORS="$work/sensors" \
+		GPIO="${GPIO:-}" DEAD="${DEAD:-}" REGS="${REGS:-}" LOAD_NOVATEK_GPIO="${GPIO:-/nonexistent}" \
 		busybox sh "$work/wrapper" >"$work/out" 2>&1) || rc=$?
 }
 
@@ -98,6 +130,11 @@ echo "=== sensors ==="
 TEST_SENSOR=imx415
 run 128 48 "$lit" "osmem=48M" "bootargs=$lit" "osmem_default=48M"
 has "insmod nvt_sen_imx415.ko sen_cfg_path=/etc/sensors/sen_imx415.cfg" "imx415 loads its own driver and cfg"
+lacks "Invalid sensor" "... and is not refused"
+exited 0 "... and the script runs to its end"
+TEST_SENSOR=sc430ai
+run 128 48 "$lit" "osmem=48M" "bootargs=$lit" "osmem_default=48M"
+has "insmod nvt_sen_sc430ai.ko sen_cfg_path=/etc/sensors/sen_sc430ai.cfg" "sc430ai loads its own driver and cfg"
 lacks "Invalid sensor" "... and is not refused"
 exited 0 "... and the script runs to its end"
 TEST_SENSOR=
@@ -144,6 +181,126 @@ exited 0 "... and the script runs to its end"
 
 run 128 32 "$lit" "osmem=32M" "bootargs=earlyprintk mem=32M panic=20 mem=40M"
 lacks "fw_setenv" "two mem= in saved bootargs: not touched, not half-moved"
+
+echo "=== detection: the sensor pads are routed before the first ipcinfo ==="
+
+# pads SENSOR I2C [driver]: a pinmux node whose summary holds these values,
+# and an IMX415 config (SIE MCLK, I2C id 0) whose driver is there or not
+pads() {
+	rm -rf "$work/pinmux" "$work/sensors" "$work"/nvt_sen_*.ko
+	mkdir -p "$work/pinmux" "$work/sensors"
+	printf 'sensor{pinmux=<%s>;};\nmipi_lvds{pinmux=<0x301>;};\ni2c{pinmux=<%s>;};\n' "$1" "$2" \
+		>"$work/pinmux/pinmux_summary"
+	printf 'id_0_mclk = 0\nid_0_i2c_id = 0\nid_0_rst_pin = 0xFFFFFFFF\n' >"$work/sensors/sen_imx415.cfg"
+	[ -z "${3:-}" ] || : >"$work/nvt_sen_imx415.ko"
+	PINMUX=$work/pinmux
+}
+after() {
+	got=$(cat "$work/pinmux/pinmux_set" 2>/dev/null || echo "(never written)")
+	if [ "$got" = "$1" ]; then ok "$2"; else bad "$2 -- pinmux_set holds '$got', want '$1'"; fi
+}
+boot='earlyprintk mem=48M panic=20'
+
+pads 0x0 0x0 driver
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+has "ipcinfo after: i2c 0x1" "pads off (the N8S): the first ipcinfo runs with I2C_1 routed"
+has "fw_setenv sensor imx415" "... finds the sensor and stores it"
+after "sensor 0x0" "... and the pads go back as found"
+exited 0 "... and the script runs to its end"
+# Before the vendor modules: after them, the fallback left an IMX415 stuck
+# with no frames until power was cut (#1889).
+first_probe=$(grep -n '^ipcinfo after' "$work/calls" | head -1 | cut -d: -f1)
+first_insmod=$(grep -n '^insmod ' "$work/calls" | head -1 | cut -d: -f1)
+if [ -n "$first_probe" ] && [ -n "$first_insmod" ] && [ "$first_probe" -lt "$first_insmod" ]; then
+	ok "... and detection runs before the vendor modules load"
+else
+	bad "... and detection runs before the vendor modules load -- probe at line ${first_probe:-none}, first insmod at ${first_insmod:-none}"
+fi
+has "insmod nvt_sen_imx415.ko sen_cfg_path=/etc/sensors/sen_imx415.cfg" "... and loads the driver it found"
+
+LATE=1
+pads 0x0 0x0 driver
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+has "fw_setenv sensor imx415" "a sensor that answers only with the modules loaded: still found"
+has "insmod nvt_sen_imx415.ko sen_cfg_path=/etc/sensors/sen_imx415.cfg" "... and its driver loaded"
+after "sensor 0x0" "... and the pads go back as found after that probe too"
+LATE=
+
+pads 0x220 0x1 driver
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+after "(never written)" "pads already routed: nothing written"
+
+pads 0x0 0x0
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+after "(never written)" "no driver for the config: its pads are not touched"
+lacks "fw_setenv sensor" "... and a miss is not stored"
+
+echo "=== detection: the fallback, a sensor held in reset ==="
+
+# gpio65 already exported as a low input, as on the N8S at boot; the sensor
+# answers only while it is high
+held() {
+	pads 0x220 0x1 driver
+	printf 'id_0_mclk = 0\nid_0_i2c_id = 0\nid_0_rst_pin = 0x41\n' >"$work/sensors/sen_imx415.cfg"
+	rm -rf "$work/gpio"
+	mkdir -p "$work/gpio/gpio65"
+	echo in >"$work/gpio/gpio65/direction"
+	echo 0 >"$work/gpio/gpio65/value"
+	GPIO=$work/gpio
+	# The N8S at boot, with the source's other bits and the divider's other
+	# bytes (other clocks) set. $1: the gate register, $2: the source.
+	rm -rf "$work/regs"
+	mkdir -p "$work/regs"
+	echo "${1:-0x00010002}" >"$work/regs/0xf0020070"
+	echo "${2:-0x00c00000}" >"$work/regs/0xf0020018"
+	echo 0x01010101 >"$work/regs/0xf0020030"
+	REGS=$work/regs
+}
+reg_is() {
+	got=$(cat "$work/regs/$1")
+	if [ "$got" = "$2" ]; then ok "$3"; else bad "$3 -- $1 holds $got, want $2"; fi
+}
+# writes WANT MESSAGE: the register writes, in order
+writes() {
+	got=$(sed -n 's/^devmem 0xf00200//p' "$work/calls" | tr '\n' ';')
+	if [ "$got" = "$1" ]; then ok "$2"; else bad "$2 -- wrote '$got', want '$1'"; fi
+}
+
+held
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+has "fw_setenv sensor imx415" "found with its reset released"
+# At the boot-time 240 MHz an IMX415 still powered from a warm reboot sent no
+# frames until power was cut; at 24 MHz it streamed (#1889).
+writes "18 0x00c00000;30 0x01010113;70 0x00010006;" "... its clock set to 24 MHz before the gate opens, and both left for its driver"
+if [ "$(cat "$work/gpio/gpio65/direction") $(cat "$work/gpio/gpio65/value")" = "in 0" ]; then
+	ok "... and gpio65 goes back to a low input"
+else
+	bad "... and gpio65 goes back to a low input -- $(cat "$work/gpio/gpio65/direction") $(cat "$work/gpio/gpio65/value")"
+fi
+
+held
+DEAD=1
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+writes "18 0x00c00000;30 0x01010113;70 0x00010006;70 0x00010002;18 0x00c00000;30 0x01010101;" "nothing answers: the gate closes, then the boot-time rate goes back"
+lacks "fw_setenv sensor" "... and nothing is stored"
+exited 0 "... and the script runs to its end"
+
+held 0x00010002 0x00c00100
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+reg_is 0xf0020018 0x00c00100 "nothing answers, the clock on another source: that source goes back"
+DEAD=
+
+held 0x00010002 0x00c00100
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+reg_is 0xf0020018 0x00c00000 "found with the clock on another source: 480 MHz is selected"
+
+held 0x00010006 0x04c00101
+run 128 48 "$boot" "osmem=48M" "osmem_default=48M" "bootargs=$boot"
+has "fw_setenv sensor imx415" "the clock already running: the sensor is found"
+writes "70 0x00010006;" "... and its source and rate are left alone"
+GPIO=
+REGS=
+PINMUX=
 
 rm -rf "$work/dt"
 echo "=== the mem= / osmem guard ==="

@@ -42,6 +42,7 @@ IPCTOOL_MAKE_OPTS += VERBOSE=1
 # for none of the eleven.
 IPCTOOL_VENDORS_allwinner  = allwinner
 IPCTOOL_VENDORS_anyka      = anyka
+IPCTOOL_VENDORS_axera      = axera
 IPCTOOL_VENDORS_fullhan    = fh
 IPCTOOL_VENDORS_goke       = none
 IPCTOOL_VENDORS_grainmedia = gm
@@ -79,6 +80,7 @@ IPCTOOL_HISI_hi3536dv100 = 3536d
 # every one rather than be trimmed on a guess.
 IPCTOOL_HISI_VENDOR_allwinner  = none
 IPCTOOL_HISI_VENDOR_anyka      = none
+IPCTOOL_HISI_VENDOR_axera      = none
 IPCTOOL_HISI_VENDOR_fullhan    = none
 IPCTOOL_HISI_VENDOR_grainmedia = none
 IPCTOOL_HISI_VENDOR_ingenic    = none

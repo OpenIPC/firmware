@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+# GM8126 on a mainline kernel: V4L2 capture and the H.264 encoder. The sensor
+# is the device tree's. S70vendor runs load_generic because ipcinfo does not
+# know this chip (ipctool does).
+
+for module in ov772x gm-cap020 gm-mcp200; do
+	modprobe $module
+done

@@ -18,5 +18,12 @@ define GPIOSTEP_OPENIPC_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 0755 -D $(@D)/gpiostep-ctl $(TARGET_DIR)/usr/bin/gpiostep-ctl
 endef
 
+# The module's built-in pin map is the GK7205V510's, and those GPIO numbers
+# mean other pads on other SoCs, so only a Goke build gets it. Elsewhere the
+# board's pins are given at insmod, and a load without them is refused.
+ifeq ($(call qstrip,$(BR2_OPENIPC_SOC_VENDOR)),goke)
+GPIOSTEP_OPENIPC_MODULE_MAKE_OPTS += GPIOSTEP_CFLAGS=-DGPIOSTEP_GK7205V510_PINS
+endif
+
 $(eval $(kernel-module))
 $(eval $(generic-package))
