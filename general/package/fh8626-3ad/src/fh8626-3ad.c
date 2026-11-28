@@ -1448,8 +1448,11 @@ int main(int argc, char **argv)
 		init_isp_digital_gain(fd, &ae);
 		char sensor_name[64] = "camera-sensor";
 		bool need_sensor = ae_enabled;
-		if (!sensor_path[0])
-			discover_sensor_subdev(sensor_path, sizeof(sensor_path), sensor_name, sizeof(sensor_name));
+		/* Two sensors (a GC1054 and a GC2083) need -s: the last one found
+		 * is not a choice. */
+		if (!sensor_path[0] &&
+		    discover_sensor_subdev(sensor_path, sizeof(sensor_path), sensor_name, sizeof(sensor_name)) < 0)
+			sensor_path[0] = '\0';
 
 		if (sensor_path[0]) {
 			sensor_fd = open(sensor_path, O_RDWR | O_NONBLOCK | O_CLOEXEC);
