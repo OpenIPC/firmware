@@ -186,6 +186,10 @@ overlay_is_ours() {
 }
 
 mount -t proc proc /proc || exit 1
+# The kernel mounts devtmpfs on /dev only for a root it mounts itself. From an
+# initramfs, /dev holds just the console node until something mounts it --
+# Buildroot's own initramfs /init does, and this file takes its place.
+mountpoint -q /dev || mount -t devtmpfs devtmpfs /dev
 grep -q overlay /proc/filesystems || exit 1
 
 is_flash_root=true
