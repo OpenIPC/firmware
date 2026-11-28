@@ -68,9 +68,10 @@ which a global exposure change first shows sets every motion block.
 - The supported sensors are `gc1054` and `gc2083`. Their control contract is
   exposure in integration lines and analogue gain in Q6 (64 = 1x); limits and
   steps are queried from the driver. The ISP tuning tables are measured on the
-  GC1054 module and are applied only to it; a GC2083 keeps the ISP driver's
-  black level, noise and colour defaults until it is measured. The 3,3,2 frame
-  delays were measured on GC1054 too; `-L` overrides them.
+  GC1054 module and are applied only to it. A GC2083 gets a fixed black level
+  of 64, its pedestal measured at 1x to 8x analogue gain, and keeps the ISP
+  driver's tone curve, noise and colour defaults until those are measured. The
+  3,3,2 frame delays were measured on GC1054 too; `-L` overrides them.
   Automatic discovery requires exactly one supported sensor; otherwise use `-s`.
 - **Timing.** The line time is `(width + HBLANK) / PIXEL_RATE`; frame lines are
   `height + VBLANK`. Without PIXEL_RATE/HBLANK, the frame interval divided by
