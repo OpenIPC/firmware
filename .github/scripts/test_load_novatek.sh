@@ -132,6 +132,11 @@ run 128 48 "$lit" "osmem=48M" "bootargs=$lit" "osmem_default=48M"
 has "insmod nvt_sen_imx415.ko sen_cfg_path=/etc/sensors/sen_imx415.cfg" "imx415 loads its own driver and cfg"
 lacks "Invalid sensor" "... and is not refused"
 exited 0 "... and the script runs to its end"
+TEST_SENSOR=sc430ai
+run 128 48 "$lit" "osmem=48M" "bootargs=$lit" "osmem_default=48M"
+has "insmod nvt_sen_sc430ai.ko sen_cfg_path=/etc/sensors/sen_sc430ai.cfg" "sc430ai loads its own driver and cfg"
+lacks "Invalid sensor" "... and is not refused"
+exited 0 "... and the script runs to its end"
 TEST_SENSOR=
 run 128 48 "$lit" "osmem=48M" "bootargs=$lit" "osmem_default=48M"
 has "insmod nvt_sen_sc501ai.ko sen_cfg_path=/etc/sensors/sen_sc501ai.cfg" "sc501ai is unchanged"
