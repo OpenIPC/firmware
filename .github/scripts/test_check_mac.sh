@@ -80,7 +80,7 @@ sed -i "/^$1=/d" "$UENV" 2>/dev/null
 exit 0'
 
 # A reboot is a test failure in itself: #1147 rebooted after writing the MAC,
-# and at S30 -- before S40network -- it never had to.
+# and it runs before S40network brings eth0 up, so it never had to.
 stub reboot 'echo "reboot $*" >> "$SB/reboot.log"; exit 0'
 
 stub ipcinfo '
@@ -116,7 +116,7 @@ assert_repaired() {
         *) bad "$desc -- want an address starting '$want_prefix', got '$stored'" ;;
     esac
     [ "$stored" = "$(env_mac)" ] || bad "$desc -- get_mac '$stored' disagrees with the env '$(env_mac)'"
-    [ -f "$SB/reboot.log" ] && bad "$desc -- rebooted; S30 runs before S40network, it must not need to"
+    [ -f "$SB/reboot.log" ] && bad "$desc -- rebooted; it runs before eth0 is up, it must not need to"
     return 0
 }
 
@@ -131,6 +131,19 @@ check_mac >/dev/null
 T "bc:24:11:aa:bb:cc" "$(env_mac)" "a real vendor MAC is left alone"
 T "0" "$(setenv_runs)" "...and nothing is written to the environment"
 T "bc:24:11:aa:bb:cc" "$(get_mac eth0)" "...and get_mac reports it"
+
+# A camera with no Ethernet at all (Wi-Fi only) has no eth0 to give an
+# address, so even an empty environment must not cause a write.
+reset_camera
+rm -rf "$SB/sys/class/net/eth0"
+check_mac >/dev/null
+T "0" "$(setenv_runs)" "no eth0: nothing is written to the environment"
+T "" "$(cat "$SB/etc/ethaddr" 2>/dev/null)" "...nor to /etc/ethaddr"
+# A modular Ethernet driver (ak_eth on the Anyka AV100 and AV130) makes eth0
+# only once S35modules has run, and the repair must still happen then.
+mkdir -p "$SB/sys/class/net/eth0"
+echo "$KERNEL_MAC" > "$SB/sys/class/net/eth0/address"
+check_mac >/dev/null; assert_repaired "eth0 made by a module: the repair runs once it exists" "02:"
 
 # The #2405 case: a full image carries no environment.
 reset_camera
@@ -194,7 +207,7 @@ octet=$(printf '%d' "0x${first%%:*}")
     bad "generated address $first is multicast"
 
 # A kernel whose CRNG is not ready yet blocks the read. A FIFO nobody writes
-# to blocks the same way, at open(). The mint must neither hang the boot (S30
+# to blocks the same way, at open(). The mint must neither hang the boot (it
 # runs ahead of the network) nor come back empty.
 mkfifo "$SB/urandom-blocked"
 reset_camera
@@ -422,6 +435,19 @@ for f in general/overlay/etc/network/interfaces.d/eth0 general/overlay/etc/init.
         bad "$f no longer routes through get_mac"
 done
 
+# check_mac decides "no Ethernet" from eth0 being absent, so it must run after
+# S35modules has loaded any Ethernet driver built as a module: from S40network,
+# before anything brings eth0 up, and from no script ordered ahead of it.
+s40=general/overlay/etc/init.d/S40network
+start=$(sed -n '/^start() {/,/^}/p' "$s40" | grep -v '^[[:space:]]*#')
+case "$start" in
+    *check_mac*ifup*) ok "S40network runs check_mac before it brings an interface up" ;;
+    *) bad "S40network's start no longer runs check_mac ahead of ifup" ;;
+esac
+early=$(grep -lw check_mac general/overlay/etc/init.d/S[0-3]* 2>/dev/null | grep -v '/S3[5-9]' || true)
+[ -z "$early" ] && ok "no init script ahead of S35modules runs check_mac" ||
+    bad "check_mac runs before S35modules, so a modular eth0 is not there yet: $early"
+
 # extutils dispatches on $0; an applet with no symlink is dead code, which is
 # exactly what set_mac was before this.
 for applet in check_mac get_mac set_mac; do
@@ -432,7 +458,7 @@ done
 # Comments stripped first: the arm's own comment explains that it used to
 # reboot, and a naive grep reads that as the reboot coming back.
 if sed -n '/^\tcheck_mac)/,/^\t;;/p' "$SRC" | grep -v '^[[:space:]]*#' | grep -qw reboot; then
-    bad "check_mac reboots again -- S30 runs before S40network, it does not need to"
+    bad "check_mac reboots again -- it runs before eth0 is up, it does not need to"
 else
     ok "check_mac does not reboot"
 fi
