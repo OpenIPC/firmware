@@ -5,7 +5,7 @@
 ################################################################################
 
 HISILICON_OPENSDK_SITE = $(call github,openipc,openhisilicon,$(HISILICON_OPENSDK_VERSION))
-HISILICON_OPENSDK_VERSION = 443c5d5b1bcd5998f01c92871129e2125948685a
+HISILICON_OPENSDK_VERSION = 8ef708a230c14ae48e23968a4c74f5a9c47f63fe
 
 HISILICON_OPENSDK_LICENSE = GPL-3.0
 HISILICON_OPENSDK_LICENSE_FILES = LICENSE
@@ -308,18 +308,22 @@ HISILICON_OPENSDK_SENSORS_gk7205v500 = \
 # registers, which the 8MB lite rootfs has room for. All 52 build; add one
 # here when a board carries it.
 HISILICON_OPENSDK_SENSORS_gk7206v100 = \
-	galaxycore_gc2053/libsns_gc2053 \
-	galaxycore_gc2083/libsns_gc2083 \
-	galaxycore_gc4653/libsns_gc4653 \
-	galaxycore_gc4663/libsns_gc4663 \
 	smartsens_sc200ai/libsns_sc200ai \
 	smartsens_sc3338/libsns_sc3338 \
 	smartsens_sc4336/libsns_sc4336 \
 	smartsens_sc4336p/libsns_sc4336p \
 	smartsens_sc450ai/libsns_sc450ai \
-	smartsens_sc500ai/libsns_sc500ai \
-	sony_imx307/libsns_imx307
+	smartsens_sc465sl/libsns_sc465sl \
+	smartsens_sc500ai/libsns_sc500ai
 HISILICON_OPENSDK_SENSORS = $(HISILICON_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
+
+# gk7206v100's AI noise reduction networks, which the ISP runs on the NPU:
+# the SDK's own, kept beside each sensor driver as ainr_<W>x<H>.xmm and
+# installed as /usr/share/aiisp/<sensor>/ainr_<W>x<H>.xmm (about 190 KB each
+# in the squashfs). Only the sensors measured on a camera; add one here once
+# it has been.
+HISILICON_OPENSDK_AINR_gk7206v100 = \
+	smartsens_sc465sl:sc465sl:ainr_2560x1440
 
 # SC2315E on hi3516ev200 builds from openhisilicon's smart_sc2315e, the source
 # of the libsns_sc2315e.so hisilicon-osdrv-hi3516ev200 used to carry as a
@@ -699,6 +703,10 @@ define HISILICON_OPENSDK_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 755 -d $(TARGET_DIR)/usr/lib/sensors
 	$(foreach s,$(HISILICON_OPENSDK_SENSORS), \
 		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/gk7206v100/$(s).so $(TARGET_DIR)/usr/lib/sensors ; \
+	)
+	$(foreach a,$(HISILICON_OPENSDK_AINR_gk7206v100), \
+		$(INSTALL) -D -m 0644 $(@D)/libraries/sensor/gk7206v100/$(word 1,$(subst :, ,$(a)))/$(word 3,$(subst :, ,$(a))).xmm \
+			$(TARGET_DIR)/usr/share/aiisp/$(word 2,$(subst :, ,$(a)))/$(word 3,$(subst :, ,$(a))).xmm ; \
 	)
 	$(INSTALL) -m 755 -d $(HISILICON_OPENSDK_KMOD_DST)
 	for ko in $(@D)/kernel/open_*.ko; do \

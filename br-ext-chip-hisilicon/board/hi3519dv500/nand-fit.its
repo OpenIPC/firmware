@@ -1,0 +1,57 @@
+/dts-v1/;
+
+/*
+ * Kernel of the hi3519dv500 NAND image: the gzipped arm64 Image and its DTB,
+ * each hashed so U-Boot refuses a kernel that NAND has corrupted instead of
+ * booting it. Built by general/scripts/rootfs_script.sh (the "NAND FIT" step)
+ * from the kernel tree; external.mk puts it in the UBIFS rootfs as
+ * /boot/fitImage. U-Boot's bootm starts it through the secure loader and BL31.
+ *
+ * The DTB is demb-flash: demb with the eMMC controller disabled. Its pins are
+ * the SPI flash's (CLK, CMD, D0-D3, RSTn at iocfg 0x34-0x4c), and an enabled
+ * mmc0 switches them to eMMC at probe, after which every NAND read returns a
+ * bit pattern. The kernel builds it whatever the defconfig's DTS is: its
+ * dts/vendor/Makefile builds the one CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE_NAMES
+ * names. The NOR uImage keeps demb, untested on NOR with demb-flash.
+ */
+/ {
+	/* "OpenIPC <soc>": sysupgrade's SoC check reads it (fit_soc). */
+	description = "OpenIPC @SOC@";
+	/* The build's BUILD_PLATFORM, as /usr/lib/os-release has it (fit_platform). */
+	openipc,platform = "BUILD_PLATFORM=@PLATFORM@";
+	#address-cells = <1>;
+
+	images {
+		kernel {
+			description = "Linux";
+			data = /incbin/("Image.gz");
+			type = "kernel";
+			arch = "arm64";
+			os = "linux";
+			compression = "gzip";
+			load = <0x40080000>;
+			entry = <0x40080000>;
+			hash-1 { algo = "crc32"; };
+			hash-2 { algo = "sha1"; };
+		};
+
+		fdt {
+			description = "hi3519dv500-demb-flash";
+			data = /incbin/("vendor/hi3519dv500-demb-flash.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			hash-1 { algo = "crc32"; };
+			hash-2 { algo = "sha1"; };
+		};
+	};
+
+	configurations {
+		default = "conf-1";
+		conf-1 {
+			description = "Linux + hi3519dv500-demb-flash";
+			kernel = "kernel";
+			fdt = "fdt";
+		};
+	};
+};

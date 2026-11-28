@@ -1,12 +1,13 @@
 #!/bin/bash
 # Regression tests for S95vigil: the supervisor it shares with S95majestic
 # (restarted after a crash, never in a loop, never during an upgrade, never
-# after a stop), and what is its own -- the arguments built from
-# /etc/vigil.yaml, and the recording directory it refuses.
+# after a stop), and what is its own -- vigild given /etc/vigil.yaml and none
+# of its settings, and the one-time conversion of an earlier /etc/vigil.json,
+# which vigild itself does (vigild -f vigil.json -w vigil.yaml).
 #
 # The same sandbox as test_majestic_supervise.sh: the real script with its
-# paths rewritten under $SB and its waits shortened; vigild, start-stop-daemon,
-# yaml-cli and logger are stubs, and /proc/mounts is a file the test writes.
+# paths rewritten under $SB and its waits shortened; vigild, start-stop-daemon
+# and logger are stubs.
 #
 # Lightweight: pure shell, no root, runs in a few seconds.
 
@@ -21,39 +22,47 @@ bad() { echo "FAIL $*"; fail=$((fail + 1)); }
 
 SB=$(mktemp -d)
 trap 'pkill -f "$SB/" 2>/dev/null; rm -rf "$SB"' EXIT
-mkdir -p "$SB/bin" "$SB/run" "$SB/crash" "$SB/cfg" "$SB/disk" "$SB/ram" "$SB/proc/self"
+mkdir -p "$SB/bin" "$SB/run" "$SB/crash" "$SB/etc" "$SB/rom$SB/etc"
 
 sed -e "s|DAEMON_PATH=\"/usr/bin/\$DAEMON\"|DAEMON_PATH=\"$SB/bin/vigild\"|" \
     -e "s|/var/run/|$SB/run/|g" \
     -e "s|CRASH=/etc/crash|CRASH=$SB/crash|" \
     -e "s|UPGRADE_LOCK=/tmp/sysupgrade.lock|UPGRADE_LOCK=$SB/sysupgrade.lock|" \
     -e "s|BACKOFF=\"5 30 120\"|BACKOFF=\"\${TEST_BACKOFF:-0 0 0}\"|" \
-    -e "s|/proc/mounts|$SB/mounts|" \
-    -e "s|CARD_POLL=10|CARD_POLL=1|" \
+    -e "s|CONFIG=/etc/vigil.yaml|CONFIG=$SB/etc/vigil.yaml|" \
+    -e "s|LEGACY=/etc/vigil.json|LEGACY=$SB/etc/vigil.json|" \
+    -e "s|ROM=/rom|ROM=$SB/rom|" \
     "$SRC" > "$SB/S95vigil"
-for p in 'DAEMON_PATH="/usr/bin/$DAEMON"' /var/run/ CRASH=/etc/crash UPGRADE_LOCK=/tmp/sysupgrade.lock 'BACKOFF="5 30 120"' /proc/mounts CARD_POLL=10; do
+for p in 'DAEMON_PATH="/usr/bin/$DAEMON"' /var/run/ CRASH=/etc/crash UPGRADE_LOCK=/tmp/sysupgrade.lock 'BACKOFF="5 30 120"' \
+    CONFIG=/etc/vigil.yaml LEGACY=/etc/vigil.json ROM=/rom; do
     grep -qF "$p" "$SRC" || bad "$p is gone from S95vigil; this test is testing nothing there"
 done
 chmod +x "$SB/S95vigil"
 
-# A disk, a RAM disk and the flash root, as /proc/mounts would list them.
-# A mount point with a space in it is listed with the space escaped (\040).
-mkdir -p "$SB/Disk One" "$SB/rocard/rec" "$SB/back\\slash/rec"
-cat > "$SB/mounts" <<EOF
-/dev/root / squashfs ro 0 0
-tmpfs $SB/ram tmpfs rw 0 0
-/dev/sda1 $SB/disk ext4 rw 0 0
-/dev/sdb1 $SB/Disk\\040One ext4 rw 0 0
-proc $SB/proc proc rw 0 0
-/dev/sdc1 $SB/rocard vfat ro,relatime 0 0
-/dev/sdd1 $SB/back\\134slash ext4 rw 0 0
-EOF
-cp "$SB/mounts" "$SB/mounts.boot"
-
-# vigild: counts its starts, keeps its arguments one per line, then does what
-# $SB/mode says.
+# vigild: with -w, converts: writes OUT (0600) from the -f file, or, when
+# $SB/wfail exists, refuses as the real one does for a file it cannot load.
+# Otherwise counts its starts, keeps its arguments one per line, then does
+# what $SB/mode says.
 cat > "$SB/bin/vigild" <<EOF
 #!/bin/sh
+case " \$* " in
+*" -w "*)
+    printf '%s\n' "\$@" > "$SB/wargs"
+    while [ \$# -gt 0 ]; do
+        case "\$1" in -f) in=\$2; shift ;; -w) out=\$2; shift ;; esac
+        shift
+    done
+    if [ -f "$SB/wfail" ]; then
+        echo "vigil: \$in: cameras[0].url: not a camera URL (schemes: rtsp, netip, capture)" >&2
+        echo "vigil: \$in is invalid; using the defaults (the file is kept)" >&2
+        echo "vigil: \$in is invalid; not writing \$out" >&2
+        exit 1
+    fi
+    (umask 077; { echo "# YAML of"; cat "\$in"; } > "\$out")
+    echo "vigil: \$in: loaded" >&2
+    echo "vigil: \$out written" >&2
+    exit 0 ;;
+esac
 echo start >> "$SB/starts"
 : > "$SB/args"
 for a in "\$@"; do printf '%s\n' "\$a" >> "$SB/args"; done
@@ -87,23 +96,14 @@ case "$mode" in
         exit 0 ;;
 esac
 EOF
-# yaml-cli -i FILE -g .a.b: the value is the file $SB/cfg/.a.b, absent = not set;
-# with $SB/cfg/.broken present it fails to parse, as the real one does.
-cat > "$SB/bin/yaml-cli" <<EOF
-#!/bin/sh
-if [ -f "$SB/cfg/.broken" ]; then
-    echo "Parse error: while parsing a block collection at line 2, column 3" >&2
-    exit 1
-fi
-[ "\$3" = -g ] && [ -f "$SB/cfg/\$4" ] && cat "$SB/cfg/\$4"
-EOF
 printf '#!/bin/sh\necho "$*" >> "%s/log"\n' "$SB" > "$SB/bin/logger"
 chmod +x "$SB/bin"/*
 export PATH="$SB/bin:$PATH" SB_DIR="$SB"
 
 starts() { [ -f "$SB/starts" ] && wc -l < "$SB/starts" | tr -d ' ' || echo 0; }
 reset() {
-    rm -f "$SB/starts" "$SB/args" "$SB/log" "$SB/crash"/* "$SB/sysupgrade.lock" "$SB/run"/* "$SB/cfg"/.*[a-z]* 2>/dev/null
+    rm -f "$SB/starts" "$SB/args" "$SB/wargs" "$SB/wfail" "$SB/log" "$SB/crash"/* "$SB/sysupgrade.lock" \
+        "$SB/run"/* "$SB/etc"/* 2>/dev/null
     echo "$1" > "$SB/mode"
 }
 supervise() { timeout 20 sh "$SB/S95vigil" supervise; }
@@ -136,113 +136,109 @@ touch "$SB/sysupgrade.lock"
 supervise
 [ "$(starts)" = 0 ] && ok "during an upgrade vigild is not started" || bad "upgrade: $(starts) starts"
 
-# 4. Arguments from the configuration.
+# 4. vigild reads its configuration itself, and decides where it may record
+#    (only onto a mounted disk, OpenIPC/vigil#14): it is given the file and
+#    none of its settings, whatever the file says.
+CONF="$SB/etc/vigil.yaml"
+BASE="-s -f $CONF"
 reset exit
 supervise
-[ "$(args)" = "-s -o none" ] && ok "no configuration: no cameras, no recording, syslog" || bad "empty config: $(args)"
+[ "$(args)" = "$BASE" ] && ok "vigild is given its configuration file and syslog, nothing else" || bad "empty config: $(args)"
 
 reset exit
-printf 'rtsp://u:p@10.0.0.1/stream=0\nnetip://admin:@10.0.0.2:34567/?ch=1&stream=extra\n' > "$SB/cfg/.cameras"
-touch "$SB/x1" "$SB/x2"         # would match a '?' glob if one were expanded
+printf 'cameras:\n  - url: "rtsp://u:p@10.0.0.1/stream=0"\nrecord:\n  path: /mnt/sda1/rec\n  segment: 300\n' > "$CONF"
 supervise
-[ "$(args)" = "-s -c rtsp://u:p@10.0.0.1/stream=0 -c netip://admin:@10.0.0.2:34567/?ch=1&stream=extra -o none" ] \
-    && ok "each camera URL is one -c, '?' and '&' untouched" || bad "cameras: $(args)"
+[ "$(args)" = "$BASE" ] && ok "cameras and recording stay in the file, not on the command line" || bad "settings: $(args)"
 
-reset exit
-mkdir -p "$SB/disk/My Recordings"
-echo "$SB/disk/My Recordings" > "$SB/cfg/.record.path"
-echo 300 > "$SB/cfg/.record.segment"
-echo 5 > "$SB/cfg/.record.keep"
-supervise
-if [ "$(sed -n 3p "$SB/args")" = "$SB/disk/My Recordings" ] && [ "$(sed -n 2p "$SB/args")" = -o ] \
-    && [ "$(sed -n '4,7p' "$SB/args" | tr '\n' ' ')" = "-S 300 -K 5 " ]; then
-    ok "a recording directory on a disk is passed as one argument, spaces and all, with -S and -K"
-else
-    bad "disk path: $(args)"
-fi
+# 5. An earlier /etc/vigil.json is converted once into /etc/vigil.yaml, by
+#    vigild itself.
+JSON="$SB/etc/vigil.json"
+shipped='# the image'"'"'s vigil.yaml'
+mine='{ "version": 1, "cameras": [ { "url": "rtsp://u:p@10.0.0.1/stream=0" } ] }'
+migrate_start() {
+    sh "$SB/S95vigil" start > /dev/null
+    for _ in $(seq 50); do [ "$(starts)" -ge 1 ] && break; sleep 0.1; done
+    sh "$SB/S95vigil" stop > /dev/null
+    sleep 0.3
+}
+mode() { stat -c %a "$1" 2>/dev/null; }
 
-reset exit
-echo "$SB/ram" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "-s -o none" ] && grep -q "not recording: $SB/ram" "$SB/log" \
-    && ok "a directory on tmpfs is refused, and the log says so" || bad "tmpfs path: $(args)"
-
-reset exit
-ln -s "$SB/ram" "$SB/disk/rec"
-echo "$SB/disk/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "-s -o none" ] && ok "a link on the disk that leads to tmpfs is refused" || bad "linked path: $(args)"
-
-reset exit
-echo "$SB/proc/self" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "-s -o none" ] && ok "a directory on proc (not a disk, card or share) is refused" || bad "proc path: $(args)"
-
-reset exit
-echo "$SB/rocard/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "-s -o none" ] && ok "a card mounted read-only is refused" || bad "read-only card: $(args)"
-
-reset exit
-echo "$SB/back\\slash/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(sed -n 3p "$SB/args")" = "$SB/back\\slash/rec" ] && ok "a disk mounted at a path with a backslash is recorded to" \
-    || bad "backslash mount point: $(args)"
-
-reset exit
-touch "$SB/cfg/.broken"
-supervise
-if [ "$(args)" = "-s -o none" ] && grep -q "cannot read .*Parse error" "$SB/log" 2>/dev/null; then
-    ok "a configuration yaml-cli cannot parse is said in the log, not taken for an empty one"
-else
-    bad "broken config: args '$(args)', log '$(cat "$SB/log" 2>/dev/null)'"
-fi
-rm -f "$SB/cfg/.broken"
-
-reset exit
-mkdir -p "$SB/flash"
-echo "$SB/flash" > "$SB/cfg/.record.path"
-supervise
-[ "$(args)" = "-s -o none" ] && ok "a directory on the flash root is refused" || bad "root path: $(args)"
-
-reset exit
-mkdir -p "$SB/disk/real"
-ln -s "$SB/disk/real" "$SB/disk/alias"
-echo "$SB/disk/alias" > "$SB/cfg/.record.path"
-supervise
-[ "$(sed -n 3p "$SB/args")" = "$SB/disk/real" ] && ok "a link within the disk is followed, and vigild gets where it leads" \
-    || bad "alias path: $(args)"
-
-reset exit
-mkdir -p "$SB/Disk One/rec"
-echo "$SB/Disk One/rec" > "$SB/cfg/.record.path"
-supervise
-[ "$(sed -n 3p "$SB/args")" = "$SB/Disk One/rec" ] && ok "a disk mounted at a path with a space (escaped in /proc/mounts) is recorded to" \
-    || bad "escaped mount point: $(args)"
-
-# 5. A card mounted after vigild started: found, and vigild started again with it.
 reset run
-echo "$SB/card/rec" > "$SB/cfg/.record.path"
-sh "$SB/S95vigil" start > /dev/null
-for _ in $(seq 50); do [ "$(starts)" -ge 1 ] && break; sleep 0.1; done
-first=$(args)
-mkdir -p "$SB/card/rec"
-echo "/dev/mmcblk0p1 $SB/card vfat rw 0 0" >> "$SB/mounts"
-for _ in $(seq 60); do [ "$(starts)" -ge 2 ] && break; sleep 0.1; done
-sleep 0.3
-if [ "$first" = "-s -o none" ] && [ "$(starts)" = 2 ] && [ "$(sed -n 3p "$SB/args")" = "$SB/card/rec" ]; then
-    ok "a card mounted later is found, and vigild is started again to record to it"
+echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo "$mine" > "$JSON"; chmod 644 "$JSON"
+migrate_start
+[ "$(tr '\n' ' ' < "$SB/wargs" 2>/dev/null)" = "-f $JSON -w $CONF " ] \
+    && ok "vigild converts vigil.json itself: -f vigil.json -w vigil.yaml" || bad "conversion: $(cat "$SB/wargs" 2>&1)"
+[ "$(head -1 "$CONF")" = "# YAML of" ] && grep -qF "$mine" "$CONF" && ok "...over the vigil.yaml the image ships" \
+    || bad "converted: $(cat "$CONF")"
+[ ! -e "$JSON" ] && [ -f "$JSON.migrated" ] && [ "$(mode "$JSON.migrated")" = 600 ] \
+    && ok "...and the old file is kept as vigil.json.migrated, root only" || bad "old file: $(ls -l "$SB/etc")"
+grep -q "converted $JSON into $CONF" "$SB/log" 2>/dev/null && ok "...and the log says so" \
+    || bad "conversion log: $(cat "$SB/log" 2>/dev/null)"
+[ "$(args)" = "$BASE" ] && ok "...then vigild runs on vigil.yaml" || bad "after conversion: $(args)"
+cp "$CONF" "$SB/converted"
+rm -f "$SB/wargs"
+: > "$SB/log"
+migrate_start
+cmp -s "$CONF" "$SB/converted" && [ ! -e "$SB/wargs" ] && [ ! -s "$SB/log" ] && ok "a second start converts nothing" \
+    || bad "second start: $(cat "$SB/log")"
+
+reset run
+rm -f "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo "$mine" > "$JSON"
+migrate_start
+grep -qF "$mine" "$CONF" 2>/dev/null && [ -f "$JSON.migrated" ] && ok "with no vigil.yaml at all, vigil.json is converted" \
+    || bad "no yaml: $(cat "$CONF" 2>&1)"
+
+reset run
+echo "$mine" > "$JSON"; touch -d '-1 hour' "$JSON"
+printf 'cameras:\n  - url: "rtsp://10.0.0.9/x"\n' > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+migrate_start
+grep -q 10.0.0.9 "$CONF" && [ -f "$JSON" ] && [ ! -e "$SB/wargs" ] && grep -q "is not converted: .* has been changed since" "$SB/log" \
+    && ok "a vigil.yaml changed since (the API, by hand) is not converted over" || bad "changed yaml: $(cat "$CONF"); $(cat "$SB/log")"
+
+reset run
+printf 'cameras:\n  - url: "rtsp://10.0.0.9/x"\n' > "$CONF"; touch -d '-1 hour' "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo "$mine" > "$JSON"
+migrate_start
+if grep -qF "$mine" "$CONF" && grep -q 10.0.0.9 "$CONF.pre-json" && [ "$(mode "$CONF.pre-json")" = 600 ] &&
+   [ -f "$JSON.migrated" ] && grep -q "was older than $JSON: kept as $CONF.pre-json" "$SB/log"; then
+    ok "a vigil.yaml older than vigil.json (left by the image before) is kept as vigil.yaml.pre-json, vigil.json converted"
 else
-    bad "late card: first '$first', starts $(starts), now '$(args)'"
+    bad "older yaml: $(cat "$CONF"); $(cat "$SB/log"); $(ls -l "$SB/etc")"
 fi
-if pgrep -f "$SB/S95vigil supervise" > /dev/null && [ ! -f "$SB/crash/vigil.loop" ]; then
-    ok "...by the same supervisor, with no crash counted"
+
+reset run
+echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo "$mine" > "$JSON"
+printf '#!/bin/sh\nexit 1\n' > "$SB/bin/mv"; chmod +x "$SB/bin/mv"
+migrate_start
+rm -f "$SB/bin/mv"
+if grep -qF "$mine" "$CONF" && [ -f "$JSON" ] && [ ! -e "$JSON.migrated" ] &&
+   grep -q "could not be kept as $JSON.migrated (root only): remove it" "$SB/log" && ! grep -q "the old file is kept" "$SB/log"; then
+    ok "vigil.json that cannot be moved aside is said, not claimed kept"
 else
-    bad "late card: supervisor gone or a crash counted"
+    bad "failed move: $(cat "$SB/log"); $(ls -l "$SB/etc")"
 fi
-sh "$SB/S95vigil" stop > /dev/null
-sleep 0.5
-cp "$SB/mounts.boot" "$SB/mounts"
+rm -f "$SB/wargs"; : > "$SB/log"
+migrate_start
+grep -qF "$mine" "$CONF" && [ ! -e "$SB/wargs" ] && grep -q "is not converted: .* has been changed since" "$SB/log" \
+    && ok "...and the next start uses the converted vigil.yaml, converting nothing again" || bad "after failed move: $(cat "$SB/log")"
+
+reset run
+echo "$shipped" > "$CONF"; echo "$shipped" > "$SB/rom$CONF"
+echo "$mine" > "$JSON"
+touch "$SB/wfail"
+migrate_start
+if [ "$(cat "$CONF")" = "$shipped" ] && [ -f "$JSON" ] && [ ! -e "$JSON.migrated" ] &&
+   grep -q "is not converted: $JSON: cameras\[0\].url: not a camera URL" "$SB/log" &&
+   ! grep -q -e ': loaded$' -e 'using the defaults' "$SB/log" && [ ! -e "$SB/run/vigil-supervise.pid.err" ]; then
+    ok "a vigil.json vigild cannot load is not converted, both files stay, and the log says why"
+else
+    bad "refused conversion: $(cat "$SB/log"); $(ls "$SB/etc" "$SB/run")"
+fi
+! grep -q 'u:p@' "$SB/log" 2>/dev/null && ok "...without a password in it" || bad "a password reached the log"
+[ "$(args)" = "$BASE" ] && ok "...and vigild runs on vigil.yaml" || bad "after a refused conversion: $(args)"
 
 # 6. A lock left with no pid -- its command killed between mkdir and writing
 #    its pid -- is taken over after a short grace, not waited on forever.

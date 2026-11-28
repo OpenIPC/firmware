@@ -18,7 +18,7 @@ BR2_ARM_INSTRUCTIONS_THUMB2=y
 
 # Toolchain -- arm musleabihf, 4.19 kernel headers (the real deployed
 # AX620U firmware's own kernel version, confirmed from its modules'
-# vermagic -- see br-ext-chip-axera/board/ax620u/README.md).
+# vermagic).
 BR2_TOOLCHAIN_EXTERNAL=y
 BR2_TOOLCHAIN_EXTERNAL_DOWNLOAD=y
 BR2_TOOLCHAIN_EXTERNAL_URL="https://github.com/openipc/firmware/releases/download/$(OPENIPC_TOOLCHAIN).tgz"

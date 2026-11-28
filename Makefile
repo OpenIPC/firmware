@@ -103,6 +103,26 @@ prepare:
 		sed -i 's|^HOST_CXXFLAGS += \$$(HOST_CFLAGS)$$|HOST_CXXFLAGS += $$(filter-out -std=%,$$(HOST_CFLAGS))|' \
 			$(TARGET)/buildroot-$(BR_VER)/package/Makefile.in; \
 	fi
+	@# Build host-tar without POSIX ACLs. Its configure finds the build host's
+	@# libacl on its own, and acl 2.4.0 declares acl_get_file_at(),
+	@# acl_set_file_at() and acl_delete_def_file_at() in <sys/acl.h>, with an
+	@# at_flags argument. tar 1.34's src/xattrs.c defines static wrappers of
+	@# the same names and different types, so host-tar stops with "conflicting
+	@# types for 'acl_get_file_at'", and with it every build from a fresh output
+	@# directory. Buildroot already builds the target tar --without-posix-acls
+	@# unless BR2_PACKAGE_ACL is set. The host tar only packs archives here and
+	@# needs no ACL support, and the wrappers sit under HAVE_POSIX_ACLS.
+	@# The flag goes in as its own `+=` line ahead of the host package's eval,
+	@# so it does not depend on how tar.mk spells HOST_TAR_CONF_OPTS; and if a
+	@# Buildroot bump moves that eval, prepare says so instead of leaving
+	@# host-tar to fail with the original error.
+	@if test -f $(TARGET)/buildroot-$(BR_VER)/package/tar/tar.mk; then \
+		tarmk=$(TARGET)/buildroot-$(BR_VER)/package/tar/tar.mk; \
+		grep -q '^HOST_TAR_CONF_OPTS += --without-posix-acls$$' $$tarmk || \
+		sed -i 's|^\$$(eval \$$(host-autotools-package))$$|HOST_TAR_CONF_OPTS += --without-posix-acls\n&|' $$tarmk; \
+		grep -q '^HOST_TAR_CONF_OPTS += --without-posix-acls$$' $$tarmk || { \
+			echo "prepare: could not add --without-posix-acls to host-tar in $$tarmk" >&2; exit 1; }; \
+	fi
 
 help:
 	@printf "BR-OpenIPC usage:\n \
@@ -167,7 +187,7 @@ repack-final: build
 
 repack:
 ifeq ($(BR2_PACKAGE_OPENIPC_NFS_ROOT),y)
-ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
+ifeq ($(BR2_OPENIPC_SOC_FAMILY),"rv11xx")
 	@$(call PREPARE_REPACK,zboot.img,16384,,,nfs-root)
 else
 	@$(call PREPARE_REPACK,uImage,16384,,,nfs-root)
@@ -179,35 +199,15 @@ ifneq ($(wildcard $(TARGET)/images/firmware.bin),)
 # kernel splits at boot, whatever bootloader loaded it, shipped as the -split
 # package. Only its whole is bounded: the chip, less what comes before the
 # firmware partition (BR2_OPENIPC_NOR_FIRMWARE_OFFSET) and the smallest overlay
-# worth keeping (256K).
-#
-# A board whose older cameras upgrade from fixed slots also ships those, the
-# plain package of uImage and rootfs. The uImage stays a 64 KiB block short of
-# its 2 MiB slot: under 1984K, which CHECK_SIZE, counting whole KB, enforces as
-# 1983K. The kernel, U-Boot and sysupgrade tell the layouts apart by where the
-# squashfs is: at the block right after the uImage is the split layout, at the
-# slot boundary fixed slots. A fixed-slot uImage ending in the slot's last block
-# would be both.
-#
-# The fixed-slot package is the extra: a build whose uImage or rootfs has
-# outgrown its slot ships the split package alone rather than failing, and
-# says so. Cameras on fixed slots then upgrade to the split layout, which
-# sysupgrade and defib install from the -split package.
-ifeq ($(BR2_OPENIPC_NOR_FIXED_PACKAGE),y)
-ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
-	@$(if $(and $(call FIXED_SLOTS_FIT,5120),$(UBOOT_ROOTMTD_FITS)),$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,5120,nor),$(call FIXED_SLOTS_SKIP,5120))
-else
-	@$(if $(call FIXED_SLOTS_FIT,8192),$(call PREPARE_REPACK,uImage,1983,rootfs.squashfs,8192,nor),$(call FIXED_SLOTS_SKIP,8192))
-endif
-endif
+# worth keeping (256K). The split package is the only NOR package such a
+# board ships: cameras still on fixed slots move to it through sysupgrade
+# and defib, which install it over either layout.
 	@$(call CHECK_SIZE,firmware.bin,$(shell expr $(subst ",,$(BR2_OPENIPC_FLASH_SIZE)) \* 1024 - $$(( $(or $(BR2_OPENIPC_NOR_FIRMWARE_OFFSET),0x50000) / 1024 )) - 256))
 	@$(call CHECK_KERNEL_READ)
 	@$(call REPACK_NOR_SPLIT)
 else
 ifeq ($(BR2_TARGET_ROOTFS_SQUASHFS),y)
-ifeq ($(BR2_OPENIPC_SOC_VENDOR),"rockchip")
-	@$(call PREPARE_REPACK,zboot.img,4096,rootfs.squashfs,8192,nor)
-else ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
+ifeq ($(BR2_OPENIPC_FLASH_SIZE),"8")
 ifneq ($(UBOOT_ROOTMTD_VENDOR),)
 	@$(call CHECK_UBOOT_ROOTMTD)
 endif
@@ -220,7 +220,7 @@ endif
 # A NOR+NAND build (ultimate with BR2_TARGET_ROOTFS_UBI) packages its NAND
 # image whichever NOR layout it ships.
 ifeq ($(BR2_TARGET_ROOTFS_UBI),y)
-ifneq ($(filter $(BR2_OPENIPC_SOC_VENDOR),"rockchip" "sigmastar"),)
+ifneq ($(or $(filter "sigmastar",$(BR2_OPENIPC_SOC_VENDOR)),$(filter "rv11xx",$(BR2_OPENIPC_SOC_FAMILY))),)
 	@$(call PREPARE_REPACK,,,rootfs.ubi,16384,nand)
 else ifneq ($(wildcard $(PWD)/br-ext-chip-$(subst ",,$(BR2_OPENIPC_SOC_VENDOR))/board/$(subst ",,$(BR2_OPENIPC_SOC_FAMILY))/nand-fit.its),)
 # FIT NAND (board/<family>/nand-fit.its): the kernel lives inside the UBIFS
@@ -244,12 +244,22 @@ else
 	@$(call CHECK_SIZE,rootfs.ubi,24576)
 endif
 	@$(call REPACK_NAND_FIT)
+else ifneq ($(wildcard $(PWD)/br-ext-chip-$(subst ",,$(BR2_OPENIPC_SOC_VENDOR))/board/$(subst ",,$(BR2_OPENIPC_SOC_FAMILY))/ubinize-nand.cfg),)
+	@$(call CHECK_SIZE,rootfs.ubi,24576)
+	@$(call REPACK_NAND_UBIFS)
 else
 	@$(call PREPARE_REPACK,uImage,4096,rootfs.ubi,16384,nand)
 endif
 endif
 ifeq ($(BR2_TARGET_ROOTFS_INITRAMFS),y)
 	@$(call PREPARE_REPACK,uImage,16384,,,initramfs)
+endif
+# An SD card board (ax630c_lite) has no flash image: genimage's sdcard.img
+# (board/<family>/*-genimage.cfg) is the whole card, kernel and ext4 rootfs.
+ifeq ($(BR2_TARGET_ROOTFS_EXT2),y)
+ifneq ($(wildcard $(TARGET)/images/sdcard.img),)
+	@$(call REPACK_SD)
+endif
 endif
 endif
 
@@ -362,9 +372,6 @@ endef
 # 5120K slot holds 4K less. An image over the slot is CHECK_SIZE's to report.
 UBOOT_ROOTMTD_VENDOR = $(filter $(BR2_OPENIPC_SOC_VENDOR),"sigmastar" "xiongmai")
 UBOOT_ROOTMTD_LIMIT = $(shell echo $$((5120 * 1024 - 4096)))
-UBOOT_ROOTMTD_USED = $(shell od -An -tu8 -j40 -N8 $(TARGET)/images/rootfs.squashfs 2>/dev/null | tr -d ' ')
-UBOOT_ROOTMTD_FITS = $(if $(UBOOT_ROOTMTD_VENDOR),$(shell [ -n "$(UBOOT_ROOTMTD_USED)" ] && \
-	[ $(UBOOT_ROOTMTD_USED) -lt $(UBOOT_ROOTMTD_LIMIT) ] && echo y),y)
 
 define CHECK_UBOOT_ROOTMTD
 	used=$$(od -An -tu8 -j40 -N8 $(TARGET)/images/rootfs.squashfs | tr -d ' '); \
@@ -404,24 +411,6 @@ define REPACK_FIRMWARE
 	rm -f $(TARGET)/images/*.md5sum
 endef
 
-# Whether uImage and rootfs.squashfs fit the fixed slots beside a split image:
-# the uImage under 1984K (see the repack target), the rootfs within $(1) KB,
-# both counted in whole KB as CHECK_SIZE counts them. "y" or empty.
-FIXED_SLOTS_FIT = $(shell k=$$(( $$(stat -c %s $(TARGET)/images/uImage 2>/dev/null || echo 0) / 1024 )); \
-	r=$$(( $$(stat -c %s $(TARGET)/images/rootfs.squashfs 2>/dev/null || echo 0) / 1024 )); \
-	[ $$k -gt 0 ] && [ $$k -le 1983 ] && [ $$r -gt 0 ] && [ $$r -le $(1) ] && echo y)
-
-define FIXED_SLOTS_SKIP
-	k=$$(( $$(stat -c %s $(TARGET)/images/uImage) / 1024 )); \
-	r=$$(( $$(stat -c %s $(TARGET)/images/rootfs.squashfs) / 1024 )); \
-	over=; \
-	[ $$k -le 1983 ] || over="uImage $${k}KB/1983KB"; \
-	[ $$r -le $(1) ] || over="$${over:+$$over, }rootfs.squashfs $${r}KB/$(1)KB"; \
-	[ -n "$$over" ] || over="rootfs.squashfs $(UBOOT_ROOTMTD_USED)B (U-Boot's 5120k slot takes under $(UBOOT_ROOTMTD_LIMIT)B)"; \
-	echo "::warning::$(BR2_OPENIPC_SOC_MODEL) $(BR2_OPENIPC_VARIANT): $$over outgrew the fixed slot;" \
-		"shipping the split package only"
-endef
-
 # The split NOR package: firmware.bin alone, under its own name so a sysupgrade
 # that predates the layout never sees it. Copies, as REPACK_NAND_FIT does.
 define REPACK_NOR_SPLIT
@@ -430,6 +419,17 @@ define REPACK_NOR_SPLIT
 	# Checksums first, as in REPACK_FIRMWARE.
 	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-nor-$(BR2_OPENIPC_VARIANT)-split.tgz \
 		firmware.bin.$(BR2_OPENIPC_SOC_MODEL).md5sum firmware.bin.$(BR2_OPENIPC_SOC_MODEL)
+	rm -f $(TARGET)/images/*.md5sum
+endef
+
+# The SD card package: the card image, written whole with dd or a card
+# flasher. Copies, as REPACK_NAND_FIT does.
+define REPACK_SD
+	cd $(TARGET)/images && cp -f sdcard.img sdcard.img.$(BR2_OPENIPC_SOC_MODEL) && \
+		md5sum sdcard.img.$(BR2_OPENIPC_SOC_MODEL) > sdcard.img.$(BR2_OPENIPC_SOC_MODEL).md5sum
+	# Checksums first, as in REPACK_FIRMWARE.
+	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-sd-$(BR2_OPENIPC_VARIANT).tgz \
+		sdcard.img.$(BR2_OPENIPC_SOC_MODEL).md5sum sdcard.img.$(BR2_OPENIPC_SOC_MODEL)
 	rm -f $(TARGET)/images/*.md5sum
 endef
 
@@ -445,5 +445,22 @@ define REPACK_NAND_FIT
 	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-nand-$(BR2_OPENIPC_VARIANT).tgz \
 		$(foreach f,$(NAND_FIT_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL).md5sum) \
 		$(foreach f,$(NAND_FIT_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL))
+	rm -f $(TARGET)/images/*.md5sum
+endef
+
+# UBIFS NAND package without FIT (kernel carried inside UBIFS as /boot/uImage,
+# e.g. Novatek openipc-novatek U-Boot whose fwupd writes rootfs.ubifs.<soc>).
+# When a NOR+NAND ultimate build also ran REPACK_FIRMWARE, uImage has already
+# been renamed to uImage.<soc>, so copy only when the unsuffixed file exists.
+NAND_UBIFS_IMAGES = uImage rootfs.ubifs rootfs.ubi
+define REPACK_NAND_UBIFS
+	cd $(TARGET)/images && for f in $(NAND_UBIFS_IMAGES); do \
+		if [ -f $$f ]; then cp -f $$f $$f.$(BR2_OPENIPC_SOC_MODEL); fi && \
+		test -f $$f.$(BR2_OPENIPC_SOC_MODEL) && \
+		md5sum $$f.$(BR2_OPENIPC_SOC_MODEL) > $$f.$(BR2_OPENIPC_SOC_MODEL).md5sum || exit 1; done
+	# Checksums first, as in REPACK_FIRMWARE.
+	cd $(TARGET)/images && tar -czf openipc.$(BR2_OPENIPC_SOC_MODEL)-nand-$(BR2_OPENIPC_VARIANT).tgz \
+		$(foreach f,$(NAND_UBIFS_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL).md5sum) \
+		$(foreach f,$(NAND_UBIFS_IMAGES),$(f).$(BR2_OPENIPC_SOC_MODEL))
 	rm -f $(TARGET)/images/*.md5sum
 endef

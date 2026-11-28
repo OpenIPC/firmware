@@ -37,12 +37,19 @@ flash_aliased() {
 		while read -r dev size name; do
 			size=$((0x$size))
 			offset=$(cat /sys/class/mtd/$dev/offset 2>/dev/null)
-			if [ -z "$offset" ]; then
-				if [ "$name" = firmware ]; then
-					offset=${kern:-$next}
-				else
-					offset=$next
-				fi
+			if [ -n "$offset" ]; then
+				p=$(readlink -f "/sys/class/mtd/$dev" 2>/dev/null)
+				while [ -n "$p" ] && [ -r "$p/../offset" ]; do
+					p=${p%/*}
+					[ -n "$p" ] || break
+					parent_off=$(cat "$p/offset" 2>/dev/null)
+					[ -n "$parent_off" ] || break
+					offset=$((offset + parent_off))
+				done
+			elif [ "$name" = firmware ]; then
+				offset=${kern:-$next}
+			else
+				offset=$next
 			fi
 			[ "$name" = kernel ] && kern=$offset
 			echo "$dev $offset $size"
@@ -56,7 +63,7 @@ flash_aliased() {
 	while read -r dev offset size; do
 		[ -n "$size" ] || continue
 		[ $((offset + size)) -gt $total ] && total=$((offset + size))
-		[ "$offset" -eq 0 ] && head_dev=$dev
+		[ -z "$head_dev" ] && [ "$offset" -eq 0 ] && [ "$size" -gt 0 ] && head_dev=$dev
 	done <<EOF
 $geometry
 EOF
@@ -99,6 +106,18 @@ EOF
 # feature node") -- and the branch below then erased it. That took every
 # setting and the root password with it on an XM510 moved from a kernel with
 # xattrs to one without (#2606 turned them on there). Reads only.
+# Erase rootfs_data for jffs2 to format, with no cleanmarkers: jffs2 writes
+# its own when it first mounts the blank blocks. A marker written here is
+# spaced by the erase size the MTD reports now, and that is not always the
+# one jffs2 mounts with: infinity6c's vendor jffs2 turns its 4 KiB NOR
+# sectors into 64 KiB blocks at mount. Markers every 4 KiB then sit inside
+# blocks jffs2 takes for clean, it programs its nodes over them, and the
+# settings come back with bad CRCs: files written after an upgrade to the
+# split layout were lost on an SSC378DE (#2758).
+erase_overlay() {
+	flash_eraseall "$1"
+}
+
 # Settings an upgrade moved. On the split NOR layout (one "firmware" partition
 # the kernel divides at boot) an upgrade that changes the images moves where
 # rootfs_data starts, so sysupgrade stages the settings at the new start as
@@ -115,7 +134,7 @@ overlay_carry_in() {
 	if [ "$len" -eq 0 ]; then
 		# sysupgrade -n: a clean overlay, nothing to restore.
 		echo "Clearing settings after an upgrade..."
-		flash_eraseall -j "$chr"
+		erase_overlay "$chr"
 		return 0
 	fi
 	echo "Restoring settings carried over by an upgrade..."
@@ -139,7 +158,7 @@ overlay_carry_in() {
 		carry_report "the carried-over settings are damaged; the camera starts from defaults"
 		return 0
 	fi
-	flash_eraseall -j "$chr"
+	erase_overlay "$chr"
 	if ! mount -t jffs2 "$blk" /mnt; then
 		carry_report "rootfs_data would not mount after the erase; the carried-over settings are lost"
 	elif gunzip -c /overlay/settings.tgz | tar -x -C /mnt; then
@@ -244,8 +263,7 @@ if $is_flash_root; then
 			else
 				mountpoint -q /overlay && umount /overlay
 				echo "Formatting flash..."
-				grep -q 'nand' /proc/cmdline || jffs2="-j"
-				flash_eraseall $jffs2 /dev/$mtdchrdev
+				erase_overlay /dev/$mtdchrdev
 				if ! mount -t jffs2 /dev/$mtdblkdev /overlay && ! mount -t tmpfs tmpfs /overlay; then
 					echo "Cannot mount overlay."
 					exit 1

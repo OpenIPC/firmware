@@ -2,7 +2,7 @@
 
 insert_sns() {
     case $SENSOR in
-    imx415 | sc401ai | sc500ai | sc501ai)
+    imx415 | sc401ai | sc430ai | sc500ai | sc501ai)
         devmem 0xf0220000 32 0x00001473
         devmem 0xF0220004 32 0x10000000
         devmem 0xF0220008 32 0x00048100
@@ -259,11 +259,57 @@ set_default_osmem() {
 # config's [POWER] section: the SIE master clock (CG_CLK_EN_REG0 bit 2,
 # "f0c00000.siemck") and a pulse on its reset pin, then ask again. Only on a
 # failed detection, so a camera that is found today never takes this path,
-# and everything goes back as it was found: the driver powers the sensor up
-# again by itself when majestic opens it.
+# and the pads and reset pin go back as found, as does the clock if nothing
+# answers: the driver powers the sensor up again by itself when majestic
+# opens it.
+#
+# The pads come first. A board whose device tree leaves the sensor pinmux
+# off boots with SN_MCLK not on its pad and I2C_1 not on S_GPIO7/8, so the
+# clock never reaches the sensor and ipcinfo cannot reach it either (the
+# N8S, #1889; its device tree comes from XM's loader in flash, not from
+# us). Route them as the video pipeline will, for the drivers we ship and
+# from their own configs: a SIE MCLK sensor (id_0_mclk 0) gets sensor
+# 0x220, MIPI | MCLK on S_GPIO0, and one on I2C id 0 gets i2c 0x1, I2C_1
+# on S_GPIO7/8 -- adding to what is set, and the old values go back after.
+# I2C id 1 is left alone: its first pads include S_GPIO4, a reset pin.
+# This is done around the first ipcinfo too, not only this fallback: with
+# I2C_1 off its pads that one jams bus 0 ("timeout waiting for bus ready")
+# and the fallback then finds nothing (#1889, on the 2026-11-18 nightly). A
+# board whose pads are already routed writes nothing.
+nvt_pinmux=${LOAD_NOVATEK_PINMUX:-/proc/nvt_info/nvt_pinmux}
+sensor_cfgs=${LOAD_NOVATEK_SENSORS:-/etc/sensors}
+gpio=${LOAD_NOVATEK_GPIO:-/sys/class/gpio}
+
+pinmux_get() {
+	sed -n "s/^$1{pinmux=<\(0x[0-9a-fA-F]*\)>.*/\1/p" $nvt_pinmux/pinmux_summary
+}
+route_sensor_pads() {
+	local cfg senmux i2cmux
+	pad_sen= pad_i2c=
+	[ -f $nvt_pinmux/pinmux_summary ] || return
+	for cfg in $sensor_cfgs/sen_*.cfg; do
+		[ -f "nvt_$(basename "$cfg" .cfg).ko" ] || continue
+		[ "$(sed -n 's/^id_0_mclk *= *\([0-9a-fA-Fx]*\).*/\1/p' "$cfg")" = 0 ] && senmux=0x220
+		[ "$(sed -n 's/^id_0_i2c_id *= *\([0-9a-fA-Fx]*\).*/\1/p' "$cfg")" = 0 ] && i2cmux=0x1
+	done
+	[ -n "$senmux" ] && pad_sen=$(pinmux_get sensor)
+	[ -n "$i2cmux" ] && pad_i2c=$(pinmux_get i2c)
+	# Nothing to add: nothing written, nothing to put back.
+	[ -n "$pad_sen" ] && [ $((pad_sen | senmux)) = $((pad_sen)) ] && pad_sen=
+	[ -n "$pad_i2c" ] && [ $((pad_i2c | i2cmux)) = $((pad_i2c)) ] && pad_i2c=
+	# One write per command: the proc node takes each write as a whole
+	# command, and busybox printf writes "sensor 0x22" and "0" separately.
+	[ -n "$pad_sen" ] && echo "sensor $(printf 0x%x $((pad_sen | senmux)))" >$nvt_pinmux/pinmux_set
+	[ -n "$pad_i2c" ] && echo "i2c $(printf 0x%x $((pad_i2c | i2cmux)))" >$nvt_pinmux/pinmux_set
+}
+restore_sensor_pads() {
+	[ -n "$pad_i2c" ] && echo i2c $pad_i2c >$nvt_pinmux/pinmux_set
+	[ -n "$pad_sen" ] && echo sensor $pad_sen >$nvt_pinmux/pinmux_set
+}
 probe_powered_sensor() {
-	local clk=0xf0020070 en pins pin cfg name dir val own found
-	for cfg in /etc/sensors/sen_*.cfg; do
+	local clk=0xf0020070 src=0xf0020018 div=0xf0020030
+	local en src0 div0 pins pin cfg name dir val own found
+	for cfg in $sensor_cfgs/sen_*.cfg; do
 		name=$(basename "$cfg" .cfg)
 		[ -f "nvt_$name.ko" ] || continue
 		pin=$(sed -n 's/^id_0_rst_pin *= *\(0x[0-9a-fA-F]*\).*/\1/p' "$cfg")
@@ -272,35 +318,54 @@ probe_powered_sensor() {
 	pins=$(echo $pins | tr ' ' '\n' | sort -un)
 	[ -n "$pins" ] || return
 	en=$(devmem $clk 32)
+	# The boot-time divider makes the SIE master clock 480 MHz / 2, 240 MHz:
+	# far out of range for any sensor. An IMX415 still powered from the stream
+	# before a warm reboot then sent no frames until power was cut (#1889, on
+	# the N8S), and set to 24 MHz before detection it streamed. So 480 MHz / 20
+	# (source in bits 8-9, divider in bits 0-7; the other fields are other
+	# clocks), unless the clock already runs and is somebody's.
+	if [ $((en & 0x4)) = 0 ]; then
+		src0=$(devmem $src 32)
+		div0=$(devmem $div 32)
+		devmem $src 32 $((src0 & ~0x300))
+		devmem $div 32 $((div0 & ~0xff | 0x13))
+	fi
 	devmem $clk 32 $((en | 0x4))
 	for pin in $pins; do
 		# A pin someone else exported is put back exactly as found and left
 		# exported; only an export this probe made is released.
 		own=
-		if [ ! -d /sys/class/gpio/gpio$pin ]; then
-			echo $pin >/sys/class/gpio/export || continue
+		if [ ! -d $gpio/gpio$pin ]; then
+			echo $pin >$gpio/export || continue
 			own=1
 		fi
-		dir=$(cat /sys/class/gpio/gpio$pin/direction)
-		val=$(cat /sys/class/gpio/gpio$pin/value)
-		echo low >/sys/class/gpio/gpio$pin/direction
+		dir=$(cat $gpio/gpio$pin/direction)
+		val=$(cat $gpio/gpio$pin/value)
+		echo low >$gpio/gpio$pin/direction
 		usleep 1000
-		echo 1 >/sys/class/gpio/gpio$pin/value
+		echo 1 >$gpio/gpio$pin/value
 		usleep 2000
 		found=$(ipcinfo --short-sensor)
-		echo 0 >/sys/class/gpio/gpio$pin/value
+		echo 0 >$gpio/gpio$pin/value
 		if [ "$dir" = in ]; then
-			echo in >/sys/class/gpio/gpio$pin/direction
+			echo in >$gpio/gpio$pin/direction
 		else
-			echo $val >/sys/class/gpio/gpio$pin/value
+			echo $val >$gpio/gpio$pin/value
 		fi
-		[ -n "$own" ] && echo $pin >/sys/class/gpio/unexport
+		[ -n "$own" ] && echo $pin >$gpio/unexport
 		if [ -n "$found" ]; then
 			logger -s -p daemon.info -t novatek "$found answered with its reset (GPIO $pin) released and its clock on"
 			break
 		fi
 	done
-	devmem $clk 32 $en
+	# A sensor that answered keeps its clock, at that rate, for its driver to
+	# take over. Nothing answered: what this probe set goes back, gate first
+	# so the boot-time rate never reaches the pad, and only its own fields.
+	if [ -z "$found" ] && [ $((en & 0x4)) = 0 ]; then
+		devmem $clk 32 $(($(devmem $clk 32) & ~0x4))
+		devmem $src 32 $(($(devmem $src 32) & ~0x300 | src0 & 0x300))
+		devmem $div 32 $(($(devmem $div 32) & ~0xff | div0 & 0xff))
+	fi
 	echo $found
 }
 
@@ -308,7 +373,6 @@ check_mem
 set_default_osmem
 
 cd /lib/modules/4.19.91/novatek
-insert_ko
 
 # Sensor config
 # SENSOR=${SENSOR:=imx307}
@@ -324,6 +388,7 @@ if [ "$SENSOR" = "unknown" ]; then
 	fw_setenv sensor
 fi
 
+detecting=
 if [ -n "$SENSOR" ]; then
     logger -s -p daemon.info -t novatek "Manualy set SENSOR as ${SENSOR}"
 else
@@ -332,20 +397,37 @@ else
         export SENSOR=${SENSOR_ENV}
         logger -s -p daemon.info -t novatek "Get data from environment and set SENSOR as ${SENSOR}"
     else
-        #insert_ko
+        # Detection runs before the vendor modules load, so nothing else
+        # drives the sensor's clock or reset meanwhile. The order alone
+        # did not cure the N8S's stuck IMX415: see the probe's clock (#1889).
+        detecting=1
+        route_sensor_pads
         SENSOR_DETECT=$(ipcinfo --short-sensor)
         [ -n "$SENSOR_DETECT" ] || SENSOR_DETECT=$(probe_powered_sensor)
-        export SENSOR=${SENSOR_DETECT:=unknown}
-        logger -s -p daemon.info -t novatek "Get data from ipcinfo and set SENSOR as ${SENSOR}"
-        # Do not persist a failed detection. The fw_printenv branch above wins
-        # whenever `sensor` exists, so writing "unknown" here latches the camera
-        # into "SENSOR is not detected, aborting..." for good -- detection never
-        # runs again and nothing says why. Seen on a GK7202V500 in #2428.
-        # load_ingenic has always cleared the variable instead of storing the
-        # miss; this is the same behaviour, reached by not writing at all.
-        if [ "$SENSOR" != "unknown" ]; then
-        	fw_setenv sensor $SENSOR && logger -s -p daemon.info -t novatek "Write detected ${SENSOR} to U-Boot ENV"
-        fi
+        restore_sensor_pads
+    fi
+fi
+
+insert_ko
+
+if [ -n "$detecting" ]; then
+    # A sensor that answers only once the modules are up is still found, by
+    # the one plain probe detection always ran here -- on routed pads too.
+    if [ -z "$SENSOR_DETECT" ]; then
+        route_sensor_pads
+        SENSOR_DETECT=$(ipcinfo --short-sensor)
+        restore_sensor_pads
+    fi
+    export SENSOR=${SENSOR_DETECT:=unknown}
+    logger -s -p daemon.info -t novatek "Get data from ipcinfo and set SENSOR as ${SENSOR}"
+    # Do not persist a failed detection. The fw_printenv branch above wins
+    # whenever `sensor` exists, so writing "unknown" here latches the camera
+    # into "SENSOR is not detected, aborting..." for good -- detection never
+    # runs again and nothing says why. Seen on a GK7202V500 in #2428.
+    # load_ingenic has always cleared the variable instead of storing the
+    # miss; this is the same behaviour, reached by not writing at all.
+    if [ "$SENSOR" != "unknown" ]; then
+    	fw_setenv sensor $SENSOR && logger -s -p daemon.info -t novatek "Write detected ${SENSOR} to U-Boot ENV"
     fi
 fi
 
