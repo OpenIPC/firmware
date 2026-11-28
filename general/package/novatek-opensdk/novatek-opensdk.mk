@@ -5,7 +5,7 @@
 ################################################################################
 
 NOVATEK_OPENSDK_SITE = $(call github,openipc,opennovatek,$(NOVATEK_OPENSDK_VERSION))
-NOVATEK_OPENSDK_VERSION = a289f2db325437c99b1eb9e9805005f86f84ec24
+NOVATEK_OPENSDK_VERSION = ed40e1958435caa1cd25807e20b218c3fde81dfb
 
 NOVATEK_OPENSDK_LICENSE = GPL-3.0
 NOVATEK_OPENSDK_LICENSE_FILES = LICENSE
@@ -24,7 +24,7 @@ NOVATEK_OPENSDK_SENSOR_DIR = $(@D)/libraries/sensor/$(NOVATEK_OPENSDK_CHIPARCH)
 
 # Sensors built for each family, by directory under libraries/sensor/: the
 # ones load_novatek can start. Each builds nvt_sen_<model>.ko.
-NOVATEK_OPENSDK_SENSORS_nt9856x = sony_imx415 smart_sc401ai smart_sc500ai smart_sc501ai
+NOVATEK_OPENSDK_SENSORS_nt9856x = sony_imx415 smart_sc401ai smart_sc430ai smart_sc500ai smart_sc501ai
 NOVATEK_OPENSDK_SENSORS = $(NOVATEK_OPENSDK_SENSORS_$(OPENIPC_SOC_FAMILY))
 
 # Plain kbuild calls rather than the kernel-module infrastructure: that would
