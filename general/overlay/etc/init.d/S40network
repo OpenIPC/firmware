@@ -286,8 +286,10 @@ start() {
 	ifup lo
 	if [ -n "$dev" ]; then
 		set_wireless
-	else
+	elif [ -e /sys/class/net/eth0 ]; then
 		ifup eth0
+	else
+		echo "No wlandev and no eth0: nothing to bring up"
 	fi
 }
 
