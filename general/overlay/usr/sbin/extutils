@@ -131,8 +131,8 @@ mac_is_own() { mac_is_valid "$1" && ! mac_is_placeholder "$1"; }
 # clear. 02: is the lowest prefix that satisfies both, and holding it fixed
 # also makes a self-assigned address recognisable beside a real vendor OUI.
 #
-# The read is bounded because it runs at S30, ahead of everything after
-# S40network. A kernel with no entropy source yet blocks /dev/urandom until
+# The read is bounded because it runs as S40network starts, ahead of the
+# network and everything after it. A kernel with no entropy source yet blocks /dev/urandom until
 # its CRNG is ready: on a hi3516av100 _neo image under QEMU (no working arch
 # timer) that was 85 s, measured. -k for the reason udhcpc's ntpd call has
 # it: TERM alone bounds nothing against a process that does not act on it. A
@@ -288,10 +288,13 @@ case "$CMD" in
 		;;
 
 	check_mac)
-		# Runs from S30customizer, which is before S40network: S40network reads
-		# ethaddr at its own start and interfaces.d/eth0 expands get_mac at ifup
-		# time, so an address written here is picked up later in the same boot.
-		# That is why this no longer reboots -- #1147 did, and did not need to.
+		# Runs from S40network's start, before it brings any interface up:
+		# interfaces.d/eth0 expands get_mac at ifup time, so an address written
+		# here is picked up later in the same boot. That is why this no longer
+		# reboots -- #1147 did, and did not need to. It runs there and not at
+		# S30 because S35modules is what loads an Ethernet driver built as a
+		# module (ak_eth on the Anyka AV100 and AV130), and the eth0 check
+		# below needs eth0 to exist by then on every camera that has one.
 		#
 		# A camera that already has an address of its own is left alone. The
 		# repair is for the two ways a camera ends up without one: no environment

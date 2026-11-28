@@ -77,6 +77,8 @@ stub fw_printenv '[ "$1" = -n ] && shift
 [ -f "'"$SB"'/env/$1" ] && { cat "'"$SB"'/env/$1"; exit 0; }
 echo "## Error: \"$1\" not defined" >&2; exit 1'
 stub get_mac 'echo 00:11:22:33:44:55'
+# check_mac has its own suite, test_check_mac.sh.
+stub check_mac 'exit 0'
 # arping: the gateway answers unless $SB/no-arp says it does not.
 stub arping 'echo "arping $*" >> "'"$LOG"'"; [ ! -e "'"$SB"'/no-arp" ]'
 stub logger 'echo "logger $*" >> "'"$LOG"'"'

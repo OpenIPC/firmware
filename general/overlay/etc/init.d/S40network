@@ -283,6 +283,8 @@ watch() {
 start() {
 	echo "Starting network..."
 	rm -f "$FALLBACK" "$ROUTES.4" "$ROUTES.6"
+	# Here, after S35modules, so a modular Ethernet driver has made eth0.
+	check_mac
 	ifup lo
 	if [ -n "$dev" ]; then
 		set_wireless
