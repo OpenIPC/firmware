@@ -1,4 +1,4 @@
 iface wlan0 inet dhcp
-    pre-up wlan_conf "$(fw_printenv -n wlanssid)" "$(fw_printenv -n wlanpass)" > /tmp/wpa_supplicant.conf
+    pre-up umask 077; ssid=$(fw_printenv -n wlanssid 2>/dev/null); if [ -n "$ssid" ]; then wlan_conf "$ssid" "$(fw_printenv -n wlanpass)"; else cat /etc/wlan.conf; fi > /tmp/wpa_supplicant.conf
     pre-up wpa_supplicant -B -i wlan0 -D nl80211,wext -c /tmp/wpa_supplicant.conf
     post-down killall -q wpa_supplicant

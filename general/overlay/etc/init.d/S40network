@@ -1,5 +1,10 @@
 #!/bin/sh
-dev=$(fw_printenv -n wlandev)
+# A board whose U-Boot environment is not OpenIPC's to write (a vendor U-Boot
+# sharing it, as on the Tenda CP3 V2.2) keeps its Wi-Fi in files instead:
+# /etc/wlandev names the device and /etc/wlan.conf is the wpa_supplicant
+# network to join. The environment, where set, comes first.
+dev=$(fw_printenv -n wlandev 2>/dev/null)
+[ -n "$dev" ] || read -r dev 2>/dev/null < /etc/wlandev
 mac=$(fw_printenv -n wlanmac)
 net=$(fw_printenv -n netaddr_fallback)
 
@@ -37,7 +42,7 @@ set_wireless() {
 		# DHCP of its own meanwhile, as qrscan's restore does not either: with
 		# no server on either side, both would take udhcpc's leasefail
 		# address, and the camera would answer on one subnet from two ports.
-		if [ -z "$(fw_printenv -n wlanssid 2>/dev/null)" ]; then
+		if [ -z "$(fw_printenv -n wlanssid 2>/dev/null)" ] && [ ! -s /etc/wlan.conf ]; then
 			[ -e /sys/class/net/eth0 ] && ifup eth0
 			return 0
 		fi
