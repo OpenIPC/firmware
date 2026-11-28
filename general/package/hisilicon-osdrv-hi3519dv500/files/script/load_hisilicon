@@ -252,18 +252,29 @@ VO_INTF=
 
 # The demo boards' HDMI adapter: a Lontium LT8618SXB BT.1120-to-HDMI bridge on
 # I2C7 at 0x39, fed by VO over BT.1120. Its chip ID is 0x17 0x02 at registers
-# 0x00/0x01 of bank 0x80, which the 0xff/0xee writes select and enable.
+# 0x00/0x01 of bank 0x80. From power-on those read 0x00 until 0xff selects the
+# bank and 0xee enables the registers (measured after a power cycle), so the
+# ID cannot be read without those two writes.
 #
-# I2C7's pads are set first, to the value open_sys_config gives them on every
-# board, since the probe runs before it loads. The register read comes first
-# too: a bus where nothing answers at 0x39 gets no writes at all.
+# The probe leaves any other device as it found it. Nothing is written unless
+# something answers at 0x39; 0xff and 0xee are read before they are written,
+# and when the ID is not the bridge's they get their old values back.
+#
+# I2C7's pads are set first, because the probe runs before open_sys_config
+# loads; they get the value open_sys_config writes on every board anyway.
 hdmi_bridge_present() {
+	local bank enable id
 	devmem 0x179F0000 32 0x1012	# I2C7_SDA
 	devmem 0x179F0004 32 0x1012	# I2C7_SCL
-	i2cget -y 7 0x39 0x00 > /dev/null 2>&1 || return 1
+	bank=$(i2cget -y 7 0x39 0xff 2> /dev/null) || return 1
+	enable=$(i2cget -y 7 0x39 0xee 2> /dev/null) || return 1
 	i2cset -y 7 0x39 0xff 0x80 2> /dev/null || return 1
-	i2cset -y 7 0x39 0xee 0x01 2> /dev/null || return 1
-	[ "$(i2cget -y 7 0x39 0x00 2> /dev/null) $(i2cget -y 7 0x39 0x01 2> /dev/null)" = "0x17 0x02" ]
+	i2cset -y 7 0x39 0xee 0x01 2> /dev/null
+	id="$(i2cget -y 7 0x39 0x00 2> /dev/null) $(i2cget -y 7 0x39 0x01 2> /dev/null)"
+	[ "$id" = "0x17 0x02" ] && return 0
+	i2cset -y 7 0x39 0xee "$enable" 2> /dev/null
+	i2cset -y 7 0x39 0xff "$bank" 2> /dev/null
+	return 1
 }
 
 # BT.1120 takes over pins that are SDIO1, I2C0 and the MIPI DSI lanes
@@ -287,14 +298,20 @@ vo_sys_config_arg() {
 }
 
 # open_vo_dev before open_vo, as the SDK's load3519dv500 has them. The bridge
-# driver programs the LT8618SXB at load and refuses to load without one, so a
-# forced bt1120 on a board that has none costs nothing.
+# driver programs the LT8618SXB at load and refuses to load without one. That
+# is logged, with what modprobe said, and the boot goes on: the camera streams
+# whether or not the HDMI output can be driven.
 insert_vo() {
+	local err
 	[ -n "$VO_INTF" ] || return 0
 	modprobe open_vo_dev
 	modprobe open_vo
 	case $VO_INTF in
-		bt1120 | bt.1120) modprobe open_lt8618sx 2>/dev/null ;;
+		bt1120 | bt.1120)
+			if ! err=$(modprobe open_lt8618sx 2>&1); then
+				logger -s -p daemon.err -t hisilicon "The HDMI bridge driver did not load, so HDMI stays dark: ${err:-no reason given}"
+			fi
+			;;
 		mipi_tx | mipitx) modprobe open_mipi_tx ;;
 	esac
 }
