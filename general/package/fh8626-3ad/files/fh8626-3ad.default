@@ -4,6 +4,9 @@
 # AE owns sensor exposure and analogue gain; AWB owns ISP red/blue balance.
 AE_MODE=auto
 AWB_MODE=auto
+# AWB estimator: whitepoint (locus measured on the GC1054 module) or gw.
+# Empty: the sensor's own, whitepoint on the GC1054 and gw on the GC2083.
+AWB_METHOD=
 # Slow shutter: in low light AE may lengthen the frame down to this rate
 # (frames/s) before raising the analogue gain above 4x; "off" keeps the
 # nominal frame rate.

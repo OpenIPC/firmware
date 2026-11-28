@@ -251,7 +251,7 @@ static bool has_ctrl(int fd, uint32_t id)
 	       !(q.flags & (V4L2_CTRL_FLAG_DISABLED | V4L2_CTRL_FLAG_READ_ONLY));
 }
 
-int isp_tuning_init(struct isp_tuning *t, int isp_fd)
+int isp_tuning_init(struct isp_tuning *t, int isp_fd, const struct isp_profile *p)
 {
 	struct v4l2_ext_control c = {
 		.id = V4L2_CID_FH8626_GAMMA_Y, .size = sizeof(gamma_y),
@@ -277,13 +277,20 @@ int isp_tuning_init(struct isp_tuning *t, int isp_fd)
 	t->have_apc = has_ctrl(isp_fd, V4L2_CID_FH8626_APC_STRENGTH) &&
 		      has_ctrl(isp_fd, V4L2_CID_FH8626_APC_GAIN);
 	t->have_sat = has_ctrl(isp_fd, V4L2_CID_FH8626_SATURATION_SCALE);
-	if (has_ctrl(isp_fd, V4L2_CID_FH8626_GAMMA_Y) &&
+	t->black_fixed = p->black_fixed;
+	if (!(p->blocks & TUNE_BLACK))
+		t->have_black = false;
+	if (!(p->blocks & TUNE_REST))
+		t->have_nr3d = t->have_bnr = t->have_ccm = t->have_hlr =
+			t->have_ynr = t->have_cnr = t->have_apc = t->have_sat = false;
+	if ((p->blocks & TUNE_GAMMA) && has_ctrl(isp_fd, V4L2_CID_FH8626_GAMMA_Y) &&
 	    ioctl(isp_fd, VIDIOC_S_EXT_CTRLS, &ctrls) < 0) {
 		LOG_WARN("Luma tone curve: %s", strerror(errno));
 		return -1;
 	}
-	LOG_INFO("ISP tuning: black=%d nr3d=%d bnr=%d ynr=%d cnr=%d apc=%d sat=%d ccm=%d hlr=%d",
-		 t->have_black, t->have_nr3d, t->have_bnr, t->have_ynr,
+	LOG_INFO("ISP tuning: black=%d%s gamma=%d nr3d=%d bnr=%d ynr=%d cnr=%d apc=%d sat=%d ccm=%d hlr=%d",
+		 t->have_black, t->black_fixed ? " (fixed)" : "", !!(p->blocks & TUNE_GAMMA),
+		 t->have_nr3d, t->have_bnr, t->have_ynr,
 		 t->have_cnr, t->have_apc, t->have_sat, t->have_ccm,
 		 t->have_hlr);
 	return 0;
@@ -378,7 +385,8 @@ void isp_tuning_update(struct isp_tuning *t, uint32_t gain, uint32_t again,
 
 	if (t->have_black) {
 		for (i = 0; i < 4; i++)
-			black[i] = (uint16_t)black_for(i, again, exposure_us);
+			black[i] = (uint16_t)(t->black_fixed ? t->black_fixed :
+					      black_for(i, again, exposure_us));
 		if (!t->written || memcmp(black, t->black, sizeof(black))) {
 			memcpy(t->black, black, sizeof(black));
 			c[n++] = (struct v4l2_ext_control){

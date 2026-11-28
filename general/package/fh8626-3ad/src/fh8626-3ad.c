@@ -216,9 +216,50 @@ static int discover_subdev(char *path, size_t size, const char *driver)
 	return found == 1 ? 0 : -1;
 }
 
-static const char * const s_supported_sensors[] = {
-	"gc1054"
+/*
+ * Sensors whose drivers expose exposure in lines, Q6 analogue gain and
+ * VBLANK/PIXEL_RATE/HBLANK timing, which is all AE and AWB use. The ISP
+ * tuning in isp-tuning.c (black pedestal, colour matrices, noise and
+ * sharpening schedules) is calibrated on one sensor module and is applied
+ * only to that sensor; the others keep the ISP driver's defaults.
+ */
+struct sensor_info {
+	const char *driver;
+	struct isp_profile tuning;
+	/* Unless -m says otherwise */
+	awb_mode_t awb_mode;
 };
+
+/*
+ * The GC2083 pedestal was measured from dark statistics on a Tenda CP3
+ * V2.2 (minimum integration, ISP digital gain 1x): 63-64 on every Bayer
+ * site at 1x to 8x analogue gain, the sensor holding its own black level.
+ * Subtracting it tripled the luma spread of a room scene. The GC1054 tone
+ * curve left the same scene a stop darker, so the GC2083 keeps the ISP's
+ * default curve; its other blocks still wait for measurements.
+ *
+ * The white-point AWB's illuminant locus was measured on the GC1054, so only
+ * the GC1054 defaults to it. On the CP3's GC2083 the same room scene came
+ * out magenta with it (Cb/Cr 136.3/143.1) and neutral with grey world
+ * (128.0/130.7).
+ */
+static const struct sensor_info s_supported_sensors[] = {
+	{ "gc1054", { TUNE_BLACK | TUNE_GAMMA | TUNE_REST, 0 }, AWB_MODE_WHITE_POINT },
+	{ "gc2083", { TUNE_BLACK, 64 }, AWB_MODE_GRAY_WORLD },
+};
+
+/* An unidentified sensor keeps the full tuning, as before */
+static const struct isp_profile s_default_tuning = { TUNE_BLACK | TUNE_GAMMA | TUNE_REST, 0 };
+
+static const struct sensor_info *find_sensor(const char *driver)
+{
+	size_t i;
+
+	for (i = 0; i < sizeof(s_supported_sensors)/sizeof(s_supported_sensors[0]); i++)
+		if (!strcmp(driver, s_supported_sensors[i].driver))
+			return &s_supported_sensors[i];
+	return NULL;
+}
 
 static int sensor_is_supported(int fd, char *detected_name, size_t max_len)
 {
@@ -244,9 +285,9 @@ static int sensor_is_supported(int fd, char *detected_name, size_t max_len)
 	fclose(file);
 
 	for (i = 0; i < sizeof(s_supported_sensors)/sizeof(s_supported_sensors[0]); i++) {
-		if (name_matches(name, s_supported_sensors[i])) {
+		if (name_matches(name, s_supported_sensors[i].driver)) {
 			if (detected_name && max_len > 0)
-				snprintf(detected_name, max_len, "%s", s_supported_sensors[i]);
+				snprintf(detected_name, max_len, "%s", s_supported_sensors[i].driver);
 			return 0;
 		}
 	}
@@ -270,13 +311,13 @@ static int discover_sensor_subdev(char *path, size_t size, char *driver_out, siz
 			continue;
 		if (fgets(name, sizeof(name), file)) {
 			for (s = 0; s < sizeof(s_supported_sensors)/sizeof(s_supported_sensors[0]); s++) {
-				if (!name_matches(name, s_supported_sensors[s]))
+				if (!name_matches(name, s_supported_sensors[s].driver))
 					continue;
 				if (sscanf(paths.gl_pathv[i], "/sys/class/video4linux/%127[^/]/name", node) == 1) {
 					found++;
 					snprintf(path, size, "/dev/%.110s", node);
 					if (driver_out && driver_size)
-						snprintf(driver_out, driver_size, "%s", s_supported_sensors[s]);
+						snprintf(driver_out, driver_size, "%s", s_supported_sensors[s].driver);
 				}
 				break;
 			}
@@ -1194,8 +1235,10 @@ int main(int argc, char **argv)
 	uint32_t ae_target = DEFAULT_AE_TARGET_LUMA, last_sequence = 0, awb_sequence = 0;
 	bool background = false, observe = false, have_sequence = false;
 	bool ae_enabled = true, awb_enabled = true, awb_sync = true, awb_written = false;
+	bool awb_method_set = false;
 	bool pidfile_written = false;
 	bool flicker_set = false, tuning_enabled = false;
+	const struct sensor_info *sensor = NULL;
 	struct isp_tuning tuning;
 	int fd, lockfd = -1, sensor_fd = -1, option, result = EXIT_FAILURE;
 
@@ -1332,6 +1375,7 @@ int main(int argc, char **argv)
 				LOG_ERR("Invalid AWB mode '%s' (use whitepoint, grayworld)", optarg);
 				return EXIT_FAILURE;
 			}
+			awb_method_set = true;
 			break;
 		case 'p':
 			if (!strcmp(optarg, "motion"))
@@ -1353,7 +1397,8 @@ int main(int argc, char **argv)
 			       "  -s <dev>   Sensor subdevice node (auto-detected if omitted)\n"
 			       "  -t <level> AE 12-bit target luminance (1..4096, default 1856)\n"
 			       "  -f <mode>  Anti-flicker: 50, 60, off (default: off; 50/60 require sensor timing)\n"
-			       "  -m <mode>  AWB mode: whitepoint, grayworld (default: whitepoint)\n"
+			       "  -m <mode>  AWB mode: whitepoint, grayworld (default: the sensor's; whitepoint\n"
+			       "             on the GC1054, whose locus it is, grayworld on the GC2083)\n"
 			       "  -p <prof>  AE profile: normal, motion (default: normal; motion requires timing)\n"
 			       "  -P <path>  Write/remove the service PID file after successful setup\n"
 			       "  -A <mode>  AE ownership: auto or off (default auto)\n"
@@ -1403,8 +1448,11 @@ int main(int argc, char **argv)
 		init_isp_digital_gain(fd, &ae);
 		char sensor_name[64] = "camera-sensor";
 		bool need_sensor = ae_enabled;
-		if (!sensor_path[0])
-			discover_sensor_subdev(sensor_path, sizeof(sensor_path), sensor_name, sizeof(sensor_name));
+		/* Two sensors (a GC1054 and a GC2083) need -s: the last one found
+		 * is not a choice. */
+		if (!sensor_path[0] &&
+		    discover_sensor_subdev(sensor_path, sizeof(sensor_path), sensor_name, sizeof(sensor_name)) < 0)
+			sensor_path[0] = '\0';
 
 		if (sensor_path[0]) {
 			sensor_fd = open(sensor_path, O_RDWR | O_NONBLOCK | O_CLOEXEC);
@@ -1418,6 +1466,7 @@ int main(int argc, char **argv)
 					close(sensor_fd);
 					sensor_fd = -1;
 				} else {
+					sensor = find_sensor(sensor_name);
 					/* Before the first timing read, so no change is missed. */
 					ae_loop.sensor_events = ae_enabled &&
 								subscribe_sensor_events(sensor_fd);
@@ -1444,6 +1493,8 @@ int main(int argc, char **argv)
 		}
 	}
 
+	if (!awb_method_set && sensor)
+		awb_cfg.mode = sensor->awb_mode;
 	awb_controller_init(&awb, &awb_cfg);
 
 	if ((!observe && awb_enabled && read_gains(fd, &awb) < 0) ||
@@ -1459,7 +1510,12 @@ int main(int argc, char **argv)
 		if (flicker_set && write_power_line(fd, ae_cfg.flicker_mode) < 0)
 			LOG_WARN("Power line frequency control: %s", strerror(errno));
 		read_power_line(fd, &ae.config);
-		tuning_enabled = isp_tuning_init(&tuning, fd) == 0;
+		const struct isp_profile *prof = sensor ? &sensor->tuning : &s_default_tuning;
+
+		if (!prof->blocks)
+			LOG_INFO("No ISP tuning for %s; keeping the ISP defaults", sensor->driver);
+		else
+			tuning_enabled = isp_tuning_init(&tuning, fd, prof) == 0;
 	}
 	if (!observe && ae_enabled) {
 		struct v4l2_event_subscription sub = { .type = V4L2_EVENT_CTRL };
