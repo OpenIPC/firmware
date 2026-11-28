@@ -22,6 +22,7 @@ on:
           - hisilicon-hi3516ev200
           - xiongmai-xm530
           - novatek-nt9856x
+          - sigmastar-infinity6c
 
 env:
   TAG_NAME: toolchain-asan
@@ -64,6 +65,8 @@ jobs:
           xiongmai-xm530) BOARD=xm530_lite ;;
           # NT98562 and NT98566 share it; proven on an NT98566.
           novatek-nt9856x) BOARD=nt98566_lite ;;
+          # Every SSC377/SSC378 board shares it; proven on an SSC378DE.
+          sigmastar-infinity6c) BOARD=ssc378de_lite ;;
           *) echo "::error::no defconfig mapped for ${{inputs.family}}"; exit 1 ;;
           esac
           NAME=$(make BOARD="${BOARD}" toolname)
