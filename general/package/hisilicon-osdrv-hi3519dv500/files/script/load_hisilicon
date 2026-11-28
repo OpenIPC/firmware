@@ -115,7 +115,7 @@ function remove_detect()
 
 insert_ko() {
 	# sys config
-	modprobe open_sys_config sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1 board=$BOARD ir_auto=$IR_AUTO
+	modprobe open_sys_config sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1 board=$BOARD ir_auto=$IR_AUTO $(vo_sys_config_arg)
 	# driver load
 	insert_osal
 	modprobe open_base logmpp_show=${DEBUG}
@@ -149,6 +149,7 @@ insert_ko() {
 	modprobe open_sensor_spi 2>/dev/null
 
 	insert_audio
+	insert_vo
 	modprobe open_mipi_rx
 	# modprobe open_user
 	case ${socmodel} in 20s|20g|00s|00g) modprobe open_aiisp ;; esac
@@ -167,6 +168,7 @@ remove_ko() {
 	# rmmod open_user
 	rmmod open_mipi_rx
 
+	remove_vo
 	remove_audio
 	rmmod open_sensor_spi &> /dev/null
 	rmmod open_sensor_i2c &> /dev/null
@@ -241,6 +243,67 @@ sensor1_pinmux() {
 	[ $SNS_SET1 -eq 1 ] || return 0
 	devmem 0x0EFF0024 32 0x1752	# I2C5_SCL
 	devmem 0x0EFF0028 32 0x1752	# I2C5_SDA
+}
+
+# Video output. VO_INTF is the interface open_sys_config muxes the pins for;
+# empty means none, and then nothing below loads and the pins are left as they
+# were, which is every camera without a display.
+VO_INTF=
+
+# The demo boards' HDMI adapter: a Lontium LT8618SXB BT.1120-to-HDMI bridge on
+# I2C7 at 0x39, fed by VO over BT.1120. Its chip ID is 0x17 0x02 at registers
+# 0x00/0x01 of bank 0x80, which the 0xff/0xee writes select and enable.
+#
+# I2C7's pads are set first, to the value open_sys_config gives them on every
+# board, since the probe runs before it loads. The register read comes first
+# too: a bus where nothing answers at 0x39 gets no writes at all.
+hdmi_bridge_present() {
+	devmem 0x179F0000 32 0x1012	# I2C7_SDA
+	devmem 0x179F0004 32 0x1012	# I2C7_SCL
+	i2cget -y 7 0x39 0x00 > /dev/null 2>&1 || return 1
+	i2cset -y 7 0x39 0xff 0x80 2> /dev/null || return 1
+	i2cset -y 7 0x39 0xee 0x01 2> /dev/null || return 1
+	[ "$(i2cget -y 7 0x39 0x00 2> /dev/null) $(i2cget -y 7 0x39 0x01 2> /dev/null)" = "0x17 0x02" ]
+}
+
+# BT.1120 takes over pins that are SDIO1, I2C0 and the MIPI DSI lanes
+# elsewhere, so it is chosen only when the bridge answers, or when the
+# environment says so:
+#   fw_setenv vo_intf bt1120     (or mipi_tx, bt656, rgb...)
+#   fw_setenv vo_intf none       no video output, even with the bridge fitted
+resolve_vo() {
+	env_vo=$(fw_printenv -n vo_intf 2>/dev/null || true)
+	if [ -n "$env_vo" ]; then
+		[ "$env_vo" = "none" ] || VO_INTF=$env_vo
+		logger -s -p daemon.info -t hisilicon "Video output ${env_vo} from the environment"
+	elif hdmi_bridge_present; then
+		VO_INTF=bt1120
+		logger -s -p daemon.info -t hisilicon "HDMI bridge (LT8618SXB) answers on I2C7, video output over BT.1120"
+	fi
+}
+
+vo_sys_config_arg() {
+	[ -n "$VO_INTF" ] && echo "vo_intf=$VO_INTF"
+}
+
+# open_vo_dev before open_vo, as the SDK's load3519dv500 has them. The bridge
+# driver programs the LT8618SXB at load and refuses to load without one, so a
+# forced bt1120 on a board that has none costs nothing.
+insert_vo() {
+	[ -n "$VO_INTF" ] || return 0
+	modprobe open_vo_dev
+	modprobe open_vo
+	case $VO_INTF in
+		bt1120 | bt.1120) modprobe open_lt8618sx 2>/dev/null ;;
+		mipi_tx | mipitx) modprobe open_mipi_tx ;;
+	esac
+}
+
+remove_vo() {
+	rmmod open_lt8618sx 2>/dev/null
+	rmmod open_mipi_tx 2>/dev/null
+	rmmod open_vo 2>/dev/null
+	rmmod open_vo_dev 2>/dev/null
 }
 
 calc_mmz_info() {
@@ -447,6 +510,7 @@ else
 	[ $SNS_SET1 -eq 0 ] && SNS_TYPE1=$SENSOR
 	if [ $b_arg_modprobe -eq 1 ]; then
 		cd /lib/modules/$(uname -r)/hisilicon
+		resolve_vo
 		insert_ko
 		sensor1_pinmux
 	fi
