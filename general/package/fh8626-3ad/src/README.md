@@ -262,7 +262,9 @@ fh8626-3ad [-i ISP-subdev] [-s sensor-subdev] [-t target]
 -s <dev>         Sensor subdevice, auto-detected when unique
 -t <level>       Perceived 12-bit AE target, 1..4096 (default 1856)
 -f <50|60|off>   Flicker mode (default off; 50/60 require sensor timing)
--m <mode>        AWB mode (default whitepoint; wp/gw aliases accepted)
+-m <mode>        AWB mode (default per sensor: whitepoint on the GC1054,
+                 whose locus it is, grayworld on the GC2083; wp/gw aliases
+                 accepted)
 -p <normal|motion> Exposure profile (default normal; motion requires sensor timing)
 -A <auto|off>    AE loop ownership (default auto)
 -W <auto|off>    AWB loop ownership (default auto)

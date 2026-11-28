@@ -226,6 +226,8 @@ static int discover_subdev(char *path, size_t size, const char *driver)
 struct sensor_info {
 	const char *driver;
 	struct isp_profile tuning;
+	/* Unless -m says otherwise */
+	awb_mode_t awb_mode;
 };
 
 /*
@@ -235,10 +237,15 @@ struct sensor_info {
  * Subtracting it tripled the luma spread of a room scene. The GC1054 tone
  * curve left the same scene a stop darker, so the GC2083 keeps the ISP's
  * default curve; its other blocks still wait for measurements.
+ *
+ * The white-point AWB's illuminant locus was measured on the GC1054, so only
+ * the GC1054 defaults to it. On the CP3's GC2083 the same room scene came
+ * out magenta with it (Cb/Cr 136.3/143.1) and neutral with grey world
+ * (128.0/130.7).
  */
 static const struct sensor_info s_supported_sensors[] = {
-	{ "gc1054", { TUNE_BLACK | TUNE_GAMMA | TUNE_REST, 0 } },
-	{ "gc2083", { TUNE_BLACK, 64 } },
+	{ "gc1054", { TUNE_BLACK | TUNE_GAMMA | TUNE_REST, 0 }, AWB_MODE_WHITE_POINT },
+	{ "gc2083", { TUNE_BLACK, 64 }, AWB_MODE_GRAY_WORLD },
 };
 
 /* An unidentified sensor keeps the full tuning, as before */
@@ -1228,6 +1235,7 @@ int main(int argc, char **argv)
 	uint32_t ae_target = DEFAULT_AE_TARGET_LUMA, last_sequence = 0, awb_sequence = 0;
 	bool background = false, observe = false, have_sequence = false;
 	bool ae_enabled = true, awb_enabled = true, awb_sync = true, awb_written = false;
+	bool awb_method_set = false;
 	bool pidfile_written = false;
 	bool flicker_set = false, tuning_enabled = false;
 	const struct sensor_info *sensor = NULL;
@@ -1367,6 +1375,7 @@ int main(int argc, char **argv)
 				LOG_ERR("Invalid AWB mode '%s' (use whitepoint, grayworld)", optarg);
 				return EXIT_FAILURE;
 			}
+			awb_method_set = true;
 			break;
 		case 'p':
 			if (!strcmp(optarg, "motion"))
@@ -1388,7 +1397,8 @@ int main(int argc, char **argv)
 			       "  -s <dev>   Sensor subdevice node (auto-detected if omitted)\n"
 			       "  -t <level> AE 12-bit target luminance (1..4096, default 1856)\n"
 			       "  -f <mode>  Anti-flicker: 50, 60, off (default: off; 50/60 require sensor timing)\n"
-			       "  -m <mode>  AWB mode: whitepoint, grayworld (default: whitepoint)\n"
+			       "  -m <mode>  AWB mode: whitepoint, grayworld (default: the sensor's; whitepoint\n"
+			       "             on the GC1054, whose locus it is, grayworld on the GC2083)\n"
 			       "  -p <prof>  AE profile: normal, motion (default: normal; motion requires timing)\n"
 			       "  -P <path>  Write/remove the service PID file after successful setup\n"
 			       "  -A <mode>  AE ownership: auto or off (default auto)\n"
@@ -1480,6 +1490,8 @@ int main(int argc, char **argv)
 		}
 	}
 
+	if (!awb_method_set && sensor)
+		awb_cfg.mode = sensor->awb_mode;
 	awb_controller_init(&awb, &awb_cfg);
 
 	if ((!observe && awb_enabled && read_gains(fd, &awb) < 0) ||

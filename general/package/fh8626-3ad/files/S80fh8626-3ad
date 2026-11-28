@@ -8,7 +8,7 @@ PIDFILE="/var/run/$DAEMON.pid"
 BIN="/usr/sbin/$DAEMON"
 AE_MODE=auto
 AWB_MODE=auto
-AWB_METHOD=whitepoint
+AWB_METHOD=
 SLOW_SHUTTER_MIN_FPS=12.5
 [ ! -r /etc/default/fh8626-3ad ] || . /etc/default/fh8626-3ad
 
@@ -64,8 +64,9 @@ case "$1" in
         # Line timing and illuminant calibration are not established on this
         # board. Keep the measured statistics loop without guessed timing.
         # -b returns only after device/control setup and PID publication.
-        "$BIN" -b -P "$PIDFILE" -A "$AE_MODE" -W "$AWB_MODE" -f off -m "$AWB_METHOD" -p normal \
-            -F "$SLOW_SHUTTER_MIN_FPS"
+        # An empty AWB_METHOD leaves the choice to the sensor's profile.
+        "$BIN" -b -P "$PIDFILE" -A "$AE_MODE" -W "$AWB_MODE" -f off \
+            ${AWB_METHOD:+-m "$AWB_METHOD"} -p normal -F "$SLOW_SHUTTER_MIN_FPS"
         result=$?
         if [ "$result" -eq 0 ]; then
             echo OK
